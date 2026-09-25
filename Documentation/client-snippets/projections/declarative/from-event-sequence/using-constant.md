@@ -10,7 +10,6 @@ public class DecFromEventSequenceOrderProjectionWithConstant : IProjectionFor<De
         // Using a constant instead of a raw string keeps the sequence identifier consistent
         // wherever it is referenced.
         .FromEventSequence(DecFromEventSequenceEventSequences.OrderManagement)
-        .AutoMap()
         .From<DecFromEventSequenceOrderCreated>();
 }
 ```

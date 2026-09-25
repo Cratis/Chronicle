@@ -21,7 +21,6 @@ public class DecFromEventSequenceMultiOrderProjection : IProjectionFor<DecFromEv
 {
     public void Define(IProjectionBuilderFor<DecFromEventSequenceOrder> builder) => builder
         .FromEventSequence("order-management")
-        .AutoMap()
         .From<DecFromEventSequenceOrderCreated>(_ => _
             .Set(m => m.Status).ToValue(DecFromEventSequenceOrderStatus.Created));
 }
@@ -31,7 +30,6 @@ public class DecFromEventSequenceShippingProjection : IProjectionFor<DecFromEven
 {
     public void Define(IProjectionBuilderFor<DecFromEventSequenceShipping> builder) => builder
         .FromEventSequence("shipping-management")
-        .AutoMap()
         .From<DecFromEventSequencePackageCreated>()
         .From<DecFromEventSequencePackageShipped>()
         .From<DecFromEventSequencePackageDelivered>();

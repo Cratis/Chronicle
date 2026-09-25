@@ -13,7 +13,6 @@ public class TaggingSalesReportProjection : IProjectionFor<TaggingSalesReport>
 {
     public void Define(IProjectionBuilderFor<TaggingSalesReport> builder) => builder
         .From<TaggingSaleRecorded>(_ => _
-            .Set(m => m.ProductId).To(e => e.ProductId)
             .Add(m => m.TotalSales).With(e => e.Amount));
 }
 ```
