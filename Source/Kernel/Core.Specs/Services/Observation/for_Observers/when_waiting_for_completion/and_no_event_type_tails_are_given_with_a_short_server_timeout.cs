@@ -6,7 +6,7 @@ using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers.when_waiting_for_completion;
 
-public class and_an_older_client_sends_no_event_type_tails : given.all_dependencies
+public class and_no_event_type_tails_are_given_with_a_short_server_timeout : given.all_dependencies
 {
     WaitForObserverCompletionResponse _result;
 
