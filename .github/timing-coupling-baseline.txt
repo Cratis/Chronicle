@@ -94,13 +94,12 @@
 1 Source/Clients/Connections.Specs/for_ConnectionWatchdog/given/a_connection_watchdog.cs  # interleave
 1 Source/Clients/Connections.Specs/for_ConnectionWatchdog/when_keep_alive_is_fresh.cs
 1 Source/Clients/Connections.Specs/for_ConnectionWatchdog/when_starting_twice.cs
+1 Source/Clients/DotNET.Specs/Reactors/for_Reactors/when_delivering_to_a_delegate/and_registration_is_cancelled.cs  # knob
 1 Source/Clients/XUnit.Integration/ChronicleFixture.cs  # readiness
 1 Source/Clients/XUnit.Integration/ChronicleOrleansFixture.cs
 1 Source/Kernel/Core.Specs/ConcurrentCallGate.cs  # deadline
 1 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_channel_capacity_is_exceeded.cs
 3 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_the_catchup_trigger_faults.cs
-1 Source/Kernel/Core.Specs/Jobs/for_JobStepThrottle/when_acquiring_and_releasing_slots.cs  # knob
-1 Source/Kernel/Core.Specs/Jobs/for_JobStepThrottle/when_observer_partition_limit_is_lower_than_job_step_limit.cs
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_acquiring_coarsely_while_a_stripe_is_held.cs  # deadline
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_different_event_source_ids_are_acquired_concurrently.cs  # deadline
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_the_same_event_source_id_is_acquired_concurrently.cs  # interleave
