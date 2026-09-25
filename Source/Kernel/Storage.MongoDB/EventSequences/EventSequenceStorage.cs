@@ -351,6 +351,7 @@ public class EventSequenceStorage(
 
                 eventsToInsert.Add(@event);
 
+                var appendedHash = eventToAppend.ContentHashes.TryGetValue(eventToAppend.EventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
                 appendedEvents.Add(new AppendedEvent(
                     new(
                         eventToAppend.EventType,
@@ -366,9 +367,9 @@ public class EventSequenceStorage(
                         eventToAppend.Causation,
                         await identityStorage.GetFor(eventToAppend.CausedByChain),
                         eventToAppend.Tags,
-                        eventToAppend.Hash,
+                        appendedHash,
                         Subject: resolvedSubject),
-                    eventToAppend.Content)
+                    eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
                 {
                     GenerationalContent = generationalContent.ToDictionary(kvp => int.Parse(kvp.Key), kvp => kvp.Value.ToString())
                 });

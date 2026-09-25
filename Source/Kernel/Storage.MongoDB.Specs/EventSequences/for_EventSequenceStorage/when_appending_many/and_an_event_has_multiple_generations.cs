@@ -14,17 +14,18 @@ public class and_an_event_has_multiple_generations(ReplicaSetMongoDBFixture fixt
 {
     AppendedEvent _acknowledged;
     Event _stored;
+    ExpandoObject _original;
 
     async Task Because()
     {
-        var original = new ExpandoObject();
+        _original = new ExpandoObject();
         var upcast = new ExpandoObject();
         _expandoObjectConverter.ToJsonObject(upcast, Arg.Any<JsonSchema>()).Returns(new JsonObject { ["value"] = "migrated" });
         var @event = EventAt(EventSequenceNumber.First) with
         {
-            Content = original,
-            Hash = "original-hash",
-            GenerationalContent = new Dictionary<EventTypeGeneration, ExpandoObject> { [EventTypeGeneration.First] = original, [new EventTypeGeneration(2)] = upcast },
+            Content = new ExpandoObject(),
+            Hash = "stale-hash",
+            GenerationalContent = new Dictionary<EventTypeGeneration, ExpandoObject> { [EventTypeGeneration.First] = _original, [new EventTypeGeneration(2)] = upcast },
             ContentHashes = new Dictionary<EventTypeGeneration, EventHash> { [EventTypeGeneration.First] = "original-hash", [new EventTypeGeneration(2)] = "migrated-hash" }
         };
         _acknowledged = (await _storage.AppendMany([@event])).AsT0.Single();
@@ -35,4 +36,6 @@ public class and_an_event_has_multiple_generations(ReplicaSetMongoDBFixture fixt
     [Fact] void should_store_the_upcast_content() => _stored.Content["2"]["value"].AsString.ShouldEqual("migrated");
     [Fact] void should_store_the_upcast_hash() => _stored.ContentHashes["2"].ShouldEqual("migrated-hash");
     [Fact] void should_acknowledge_both_generations() => _acknowledged.GenerationalContent.Keys.ShouldContainOnly([1, 2]);
+    [Fact] void should_acknowledge_the_appended_generations_content() => _acknowledged.Content.ShouldEqual(_original);
+    [Fact] void should_acknowledge_the_appended_generations_hash() => _acknowledged.Context.Hash.ShouldEqual((EventHash)"original-hash");
 }

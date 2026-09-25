@@ -12,16 +12,17 @@ public class and_an_event_has_multiple_generations : given.an_event_sequence_sto
 {
     AppendedEvent _acknowledged;
     EventEntry _stored;
+    ExpandoObject _original;
 
     async Task Because()
     {
-        var original = new ExpandoObject();
-        ((IDictionary<string, object?>)original)["legacyValue"] = "original";
+        _original = new ExpandoObject();
+        ((IDictionary<string, object?>)_original)["legacyValue"] = "original";
         var upcast = new ExpandoObject();
         ((IDictionary<string, object?>)upcast)["value"] = "migrated";
-        var @event = new EventToAppendToStorage(EventSequenceNumber.First, EventSourceType.Default, "some-source", EventStreamType.All, EventStreamId.Default, _eventType, CorrelationId.NotSet, [], [], [], DateTimeOffset.UtcNow, original, "original-hash")
+        var @event = new EventToAppendToStorage(EventSequenceNumber.First, EventSourceType.Default, "some-source", EventStreamType.All, EventStreamId.Default, _eventType, CorrelationId.NotSet, [], [], [], DateTimeOffset.UtcNow, new ExpandoObject(), "stale-hash")
         {
-            GenerationalContent = new Dictionary<EventTypeGeneration, ExpandoObject> { [EventTypeGeneration.First] = original, [new EventTypeGeneration(2)] = upcast },
+            GenerationalContent = new Dictionary<EventTypeGeneration, ExpandoObject> { [EventTypeGeneration.First] = _original, [new EventTypeGeneration(2)] = upcast },
             ContentHashes = new Dictionary<EventTypeGeneration, EventHash> { [EventTypeGeneration.First] = "original-hash", [new EventTypeGeneration(2)] = "migrated-hash" }
         };
         _acknowledged = (await _storage.AppendMany([@event])).AsT0.Single();
@@ -29,7 +30,9 @@ public class and_an_event_has_multiple_generations : given.an_event_sequence_sto
         _stored = context.Events.Single();
     }
 
-    [Fact] void should_store_both_generations() => JsonDocument.Parse(_stored.Content).RootElement.GetProperty("2").GetProperty("value").GetString().ShouldEqual("migrated");
+    [Fact] void should_store_the_upcast_content() => JsonDocument.Parse(_stored.Content).RootElement.GetProperty("2").GetProperty("value").GetString().ShouldEqual("migrated");
     [Fact] void should_store_the_upcast_hash() => JsonDocument.Parse(_stored.ContentHashes).RootElement.GetProperty("2").GetString().ShouldEqual("migrated-hash");
     [Fact] void should_acknowledge_both_generations() => _acknowledged.GenerationalContent.Keys.ShouldContainOnly([1, 2]);
+    [Fact] void should_acknowledge_the_appended_generations_content() => _acknowledged.Content.ShouldEqual(_original);
+    [Fact] void should_acknowledge_the_appended_generations_hash() => _acknowledged.Context.Hash.ShouldEqual((EventHash)"original-hash");
 }
