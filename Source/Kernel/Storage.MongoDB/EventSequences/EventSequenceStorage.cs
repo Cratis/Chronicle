@@ -985,6 +985,15 @@ public class EventSequenceStorage(
                 new CreateIndexOptions { Sparse = true, Name = "subject_index" })).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Builds replacement content without retaining the original causation chain.
+    /// </summary>
+    /// <param name="originalRawEvent">The event being redacted.</param>
+    /// <param name="reason">The reason for redaction.</param>
+    /// <returns>Content describing the redacted event without its original causation.</returns>
+    internal static RedactionEventContent CreateRedactionContent(Event originalRawEvent, RedactionReason reason) =>
+        new(reason, originalRawEvent.Type, originalRawEvent.Occurred, originalRawEvent.CorrelationId, [], originalRawEvent.CausedBy);
+
     static EventSequenceNumber ToEventSequenceNumber(BsonValue value)
     {
         var sequenceNumber = Convert.ToUInt64(value.ToDecimal());
@@ -1047,9 +1056,9 @@ public class EventSequenceStorage(
 
     /// <summary>
     /// Creates a MongoDB update model for replacing an event in-place with the <see cref="GlobalEventTypes.Redaction"/> event type.
-    /// The replacement content stores the ORIGINAL event's context (type, occurred, correlation, causation, caused-by) so it
-    /// can be audited after the fact. The CURRENT redaction context (correlationId, causation, causedByChain, occurred) is
-    /// written directly to the event document's own context fields.
+    /// The replacement content stores the original event's type, occurrence, correlation and caused-by chain,
+    /// but never its causation (which may carry sensitive command properties). The redaction's own auditing
+    /// context is written directly to the event document's context fields.
     /// </summary>
     /// <param name="originalRawEvent">The raw MongoDB <see cref="Event"/> document for the event being redacted.</param>
     /// <param name="reason">The <see cref="RedactionReason"/> for the redaction.</param>
@@ -1066,13 +1075,7 @@ public class EventSequenceStorage(
         IEnumerable<IdentityId> redactionCausedByChain,
         DateTimeOffset redactionOccurred)
     {
-        var content = new RedactionEventContent(
-            reason,
-            originalRawEvent.Type,
-            originalRawEvent.Occurred,
-            originalRawEvent.CorrelationId,
-            originalRawEvent.Causation,
-            originalRawEvent.CausedBy);
+        var content = CreateRedactionContent(originalRawEvent, reason);
 
         var document = BsonDocument.Parse(JsonSerializer.Serialize(content, jsonSerializerOptions));
         var generationalContent = new Dictionary<string, BsonDocument>

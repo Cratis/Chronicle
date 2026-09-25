@@ -536,14 +536,15 @@ public class EventSequenceStorage(
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred)
     {
+        // The original causation can carry sensitive command properties and must not survive redaction.
         // This provider stores a single Identity per event rather than an identity chain, so the original
-        // chain cannot be carried into the redaction content; everything else mirrors the persistent providers.
+        // caused-by chain cannot be carried into the redaction content.
         var content = new RedactionEventContent(
             reason,
             original.Context.EventType.Id,
             original.Context.Occurred,
             original.Context.CorrelationId,
-            original.Context.Causation,
+            [],
             causedByChain);
 
         return original with
