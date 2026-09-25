@@ -13,15 +13,27 @@ using PackageConsumer;
 var id = EventSourceId.New();
 using var events = new EventScenario();
 var result = await events.EventLog.Append(id, new SomethingHappened("hello"));
-if (!result.IsSuccess) return 1;
+if (!result.IsSuccess)
+{
+    Console.Error.WriteLine("EventScenario append failed.");
+    return 1;
+}
 
 var readModel = new ReadModelScenario<SomethingReadModel>();
 await readModel.Given.ForEventSource(id).Events(new SomethingHappened("hello"));
-if (readModel.Instance?.What != "hello") return 2;
+if (readModel.Instance?.What != "hello")
+{
+    Console.Error.WriteLine("ReadModelScenario did not project the expected value.");
+    return 2;
+}
 
 var reactor = new ReactorScenario<SomethingReactor>();
 await reactor.Given.ForEventSource(id).Events(new SomethingHappened("hello"));
-if (SomethingReactor.Handled != "hello") return 3;
+if (SomethingReactor.Handled != "hello")
+{
+    Console.Error.WriteLine("ReactorScenario did not handle the expected value.");
+    return 3;
+}
 
 Console.WriteLine("EventScenario append, ReadModelScenario projection and ReactorScenario dispatch passed.");
 return 0;

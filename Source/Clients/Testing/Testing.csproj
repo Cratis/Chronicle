@@ -53,7 +53,7 @@
              with the consumer's Arc packages instead of embedding a second copy. -->
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.Core" />
-        <!-- The embedded Core migration engine evaluates JMESPath during scenario replay. -->
+        <!-- The embedded Core migration engine evaluates JMESPath for registered migrations. -->
         <PackageReference Include="JsonCons.JmesPath" />
         <PackageReference Include="Microsoft.Extensions.Logging" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
