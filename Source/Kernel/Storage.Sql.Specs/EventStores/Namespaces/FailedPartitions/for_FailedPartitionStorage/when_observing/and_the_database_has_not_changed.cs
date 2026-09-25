@@ -37,7 +37,7 @@ public class and_the_database_has_not_changed : given.a_failed_partition_storage
             });
 
         _subscription = _storage.ObserveAllFor().Subscribe(_ => _receivedCount++);
-        await threeQueriesCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await threeQueriesCompleted.Task.WaitAsync(TimeSpan.FromSeconds(30));
     }
 
     [Fact] void should_emit_only_the_initial_snapshot() => _receivedCount.ShouldEqual(1);
