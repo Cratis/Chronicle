@@ -3,12 +3,14 @@
 
 using System.Collections;
 using System.Dynamic;
+using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
@@ -71,7 +73,7 @@ public class ResolveFutures(
                     var parentIdentifierPath = future.ParentPath + future.ParentIdentifiedByProperty;
                     var type = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(parentIdentifierPath, typeFormats);
                     var parentKey = future.ParentKey.Value;
-                    if (type is not null)
+                    if (type is not null && !future.ParentPath.IsRoot)
                     {
                         try
                         {
@@ -100,6 +102,8 @@ public class ResolveFutures(
                     // records the identifier of each intermediate element.
                     var parentExistsInCurrentState = TryFindParentWithIndexers(
                         context.Changeset.CurrentState,
+                        context.Changeset,
+                        context.Key.Value,
                         childProjection,
                         future.ParentPath,
                         future.ParentIdentifiedByProperty,
@@ -224,6 +228,8 @@ public class ResolveFutures(
     /// chain of <see cref="ArrayIndexer"/> entries needed to navigate from root to that parent.
     /// </summary>
     /// <param name="currentState">The root <see cref="ExpandoObject"/> representing the current read model state.</param>
+    /// <param name="changeset">The changeset for the current root event, including initialization changes.</param>
+    /// <param name="rootKey">The resolved key of the root document currently being processed.</param>
     /// <param name="childProjection">The child projection whose parent chain is being resolved.</param>
     /// <param name="parentPath">The <see cref="PropertyPath"/> identifying the parent's collection.</param>
     /// <param name="parentIdentifiedByProperty">The <see cref="PropertyPath"/> of the property that identifies items in the parent collection.</param>
@@ -240,6 +246,8 @@ public class ResolveFutures(
     /// <returns><see langword="true"/> if the parent was found; otherwise <see langword="false"/>.</returns>
     static bool TryFindParentWithIndexers(
         ExpandoObject? currentState,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        object rootKey,
         IProjection childProjection,
         PropertyPath parentPath,
         PropertyPath parentIdentifiedByProperty,
@@ -253,16 +261,10 @@ public class ResolveFutures(
 
         if (chain.Count == 0)
         {
-            // A first-level child's parent is the root document, not an item in the child collection.
-            // SetInitialState stores the root key on the document even when the read model has no
-            // declared id property. The caller adds the child's own indexer; there are no ancestors.
-            var rootSchema = childProjection.Parent!.TargetReadModelSchema;
-            var rootKeyProperty = rootSchema.HasKeyProperty()
-                ? rootSchema.GetKeyProperty().Name
-                : rootSchema.GetLikelyKeyPropertyName();
-            if (rootKeyProperty is null) return false;
-
-            return new[] { currentState }.Contains(new PropertyPath(rootKeyProperty), parentKey);
+            // A first-level child's parent is the root being processed. Storage need not return
+            // its synthetic id as a schema property. Only attach after the root's FROM event
+            // has initialized it; a key-bearing child-created placeholder is not a parent.
+            return KeysMatch(rootKey, parentKey) && IsRootInitialized(currentState, changeset);
         }
 
         if (chain.Count == 1)
@@ -279,6 +281,61 @@ public class ResolveFutures(
         }
 
         return SearchLevel(currentState, chain, 0, [], parentIdentifiedByProperty, parentKey, allIndexers);
+    }
+
+    static bool IsRootInitialized(ExpandoObject state, IChangeset<AppendedEvent, ExpandoObject> changeset)
+    {
+        if (changeset.HasBeenRemoved()) return false;
+
+        var initializedNow = changeset.Changes
+            .OfType<PropertiesChanged<ExpandoObject>>()
+            .SelectMany(change => change.Differences)
+            .LastOrDefault(difference => difference.PropertyPath.Path == WellKnownProperties.ReadModelInstanceInitialized);
+        if (initializedNow is not null)
+        {
+            return initializedNow.Changed is true;
+        }
+
+        return ((IDictionary<string, object?>)state).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) && initialized is true;
+    }
+
+    static bool KeysMatch(object rootKey, object parentKey)
+    {
+        if (Equals(rootKey, parentKey)) return true;
+
+        // Futures and resolved keys can be independently materialized composite objects;
+        // SQL can also supply the same composite key as JSON text.
+        if (rootKey is string rootText && rootText.StartsWith('{'))
+        {
+            return MatchesJson(rootText, parentKey);
+        }
+        if (parentKey is string parentText && parentText.StartsWith('{'))
+        {
+            return MatchesJson(parentText, rootKey);
+        }
+
+        return JsonElement.DeepEquals(JsonSerializer.SerializeToElement(rootKey), JsonSerializer.SerializeToElement(parentKey)) ||
+            (rootKey is not ExpandoObject && parentKey is not ExpandoObject &&
+             string.Equals(rootKey.ToString(), parentKey.ToString(), StringComparison.Ordinal));
+    }
+
+    static bool MatchesJson(string json, object other)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (other is string otherJson && otherJson.StartsWith('{'))
+            {
+                using var otherDocument = JsonDocument.Parse(otherJson);
+                return JsonElement.DeepEquals(document.RootElement, otherDocument.RootElement);
+            }
+
+            return JsonElement.DeepEquals(document.RootElement, JsonSerializer.SerializeToElement(other));
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     /// <summary>

@@ -2,75 +2,51 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Text.Json.Nodes;
+using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_ResolveFutures.when_processing_events_live;
 
-public class and_a_child_arrives_before_its_root : given.a_resolve_futures_step
+public class and_a_child_arrives_before_its_root : given.a_first_level_child_future
 {
-    ProjectionFuture _future;
-    IProjection _child;
-    ProjectionEventContext? _resolvedContext;
-    bool _resolved;
     bool _resolvedBeforeRoot;
+    bool _matchesReplayOrder;
 
     void Establish()
     {
         var schema = new JsonSchema();
-        schema.Properties["name"] = new JsonSchemaProperty("name", new JsonObject { ["type"] = "string" }, schema);
+        schema.Properties["id"] = new JsonSchemaProperty("id", new System.Text.Json.Nodes.JsonObject { ["type"] = "string" }, schema);
         _projection.TargetReadModelSchema.Returns(schema);
-
-        _child = Substitute.For<IProjection>();
-        _child.Parent.Returns(_projection);
-        _child.Path.Returns(new ProjectionPath("children"));
-        _child.ChildrenPropertyPath.Returns(new PropertyPath("children"));
-        _child.OnNext(Arg.Do<ProjectionEventContext>(context => _resolvedContext = context));
-        _projection.ChildProjections.Returns([_child]);
-
-        _future = new ProjectionFuture(
-            ProjectionFutureId.New(),
-            _projection.Identifier,
-            _event,
-            PropertyPath.Root,
-            new PropertyPath("children"),
-            new PropertyPath("childId"),
-            new PropertyPath("childId"),
-            new Key("root-key", ArrayIndexers.NoIndexers),
-            DateTimeOffset.UtcNow);
-        _projectionFutures.GetFutures().Returns(_ => Task.FromResult<IEnumerable<ProjectionFuture>>(_resolved ? [] : [_future]));
-        _projectionFutures.ResolveFuture(_future.Id).Returns(_ =>
-        {
-            _resolved = true;
-            return Task.CompletedTask;
-        });
-        _tracker.HasPending = true;
-        _context = _context with { Key = new Key("root-key", ArrayIndexers.NoIndexers) };
+        SetFutureKey("root-key");
     }
 
     async Task Because()
     {
-        // Live processing sees the child first, with no root document to attach it to.
-        await _step.Perform(_projection, _context);
+        await _step.Perform(_projection, _context with { Key = new Key("root-key", ArrayIndexers.NoIndexers) });
         _resolvedBeforeRoot = _resolved;
+        await ProcessRoot(RootWith("id", "root-key", initialized: null), initializeNow: true);
 
-        dynamic rootState = new ExpandoObject();
-        rootState.id = "root-key";
-        rootState.children = new List<ExpandoObject>();
-        var rootChangeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
-        rootChangeset.CurrentState.Returns((ExpandoObject)rootState);
-        var rootEvent = AppendedEvent.EmptyWithEventType(new EventType("RootCreated", EventTypeGeneration.First));
-        await _step.Perform(_projection, _context with { Event = rootEvent, Changeset = rootChangeset });
+        // In replay order the root already exists when its child is projected.
+        var replay = new Changeset<AppendedEvent, ExpandoObject>(new ObjectComparer(), _event, RootWith("id", "root-key", initialized: null));
+        replay.AddChild<ExpandoObject>(
+            new PropertyPath("children"),
+            new PropertyPath("childId"),
+            "child-key",
+            [],
+            new ArrayIndexers([new ArrayIndexer(new PropertyPath("children"), new PropertyPath("childId"), "child-key")]));
+        _matchesReplayOrder = JsonSerializer.Serialize(_result!.PendingFutureSaves.Single().Changeset.CurrentState) ==
+            JsonSerializer.Serialize(replay.CurrentState);
     }
 
     [Fact] void should_leave_the_future_pending_before_the_root_arrives() => _resolvedBeforeRoot.ShouldBeFalse();
     [Fact] void should_resolve_the_future_after_the_root_arrives() => _projectionFutures.Received(1).ResolveFuture(_future.Id);
-    [Fact] void should_project_the_child_under_the_root() => _resolvedContext!.Key.Value.ShouldEqual("root-key");
-    [Fact] void should_use_only_the_child_indexer() => _resolvedContext!.Key.ArrayIndexers.All.Single().ArrayProperty.ShouldEqual(new PropertyPath("children"));
+    [Fact] void should_project_the_child_under_the_root() => HasChild.ShouldBeTrue();
+    [Fact] void should_produce_the_same_state_as_replay_order() => _matchesReplayOrder.ShouldBeTrue();
+    [Fact] void should_save_the_child_under_the_root_key() => _result!.PendingFutureSaves.Single().Key.Value.ShouldEqual("root-key");
+    [Fact] void should_use_only_the_child_indexer() => _result!.PendingFutureSaves.Single().Key.ArrayIndexers.All.Single().ArrayProperty.ShouldEqual(new PropertyPath("children"));
     [Fact] void should_leave_no_future_pending() => _tracker.HasPending.ShouldBeFalse();
 }
