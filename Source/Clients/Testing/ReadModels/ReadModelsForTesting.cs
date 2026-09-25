@@ -12,9 +12,10 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// and delegates all other operations to the real inner implementation.
 /// </summary>
 /// <param name="inner">The real <see cref="IReadModels"/> implementation to delegate to.</param>
-public class ReadModelsForTesting(IReadModels inner) : IReadModels
+public class ReadModelsForTesting(IReadModels inner) : IReadModels, IDecisionReadModels
 {
     readonly Dictionary<(string Identifier, string Key), object> _instances = [];
+    readonly Dictionary<(string Identifier, string Key), object> _decisionInstances = [];
 
     /// <summary>
     /// Gets the <see cref="IMaterializedReadModels"/> for working with materialized read model instances.
@@ -51,6 +52,20 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     }
 
     /// <inheritdoc/>
+    public Task<ReadModelInstance<TReadModel>> GetInstanceForDecision<TReadModel>(ReadModelKey key)
+    {
+        var identifier = typeof(TReadModel).GetReadModelIdentifier();
+        if (_decisionInstances.TryGetValue((identifier, key.Value), out var decisionRead))
+        {
+            return Task.FromResult((ReadModelInstance<TReadModel>)decisionRead);
+        }
+
+        // This harness intercepts ordinary reads. A missing seed cannot tell never-created from removed,
+        // and a legacy seed carries no event-log watermark: neither is safe to turn into a scope.
+        throw new NotSupportedException("Decision reads in test scenarios require an explicit instance, watermark and event types via RegisterDecisionRead.");
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null) =>
         inner.GetInstances<TReadModel>(eventCount);
 
@@ -79,8 +94,18 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
         inner.Release(instances);
 
     /// <summary>
-    /// Registers a pre-seeded read model instance so that subsequent <c language="csharp">GetInstanceById</c> calls
-    /// return it directly without hitting the server.
+    /// Registers a decision read with an explicit, validated event-log watermark.
+    /// </summary>
+    /// <typeparam name="TReadModel">The type of read model.</typeparam>
+    /// <param name="read">The guarded read to pre-seed.</param>
+    internal void RegisterDecisionInstance<TReadModel>(ReadModelInstance<TReadModel> read)
+    {
+        _ = read.ToConcurrencyScope();
+        _decisionInstances[(typeof(TReadModel).GetReadModelIdentifier(), read.Key.Value)] = read;
+    }
+
+    /// <summary>
+    /// Registers a pre-seeded read model instance so GetInstanceById returns it without hitting the server.
     /// </summary>
     /// <typeparam name="TReadModel">The type of read model to register.</typeparam>
     /// <param name="eventSourceId">The event source identifier to associate with the read model.</param>

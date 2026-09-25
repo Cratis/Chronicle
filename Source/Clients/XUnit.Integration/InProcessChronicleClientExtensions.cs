@@ -97,7 +97,7 @@ public static class InProcessChronicleClientExtensions
 
             var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
             var connection = new ChronicleConnection(connectionLifecycle, grainFactory, sp.GetRequiredService<ILocalSiloDetails>(), loggerFactory);
-            connection.SetServices(chronicleServices);
+            connection.SetServices(chronicleServices, sp.GetRequiredService<Contracts.Decisions.IDecisionReadModels>());
 
             return new ChronicleClient(connection, options, provider, sp, identityProvider, loggerFactory: loggerFactory);
         });

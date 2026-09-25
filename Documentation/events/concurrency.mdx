@@ -83,6 +83,12 @@ This strategy gets the current tail sequence number and uses it as the expected 
 
 > **Note**: `[EventStreamType]` on a reactor or reducer scopes which events an *observer* receives (see [Filter by event stream type](filtering/by-event-stream-type)) — it does not set the `EventStreamType` used for concurrency scoping on an *append* call. Set `eventStreamType` explicitly on `Append`/`AppendMany`, or through `ConcurrencyScopeBuilder.WithEventStreamType(...)`, when you need concurrency scoped to a specific stream type.
 
+## Concurrency scopes for read-model decisions (.NET)
+
+A command reading an event-source-keyed projection can call `eventStore.ReadModels.GetInstanceForDecision<T>(key)` and use the returned `ReadModelInstance<T>.ToConcurrencyScope()` when it appends. This scope uses the read key as event source, all projected event types (including removal events), and the last event the projection folded. It also protects **absence**: after a removal the scope expects that removal's sequence number; when no matching event has ever happened it explicitly expects `BeforeFirst`, regardless of the default first-append strategy. Any later matching append rejects the decision; other types and sources do not.
+
+Unlike the ordinary materialized read, this decision read folds the key's events from the event log using a fresh projection per call. It refuses reducers, joins, non-event-source keys, hierarchies, open-ended all-event subscriptions, unknown definitions and non-log projections with a typed reason rather than silently producing an incomplete scope. See [Getting a Single Instance](../read-models/getting-single-instance) for usage and cost.
+
 ## The First Append Into a Scope Is Not Checked by Default
 
 A concurrency check needs something to compare against, and the optimistic strategy gets one by reading the tail *through the scope's own narrowing*. When nothing matching that narrowing has been appended yet there is no tail to read, so the strategy reports `EventSequenceNumber.Unavailable` — the same value that means "no expected sequence number was supplied at all". The kernel cannot act on that, so it skips the check, notes it in a debug-level log line, and lets the append through — the skip is the designed default, so it is not logged as a warning.

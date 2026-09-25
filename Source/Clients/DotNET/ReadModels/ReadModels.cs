@@ -6,7 +6,10 @@ using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Decisions;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.ReadModelExplorer;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Events;
@@ -48,7 +51,7 @@ public class ReadModels(
     IReadModelWatcherManager readModelWatcherManager,
     IReducerObservers reducerObservers,
     IMaterializedReadModels materializedReadModels,
-    ILogger<ReadModels> logger) : IReadModels
+    ILogger<ReadModels> logger) : IReadModels, IDecisionReadModels
 {
     readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     readonly SinkTypeId _defaultSinkTypeId = options.Value.DefaultSinkTypeId;
@@ -245,6 +248,36 @@ public class ReadModels(
 
         var instance = JsonSerializer.Deserialize(readModelJson, readModelType, jsonSerializerOptions);
         return instance ?? throw new InvalidOperationException($"Read model returned null for type '{readModelType.Name}' with key '{key.Value}'");
+    }
+
+    /// <inheritdoc/>
+    public async Task<ReadModelInstance<TReadModel>> GetInstanceForDecision<TReadModel>(ReadModelKey key)
+    {
+        var services = eventStore.Connection as IDecisionReadModelsServiceAccessor ??
+            throw new NotSupportedException("This connection does not support decision reads.");
+        var response = await services.DecisionReadModels.GetInstanceForDecision(new GetInstanceForDecisionRequest
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            ReadModelIdentifier = typeof(TReadModel).GetReadModelIdentifier(),
+            Key = key.Value
+        }).EnsureSuccess();
+
+        if (response.Refusal != DecisionReadRefusal.None)
+        {
+            throw new DecisionReadRefused(response.Refusal);
+        }
+
+        var types = response.EventTypes.Select(EventType.Parse).ToArray();
+        if (types.Length == 0)
+        {
+            throw new InvalidOperationException("The decision read returned no projected event types.");
+        }
+
+        var instance = response.Instance == "null" ? default : JsonSerializer.Deserialize<TReadModel>(response.Instance, jsonSerializerOptions);
+        var read = new ReadModelInstance<TReadModel>(key, instance, response.SequenceNumber, Array.AsReadOnly(types));
+        _ = read.ToConcurrencyScope();
+        return read;
     }
 
     /// <inheritdoc/>

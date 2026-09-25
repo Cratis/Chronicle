@@ -14,8 +14,11 @@ public class when_generating_client_schema : Specification
     [Fact] void should_use_proto3_syntax() => _schema.ShouldContain("syntax = \"proto3\"");
     [Fact] void should_include_connection_service() => _schema.ShouldContain("ConnectionService");
     [Fact] void should_include_event_sequences_service() => _schema.ShouldContain("EventSequences");
-    [Fact] void should_include_all_available_services() =>
+    [Fact] void should_include_all_required_services() =>
         Contracts.AvailableServices.All
+            .Where(serviceType => serviceType != typeof(Contracts.Decisions.IDecisionReadModels))
             .All(serviceType => _schema.Contains(serviceType.Name.TrimStart('I')))
             .ShouldBeTrue();
+    [Fact] void should_not_require_the_optional_decision_read_service_from_older_kernels() =>
+        _schema.ShouldNotContain("service DecisionReadModels");
 }

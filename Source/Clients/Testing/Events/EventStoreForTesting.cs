@@ -374,6 +374,14 @@ public class EventStoreForTesting : IEventStore
         Task.FromResult(Enumerable.Empty<EventStoreNamespaceName>());
 
     /// <summary>
+    /// Registers an explicit decision read with its event-log watermark and projected event types.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="read">The pre-seeded decision read.</param>
+    public void RegisterDecisionRead<TReadModel>(ReadModelInstance<TReadModel> read) =>
+        _readModelsForTesting.RegisterDecisionInstance(read);
+
+    /// <summary>
     /// Registers a pre-seeded read model instance so that production code calling
     /// <see cref="IReadModels.GetInstanceById{TReadModel}"/> can retrieve it during the test.
     /// </summary>

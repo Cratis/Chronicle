@@ -54,6 +54,13 @@ public interface IProjection : IGrainWithStringKey
     Task<IEnumerable<EventType>> GetEventTypes();
 
     /// <summary>
+    /// Gets the event-source-keyed admission and complete event-type set for a decision read.
+    /// </summary>
+    /// <param name="eventStoreNamespace">Namespace to build the projection for.</param>
+    /// <returns>Admission and event types from the same projection definition.</returns>
+    Task<DecisionProjectionShape> GetDecisionProjectionShape(EventStoreNamespaceName eventStoreNamespace);
+
+    /// <summary>
     /// Get the event types for a preview scenario with a provided read model definition.
     /// </summary>
     /// <param name="readModelDefinition">The read model definition to use for preview.</param>

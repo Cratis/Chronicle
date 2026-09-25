@@ -3,11 +3,9 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
@@ -38,6 +36,7 @@ public class ImmediateProjection(
     ExpandoObject? _initialState;
     ReadModelDefinition? _readModelDefinition;
     IProjection? _projection;
+    EventType[]? _decisionEventTypes;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -62,12 +61,20 @@ public class ImmediateProjection(
     }
 
     /// <inheritdoc/>
+    public async Task InitializeForDecision(ProjectionDefinition definition, IEnumerable<EventType> eventTypes)
+    {
+        await OnProjectionDefinitionsChanged(definition);
+        _decisionEventTypes = eventTypes.ToArray();
+    }
+
+    /// <inheritdoc/>
     public Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
     {
         State = definition;
         _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         _initialState = null;
         _readModelDefinition = null;
+        _decisionEventTypes = null;
         return Task.CompletedTask;
     }
 
@@ -93,24 +100,12 @@ public class ImmediateProjection(
             var readModelKey = new ReadModelGrainKey(State.ReadModel, _projectionKey.EventStore);
             var readModel = GrainFactory.GetGrain<IReadModel>(readModelKey);
             _readModelDefinition = await readModel.GetDefinition();
-            var eventTypes = await _projection!.GetEventTypes();
+            var eventTypes = _decisionEventTypes ?? await _projection!.GetEventTypes();
             var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
 
-            var eventSequenceKey = new EventSequenceKey(_projectionKey!.EventSequenceId, _projectionKey!.EventStore, _projectionKey!.Namespace);
-            var eventSequence = GrainFactory.GetGrain<IEventSequence>(eventSequenceKey);
-            var tail = await eventSequence.GetTailSequenceNumberForEventTypes(eventTypes);
-            if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null)
-            {
-                logger.UsingCachedModelInstance();
-                if (!HasReadModel(_initialState))
-                {
-                    return ProjectionResult.Empty with { LastHandledEventSequenceNumber = tail };
-                }
-
-                var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, _readModelDefinition!.GetSchemaForLatestGeneration());
-                return new(initialStateAsJson, 0, tail);
-            }
-
+            // A global event-type tail is not a per-key watermark. Check the event log for this key on
+            // every call, even when the state is cached: only matching events actually folded here may
+            // advance the returned sequence number.
             var modelKey = _projectionKey.ReadModelKey.IsSpecified ? (EventSourceId)_projectionKey.ReadModelKey.Value : null!;
             using var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(fromSequenceNumber, modelKey, eventTypes: eventTypes);
             var projectedEventsCount = 0;

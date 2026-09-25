@@ -127,6 +127,18 @@ public class Projection(
     }
 
     /// <inheritdoc/>
+    public async Task<DecisionProjectionShape> GetDecisionProjectionShape(EventStoreNamespaceName eventStoreNamespace)
+    {
+        var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
+        return new(
+            projection.IsEventSourceKeyed,
+            State.Join.Count > 0 || State.RemovedWithJoin.Count > 0,
+            State.Children.Count > 0 || (State.Nested?.Count ?? 0) > 0,
+            projection.SubscribesToAllEvents,
+            projection.EventTypes.ToArray());
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<EventType>> GetEventTypesForPreview(ReadModelDefinition readModelDefinition)
     {
         var projection = await GetOrCreateProjectionForNamespaceWithReadModel(EventStoreNamespaceName.Default, readModelDefinition);

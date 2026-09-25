@@ -22,6 +22,14 @@ public interface IImmediateProjection : IGrainWithStringKey
     Task<ProjectionResult> GetModelInstance();
 
     /// <summary>
+    /// Initializes a fresh, isolated decision read with the definition validated by the caller.
+    /// </summary>
+    /// <param name="definition">The projection definition.</param>
+    /// <param name="eventTypes">The admitted projection's event types for this namespace, including removals.</param>
+    /// <returns>Awaitable task.</returns>
+    Task InitializeForDecision(Concepts.Projections.Definitions.ProjectionDefinition definition, IEnumerable<Concepts.Events.EventType> eventTypes);
+
+    /// <summary>
     /// Get the current model instance with additional events applied. Ignoring any new events from the event store.
     /// </summary>
     /// <param name="events">Collection of events to apply.</param>

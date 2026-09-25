@@ -84,6 +84,11 @@ public static class WellKnownServices
     public const string ReadModelExplorer = "ReadModelExplorer";
 
     /// <summary>
+    /// The generated service for decision-consistent reads from the event log.
+    /// </summary>
+    public const string DecisionReadModels = "DecisionReadModels";
+
+    /// <summary>
     /// The name of the ProjectionEditor service - the projection-editing surface the Workbench drives.
     /// </summary>
     /// <remarks>

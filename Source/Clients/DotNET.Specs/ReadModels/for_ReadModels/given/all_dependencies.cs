@@ -24,6 +24,7 @@ public class all_dependencies : Specification
     protected IEnumerable<IHaveReadModel> _additionalReadModels;
     protected IJsonSchemaGenerator _schemaGenerator;
     protected IChronicleServicesAccessor _servicesAccessor;
+    protected Contracts.Decisions.IDecisionReadModels _decisionReadModelsService;
     protected IServices _services;
     protected IReadModelWatcherManager _readModelWatcherManager;
     protected IReducerObservers _reducerObservers;
@@ -49,9 +50,11 @@ public class all_dependencies : Specification
 
         _services = Substitute.For<IServices>();
 
-        var connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
+        var connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor, IDecisionReadModelsServiceAccessor>();
         _servicesAccessor = connection as IChronicleServicesAccessor;
         _servicesAccessor.Services.Returns(_services);
+        _decisionReadModelsService = Substitute.For<Contracts.Decisions.IDecisionReadModels>();
+        ((IDecisionReadModelsServiceAccessor)connection).DecisionReadModels.Returns(_decisionReadModelsService);
         _eventStore.Connection.Returns(connection);
 
         var materializedReadModels = new MaterializedReadModels(

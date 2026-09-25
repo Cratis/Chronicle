@@ -7,6 +7,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
+using Cratis.Chronicle.Contracts.Decisions;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.EventTypes;
@@ -38,7 +39,7 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/>.
 /// </summary>
-public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor
+public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor, IDecisionReadModelsServiceAccessor
 {
     readonly ChronicleConnectionString _connectionString;
     readonly int _connectTimeout;
@@ -63,6 +64,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     IServices _services;
+    IDecisionReadModels? _decisionReadModels;
     IDisposable? _keepAliveSubscription;
     TaskCompletionSource? _connectTcs;
     DateTimeOffset? _lastConnectFailure;
@@ -165,6 +167,16 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             ConnectIfNotConnected();
             return _services;
+        }
+    }
+
+    /// <inheritdoc/>
+    IDecisionReadModels IDecisionReadModelsServiceAccessor.DecisionReadModels
+    {
+        get
+        {
+            ConnectIfNotConnected();
+            return _decisionReadModels!;
         }
     }
 
@@ -310,6 +322,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             await CheckCompatibility(callInvoker.CreateGrpcService<IConnectionService>(clientFactory));
         }
 
+        _decisionReadModels = callInvoker.CreateGrpcService<IDecisionReadModels>(clientFactory);
         _services = new Services(
             callInvoker.CreateGrpcService<ICompliance>(clientFactory),
             callInvoker.CreateGrpcService<IEventStores>(clientFactory),

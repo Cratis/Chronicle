@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Decisions;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Testing.Compliance;
 
@@ -20,7 +21,7 @@ internal sealed class ChronicleConnectionForTesting(
     IGrainFactory grainFactory,
     IStorage storage,
     InProcessCompliance compliance,
-    JsonSerializerOptions jsonSerializerOptions) : IChronicleConnection, IChronicleServicesAccessor
+    JsonSerializerOptions jsonSerializerOptions) : IChronicleConnection, IChronicleServicesAccessor, IDecisionReadModelsServiceAccessor
 {
     readonly TestingServices _services = new(grainFactory, storage, compliance, jsonSerializerOptions);
 
@@ -29,6 +30,9 @@ internal sealed class ChronicleConnectionForTesting(
 
     /// <inheritdoc/>
     IServices IChronicleServicesAccessor.Services => _services;
+
+    /// <inheritdoc/>
+    IDecisionReadModels IDecisionReadModelsServiceAccessor.DecisionReadModels => _services.DecisionReadModels;
 
     /// <inheritdoc/>
     public Task Connect() => Task.CompletedTask;

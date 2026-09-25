@@ -24,6 +24,20 @@ The read model type must already be registered by the client, either as a model-
 
 Each client names the operation in its own idiom, but the inputs are the same: the read model type and the read model key.
 
+## Guarding a command decision (.NET)
+
+When a command decides from a read model, use the additive `GetInstanceForDecision<T>(key)` API instead of `GetInstanceById<T>`. It returns a `ReadModelInstance<T>` with a nullable `Instance`, `SequenceNumber`, and `EventTypes`. `ToConcurrencyScope()` narrows the check to the read key as event source and **exactly** the projection's event types (including removal events):
+
+```csharp
+var read = await eventStore.ReadModels.GetInstanceForDecision<AccountBalance>(accountId);
+var scope = read.ToConcurrencyScope();
+// Pass scope for accountId in the concurrencyScopes dictionary of AppendMany.
+```
+
+This operation uses a separate generated service and **always computes from the event log**, even when the read model is materialized. It folds that key's matching events through the current projection definition on every read, so its cost grows with the key's history; it never trusts a sink watermark, replay progress, or an observer's eventual consistency. An absent result with a removal at sequence R carries R. A key with no matching events carries `EventSequenceNumber.Unavailable` in the read; `ToConcurrencyScope()` turns that into `BeforeFirst` so an intervening first matching append is rejected. Neither case silently skips the concurrency check. The scope protects matching **event appends**, not changes to the projection definition made after the read.
+
+Only projections on the event log whose events all resolve their keys directly to their event source ID are admitted. Joins, child or nested hierarchies, custom/constant keys, reducers, projections subscribing to all event types, an unknown definition, and unspecified keys receive a typed `DecisionReadRefused` reason instead of an unsafe scope. Other event sources and non-projected event types do not affect the decision watermark. Ordinary `GetInstanceById` behavior is unchanged. In in-process test scenarios, explicitly seed a `ReadModelInstance<T>` with its watermark and event types using `EventStoreForTesting.RegisterDecisionRead(read)`; an ordinary seeded instance has no reliable watermark and cannot answer this API.
+
 ## Missing instances
 
 If no instance exists for that key, clients return their normal "not found" shape: `null`, `nil`, or an empty result depending on the language. Treat that as "no state exists yet," not as a projection failure. For a materialized read model this covers both a key that was never created and one that has been removed — the observer is authoritative, so Chronicle does not fall back to a replay that would resurrect it.

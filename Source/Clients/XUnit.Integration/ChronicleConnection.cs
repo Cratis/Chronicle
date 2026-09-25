@@ -8,6 +8,7 @@ extern alias KernelConcepts;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
+using Cratis.Chronicle.Contracts.Decisions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ConnectionService = KernelGrpc::Cratis.Chronicle.Services.Clients.ConnectionService;
@@ -30,7 +31,7 @@ internal class ChronicleConnection(
     IConnectionLifecycle lifecycle,
     IGrainFactory grainFactory,
     ILocalSiloDetails localSiloDetails,
-    ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor
+    ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor, IDecisionReadModelsServiceAccessor
 {
     /// <summary>
     /// In-process test clients share the silo process and cannot network-drop, so they are flagged as
@@ -39,6 +40,7 @@ internal class ChronicleConnection(
     const bool KeepAliveExempt = true;
 
     IServices? _services;
+    IDecisionReadModels? _decisionReadModels;
     ConnectionService? _connectionService;
 
     /// <inheritdoc/>
@@ -55,6 +57,10 @@ internal class ChronicleConnection(
     }
 
     /// <inheritdoc/>
+    IDecisionReadModels IDecisionReadModelsServiceAccessor.DecisionReadModels =>
+        _decisionReadModels ?? throw new NotSupportedException("Decision reads are not configured for this connection.");
+
+    /// <inheritdoc/>
     public void Dispose()
     {
         lifecycle.Disconnected().GetAwaiter().GetResult();
@@ -67,7 +73,12 @@ internal class ChronicleConnection(
     /// Set the services.
     /// </summary>
     /// <param name="services">Services to set.</param>
-    internal void SetServices(IServices services) => _services = services;
+    /// <param name="decisionReadModels">The decision-read service.</param>
+    internal void SetServices(IServices services, IDecisionReadModels decisionReadModels)
+    {
+        _services = services;
+        _decisionReadModels = decisionReadModels;
+    }
 
     /// <summary>
     /// Re-establishes the client connection after a lifecycle disconnect.
