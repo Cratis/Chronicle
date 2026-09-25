@@ -14,7 +14,7 @@ public class and_wrapped_events_have_named_concurrency_scopes : given.an_event_s
         {
             var sequence = new Cratis.Chronicle.EventSequences.EventSequence();
             var events = new[] { new Cratis.Chronicle.EventSequences.EventForEventSourceId() };
-            var scopes = new System.Collections.Generic.Dictionary<Cratis.Chronicle.EventSequences.EventSourceId, string>();
+            var scopes = new System.Collections.Generic.Dictionary<Cratis.Chronicle.EventSequences.EventSourceId, Cratis.Chronicle.EventSequences.ConcurrencyScope>();
             sequence.AppendMany(events, concurrencyScopes: scopes);
         }
     }

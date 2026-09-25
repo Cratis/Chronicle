@@ -86,7 +86,7 @@ public class EventSequenceAppendAnalyzer : DiagnosticAnalyzer
         {
             var diagnostic = Diagnostic.Create(
                 Rule,
-                eventArgument.GetLocation(),
+                eventArgument.Expression.GetLocation(),
                 eventType.Name);
             context.ReportDiagnostic(diagnostic);
         }

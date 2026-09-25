@@ -16,7 +16,7 @@ public class and_unmarked_event_is_named_out_of_order : given.an_event_sequence_
         public void Append()
         {
             var sequence = new Cratis.Chronicle.EventSequences.EventSequence();
-            sequence.Append({|#0:@event: new MissingEvent()|}, eventSourceId: "source");
+            sequence.Append(@event: {|#0:new MissingEvent()|}, eventSourceId: "source");
         }
     }
     """;
