@@ -4,6 +4,8 @@
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 
+using IObserverRemover = Cratis.Chronicle.Observation.IObserverRemover;
+
 namespace Cratis.Chronicle.Services.Observation.for_Observers.given;
 
 public class all_dependencies : Specification
@@ -15,6 +17,7 @@ public class all_dependencies : Specification
     protected IObserverStateStorage _observerStateStorage;
     protected IFailedPartitionsStorage _failedPartitionsStorage;
     protected IGrainFactory _grainFactory;
+    protected IObserverRemover _observerRemover;
     protected Contracts.Observation.IObservers _observers;
 
     void Establish()
@@ -26,6 +29,7 @@ public class all_dependencies : Specification
         _observerStateStorage = Substitute.For<IObserverStateStorage>();
         _failedPartitionsStorage = Substitute.For<IFailedPartitionsStorage>();
         _grainFactory = Substitute.For<IGrainFactory>();
+        _observerRemover = Substitute.For<IObserverRemover>();
 
         _storage.GetEventStore(Arg.Any<Concepts.EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.Observers.Returns(_observerDefinitionsStorage);
@@ -33,6 +37,6 @@ public class all_dependencies : Specification
         _namespaceStorage.Observers.Returns(_observerStateStorage);
         _namespaceStorage.FailedPartitions.Returns(_failedPartitionsStorage);
 
-        _observers = new Observers(_grainFactory, _storage);
+        _observers = new Observers(_grainFactory, _storage, _observerRemover);
     }
 }

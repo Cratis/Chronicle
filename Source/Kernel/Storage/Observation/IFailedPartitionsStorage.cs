@@ -31,6 +31,18 @@ public interface IFailedPartitionsStorage
     Task Save(ObserverId observerId, FailedPartitions failedPartitions);
 
     /// <summary>
+    /// Remove every failed partition record for a specific <see cref="ObserverId"/>.
+    /// </summary>
+    /// <param name="observerId">The <see cref="ObserverId"/> to remove the records for.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Unlike saving an empty <see cref="FailedPartitions"/>, which only clears the partitions it is told are
+    /// resolved, this removes every record keyed to the observer. That is what removing an observer needs: nothing
+    /// keyed to it may survive it.
+    /// </remarks>
+    Task RemoveAllFor(ObserverId observerId);
+
+    /// <summary>
     /// Get all the failed partitions for a specific <see cref="ObserverId"/>.
     /// </summary>
     /// <param name="observerId">Optional <see cref="ObserverId"/> to get for.</param>

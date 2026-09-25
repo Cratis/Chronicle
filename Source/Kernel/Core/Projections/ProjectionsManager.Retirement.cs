@@ -26,6 +26,22 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 public partial class ProjectionsManager
 {
+    /// <inheritdoc/>
+    public async Task Forget(ProjectionId identifier)
+    {
+        if (State.Projections.All(projection => projection.Identifier != identifier))
+        {
+            return;
+        }
+
+        logger.RetiringProjection(identifier);
+        await projectionsService.Unregister(_eventStoreName, identifier);
+        await GrainFactory.GetGrain<IProjection>(new ProjectionKey(identifier, _eventStoreName)).Remove();
+
+        State.Projections = State.Projections.Where(projection => projection.Identifier != identifier).ToList();
+        await WriteStateAsync();
+    }
+
     async Task RetireUnregisteredProjections(IReadOnlyList<ProjectionDefinition> registeredDefinitions, ProjectionOwner owner)
     {
         var registeredIdentifiers = registeredDefinitions.Select(definition => definition.Identifier).ToHashSet();

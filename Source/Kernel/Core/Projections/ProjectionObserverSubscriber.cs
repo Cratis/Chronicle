@@ -22,6 +22,8 @@ using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
+using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
+
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
@@ -56,6 +58,7 @@ public class ProjectionObserverSubscriber(
 {
     ObserverSubscriberKey _key = ObserverSubscriberKey.Unspecified;
     IProjectionPipeline? _pipeline;
+    EngineProjection? _projection;
     IProjectionChangesetNotifier? _changesetNotifier;
     JsonSchema? _schema;
     Exception? _pipelineBuildFailure;
@@ -157,6 +160,21 @@ public class ProjectionObserverSubscriber(
 
             foreach (var @event in events)
             {
+                // An event this projection no longer takes part in still reaches us for a while after a
+                // definition drops it: the subscriber is told about the new definition before the observer's
+                // subscription is narrowed to match, and a replay scheduled by that same change reads through
+                // the subscription's event types. Resolving a key for it would throw and fail the partition,
+                // which is how removing a child collection could leave the projection stuck mid-replay (#3722).
+                // Skipping is what the definition actually says to do - the event contributes nothing here -
+                // while still advancing the observer past it. An event type the definition *does* name but the
+                // pipeline cannot resolve is a different thing entirely, and still fails so it gets retried.
+                if (_projection?.Accepts(@event.Context.EventType) == false)
+                {
+                    lastSuccessfullyObservedEvent = @event;
+                    logger.SkippedEventNotInProjection(@event.Context.EventType, @event.Context.SequenceNumber, _key);
+                    continue;
+                }
+
                 var pipelineContext = await _pipeline.Handle(@event);
                 changeset = pipelineContext.Changeset;
 
@@ -255,12 +273,14 @@ public class ProjectionObserverSubscriber(
             var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
             var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel, eventTypeSchemas);
             _pipeline = await projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
+            _projection = projection;
             _schema = readModel.GetSchemaForLatestGeneration();
             _pipelineBuildFailure = null;
         }
         catch (Exception exception)
         {
             _pipeline = null;
+            _projection = null;
             _pipelineBuildFailure = exception;
             logger.FailedBuildingPipeline(exception, _key);
         }

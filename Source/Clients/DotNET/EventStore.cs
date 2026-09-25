@@ -209,6 +209,7 @@ public class EventStore : IEventStore
         ExternalServices = new ExternalServices.ExternalServices(this, loggerFactory.CreateLogger<ExternalServices.ExternalServices>());
         Subscriptions = new EventStoreSubscriptions.EventStoreSubscriptions(EventTypes, this, loggerFactory.CreateLogger<EventStoreSubscriptions.EventStoreSubscriptions>());
         FailedPartitions = new FailedPartitions(this);
+        Observers = new Observers(this);
 
         var readModelsWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions));
         var materializedReadModels = new MaterializedReadModels(
@@ -313,6 +314,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IFailedPartitions FailedPartitions { get; }
+
+    /// <inheritdoc/>
+    public IObservers Observers { get; }
 
     /// <inheritdoc/>
     public IReadModels ReadModels { get; }

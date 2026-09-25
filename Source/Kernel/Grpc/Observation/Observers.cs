@@ -10,6 +10,10 @@ using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
 
+// Cratis.Chronicle.Observation cannot be imported wholesale here: it declares the kernel-side command records that
+// share their names with the contract types this file is built around, starting with RemoveObserver.
+using IObserverRemover = Cratis.Chronicle.Observation.IObserverRemover;
+
 namespace Cratis.Chronicle.Services.Observation;
 
 /// <summary>
@@ -17,7 +21,8 @@ namespace Cratis.Chronicle.Services.Observation;
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
 /// <param name="storage">The <see cref="IStorage"/>.</param>
-internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : IObservers
+/// <param name="observerRemover">The <see cref="IObserverRemover"/> for removing observers.</param>
+internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IObserverRemover observerRemover) : IObservers
 {
     const int ObserverCompletionPollingDelayMs = 50;
 
@@ -94,6 +99,25 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
     /// <inheritdoc/>
     public Task ClearFailedPartitions(ClearFailedPartitions command, CallContext context = default) =>
         grainFactory.GetObserver(command).ClearFailedPartitions();
+
+    /// <inheritdoc/>
+    public async Task<RemoveObserverResponse> RemoveObserver(RemoveObserver command, CallContext context = default)
+    {
+        var eventSequenceId = string.IsNullOrEmpty(command.EventSequenceId)
+            ? Concepts.EventSequences.EventSequenceId.Log
+            : (Concepts.EventSequences.EventSequenceId)command.EventSequenceId;
+
+        var result = await observerRemover.Remove(
+            (Concepts.EventStoreName)command.EventStore,
+            (Concepts.Observation.ObserverId)command.ObserverId,
+            eventSequenceId);
+
+        return new RemoveObserverResponse
+        {
+            Outcome = (ObserverRemovalOutcome)(int)result.Outcome,
+            BlockingNamespace = result.Outcome == Concepts.Observation.ObserverRemovalOutcome.Removed ? string.Empty : result.BlockingNamespace.Value
+        };
+    }
 
     /// <inheritdoc/>
     public async Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default)
