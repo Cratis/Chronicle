@@ -33,10 +33,12 @@ public enum EventObservationState
     /// happened three days ago and the observer is only now reaching it' demand opposite things of a reactor
     /// that acts on the world - and they used to be the same value.
     /// <para>
-    /// Delivering it combined was tried first and stalls every catch-up observer. Despite the [Flags]
-    /// declaration, a combination does not survive the round trip through job-step state and the wire, and
-    /// the stall is silent - the observer simply never reaches running. Until that is fixed, only single
-    /// declared members may be put on this enum in flight.
+    /// Delivering it combined stalls every catch-up observer on Cratis.Fundamentals 7.19.3 and earlier:
+    /// Orleans routes every Cratis-namespaced type through Fundamentals' EnumConverter, which wrote a [Flags]
+    /// combination and then refused to read it back, so the job step arguments failed to deserialize, the step
+    /// never ran, and the observer silently never reached running. Fixed in Fundamentals by
+    /// https://github.com/Cratis/Fundamentals/pull/1131; once that version is picked up here, this may be
+    /// delivered as Initial | CatchUp and this note removed.
     /// </para>
     /// </remarks>
     CatchUp = 1 << 2,
