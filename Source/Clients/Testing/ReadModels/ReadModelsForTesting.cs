@@ -60,9 +60,9 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels, IDecisionRea
             return Task.FromResult((ReadModelInstance<TReadModel>)decisionRead);
         }
 
-        // Only explicit decision seeds override the real event-log read. Ordinary seeds carry no
-        // watermark, so they must not be used to answer a decision read.
-        return inner.GetInstanceForDecision<TReadModel>(key);
+        // Ordinary seeds carry no watermark, and the in-process TestingGrainFactory cannot serve
+        // the kernel decision read. Only an explicit decision seed can provide a guarded scope.
+        throw new InvalidOperationException($"No decision read is seeded for '{identifier}' and key '{key.Value}'. Seed it with EventStoreForTesting.RegisterDecisionRead before calling GetInstanceForDecision.");
     }
 
     /// <inheritdoc/>

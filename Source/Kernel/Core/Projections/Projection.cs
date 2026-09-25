@@ -136,7 +136,7 @@ public class Projection(
         return new(
             State.From.Values.All(from => IsDirectEventSourceKey(from.Key, from.ParentKey)) &&
             State.RemovedWith.Values.All(removed => IsDirectEventSourceKey(removed.Key, removed.ParentKey)) &&
-            !State.FromDerivatives.Any() && State.FromEventProperty is null &&
+            !(State.FromDerivatives?.Any() ?? false) && State.FromEventProperty is null &&
             State.Join.Count == 0 && State.RemovedWithJoin.Count == 0 &&
             State.Children.Count == 0 && (State.Nested?.Count ?? 0) == 0 &&
             !projection.SubscribesToAllEvents && projection.EventTypes.Any(),

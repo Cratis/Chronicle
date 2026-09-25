@@ -50,6 +50,19 @@ public class when_getting_decision_shape_for_client_keys
         shape.EventTypes.ShouldContain(_removed);
     }
 
+    [Theory]
+    [InlineData("$composite(id=$eventSourceId)", null)]
+    [InlineData("$name", null)]
+    [InlineData("fixed-key", null)]
+    [InlineData("$eventSourceId", "parentId")]
+    public async Task should_refuse_non_direct_from_or_parent_keys(string fromKey, string? parentKey)
+    {
+        var definition = CreateDefinition(fromKey, parentKey is null ? null : new PropertyExpression(parentKey));
+        definition.RemovedWith[_removed] = new(WellKnownExpressions.EventSourceId, null);
+        var grain = await CreateGrain(definition);
+        (await grain.GetDecisionProjectionShape(EventStoreNamespaceName.Default)).IsEventSourceKeyed.ShouldBeFalse();
+    }
+
     [Fact]
     public async Task should_refuse_a_custom_removal_key()
     {

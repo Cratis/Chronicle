@@ -43,7 +43,6 @@ using KernelCapturesService = KernelGrpc::Cratis.Chronicle.Services.Captures.Cap
 using KernelCaptureValidator = KernelCore::Cratis.Chronicle.Captures.Engine.CaptureValidator;
 using KernelComplianceService = KernelGrpc::Cratis.Chronicle.Services.Compliance.ComplianceService;
 using KernelConstraintsService = KernelGrpc::Cratis.Chronicle.Services.Events.Constraints.Constraints;
-using KernelDecisionReadModelsService = KernelGrpc::Cratis.Chronicle.Services.Decisions.DecisionReadModels;
 using KernelEventStoresService = KernelGrpc::Cratis.Chronicle.Services.EventStores.EventStores;
 using KernelEventTypeRegistrar = KernelCore::Cratis.Chronicle.EventTypes.EventTypeRegistrar;
 using KernelEventTypesService = KernelGrpc::Cratis.Chronicle.Services.EventTypes.EventTypes;
@@ -114,7 +113,6 @@ internal sealed class TestingServices : IServices
     readonly Lazy<IServer> _server;
     readonly Lazy<IEventStores> _eventStores;
     readonly Lazy<IReadModels> _readModels;
-    readonly Lazy<IDecisionReadModels> _decisionReadModels;
     readonly Lazy<ICompliance> _compliance;
 
     /// <summary>
@@ -295,13 +293,6 @@ internal sealed class TestingServices : IServices
                 new KernelMaterializedReadModelStore(storage, compliance.CreateReadModelsCompliance()),
                 jsonSerializerOptions));
 
-        _decisionReadModels = new(() =>
-            new KernelDecisionReadModelsService(
-                grainFactory,
-                compliance.CreateReadModelsCompliance(),
-                jsonSerializerOptions,
-                NullLogger<KernelDecisionReadModelsService>.Instance));
-
         _compliance = new(() =>
             new KernelComplianceService(
                 grainFactory,
@@ -313,9 +304,10 @@ internal sealed class TestingServices : IServices
     public IReadModels ReadModels => _readModels.Value;
 
     /// <summary>
-    /// Gets the in-process generated decision-read service.
+    /// Decision reads require explicit seeds in in-process scenarios; TestingGrainFactory cannot serve them.
     /// </summary>
-    public IDecisionReadModels DecisionReadModels => _decisionReadModels.Value;
+    /// <exception cref="NotSupportedException">The kernel decision service cannot run in-process.</exception>
+    public IDecisionReadModels DecisionReadModels => throw new NotSupportedException("Decision reads require EventStoreForTesting.RegisterDecisionRead in test scenarios.");
 
     /// <inheritdoc/>
     public IMaterializedReadModels MaterializedReadModels => throw new NotSupportedException("MaterializedReadModels is not supported in test scenarios.");

@@ -122,6 +122,18 @@ public static class SerializationConfigurationExtensions
         return services;
     }
 
+    /// <summary>
+    /// Applies the kernel's JSON converters to serializer options.
+    /// </summary>
+    /// <param name="options">The serializer options to configure.</param>
+    internal static void ApplyConverters(JsonSerializerOptions options)
+    {
+        foreach (var converter in _converters)
+        {
+            options.Converters.Add(converter);
+        }
+    }
+
     static void Configure(this IServiceCollection services)
     {
         // Pre-warm the global JsonSerializerOptions on this single configuration thread. Its lazy
@@ -165,13 +177,5 @@ public static class SerializationConfigurationExtensions
                     || (type.Namespace?.StartsWith("Cratis") ?? false);
             },
             options));
-    }
-
-    static void ApplyConverters(JsonSerializerOptions options)
-    {
-        foreach (var converter in _converters)
-        {
-            options.Converters.Add(converter);
-        }
     }
 }

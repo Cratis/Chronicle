@@ -3,18 +3,19 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Setup.Serialization;
 
 namespace Cratis.Chronicle.Decisions.for_DecisionReadModel;
 
@@ -70,10 +71,12 @@ public class when_reading_for_a_decision
 
     static JsonSerializerOptions CreateOptions()
     {
-        var options = new JsonSerializerOptions();
-        options.Converters.Add(new PropertyExpressionDictionaryConverter());
-        options.Converters.Add(new FromDefinitionsConverter());
-        options.Converters.Add(new RemovedWithDefinitionsConverter());
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+        SerializationConfigurationExtensions.ApplyConverters(options);
         return options;
     }
 

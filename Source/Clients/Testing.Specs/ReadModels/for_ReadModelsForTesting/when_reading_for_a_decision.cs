@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Testing.Events;
 
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelsForTesting;
 
@@ -23,17 +24,19 @@ public class when_reading_for_a_decision
     }
 
     [Fact]
-    public async Task should_delegate_an_unseeded_key_to_the_real_decision_read()
+    public async Task should_require_an_explicit_decision_seed_for_an_unseeded_key_in_the_event_store()
     {
-        var inner = Substitute.For<IReadModels, IDecisionReadModels>();
-        var expected = new ReadModelInstance<string>("source", "real", 11, [_created]);
-        ((IDecisionReadModels)inner).GetInstanceForDecision<string>("source").Returns(expected);
-        var wrapper = new ReadModelsForTesting(inner);
-        wrapper.RegisterDecisionInstance(new ReadModelInstance<string>("other", "seed", 9, [_created]));
-
-        var actual = await ((IReadModels)wrapper).GetInstanceForDecision<string>("source");
-
-        actual.ShouldEqual(expected);
-        await ((IDecisionReadModels)inner).Received(1).GetInstanceForDecision<string>("source");
+        var store = new EventStoreForTesting(null, Substitute.For<IClientArtifactsProvider>());
+        try
+        {
+            store.RegisterDecisionRead(new ReadModelInstance<string>("other", "seed", 9, [_created]));
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => store.ReadModels.GetInstanceForDecision<string>("source"));
+            exception.Message.ShouldContain("RegisterDecisionRead");
+            exception.Message.ShouldContain("source");
+        }
+        finally
+        {
+            store.Connection.Dispose();
+        }
     }
 }

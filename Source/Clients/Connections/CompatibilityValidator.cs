@@ -80,10 +80,7 @@ internal static partial class CompatibilityValidator
 
         // SchemaGenerator requires all types in a single call to share the same proto package
         // (derived from C# namespace). Group by namespace and concatenate the resulting schemas.
-        // Validate older kernels for ordinary client APIs: the decision-read service is opt-in.
-        // Including it here makes Validate reject connections to kernels without that endpoint.
         var schemas = Contracts.AvailableServices.All
-            .Where(t => t != typeof(Contracts.Decisions.IDecisionReadModels))
             .GroupBy(t => t.Namespace ?? string.Empty)
             .Select(group => generator.GetSchema(group.ToArray()));
 
