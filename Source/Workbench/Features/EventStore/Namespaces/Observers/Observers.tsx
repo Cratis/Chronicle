@@ -88,6 +88,12 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             icon: <faIcons.FaShield className='mr-2' />,
             disabled: !viewModel.canClearObserverQuarantine,
             command: () => viewModel.clearObserverQuarantine(params.eventStore!, params.namespace!)
+        },
+        {
+            label: strings.eventStore.namespaces.observers.actions.remove,
+            icon: <faIcons.FaTrash className='mr-2' />,
+            disabled: !viewModel.canRemoveObserver,
+            command: () => viewModel.removeObserver(params.eventStore!, params.namespace!)
         }
     ];
 

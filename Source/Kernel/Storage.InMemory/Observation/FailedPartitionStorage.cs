@@ -53,6 +53,23 @@ public sealed class FailedPartitionStorage : IFailedPartitionsStorage, IDisposab
     }
 
     /// <inheritdoc/>
+    public Task RemoveAllFor(ObserverId observerId)
+    {
+        var removedAny = false;
+        foreach (var partition in SnapshotFor(observerId))
+        {
+            removedAny |= _partitions.TryRemove(partition.Id, out _);
+        }
+
+        if (removedAny)
+        {
+            _allSubject.OnNext(Snapshot());
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task<FailedPartitions> GetFor(ObserverId? observerId)
     {
         var partitions = observerId is null

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Microsoft.Extensions.Logging;
 
@@ -25,4 +26,7 @@ internal static partial class ProjectionObserverSubscriberLogging
 
     [LoggerMessage(LogLevel.Trace, "Successfully handled all events for projection pipeline for key {Key}")]
     internal static partial void SuccessfullyHandledAllEvents(this ILogger<ProjectionObserverSubscriber> logger, ObserverSubscriberKey key);
+
+    [LoggerMessage(LogLevel.Debug, "Skipping event {EventType} at {EventSequenceNumber} for key {Key} - the current projection definition does not take part in it")]
+    internal static partial void SkippedEventNotInProjection(this ILogger<ProjectionObserverSubscriber> logger, EventType eventType, ulong eventSequenceNumber, ObserverSubscriberKey key);
 }

@@ -51,4 +51,19 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// </param>
     /// <returns>Awaitable task.</returns>
     Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null);
+
+    /// <summary>
+    /// Forget a single registered projection.
+    /// </summary>
+    /// <param name="identifier">The <see cref="ProjectionId"/> of the projection to forget.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Called when an observer is removed outright, so that the manager stops treating the projection as registered.
+    /// Without this the definition survives in the manager's own state and the next activation subscribes it again,
+    /// recreating the very observer records the removal just deleted. The projection is evicted from the engine and
+    /// its own grain state is cleared; its sink container is left untouched, as it is everywhere else.
+    /// Forgetting a projection this manager does not know is a no-op, so a removal that partially failed can be
+    /// repeated safely.
+    /// </remarks>
+    Task Forget(ProjectionId identifier);
 }

@@ -106,6 +106,12 @@ enum ObserverOwner {
    Client = 1;
    Kernel = 2;
 }
+enum ObserverRemovalOutcome {
+   Removed = 0;
+   ObserverNotFound = 1;
+   ObserverActive = 2;
+   ObserverSubscribed = 3;
+}
 enum ObserverRunningState {
    OBSERVER_RUNNING_STATE_Unknown = 0;
    Active = 1;
@@ -126,6 +132,16 @@ enum PartitionRecoveryOutcome {
    PartitionNotFound = 1;
    ObserverQuarantined = 2;
    PartitionQuarantined = 3;
+}
+message RemoveObserver {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ObserverId = 3;
+   string EventSequenceId = 4;
+}
+message RemoveObserverResponse {
+   ObserverRemovalOutcome Outcome = 1;
+   string BlockingNamespace = 2;
 }
 message Replay {
    string EventStore = 1;
@@ -179,6 +195,7 @@ service Observers {
    rpc GetObservers (AllObserversRequest) returns (IEnumerable_ObserverInformation);
    rpc GetReplayableObserversForEventTypes (GetReplayableObserversForEventTypesRequest) returns (IEnumerable_ObserverInformation);
    rpc ObserveObservers (AllObserversRequest) returns (stream IEnumerable_ObserverInformation);
+   rpc RemoveObserver (.Cratis.Chronicle.Contracts.Observation.RemoveObserver) returns (RemoveObserverResponse);
    rpc Replay (.Cratis.Chronicle.Contracts.Observation.Replay) returns (ReplayResponse);
    rpc ReplayPartition (.Cratis.Chronicle.Contracts.Observation.ReplayPartition) returns (.google.protobuf.Empty);
    rpc RetryPartition (.Cratis.Chronicle.Contracts.Observation.RetryPartition) returns (RetryPartitionResponse);
