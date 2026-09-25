@@ -2,7 +2,7 @@
 
 ## Rule Description
 
-Types that are appended to event sequences must be marked with the `[EventType]` attribute. This ensures that all events in the event store are properly identified and can be correctly deserialized.
+Types that are appended to event sequences must be marked with the `[EventType]` attribute. This ensures that all events in the event store are properly identified and can be correctly deserialized. The rule checks the event argument of `Append` and `AppendMany`, including calls with named arguments. For `AppendMany(IEnumerable<EventForEventSourceId>, ...)`, the wrappers carry the events; optional correlation IDs and concurrency scopes are not event types and are not checked by this rule.
 
 ## Severity
 
