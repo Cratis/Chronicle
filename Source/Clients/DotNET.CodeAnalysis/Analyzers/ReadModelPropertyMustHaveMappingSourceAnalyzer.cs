@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 
@@ -25,6 +26,9 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
     const string ModelBoundNamespace = "Cratis.Chronicle.Projections.ModelBound";
     const string IdentifierName = "Id";
     const string SetValueAttributeName = "SetValueAttribute";
+    const string ChildrenFromAttributeName = "ChildrenFromAttribute";
+    const string NestedAttributeName = "NestedAttribute";
+    const string NotProjectedAttributeName = "NotProjectedAttribute";
 
     static readonly HashSet<string> ModelBoundMappingAttributeNames = new(StringComparer.Ordinal)
     {
@@ -32,7 +36,8 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
         "SetFromAttribute",
         "SetFromContextAttribute",
         SetValueAttributeName,
-        "ChildrenFromAttribute",
+        NestedAttributeName,
+        ChildrenFromAttributeName,
         "JoinAttribute",
         "AddFromAttribute",
         "SubtractFromAttribute",
@@ -61,14 +66,32 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSymbolAction(AnalyzeType, SymbolKind.NamedType);
+
+        // The events that populate a child record are declared by its parent's [ChildrenFrom<TEvent>], not by the
+        // child itself, so the child cannot be judged in isolation. The parent lookup is built once per compilation
+        // and only when something actually needs it.
+        context.RegisterCompilationStartAction(compilationStart =>
+        {
+            var eventsByChildType = new Lazy<Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>>>(
+                () => BuildEventsByChildType(compilationStart.Compilation),
+                LazyThreadSafetyMode.ExecutionAndPublication);
+
+            compilationStart.RegisterSymbolAction(symbolContext => AnalyzeType(symbolContext, eventsByChildType), SymbolKind.NamedType);
+        });
     }
 
-    static void AnalyzeType(SymbolAnalysisContext context)
+    static void AnalyzeType(SymbolAnalysisContext context, Lazy<Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>>> eventsByChildType)
     {
         var typeSymbol = (INamedTypeSymbol)context.Symbol;
 
         var subscribedEvents = GetSubscribedEventTypes(typeSymbol);
+
+        // A child record is populated from the events its parent names in [ChildrenFrom<TEvent>]. Those count as
+        // subscribed for the child too - without them every property of every child record reads as unmapped.
+        if (eventsByChildType.Value.TryGetValue(typeSymbol, out var inheritedEvents))
+        {
+            subscribedEvents.AddRange(inheritedEvents);
+        }
 
         // Only a model-bound projection is analyzed: it must carry at least one model-bound mapping attribute
         // (class-level [FromEvent<T>] or a member-level mapping attribute). Be conservative — never fire on
@@ -93,6 +116,13 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
     {
         // Skip members that are explicitly sourced by a mapping attribute or marked as the key.
         if (attributes.Any(IsMappingOrKeyAttribute))
+        {
+            return;
+        }
+
+        // Skip members the author has declared the reader assembles. Having no mapping source is the whole point
+        // of such a member, so reporting it as unmapped says nothing the author does not already know.
+        if (attributes.Any(IsNotProjectedAttribute))
         {
             return;
         }
@@ -160,6 +190,89 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
         return events;
     }
 
+    /// <summary>
+    /// Maps every type used as the element of a <c language="csharp">[ChildrenFrom&lt;TEvent&gt;]</c> collection to the events that populate it.
+    /// </summary>
+    /// <param name="compilation">The compilation to scan.</param>
+    /// <returns>The events that populate each child type, keyed by that child type.</returns>
+    /// <remarks>
+    /// Only types declared in this compilation are scanned. A parent in a referenced assembly cannot be seen, so a
+    /// child whose only parent lives outside the compilation is still judged on its own attributes - the analyzer
+    /// stays conservative rather than guessing.
+    /// </remarks>
+    static Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>> BuildEventsByChildType(Compilation compilation)
+    {
+        var eventsByChildType = new Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>>(SymbolEqualityComparer.Default);
+
+        foreach (var type in GetAllTypes(compilation.Assembly.GlobalNamespace))
+        {
+            foreach (var (_, memberType, attributes) in GetMembers(type))
+            {
+                var childEvents = attributes
+                    .Where(attribute => attribute.AttributeClass?.Name == ChildrenFromAttributeName && IsModelBoundMappingAttribute(attribute))
+                    .Select(attribute => attribute.AttributeClass!.TypeArguments.FirstOrDefault())
+                    .OfType<INamedTypeSymbol>()
+                    .ToArray();
+
+                if (childEvents.Length == 0 || GetCollectionElementType(memberType) is not { } elementType)
+                {
+                    continue;
+                }
+
+                if (!eventsByChildType.TryGetValue(elementType, out var events))
+                {
+                    events = [];
+                    eventsByChildType[elementType] = events;
+                }
+
+                events.AddRange(childEvents);
+            }
+        }
+
+        return eventsByChildType;
+    }
+
+    static IEnumerable<INamedTypeSymbol> GetAllTypes(INamespaceSymbol namespaceSymbol)
+    {
+        foreach (var type in namespaceSymbol.GetTypeMembers())
+        {
+            yield return type;
+
+            foreach (var nested in GetAllNestedTypes(type))
+            {
+                yield return nested;
+            }
+        }
+
+        foreach (var nestedNamespace in namespaceSymbol.GetNamespaceMembers())
+        {
+            foreach (var type in GetAllTypes(nestedNamespace))
+            {
+                yield return type;
+            }
+        }
+    }
+
+    static IEnumerable<INamedTypeSymbol> GetAllNestedTypes(INamedTypeSymbol typeSymbol)
+    {
+        foreach (var nested in typeSymbol.GetTypeMembers())
+        {
+            yield return nested;
+
+            foreach (var deeper in GetAllNestedTypes(nested))
+            {
+                yield return deeper;
+            }
+        }
+    }
+
+    static INamedTypeSymbol? GetCollectionElementType(ITypeSymbol memberType) => memberType switch
+    {
+        IArrayTypeSymbol { ElementType: INamedTypeSymbol elementType } => elementType,
+        INamedTypeSymbol { IsGenericType: true } namedType when namedType.TypeArguments.Length == 1 => namedType.TypeArguments[0] as INamedTypeSymbol,
+        _ => null
+    };
+
     static IEnumerable<(ISymbol Member, ITypeSymbol Type, IReadOnlyList<AttributeData> Attributes)> GetMembers(INamedTypeSymbol typeSymbol)
     {
         // Restrict to public instance properties: this excludes the compiler-generated protected
@@ -216,6 +329,11 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
     static bool IsModelBoundMappingAttribute(AttributeData attribute) =>
         attribute.AttributeClass is { } attributeClass &&
         ModelBoundMappingAttributeNames.Contains(attributeClass.Name) &&
+        attributeClass.ContainingNamespace?.ToDisplayString() == ModelBoundNamespace;
+
+    static bool IsNotProjectedAttribute(AttributeData attribute) =>
+        attribute.AttributeClass is { } attributeClass &&
+        attributeClass.Name == NotProjectedAttributeName &&
         attributeClass.ContainingNamespace?.ToDisplayString() == ModelBoundNamespace;
 
     static bool IsMappingOrKeyAttribute(AttributeData attribute) =>

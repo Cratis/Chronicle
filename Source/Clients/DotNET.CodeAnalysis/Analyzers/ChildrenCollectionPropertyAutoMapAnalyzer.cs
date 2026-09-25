@@ -22,6 +22,7 @@ public class ChildrenCollectionPropertyAutoMapAnalyzer : DiagnosticAnalyzer
     const string ModelBoundNamespace = "Cratis.Chronicle.Projections.ModelBound";
     const string KeysNamespace = "Cratis.Chronicle.Keys";
     const string KeyAttributeName = "KeyAttribute";
+    const string NotProjectedAttributeName = "NotProjectedAttribute";
     const string IdentifiedByParameterName = "identifiedBy";
 
     static readonly HashSet<string> _mappingAttributeNames =
@@ -99,6 +100,7 @@ public class ChildrenCollectionPropertyAutoMapAnalyzer : DiagnosticAnalyzer
             if (!IsCollection(type) ||
                 IsChildKey(name, attributes, identifiedBy) ||
                 HasExplicitMapping(attributes) ||
+                IsNotProjected(attributes) ||
                 eventPropertyNames.Contains(name))
             {
                 continue;
@@ -185,6 +187,20 @@ public class ChildrenCollectionPropertyAutoMapAnalyzer : DiagnosticAnalyzer
             string.Equals(attributeClass.Name, KeyAttributeName, StringComparison.Ordinal) &&
             attributeClass.ContainingNamespace?.ToDisplayString() == KeysNamespace);
     }
+
+    /// <summary>
+    /// Determines whether a member is declared as one the reader assembles.
+    /// </summary>
+    /// <param name="attributes">The attributes to inspect.</param>
+    /// <returns>True when the member is declared as assembled by the reader.</returns>
+    /// <remarks>
+    /// Such a collection is meant to project as empty - that is not the mistake this rule reports.
+    /// </remarks>
+    static bool IsNotProjected(ImmutableArray<AttributeData> attributes) =>
+        attributes.Any(attribute =>
+            attribute.AttributeClass is { } attributeClass &&
+            attributeClass.ContainingNamespace?.ToDisplayString() == ModelBoundNamespace &&
+            attributeClass.Name == NotProjectedAttributeName);
 
     static bool HasExplicitMapping(ImmutableArray<AttributeData> attributes) =>
         attributes.Any(attribute =>
