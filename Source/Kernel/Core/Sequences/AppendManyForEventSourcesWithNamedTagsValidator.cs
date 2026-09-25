@@ -7,14 +7,19 @@ using FluentValidation;
 namespace Cratis.Chronicle.Sequences;
 
 /// <summary>
-/// Represents the validator for <see cref="AppendManyForEventSources"/>.
+/// Represents the validator for <see cref="AppendManyForEventSourcesWithNamedTags"/>.
 /// </summary>
-internal class AppendManyForEventSourcesValidator : CommandValidator<AppendManyForEventSources>
+/// <remarks>
+/// The command hands over to <see cref="AppendManyForEventSources"/> without going back through the command pipeline,
+/// so <see cref="AppendManyForEventSourcesValidator"/> never sees it. This validator applies the same rules, plus the
+/// named-tag rules.
+/// </remarks>
+internal class AppendManyForEventSourcesWithNamedTagsValidator : CommandValidator<AppendManyForEventSourcesWithNamedTags>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="AppendManyForEventSourcesValidator"/> class.
+    /// Initializes a new instance of the <see cref="AppendManyForEventSourcesWithNamedTagsValidator"/> class.
     /// </summary>
-    public AppendManyForEventSourcesValidator()
+    public AppendManyForEventSourcesWithNamedTagsValidator()
     {
         RuleFor(_ => _.EventStore).RequiredEventStore();
         RuleFor(_ => _.Namespace).RequiredNamespace();
@@ -30,6 +35,7 @@ internal class AppendManyForEventSourcesValidator : CommandValidator<AppendManyF
             @event.RuleFor(_ => _.EventType).RequiredEventType();
             @event.RuleFor(_ => _.EventType.Id).RequiredEventTypeId().When(_ => _.EventType is not null);
             @event.RuleFor(_ => _.Content).RequiredContent();
+            @event.RuleForEach(_ => _.NamedTags).ValidNamedTag();
         });
     }
 }

@@ -7,14 +7,18 @@ using FluentValidation;
 namespace Cratis.Chronicle.Sequences;
 
 /// <summary>
-/// Represents the validator for <see cref="AppendMany"/>.
+/// Represents the validator for <see cref="AppendManyWithNamedTags"/>.
 /// </summary>
-internal class AppendManyValidator : CommandValidator<AppendMany>
+/// <remarks>
+/// The command hands over to <see cref="AppendMany"/> without going back through the command pipeline, so
+/// <see cref="AppendManyValidator"/> never sees it. This validator applies the same rules, plus the named-tag rules.
+/// </remarks>
+internal class AppendManyWithNamedTagsValidator : CommandValidator<AppendManyWithNamedTags>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="AppendManyValidator"/> class.
+    /// Initializes a new instance of the <see cref="AppendManyWithNamedTagsValidator"/> class.
     /// </summary>
-    public AppendManyValidator()
+    public AppendManyWithNamedTagsValidator()
     {
         RuleFor(_ => _.EventStore).RequiredEventStore();
         RuleFor(_ => _.Namespace).RequiredNamespace();
@@ -26,6 +30,7 @@ internal class AppendManyValidator : CommandValidator<AppendMany>
             @event.RuleFor(_ => _.EventType).RequiredEventType();
             @event.RuleFor(_ => _.EventType.Id).RequiredEventTypeId().When(_ => _.EventType is not null);
             @event.RuleFor(_ => _.Content).RequiredContent();
+            @event.RuleForEach(_ => _.NamedTags).ValidNamedTag();
         });
     }
 }

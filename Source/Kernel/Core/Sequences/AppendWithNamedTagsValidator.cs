@@ -6,14 +6,18 @@ using Cratis.Arc.Commands;
 namespace Cratis.Chronicle.Sequences;
 
 /// <summary>
-/// Represents the validator for <see cref="Append"/>.
+/// Represents the validator for <see cref="AppendWithNamedTags"/>.
 /// </summary>
-internal class AppendValidator : CommandValidator<Append>
+/// <remarks>
+/// The command hands over to <see cref="Append"/> without going back through the command pipeline, so
+/// <see cref="AppendValidator"/> never sees it. This validator applies the same rules, plus the named-tag rules.
+/// </remarks>
+internal class AppendWithNamedTagsValidator : CommandValidator<AppendWithNamedTags>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="AppendValidator"/> class.
+    /// Initializes a new instance of the <see cref="AppendWithNamedTagsValidator"/> class.
     /// </summary>
-    public AppendValidator()
+    public AppendWithNamedTagsValidator()
     {
         RuleFor(_ => _.EventStore).RequiredEventStore();
         RuleFor(_ => _.Namespace).RequiredNamespace();
@@ -25,5 +29,6 @@ internal class AppendValidator : CommandValidator<Append>
         RuleFor(_ => _.EventType).RequiredEventType();
         RuleFor(_ => _.EventType).RequiredEventTypeIdentifier();
         RuleFor(_ => _.Content).RequiredContent();
+        RuleForEach(_ => _.NamedTags).ValidNamedTag();
     }
 }
