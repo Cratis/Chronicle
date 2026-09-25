@@ -393,9 +393,7 @@ public class InMemorySink(
         }
     }
 
-#pragma warning disable SA1204 // Static elements should appear before instance elements
-    static void RemoveChildFromDocument(ExpandoObject document, ChildRemovedFromAll childRemoved)
-#pragma warning restore SA1204
+    void RemoveChildFromDocument(ExpandoObject document, ChildRemovedFromAll childRemoved)
     {
         var children = document.EnsureCollection<ExpandoObject, object>(childRemoved.ChildrenProperty, childRemoved.ArrayIndexers);
         var child = children.FindByKey(childRemoved.IdentifiedByProperty, childRemoved.Key);
