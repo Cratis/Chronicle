@@ -56,12 +56,12 @@ public class all_dependencies : Specification
         _middlewares = Substitute.For<IReactorMiddlewares>();
         _middlewaresActivator.Activate(Arg.Any<IServiceProvider>()).Returns(_middlewares);
         _eventSerializer = Substitute.For<IEventSerializer>();
-        _causationManager = Substitute.For<ICausationManager>();
+        _causationManager = CreateCausationManager();
         _traceSource = new System.Diagnostics.ActivitySource("reactor-specification");
         _activitySource = new Cratis.Traces.ActivitySource<Reactors>(_traceSource);
         _sideEffectHandlers = Substitute.For<IReactorSideEffectHandlers>();
         _reactorContextValuesBuilder = Substitute.For<IReactorContextValuesBuilder>();
-        _logger = Substitute.For<ILogger<Reactors>>();
+        _logger = CreateLogger();
         _loggerFactory = Substitute.For<ILoggerFactory>();
 
         _connectionLifecycle = Substitute.For<IConnectionLifecycle>();
@@ -102,6 +102,10 @@ public class all_dependencies : Specification
             _logger,
             _loggerFactory);
     }
+
+    protected virtual ICausationManager CreateCausationManager() => Substitute.For<ICausationManager>();
+
+    protected virtual ILogger<Reactors> CreateLogger() => Substitute.For<ILogger<Reactors>>();
 
     void Destroy() => _traceSource.Dispose();
 }

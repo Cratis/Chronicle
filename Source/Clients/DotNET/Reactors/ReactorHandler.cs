@@ -149,18 +149,39 @@ public class ReactorHandler(
     internal void BeginHandling(EventContext context)
     {
         identityProvider.SetCurrentIdentity((Identity.System with { OnBehalfOf = context.CausedBy }).WithoutDuplicates());
-        causationManager.Add(CausationType, new Dictionary<string, string>
+        causationManager.Add(CausationType, GetCausationProperties(context));
+    }
+
+    /// <summary>
+    /// Sets identity and scopes causation for one delivered event.
+    /// </summary>
+    /// <param name="context">The delivered event context.</param>
+    /// <returns>A scope to dispose after handling the event.</returns>
+    internal IDisposable BeginHandlingScope(EventContext context)
+    {
+        identityProvider.SetCurrentIdentity((Identity.System with { OnBehalfOf = context.CausedBy }).WithoutDuplicates());
+        try
         {
-            { CausationReactorIdProperty, Id.ToString() },
-            { CausationEventTypeIdProperty, context.EventType.Id.ToString() },
-            { CausationEventTypeGenerationProperty, context.EventType.Generation.ToString() },
-            { CausationEventSequenceIdProperty, EventSequenceId.ToString() },
-            { CausationEventSequenceNumberProperty, context.SequenceNumber.ToString() }
-        });
+            return causationManager.BeginScope(CausationType, GetCausationProperties(context));
+        }
+        catch
+        {
+            identityProvider.ClearCurrentIdentity();
+            throw;
+        }
     }
 
     /// <summary>
     /// Clears the identity after handling an event.
     /// </summary>
     internal void EndHandling() => identityProvider.ClearCurrentIdentity();
+
+    Dictionary<string, string> GetCausationProperties(EventContext context) => new()
+    {
+        { CausationReactorIdProperty, Id.ToString() },
+        { CausationEventTypeIdProperty, context.EventType.Id.ToString() },
+        { CausationEventTypeGenerationProperty, context.EventType.Generation.ToString() },
+        { CausationEventSequenceIdProperty, EventSequenceId.ToString() },
+        { CausationEventSequenceNumberProperty, context.SequenceNumber.ToString() }
+    };
 }

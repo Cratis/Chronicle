@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
+using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
 using ContractAppendedEvent = Cratis.Chronicle.Contracts.Events.AppendedEvent;
@@ -17,8 +18,11 @@ public class and_registration_is_cancelled : given.all_dependencies
 {
     readonly TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _cancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly CompletionLogger _completionLogger = new();
     Subject<EventsToObserve> _observed;
     int _publishedResults;
+
+    protected override ILogger<Reactors> CreateLogger() => _completionLogger;
 
     void Establish()
     {
@@ -65,7 +69,43 @@ public class and_registration_is_cancelled : given.all_dependencies
         await _started.Task.WaitAsync(TimeSpan.FromSeconds(10));
         _reactors.Unregister("cancelled-bridge");
         await _cancelled.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await _completionLogger.Completed.WaitAsync(TimeSpan.FromSeconds(10));
     }
 
     [Fact] void should_not_publish_a_failed_result() => _publishedResults.ShouldEqual(0);
+    [Fact] void should_not_log_a_handling_error() => _completionLogger.HandlingErrors.ShouldEqual(0);
+
+    sealed class CompletionLogger : ILogger<Reactors>
+    {
+        readonly TaskCompletionSource _completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int _handlingErrors;
+
+        public Task Completed => _completed.Task;
+        public int HandlingErrors => _handlingErrors;
+
+        public IDisposable BeginScope<TState>(TState state)
+            where TState : notnull => EmptyScope.Instance;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            var message = formatter(state, exception);
+            if (logLevel == LogLevel.Trace && message.StartsWith("Handling of events received for Reactor", StringComparison.Ordinal))
+            {
+                _completed.TrySetResult();
+            }
+            if (logLevel == LogLevel.Warning && message.StartsWith("An error occurred while handling event", StringComparison.Ordinal))
+            {
+                Interlocked.Increment(ref _handlingErrors);
+            }
+        }
+
+        sealed class EmptyScope : IDisposable
+        {
+            public static readonly EmptyScope Instance = new();
+            public void Dispose()
+            {
+            }
+        }
+    }
 }

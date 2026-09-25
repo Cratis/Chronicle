@@ -12,6 +12,8 @@ public class when_discovering_two_typed_reactors_with_the_same_id : given.all_de
     async Task Because() => _exception = await Catch.Exception(_reactors.Discover);
 
     [Fact] void should_reject_the_ambiguous_observer_id() => _exception.ShouldBeOfExactType<ReactorAlreadyRegistered>();
+    [Fact] void should_name_the_first_reactor_type() => _exception.Message.ShouldContain(nameof(FirstReactor));
+    [Fact] void should_name_the_second_reactor_type() => _exception.Message.ShouldContain(nameof(SecondReactor));
 
     [Reactor("shared-id")]
     class FirstReactor : IReactor;

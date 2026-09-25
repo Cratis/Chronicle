@@ -13,7 +13,7 @@ public class and_identity_and_causation_are_set : given.a_registered_delegate
 
     void Establish()
     {
-        _causationManager.When(_ => _.Add(ReactorHandler.CausationType, Arg.Any<IDictionary<string, string>>()))
+        _causationManager.When(_ => _.BeginScope(ReactorHandler.CausationType, Arg.Any<IDictionary<string, string>>()))
             .Do(call => _causation = call.Arg<IDictionary<string, string>>());
         _identityProvider.When(_ => _.SetCurrentIdentity(Arg.Any<Identity>()))
             .Do(call => _identity = call.Arg<Identity>());

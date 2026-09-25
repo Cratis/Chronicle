@@ -127,6 +127,12 @@ public class Reactors : IReactors
             var duplicate = ids.GroupBy(_ => _).FirstOrDefault(_ => _.Count() > 1);
             if (duplicate is not null)
             {
+                var collidingTypes = reactorTypes.Where(_ => _.GetReactorId() == duplicate.Key).Take(2).ToArray();
+                if (collidingTypes.Length == 2)
+                {
+                    throw new ReactorAlreadyRegistered(duplicate.Key, collidingTypes[0], collidingTypes[1]);
+                }
+
                 throw new ReactorAlreadyRegistered(duplicate.Key);
             }
 
@@ -542,14 +548,16 @@ public class Reactors : IReactors
                         @event.Context.ToClient(),
                         JsonNode.Parse(@event.Content)!.AsObject(),
                         new Dictionary<int, string>(@event.GenerationalContent));
-                    handler.BeginHandling(delivered.Context);
-                    try
+                    using (handler.BeginHandlingScope(delivered.Context))
                     {
-                        await registration.Handle(delivered, cancellationToken);
-                    }
-                    finally
-                    {
-                        handler.EndHandling();
+                        try
+                        {
+                            await registration.Handle(delivered, cancellationToken);
+                        }
+                        finally
+                        {
+                            handler.EndHandling();
+                        }
                     }
                     lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
                 }
