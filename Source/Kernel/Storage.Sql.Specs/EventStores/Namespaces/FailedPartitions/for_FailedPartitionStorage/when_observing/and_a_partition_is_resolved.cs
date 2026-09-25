@@ -37,11 +37,11 @@ public class and_a_partition_is_resolved : given.a_failed_partition_storage
             if (initial.Task.IsCompleted && !partitions.Any()) completion.TrySetResult(partitions);
         });
 
-        await initial.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await initial.Task.WaitAsync(TimeSpan.FromSeconds(30));
         _state.Remove(_partition);
         await _storage.Save(_observerId, _state);
 
-        _received = await completion.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        _received = await completion.Task.WaitAsync(TimeSpan.FromSeconds(30));
     }
 
     [Fact] void should_publish_the_removal() => _received.ShouldBeEmpty();

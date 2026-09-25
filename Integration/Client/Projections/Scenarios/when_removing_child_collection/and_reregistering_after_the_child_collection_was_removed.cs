@@ -52,7 +52,13 @@ public class and_reregistering_after_the_child_collection_was_removed(context co
             await EventStore.Projections.Discover();
             await EventStore.Projections.Register();
 
-            var replayJobs = await EventStore.Jobs.WaitForThereToBeJobOfType("ReplayObserver");
+            // A replay job is a transient artifact: it is removed the moment it completes. Replaying two events
+            // against a fast database can finish before the first poll here looks, so requiring the job to be
+            // caught made this specification depend on losing that race. What it is actually about - that the
+            // changed definition is replayed automatically - is asserted below, from the rebuilt read model and
+            // the absence of a recommendation. The job is still caught when it is there, because a replay that
+            // fails carries the reason, and that reason is gone once the job is.
+            var replayJobs = await EventStore.Jobs.TryFindJobsOfType("ReplayObserver");
             foreach (var job in replayJobs)
             {
                 var completedJob = await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(job.Id);

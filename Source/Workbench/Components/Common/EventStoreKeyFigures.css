@@ -1,0 +1,35 @@
+/* Copyright (c) Cratis. All rights reserved. */
+/* Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+/*
+ * Sits in the card footer, beneath the title. The figures read left to right as a row of small
+ * icon-and-number pairs, so the card answers "how big is this store" without being opened.
+ */
+
+.workbench-event-store-key-figures {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 0 1.25rem 0.75rem;
+    color: var(--cratis-text-color-secondary);
+    font-size: 0.875rem;
+}
+
+.workbench-event-store-key-figures--unavailable {
+    font-style: italic;
+}
+
+.workbench-event-store-key-figures__figure {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.375rem;
+}
+
+.workbench-event-store-key-figures__figure svg {
+    align-self: center;
+}
+
+.workbench-event-store-key-figures__value {
+    font-weight: 600;
+    color: var(--cratis-text-color);
+}
