@@ -86,7 +86,10 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
         where TReadModel : class =>
         _instances.TryGetValue((typeof(TReadModel).GetReadModelIdentifier(), key.Value), out var instance) ? (TReadModel)instance : null;
 
-    /// <summary>Registers a pre-seeded read model instance for the test scenario.</summary>
+    /// <summary>
+    /// Registers a pre-seeded read model instance so that subsequent <c language="csharp">GetInstanceById</c> calls
+    /// return it directly without hitting the server.
+    /// </summary>
     /// <typeparam name="TReadModel">The type of read model to register.</typeparam>
     /// <param name="eventSourceId">The event source identifier to associate with the read model.</param>
     /// <param name="instance">The read model instance to pre-seed.</param>

@@ -46,6 +46,7 @@ public class UnitOfWork(
     Action<IUnitOfWork> _onCompleted = onCompleted;
     bool _isCommitted;
     bool _isRolledBack;
+    bool _completing;
     bool _hasOrderedBatch;
     IEventSequence? _eventSequence;
     EventSequenceId? _eventSequenceId;
@@ -160,7 +161,7 @@ public class UnitOfWork(
     {
         lock (_decisionLock)
         {
-            if (IsCompleted) throw new DecisionReadAfterCompletion();
+            if (IsCompleted || _completing) throw new DecisionReadAfterCompletion();
             DecisionReadScopes.Validate(read, eventStore.Name, eventStore.Namespace, EventSequenceId.Log);
             ValidateLegacyEventSequenceIdsForOrderedBatch(EventSequenceId.Log);
             EnsureEventSequenceCanBeUsed(EventSequenceId.Log);
@@ -211,10 +212,10 @@ public class UnitOfWork(
     /// <param name="owner">The claimed owner capability.</param>
     /// <returns>The commit task.</returns>
     /// <exception cref="ProtectedUnitOfWorkRequiresOwner">A different owner attempted to complete the unit.</exception>
-    public Task CommitAsOwner(DecisionReadCommitOwner owner)
+    public async Task CommitAsOwner(DecisionReadCommitOwner owner)
     {
         if (!ReferenceEquals(owner, _commitOwner)) throw new ProtectedUnitOfWorkRequiresOwner();
-        return CommitCore(true);
+        await CommitCore(true);
     }
 
     /// <inheritdoc/>
@@ -305,16 +306,25 @@ public class UnitOfWork(
     {
         using var span = _activitySource.Commit(correlationId.ToString());
 
-        ThrowIfUnitOfWorkIsCompleted();
-        if (_decisionScopes.Count != 0 && (!fromOwner || _commitOwner is null)) throw new ProtectedUnitOfWorkRequiresOwner();
+        Dictionary<EventSourceId, ConcurrencyScope> scopes;
+        bool protectedCommit;
+        lock (_decisionLock)
+        {
+            ThrowIfUnitOfWorkIsCompleted();
+            if (_completing) throw new DecisionReadAfterCompletion();
+            protectedCommit = _decisionScopes.Count != 0;
+            if (protectedCommit && (!fromOwner || _commitOwner is null)) throw new ProtectedUnitOfWorkRequiresOwner();
+            _completing = true;
+
+            // Keep legacy scope resolution and append bytes unchanged for units without decisions.
+            scopes = !protectedCommit ? _concurrencyScopes :
+                _concurrencyScopes.Concat(_decisionScopes).ToDictionary(_ => _.Key, _ => _.Value);
+        }
 
         try
         {
             if (_eventSequence is not null)
             {
-                // Keep legacy scope resolution and append bytes unchanged for units without decisions.
-                var scopes = _decisionScopes.Count == 0 ? _concurrencyScopes :
-                    _concurrencyScopes.Concat(_decisionScopes).ToDictionary(_ => _.Key, _ => _.Value);
                 var events = GetEventsToCommit();
                 AppendManyResult result;
                 try
@@ -322,7 +332,7 @@ public class UnitOfWork(
                     result = await _eventSequence.AppendMany(events, concurrencyScopes: scopes);
                 }
                 catch (CommandFailed exception) when (
-                    _decisionScopes.Count != 0 && events.Length == 0 &&
+                    protectedCommit && events.Length == 0 &&
                     exception.Result?.ValidationResults.Any(_ => _.Message == "At least one event is required.") == true)
                 {
                     throw new DecisionReadValidateOnlyNotSupported();

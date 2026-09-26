@@ -30,5 +30,7 @@ public class when_a_protected_absent_model_changes_before_validate_only : Specif
     }
 
     [Fact] void should_report_a_conflict() => _unit.GetDecisionConflicts().ShouldContain(_ => _.Key.Value == _source.Value);
-    [Fact] void should_not_have_committed_events() => _unit.GetEvents().ShouldBeEmpty();
+    [Fact] void should_not_succeed() => _unit.IsSuccess.ShouldBeFalse();
+    [Fact] async Task should_leave_only_the_concurrent_event_in_the_log() =>
+        (await _store.EventLog.GetTailSequenceNumber()).ShouldEqual(EventSequenceNumber.First);
 }

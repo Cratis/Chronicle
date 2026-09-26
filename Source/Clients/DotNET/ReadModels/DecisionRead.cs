@@ -55,10 +55,10 @@ public sealed class DecisionRead<T> : IDecisionRead
     public Type ReadModelType => typeof(T);
 
     /// <inheritdoc/>
-    public EventStoreName EventStore { get; } = null!;
+    public EventStoreName EventStore { get; } = EventStoreName.NotSet;
 
     /// <inheritdoc/>
-    public EventStoreNamespaceName Namespace { get; } = null!;
+    public EventStoreNamespaceName Namespace { get; } = EventStoreNamespaceName.NotSet;
 
     /// <inheritdoc/>
     public EventSequenceId EventSequenceId => EventSequenceId.Log;

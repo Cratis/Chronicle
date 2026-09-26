@@ -5,10 +5,13 @@ using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Schemas;
+using Grpc.Core;
+using ProtoBuf.Grpc;
 using ProjectionDefinition = Cratis.Chronicle.Contracts.Projections.ProjectionDefinition;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -65,11 +68,21 @@ public sealed class DecisionReads : IDecisionReads
         var type = typeof(T);
         var (definition, types) = GetAdmittedShape<T>(key);
         cancellationToken.ThrowIfCancellationRequested();
-        await _agreements.GetOrAdd(
+        var agreement = _agreements.GetOrAdd(
             type,
-            static (modelType, state) => state.Self.CheckAgreement(modelType, state.Definition, state.Types),
-            (Self: this, Definition: definition, Types: types));
-        var sequence = _eventStore.EventLog;
+            static (modelType, state) => state.Self.CheckAgreement(modelType, state.Definition, state.Types, state.CancellationToken),
+            (Self: this, Definition: definition, Types: types, CancellationToken: cancellationToken));
+        try
+        {
+            await agreement;
+        }
+        catch (Exception exception) when (exception is not DecisionReadRefused)
+        {
+            ((ICollection<KeyValuePair<Type, Task>>)_agreements).Remove(new(type, agreement));
+            throw;
+        }
+        var services = ((IChronicleServicesAccessor)_eventStore.Connection).Services;
+        var callContext = new CallContext(new CallOptions(cancellationToken: cancellationToken));
         var source = (EventSourceId)key;
         for (var attempt = 0; attempt != 3; ++attempt)
         {
@@ -77,30 +90,40 @@ public sealed class DecisionReads : IDecisionReads
 
             // Capture both tails before starting the fold. The narrow tail is only a diagnostic;
             // the unfiltered tail is the boundary of the concurrency scope.
-            var boundaryTask = sequence.GetTailSequenceNumber();
-            var probeTask = sequence.GetTailSequenceNumber(eventSourceId: source, filterEventTypes: types);
+            var boundaryTask = services.Sequences.TailSequenceNumber(
+                new() { EventStore = _eventStore.Name, Namespace = _eventStore.Namespace, EventSequenceId = EventSequenceId.Log },
+                callContext);
+            var probeTask = services.Sequences.TailSequenceNumber(
+                new()
+                {
+                    EventStore = _eventStore.Name, Namespace = _eventStore.Namespace, EventSequenceId = EventSequenceId.Log,
+                    EventSourceId = source.Value, EventTypeIds = string.Join(',', types.Select(_ => _.Id.Value))
+                },
+                callContext);
             await Task.WhenAll(boundaryTask, probeTask);
-            var boundary = await boundaryTask;
-            var probe = await probeTask;
+            var boundary = (EventSequenceNumber)(await boundaryTask).EnsureSuccess().SequenceNumber;
+            var probe = (EventSequenceNumber)(await probeTask).EnsureSuccess().SequenceNumber;
             var session = Guid.NewGuid();
             GetInstanceByKeyResponse result;
             try
             {
-                result = await ((IChronicleServicesAccessor)_eventStore.Connection).Services.ReadModels.GetInstanceByKey(new()
-                {
-                    EventStore = _eventStore.Name,
-                    Namespace = _eventStore.Namespace,
-                    ReadModelIdentifier = type.GetReadModelIdentifier(),
-                    EventSequenceId = EventSequenceId.Log,
-                    ReadModelKey = key,
-                    SessionId = session.ToString()
-                });
+                result = await services.ReadModels.GetInstanceByKey(
+                    new()
+                    {
+                        EventStore = _eventStore.Name,
+                        Namespace = _eventStore.Namespace,
+                        ReadModelIdentifier = type.GetReadModelIdentifier(),
+                        EventSequenceId = EventSequenceId.Log,
+                        ReadModelKey = key,
+                        SessionId = session.ToString()
+                    },
+                    callContext);
             }
             finally
             {
                 // Cleanup is advisory and must not mask the read result. Observe errors even when
                 // the server has already deactivated the session.
-                _ = Dehydrate(session, type, key);
+                _ = Dehydrate(session, type, key, cancellationToken);
             }
             var last = (EventSequenceNumber)result.LastHandledEventSequenceNumber;
             if (probe.IsActualValue && (!last.IsActualValue || last.Value < probe.Value))
@@ -172,19 +195,21 @@ public sealed class DecisionReads : IDecisionReads
         return (definition!, types);
     }
 
-    async Task Dehydrate(Guid session, Type type, ReadModelKey key)
+    async Task Dehydrate(Guid session, Type type, ReadModelKey key, CancellationToken cancellationToken)
     {
         try
         {
-            await ((IChronicleServicesAccessor)_eventStore.Connection).Services.ReadModels.DehydrateSession(new()
-            {
-                EventStore = _eventStore.Name,
-                Namespace = _eventStore.Namespace,
-                ReadModelIdentifier = type.GetReadModelIdentifier(),
-                EventSequenceId = EventSequenceId.Log,
-                ReadModelKey = key,
-                SessionId = session.ToString()
-            });
+            await ((IChronicleServicesAccessor)_eventStore.Connection).Services.ReadModels.DehydrateSession(
+                new()
+                {
+                    EventStore = _eventStore.Name,
+                    Namespace = _eventStore.Namespace,
+                    ReadModelIdentifier = type.GetReadModelIdentifier(),
+                    EventSequenceId = EventSequenceId.Log,
+                    ReadModelKey = key,
+                    SessionId = session.ToString()
+                },
+                new CallContext(new CallOptions(cancellationToken: cancellationToken)));
         }
         catch (Exception exception)
         {
@@ -229,12 +254,13 @@ public sealed class DecisionReads : IDecisionReads
             types.Select(_ => new EventType(_.Id, _.Generation, _.Tombstone)).ToArray(), target == typeof(Guid));
     }
 
-    async Task CheckAgreement(Type type, ProjectionDefinition client, EventType[] types)
+    async Task CheckAgreement(Type type, ProjectionDefinition client, EventType[] types, CancellationToken cancellationToken)
     {
         var services = ((IChronicleServicesAccessor)_eventStore.Connection).Services;
-        var readModels = await services.ReadModels.GetDefinitions(new() { EventStore = _eventStore.Name });
+        var context = new CallContext(new CallOptions(cancellationToken: cancellationToken));
+        var readModels = await services.ReadModels.GetDefinitions(new() { EventStore = _eventStore.Name }, context);
         var matches = readModels.ReadModels.Where(_ => _.Type.Identifier == type.GetReadModelIdentifier()).ToArray();
-        var definitions = await services.Projections.GetAllDefinitions(new() { EventStore = _eventStore.Name });
+        var definitions = await services.Projections.GetAllDefinitions(new() { EventStore = _eventStore.Name }, context);
         var projections = definitions.Where(_ => _.Identifier == client.Identifier).ToArray();
         if (matches.Length != 1 || matches[0].ObserverIdentifier != client.Identifier ||
             matches[0].ObserverType != ReadModelObserverType.Projection || projections.Length != 1 ||

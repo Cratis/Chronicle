@@ -21,7 +21,7 @@ internal class AppendManyValidator : CommandValidator<AppendMany>
         RuleFor(_ => _.EventSequenceId).NotEmpty().WithMessage("Event sequence identifier is required.");
         RuleFor(_ => _.EventSourceId).NotEmpty().WithMessage("Event source identifier is required.");
         RuleFor(_ => _.Events)
-            .Must((command, events) => events is not null && (events.Any() || command.ConcurrencyScope is not null))
+            .Must((command, events) => events is not null && (events.Any() || (command.ConcurrencyScope is { } scope && (scope.ExpectsNoMatchingEvent || scope.SequenceNumber < Concepts.Events.EventSequenceNumber.BeforeFirst.Value))))
             .WithMessage("At least one event is required.");
         RuleForEach(_ => _.Events).ChildRules(@event =>
         {

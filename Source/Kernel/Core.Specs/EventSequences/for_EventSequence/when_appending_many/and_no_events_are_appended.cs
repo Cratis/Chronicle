@@ -35,6 +35,9 @@ public class and_no_events_are_appended : given.appending_many_events
         }));
 
     [Fact] void should_validate_and_succeed() => _result.IsSuccess.ShouldBeTrue();
+    [Fact] void should_not_advance_the_next_sequence_number() => _stateStorage.State.SequenceNumber.ShouldEqual(EventSequenceNumber.First);
+    [Fact] void should_not_enqueue_an_empty_batch() => _appendedEventsQueues.DidNotReceiveWithAnyArgs().Enqueue(Arg.Any<IEnumerable<AppendedEvent>>());
+    [Fact] void should_not_update_constraint_indexes() => _constraintIndexSequenceNumbers.ShouldBeEmpty();
     [Fact] void should_not_append_any_event() => _eventSequenceStorage.DidNotReceive().AppendMany(Arg.Is<IEnumerable<EventToAppendToStorage>>(_ => _.Any()));
     [Fact] void should_filter_the_validation_by_source_and_type() =>
         _eventSequenceStorage.Received().GetTailSequenceNumber(Arg.Any<IEnumerable<EventType>>(), _readSource, null, null, null);

@@ -598,9 +598,12 @@ public class EventSequence(
             _metrics?.AppendedEvent(appendedEvent.Context.EventSourceId, appendedEvent.Context.EventType.Id);
         }
 
-        await CompleteDurableAppend(
-            appendedEventsList,
-            constraintContexts.Zip(eventsToAppend, (constraintContext, eventToAppend) => (constraintContext, eventToAppend.SequenceNumber)));
+        if (appendedEventsList.Count > 0)
+        {
+            await CompleteDurableAppend(
+                appendedEventsList,
+                constraintContexts.Zip(eventsToAppend, (constraintContext, eventToAppend) => (constraintContext, eventToAppend.SequenceNumber)));
+        }
 
         return AppendManyResult.Success(correlationId, appendedEventsList.Select(@event => @event.Context.SequenceNumber));
     }

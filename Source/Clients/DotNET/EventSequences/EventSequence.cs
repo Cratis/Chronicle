@@ -639,7 +639,7 @@ public class EventSequence(
             Observers = GetObservers()
         };
 
-        if (_appendedEventsRaised is not null)
+        if (eventsList.Count > 0 && _appendedEventsRaised is not null)
         {
             var sequenceNumbers = result.SequenceNumbers.ToList();
             var allResults = new List<AppendedEventWithResult>(eventsList.Count);

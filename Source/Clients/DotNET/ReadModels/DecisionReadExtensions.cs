@@ -14,6 +14,17 @@ public static class DecisionReadExtensions
     /// <returns>A decision reader.</returns>
     public static IDecisionReads GetDecisionReads(this IEventStore eventStore) => DecisionReads.For(eventStore);
 
+    /// <summary>Maps guarded append concurrency violations to decision conflicts without exposing sequence numbers.</summary>
+    /// <param name="result">The guarded append result.</param>
+    /// <param name="reads">The reads that guarded the append.</param>
+    /// <returns>The read models and keys whose decisions conflicted.</returns>
+    public static IEnumerable<DecisionConflict> GetDecisionConflicts(this AppendManyResult result, IEnumerable<IDecisionRead> reads)
+    {
+        var labels = result.ConcurrencyViolations.Select(_ => _.EventSourceId).ToHashSet();
+        return reads.Where(_ => labels.Contains((Events.EventSourceId)_.Key))
+            .Select(_ => new DecisionConflict(_.ReadModelType, _.Key)).Distinct().ToArray();
+    }
+
     /// <summary>Validates the reads and appends the events atomically in the event-log grain.</summary>
     /// <param name="sequence">The event-log sequence.</param>
     /// <param name="events">The events to append.</param>
