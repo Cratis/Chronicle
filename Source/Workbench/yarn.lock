@@ -261,15 +261,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/components@npm:^4.1.1":
-  version: 4.1.1
-  resolution: "@cratis/components@npm:4.1.1"
+"@cratis/components@npm:^4.14.0":
+  version: 4.14.0
+  resolution: "@cratis/components@npm:4.14.0"
   dependencies:
-    "@internationalized/date": "npm:3.12.3"
+    "@internationalized/date": "npm:3.12.4"
     allotment: "npm:1.20.5"
-    framer-motion: "npm:13.1.1"
-    react-aria: "npm:3.51.0"
-    react-aria-components: "npm:1.20.0"
+    framer-motion: "npm:13.2.0"
+    react-aria: "npm:3.52.1"
+    react-aria-components: "npm:1.21.1"
     react-icons: "npm:5.7.0"
     ts-deepmerge: "npm:8.0.0"
   peerDependencies:
@@ -284,7 +284,7 @@ __metadata:
   peerDependenciesMeta:
     pixi.js:
       optional: true
-  checksum: 10/a7f9ecf0e49a0bc838427532d3e4c0d118abe7105ed6f71ddf16a141b57e36edd720881bb2f414c8fceb43bc25df95b11536c807f9634c46ab1ec1fb31585301
+  checksum: 10/a538358ec75c9aac6d5c0548f11b7f6d9465c83ba6e2c86e3b81aec49a1e43b00e45acedd5485d9085c36596a1e6737756bf8fb11232827f641792186e7a81ee
   languageName: node
   linkType: hard
 
@@ -739,21 +739,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@internationalized/date@npm:3.12.3, @internationalized/date@npm:^3.12.3":
-  version: 3.12.3
-  resolution: "@internationalized/date@npm:3.12.3"
+"@internationalized/date@npm:3.12.4, @internationalized/date@npm:^3.12.4":
+  version: 3.12.4
+  resolution: "@internationalized/date@npm:3.12.4"
   dependencies:
     "@swc/helpers": "npm:^0.5.0"
-  checksum: 10/2c4ce86ac5aec2f9f6799cd455b776ab8750238059d1ed031f866c1f7bd7799fc6f938d46a328066989e1f24f5f9c10d4bfad3b2cab45fba0ce8fbb369ef7e1e
+  checksum: 10/002c10b4cf93d87fbeef83faa232a957f5e04d7e5a1c967db40abbf78a02ac6b61328ce447ada3d6dfb875fbf31acf146625e90d7586d04a43d88759ebfbcca1
   languageName: node
   linkType: hard
 
-"@internationalized/number@npm:^3.6.7":
-  version: 3.6.7
-  resolution: "@internationalized/number@npm:3.6.7"
+"@internationalized/number@npm:^3.6.8":
+  version: 3.6.8
+  resolution: "@internationalized/number@npm:3.6.8"
   dependencies:
     "@swc/helpers": "npm:^0.5.0"
-  checksum: 10/bdf2a21d338789825e7ba0f2b0d7000c3dbc4a5ee2e395e7a347ee094927eb271327bf10467de17e4c23c4a51f9467aa9de7f3e568407c84487a34960c7f7fda
+  checksum: 10/af1ccd2080524bc086fa484b2971d4768ee6177864122e181ef2be7fce121f3837fbd6b72f194219110762191e4c5a5a7dc5e61e6a65b141751abcdc39a4cee4
   languageName: node
   linkType: hard
 
@@ -4612,11 +4612,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"framer-motion@npm:13.1.1":
-  version: 13.1.1
-  resolution: "framer-motion@npm:13.1.1"
+"framer-motion@npm:13.2.0":
+  version: 13.2.0
+  resolution: "framer-motion@npm:13.2.0"
   dependencies:
-    motion-dom: "npm:^13.1.1"
+    motion-dom: "npm:^13.2.0"
     motion-utils: "npm:^13.0.0"
     tslib: "npm:^2.4.0"
   peerDependencies:
@@ -4627,7 +4627,7 @@ __metadata:
       optional: true
     react-dom:
       optional: true
-  checksum: 10/78904da047762834e69810660d1aa73c99f07d69097c80e07b3c8b5bbd6f1dbf488e243fe5a482705baf1608903096d494a3be7322ee4af0e979766ce3aae11f
+  checksum: 10/57e04da36915ebfd08d1a17a2623fad9ce4bc6f1157e66f16c522f22677c26e5a52a61032cf9afc90e1a403997d5a4d7c03dc364c9f394ccbf8a4a1d489ee477
   languageName: node
   linkType: hard
 
@@ -6124,12 +6124,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"motion-dom@npm:^13.1.1":
-  version: 13.1.1
-  resolution: "motion-dom@npm:13.1.1"
+"motion-dom@npm:^13.2.0":
+  version: 13.4.2
+  resolution: "motion-dom@npm:13.4.2"
   dependencies:
-    motion-utils: "npm:^13.0.0"
-  checksum: 10/88f0d90946b292f94e0f964fb97540de64c0d648f3801295955da420608a529546be63214456dcb16420bc3e3fc8cb23e140a86f451933ac34fc0bf4e09397d3
+    motion-utils: "npm:^13.3.0"
+  checksum: 10/c1f727718c0b22b5fc01fd6f34f03bb7331ce3debe3d06437a3f7205e1b43379852aa10e603cc66008bff05f15a2591cae2840b89b852c092ea9953201a3ced4
   languageName: node
   linkType: hard
 
@@ -6137,6 +6137,13 @@ __metadata:
   version: 13.0.0
   resolution: "motion-utils@npm:13.0.0"
   checksum: 10/ee6296263ed6fd16a46eced143446e9335facdf72d1922ecdcfb945fb498d3723e9c94f3036fed4cc3cda7fca59de9b2971c11496fdfb8511cefb70eb2ec2da3
+  languageName: node
+  linkType: hard
+
+"motion-utils@npm:^13.3.0":
+  version: 13.3.0
+  resolution: "motion-utils@npm:13.3.0"
+  checksum: 10/8cd6e39827a6714a7eb1651e4e0cc02b276b823ed8a3095d4764761cee33ad094bc9904a555882e0cddeb07fcbbd8e51a08d15355831ebf1dad96faa1be2c88a
   languageName: node
   linkType: hard
 
@@ -6822,41 +6829,41 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-aria-components@npm:1.20.0":
-  version: 1.20.0
-  resolution: "react-aria-components@npm:1.20.0"
+"react-aria-components@npm:1.21.1":
+  version: 1.21.1
+  resolution: "react-aria-components@npm:1.21.1"
   dependencies:
-    "@internationalized/date": "npm:^3.12.3"
+    "@internationalized/date": "npm:^3.12.4"
     "@internationalized/string": "npm:^3.2.10"
     "@react-types/shared": "npm:^3.36.1"
     "@swc/helpers": "npm:^0.5.0"
     client-only: "npm:^0.0.1"
-    react-aria: "npm:3.51.0"
-    react-stately: "npm:3.49.0"
+    react-aria: "npm:3.52.1"
+    react-stately: "npm:3.50.0"
   peerDependencies:
     react: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
     react-dom: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
-  checksum: 10/195cc87bf8b09c977ad217aa18ea2eea7c96637ece9a9ec8e3520c960161ce151df5ee7978e92d5d0b549a5ef4926c114c5deda737fec6c54f31385d10bb498a
+  checksum: 10/91d3b06426fe8fb3eac5471ffc11d170617873301f6670d9cf5f6c16f4a002e1dd5af1222c0a68711c43907049037cdf2c93d0949a1289a166317fb0eede1023
   languageName: node
   linkType: hard
 
-"react-aria@npm:3.51.0":
-  version: 3.51.0
-  resolution: "react-aria@npm:3.51.0"
+"react-aria@npm:3.52.1":
+  version: 3.52.1
+  resolution: "react-aria@npm:3.52.1"
   dependencies:
-    "@internationalized/date": "npm:^3.12.3"
-    "@internationalized/number": "npm:^3.6.7"
+    "@internationalized/date": "npm:^3.12.4"
+    "@internationalized/number": "npm:^3.6.8"
     "@internationalized/string": "npm:^3.2.10"
     "@react-types/shared": "npm:^3.36.1"
     "@swc/helpers": "npm:^0.5.0"
     aria-hidden: "npm:^1.2.3"
     clsx: "npm:^2.0.0"
-    react-stately: "npm:3.49.0"
+    react-stately: "npm:3.50.0"
     use-sync-external-store: "npm:^1.6.0"
   peerDependencies:
     react: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
     react-dom: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
-  checksum: 10/32d0e236b7689765d273960fbff6df1e75971cce0a80bf73b14a90f6ee68bfc0dcb2b5c056a69b8fe78fb79f114e52726bcc47c732f5a84f7adfbedf60b8a1ef
+  checksum: 10/2ade8388ae2a8069c7da1ee016f2fdc95fe0f631ac3018ea41db3469257051c42ffd05d189a6811651e6b85eb51e6f54e6218c3525f6b4cd59a8ffeaadee0976
   languageName: node
   linkType: hard
 
@@ -6949,19 +6956,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-stately@npm:3.49.0":
-  version: 3.49.0
-  resolution: "react-stately@npm:3.49.0"
+"react-stately@npm:3.50.0":
+  version: 3.50.0
+  resolution: "react-stately@npm:3.50.0"
   dependencies:
-    "@internationalized/date": "npm:^3.12.3"
-    "@internationalized/number": "npm:^3.6.7"
+    "@internationalized/date": "npm:^3.12.4"
+    "@internationalized/number": "npm:^3.6.8"
     "@internationalized/string": "npm:^3.2.10"
     "@react-types/shared": "npm:^3.36.1"
     "@swc/helpers": "npm:^0.5.0"
     use-sync-external-store: "npm:^1.6.0"
   peerDependencies:
     react: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
-  checksum: 10/f8296a3ec7845a3a6544225fcaf73fe7077ac3041d043e51bd20ca0da2741bac3166df57e429154c060fe9d8df19059840893dd1a0e3006cd025a0963edd0b7c
+  checksum: 10/1959a715b925c966c59c277ff199725c7e27c24a1c2a3c4b8da145365e46c2c92a3b84b30c7d0b40842c8b5a5d19e894dc25e5fe85ea7f89471b6bae944c6b99
   languageName: node
   linkType: hard
 
@@ -8682,7 +8689,7 @@ __metadata:
     "@cratis/arc.react": "npm:^22.6.0"
     "@cratis/arc.react.mvvm": "npm:^22.6.0"
     "@cratis/arc.vite": "npm:^22.6.0"
-    "@cratis/components": "npm:^4.1.1"
+    "@cratis/components": "npm:^4.14.0"
     "@cratis/fundamentals": "npm:^7.18.1"
     "@cratis/screenplay-language": "npm:^4.14.0"
     "@eslint/eslintrc": "npm:3.3.6"
