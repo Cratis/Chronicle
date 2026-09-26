@@ -113,6 +113,8 @@ Extend the pipeline by registering a custom `IReactorSideEffectHandler`:
 
 Chronicle registers its built-in handlers and reactor metadata providers when you call `AddCratisChronicle`, including in standalone hosts. Register custom handlers under `IReactorSideEffectHandler` or their concrete type in the host's service collection. Handlers discovered from other loaded libraries only participate when registered; merely loading an assembly does not activate its integration.
 
+To return your custom side effect synchronously, implement `CanHandleReturnType(Type)` on the handler to claim its declared type. Existing handlers default to `false` and can still handle asynchronous `Task<T>` results. A handler can also claim a declared `IEnumerable<T>` return type; it must process the collection at invocation time. Returning a type that no handler claims synchronously is rejected during registration.
+
 ## Supported Return Types
 
 | Return type | Handler invoked |
@@ -128,6 +130,7 @@ Chronicle registers its built-in handlers and reactor metadata providers when yo
 | `EventsWithConcurrencyScopes` | `EventsWithConcurrencyScopesResultHandler` — appends its ordered events and scopes as one transaction |
 | `Task<EventsWithConcurrencyScopes>` | `EventsWithConcurrencyScopesResultHandler` |
 | `IEnumerable<object>` mixing events and `EventForEventSourceId` | `MixedSideEffectsResultHandler` — bare events use reactor metadata, each `EventForEventSourceId` keeps its own; all appended as one transaction |
+| Custom `T` or `IEnumerable<T>` claimed by a registered handler | The claiming `IReactorSideEffectHandler` processes the return value |
 | `void` / `Task` | No side effects appended |
 
 ## Error handling

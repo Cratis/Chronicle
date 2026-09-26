@@ -30,6 +30,9 @@ public class ReactorSideEffectHandlers(IInstancesOf<IReactorSideEffectHandler> h
         handlers.Any(h => h.CanHandle(reactorContext, eventStore, value));
 
     /// <inheritdoc/>
+    public bool CanHandleReturnType(Type type) => handlers.Any(handler => handler.CanHandleReturnType(type));
+
+    /// <inheritdoc/>
     public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
         var allFailures = new List<AppendFailure>();
