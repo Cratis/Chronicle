@@ -1,0 +1,19 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Concepts.Projections;
+
+namespace Cratis.Chronicle.Projections.for_ImmediateProjectionKey.when_round_tripping;
+
+public class without_a_separator : Specification
+{
+    ImmediateProjectionKey _key;
+    ImmediateProjectionKey _result;
+
+    void Establish() => _key = new("projection", "store", "namespace", "sequence", "read-model-key");
+
+    void Because() => _result = ImmediateProjectionKey.Parse(_key.ToString());
+
+    [Fact] void should_preserve_the_original_key_string() => _key.ToString().ShouldEqual("projection#store#namespace#sequence#read-model-key");
+    [Fact] void should_preserve_all_components() => _result.ShouldEqual(_key);
+}
