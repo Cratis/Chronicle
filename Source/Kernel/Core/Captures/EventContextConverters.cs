@@ -49,22 +49,10 @@ internal static class EventContextConverters
         Properties = causation.Properties
     };
 
-    /// <summary>
-    /// Convert to contract version of the observation state.
-    /// </summary>
-    /// <param name="state">The state to convert.</param>
-    /// <returns>The converted contract version.</returns>
-    /// <remarks>
-    /// Mapped flag by flag rather than by whole value: this is a [Flags] enum, so a switch on the exact value
-    /// silently answers None for any combination - which is how CatchUp, which travels alongside Initial,
-    /// would have been erased on the way to the client.
-    /// </remarks>
-    static Contracts.Events.EventObservationState ToContract(this EventObservationState state)
+    static Contracts.Events.EventObservationState ToContract(this EventObservationState state) => state switch
     {
-        var result = Contracts.Events.EventObservationState.None;
-        if (state.HasFlag(EventObservationState.Initial)) result |= Contracts.Events.EventObservationState.Initial;
-        if (state.HasFlag(EventObservationState.Replay)) result |= Contracts.Events.EventObservationState.Replay;
-        if (state.HasFlag(EventObservationState.CatchUp)) result |= Contracts.Events.EventObservationState.CatchUp;
-        return result;
-    }
+        EventObservationState.Initial => Contracts.Events.EventObservationState.Initial,
+        EventObservationState.Replay => Contracts.Events.EventObservationState.Replay,
+        _ => Contracts.Events.EventObservationState.None
+    };
 }

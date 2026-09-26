@@ -16,8 +16,6 @@
   href: once-only.mdx
 - name: Replay
   href: replay.mdx
-- name: Catch-up
-  href: catch-up.mdx
 - name: Delivery identity
   href: delivery-identity.mdx
 - name: Filtering by appended event metadata

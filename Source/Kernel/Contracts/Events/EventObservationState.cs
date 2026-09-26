@@ -22,9 +22,5 @@ public enum EventObservationState
     /// <summary>
     /// Represents the Replay value.
     /// </summary>
-    Replay = 2,
-    /// <summary>
-    /// Represents the CatchUp value.
-    /// </summary>
-    CatchUp = 4
+    Replay = 2
 }

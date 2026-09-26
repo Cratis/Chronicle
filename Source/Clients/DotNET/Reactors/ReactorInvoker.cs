@@ -232,8 +232,7 @@ public class ReactorInvoker(
     /// <param name="Live">The handlers to run as events happen.</param>
     /// <param name="Replay">The handlers marked with <see cref="ReplayAttribute"/>, which take over during a replay.</param>
     /// <param name="OnceOnly">The handlers marked with <see cref="OnceOnlyAttribute"/>, which never run for a replayed event.</param>
-    /// <param name="SkipCatchUp">The handlers marked with <see cref="SkipCatchUpAttribute"/>, which never run for a catch-up event.</param>
-    record HandlerMethods(FrozenDictionary<Type, MethodInfo> Live, FrozenDictionary<Type, MethodInfo> Replay, FrozenSet<MethodInfo> OnceOnly, FrozenSet<MethodInfo> SkipCatchUp)
+    record HandlerMethods(FrozenDictionary<Type, MethodInfo> Live, FrozenDictionary<Type, MethodInfo> Replay, FrozenSet<MethodInfo> OnceOnly)
     {
         /// <summary>
         /// Gets every event type handled, whichever path handles it. An event type handled only by a replay
@@ -259,7 +258,6 @@ public class ReactorInvoker(
         public (MethodInfo? Method, MethodInfo? SkippedForReplay) Resolve(Type eventType, EventObservationState observationState)
         {
             var isReplay = observationState.HasFlag(EventObservationState.Replay);
-            var isCatchUp = observationState.HasFlag(EventObservationState.CatchUp);
 
             // A replay handler takes over for the duration of the replay, and the live handler does not also run.
             // Without one, the live handler keeps running during replay - which is what every reactor written
@@ -274,12 +272,7 @@ public class ReactorInvoker(
                 return (null, null);
             }
 
-            if (isReplay && OnceOnly.Contains(method))
-            {
-                return (null, method);
-            }
-
-            return isCatchUp && SkipCatchUp.Contains(method) ? (null, method) : (method, null);
+            return isReplay && OnceOnly.Contains(method) ? (null, method) : (method, null);
         }
     }
 
@@ -296,7 +289,6 @@ public class ReactorInvoker(
             var liveMethodsByEventType = new Dictionary<Type, MethodInfo>();
             var replayMethodsByEventType = new Dictionary<Type, MethodInfo>();
             var onceOnlyMethods = new HashSet<MethodInfo>();
-            var skipCatchUpMethods = new HashSet<MethodInfo>();
 
             // Ordered so the handler that should win comes first, and claimed with TryAdd so it keeps the event
             // type. A private helper taking the same event as its first parameter is a handler candidate too,
@@ -323,11 +315,6 @@ public class ReactorInvoker(
                     onceOnlyMethods.Add(method);
                 }
 
-                if (method.IsDefined(typeof(SkipCatchUpAttribute), false))
-                {
-                    skipCatchUpMethods.Add(method);
-                }
-
                 var eventParameterType = method.GetParameters()[0].ParameterType;
                 foreach (var eventType in eventParameterType.GetEventTypes(eventTypes))
                 {
@@ -335,7 +322,7 @@ public class ReactorInvoker(
                 }
             }
 
-            return new(liveMethodsByEventType.ToFrozenDictionary(), replayMethodsByEventType.ToFrozenDictionary(), onceOnlyMethods.ToFrozenSet(), skipCatchUpMethods.ToFrozenSet());
+            return new(liveMethodsByEventType.ToFrozenDictionary(), replayMethodsByEventType.ToFrozenDictionary(), onceOnlyMethods.ToFrozenSet());
         }
     }
 }

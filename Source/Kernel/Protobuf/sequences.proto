@@ -208,7 +208,6 @@ enum EventObservationState {
    EVENT_OBSERVATION_STATE_None = 0;
    Initial = 1;
    Replay = 2;
-   CatchUp = 4;
 }
 message EventRevision {
    uint32 Generation = 1;
