@@ -85,9 +85,7 @@ An event matches when it satisfies any one of the criteria. The named-tag criter
 Named-tag appends and queries use server operations that older Chronicle servers don't have. An older server rejects the call, and the .NET client surfaces it as an `RpcException` with status code `Unimplemented`. The tags are never dropped silently, and a query is never widened to ignore its named-tag criteria. Appends without named tags keep using the existing operations, so they are unaffected.
 :::
 
-:::caution[SQL storage doesn't support named tags yet]
-The MongoDB and in-memory storage providers store and query named tags, and MongoDB indexes them by name and value. With the SQL storage provider, an append that carries named tags and a query that filters on them both fail with `NamedTagsNotSupported`.
-:::
+MongoDB, SQL (SQLite, PostgreSQL, and SQL Server), and in-memory storage support named-tag appends and queries. SQL stores them in a companion table named `__cratis_named_tags` in each event-store namespace database. That name is reserved for Chronicle; if you already have a table by that name, move it before upgrading.
 
 :::danger[Never put secrets or personal data in a named tag]
 Named tags are plaintext, indexed metadata. [PII encryption](../compliance/pii.mdx) and the other compliance features protect event content, not tags, so a named tag is never encrypted. Event exports include named tags too. Use identifiers that are safe to show to anyone who can read the event sequence.

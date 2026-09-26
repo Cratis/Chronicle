@@ -50,8 +50,8 @@ Each event in a batch can carry its own named tags, and the append call can add 
 
 Transactional appends through a unit of work accept named tags the same way.
 
-:::caution[Check the server and storage before you rely on named tags]
-An older Chronicle server rejects named-tag appends instead of dropping the tags; the .NET client surfaces an `RpcException` with status code `Unimplemented`. The SQL storage provider doesn't support named tags yet, so these appends fail with `NamedTagsNotSupported` there. MongoDB and in-memory storage support them.
+:::caution[Upgrade the Chronicle server first]
+An older Chronicle server rejects named-tag appends instead of dropping the tags; the .NET client surfaces an `RpcException` with status code `Unimplemented`. MongoDB, SQL, and in-memory storage support named tags on an upgraded server. SQL reserves the table name `__cratis_named_tags` in each event-store namespace database; a pre-existing table with that name blocks migration.
 :::
 
 Named tags are plaintext and are not encrypted by the compliance features. Don't put secrets or personal data in them.
