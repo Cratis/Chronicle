@@ -82,13 +82,29 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 .FailedPartitions
                 .GetFor(observerIds);
             var failedObserverIds = failedPartitions.Partitions.Select(_ => _.ObserverId.Value).ToHashSet(StringComparer.Ordinal);
-            var outstanding = observers.Where(_ =>
-                !failedObserverIds.Contains(_.Id) &&
-                (!((EventSequenceNumber)_.LastHandledEventSequenceNumber).IsActualValue ||
-                 _.LastHandledEventSequenceNumber < (eventTypeTails.Count == 0 || !_.EventTypes.Any()
-                     ? request.TailEventSequenceNumber
-                     : _.EventTypes.Where(type => eventTypeTails.ContainsKey(type.Id)).Max(type => eventTypeTails[type.Id])))).Select(_ => _.Id).ToArray();
-            if (outstanding.Length == 0)
+            var outstanding = new List<string>();
+            foreach (var observer in observers.Where(_ => !failedObserverIds.Contains(_.Id)))
+            {
+                var target = eventTypeTails.Count == 0 || !observer.EventTypes.Any()
+                    ? request.TailEventSequenceNumber
+                    : observer.EventTypes.Where(type => eventTypeTails.ContainsKey(type.Id)).Max(type => eventTypeTails[type.Id]);
+                var lastHandled = (EventSequenceNumber)observer.LastHandledEventSequenceNumber;
+                if (lastHandled.IsActualValue && lastHandled >= (EventSequenceNumber)target)
+                {
+                    continue;
+                }
+
+                var observerKey = new Concepts.Observation.ObserverKey(observer.Id, request.EventStore, request.Namespace, request.EventSequenceId);
+                var subscription = await grainFactory.GetGrain<Cratis.Chronicle.Observation.IObserver>(observerKey).GetSubscription();
+                if (subscription is { Filters: { } filters } && HasEffectiveFilters(filters) &&
+                    !await HasMatchingEvent(request, observer, lastHandled, target, filters, context.CancellationToken))
+                {
+                    continue;
+                }
+
+                outstanding.Add(observer.Id);
+            }
+            if (outstanding.Count == 0)
             {
                 return new WaitForObserverCompletionResponse
                 {
@@ -103,7 +119,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 {
                     TimedOut = true,
                     FailedPartitions = failedPartitions.Partitions.ToContract().ToArray(),
-                    OutstandingObservers = outstanding
+                    OutstandingObservers = outstanding.ToArray()
                 };
             }
 
@@ -248,5 +264,46 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             select (definition, state);
 
         return observers.ToContract();
+    }
+
+    static bool HasEffectiveFilters(Concepts.Observation.ObserverFilters filters) =>
+        filters.Tags.Any() ||
+        filters.EventSourceType is { IsDefaultOrUnspecified: false } ||
+        filters.EventStreamType is { IsAll: false };
+
+    async Task<bool> HasMatchingEvent(
+        WaitForObserverCompletionRequest request,
+        ObserverInformation observer,
+        EventSequenceNumber lastHandled,
+        EventSequenceNumber target,
+        Concepts.Observation.ObserverFilters filters,
+        CancellationToken cancellationToken)
+    {
+        // The queue drops filtered events before they reach the observer. Inspect the range since its last
+        // handled event, not only the target: a matching event earlier in the batch may still be in flight.
+        var eventTypes = observer.EventTypes.Any() ? observer.EventTypes.ToChronicle() : null;
+        var tags = filters.Tags.Any() ? filters.Tags.Select(_ => (Tag)_).ToArray() : null;
+        var eventSequence = storage.GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace)
+            .GetEventSequence(request.EventSequenceId);
+        using var cursor = await eventSequence.GetRange(
+            lastHandled.IsActualValue ? lastHandled.Next() : EventSequenceNumber.First,
+            target,
+            eventTypes: eventTypes,
+            tags: tags,
+            cancellationToken: cancellationToken);
+        while (await cursor.MoveNext())
+        {
+            if (cursor.Current.Any(@event =>
+                (eventTypes is null || observer.EventTypes.Any(type => type.Id == @event.Context.EventType.Id)) &&
+                (filters.EventSourceType is not { IsDefaultOrUnspecified: false } || @event.Context.EventSourceType == filters.EventSourceType) &&
+                (filters.EventStreamType is not { IsAll: false } || @event.Context.EventStreamType == filters.EventStreamType) &&
+                (tags is null || @event.Context.Tags.Any(tag => filters.Tags.Contains(tag.Value)))))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
