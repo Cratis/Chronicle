@@ -132,4 +132,4 @@ Chronicle registers its built-in handlers and reactor metadata providers when yo
 
 ## Error handling
 
-If a side-effect append fails, Chronicle marks the reactor partition as failed. Fix the underlying cause and retry or rewind the observer to continue processing.
+If a side-effect append fails, Chronicle marks the reactor partition as failed. A non-null return value that no side-effect handler claims also fails the partition instead of being discarded and acknowledged. Register a handler for the returned type (or return a supported event), then retry or rewind the observer to continue processing.
