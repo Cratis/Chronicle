@@ -67,6 +67,8 @@ public record OrderKey(string CustomerId, string OrderNumber);
 
 public record OrderReadModel(string Id, decimal Total, OrderKey? OrderKey);
 
+public record CompositeOrderReadModel(OrderKey Id, decimal Total, string Name);
+
 public record Users(string Name);
 
 public record ModelWithKeywordProperties(
