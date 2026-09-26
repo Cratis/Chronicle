@@ -8,9 +8,6 @@ env:
   DOTNET8_VERSION: "8.0.410"
   DOTNET9_VERSION: "9.0.x"
   DOTNET_VERSION: "10.0.x"
-  DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
-  # Separate cache for the DEVELOPMENT-symbol build the integration tests consume.
-  DOTNET_DEV_CACHE: "dotnet-dev-cache-${{ github.sha }}"
   CRATIS_CHRONICLE_LOCAL_IMAGE: "ghcr.io/cratis/chronicle:${{ github.sha }}"
 
 on:
@@ -57,8 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     outputs:
-      dotnet-cache-key: ${{ steps.export-cache-key.outputs.key }}
-      chronicle-image: ${{ steps.export-cache-key.outputs.image }}
+      chronicle-image: ${{ steps.export-image.outputs.image }}
 
     steps:
       - name: Checkout code
@@ -114,12 +110,6 @@ jobs:
           restore-keys: |
             dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
 
-      - uses: actions/cache@v4
-        id: dotnet-x64-output
-        with:
-          path: ./**/bin
-          key: ${{ env.DOTNET_CACHE }}
-
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
         with:
@@ -167,20 +157,34 @@ jobs:
         if: github.actor != 'dependabot[bot]'
         run: docker push ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
 
-      - name: Export cache key and image
-        id: export-cache-key
+      - name: Pack Release build output
         run: |
-          echo "key=${{ env.DOTNET_CACHE }}" >> "$GITHUB_OUTPUT"
-          echo "image=${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB; do
+            test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
+          done
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -czf build-output-release.tar.gz -T -
+
+      - name: Upload Release build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output-release
+          path: build-output-release.tar.gz
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Export image
+        id: export-image
+        run: echo "image=${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" >> "$GITHUB_OUTPUT"
 
   # The integration tests run with the DEVELOPMENT compile symbol, which the
   # Release build above does not define, so every integration shard would
   # otherwise recompile ~15-20 projects from source before its first test.
   # Build that variant once here -- in parallel with dotnet-build, so it does
-  # not extend the critical path -- and cache it under its own key for the
-  # shards to restore and run with --no-build. The non-DEVELOPMENT cache stays
-  # for the specs/mongodb/integration-api jobs, which must exercise production
-  # (non-DEVELOPMENT) behavior.
+  # not extend the critical path -- and upload it separately for the shards
+  # to run with --no-build. The non-DEVELOPMENT build output goes to the
+  # specs/mongodb/integration-api jobs, which must exercise production behavior.
   dotnet-build-development:
     needs: [wire-compatibility]
     runs-on: ubuntu-latest
@@ -188,9 +192,6 @@ jobs:
     permissions:
       contents: read
       packages: read
-    outputs:
-      dotnet-cache-key: ${{ steps.export-dev-cache-key.outputs.key }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -220,12 +221,6 @@ jobs:
           restore-keys: |
             dotnet-dev-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
 
-      - uses: actions/cache@v4
-        id: dotnet-dev-output
-        with:
-          path: ./**/bin
-          key: ${{ env.DOTNET_DEV_CACHE }}
-
       - name: Add GitHub Package Registry to NuGet
         run: |
           dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
@@ -234,9 +229,22 @@ jobs:
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
-      - name: Export dev cache key
-        id: export-dev-cache-key
-        run: echo "key=${{ env.DOTNET_DEV_CACHE }}" >> "$GITHUB_OUTPUT"
+      - name: Pack DEVELOPMENT build output
+        run: |
+          set -euo pipefail
+          for project in Integration/Client Integration/Kernel Integration/Clustering; do
+            test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
+          done
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -czf build-output-development.tar.gz -T -
+
+      - name: Upload DEVELOPMENT build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output-development
+          path: build-output-development.tar.gz
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
 
   specs:
     runs-on: ubuntu-latest
@@ -254,11 +262,13 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v4
-        id: dotnet-x64-output
+      - name: Download Release build output
+        uses: actions/download-artifact@v4
         with:
-          path: ./**/bin
-          key: ${{ env.DOTNET_CACHE }}
+          name: build-output-release
+
+      - name: Extract Release build output
+        run: tar -xzf build-output-release.tar.gz
 
       - name: Run tests with coverage
         # Integration tests are executed by .github/workflows/integration.yml.
@@ -280,7 +290,7 @@ jobs:
           retention-days: 1
 
   # Skipped for Dependabot, whose read-only token cannot push the image these shards pull. The rest of the
-  # gate - build, specs, mongodb, and integration-api, which builds its own image from the cached binaries -
+  # gate - build, specs, mongodb, and integration-api, which builds its own image from the downloaded binaries -
   # still runs, so a bump is checked rather than waved through. A bump that needs the full matrix should be
   # re-opened as an ordinary pull request, where the token can push.
   integration:
@@ -292,9 +302,9 @@ jobs:
     uses: ./.github/workflows/integration.yml
     secrets: inherit
     with:
-      # Integration shards restore the DEVELOPMENT-symbol build and run --no-build;
+      # Integration shards download the DEVELOPMENT-symbol build and run --no-build;
       # the Docker image still comes from dotnet-build.
-      dotnet-cache-key: ${{ needs.dotnet-build-development.outputs.dotnet-cache-key }}
+      build-output-artifact: build-output-development
       chronicle-image: ${{ needs.dotnet-build.outputs.chronicle-image }}
       # Every storage backend on the nightly schedule and on manual dispatch;
       # pull requests run the default backend only.
@@ -316,18 +326,13 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v4
-        id: dotnet-x64-output
+      - name: Download Release build output
+        uses: actions/download-artifact@v4
         with:
-          path: ./**/bin
-          key: ${{ env.DOTNET_CACHE }}
-          # The next step copies straight out of the restored bin directory, so this job cannot survive a miss.
-          # Left at the default, a miss - including a transient "operation cannot be completed in timeout" on
-          # restore - carried on to fail at `cp: cannot stat`, which reads as a broken build rather than as the
-          # cache problem it is. Fail here instead, where the message names the cause and a re-run fixes it.
-          # The equivalent restores in integration.yml are deliberately left tolerant: those jobs build as part
-          # of `dotnet test`, so a miss there costs time rather than correctness.
-          fail-on-cache-miss: true
+          name: build-output-release
+
+      - name: Extract Release build output
+        run: tar -xzf build-output-release.tar.gz
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
@@ -336,7 +341,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker image from cached binaries
+      - name: Build Docker image from downloaded binaries
         run: |
           rm -rf Source/Kernel/Server/out
           mkdir -p Source/Kernel/Server/out
@@ -379,11 +384,13 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v4
-        id: dotnet-x64-output
+      - name: Download Release build output
+        uses: actions/download-artifact@v4
         with:
-          path: ./**/bin
-          key: ${{ env.DOTNET_CACHE }}
+          name: build-output-release
+
+      - name: Extract Release build output
+        run: tar -xzf build-output-release.tar.gz
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
@@ -514,11 +521,13 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v4
-        id: dotnet-x64-output
+      - name: Download Release build output
+        uses: actions/download-artifact@v4
         with:
-          path: ./**/bin
-          key: ${{ env.DOTNET_CACHE }}
+          name: build-output-release
+
+      - name: Extract Release build output
+        run: tar -xzf build-output-release.tar.gz
 
       - name: Build benchmarks the way BenchmarkDotNet does
         run: |
