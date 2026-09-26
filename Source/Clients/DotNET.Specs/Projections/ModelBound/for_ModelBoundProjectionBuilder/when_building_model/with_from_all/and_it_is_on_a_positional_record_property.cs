@@ -20,6 +20,8 @@ public class and_it_is_on_a_positional_record_property : given.a_model_bound_pro
 
     void Because() => _result = builder.Build(typeof(ThingTimeline));
 
+    [Fact] void should_subscribe_to_all_event_types() => _result.SubscribesToAllEvents.ShouldBeTrue();
+
     [Fact]
     void should_pick_up_the_property_targeted_from_all()
     {

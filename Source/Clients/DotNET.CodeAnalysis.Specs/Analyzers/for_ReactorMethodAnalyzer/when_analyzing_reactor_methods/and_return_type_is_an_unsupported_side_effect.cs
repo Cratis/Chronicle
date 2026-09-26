@@ -29,7 +29,7 @@ public class and_return_type_is_an_unsupported_side_effect : given.a_reactor_met
 
     Task _result;
 
-    void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.ReactorMethodAnalyzer>.VerifyAnalyzer(CreateSource(Usage), new ExpectedDiagnostic(DiagnosticIds.ReactorMethodSignatureMustMatchAllowed, DiagnosticSeverity.Warning, "On"));
+    void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.ReactorMethodAnalyzer>.VerifyAnalyzer(CreateSource(Usage), new ExpectedDiagnostic(DiagnosticIds.ReactorMethodReturnTypeMustBeSupported, DiagnosticSeverity.Warning, "unsupported return type 'Sample.NotAnEvent'"));
 
-    [Fact] Task should_report_invalid_signature_diagnostic() => _result;
+    [Fact] Task should_report_unsupported_return_type_diagnostic() => _result;
 }

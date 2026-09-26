@@ -590,6 +590,10 @@ internal class ModelBoundProjectionBuilder(
         if (fromAllAttr is not null)
         {
             _fromEveryAttributes.Add((propertyName, new FromEveryAttribute(property: fromAllAttr.Property, contextProperty: fromAllAttr.ContextProperty)));
+            if (isRoot)
+            {
+                definition.SubscribesToAllEvents = true;
+            }
         }
     }
 
@@ -767,6 +771,10 @@ internal class ModelBoundProjectionBuilder(
         if (fromAllAttr is not null)
         {
             _fromEveryAttributes.Add((propertyName, new FromEveryAttribute(property: fromAllAttr.Property, contextProperty: fromAllAttr.ContextProperty)));
+            if (isRoot)
+            {
+                definition.SubscribesToAllEvents = true;
+            }
         }
     }
 }

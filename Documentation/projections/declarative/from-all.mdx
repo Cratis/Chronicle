@@ -1,8 +1,8 @@
 # Projection With FromAll
 
-`FromAll` is a .NET declarative projection API that maps properties from every event considered by the projection, excluding child projection events by default. Other clients expose the same underlying concept through their every-event APIs configured to exclude children; see [Projection With FromEvery](./from-every) for the full every-event feature set.
+`FromAll` subscribes to **every event type in the event sequence**, not just event types declared by the projection. It can create or update a read-model instance for any event source, keyed by the event source id unless you configure another key. Use [FromEvery](./from-every) instead when mappings should apply only to event types the projection already handles.
 
-Use `FromAll` in .NET when the projection should express that a mapping belongs to the all-events portion of the projection definition. In Elixir, the same default (excluding child projection events) is what `from_every` does when `:include_children` is omitted. In TypeScript, call `excludeChildProjections()` on the `fromEvery` builder to get the same behavior.
+Use `FromAll` in .NET for sequence-wide mappings such as per-source event counts. The `all` block in the declaration language has the same subscription scope. Child-projection inclusion is a separate setting; it does not limit which root event types `FromAll` subscribes to.
 
 ## Basic Usage
 
@@ -18,7 +18,7 @@ Use `FromAll` in .NET when the projection should express that a mapping belongs 
 
 ## With Event-Specific Mappings
 
-`FromAll` can sit beside event-specific `From` mappings. Use event-specific mappings for business state, and reserve `FromAll` for metadata that should update for every projected event.
+`FromAll` can sit beside event-specific `From` mappings, but the `FromAll` mapping also processes event types not shown in this example. Those events can create instances without the event-specific business fields. If metadata should update only for the events listed in `From`, use `FromEvery` instead.
 
 <ChronicleClientTabs snippet="projections/declarative/from-all/with-specific-mappings" />
 
@@ -35,6 +35,6 @@ The model-bound `[FromAll]` attribute does not yet support this dictionary form 
 | API | Use it when |
 | --- | --- |
 | `FromAll` | You are using the .NET declarative projection API and want to express an all-events mapping. |
-| `FromEvery` | You want the portable every-event concept, or you are using a client that exposes the concept under that name. |
+| `FromEvery` | You want mappings applied to the projection's own handled event types, without subscribing to unrelated event types. |
 
 Prefer event context sources for audit fields because every event has the same context shape. Use event payload properties only when the event contracts intentionally share the same property.
