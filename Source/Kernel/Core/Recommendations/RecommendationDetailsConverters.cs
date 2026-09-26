@@ -25,7 +25,15 @@ internal static class RecommendationDetailsConverters
     /// keeps the source type as its first generic argument. See EventStoreNames for what that cost the last time.
     /// </remarks>
     internal static IEnumerable<RecommendationDetails> ToDetails(this IEnumerable<RecommendationState> recommendations) =>
-        [.. recommendations.Select(ToDetails)];
+        [.. recommendations.Where(recommendation => !recommendation.IsIgnored).Select(ToDetails)];
+
+    /// <summary>
+    /// Converts the stored recommendations a human has declined into read models, materializing the result.
+    /// </summary>
+    /// <param name="recommendations">The stored recommendations.</param>
+    /// <returns>The ignored recommendations as read models.</returns>
+    internal static IEnumerable<RecommendationDetails> ToIgnoredDetails(this IEnumerable<RecommendationState> recommendations) =>
+        [.. recommendations.Where(recommendation => recommendation.IsIgnored).Select(ToDetails)];
 
     /// <summary>
     /// Converts a stored recommendation into a read model.
