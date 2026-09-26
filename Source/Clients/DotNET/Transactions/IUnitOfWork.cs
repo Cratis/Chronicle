@@ -103,7 +103,7 @@ public interface IUnitOfWork : IDisposable
     /// <param name="occurred">Optional occurred time.</param>
     /// <param name="subject">Optional subject.</param>
     /// <exception cref="UnitOfWorkNamedTagsNotSupported">The implementation cannot carry nonempty named tags.</exception>
-    void AddEvent(
+    void AddEventWithNamedTags(
         EventSequenceId eventSequenceId,
         EventSourceId eventSourceId,
         object @event,

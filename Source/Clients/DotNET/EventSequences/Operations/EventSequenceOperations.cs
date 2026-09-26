@@ -90,7 +90,7 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
                 kvp => kvp.Value.ConcurrencyScope);
 
         return events.Any(_ => _.NamedTags.Any())
-            ? eventSequence.AppendMany(events, [], concurrencyScopes: concurrencyScopes)
+            ? eventSequence.AppendManyWithNamedTags(events, [], concurrencyScopes: concurrencyScopes)
             : eventSequence.AppendMany(events, concurrencyScopes: concurrencyScopes);
     }
 }

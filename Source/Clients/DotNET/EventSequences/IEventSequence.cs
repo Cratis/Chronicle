@@ -186,7 +186,7 @@ public interface IEventSequence
     /// <param name="subject">Optional subject.</param>
     /// <returns>The append result.</returns>
     /// <exception cref="NamedTagsNotSupported">The implementation cannot append nonempty named tags.</exception>
-    Task<AppendResult> Append(
+    Task<AppendResult> AppendWithNamedTags(
         EventSourceId eventSourceId,
         object @event,
         IEnumerable<NamedTag> namedTags,
@@ -218,7 +218,7 @@ public interface IEventSequence
     /// <param name="subject">Optional subject.</param>
     /// <returns>The batch result.</returns>
     /// <exception cref="NamedTagsNotSupported">The implementation cannot append nonempty named tags.</exception>
-    Task<AppendManyResult> AppendMany(
+    Task<AppendManyResult> AppendManyWithNamedTags(
         EventSourceId eventSourceId,
         IEnumerable<object> events,
         IEnumerable<NamedTag> namedTags,
@@ -244,7 +244,7 @@ public interface IEventSequence
     /// <param name="concurrencyScopes">Optional concurrency scopes.</param>
     /// <returns>The batch result.</returns>
     /// <exception cref="NamedTagsNotSupported">The implementation cannot append nonempty named tags.</exception>
-    Task<AppendManyResult> AppendMany(
+    Task<AppendManyResult> AppendManyWithNamedTags(
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<NamedTag> namedTags,
         CorrelationId? correlationId = default,

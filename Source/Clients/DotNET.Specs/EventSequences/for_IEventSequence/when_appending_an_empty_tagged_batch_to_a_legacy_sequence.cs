@@ -9,7 +9,7 @@ public class when_appending_an_empty_tagged_batch_to_a_legacy_sequence : given.a
 {
     Exception _error;
 
-    async Task Because() => _error = await Catch.Exception(() => _sequence.AppendMany(EventSourceId.New(), ["event"], []));
+    async Task Because() => _error = await Catch.Exception(() => _sequence.AppendManyWithNamedTags(EventSourceId.New(), ["event"], []));
 
     [Fact] void should_delegate_to_the_legacy_implementation() => _implementation.SingleSourceBatchCalls.ShouldEqual(1);
     [Fact] void should_not_fail() => _error.ShouldBeNull();

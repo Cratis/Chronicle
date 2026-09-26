@@ -56,7 +56,7 @@ public interface ITransactionalEventSequence
     /// <param name="subject">Optional subject.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="NamedTagsNotSupported">The implementation cannot carry nonempty named tags.</exception>
-    Task Append(
+    Task AppendWithNamedTags(
         EventSourceId eventSourceId,
         object @event,
         IEnumerable<NamedTag> namedTags,
@@ -110,7 +110,7 @@ public interface ITransactionalEventSequence
     /// <param name="subject">Optional subject.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="NamedTagsNotSupported">The implementation cannot carry nonempty named tags.</exception>
-    Task AppendMany(
+    Task AppendManyWithNamedTags(
         EventSourceId eventSourceId,
         IEnumerable<object> events,
         IEnumerable<NamedTag> namedTags,

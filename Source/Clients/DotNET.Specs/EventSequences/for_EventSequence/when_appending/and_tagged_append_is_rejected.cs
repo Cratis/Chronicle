@@ -22,7 +22,7 @@ public class and_tagged_append_is_rejected : given.a_named_tag_append
             }));
     }
 
-    Task Because() => _eventSequence.Append(_sourceId, "event", [new("name", "value")]);
+    Task Because() => _eventSequence.AppendWithNamedTags(_sourceId, "event", [new("name", "value")]);
 
     [Fact] void should_notify_with_effective_named_tags() => _notification.Event.Context.NamedTags.Single().Value.ShouldEqual("value");
     [Fact] void should_notify_with_the_rejection_result() => _notification.Result.Errors.ShouldNotBeEmpty();

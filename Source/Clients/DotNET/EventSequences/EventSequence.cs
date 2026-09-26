@@ -97,7 +97,7 @@ public class EventSequence(
         AppendCore(eventSourceId, @event, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
 
     /// <inheritdoc/>
-    public Task<AppendResult> Append(
+    public Task<AppendResult> AppendWithNamedTags(
         EventSourceId eventSourceId,
         object @event,
         IEnumerable<NamedTag> namedTags,
@@ -126,7 +126,7 @@ public class EventSequence(
         AppendManyCore(eventSourceId, events, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
 
     /// <inheritdoc/>
-    public Task<AppendManyResult> AppendMany(
+    public Task<AppendManyResult> AppendManyWithNamedTags(
         EventSourceId eventSourceId,
         IEnumerable<object> events,
         IEnumerable<NamedTag> namedTags,
@@ -149,7 +149,7 @@ public class EventSequence(
         AppendManyCore(events, [], correlationId, tags, concurrencyScopes);
 
     /// <inheritdoc/>
-    public Task<AppendManyResult> AppendMany(
+    public Task<AppendManyResult> AppendManyWithNamedTags(
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<NamedTag> namedTags,
         CorrelationId? correlationId = default,

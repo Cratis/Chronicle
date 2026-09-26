@@ -9,7 +9,7 @@ public class when_appending_named_tags_to_a_legacy_sequence : given.a_legacy_eve
 {
     Exception _error;
 
-    async Task Because() => _error = await Catch.Exception(() => _sequence.Append(EventSourceId.New(), "event", [new("name", "value")]));
+    async Task Because() => _error = await Catch.Exception(() => _sequence.AppendWithNamedTags(EventSourceId.New(), "event", [new("name", "value")]));
 
     [Fact] void should_throw_a_dedicated_exception() => _error.ShouldBeOfExactType<NamedTagsNotSupported>();
     [Fact] void should_not_call_the_legacy_implementation() => _implementation.AppendCalls.ShouldEqual(0);

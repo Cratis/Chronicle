@@ -21,7 +21,7 @@ public class NamedTaggedTransferService(IEventLog eventLog)
 
         // The withdrawal carries ledger-side = debit and transfer = <transferId>.
         // The deposit carries ledger-side = credit and transfer = <transferId>.
-        return eventLog.AppendMany(
+        return eventLog.AppendManyWithNamedTags(
             events,
             namedTags: [new NamedTag("transfer", transferId)],
             tags: ["transfer"]);

@@ -67,7 +67,7 @@ internal sealed class NoOpUnitOfWorkManager : IUnitOfWorkManager
         {
         }
 
-        public void AddEvent(
+        public void AddEventWithNamedTags(
             EventSequenceId eventSequenceId,
             EventSourceId eventSourceId,
             object @event,

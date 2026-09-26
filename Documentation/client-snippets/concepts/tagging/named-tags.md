@@ -12,7 +12,7 @@ public class TaggingCatalogImportService(IEventLog eventLog)
     public Task<AppendResult> Import(EventSourceId itemId, string sku, string title, string batchId) =>
         // Plain tags: ["catalog", "import"]
         // Named tags: import-batch = <batchId>, source-system = erp
-        eventLog.Append(
+        eventLog.AppendWithNamedTags(
             itemId,
             new TaggingCatalogItemImported(sku, title),
             namedTags: [new NamedTag("import-batch", batchId), new NamedTag("source-system", "erp")],

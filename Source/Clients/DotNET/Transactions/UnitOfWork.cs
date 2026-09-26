@@ -68,10 +68,10 @@ public class UnitOfWork(
         IEnumerable<string>? tags = default,
         DateTimeOffset? occurred = default,
         Subject? subject = default) =>
-        AddEvent(eventSequenceId, eventSourceId, @event, [], causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
+        AddEventWithNamedTags(eventSequenceId, eventSourceId, @event, [], causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
 
     /// <inheritdoc/>
-    public void AddEvent(
+    public void AddEventWithNamedTags(
         EventSequenceId eventSequenceId,
         EventSourceId eventSourceId,
         object @event,
@@ -178,7 +178,7 @@ public class UnitOfWork(
             {
                 var events = GetEventsToCommit();
                 var result = events.Any(_ => _.NamedTags.Any())
-                    ? await _eventSequence.AppendMany(events, [], concurrencyScopes: _concurrencyScopes)
+                    ? await _eventSequence.AppendManyWithNamedTags(events, [], concurrencyScopes: _concurrencyScopes)
                     : await _eventSequence.AppendMany(events, concurrencyScopes: _concurrencyScopes);
                 if (result.SequenceNumbers?.Any() == true)
                 {

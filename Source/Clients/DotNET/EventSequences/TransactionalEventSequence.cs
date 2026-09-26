@@ -46,7 +46,7 @@ public class TransactionalEventSequence(IEventSequence eventSequence, IUnitOfWor
     }
 
     /// <inheritdoc/>
-    public Task Append(
+    public Task AppendWithNamedTags(
         EventSourceId eventSourceId,
         object @event,
         IEnumerable<NamedTag> namedTags,
@@ -58,7 +58,7 @@ public class TransactionalEventSequence(IEventSequence eventSequence, IUnitOfWor
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        UnitOfWork.AddEvent(eventSequence.Id, eventSourceId, @event, namedTags, GetCausation(), eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
+        UnitOfWork.AddEventWithNamedTags(eventSequence.Id, eventSourceId, @event, namedTags, GetCausation(), eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
         return Task.CompletedTask;
     }
 
@@ -83,7 +83,7 @@ public class TransactionalEventSequence(IEventSequence eventSequence, IUnitOfWor
     }
 
     /// <inheritdoc/>
-    public Task AppendMany(
+    public Task AppendManyWithNamedTags(
         EventSourceId eventSourceId,
         IEnumerable<object> events,
         IEnumerable<NamedTag> namedTags,
@@ -99,7 +99,7 @@ public class TransactionalEventSequence(IEventSequence eventSequence, IUnitOfWor
         var materializedNamedTags = namedTags.ToArray();
         foreach (var @event in events)
         {
-            UnitOfWork.AddEvent(eventSequence.Id, eventSourceId, @event, materializedNamedTags, causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
+            UnitOfWork.AddEventWithNamedTags(eventSequence.Id, eventSourceId, @event, materializedNamedTags, causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
         }
         return Task.CompletedTask;
     }

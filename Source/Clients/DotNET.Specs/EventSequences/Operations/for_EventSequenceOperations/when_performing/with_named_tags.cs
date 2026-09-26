@@ -21,7 +21,7 @@ public class with_named_tags : given.event_sequence_operations_without_any_opera
             staged.Add(new AppendOperation("event") { NamedTags = YieldOnce() });
         });
         _previewTags = _operations.GetEventsToAppend().Single().NamedTags;
-        _eventSequence.AppendMany(
+        _eventSequence.AppendManyWithNamedTags(
             Arg.Any<IEnumerable<EventForEventSourceId>>(),
             Arg.Any<IEnumerable<NamedTag>>(),
             Arg.Any<CorrelationId?>(),

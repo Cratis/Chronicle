@@ -15,8 +15,8 @@ public class and_tagged_rpc_is_unimplemented : given.a_unit_of_work
 
     void Establish()
     {
-        _unitOfWork.AddEvent(EventSequenceId.Log, EventSourceId.New(), "event", [new("name", "value")], Causation.Unknown());
-        _eventSequence.AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>(), Arg.Any<IEnumerable<NamedTag>>(), Arg.Any<CorrelationId?>(), Arg.Any<IEnumerable<string>>(), Arg.Any<IDictionary<EventSourceId, ConcurrencyScope>>())
+        _unitOfWork.AddEventWithNamedTags(EventSequenceId.Log, EventSourceId.New(), "event", [new("name", "value")], Causation.Unknown());
+        _eventSequence.AppendManyWithNamedTags(Arg.Any<IEnumerable<EventForEventSourceId>>(), Arg.Any<IEnumerable<NamedTag>>(), Arg.Any<CorrelationId?>(), Arg.Any<IEnumerable<string>>(), Arg.Any<IDictionary<EventSourceId, ConcurrencyScope>>())
             .Returns<Task<AppendManyResult>>(_ => throw new RpcException(new Status(StatusCode.Unimplemented, "No tagged RPC")));
     }
 

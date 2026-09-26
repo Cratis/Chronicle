@@ -9,7 +9,7 @@ public class when_appending_empty_named_tags_to_a_legacy_sequence : given.a_lega
 {
     Exception _error;
 
-    async Task Because() => _error = await Catch.Exception(() => _sequence.Append(EventSourceId.New(), "event", []));
+    async Task Because() => _error = await Catch.Exception(() => _sequence.AppendWithNamedTags(EventSourceId.New(), "event", []));
 
     [Fact] void should_delegate_to_the_legacy_implementation() => _implementation.AppendCalls.ShouldEqual(1);
     [Fact] void should_not_fail() => _error.ShouldBeNull();

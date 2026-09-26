@@ -16,7 +16,7 @@ public class with_named_tags : given.a_unit_of_work
     void Establish()
     {
         _sourceId = EventSourceId.New();
-        _eventSequence.AppendMany(
+        _eventSequence.AppendManyWithNamedTags(
             Arg.Any<IEnumerable<EventForEventSourceId>>(),
             Arg.Any<IEnumerable<NamedTag>>(),
             Arg.Any<CorrelationId?>(),
@@ -27,7 +27,7 @@ public class with_named_tags : given.a_unit_of_work
                 _taggedEvents = call.Arg<IEnumerable<EventForEventSourceId>>().ToArray();
                 return _appendResult;
             });
-        _unitOfWork.AddEvent(EventSequenceId.Log, _sourceId, "one", [new("event", "one")], Causation.Unknown());
+        _unitOfWork.AddEventWithNamedTags(EventSequenceId.Log, _sourceId, "one", [new("event", "one")], Causation.Unknown());
         _unitOfWork.AddEvents(EventSequenceId.Log,
             [new EventForEventSourceId(_sourceId, "two") { NamedTags = [new("event", "two"), new("shared", "same"), new("shared", "same"), new("call", "value")] }],
             []);

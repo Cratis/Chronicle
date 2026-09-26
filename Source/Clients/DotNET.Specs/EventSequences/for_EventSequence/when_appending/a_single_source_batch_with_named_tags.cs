@@ -12,7 +12,7 @@ public class a_single_source_batch_with_named_tags : given.a_named_tag_append
 
     void Establish() => _eventSequence.AppendOperations.Subscribe(events => _observedContexts = events.Select(_ => _.Event.Context).ToArray());
 
-    async Task Because() => await _eventSequence.AppendMany(_sourceId, ["one", "two"], [new("name", "a"), new("name", "a"), new("name", "b")], tags: ["plain"], subject: "invoice");
+    async Task Because() => await _eventSequence.AppendManyWithNamedTags(_sourceId, ["one", "two"], [new("name", "a"), new("name", "a"), new("name", "b")], tags: ["plain"], subject: "invoice");
 
     [Fact] void should_use_tagged_batch_rpc() => _batchRequest.ShouldNotBeNull();
     [Fact] void should_include_distinct_pairs_on_every_event() => _batchRequest.Events.All(_ => _.NamedTags.Select(tag => tag.Value).SequenceEqual(["a", "b"])).ShouldBeTrue();

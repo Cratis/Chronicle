@@ -9,7 +9,7 @@ public class when_appending_per_event_tags_to_a_legacy_sequence : given.a_legacy
 {
     Exception _error;
 
-    async Task Because() => _error = await Catch.Exception(() => _sequence.AppendMany(
+    async Task Because() => _error = await Catch.Exception(() => _sequence.AppendManyWithNamedTags(
         [new EventForEventSourceId(EventSourceId.New(), "event") { NamedTags = [new("name", "value")] }], []));
 
     [Fact] void should_throw_a_dedicated_exception() => _error.ShouldBeOfExactType<NamedTagsNotSupported>();

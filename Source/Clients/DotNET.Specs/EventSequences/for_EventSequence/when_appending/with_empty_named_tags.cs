@@ -19,7 +19,7 @@ public class with_empty_named_tags : given.a_named_tag_append
             }));
     }
 
-    Task Because() => _eventSequence.Append(_sourceId, "one", []);
+    Task Because() => _eventSequence.AppendWithNamedTags(_sourceId, "one", []);
 
     [Fact] void should_use_the_original_rpc() => _sequences.Received(1).Append(Arg.Any<Contracts.Sequences.AppendRequest>(), CallContext.Default);
     [Fact] void should_not_use_tagged_rpc() => _singleRequest.ShouldBeNull();

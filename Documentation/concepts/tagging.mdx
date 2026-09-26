@@ -48,7 +48,7 @@ A plain tag says what kind of event you have: `"checkout"`, `"audit"`. Sometimes
 
 ### Appending named tags
 
-You supply named tags when you append. Unlike plain tags, there is no attribute that declares them on an event type.
+You supply named tags with `AppendWithNamedTags` (or `AppendManyWithNamedTags` for a batch). Unlike plain tags, there is no attribute that declares them on an event type.
 
 <ChronicleClientTabs snippet="concepts/tagging/named-tags" />
 
@@ -85,7 +85,7 @@ An event matches when it satisfies any one of the criteria. The named-tag criter
 Named-tag appends and queries use server operations that older Chronicle servers don't have. An older server rejects the call, and the .NET client surfaces it as an `RpcException` with status code `Unimplemented`. The tags are never dropped silently, and a query is never widened to ignore its named-tag criteria. Appends without named tags keep using the existing operations, so they are unaffected.
 :::
 
-MongoDB, SQL (SQLite, PostgreSQL, and SQL Server), and in-memory storage support named-tag appends and queries. SQL stores them in a companion table named `__cratis_named_tags` in each event-store namespace database. That name is reserved for Chronicle; if you already have a table by that name, move it before upgrading.
+MongoDB, SQL (SQLite, PostgreSQL, and SQL Server), and in-memory storage support named-tag appends and queries. SQL stores them in a companion table named `__cratis_named_tags` in each event-store namespace database. That name is reserved for Chronicle. If a conflicting table already exists, every event-sequence operation in that namespace fails with `NamedTagsTableCollision` on first access (migration is lazy) and continues to fail until the conflicting table is renamed.
 
 :::danger[Never put secrets or personal data in a named tag]
 Named tags are plaintext, indexed metadata. [PII encryption](../compliance/pii.mdx) and the other compliance features protect event content, not tags, so a named tag is never encrypted. Event exports include named tags too. Use identifiers that are safe to show to anyone who can read the event sequence.

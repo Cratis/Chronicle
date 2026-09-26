@@ -9,7 +9,7 @@ public class when_appending_an_untagged_routed_batch_to_a_legacy_sequence : give
 {
     Exception _error;
 
-    async Task Because() => _error = await Catch.Exception(() => _sequence.AppendMany([new EventForEventSourceId(EventSourceId.New(), "event")], []));
+    async Task Because() => _error = await Catch.Exception(() => _sequence.AppendManyWithNamedTags([new EventForEventSourceId(EventSourceId.New(), "event")], []));
 
     [Fact] void should_delegate_to_the_legacy_implementation() => _implementation.RoutedBatchCalls.ShouldEqual(1);
     [Fact] void should_not_fail() => _error.ShouldBeNull();

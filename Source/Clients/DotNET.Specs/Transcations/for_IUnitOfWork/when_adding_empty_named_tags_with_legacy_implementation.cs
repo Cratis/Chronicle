@@ -13,7 +13,7 @@ public class when_adding_empty_named_tags_with_legacy_implementation : Specifica
     Exception _error;
 
     void Establish() => _unitOfWork = new();
-    void Because() => _error = Catch.Exception(() => ((IUnitOfWork)_unitOfWork).AddEvent(EventSequenceId.Log, EventSourceId.New(), "event", [], Causation.Unknown()));
+    void Because() => _error = Catch.Exception(() => ((IUnitOfWork)_unitOfWork).AddEventWithNamedTags(EventSequenceId.Log, EventSourceId.New(), "event", [], Causation.Unknown()));
 
     [Fact] void should_delegate_to_the_legacy_method() => _unitOfWork.AddEventCalls.ShouldEqual(1);
     [Fact] void should_not_fail() => _error.ShouldBeNull();

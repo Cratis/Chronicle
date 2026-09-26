@@ -9,7 +9,7 @@ public record NamedTaggedOrderPlaced(decimal Total);
 public class NamedTaggedCheckoutService(IEventLog eventLog)
 {
     public Task<AppendResult> PlaceOrder(EventSourceId orderId, string checkoutSessionId, decimal total) =>
-        eventLog.Append(
+        eventLog.AppendWithNamedTags(
             orderId,
             new NamedTaggedOrderPlaced(total),
             namedTags:

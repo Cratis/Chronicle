@@ -12,7 +12,7 @@ public class a_single_event_with_named_tags : given.a_named_tag_append
 
     void Establish() => _eventSequence.AppendOperations.Subscribe(events => _observedContext = events.Single().Event.Context);
 
-    async Task Because() => await _eventSequence.Append(_sourceId, "one", [new("Case", ""), new("Case", ""), new("case", "value")], eventStreamType: "orders", eventStreamId: "current", eventSourceType: "customer", tags: ["plain"], subject: "invoice");
+    async Task Because() => await _eventSequence.AppendWithNamedTags(_sourceId, "one", [new("Case", ""), new("Case", ""), new("case", "value")], eventStreamType: "orders", eventStreamId: "current", eventSourceType: "customer", tags: ["plain"], subject: "invoice");
 
     [Fact] void should_use_the_tagged_rpc() => _singleRequest.ShouldNotBeNull();
     [Fact] void should_deduplicate_exact_pairs_without_folding_case() => _singleRequest.NamedTags.Select(_ => (_.Name, _.Value)).ShouldEqual([("Case", ""), ("case", "value")]);

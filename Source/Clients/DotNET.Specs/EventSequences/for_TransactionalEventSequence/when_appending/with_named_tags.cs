@@ -18,8 +18,8 @@ public class with_named_tags : given.a_transactional_event_sequence
         _namedTags = [new("name", "value")];
     }
 
-    Task Because() => _transactionalEventSequence.Append(_sourceId, "event", _namedTags);
+    Task Because() => _transactionalEventSequence.AppendWithNamedTags(_sourceId, "event", _namedTags);
 
-    [Fact] void should_enroll_in_the_current_unit_of_work() => _unitOfWork.Received(1).AddEvent(EventSequenceId.Log, _sourceId, "event", _namedTags, Arg.Any<Causation>(), Arg.Any<EventStreamType?>(), Arg.Any<EventStreamId?>(), Arg.Any<EventSourceType?>(), Arg.Any<ConcurrencyScope?>(), Arg.Any<IEnumerable<string>>(), Arg.Any<DateTimeOffset?>(), Arg.Any<Subject?>());
+    [Fact] void should_enroll_in_the_current_unit_of_work() => _unitOfWork.Received(1).AddEventWithNamedTags(EventSequenceId.Log, _sourceId, "event", _namedTags, Arg.Any<Causation>(), Arg.Any<EventStreamType?>(), Arg.Any<EventStreamId?>(), Arg.Any<EventSourceType?>(), Arg.Any<ConcurrencyScope?>(), Arg.Any<IEnumerable<string>>(), Arg.Any<DateTimeOffset?>(), Arg.Any<Subject?>());
     [Fact] void should_not_call_the_legacy_enrollment() => _unitOfWork.DidNotReceive().AddEvent(EventSequenceId.Log, _sourceId, "event", Arg.Any<Causation>(), Arg.Any<EventStreamType?>(), Arg.Any<EventStreamId?>(), Arg.Any<EventSourceType?>(), Arg.Any<ConcurrencyScope?>(), Arg.Any<IEnumerable<string>>(), Arg.Any<DateTimeOffset?>(), Arg.Any<Subject?>());
 }

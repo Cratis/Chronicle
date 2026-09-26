@@ -13,7 +13,7 @@ public class a_routed_batch_with_per_event_and_call_named_tags : given.a_named_t
 
     void Establish() => _eventSequence.AppendOperations.Subscribe(events => _observedContexts = events.Select(_ => _.Event.Context).ToArray());
 
-    async Task Because() => await _eventSequence.AppendMany(
+    async Task Because() => await _eventSequence.AppendManyWithNamedTags(
         [
             new EventForEventSourceId(_sourceId, "one") { NamedTags = [new("event", "one"), new("shared", "x")], Tags = ["first"], EventSourceType = "customer", EventStreamType = "orders", EventStreamId = "current", Subject = "invoice", Occurred = _occurred },
             new EventForEventSourceId(EventSourceId.New(), "two") { NamedTags = [new("event", "two")] }

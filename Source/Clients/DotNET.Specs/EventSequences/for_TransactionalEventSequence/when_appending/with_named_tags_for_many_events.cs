@@ -16,11 +16,11 @@ public class with_named_tags_for_many_events : given.a_transactional_event_seque
     {
         _sourceId = EventSourceId.New();
         _received = [];
-        _unitOfWork.When(_ => _.AddEvent(_eventSequence.Id, _sourceId, Arg.Any<object>(), Arg.Any<IEnumerable<NamedTag>>(), Arg.Any<Causation>()))
+        _unitOfWork.When(_ => _.AddEventWithNamedTags(_eventSequence.Id, _sourceId, Arg.Any<object>(), Arg.Any<IEnumerable<NamedTag>>(), Arg.Any<Causation>()))
             .Do(call => _received.Add(call.Arg<IEnumerable<NamedTag>>()));
     }
 
-    Task Because() => _transactionalEventSequence.AppendMany(_sourceId, ["one", "two"], YieldOnce());
+    Task Because() => _transactionalEventSequence.AppendManyWithNamedTags(_sourceId, ["one", "two"], YieldOnce());
 
     [Fact] void should_enroll_each_event_with_the_same_named_tag() => _received.Select(_ => _.Single().Value).ShouldEqual(["value", "value"]);
     [Fact] void should_materialize_the_call_tags_only_once() => _enumerations.ShouldEqual(1);

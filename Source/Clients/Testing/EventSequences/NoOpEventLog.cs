@@ -93,7 +93,7 @@ internal sealed class NoOpEventLog : IEventLog
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default) => throw new EventLogNotAvailableInKernelPipeline();
 
     /// <inheritdoc/>
-    public Task<AppendResult> Append(
+    public Task<AppendResult> AppendWithNamedTags(
         EventSourceId eventSourceId,
         object @event,
         IEnumerable<NamedTag> namedTags,
@@ -107,7 +107,7 @@ internal sealed class NoOpEventLog : IEventLog
         Subject? subject = default) => throw new EventLogNotAvailableInKernelPipeline();
 
     /// <inheritdoc/>
-    public Task<AppendManyResult> AppendMany(
+    public Task<AppendManyResult> AppendManyWithNamedTags(
         EventSourceId eventSourceId,
         IEnumerable<object> events,
         IEnumerable<NamedTag> namedTags,
@@ -121,7 +121,7 @@ internal sealed class NoOpEventLog : IEventLog
         Subject? subject = default) => throw new EventLogNotAvailableInKernelPipeline();
 
     /// <inheritdoc/>
-    public Task<AppendManyResult> AppendMany(
+    public Task<AppendManyResult> AppendManyWithNamedTags(
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<NamedTag> namedTags,
         CorrelationId? correlationId = default,
