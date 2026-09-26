@@ -93,6 +93,42 @@ internal sealed class NoOpEventLog : IEventLog
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default) => throw new EventLogNotAvailableInKernelPipeline();
 
     /// <inheritdoc/>
+    public Task<AppendResult> Append(
+        EventSourceId eventSourceId,
+        object @event,
+        IEnumerable<NamedTag> namedTags,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) => throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
+    public Task<AppendManyResult> AppendMany(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        IEnumerable<NamedTag> namedTags,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) => throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
+    public Task<AppendManyResult> AppendMany(
+        IEnumerable<EventForEventSourceId> events,
+        IEnumerable<NamedTag> namedTags,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default) => throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
     public Task Revise(EventSequenceNumber sequenceNumber, object @event) => throw new EventLogNotAvailableInKernelPipeline();
 
     /// <inheritdoc/>

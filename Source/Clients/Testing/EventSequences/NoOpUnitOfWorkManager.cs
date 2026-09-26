@@ -67,6 +67,28 @@ internal sealed class NoOpUnitOfWorkManager : IUnitOfWorkManager
         {
         }
 
+        public void AddEvent(
+            EventSequenceId eventSequenceId,
+            EventSourceId eventSourceId,
+            object @event,
+            IEnumerable<NamedTag> namedTags,
+            Causation causation,
+            EventStreamType? eventStreamType = default,
+            EventStreamId? eventStreamId = default,
+            EventSourceType? eventSourceType = default,
+            ConcurrencyScope? concurrencyScope = default,
+            IEnumerable<string>? tags = default,
+            DateTimeOffset? occurred = default,
+            Subject? subject = default)
+        {
+            if (namedTags.Any())
+            {
+                throw new UnitOfWorkNamedTagsNotSupported(GetType());
+            }
+
+            AddEvent(eventSequenceId, eventSourceId, @event, causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
+        }
+
         public IEnumerable<object> GetEvents() => [];
         public IEnumerable<ConstraintViolation> GetConstraintViolations() => [];
         public IEnumerable<ConcurrencyViolation> GetConcurrencyViolations() => [];
