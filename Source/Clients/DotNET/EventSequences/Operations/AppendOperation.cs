@@ -25,4 +25,10 @@ public record AppendOperation(
     EventSourceType? EventSourceType = default,
     IEnumerable<string>? Tags = default,
     DateTimeOffset? Occurred = default,
-    Subject? Subject = default) : IEventSequenceOperation;
+    Subject? Subject = default) : IEventSequenceOperation
+{
+    /// <summary>
+    /// Gets or inits the structured named tags for this event.
+    /// </summary>
+    public IEnumerable<NamedTag> NamedTags { get; init; } = [];
+}

@@ -22,7 +22,7 @@ public interface IEventSequence
     /// Gets an observable that emits a collection of <see cref="AppendedEventWithResult"/> after each append operation.
     /// </summary>
     /// <remarks>
-    /// Both <see cref="Append"/> and <see cref="AppendMany(EventSourceId, IEnumerable{object}, EventStreamType?, EventStreamId?, EventSourceType?, CorrelationId?, IEnumerable{string}?, ConcurrencyScope?, DateTimeOffset?, Subject?)"/>
+    /// Both single-event and batch append operations
     /// emit through this observable. A single-event append emits a collection of one element;
     /// a batch append emits the full batch. Subscribers receive the notification after the operation has completed, whether it succeeded or failed.
     /// This observable does not fire for transactional appends through <see cref="ITransactionalEventSequence"/>.
@@ -169,6 +169,96 @@ public interface IEventSequence
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default);
+
+    /// <summary>
+    /// Append a single event with structured named tags.
+    /// </summary>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="event">The event.</param>
+    /// <param name="namedTags">Structured named tags for the event.</param>
+    /// <param name="eventStreamType">Optional stream type.</param>
+    /// <param name="eventStreamId">Optional stream id.</param>
+    /// <param name="eventSourceType">Optional source type.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional plain tags.</param>
+    /// <param name="concurrencyScope">Optional concurrency scope.</param>
+    /// <param name="occurred">Optional occurred time.</param>
+    /// <param name="subject">Optional subject.</param>
+    /// <returns>The append result.</returns>
+    /// <exception cref="NamedTagsNotSupported">The implementation cannot append nonempty named tags.</exception>
+    Task<AppendResult> Append(
+        EventSourceId eventSourceId,
+        object @event,
+        IEnumerable<NamedTag> namedTags,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) =>
+        namedTags.Any()
+            ? throw new NamedTagsNotSupported(GetType())
+            : Append(eventSourceId, @event, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
+
+    /// <summary>
+    /// Append events for one source with structured named tags.
+    /// </summary>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="events">The events.</param>
+    /// <param name="namedTags">Structured named tags for every event.</param>
+    /// <param name="eventStreamType">Optional stream type.</param>
+    /// <param name="eventStreamId">Optional stream id.</param>
+    /// <param name="eventSourceType">Optional source type.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional plain tags.</param>
+    /// <param name="concurrencyScope">Optional concurrency scope.</param>
+    /// <param name="occurred">Optional occurred time.</param>
+    /// <param name="subject">Optional subject.</param>
+    /// <returns>The batch result.</returns>
+    /// <exception cref="NamedTagsNotSupported">The implementation cannot append nonempty named tags.</exception>
+    Task<AppendManyResult> AppendMany(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        IEnumerable<NamedTag> namedTags,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) =>
+        namedTags.Any()
+            ? throw new NamedTagsNotSupported(GetType())
+            : AppendMany(eventSourceId, events, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
+
+    /// <summary>
+    /// Append events for several sources with structured named tags.
+    /// </summary>
+    /// <param name="events">The events, including their own named tags.</param>
+    /// <param name="namedTags">Structured named tags shared by all events.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional plain tags.</param>
+    /// <param name="concurrencyScopes">Optional concurrency scopes.</param>
+    /// <returns>The batch result.</returns>
+    /// <exception cref="NamedTagsNotSupported">The implementation cannot append nonempty named tags.</exception>
+    Task<AppendManyResult> AppendMany(
+        IEnumerable<EventForEventSourceId> events,
+        IEnumerable<NamedTag> namedTags,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
+    {
+        var materializedEvents = events.ToArray();
+        if (namedTags.Any() || materializedEvents.Any(_ => _.NamedTags.Any()))
+        {
+            throw new NamedTagsNotSupported(GetType());
+        }
+
+        return AppendMany(materializedEvents, correlationId, tags, concurrencyScopes);
+    }
 
     /// <summary>
     /// Revise a specific event in the event sequence with new content.

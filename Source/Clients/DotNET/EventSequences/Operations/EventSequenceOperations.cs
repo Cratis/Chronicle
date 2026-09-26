@@ -62,6 +62,7 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
                     EventStreamId = op.EventStreamId ?? EventStreamId.Default,
                     EventSourceType = op.EventSourceType ?? EventSourceType.Default,
                     Tags = op.Tags ?? [],
+                    NamedTags = op.NamedTags.ToArray(),
                     Occurred = op.Occurred,
                     Subject = op.Subject
                 }));
@@ -88,6 +89,8 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
                 kvp => kvp.Key,
                 kvp => kvp.Value.ConcurrencyScope);
 
-        return eventSequence.AppendMany(events, concurrencyScopes: concurrencyScopes);
+        return events.Any(_ => _.NamedTags.Any())
+            ? eventSequence.AppendMany(events, [], concurrencyScopes: concurrencyScopes)
+            : eventSequence.AppendMany(events, concurrencyScopes: concurrencyScopes);
     }
 }

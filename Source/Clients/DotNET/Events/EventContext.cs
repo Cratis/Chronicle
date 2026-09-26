@@ -79,7 +79,7 @@ public record EventContext(
                 throw new InvalidNamedTag();
             }
 
-            field = Array.AsReadOnly(snapshot);
+            field = snapshot.Length == 0 ? Array.Empty<NamedTag>() : Array.AsReadOnly(snapshot);
         }
     } = [];
 
