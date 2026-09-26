@@ -51,10 +51,6 @@ liveness probe that failed on this would restart a healthy host in a loop while 
 builder.Services.AddChronicleHealthCheck(HealthStatus.Degraded);
 ```
 
-:::caution[As of Chronicle 19.6 the status does not apply to a lost connection]
-The check reports a disconnected or unreachable kernel as `Unhealthy` itself, and ASP.NET Core only substitutes the registered failure status when a check throws. So passing `Degraded` does not change what a probe sees when the kernel is down. Until that changes, map the result in your probe configuration, or register your own check if you need `Degraded`.
-:::
-
 Call this before `AddCratisChronicle`, or on its own in a host that wires the client up itself.
 Registration is idempotent, so the automatic registration will not add a second check.
 
