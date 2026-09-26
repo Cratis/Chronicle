@@ -15,6 +15,7 @@ public class and_the_read_model_is_never_registered : given.all_dependencies
 
     void Establish()
     {
+        ((ReadModels)_service).ReadModelDefinitionRetryDelay = TimeSpan.Zero;
         var unpopulated = (Concepts.ReadModels.ReadModelDefinition)RuntimeHelpers.GetUninitializedObject(typeof(Concepts.ReadModels.ReadModelDefinition));
         _readModel.GetDefinition().Returns(unpopulated);
     }
