@@ -25,6 +25,7 @@ public class an_ordered_bulk_write : Specification
     protected const int OperationCount = 1000;
     protected int[] _failureIndexes = [];
     protected bool _writeConcernFailure;
+    protected int _missingMetadataIndex = -1;
     protected List<int[]> _attempts = [];
     protected FailedPartition[] _failedPartitions = [];
 
@@ -72,14 +73,25 @@ public class an_ordered_bulk_write : Specification
             {
                 _failedPartitions = failed.ToArray();
             }
+            else if (index == OperationCount - 2 && _missingMetadataIndex >= 0)
+            {
+                var metadata = (Dictionary<int, (Key, EventSequenceNumber)>)typeof(Sink)
+                    .GetField("_bulkOperationMetadata", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .GetValue(_sink)!;
+                metadata.Remove(_missingMetadataIndex);
+            }
         }
     }
 
     protected virtual Key KeyFor(int index) => new($"key-{index}", ArrayIndexers.NoIndexers);
 
-    protected bool Sent(params (int Start, int End)[] ranges) =>
+    protected bool Sent(params (int Start, int End)[] ranges) => SentExcluding([], ranges);
+
+    protected bool SentExcluding(int[][] excluded, params (int Start, int End)[] ranges) =>
         _attempts.Count == ranges.Length &&
-        _attempts.Select((attempt, index) => attempt.SequenceEqual(Enumerable.Range(ranges[index].Start, ranges[index].End - ranges[index].Start)))
+        _attempts.Select((attempt, index) => attempt.SequenceEqual(
+            Enumerable.Range(ranges[index].Start, ranges[index].End - ranges[index].Start)
+                .Except(index < excluded.Length ? excluded[index] : [])))
             .All(matches => matches);
 
     protected bool Failed(params int[] indexes) =>

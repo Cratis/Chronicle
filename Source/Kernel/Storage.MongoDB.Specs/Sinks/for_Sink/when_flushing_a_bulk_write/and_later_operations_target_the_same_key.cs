@@ -11,6 +11,6 @@ public class and_later_operations_target_the_same_key : given.an_ordered_bulk_wr
     void Establish() => _failureIndexes = [100];
     protected override Key KeyFor(int index) => index == 101 ? new Key("key-100", ArrayIndexers.NoIndexers) : base.KeyFor(index);
     async Task Because() => await Flush();
-    [Fact] void should_preserve_the_order_of_operations_for_that_key() => Sent((0, 1000), (101, 1000)).ShouldBeTrue();
+    [Fact] void should_skip_later_operations_for_the_failed_partition_and_resume_other_partitions() => SentExcluding([[], [101]], (0, 1000), (101, 1000)).ShouldBeTrue();
     [Fact] void should_report_the_failed_partition_once() => Failed(100).ShouldBeTrue();
 }

@@ -566,13 +566,13 @@ public class Sink(
             _currentBulkSize = 0;
         }
 
-        var failedPartitions = new List<FailedPartition>();
+        var failedPartitions = new Dictionary<Key, EventSequenceNumber>();
         try
         {
-            var nextIndex = 0;
-            while (nextIndex < snapshot.Count)
+            var remainingIndexes = Enumerable.Range(0, snapshot.Count).ToList();
+            while (remainingIndexes.Count > 0)
             {
-                var remaining = snapshot.GetRange(nextIndex, snapshot.Count - nextIndex);
+                var remaining = remainingIndexes.ConvertAll(index => snapshot[index]);
                 try
                 {
                     await Collection.BulkWriteAsync(remaining);
@@ -592,22 +592,28 @@ public class Sink(
                         !ex.Result.ProcessedRequests.SequenceEqual(remaining.Take(ex.Result.ProcessedRequests.Count)) ||
                         !ex.UnprocessedRequests.SequenceEqual(remaining.Skip(ex.Result.ProcessedRequests.Count)))
                     {
-                        AddFailedPartitions(nextIndex, snapshot.Count, metadataSnapshot, failedPartitions);
+                        AddFailedPartitions(remainingIndexes, metadataSnapshot, failedPartitions);
                         break;
                     }
 
-                    var failedIndex = nextIndex + ex.WriteErrors[0].Index;
-                    AddFailedPartitions(failedIndex, failedIndex + 1, metadataSnapshot, failedPartitions);
-                    nextIndex = failedIndex + 1;
+                    var failedOffset = ex.WriteErrors[0].Index;
+                    AddFailedPartitions([remainingIndexes[failedOffset]], metadataSnapshot, failedPartitions);
+
+                    // The observer will replay a failed partition from its earliest failed sequence number.
+                    // Do not write any later changes for that partition ahead of the replayed change.
+                    remainingIndexes = remainingIndexes.Skip(failedOffset + 1)
+                        .Where(index => !metadataSnapshot.TryGetValue(index, out var metadata) ||
+                            !failedPartitions.ContainsKey(metadata.EventSourceId))
+                        .ToList();
                 }
                 catch (MongoBulkWriteException)
                 {
-                    AddFailedPartitions(nextIndex, snapshot.Count, metadataSnapshot, failedPartitions);
+                    AddFailedPartitions(remainingIndexes, metadataSnapshot, failedPartitions);
                     break;
                 }
             }
 
-            return failedPartitions;
+            return failedPartitions.Select(partition => new FailedPartition(partition.Key, partition.Value)).ToArray();
         }
         finally
         {
@@ -619,15 +625,18 @@ public class Sink(
     }
 
     static void AddFailedPartitions(
-        int start,
-        int end,
+        IEnumerable<int> indexes,
         Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata,
-        List<FailedPartition> failedPartitions)
+        Dictionary<Key, EventSequenceNumber> failedPartitions)
     {
-        for (var index = start; index < end; index++)
+        foreach (var index in indexes)
         {
-            var (eventSourceId, sequenceNumber) = metadata[index];
-            failedPartitions.Add(new FailedPartition(eventSourceId, sequenceNumber));
+            if (metadata.TryGetValue(index, out var operationMetadata) &&
+                (!failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var earliest) ||
+                    operationMetadata.SequenceNumber.Value < earliest.Value))
+            {
+                failedPartitions[operationMetadata.EventSourceId] = operationMetadata.SequenceNumber;
+            }
         }
     }
 
