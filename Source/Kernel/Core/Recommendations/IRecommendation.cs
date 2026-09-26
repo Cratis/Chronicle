@@ -21,12 +21,6 @@ public interface IRecommendation : IGrainWithGuidCompoundKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Ignore();
-
-    /// <summary>
-    /// Stop ignoring the recommendation, bringing it back into view.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    Task Unignore();
 }
 
 /// <summary>

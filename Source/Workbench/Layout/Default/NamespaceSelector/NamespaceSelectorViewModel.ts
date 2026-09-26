@@ -14,12 +14,10 @@ export class NamespaceSelectorViewModel {
         private readonly _namespaces: INamespaces,
         @inject('props') private readonly _props: INamespaceSelectorProps) {
 
-        // Display only. Navigating from here would mean any code path that touches the store steers
-        // the browser - which is how a routine namespaces push used to drag the user back to
-        // whichever namespace the application started on. Navigation belongs to the click handler.
         _namespaces.currentNamespace.subscribe(namespace => {
             if (namespace) {
                 this.currentNamespace = namespace;
+                this._props.onNamespaceSelected(namespace);
             }
         });
 
@@ -48,7 +46,6 @@ export class NamespaceSelectorViewModel {
      * @param namespace - The namespace currently in the route.
      */
     syncNamespaceFromRoute(namespace: string) {
-        this._namespaces.setRouteNamespace(namespace || undefined);
         if (namespace && namespace !== this.currentNamespace) {
             this._namespaces.setCurrentNamespace(namespace);
         }

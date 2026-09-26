@@ -3,10 +3,6 @@
 
 namespace Cratis.Chronicle.Recommendations.for_Recommendation;
 
-/// <summary>
-/// The state is kept rather than cleared: clearing it only removed the row, and the evaluation that
-/// raised the recommendation is unchanged, so the next client reconnect raised it again (#4141).
-/// </summary>
 public class when_ignoring : given.all_dependencies
 {
     static given.TheRequest _request;
@@ -22,7 +18,6 @@ public class when_ignoring : given.all_dependencies
     async Task Because() => _error = await Catch.Exception(recommendation.Ignore);
 
     [Fact] void should_not_fail() => _error.ShouldBeNull();
-
-    [Fact] void should_write_state_once() => storageStats.Writes.ShouldEqual(1);
-    [Fact] void should_not_clear_state() => storageStats.Clears.ShouldEqual(0);
+    [Fact] void should_not_write_state() => storageStats.Writes.ShouldEqual(0);
+    [Fact] void should_clear_state_once() => storageStats.Clears.ShouldEqual(1);
 }
