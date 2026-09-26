@@ -19,10 +19,9 @@ public class when_retrying_a_failed_partition : given.all_dependencies
 
     void Establish()
     {
-        var handler = Substitute.For<IReactorHandler>();
-        handler.Id.Returns(_reactorId);
-        handler.EventSequenceId.Returns(_eventSequenceId);
-        _handlers[typeof(MyReactor)] = handler;
+        _eventStore.EventTypes.Returns(_eventTypes);
+        _eventTypes.AllClrTypes.Returns([]);
+        _reactors.Register<MyReactor>().GetAwaiter().GetResult();
         _observers.RetryPartition(Arg.Any<RetryPartition>()).Returns(new RetryPartitionResponse { Outcome = ContractOutcome.Started });
     }
 
@@ -41,5 +40,7 @@ public class when_retrying_a_failed_partition : given.all_dependencies
             request.EventSequenceId == _eventSequenceId.Value &&
             request.Partition == _partition.Value));
 
+    [Reactor("73c0c8ed-f2cd-49a2-b5b9-f2f4e1b7b5d4")]
+    [EventSequence("non-log-sequence")]
     class MyReactor : IReactor;
 }

@@ -272,7 +272,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
     /// <inheritdoc/>
     public async Task<ReactorPartitionRetryOutcome> RetryFailedPartitionFor(Type reactorType, Partition partition)
     {
-        var handler = _handlers[reactorType];
+        var handler = _handlers[reactorType.GetReactorId()].Handler;
         var response = await _servicesAccessor.Services.Observers.RetryPartition(new RetryPartition
         {
             EventStore = _eventStore.Name,

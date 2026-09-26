@@ -23,10 +23,9 @@ public class when_retrying_a_failed_partition_with_other_outcomes : given.all_de
 
     void Establish()
     {
-        var handler = Substitute.For<IReactorHandler>();
-        handler.Id.Returns((ReactorId)"73c0c8ed-f2cd-49a2-b5b9-f2f4e1b7b5d4");
-        handler.EventSequenceId.Returns((EventSequenceId)"non-log-sequence");
-        _handlers[typeof(MyReactor)] = handler;
+        _eventStore.EventTypes.Returns(_eventTypes);
+        _eventTypes.AllClrTypes.Returns([]);
+        _reactors.Register<MyReactor>().GetAwaiter().GetResult();
         _observers.RetryPartition(Arg.Any<RetryPartition>()).Returns(_ =>
             new RetryPartitionResponse { Outcome = _outcomes[_nextOutcome++] });
     }
@@ -46,5 +45,7 @@ public class when_retrying_a_failed_partition_with_other_outcomes : given.all_de
     [Fact] void should_return_partition_quarantined() => _results[2].ShouldEqual(ClientOutcome.PartitionQuarantined);
     [Fact] void should_return_unknown_for_an_unrecognized_outcome() => _results[3].ShouldEqual(ClientOutcome.Unknown);
 
+    [Reactor("73c0c8ed-f2cd-49a2-b5b9-f2f4e1b7b5d4")]
+    [EventSequence("non-log-sequence")]
     class MyReactor : IReactor;
 }
