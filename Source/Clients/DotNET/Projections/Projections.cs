@@ -47,6 +47,9 @@ public class Projections(
     Dictionary<Type, ProjectionDefinition> _definitionsByType = new();
     bool _discovered;
 
+    /// <summary>Raised after definitions are registered successfully.</summary>
+    internal event Action? Registered;
+
     /// <summary>
     /// Gets all the <see cref="ProjectionDefinition">projection definitions</see>.
     /// </summary>
@@ -244,6 +247,7 @@ public class Projections(
             // the client.
             FullSet = _discovered && ArtifactRegistrations.All(registration => registration.IsRegistered)
         });
+        Registered?.Invoke();
     }
 
     /// <inheritdoc/>

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.Projections;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.when_compiling_and_generating;
 
@@ -20,15 +20,21 @@ public class projection_level_remove_via_join : given.a_language_service_with_sc
 
     protected override IEnumerable<Type> EventTypes => [typeof(given.UserRegistered), typeof(given.GroupCreated), typeof(given.GroupDeleted)];
 
-    ProjectionDefinition _result;
-    RemovedWithJoinDefinition _removedWithJoinDef;
+    CompilerErrors _withSchemas;
+    CompilerErrors _withoutSchemas;
 
     void Because()
     {
-        _result = CompileGenerateAndRecompile(Declaration);
-        _removedWithJoinDef = _result.RemovedWithJoin.Values.FirstOrDefault();
+        _withSchemas = Errors(true);
+        _withoutSchemas = Errors(false);
     }
 
-    [Fact] void should_have_removed_with_join_definition() => _removedWithJoinDef.ShouldNotBeNull();
-    [Fact] void should_have_one_removed_with_join_entry() => _result.RemovedWithJoin.Count.ShouldEqual(1);
+    CompilerErrors Errors(bool schemas) => _languageService.Compile(
+        Declaration,
+        ProjectionOwner.Client,
+        schemas ? [_readModelDefinition] : [],
+        schemas ? _eventTypeSchemas : []).Match(_ => CompilerErrors.Empty, errors => errors);
+
+    [Fact] void should_reject_root_removal_with_schemas() => _withSchemas.Errors.ShouldContain(_ => _.Message.Contains("'remove via join' at the root is not supported", StringComparison.Ordinal) && _.Line == 8);
+    [Fact] void should_reject_root_removal_without_schemas() => _withoutSchemas.Errors.ShouldContain(_ => _.Message.Contains("'remove via join' at the root is not supported", StringComparison.Ordinal) && _.Line == 8);
 }

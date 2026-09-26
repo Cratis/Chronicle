@@ -96,6 +96,7 @@ public class EventAppendCollection : IEventAppendCollection
         if (_disposed) return;
 
         var items = operations.ToList();
+        if (items.Count < 1) return;
 
         lock (_lock)
         {

@@ -22,7 +22,8 @@ internal static class JoinDefinitionConverters
         {
             On = definition.On,
             Properties = definition.Properties.ToDictionary(_ => (string)_.Key, _ => _.Value),
-            Key = definition.Key
+            Key = definition.Key,
+            AutoMap = (Contracts.Projections.AutoMap)definition.AutoMap
         };
     }
 
@@ -36,7 +37,8 @@ internal static class JoinDefinitionConverters
         return new(
             contract.On,
             contract.Properties.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value),
-            contract.Key
+            contract.Key,
+            (AutoMap)contract.AutoMap
         );
     }
 }

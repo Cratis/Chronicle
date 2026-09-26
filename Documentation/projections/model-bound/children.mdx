@@ -36,7 +36,7 @@ You can disable auto-mapping if you want to control property mapping explicitly:
 <ChronicleClientTabs snippet="projections/model-bound/children/no-automap" />
 
 :::note[Client coverage]
-Disabling auto-mapping for a child type is a .NET-only mechanism today — Kotlin, Java, Elixir, and TypeScript model-bound child collections do not expose a `NoAutoMap`-equivalent switch.
+Disabling auto-mapping for a child type works in .NET and in TypeScript (`@noAutoMap` on the child type, from `@cratis/chronicle` 6.15.0). Kotlin, Java, and Elixir model-bound child collections do not expose a `NoAutoMap`-equivalent switch yet.
 :::
 
 ## Recursive Attribute Processing

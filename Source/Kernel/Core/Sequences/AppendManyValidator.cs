@@ -20,7 +20,9 @@ internal class AppendManyValidator : CommandValidator<AppendMany>
         RuleFor(_ => _.Namespace).RequiredNamespace();
         RuleFor(_ => _.EventSequenceId).RequiredEventSequence();
         RuleFor(_ => _.EventSourceId).RequiredEventSource();
-        RuleFor(_ => _.Events).RequiredEvents();
+        RuleFor(_ => _.Events)
+            .Must((command, events) => events is not null && (events.Any() || (command.ConcurrencyScope is { } scope && (scope.ExpectsNoMatchingEvent || scope.SequenceNumber < Concepts.Events.EventSequenceNumber.BeforeFirst.Value))))
+            .WithMessage("At least one event is required.");
         RuleForEach(_ => _.Events).ChildRules(@event =>
         {
             @event.RuleFor(_ => _.EventType).RequiredEventType();

@@ -218,6 +218,14 @@ public class Generator : IGenerator
             var join = kv.Value;
 
             sb.AppendLine($"{Indent(indent + 1)}with {eventType}");
+            if (join.AutoMap == AutoMap.Disabled)
+            {
+                sb.AppendLine($"{Indent(indent + 2)}no automap");
+            }
+            else if (join.AutoMap == AutoMap.Enabled)
+            {
+                sb.AppendLine($"{Indent(indent + 2)}automap");
+            }
 
             // Property mappings - filter out redundant mappings when automap is enabled
             foreach (var prop in join.Properties)
