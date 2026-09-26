@@ -6,6 +6,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Microsoft.Extensions.Logging;
@@ -185,9 +186,7 @@ public class ChangesetConverter(
         }
 
         var segments = path.Segments.ToArray();
-        var current = initialState as IDictionary<string, object?>;
         var parentPath = PropertyPath.Root;
-        var insideArray = false;
         for (var index = 0; index < segments.Length - 1; index++)
         {
             parentPath += segments[index];
@@ -199,19 +198,18 @@ public class ChangesetConverter(
                     yield break;
                 }
 
-                insideArray = true;
-                current = null;
                 continue;
             }
 
-            if (insideArray || current is null || !current.TryGetValue(segments[index].Value, out var value) || value is null)
+            // Look up the actual identified child in the initial state. A parent already present
+            // on that child needs no pre-unset; joins still use a null initial state because their
+            // matched documents can have different shapes.
+            var existingParent = initialState?.TryGetExistingPath(parentPath, indexers);
+            if (existingParent is null ||
+                !((IDictionary<string, object?>)existingParent).TryGetValue(segments[index].Value, out var value) ||
+                value is null)
             {
                 yield return parentPath;
-                current = null;
-            }
-            else
-            {
-                current = value as IDictionary<string, object?>;
             }
         }
     }
