@@ -39,7 +39,8 @@ public class LanguageService(
         IEnumerable<ReadModelDefinition> readModelDefinitions,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
-        var result = _compiler.CompileProjection(definition);
+        var (input, literals) = NumericProjectionLiterals.Prepare(definition);
+        var result = _compiler.CompileProjection(input);
         var syntax = result.Value;
         var hasDirectiveEquivalents = syntax is not null && (syntax.AutoMap != AutoMapMode.Inherit || syntax.Sequence is not null);
         var errors = GetErrors(result.Diagnostics, ignoreMissingDirectives: hasDirectiveEquivalents);
@@ -68,7 +69,7 @@ public class LanguageService(
             }
         }
 
-        var visitor = new ProjectionDefinitionSyntaxVisitor(owner);
+        var visitor = new ProjectionDefinitionSyntaxVisitor(owner, literals);
         return visitor.Visit(syntax);
     }
 

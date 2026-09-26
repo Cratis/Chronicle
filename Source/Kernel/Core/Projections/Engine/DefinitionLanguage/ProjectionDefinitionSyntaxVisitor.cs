@@ -22,7 +22,15 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 /// <param name="owner">The <see cref="ProjectionOwner"/> for the resulting definition.</param>
 public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProjectionSyntaxVisitor<ProjectionDefinition>
 {
+    readonly IReadOnlyDictionary<int, string> _numericLiterals = new Dictionary<int, string>();
     bool _noAutoMap;
+
+    /// <summary>
+    /// Initializes a visitor with the original numeric tokens from the declaration.
+    /// </summary>
+    /// <param name="owner">The projection owner.</param>
+    /// <param name="numericLiterals">The original numeric tokens by source line.</param>
+    internal ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner, IReadOnlyDictionary<int, string> numericLiterals) : this(owner) => _numericLiterals = numericLiterals;
 
     /// <inheritdoc/>
     public ProjectionDefinition Visit(ProjectionSyntax syntax)
@@ -276,7 +284,7 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
             CausedByExpressionSyntax causedBy => causedBy.Property is null
                 ? WellKnownExpressions.CausedBy
                 : $"{WellKnownExpressions.CausedBy}({causedBy.Property})",
-            LiteralExpressionSyntax literal => FormatLiteralForStorage(literal.Value),
+            LiteralExpressionSyntax literal => FormatLiteralForStorage(literal),
             TemplateExpressionSyntax template => ConvertTemplateToString(template),
             RawExpressionSyntax raw => raw.Text,
             _ => throw new UnsupportedProjectionSyntax(expression)
@@ -304,15 +312,22 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
         return $"`{builder}`";
     }
 
-    string FormatLiteralForStorage(object? value) =>
-        value switch
+    string FormatLiteralForStorage(LiteralExpressionSyntax literal)
+    {
+        if (literal.Value is double && _numericLiterals.TryGetValue(literal.Location.Line, out var originalNumber))
+        {
+            return originalNumber;
+        }
+
+        return literal.Value switch
         {
             null => string.Empty, // Null is stored as an empty string
             string text => $"\"{text}\"", // Strings keep their quotes to distinguish them from property names
             bool boolean => boolean.ToString(), // Stored as "True"/"False"
             double number => number.ToString(CultureInfo.InvariantCulture),
-            _ => Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty
+            _ => Convert.ToString(literal.Value, CultureInfo.InvariantCulture) ?? string.Empty
         };
+    }
 
     AutoMap GetAutoMapValue(AutoMapMode mode) =>
         mode switch

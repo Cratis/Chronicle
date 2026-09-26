@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -459,7 +460,7 @@ public class Generator : IGenerator
         }
 
         // Numeric literals
-        if (double.TryParse(normalizedExpression, out _))
+        if (LiteralExpressionResolver.TryRead(normalizedExpression, out var literal) && literal is long or decimal or double)
         {
             return normalizedExpression;
         }
