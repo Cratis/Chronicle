@@ -572,15 +572,12 @@ public class EventSequence(
             EventStreamId = ResolveEventStreamId(@event.EventStreamId)
         }).ToList();
         var eventsToAppend = new List<Contracts.Sequences.EventForEventSourceId>(eventsList.Count);
-        IImmutableList<Causation>? causation = null;
+        var causation = causationManager.GetCurrentChain();
+        var eventCausations = eventsList.ConvertAll(@event => @event.Causation is null ? causation : causation.Add(@event.Causation));
 
-        foreach (var @event in eventsList)
+        for (var i = 0; i < eventsList.Count; i++)
         {
-            if (causation is null && @event.Causation is not null)
-            {
-                causation = [@event.Causation];
-            }
-
+            var @event = eventsList[i];
             var eventClrType = @event.Event.GetType();
             ThrowIfUnknownEventType(eventTypes, eventClrType);
             var eventType = eventTypes.GetEventTypeFor(eventClrType);
@@ -599,11 +596,10 @@ public class EventSequence(
                 Content = (await eventSerializer.Serialize(@event.Event)).ToJsonString(),
                 Tags = allTags,
                 Occurred = ToWireOccurred(@event.Occurred),
-                Subject = (@event.Subject ?? SubjectResolver.ResolveFrom(@event.Event))?.Value
+                Subject = (@event.Subject ?? SubjectResolver.ResolveFrom(@event.Event))?.Value,
+                Causation = @event.Causation is null ? null : eventCausations[i].ToSequencesContract()
             });
         }
-
-        causation ??= causationManager.GetCurrentChain();
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
         var resolvedConcurrencyScopes = await ResolveConcurrencyScopes(eventsList, concurrencyScopes);
@@ -661,7 +657,7 @@ public class EventSequence(
                     resolvedCorrelationId,
                     evt.Occurred) with
                 {
-                    Causation = causation,
+                    Causation = eventCausations[i],
                     CausedBy = identity,
                     Subject = new Subject(eventsToAppend[i].Subject ?? evt.EventSourceId.Value)
                 };

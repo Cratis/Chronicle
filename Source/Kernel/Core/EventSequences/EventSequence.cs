@@ -550,7 +550,7 @@ public class EventSequence(
                 eventToAppend.eventStreamId,
                 eventToAppend.EventType,
                 correlationId,
-                causation,
+                eventToAppend.Causation ?? causation,
                 causedByChain,
                 eventToAppend.Tags,
                 eventToAppend.Occurred ?? DateTimeOffset.UtcNow,
