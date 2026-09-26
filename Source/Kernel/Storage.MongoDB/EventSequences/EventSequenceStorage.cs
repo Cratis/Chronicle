@@ -1064,6 +1064,21 @@ public class EventSequenceStorage(
             filters.Add(Builders<Event>.Filter.AnyIn(_ => _.Tags, criteria.Tags!.Select(_ => _.Value).ToArray()));
         }
 
+        if (criteria.HasNamedTags)
+        {
+            var namedTagFilters = criteria.NamedTags!.Select(criterion =>
+            {
+                var tagFilter = Builders<NamedTagDocument>.Filter.Eq(_ => _.Name, criterion.Name.Value);
+                if (criterion.Values is not null)
+                {
+                    tagFilter &= Builders<NamedTagDocument>.Filter.In(_ => _.Value, criterion.Values);
+                }
+
+                return Builders<Event>.Filter.ElemMatch(_ => _.NamedTags, tagFilter);
+            });
+            filters.Add(Builders<Event>.Filter.Or(namedTagFilters));
+        }
+
         if (criteria.OccurredFrom is not null)
         {
             filters.Add(Builders<Event>.Filter.Gte(_ => _.Occurred, criteria.OccurredFrom.Value));
