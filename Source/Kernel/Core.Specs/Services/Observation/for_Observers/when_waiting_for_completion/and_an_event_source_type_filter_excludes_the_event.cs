@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers.when_waiting_for_completion;
@@ -22,4 +23,5 @@ public class and_an_event_source_type_filter_excludes_the_event : given.an_obser
     });
 
     [Fact] void should_complete_without_waiting_for_the_filtered_event() => _result.IsSuccess.ShouldBeTrue();
+    [Fact] void should_narrow_the_read_to_the_source_type() => _eventSequence.Received(1).GetRange(53UL, 53UL, null, Arg.Any<IEnumerable<EventType>>(), Arg.Any<IEnumerable<Tag>>(), (EventSourceType)"order", null, Arg.Any<CancellationToken>());
 }

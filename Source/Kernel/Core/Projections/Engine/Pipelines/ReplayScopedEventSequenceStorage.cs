@@ -189,6 +189,10 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
         inner.GetRange(start, end, eventSourceId, eventTypes, tags, cancellationToken);
 
     /// <inheritdoc/>
+    public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId, IEnumerable<EventType>? eventTypes, IEnumerable<Tag>? tags, EventSourceType? eventSourceType, EventStreamType? eventStreamType, CancellationToken cancellationToken) =>
+        inner.GetRange(start, end, eventSourceId, eventTypes, tags, eventSourceType, eventStreamType, cancellationToken);
+
+    /// <inheritdoc/>
     public Task<IEventCursor> GetEventsWithLimit(
         EventSequenceNumber start,
         int limit,

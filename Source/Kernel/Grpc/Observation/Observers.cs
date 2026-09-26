@@ -312,8 +312,11 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         using var cursor = await eventSequence.GetRange(
             start,
             target,
+            eventSourceId: null,
             eventTypes: eventTypes,
             tags: tags,
+            eventSourceType: filters.EventSourceType,
+            eventStreamType: filters.EventStreamType,
             cancellationToken: cancellationToken);
         EventSequenceNumber? lastMatch = null;
         while (await cursor.MoveNext())

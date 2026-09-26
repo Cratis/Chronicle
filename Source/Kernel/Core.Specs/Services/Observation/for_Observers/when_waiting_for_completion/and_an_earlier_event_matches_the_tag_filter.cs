@@ -29,5 +29,5 @@ public class and_an_earlier_event_matches_the_tag_filter : given.an_observer_wit
     });
 
     [Fact] void should_wait_for_the_matching_event_even_if_the_tail_does_not_match() => _result.OutstandingObservers.ShouldContain("filtered-observer");
-    [Fact] void should_read_only_the_unhandled_part_of_the_batch() => _eventSequence.Received(1).GetRange(53UL, 54UL, eventTypes: Arg.Any<IEnumerable<EventType>>(), tags: Arg.Any<IEnumerable<Tag>>());
+    [Fact] void should_read_only_the_unhandled_part_of_the_batch() => _eventSequence.Received(1).GetRange(53UL, 54UL, null, Arg.Any<IEnumerable<EventType>>(), Arg.Any<IEnumerable<Tag>>(), null, null, Arg.Any<CancellationToken>());
 }

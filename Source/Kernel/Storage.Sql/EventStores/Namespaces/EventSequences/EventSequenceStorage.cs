@@ -700,7 +700,11 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default)
+    public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        GetRange(start, end, eventSourceId, eventTypes, tags, null, null, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId, IEnumerable<EventType>? eventTypes, IEnumerable<Tag>? tags, EventSourceType? eventSourceType, EventStreamType? eventStreamType, CancellationToken cancellationToken)
     {
         var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
@@ -720,6 +724,17 @@ public class EventSequenceStorage(
         if (eventSourceId?.IsSpecified == true)
         {
             query = query.Where(e => e.EventSourceId == eventSourceId);
+        }
+
+        if (eventSourceType?.IsDefaultOrUnspecified == false)
+        {
+            var resolvedEventSourceType = eventSourceType.Value;
+            query = query.Where(e => e.EventSourceType == resolvedEventSourceType);
+        }
+
+        if (eventStreamType?.IsAll == false)
+        {
+            query = query.Where(e => e.EventStreamType == eventStreamType);
         }
 
         if (eventTypes?.Any() == true)

@@ -37,7 +37,7 @@ public class an_observer_with_filtered_event : all_dependencies
         _observerStateStorage.GetAll().Returns([new ObserverState { Identifier = "filtered-observer", LastHandledEventSequenceNumber = 52UL }]);
         _failedPartitionsStorage.GetFor(Arg.Any<IEnumerable<ObserverId>>()).Returns(new Concepts.Observation.FailedPartitions());
         _appendedEvent = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(new EventType("a-recorded", 1), 53UL);
-        _eventSequence.GetRange(Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSourceId?>(), Arg.Any<IEnumerable<EventType>?>(), Arg.Any<IEnumerable<Tag>?>(), Arg.Any<CancellationToken>()).Returns(_cursor);
+        _eventSequence.GetRange(Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSourceId?>(), Arg.Any<IEnumerable<EventType>?>(), Arg.Any<IEnumerable<Tag>?>(), Arg.Any<EventSourceType?>(), Arg.Any<EventStreamType?>(), Arg.Any<CancellationToken>()).Returns(_cursor);
         _cursor.MoveNext().Returns(true, false);
         _cursor.Current.Returns(_ => [_appendedEvent]);
     }

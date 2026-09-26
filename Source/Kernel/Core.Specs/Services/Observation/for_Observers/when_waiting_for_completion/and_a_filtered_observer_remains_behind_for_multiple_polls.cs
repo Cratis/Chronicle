@@ -28,6 +28,6 @@ public class and_a_filtered_observer_remains_behind_for_multiple_polls : given.a
     });
 
     [Fact] void should_still_report_the_observer_as_outstanding() => _result.OutstandingObservers.ShouldContain("filtered-observer");
-    [Fact] void should_read_the_fixed_range_once() => _eventSequence.Received(1).GetRange(53UL, 53UL, eventTypes: Arg.Any<IEnumerable<EventType>>(), tags: Arg.Any<IEnumerable<Tag>>());
+    [Fact] void should_read_the_fixed_range_once() => _eventSequence.Received(1).GetRange(53UL, 53UL, null, Arg.Any<IEnumerable<EventType>>(), Arg.Any<IEnumerable<Tag>>(), null, null, Arg.Any<CancellationToken>());
     [Fact] void should_read_the_subscription_once() => _observer.Received(1).GetSubscription();
 }

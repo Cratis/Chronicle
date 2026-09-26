@@ -33,6 +33,6 @@ public class and_the_observer_has_never_handled_an_event_in_a_non_log_sequence :
         TimeoutMilliseconds = 100
     });
 
-    [Fact] void should_start_at_the_first_appended_event_in_that_sequence() => _eventSequence.Received(1).GetRange(53UL, 53UL, eventTypes: Arg.Any<IEnumerable<EventType>>(), tags: Arg.Any<IEnumerable<Tag>>());
+    [Fact] void should_start_at_the_first_appended_event_in_that_sequence() => _eventSequence.Received(1).GetRange(53UL, 53UL, null, Arg.Any<IEnumerable<EventType>>(), Arg.Any<IEnumerable<Tag>>(), null, null, Arg.Any<CancellationToken>());
     [Fact] void should_not_wait_for_filtered_out_events() => _result.IsSuccess.ShouldBeTrue();
 }

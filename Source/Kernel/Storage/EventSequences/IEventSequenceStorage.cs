@@ -232,6 +232,21 @@ public interface IEventSequenceStorage
     Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Get a bounded range, narrowed by observer event source and stream types where supported.
+    /// </summary>
+    /// <param name="start">Start of the range.</param>
+    /// <param name="end">End of the range.</param>
+    /// <param name="eventSourceId">Optional event source identity.</param>
+    /// <param name="eventTypes">Optional event types.</param>
+    /// <param name="tags">Optional tags.</param>
+    /// <param name="eventSourceType">Optional event source type.</param>
+    /// <param name="eventStreamType">Optional event stream type.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><see cref="IEventCursor"/>.</returns>
+    Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId, IEnumerable<EventType>? eventTypes, IEnumerable<Tag>? tags, EventSourceType? eventSourceType, EventStreamType? eventStreamType, CancellationToken cancellationToken) =>
+        GetRange(start, end, eventSourceId, eventTypes, tags, cancellationToken);
+
+    /// <summary>
     /// Get events with a limit starting from a specific sequence number.
     /// </summary>
     /// <param name="start">The starting <see cref="EventSequenceNumber"/>.</param>

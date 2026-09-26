@@ -26,5 +26,5 @@ public class and_the_observer_has_handled_part_of_the_batch : given.an_observer_
         TimeoutMilliseconds = 100
     });
 
-    [Fact] void should_start_after_the_last_handled_event() => _eventSequence.Received(1).GetRange(55UL, 55UL, eventTypes: Arg.Any<IEnumerable<EventType>>(), tags: Arg.Any<IEnumerable<Tag>>());
+    [Fact] void should_start_after_the_last_handled_event() => _eventSequence.Received(1).GetRange(55UL, 55UL, null, Arg.Any<IEnumerable<EventType>>(), Arg.Any<IEnumerable<Tag>>(), null, null, Arg.Any<CancellationToken>());
 }
