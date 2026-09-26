@@ -720,7 +720,7 @@ internal static class ProjectionReadModelProcessor
                     break;
 
                 case NestedCleared nestedCleared:
-                    ((IDictionary<string, object?>)state)[nestedCleared.NestedProperty.LastSegment.Value] = null;
+                    nestedCleared.NestedProperty.SetValue(state, null!, NormalizeArrayIndexers(nestedCleared.ArrayIndexers));
                     break;
 
                 case Joined joined:

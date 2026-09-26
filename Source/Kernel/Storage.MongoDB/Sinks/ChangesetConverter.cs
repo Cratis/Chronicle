@@ -6,6 +6,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Microsoft.Extensions.Logging;
@@ -68,6 +69,7 @@ public class ChangesetConverter(
         await ApplyActualChanges(
             key,
             normalizedChanges,
+            changeset.InitialState,
             updateDefinitionBuilder,
             ref updateBuilder,
             ref hasChanges,
@@ -165,9 +167,69 @@ public class ChangesetConverter(
         }
     }
 
+    static Dictionary<(PropertyPath Path, ArrayIndexers Indexers), object> FindRecreatedParents(IEnumerable<Change> changes, ExpandoObject? initialState)
+    {
+        var parents = new Dictionary<(PropertyPath Path, ArrayIndexers Indexers), object>();
+        var propertyChanges = changes.OfType<PropertiesChanged<ExpandoObject>>().ToArray();
+        var differences = propertyChanges.SelectMany(change => change.Differences).ToArray();
+
+        foreach (var changed in propertyChanges)
+        {
+            foreach (var difference in changed.Differences)
+            {
+                var segments = difference.PropertyPath.Segments.ToArray();
+                for (var length = 1; length < segments.Length; length++)
+                {
+                    if (segments[length - 1] is not PropertyName)
+                    {
+                        continue;
+                    }
+
+                    var parent = PropertyPath.CreateFrom(segments.Take(length).ToArray());
+                    var isAlsoChanged = differences.Any(other =>
+                        other.PropertyPath == parent && other.ArrayIndexers.Equals(difference.ArrayIndexers));
+                    if (!isAlsoChanged && initialState is null)
+                    {
+                        continue;
+                    }
+
+                    // Check a copy: GetValue ensures intermediate paths and must not mutate the changeset's initial state.
+                    if (!isAlsoChanged && parent.GetValue(initialState!.Clone(), difference.ArrayIndexers) is not null)
+                    {
+                        continue;
+                    }
+
+                    if (parent.GetValue(changed.State, difference.ArrayIndexers) is object value)
+                    {
+                        parents[(parent, difference.ArrayIndexers)] = value;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // An absent outer object supersedes any replacement for one of its descendants.
+        foreach (var parent in parents.Keys.ToArray())
+        {
+            if (parents.Keys.Any(other => other != parent && other.Indexers.Equals(parent.Indexers) && IsAtOrBelow(parent.Path, other.Path)))
+            {
+                parents.Remove(parent);
+            }
+        }
+        return parents;
+    }
+
+    static bool IsAtOrBelow(PropertyPath path, PropertyPath parent)
+    {
+        var segments = path.Segments.ToArray();
+        var parentSegments = parent.Segments.ToArray();
+        return segments.Length >= parentSegments.Length && parentSegments.Select((segment, index) => segment.Value == segments[index].Value).All(equal => equal);
+    }
+
     Task ApplyActualChanges(
         Key key,
         IEnumerable<Change> changes,
+        ExpandoObject? initialState,
         UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder,
         ref UpdateDefinition<BsonDocument>? updateBuilder,
         ref bool hasChanges,
@@ -178,13 +240,15 @@ public class ChangesetConverter(
         var changesToApply = changes.ToList();
         var collectionPathsWithChildOperations = changesToApply.GetCollectionPathsWithChildOperations();
         var wholeCollectionReplacementPaths = changesToApply.GetWholeCollectionReplacementPaths();
+        var recreatedParents = FindRecreatedParents(changesToApply, initialState);
+        var writtenParents = new HashSet<(PropertyPath Path, ArrayIndexers Indexers)>();
 
         foreach (var change in changesToApply)
         {
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    hasChanges |= BuildPropertiesChanged(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, collectionPathsWithChildOperations, wholeCollectionReplacementPaths, propertiesChanged);
+                    hasChanges |= BuildPropertiesChanged(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, collectionPathsWithChildOperations, wholeCollectionReplacementPaths, recreatedParents, writtenParents, propertiesChanged);
                     break;
 
                 case ChildAdded childAdded:
@@ -207,7 +271,7 @@ public class ChangesetConverter(
                     break;
 
                 case ResolvedJoin resolvedJoined:
-                    var applyActualChangesTask = ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber);
+                    var applyActualChangesTask = ApplyActualChanges(key, resolvedJoined.Changes, initialState, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber);
                     joinTasks.Add(applyActualChangesTask);
                     break;
             }
@@ -235,7 +299,7 @@ public class ChangesetConverter(
         }
     }
 
-    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ISet<PropertyPath> collectionPathsWithChildOperations, ISet<PropertyPath> wholeCollectionReplacementPaths, PropertiesChanged<ExpandoObject> propertiesChanged)
+    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ISet<PropertyPath> collectionPathsWithChildOperations, ISet<PropertyPath> wholeCollectionReplacementPaths, IReadOnlyDictionary<(PropertyPath Path, ArrayIndexers Indexers), object> recreatedParents, HashSet<(PropertyPath Path, ArrayIndexers Indexers)> writtenParents, PropertiesChanged<ExpandoObject> propertiesChanged)
     {
         var allArrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
 
@@ -252,10 +316,18 @@ public class ChangesetConverter(
 
         foreach (var propertyDifference in applicableDifferences)
         {
-            var (property, arrayFilters) = converter.ToMongoDBProperty(propertyDifference.PropertyPath, propertyDifference.ArrayIndexers);
+            var parent = recreatedParents.Keys.FirstOrDefault(candidate =>
+                candidate.Indexers.Equals(propertyDifference.ArrayIndexers) && IsAtOrBelow(propertyDifference.PropertyPath, candidate.Path));
+            if (parent.Path is not null && !writtenParents.Add(parent))
+            {
+                continue;
+            }
+
+            var path = parent.Path ?? propertyDifference.PropertyPath;
+            var (property, arrayFilters) = converter.ToMongoDBProperty(path, propertyDifference.ArrayIndexers);
             allArrayFilters.AddRange(arrayFilters);
 
-            var value = converter.ToBsonValue(propertyDifference.Changed, propertyDifference.PropertyPath);
+            var value = converter.ToBsonValue(parent.Path is not null ? recreatedParents[parent] : propertyDifference.Changed, path);
 
             if (updateBuilder != default)
             {
@@ -307,8 +379,8 @@ public class ChangesetConverter(
         arrayFiltersForDocument.AddRange(arrayFilters);
 
         updateBuilder = updateBuilder is not null
-            ? updateBuilder.Set(property, BsonNull.Value)
-            : updateDefinitionBuilder.Set(property, BsonNull.Value);
+            ? updateBuilder.Unset(property)
+            : updateDefinitionBuilder.Unset(property);
     }
 
     void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildRemoved childRemoved)
@@ -358,7 +430,7 @@ public class ChangesetConverter(
         var collection = collections.GetCollection();
 
         var joinArrayFiltersForDocument = new ArrayFilters();
-        await ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber);
+        await ApplyActualChanges(key, joined.Changes, null, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber);
 
         if (!hasJoinChanges)
         {
