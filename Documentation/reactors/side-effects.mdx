@@ -111,6 +111,8 @@ Extend the pipeline by registering a custom `IReactorSideEffectHandler`:
 
 <ChronicleClientTabs snippet="reactors/side-effects/custom-handler" />
 
+Chronicle registers its built-in handlers and reactor metadata providers when you call `AddCratisChronicle`, including in standalone hosts. Register custom handlers under `IReactorSideEffectHandler` or their concrete type in the host's service collection. Handlers discovered from other loaded libraries only participate when registered; merely loading an assembly does not activate its integration.
+
 ## Supported Return Types
 
 | Return type | Handler invoked |
