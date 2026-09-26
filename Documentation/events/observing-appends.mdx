@@ -49,9 +49,17 @@ See <xref:Chronicle.Testing.EventAppendCollection> for full details.
 When you need to wait until observers affected by an append operation have completed, use
 `WaitForCompletion()` from the `Cratis.Chronicle.Observation` namespace.
 
-If any affected observer fails while catching up, the returned result includes failed partitions.
+With the .NET client and a server with this change, the wait includes observers that handle the
+appended event types, plus observers subscribed to all events. For `AppendMany`, each observer waits
+only through its last matching event in the batch. If an affected observer fails while catching up,
+the result includes failed partitions. Check the append result before you wait: an append that failed
+never reached the log, so there is nothing to wait for and the wait reports success.
 
-Check the append result before you wait. An append that failed never reached the log, so there is nothing to wait for and the wait reports success. The wait is also bounded: it gives up after five seconds unless you pass a longer `timeout`, and throws when it does. The wait covers every observer on that event sequence, not only those that handle the appended event, so an unrelated observer that is behind — or one that never handles this event type — can hold it until it times out.
+The wait gives up after five seconds unless you pass a longer `timeout`. A timeout returns a result
+with `IsSuccess` false and `TimedOut` true instead of throwing. Newer servers name the observers still
+behind in `OutstandingObservers`. TypeScript, Elixir, Kotlin, and Python clients send no event types
+and keep waiting for every observer on the sequence. An older server ignores the new fields, so a
+newer .NET client can still time out on a mixed-type batch there.
 
 Waiting only means something when there are observers behind the connection. The in-process testing
 surfaces (`EventScenario` and `EventStoreForTesting`) run the event sequence without a silo, so an
