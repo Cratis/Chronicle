@@ -3,8 +3,10 @@
 
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
@@ -37,6 +39,9 @@ public class a_catching_up_in_flight_state : Specification
         _failuresState.State = _failedPartitions;
 
         _jobsManager = Substitute.For<IJobsManager>();
+        _jobsManager
+            .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>())
+            .Returns(Task.FromResult(Result<JobId, StartJobError>.Success(JobId.New())));
 
         _state = new CatchingUpInFlight(
             _observerKey,
