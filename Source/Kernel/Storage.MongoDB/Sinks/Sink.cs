@@ -240,17 +240,21 @@ public class Sink(
         // write in bulk mode, and preserve the watermark guard on redelivery.
         if (!usesJoinTargetsOnlyFilter)
         {
-            foreach (var parent in converted.NullParentPaths)
+            foreach (var parent in converted.NullParentPaths.Select(path => (Path: path, Filters: (IReadOnlyList<BsonDocumentArrayFilterDefinition<BsonDocument>>)[]))
+                         .Concat(converted.NullArrayParents.Select(_ => (_.Path, Filters: _.ArrayFilters)))
+                         .OrderBy(_ => _.Path.Count(ch => ch == '.')))
             {
-                var nullFilter = Builders<BsonDocument>.Filter.And(filter, Builders<BsonDocument>.Filter.Type(parent, BsonType.Null));
-                var unset = Builders<BsonDocument>.Update.Unset(parent);
+                var nullFilter = parent.Filters.Count == 0
+                    ? Builders<BsonDocument>.Filter.And(filter, Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null))
+                    : filter;
+                var unset = Builders<BsonDocument>.Update.Unset(parent.Path);
                 if (_isBulkMode)
                 {
-                    AddToBulk(new UpdateOneModel<BsonDocument>(nullFilter, unset), key, eventSequenceNumber);
+                    AddToBulk(new UpdateOneModel<BsonDocument>(nullFilter, unset) { ArrayFilters = parent.Filters }, key, eventSequenceNumber);
                 }
                 else
                 {
-                    await Collection.UpdateOneAsync(nullFilter, unset);
+                    await Collection.UpdateOneAsync(nullFilter, unset, new UpdateOptions { ArrayFilters = parent.Filters });
                 }
             }
         }

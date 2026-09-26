@@ -18,4 +18,9 @@ public record UpdateDefinitionAndArrayFilters(UpdateDefinition<BsonDocument> Upd
     /// Gets parent paths that may contain legacy BSON nulls and must be conditionally unset before the leaf update.
     /// </summary>
     internal IReadOnlyList<string> NullParentPaths { get; init; } = [];
+
+    /// <summary>
+    /// Gets indexed parents that may contain legacy BSON nulls, with per-element filters for their conditional unset.
+    /// </summary>
+    internal IReadOnlyList<NullArrayParent> NullArrayParents { get; init; } = [];
 }
