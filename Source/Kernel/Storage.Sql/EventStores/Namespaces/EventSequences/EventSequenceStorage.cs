@@ -843,8 +843,14 @@ public class EventSequenceStorage(
     /// <param name="query">The <see cref="IQueryable{T}"/> of <see cref="EventEntry"/> to narrow.</param>
     /// <param name="criteria">The <see cref="EventSequenceQueryCriteria"/> to apply.</param>
     /// <returns>The narrowed query - unchanged when the criteria narrows nothing.</returns>
+    /// <exception cref="NamedTagsNotSupported">The criteria contain named tags that SQL does not yet persist.</exception>
     static IQueryable<EventEntry> ApplyCriteria(IQueryable<EventEntry> query, EventSequenceQueryCriteria criteria)
     {
+        if (criteria.HasNamedTags)
+        {
+            throw new NamedTagsNotSupported();
+        }
+
         if (criteria.HasEventSourceId)
         {
             var eventSourceId = criteria.EventSourceId!.Value;
