@@ -26,8 +26,8 @@ namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_creatin
 
 public class and_joining_with_every_event_mappings : Specification
 {
-    (int Subscriptions, long Count) _withChildren;
-    (int Subscriptions, long Count) _withoutChildren;
+    (int Subscriptions, long Count, bool HasKeyedFrom) _withChildren;
+    (int Subscriptions, long Count, bool HasKeyedFrom) _withoutChildren;
 
     async Task Because()
     {
@@ -39,8 +39,9 @@ public class and_joining_with_every_event_mappings : Specification
     [Fact] void should_subscribe_once_for_each_from_join_and_join_backfill() => _withChildren.Subscriptions.ShouldEqual(3);
     [Fact] void should_count_the_join_once_when_children_are_included() => _withChildren.Count.ShouldEqual(1);
     [Fact] void should_count_the_join_once_when_children_are_excluded() => _withoutChildren.Count.ShouldEqual(1);
+    [Fact] void should_keep_join_only_events_unkeyed() => _withoutChildren.HasKeyedFrom.ShouldBeFalse();
 
-    internal static async Task<(int Subscriptions, long Count)> ProjectJoin(bool includeChildren, bool isChild = false)
+    internal static async Task<(int Subscriptions, long Count, bool HasKeyedFrom)> ProjectJoin(bool includeChildren, bool isChild = false, bool fromAlsoJoins = false, bool subscribeToAllEvents = false, bool includeJoin = true)
     {
         EventStoreName eventStore = "event-store";
         EventStoreNamespaceName @namespace = "namespace";
@@ -66,12 +67,12 @@ public class and_joining_with_every_event_mappings : Specification
 
         var from = new Dictionary<EventType, FromDefinition>
         {
-            [(EventType)"Created"] = new FromDefinition(new Dictionary<PropertyPath, string> { [(PropertyPath)"joinId"] = "joinId" }, PropertyExpression.NotSet, null)
+            [(EventType)(fromAlsoJoins ? "Joined" : "Created")] = new FromDefinition(fromAlsoJoins ? new Dictionary<PropertyPath, string>() : new Dictionary<PropertyPath, string> { [(PropertyPath)"joinId"] = "joinId" }, PropertyExpression.NotSet, null)
         };
-        var joins = new Dictionary<EventType, JoinDefinition>
+        var joins = includeJoin ? new Dictionary<EventType, JoinDefinition>
         {
             [(EventType)"Joined"] = new JoinDefinition((PropertyPath)"joinId", new Dictionary<PropertyPath, string>(), PropertyExpression.NotSet)
-        };
+        } : new Dictionary<EventType, JoinDefinition>();
         var every = new FromEveryDefinition(new Dictionary<PropertyPath, string> { [(PropertyPath)"count"] = WellKnownExpressions.Count }, includeChildren);
         var children = isChild ? new Dictionary<PropertyPath, ChildrenDefinition>
         {
@@ -100,7 +101,8 @@ public class and_joining_with_every_event_mappings : Specification
             isChild ? new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false) : every,
             new Dictionary<EventType, RemovedWithDefinition>(),
             new Dictionary<EventType, RemovedWithJoinDefinition>(),
-            AutoMap: AutoMap.Disabled);
+            AutoMap: AutoMap.Disabled,
+            SubscribesToAllEvents: subscribeToAllEvents);
         var schema = await JsonSchema.FromJsonAsync("""
             {"type":"object","properties":{"id":{"type":"string"},"joinId":{"type":"string"},"count":{"type":"integer"},"items":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"joinId":{"type":"string"},"count":{"type":"integer"}}}}}}
             """);
@@ -136,6 +138,7 @@ public class and_joining_with_every_event_mappings : Specification
             new ExpandoObject());
         var state = new ExpandoObject();
         ((IDictionary<string, object?>)state)["count"] = 0L;
+        ((IDictionary<string, object?>)state)["joinId"] = "join-source";
         if (isChild)
         {
             var item = new ExpandoObject();
@@ -149,13 +152,13 @@ public class and_joining_with_every_event_mappings : Specification
             ? new ArrayIndexers([new ArrayIndexer((PropertyPath)"[items]", (PropertyPath)"id", "child")])
             : ArrayIndexers.NoIndexers;
         projection.OnNext(new ProjectionEventContext(new Key("root", indexers), incoming, changeset, ProjectionOperationType.Join, false, "join-source"));
-        var joined = changeset.Changes.OfType<Joined>().Single();
-        var changed = joined.Changes.OfType<PropertiesChanged<ExpandoObject>>().Single();
-        var resultState = (IDictionary<string, object?>)changed.State;
+        var joined = changeset.Changes.OfType<Joined>().SingleOrDefault();
+        var finalJoinedState = joined?.Changes.OfType<PropertiesChanged<ExpandoObject>>().LastOrDefault()?.State;
+        var resultState = (IDictionary<string, object?>)(finalJoinedState ?? changeset.CurrentState);
         var count = isChild
             ? Convert.ToInt64(((IDictionary<string, object?>)((IEnumerable<object>)resultState["items"]!).Single())["count"])
             : Convert.ToInt64(resultState["count"]);
 
-        return (((Projection)projection).Subscriptions.Count, count);
+        return (((Projection)projection).Subscriptions.Count, count, joined?.HasKeyedFrom ?? false);
     }
 }

@@ -39,4 +39,17 @@ public record EventToAppendToStorage(
     DateTimeOffset Occurred,
     ExpandoObject Content,
     EventHash Hash,
-    Subject? Subject = null);
+    Subject? Subject = null)
+{
+    /// <summary>
+    /// Gets the content for every generation of the event type.
+    /// </summary>
+    public IDictionary<EventTypeGeneration, ExpandoObject> GenerationalContent { get; init; } =
+        new Dictionary<EventTypeGeneration, ExpandoObject> { [EventType.Generation] = Content };
+
+    /// <summary>
+    /// Gets the content hash for every generation of the event type.
+    /// </summary>
+    public IDictionary<EventTypeGeneration, EventHash> ContentHashes { get; init; } =
+        new Dictionary<EventTypeGeneration, EventHash> { [EventType.Generation] = Hash };
+}

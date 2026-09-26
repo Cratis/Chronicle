@@ -3,12 +3,14 @@
 
 using System.Collections;
 using System.Dynamic;
+using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
@@ -71,7 +73,7 @@ public class ResolveFutures(
                     var parentIdentifierPath = future.ParentPath + future.ParentIdentifiedByProperty;
                     var type = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(parentIdentifierPath, typeFormats);
                     var parentKey = future.ParentKey.Value;
-                    if (type is not null)
+                    if (type is not null && !future.ParentPath.IsRoot)
                     {
                         try
                         {
@@ -100,6 +102,8 @@ public class ResolveFutures(
                     // records the identifier of each intermediate element.
                     var parentExistsInCurrentState = TryFindParentWithIndexers(
                         context.Changeset.CurrentState,
+                        context.Changeset,
+                        context.Key.Value,
                         childProjection,
                         future.ParentPath,
                         future.ParentIdentifiedByProperty,
@@ -224,14 +228,17 @@ public class ResolveFutures(
     /// chain of <see cref="ArrayIndexer"/> entries needed to navigate from root to that parent.
     /// </summary>
     /// <param name="currentState">The root <see cref="ExpandoObject"/> representing the current read model state.</param>
+    /// <param name="changeset">The changeset for the current root event, including initialization changes.</param>
+    /// <param name="rootKey">The resolved key of the root document currently being processed.</param>
     /// <param name="childProjection">The child projection whose parent chain is being resolved.</param>
     /// <param name="parentPath">The <see cref="PropertyPath"/> identifying the parent's collection.</param>
     /// <param name="parentIdentifiedByProperty">The <see cref="PropertyPath"/> of the property that identifies items in the parent collection.</param>
     /// <param name="parentKey">The key value of the parent item being located.</param>
     /// <param name="allIndexers">Receives the full root-to-parent indexer chain when the method returns <see langword="true"/>.</param>
     /// <remarks>
-    /// For a direct child (one array level between root and parent), <paramref name="allIndexers"/>
-    /// receives a single entry for the parent's collection. For deeper hierarchies the method
+    /// For a first-level child the root read model is the parent, so no ancestor indexers are
+    /// needed. For a child of an array element, <paramref name="allIndexers"/> receives a single
+    /// entry for the parent's collection. For deeper hierarchies the method
     /// recurses through each intermediate array, locating the enclosing element at each level and
     /// recording its identifier, so that EnsurePath can navigate the full path
     /// without missing-indexer errors.
@@ -239,6 +246,8 @@ public class ResolveFutures(
     /// <returns><see langword="true"/> if the parent was found; otherwise <see langword="false"/>.</returns>
     static bool TryFindParentWithIndexers(
         ExpandoObject? currentState,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        object rootKey,
         IProjection childProjection,
         PropertyPath parentPath,
         PropertyPath parentIdentifiedByProperty,
@@ -252,16 +261,15 @@ public class ResolveFutures(
 
         if (chain.Count == 0)
         {
-            // The child projection's parent is root, so the resolved item is a direct child of the root.
-            // Use the child projection's ChildrenPropertyPath (e.g. [Configurations]) to find the
-            // collection. ParentPath is PropertyPath.Root for first-level children and cannot be used
-            // directly. The caller adds the child's own ArrayIndexer; no ancestor indexers are needed.
-            var directCollectionValue = childProjection.ChildrenPropertyPath.GetValue(currentState, ArrayIndexers.NoIndexers);
-            var directCollection = AsExpandoCollection(directCollectionValue);
-            if (directCollection is null) return false;
-            var directList = directCollection.ToList();
+            // A first-level child can be created under the root or updated after it already
+            // exists there. The creator's parent key is the root key, whereas an update whose
+            // parent key comes from its event source names the child in the root collection.
+            // Neither may resolve against a child-created placeholder before the root's FROM.
+            if (!IsRootInitialized(currentState, changeset)) return false;
+            if (KeysMatch(rootKey, parentKey)) return true;
 
-            return directList.Contains(parentIdentifiedByProperty, parentKey);
+            var directCollection = AsExpandoCollection(childProjection.ChildrenPropertyPath.GetValue(currentState, ArrayIndexers.NoIndexers));
+            return directCollection?.ToList().Contains(parentIdentifiedByProperty, parentKey) == true;
         }
 
         if (chain.Count == 1)
@@ -278,6 +286,61 @@ public class ResolveFutures(
         }
 
         return SearchLevel(currentState, chain, 0, [], parentIdentifiedByProperty, parentKey, allIndexers);
+    }
+
+    static bool IsRootInitialized(ExpandoObject state, IChangeset<AppendedEvent, ExpandoObject> changeset)
+    {
+        if (changeset.HasBeenRemoved()) return false;
+
+        var initializedNow = changeset.Changes
+            .OfType<PropertiesChanged<ExpandoObject>>()
+            .SelectMany(change => change.Differences)
+            .LastOrDefault(difference => difference.PropertyPath.Path == WellKnownProperties.ReadModelInstanceInitialized);
+        if (initializedNow is not null)
+        {
+            return initializedNow.Changed is true;
+        }
+
+        return ((IDictionary<string, object?>)state).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) && initialized is true;
+    }
+
+    static bool KeysMatch(object rootKey, object parentKey)
+    {
+        if (Equals(rootKey, parentKey)) return true;
+
+        // Futures and resolved keys can be independently materialized composite objects;
+        // SQL can also supply the same composite key as JSON text.
+        if (rootKey is string rootText && rootText.StartsWith('{'))
+        {
+            return MatchesJson(rootText, parentKey);
+        }
+        if (parentKey is string parentText && parentText.StartsWith('{'))
+        {
+            return MatchesJson(parentText, rootKey);
+        }
+
+        return JsonElement.DeepEquals(JsonSerializer.SerializeToElement(rootKey), JsonSerializer.SerializeToElement(parentKey)) ||
+            (rootKey is not ExpandoObject && parentKey is not ExpandoObject &&
+             string.Equals(rootKey.ToString(), parentKey.ToString(), StringComparison.Ordinal));
+    }
+
+    static bool MatchesJson(string json, object other)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (other is string otherJson && otherJson.StartsWith('{'))
+            {
+                using var otherDocument = JsonDocument.Parse(otherJson);
+                return JsonElement.DeepEquals(document.RootElement, otherDocument.RootElement);
+            }
+
+            return JsonElement.DeepEquals(document.RootElement, JsonSerializer.SerializeToElement(other));
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     /// <summary>

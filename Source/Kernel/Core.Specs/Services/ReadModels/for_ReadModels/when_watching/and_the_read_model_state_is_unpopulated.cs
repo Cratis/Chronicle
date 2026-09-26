@@ -16,6 +16,7 @@ public class and_the_read_model_state_is_unpopulated : given.all_dependencies
 
     void Establish()
     {
+        ((ReadModels)_service).ReadModelDefinitionRetryDelay = TimeSpan.Zero;
         var unpopulated = (Concepts.ReadModels.ReadModelDefinition)RuntimeHelpers.GetUninitializedObject(typeof(Concepts.ReadModels.ReadModelDefinition));
         _readModel.GetDefinition().Returns(_ => Task.FromResult(++_definitionReads == 1 ? unpopulated : _readModelDefinition));
 

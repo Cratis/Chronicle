@@ -93,6 +93,22 @@ public class an_event_sequence_storage : Specification, IDisposable
             new Dictionary<EventTypeGeneration, ExpandoObject> { { EventTypeGeneration.First, new ExpandoObject() } },
             new Dictionary<EventTypeGeneration, EventHash>());
 
+    protected Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(EventSequenceNumber sequenceNumber, ExpandoObject content, EventHash hash) =>
+        _storage.Append(
+            sequenceNumber,
+            EventSourceType.Default,
+            EventSourceId.New(),
+            EventStreamType.All,
+            EventStreamId.Default,
+            _eventType,
+            CorrelationId.New(),
+            [],
+            [],
+            [],
+            DateTimeOffset.UtcNow,
+            new Dictionary<EventTypeGeneration, ExpandoObject> { { EventTypeGeneration.First, content } },
+            new Dictionary<EventTypeGeneration, EventHash> { { EventTypeGeneration.First, hash } });
+
     protected Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(params EventSequenceNumber[] sequenceNumbers) =>
         _storage.AppendMany(sequenceNumbers.Select(number => new EventToAppendToStorage(
             number,

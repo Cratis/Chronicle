@@ -21,6 +21,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.for_EventSequenceStora
 public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixture fixture) : Specification
 {
     protected EventSequenceStorage _storage;
+    protected IMongoCollection<Event> _collection;
+    protected Json.IExpandoObjectConverter _expandoObjectConverter;
     protected EventType _eventType;
 
     IMongoClient _client;
@@ -33,6 +35,7 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
         _client = new MongoClient(fixture.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
         var collection = database.GetCollection<Event>("event-log");
+        _collection = collection;
 
         var namespaceDatabase = Substitute.For<IEventStoreNamespaceDatabase>();
         namespaceDatabase.Client.Returns(_client);
@@ -46,8 +49,8 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
         var identityStorage = Substitute.For<IIdentityStorage>();
         identityStorage.GetFor(Arg.Any<IEnumerable<IdentityId>>()).Returns(Identity.System);
 
-        var expandoObjectConverter = Substitute.For<Json.IExpandoObjectConverter>();
-        expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()).Returns(new JsonObject());
+        _expandoObjectConverter = Substitute.For<Json.IExpandoObjectConverter>();
+        _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()).Returns(new JsonObject());
 
         _storage = new EventSequenceStorage(
             "test-store",
@@ -57,7 +60,7 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
             Substitute.For<IEventConverter>(),
             eventTypesStorage,
             identityStorage,
-            expandoObjectConverter,
+            _expandoObjectConverter,
             new JsonSerializerOptions(),
             Substitute.For<ILogger<EventSequenceStorage>>());
     }

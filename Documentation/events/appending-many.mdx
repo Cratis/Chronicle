@@ -12,6 +12,8 @@ AppendMany is transactional all the way to storage. Either all events in the bat
 ## How it works
 
 - Each item in the batch pairs an event with the event source it belongs to.
+- In the .NET client, each `EventForEventSourceId` can supply its own `Causation`. The current ambient causation chain is kept first, followed by that event's explicit cause. Events without an explicit cause keep only the ambient chain; they do not inherit another event's cause.
+- Per-event causation requires an updated Chronicle kernel. Older kernels ignore the per-event field and store only the batch's ambient causation chain.
 - The batch is validated as a unit and written atomically.
 - Sequence numbers are assigned in the order provided.
 - The event sequence state is updated once the batch commits.

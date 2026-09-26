@@ -12,7 +12,8 @@ namespace Cratis.Chronicle.Testing.Reactors;
 /// alike — for assertion, instead of appending or executing them. Used by <see cref="ReactorScenario{TReactor}"/> when
 /// no explicit handlers are supplied, so a return-style reactor can be asserted directly.
 /// </summary>
-sealed class RecordingReactorSideEffectHandlers : IReactorSideEffectHandlers
+/// <param name="isClaimedReturnType">Checks whether a registered host handler claims a synchronous return type.</param>
+sealed class RecordingReactorSideEffectHandlers(Func<Type, bool> isClaimedReturnType) : IReactorSideEffectHandlers
 {
     readonly List<object> _produced = [];
 
@@ -35,6 +36,9 @@ sealed class RecordingReactorSideEffectHandlers : IReactorSideEffectHandlers
 
     /// <inheritdoc/>
     public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) => true;
+
+    /// <inheritdoc/>
+    public bool CanHandleReturnType(Type type) => isClaimedReturnType(type);
 
     /// <inheritdoc/>
     Task<Result<ReactorSideEffectFailure>> IReactorSideEffectHandlers.Handle(ReactorContext reactorContext, IEventStore eventStore, object value)

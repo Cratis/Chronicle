@@ -110,7 +110,10 @@ public class an_event_sequence : Specification
         _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>())
             .Returns(_ => new ExpandoObject());
         _eventTypeMigrations.MigrateToAllGenerations(Arg.Any<EventStoreName>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<ExpandoObject>())
-            .Returns(new Dictionary<EventTypeGeneration, ExpandoObject>());
+            .Returns(call => new Dictionary<EventTypeGeneration, ExpandoObject>
+            {
+                [call.ArgAt<EventType>(1).Generation] = call.ArgAt<ExpandoObject>(3)
+            });
 
         _currentValidation = _constraintValidation;
         _constraintValidationFactory.Create(Arg.Any<EventSequenceKey>()).Returns(_ => _currentValidation);
@@ -213,7 +216,7 @@ public class an_event_sequence : Specification
     /// schema/compliance/constraint pipeline so specs can exercise the batch append and sequence-number logic directly.
     /// </summary>
     /// <returns>A validated event tuple in the shape expected by <see cref="EventSequence.AppendManyToStorage"/>.</returns>
-    protected static (EventToAppend Event, ExpandoObject CompliantEvent, ConstraintValidationContext ConstraintContext) ValidatedEvent()
+    protected static (EventToAppend Event, ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintContext) ValidatedEvent()
     {
         var eventSourceId = EventSourceId.New();
         var eventType = new EventType("BatchEvent", EventTypeGeneration.First);
@@ -227,6 +230,6 @@ public class an_event_sequence : Specification
             [],
             new JsonObject());
         var constraintContext = new ConstraintValidationContext([], eventSourceId, eventType.Id, content);
-        return (eventToAppend, content, constraintContext);
+        return (eventToAppend, content, new JsonObject(), constraintContext);
     }
 }

@@ -43,7 +43,7 @@ public class ReactorScenario<TReactor>
     readonly IServiceProvider? _explicitServiceProvider;
     readonly IEventTypes _eventTypes = Defaults.Instance.EventTypes;
     readonly List<Action<EventStoreForTesting>> _readModelSeeds = [];
-    readonly RecordingReactorSideEffectHandlers _recordingHandlers = new();
+    readonly RecordingReactorSideEffectHandlers _recordingHandlers;
     IServiceProvider? _serviceProvider;
     IEventStore? _eventStore;
 
@@ -84,6 +84,9 @@ public class ReactorScenario<TReactor>
         _explicitEventStore = eventStore;
         Services = new ServiceCollection();
         Services.AddLogging();
+        _recordingHandlers = new(type => EnsureServiceProvider()
+            .GetServices<IReactorSideEffectHandler>()
+            .Any(handler => handler.CanHandleReturnType(type)));
     }
 
     /// <summary>

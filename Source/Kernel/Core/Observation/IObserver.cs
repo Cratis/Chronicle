@@ -179,12 +179,39 @@ public interface IObserver : IGrainWithStringKey
     Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Complete a replay, resolving only failures already present when it began.
+    /// </summary>
+    /// <param name="lastHandledEventSequenceNumber">The last event handled by the replay.</param>
+    /// <param name="replayedPartitions">Partitions and their successfully handled sequence numbers.</param>
+    /// <param name="replayedEventTypes">The event types read during the replay.</param>
+    /// <param name="replayStartedAt">The time before replay steps were prepared.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReplayedSuccessfullySince(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt);
+
+    /// <summary>
     /// Notify that the partition has been replayed.
     /// </summary>
     /// <param name="partition">The partition that has been replayed.</param>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
+    /// Notify that a partition replay completed for the specified event types.
+    /// </summary>
+    /// <param name="partition">The partition that has been replayed.</param>
+    /// <param name="lastHandledEventSequenceNumber">The last event handled by that partition.</param>
+    /// <param name="replayedEventTypes">The event types included in the replay.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes);
+
+    /// <summary>
+    /// Notify that a partition replay finished without handling all events.
+    /// </summary>
+    /// <param name="partition">The partition being replayed.</param>
+    /// <param name="lastHandledEventSequenceNumber">The last event sequence number handled before replay stopped.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Notify that the partition has failed.

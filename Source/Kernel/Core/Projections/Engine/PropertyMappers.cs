@@ -222,29 +222,36 @@ public static class PropertyMappers
     /// Resolve a property path that may contain a dynamic, expression-based segment (e.g. eventCountByType.$eventContext.eventType.id)
     /// into a concrete <see cref="PropertyPath"/> for the current <see cref="AppendedEvent"/>.
     /// </summary>
-    /// <param name="propertyPath">The property path that may contain a .$eventContext.&lt;path&gt; segment.</param>
+    /// <param name="propertyPath">The property path that may contain a .$eventContext.&lt;path&gt; or .$causedBy.&lt;property&gt; segment.</param>
     /// <param name="event">The event to evaluate the dynamic segment against.</param>
     /// <returns>The resolved property path, with the dynamic segment replaced by its runtime value. Returns <paramref name="propertyPath"/> unchanged when it has no dynamic segment.</returns>
     /// <exception cref="UnsupportedDynamicPropertyPathExpression">Thrown when the dynamic segment does not reference a well-known expression this method knows how to resolve.</exception>
     static PropertyPath ResolveDynamicPropertyPath(PropertyPath propertyPath, AppendedEvent @event)
     {
         var pathString = propertyPath.Path;
-        var eventContextMarker = $".{WellKnownExpressions.EventContext}.";
-        var markerIndex = pathString.IndexOf(eventContextMarker, StringComparison.Ordinal);
+        var markerIndex = pathString.IndexOf(".$", StringComparison.Ordinal);
         if (markerIndex < 0)
         {
             return propertyPath;
         }
 
         var staticPrefix = pathString[..markerIndex];
-        var contextPath = pathString[(markerIndex + eventContextMarker.Length)..];
-        if (contextPath.Length == 0)
+        var expressionStart = markerIndex + 1;
+        var propertyStart = pathString.IndexOf('.', expressionStart);
+        if (propertyStart < 0 || propertyStart == pathString.Length - 1)
         {
             throw new UnsupportedDynamicPropertyPathExpression(propertyPath);
         }
 
-        var contextPropertyPath = new PropertyPath(contextPath);
-        var resolvedValue = EventValueProviders.EventContext(contextPropertyPath)(@event);
+        var expression = pathString[expressionStart..propertyStart];
+        var property = pathString[(propertyStart + 1)..];
+        var contextPath = expression switch
+        {
+            WellKnownExpressions.EventContext => property,
+            WellKnownExpressions.CausedBy when property.Equals("subject", StringComparison.Ordinal) || property.Equals("name", StringComparison.Ordinal) || property.Equals("userName", StringComparison.Ordinal) => $"causedBy.{property}",
+            _ => throw new UnsupportedDynamicPropertyPathExpression(propertyPath)
+        };
+        var resolvedValue = EventValueProviders.EventContext(new PropertyPath(contextPath))(@event);
 
         return new PropertyPath($"{staticPrefix}.{FormatDynamicKeyValue(resolvedValue)}");
     }

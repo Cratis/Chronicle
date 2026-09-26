@@ -361,8 +361,8 @@ public class EventSequence(
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
             var validatedEvents = getValidAndCompliantEvents.ConvertAll(eventAndResult =>
             {
-                var (compliantEvent, _, constraintContext) = eventAndResult.Result.AsT0;
-                return (eventAndResult.Event, CompliantEvent: compliantEvent, ConstraintContext: constraintContext);
+                var (compliantEvent, compliantContent, constraintContext) = eventAndResult.Result.AsT0;
+                return (eventAndResult.Event, CompliantEvent: compliantEvent, CompliantContent: compliantContent, ConstraintContext: constraintContext);
             });
 
             var appendManyResult = await AppendManyToStorage(validatedEvents, correlationId, causation, identity);
@@ -524,7 +524,7 @@ public class EventSequence(
     /// retry can make progress instead of resubmitting the same colliding numbers forever.
     /// </remarks>
     internal async Task<AppendManyResult> AppendManyToStorage(
-        IReadOnlyList<(EventToAppend Event, ExpandoObject CompliantEvent, ConstraintValidationContext ConstraintContext)> validatedEvents,
+        IReadOnlyList<(EventToAppend Event, ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintContext)> validatedEvents,
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain)
@@ -533,10 +533,14 @@ public class EventSequence(
         var constraintContexts = new List<ConstraintValidationContext>();
 
         var nextSequenceNumber = State.SequenceNumber;
-        foreach (var (eventToAppend, compliantEvent, constraintContext) in validatedEvents)
+        foreach (var (eventToAppend, compliantEvent, compliantContent, constraintContext) in validatedEvents)
         {
             constraintContexts.Add(constraintContext);
-            var eventHash = eventHashCalculator.Calculate(eventToAppend.EventType.Id, eventToAppend.EventSourceId, compliantEvent);
+            var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(_eventSequenceKey.EventStore, eventToAppend.EventType, compliantContent, compliantEvent);
+            var contentHashes = migratedContent.ToDictionary(
+                kvp => kvp.Key,
+                kvp => eventHashCalculator.Calculate(eventToAppend.EventType.Id, eventToAppend.EventSourceId, kvp.Value));
+            var eventHash = contentHashes.TryGetValue(eventToAppend.EventType.Generation, out var hash) ? hash : EventHash.NotSet;
 
             eventsToAppend.Add(new EventToAppendToStorage(
                 nextSequenceNumber,
@@ -546,13 +550,17 @@ public class EventSequence(
                 eventToAppend.eventStreamId,
                 eventToAppend.EventType,
                 correlationId,
-                causation,
+                eventToAppend.Causation ?? causation,
                 causedByChain,
                 eventToAppend.Tags,
                 eventToAppend.Occurred ?? DateTimeOffset.UtcNow,
                 compliantEvent,
                 eventHash,
-                eventToAppend.Subject));
+                eventToAppend.Subject)
+            {
+                GenerationalContent = migratedContent,
+                ContentHashes = contentHashes
+            });
 
             nextSequenceNumber = nextSequenceNumber.Next();
         }

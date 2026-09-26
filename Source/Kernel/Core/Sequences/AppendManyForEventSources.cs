@@ -68,7 +68,10 @@ public record AppendManyForEventSources(
                 (@event.Tags ?? []).Select(tag => (Tag)tag).Concat(globalTags).Distinct(),
                 JsonNode.Parse(@event.Content)!.AsObject(),
                 @event.Occurred,
-                Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject));
+                Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject))
+            {
+                Causation = @event.Causation?.ToChronicle()
+            };
         });
 
         var correlationId = CorrelationId ?? Guid.NewGuid();
