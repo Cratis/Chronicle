@@ -59,6 +59,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     IReadOnlyList<ReadModelSubstitution>? _substitutions;
     Contracts.Projections.ProjectionDefinition? _projectionDefinition;
     bool _projectionDefinitionResolved;
+    bool _inlineProjection;
     bool _processed;
     bool _strictEventSubscription;
     bool _strictFidelity;
@@ -217,6 +218,24 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     public IClientArtifactsProvider ClientArtifactsProvider { get; } = defaults.ClientArtifactsProvider;
 
     /// <summary>
+    /// Defines a projection for this scenario only, instead of discovering a projection or reducer.
+    /// </summary>
+    /// <param name="define">Configures the projection for <typeparamref name="TReadModel"/>.</param>
+    /// <returns>This scenario for chaining.</returns>
+    public ReadModelScenario<TReadModel> WithProjection(Action<IProjectionBuilderFor<TReadModel>> define)
+    {
+        var builder = new ProjectionBuilderFor<TReadModel>(
+            Guid.NewGuid().ToString(), typeof(TReadModel), _namingPolicy, _eventTypes, _jsonSerializerOptions);
+        define(builder);
+        _projectionDefinition = builder.Build();
+        _projectionDefinitionResolved = true;
+        _inlineProjection = true;
+        _substitutions = null;
+        _processed = false;
+        return this;
+    }
+
+    /// <summary>
     /// Enables strict event subscription: seeding an event the projection does not subscribe to raises
     /// <see cref="UnsubscribedEventSeeded"/> instead of being silently skipped.
     /// </summary>
@@ -334,7 +353,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     {
         if (_eventStore is null)
         {
-            _eventStore = new EventStoreForTesting(ResolvedServiceProvider());
+            _eventStore = new EventStoreForTesting(ResolvedServiceProvider(), defaults.ClientArtifactsProvider);
             foreach (var seed in _readModelSeeds)
             {
                 seed(_eventStore);
@@ -358,7 +377,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 
     IReadOnlyList<ReadModelSubstitution> DetectSubstitutions()
     {
-        var isReduced = FindReducerType(typeof(TReadModel)) is not null;
+        var isReduced = !_inlineProjection && FindReducerType(typeof(TReadModel)) is not null;
         return SubstitutedLayers.DetectFor(
             typeof(TReadModel),
             isReduced ? null : ProjectionDefinition(),
@@ -396,7 +415,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         var eventsList = events.ToList();
         var readModelType = typeof(TReadModel);
 
-        var reducerType = FindReducerType(readModelType);
+        var reducerType = _inlineProjection ? null : FindReducerType(readModelType);
         if (reducerType is not null)
         {
             var reduced = await ReducerReadModelProcessor.Process<TReadModel>(
