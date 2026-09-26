@@ -42,6 +42,36 @@ public interface ITransactionalEventSequence
         Subject? subject = default);
 
     /// <summary>
+    /// Append an event with structured named tags to the current unit of work.
+    /// </summary>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="event">The event.</param>
+    /// <param name="namedTags">Structured named tags.</param>
+    /// <param name="eventStreamType">Optional stream type.</param>
+    /// <param name="eventStreamId">Optional stream id.</param>
+    /// <param name="eventSourceType">Optional source type.</param>
+    /// <param name="concurrencyScope">Optional concurrency scope.</param>
+    /// <param name="tags">Optional plain tags.</param>
+    /// <param name="occurred">Optional occurred time.</param>
+    /// <param name="subject">Optional subject.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="NamedTagsNotSupported">The implementation cannot carry nonempty named tags.</exception>
+    Task Append(
+        EventSourceId eventSourceId,
+        object @event,
+        IEnumerable<NamedTag> namedTags,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) =>
+        namedTags.Any()
+            ? throw new NamedTagsNotSupported(GetType())
+            : Append(eventSourceId, @event, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
+
+    /// <summary>
     /// Append a collection of events to the event store.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
@@ -64,4 +94,34 @@ public interface ITransactionalEventSequence
         IEnumerable<string>? tags = default,
         DateTimeOffset? occurred = default,
         Subject? subject = default);
+
+    /// <summary>
+    /// Append events with structured named tags to the current unit of work.
+    /// </summary>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="events">The events.</param>
+    /// <param name="namedTags">Structured named tags for every event.</param>
+    /// <param name="eventStreamType">Optional stream type.</param>
+    /// <param name="eventStreamId">Optional stream id.</param>
+    /// <param name="eventSourceType">Optional source type.</param>
+    /// <param name="concurrencyScope">Optional concurrency scope.</param>
+    /// <param name="tags">Optional plain tags.</param>
+    /// <param name="occurred">Optional occurred time.</param>
+    /// <param name="subject">Optional subject.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="NamedTagsNotSupported">The implementation cannot carry nonempty named tags.</exception>
+    Task AppendMany(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        IEnumerable<NamedTag> namedTags,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) =>
+        namedTags.Any()
+            ? throw new NamedTagsNotSupported(GetType())
+            : AppendMany(eventSourceId, events, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
 }

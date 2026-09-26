@@ -46,6 +46,23 @@ public class TransactionalEventSequence(IEventSequence eventSequence, IUnitOfWor
     }
 
     /// <inheritdoc/>
+    public Task Append(
+        EventSourceId eventSourceId,
+        object @event,
+        IEnumerable<NamedTag> namedTags,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
+    {
+        UnitOfWork.AddEvent(eventSequence.Id, eventSourceId, @event, namedTags, GetCausation(), eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task AppendMany(
         EventSourceId eventSourceId,
         IEnumerable<object> events,
@@ -61,6 +78,28 @@ public class TransactionalEventSequence(IEventSequence eventSequence, IUnitOfWor
         foreach (var @event in events)
         {
             UnitOfWork.AddEvent(eventSequence.Id, eventSourceId, @event, causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
+        }
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task AppendMany(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        IEnumerable<NamedTag> namedTags,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
+    {
+        var causation = GetCausation();
+        var materializedNamedTags = namedTags.ToArray();
+        foreach (var @event in events)
+        {
+            UnitOfWork.AddEvent(eventSequence.Id, eventSourceId, @event, materializedNamedTags, causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
         }
         return Task.CompletedTask;
     }
