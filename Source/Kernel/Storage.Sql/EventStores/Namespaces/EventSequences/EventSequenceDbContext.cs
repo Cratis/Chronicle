@@ -28,6 +28,9 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
     /// </summary>
     public DbSet<EventEntry> Events { get; set; } = null!;
 
+    /// <summary>Gets or sets the shared named-tag rows for this namespace.</summary>
+    public DbSet<NamedTagEntry> NamedTags { get; set; } = null!;
+
     /// <summary>
     /// Ensures the table exists in the database using migrations.
     /// </summary>
@@ -65,6 +68,22 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
     {
         base.OnModelCreating(modelBuilder);
 
+#pragma warning disable RCS1201 // Separate EF entity configurations cannot be combined into a fluent chain.
+        modelBuilder.Entity<NamedTagEntry>(entity =>
+        {
+            entity.ToTable(EventSequenceMigrator.NamedTagsTable)
+                .HasKey(tag => new { tag.EventSequenceId, tag.SequenceNumber, tag.Position });
+            entity.HasIndex(tag => new { tag.EventSequenceId, tag.NameHash, tag.SequenceNumber });
+            entity.HasIndex(tag => new { tag.EventSequenceId, tag.NameHash, tag.ValueHash, tag.SequenceNumber });
+            entity.HasIndex(tag => new { tag.EventSequenceId, tag.SequenceNumber });
+            entity.Property(tag => tag.NameHash).HasMaxLength(32).IsRequired();
+            entity.Property(tag => tag.ValueHash).HasMaxLength(32).IsRequired();
+            entity.Property(tag => tag.Name).IsRequired();
+            entity.Property(tag => tag.Value).IsRequired();
+            entity.Property(tag => tag.CratisNamedTagsVersion).IsRequired();
+        });
+
+#pragma warning restore RCS1201
         modelBuilder.Entity<EventEntry>(entity =>
         {
             entity.ToTable(tableName);

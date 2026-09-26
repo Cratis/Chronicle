@@ -6,11 +6,11 @@ using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for_EventSequenceStorage.when_querying_with_named_tags;
 
-public class and_getting_a_histogram : given.an_event_sequence_storage
+public class and_getting_a_histogram : given.a_storage_with_named_tags
 {
-    Exception _error;
+    IEnumerable<HistogramBucket> _buckets;
 
-    async Task Because() => _error = await Catch.Exception(async () => await _storage.GetHistogram(HistogramResolution.Day, new() { NamedTags = [new(new TagName("account"))] }));
+    async Task Because() => _buckets = await _storage.GetHistogram(HistogramResolution.Day, new() { NamedTags = [new(new TagName("account"))] });
 
-    [Fact] void should_reject_the_query() => _error.ShouldBeOfExactType<NamedTagsNotSupported>();
+    [Fact] void should_count_only_matching_events() => _buckets.Single().Count.ShouldEqual(2L);
 }

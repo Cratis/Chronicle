@@ -62,10 +62,11 @@ public class EventCursor(
             return false;
         }
 
+        var namedTags = await NamedTagEntries.LoadFor(_scope.DbContext, _scope.DbContext.TableName, eventEntries.Select(entry => entry.SequenceNumber), _cancellationToken);
         var appendedEvents = new List<AppendedEvent>();
         foreach (var eventEntry in eventEntries)
         {
-            appendedEvents.Add(await EventEntryConverter.ToAppendedEvent(eventEntry, _eventStore, _namespace, _identityStorage));
+            appendedEvents.Add(await EventEntryConverter.ToAppendedEvent(eventEntry, _eventStore, _namespace, _identityStorage, NamedTagEntries.At(namedTags, eventEntry.SequenceNumber)));
         }
 
         Current = appendedEvents;

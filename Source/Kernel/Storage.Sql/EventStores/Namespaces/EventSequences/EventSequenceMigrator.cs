@@ -17,13 +17,59 @@ public class EventSequenceMigrator(
     ITableMigrator<EventSequenceDbContext> tableMigrator,
     ILogger<EventSequenceMigrator> logger) : IEventSequenceMigrator
 {
+    /// <summary>The reserved companion table shared by all sequences in a namespace database.</summary>
+    public const string NamedTagsTable = "__cratis_named_tags";
+
     /// <inheritdoc/>
-    public Task EnsureTableMigrated(string tableName, EventSequenceDbContext context) =>
-        tableMigrator.EnsureTableMigrated(tableName, context, CreateTable, UpgradeTable);
+    public async Task EnsureTableMigrated(string tableName, EventSequenceDbContext context)
+    {
+        if (string.Equals(tableName, NamedTagsTable, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new NamedTagsTableCollision();
+        }
+
+        await tableMigrator.EnsureTableMigrated(NamedTagsTable, context, CreateNamedTagsTable, ValidateNamedTagsTable);
+        await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable, UpgradeTable);
+    }
 
     /// <inheritdoc/>
     public void ClearMigrationCache(string connectionStringPrefix) =>
         tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
+
+    async Task CreateNamedTagsTable(EventSequenceDbContext context, string tableName)
+    {
+        var migration = new MigrationBuilder(context.Database.ProviderName);
+        migration.CreateTable(
+            name: tableName,
+            columns: table => new
+            {
+                EventSequenceId = table.StringColumn(migration, maxLength: 200),
+                SequenceNumber = table.Column<ulong>(nullable: false),
+                Position = table.Column<int>(nullable: false),
+                Name = table.Column<byte[]>(nullable: false),
+                Value = table.Column<byte[]>(nullable: false),
+                NameHash = table.Column<byte[]>(maxLength: 32, nullable: false),
+                ValueHash = table.Column<byte[]>(maxLength: 32, nullable: false),
+                CratisNamedTagsVersion = table.Column<int>(nullable: false, defaultValue: 1)
+            },
+            constraints: table => table.PrimaryKey("PK_cratis_named_tags", x => new { x.EventSequenceId, x.SequenceNumber, x.Position }));
+        migration.CreateIndex("IX_cratis_tags_name", tableName, ["EventSequenceId", "NameHash", "SequenceNumber"]);
+        migration.CreateIndex("IX_cratis_tags_value", tableName, ["EventSequenceId", "NameHash", "ValueHash", "SequenceNumber"]);
+        migration.CreateIndex("IX_cratis_tags_event", tableName, ["EventSequenceId", "SequenceNumber"]);
+        await tableMigrator.ExecuteMigrationOperations(context, migration);
+    }
+
+    async Task ValidateNamedTagsTable(EventSequenceDbContext context, string tableName)
+    {
+        // A table with this name predating Chronicle's migration must not be adopted or modified.
+        foreach (var column in new[] { "CratisNamedTagsVersion", "EventSequenceId", "SequenceNumber", "Position", "Name", "Value", "NameHash", "ValueHash" })
+        {
+            if (!await tableMigrator.ColumnExists(context, tableName, column))
+            {
+                throw new NamedTagsTableCollision();
+            }
+        }
+    }
 
     async Task CreateTable(EventSequenceDbContext context, string tableName)
     {

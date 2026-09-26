@@ -9,39 +9,24 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for
 
 public class and_an_event_has_named_tags : given.an_event_sequence_storage
 {
-    Exception _exception;
-    EventCount _count;
+    AppendedEvent[] _appended;
+    AppendedEvent _first;
+    AppendedEvent _second;
 
     async Task Because()
     {
-        try
+        var result = await _storage.AppendManyWithNamedTags([new EventToAppendToStorage(
+            EventSequenceNumber.First, EventSourceType.Default, "source", EventStreamType.All, EventStreamId.Default, _eventType, CorrelationId.New(), [], [], [], DateTimeOffset.UtcNow, new ExpandoObject(), EventHash.NotSet)
         {
-            await _storage.AppendMany([new EventToAppendToStorage(
-                EventSequenceNumber.First,
-                EventSourceType.Default,
-                "source",
-                EventStreamType.All,
-                EventStreamId.Default,
-                _eventType,
-                CorrelationId.New(),
-                [],
-                [],
-                [],
-                DateTimeOffset.UtcNow,
-                new ExpandoObject(),
-                EventHash.NotSet)
-            {
-                NamedTags = [new NamedTag(new TagName("account"), "one")]
-            }]);
-        }
-        catch (Exception exception)
-        {
-            _exception = exception;
-        }
-
-        _count = await _storage.GetCount();
+            NamedTags = [new NamedTag(new TagName("account"), "one"), new NamedTag(new TagName("account"), "one")]
+        }, new EventToAppendToStorage(
+            new EventSequenceNumber(1), EventSourceType.Default, "source", EventStreamType.All, EventStreamId.Default, _eventType, CorrelationId.New(), [], [], [], DateTimeOffset.UtcNow, new ExpandoObject(), EventHash.NotSet)]);
+        _appended = result.AsT0.ToArray();
+        _first = await _storage.GetEventAt(EventSequenceNumber.First);
+        _second = await _storage.GetEventAt(new EventSequenceNumber(1));
     }
 
-    [Fact] void should_reject_the_batch_before_writing() => _exception.ShouldBeOfExactType<NamedTagsNotSupported>();
-    [Fact] void should_leave_storage_empty() => _count.Value.ShouldEqual(0UL);
+    [Fact] void should_return_per_event_tags() => _appended.Select(_ => _.Context.NamedTags.Count()).ShouldEqual([2, 0]);
+    [Fact] void should_preserve_duplicate_tags_and_position() => _first.Context.NamedTags.Select(_ => _.Value).ShouldEqual(["one", "one"]);
+    [Fact] void should_not_spill_tags_into_the_next_event() => _second.Context.NamedTags.ShouldBeEmpty();
 }

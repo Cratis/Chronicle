@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for
 /// </summary>
 public class an_event_sequence_storage : Specification, IDisposable
 {
-    protected static readonly string _tableName = "event-sequence";
+    protected static readonly string _tableName = EventSequenceId.Log.Value;
     protected static readonly EventStoreName _eventStore = "test-store";
     protected static readonly EventStoreNamespaceName _namespace = "test-namespace";
     protected static readonly EventSequenceId _eventSequenceId = EventSequenceId.Log;
