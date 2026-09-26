@@ -294,8 +294,18 @@ public class ProjectionFactory(
         }
     }
 
-    static void SetupRemovedWithJoin(ProjectionDefinition projectionDefinition, PropertyPath childrenAccessorProperty, PropertyPath actualIdentifiedByProperty, Projection projection)
+    static void SetupRemovedWithJoin(ProjectionDefinition projectionDefinition, PropertyPath childrenAccessorProperty, PropertyPath actualIdentifiedByProperty, Projection projection, ILogger<ProjectionFactory> logger)
     {
+        if (childrenAccessorProperty.IsRoot)
+        {
+            if (projectionDefinition.RemovedWithJoin.Count > 0)
+            {
+                logger.RootRemovalViaJoinNotSupported(projection.Identifier.Value);
+            }
+
+            return;
+        }
+
         foreach (var (eventType, _) in projectionDefinition.RemovedWithJoin)
         {
             projection.Subscriptions.Add(
@@ -660,7 +670,8 @@ public class ProjectionFactory(
             projectionDefinition,
             childrenAccessorProperty,
             actualIdentifiedByProperty,
-            projection);
+            projection,
+            logger);
 
         SetupNestedSubscriptions(projection, projectionDefinition, childrenAccessorProperty, currentReadModelSchema, eventTypeSchemas);
 

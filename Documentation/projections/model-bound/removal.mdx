@@ -1,6 +1,6 @@
 # Removing Read Models
 
-Model-bound projections support removing read models and child items through the `RemovedWith` and `RemovedWithJoin` attributes. These can be applied at both the class level (for root read models and child types) and on properties/parameters (for child collections).
+Model-bound projections remove root read models with `RemovedWith` and child items with `RemovedWith` or `RemovedWithJoin`. Root-level `RemovedWithJoin` is not yet supported: the engine ignores it and logs a warning. Do not rely on it to remove root instances.
 
 ## Removing Root Read Models
 
@@ -26,15 +26,15 @@ In this example, an account can be removed by:
 
 - An `AccountClosed` event (direct removal)
 - An `AccountMerged` event when it's the source account
-- An `OrganizationClosed` event through a join relationship
+- A removal event declared on a child collection through a join relationship (root-level `RemovedWithJoin` does not remove the account)
 
 ## RemovedWithJoin
 
-Use `RemovedWithJoin` when the removal event comes from a different stream (join relationship):
+`RemovedWithJoin` on a root class is not yet supported. The following declaration is illustrative only; it does **not** remove root read models:
 
 <ChronicleClientTabs snippet="projections/model-bound/removal/join-on-class" />
 
-When the company is dissolved, all employees associated with that company are removed.
+A company-dissolution event will not remove its employees from a root read-model collection with this attribute. Use child-level `RemovedWithJoin` for child items; root deletion by a join relationship requires a future engine feature.
 
 ## Removing Children
 
@@ -69,7 +69,7 @@ For children that should be removed based on join events, apply `RemovedWithJoin
 
 ## Complete Example
 
-Here's a comprehensive example showing both root and child removal:
+This example shows root and child removal declarations. Any root-level `RemovedWithJoin` in it is unsupported and will be ignored:
 
 <ChronicleClientTabs snippet="projections/model-bound/removal/full-example" />
 
@@ -80,5 +80,5 @@ Here's a comprehensive example showing both root and child removal:
    - Property-level if the removal is specific to how the child is used in that parent
    - Class-level if the removal logic applies universally to that child type
 3. **Always specify keys explicitly** when the default EventSourceId doesn't apply
-4. **Use RemovedWithJoin** for removal events from different streams (e.g., when a parent entity in another aggregate is deleted)
+4. **Use RemovedWithJoin only for children** when a removal event comes from another stream; root removal through a join is not supported
 5. **Combine multiple removal attributes** when a model can be removed by different events
