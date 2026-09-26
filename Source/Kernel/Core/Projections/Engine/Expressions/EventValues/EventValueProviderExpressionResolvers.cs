@@ -67,11 +67,18 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
             // deleted lookups), and a read-side key resolver must survive them. Conversions that
             // already succeed keep working; only the hard TypeConversion.Convert failure - a
             // FormatException, InvalidCast or NotSupported shape - degrades to the raw value.
+            // Throwing from the graceful path itself is never acceptable - this runs inside the
+            // partition-consuming pipeline, and any exception there quarantines the partition. So every
+            // failure degrades, not just the three shapes TypeConversion.Convert is known to raise today.
+            // The converted value is returned as it comes back: a string-typed property can still target a
+            // non-string type through its format - "guid" is the common one - and forcing the result back to
+            // string turns every one of those into a swallowed InvalidCastException, which silently disables
+            // the conversion and leaves joins keyed on the raw text.
             try
             {
                 return TypeConversion.Convert(schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(string), input);
             }
-            catch (Exception ex) when (ex is FormatException or InvalidCastException or NotSupportedException)
+            catch (Exception ex)
             {
                 logger.EventValueLeftUnconverted(text, schemaProperty.Name, ex.Message);
                 return input;
