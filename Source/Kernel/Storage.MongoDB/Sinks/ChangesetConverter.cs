@@ -378,14 +378,43 @@ public class ChangesetConverter(
         }
 
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
-        var result = await collection.UpdateManyAsync(
-            Builders<BsonDocument>.Filter.Eq(target.Property, target.Value),
-            joinUpdateBuilder,
-            new UpdateOptions
+        var joinFilter = Builders<BsonDocument>.Filter.Eq(target.Property, target.Value);
+        var options = new UpdateOptions
+        {
+            IsUpsert = false,
+            ArrayFilters = [.. joinArrayFiltersForDocument]
+        };
+        UpdateResult result;
+        try
+        {
+            result = await collection.UpdateManyAsync(joinFilter, joinUpdateBuilder, options);
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Code == NullParentRepair.CannotCreateField && eventSequenceNumber.IsActualValue)
+        {
+            // UpdateMany can write some documents before reporting a failure. The watermark keeps the
+            // retry from applying non-idempotent changes ($push in particular) to those documents twice.
+            var watermark = converter.ToBsonValue(eventSequenceNumber);
+            var behindWatermark = Builders<BsonDocument>.Filter.And(
+                joinFilter,
+                Builders<BsonDocument>.Filter.Or(
+                    Builders<BsonDocument>.Filter.Exists(WellKnownProperties.LastHandledEventSequenceNumber, false),
+                    Builders<BsonDocument>.Filter.Lt(WellKnownProperties.LastHandledEventSequenceNumber, watermark)));
+            logger.RepairingJoinedNullParents(readModel.Identifier);
+            using (var cursor = await collection.FindAsync(
+                behindWatermark,
+                new FindOptions<BsonDocument> { Projection = Builders<BsonDocument>.Projection.Include("_id") }))
             {
-                IsUpsert = false,
-                ArrayFilters = [.. joinArrayFiltersForDocument]
-            });
+                while (await cursor.MoveNextAsync())
+                {
+                    foreach (var document in cursor.Current)
+                    {
+                        await NullParentRepair.Repair(collection, document["_id"], joinUpdateBuilder!);
+                    }
+                }
+            }
+
+            result = await collection.UpdateManyAsync(behindWatermark, joinUpdateBuilder, options);
+        }
 
         // A join that matches nothing is a successful zero-row update — the write is simply lost. That is
         // legitimate when no root carries the joined value yet (the row-creation-time backfill covers it),

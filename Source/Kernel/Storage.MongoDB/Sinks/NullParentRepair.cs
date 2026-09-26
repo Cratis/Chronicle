@@ -25,6 +25,19 @@ internal static class NullParentRepair
     /// <returns>A task completing when the repaired write has been retried.</returns>
     internal static async Task RepairAndRetry(IMongoCollection<BsonDocument> collection, BsonValue id, UpdateDefinition<BsonDocument> update, Func<Task> retry)
     {
+        await Repair(collection, id, update);
+        await retry();
+    }
+
+    /// <summary>
+    /// Unsets null ancestors of dotted updates on one document without writing state values.
+    /// </summary>
+    /// <param name="collection">The collection containing the legacy document.</param>
+    /// <param name="id">The document identifier.</param>
+    /// <param name="update">The rejected update.</param>
+    /// <returns>A task completing when the null ancestors have been removed.</returns>
+    internal static async Task Repair(IMongoCollection<BsonDocument> collection, BsonValue id, UpdateDefinition<BsonDocument> update)
+    {
         var rendered = update.Render(new RenderArgs<BsonDocument>(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry));
         var ancestors = new HashSet<string>();
 
@@ -62,7 +75,5 @@ internal static class NullParentRepair
                 Builders<BsonDocument>.Filter.Exists(ancestor, true));
             await collection.UpdateOneAsync(filter, Builders<BsonDocument>.Update.Unset(ancestor));
         }
-
-        await retry();
     }
 }

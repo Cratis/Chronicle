@@ -9,6 +9,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 internal static partial class ChangesetConverterLogging
 {
+    [LoggerMessage(LogLevel.Information, "Repairing legacy null parents for joined read model '{ReadModel}' before retrying the MongoDB update")]
+    internal static partial void RepairingJoinedNullParents(this ILogger<ChangesetConverter> logger, ReadModelIdentifier readModel);
+
     [LoggerMessage(LogLevel.Debug, "Root-level join for read model '{ReadModel}' on property '{OnProperty}' matched no documents")]
     internal static partial void JoinMatchedNoDocuments(this ILogger<ChangesetConverter> logger, ReadModelIdentifier readModel, PropertyPath onProperty);
 
