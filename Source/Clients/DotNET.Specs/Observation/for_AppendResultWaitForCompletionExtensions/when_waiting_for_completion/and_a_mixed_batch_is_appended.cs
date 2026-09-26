@@ -32,6 +32,7 @@ public class and_a_mixed_batch_is_appended : given.an_append_result_for_completi
 
     async Task Because() => _result = await _batch.WaitForCompletion();
 
+    [Fact] void should_send_the_first_number_of_the_batch() => _request.FirstEventSequenceNumber.ShouldEqual(40UL);
     [Fact] void should_send_the_last_number_for_each_type() => _request.EventTypeTails.Single(_ => _.EventType.Id == "a-recorded").SequenceNumber.ShouldEqual(42UL);
     [Fact] void should_send_the_other_type_number() => _request.EventTypeTails.Single(_ => _.EventType.Id == "b-recorded").SequenceNumber.ShouldEqual(41UL);
 }

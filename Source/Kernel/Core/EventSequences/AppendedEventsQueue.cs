@@ -270,33 +270,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
     static bool MatchesFilters(AppendedEventsQueueObserverSubscription subscription, AppendedEvent @event)
     {
-        var filters = subscription.Filters;
-        if (filters is null)
-        {
-            return true;
-        }
-
-        if (filters.EventSourceType is { } eventSourceType &&
-            !eventSourceType.IsDefaultOrUnspecified &&
-            @event.Context.EventSourceType != eventSourceType)
-        {
-            return false;
-        }
-
-        if (filters.EventStreamType is { } eventStreamType &&
-            !eventStreamType.IsAll &&
-            @event.Context.EventStreamType != eventStreamType)
-        {
-            return false;
-        }
-
-        if (filters.Tags.Any() &&
-            !filters.Tags.Any(tag => @event.Context.Tags.Any(t => t.Value == tag)))
-        {
-            return false;
-        }
-
-        return true;
+        return subscription.Filters?.Matches(@event) ?? true;
     }
 
     static bool MatchesSubscription(AppendedEventsQueueObserverSubscription subscription, AppendedEvent @event)

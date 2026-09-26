@@ -51,7 +51,12 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         var eventTypeTails = request.EventTypeTails
             .GroupBy(_ => _.EventType.Id, StringComparer.Ordinal)
             .ToDictionary(_ => _.Key, _ => _.Max(tail => tail.SequenceNumber), StringComparer.Ordinal);
+
         var stopwatch = Stopwatch.StartNew();
+
+        // The appended range is immutable for this wait. Retain the last matching sequence number
+        // rather than reading the same events again on every progress poll.
+        var lastMatchingEvents = new Dictionary<string, EventSequenceNumber?>();
         while (true)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
@@ -94,10 +99,17 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                     continue;
                 }
 
-                var observerKey = new Concepts.Observation.ObserverKey(observer.Id, request.EventStore, request.Namespace, request.EventSequenceId);
-                var subscription = await grainFactory.GetGrain<Cratis.Chronicle.Observation.IObserver>(observerKey).GetSubscription();
-                if (subscription is { Filters: { } filters } && HasEffectiveFilters(filters) &&
-                    !await HasMatchingEvent(request, observer, lastHandled, target, filters, context.CancellationToken))
+                if (!lastMatchingEvents.TryGetValue(observer.Id, out var lastMatchingEvent))
+                {
+                    var observerKey = new Concepts.Observation.ObserverKey(observer.Id, request.EventStore, request.Namespace, request.EventSequenceId);
+                    var subscription = await grainFactory.GetGrain<Cratis.Chronicle.Observation.IObserver>(observerKey).GetSubscription();
+                    lastMatchingEvent = subscription is { Filters: { } filters } && HasEffectiveFilters(filters)
+                        ? await GetLastMatchingEvent(request, observer, lastHandled, target, filters, context.CancellationToken)
+                        : target;
+                    lastMatchingEvents.Add(observer.Id, lastMatchingEvent);
+                }
+
+                if (lastMatchingEvent is null || (lastHandled.IsActualValue && lastHandled >= lastMatchingEvent))
                 {
                     continue;
                 }
@@ -271,7 +283,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         filters.EventSourceType is { IsDefaultOrUnspecified: false } ||
         filters.EventStreamType is { IsAll: false };
 
-    async Task<bool> HasMatchingEvent(
+    async Task<EventSequenceNumber?> GetLastMatchingEvent(
         WaitForObserverCompletionRequest request,
         ObserverInformation observer,
         EventSequenceNumber lastHandled,
@@ -279,31 +291,44 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         Concepts.Observation.ObserverFilters filters,
         CancellationToken cancellationToken)
     {
-        // The queue drops filtered events before they reach the observer. Inspect the range since its last
-        // handled event, not only the target: a matching event earlier in the batch may still be in flight.
+        // Inspect only the appended batch still unhandled by this observer. Older clients do not
+        // provide its first sequence number and retain the legacy lower bound.
+        var start = lastHandled.IsActualValue ? lastHandled.Next() : EventSequenceNumber.First;
+        if (request.FirstEventSequenceNumber > 0 && (EventSequenceNumber)request.FirstEventSequenceNumber > start)
+        {
+            start = request.FirstEventSequenceNumber;
+        }
+
+        if (start > target)
+        {
+            return null;
+        }
+
         var eventTypes = observer.EventTypes.Any() ? observer.EventTypes.ToChronicle() : null;
         var tags = filters.Tags.Any() ? filters.Tags.Select(_ => (Tag)_).ToArray() : null;
         var eventSequence = storage.GetEventStore(request.EventStore)
             .GetNamespace(request.Namespace)
             .GetEventSequence(request.EventSequenceId);
         using var cursor = await eventSequence.GetRange(
-            lastHandled.IsActualValue ? lastHandled.Next() : EventSequenceNumber.First,
+            start,
             target,
             eventTypes: eventTypes,
             tags: tags,
             cancellationToken: cancellationToken);
+        EventSequenceNumber? lastMatch = null;
         while (await cursor.MoveNext())
         {
-            if (cursor.Current.Any(@event =>
-                (eventTypes is null || observer.EventTypes.Any(type => type.Id == @event.Context.EventType.Id)) &&
-                (filters.EventSourceType is not { IsDefaultOrUnspecified: false } || @event.Context.EventSourceType == filters.EventSourceType) &&
-                (filters.EventStreamType is not { IsAll: false } || @event.Context.EventStreamType == filters.EventStreamType) &&
-                (tags is null || @event.Context.Tags.Any(tag => filters.Tags.Contains(tag.Value)))))
+            foreach (var @event in cursor.Current)
             {
-                return true;
+                if ((eventTypes is null || observer.EventTypes.Any(type => type.Id == @event.Context.EventType.Id)) &&
+                    filters.Matches(@event) &&
+                    (lastMatch is null || @event.Context.SequenceNumber > lastMatch))
+                {
+                    lastMatch = @event.Context.SequenceNumber;
+                }
             }
         }
 
-        return false;
+        return lastMatch;
     }
 }

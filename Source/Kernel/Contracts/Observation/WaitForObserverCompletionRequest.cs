@@ -44,4 +44,10 @@ public class WaitForObserverCompletionRequest
     /// </summary>
     [ProtoMember(6)]
     public long TimeoutMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the first appended sequence number. Zero means it was not supplied by an older client.
+    /// </summary>
+    [ProtoMember(7)]
+    public ulong FirstEventSequenceNumber { get; set; }
 }
