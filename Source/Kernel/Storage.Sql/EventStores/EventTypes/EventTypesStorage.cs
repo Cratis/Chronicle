@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage
 {
+    readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
     ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
@@ -48,6 +49,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         await scope.DbContext.EventTypes.Upsert(eventType);
         await scope.DbContext.SaveChangesAsync();
+        _definitionsByType.TryRemove(eventType.Id, out _);
         return true;
     }
 
@@ -63,6 +65,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         await scope.DbContext.EventTypes.Upsert(eventType);
         await scope.DbContext.SaveChangesAsync();
+        _definitionsByType.TryRemove(definition.Id, out _);
         return true;
     }
 
@@ -77,6 +80,11 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     /// <inheritdoc/>
     public async Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId)
     {
+        if (_definitionsByType.TryGetValue(eventTypeId, out var cached))
+        {
+            return cached;
+        }
+
         var eventType = await GetSpecificEventType(eventTypeId);
         if (eventType is null)
         {
@@ -89,7 +97,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
                 []);
         }
 
-        return eventType.ToDefinition();
+        return _definitionsByType.GetOrAdd(eventTypeId, eventType.ToDefinition());
     }
 
     /// <inheritdoc/>
@@ -183,6 +191,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     /// <inheritdoc/>
     public void Invalidate(EventTypeId eventTypeId)
     {
+        _definitionsByType.TryRemove(eventTypeId, out _);
         if (_eventTypes.Any(_ => _.Id == eventTypeId))
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != eventTypeId));
