@@ -1,0 +1,71 @@
+---
+title: Catch-up
+description: Skip a reactor handler while the observer works through a backlog, so a side effect acts on the present rather than on history.
+---
+
+A reactor sees an event in one of three situations, and only two of them used to be distinguishable.
+
+| Situation | What it means | Observation state |
+|---|---|---|
+| Live | The event just happened and the observer is keeping up | `Initial` |
+| Catch-up | The event happened some time ago and the observer is working through a backlog | `CatchUp` |
+| Replay | The observer has seen this event before and is being rebuilt | `Replay` |
+
+The distinction that matters for a side effect is not the one that was on offer. *This just happened* and
+*this happened three days ago and the observer is only now reaching it* were the same value, so a handler
+that pokes the world could be correct for one of them at most.
+
+Catch-up is also the common case. It happens on every restart, and a restart is exactly when the backlog is
+longest — a reactor that sends a notification per event will send the whole backlog's worth the moment the
+process comes back.
+
+## Opting a handler out
+
+Mark the handler with `SkipCatchUp`:
+
+```csharp
+public class OrderNotifications(INotificationService notifications) : IReactor
+{
+    [SkipCatchUp]
+    [OnceOnly]
+    public Task OrderPlaced(OrderPlaced @event) =>
+        notifications.Notify($"Order {@event.Number} placed.");
+}
+```
+
+The observer still advances past the event. Skipping without advancing would leave the backlog undrained,
+which is worse than the problem being solved.
+
+`CatchUp` arrives on its own rather than alongside `Initial`, and implies it — a catch-up event has not been
+observed before. A handler that tests `HasFlag(EventObservationState.Initial)` to mean "first time" should
+test for `CatchUp` as well.
+
+## Which marker to reach for
+
+- [`OnceOnly`](once-only) covers **replay** — the side effect must not happen a second time.
+- [`SkipCatchUp`](catch-up) covers **catch-up** — the side effect is only meaningful if the event is recent.
+- A handler whose effect is *act on the world as it is now* usually wants **both**, as above.
+- [`Replay`](replay) is for when a replay should do something *different* rather than nothing.
+- [Delivery identity](delivery-identity) covers the re-delivery that follows a failed partition being
+  recovered, which none of the markers above address.
+
+## Reading the state directly
+
+The flag is on the event context, so a handler can decide for itself rather than opting out wholesale:
+
+```csharp
+public Task OrderPlaced(OrderPlaced @event, EventContext context)
+{
+    if (context.ObservationState.HasFlag(EventObservationState.CatchUp))
+    {
+        return Task.CompletedTask;
+    }
+
+    return notifications.Notify($"Order {@event.Number} placed.");
+}
+```
+
+:::note[Client coverage]
+`SkipCatchUp` is a .NET marker. The `CatchUp` flag travels on the event context to every client, so a handler
+in any language can read it and decide.
+:::

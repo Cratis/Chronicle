@@ -142,7 +142,7 @@ public class CatchUpObserver(
                         request.ObserverType,
                         request.FromEventSequenceNumber,
                         EventSequenceNumber.Max,
-                        EventObservationState.None,
+                        EventObservationState.CatchUp,
                         request.EventTypes)
                     {
                         SkipFailedPartitions = true
@@ -158,7 +158,7 @@ public class CatchUpObserver(
                     key,
                     request.FromEventSequenceNumber,
                     EventSequenceNumber.Max,
-                    EventObservationState.None,
+                    EventObservationState.CatchUp,
                     request.EventTypes)))
             .ToImmutableList();
     }
