@@ -37,7 +37,8 @@ public class and_named_tags_are_explicit : Sequences.given.an_append_endpoint
         EventStreamId.Default,
         new EventType("event", 1, false),
         "{}",
-        [new NamedTag("account", "one")]).Handle(_grainFactory, _causation, _principal);
+        [new NamedTag("account", "one"), new NamedTag("account", "one"), new NamedTag("Account", "one"), new NamedTag("account", "")]).Handle(_grainFactory, _causation, _principal);
 
-    [Fact] void should_thread_the_named_tag_to_the_grain() => _namedTags.Single().ShouldEqual(new Concepts.Events.NamedTag(new TagName("account"), "one"));
+    [Fact] void should_deduplicate_exact_pairs_but_preserve_case_and_empty_values() =>
+        _namedTags.Select(tag => (tag.Name.Value, tag.Value)).ShouldEqual([("account", "one"), ("Account", "one"), ("account", "")]);
 }

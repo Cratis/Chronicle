@@ -16,7 +16,9 @@ internal static class NamedTagConverters
     public static IReadOnlyCollection<Concepts.Events.NamedTag> ToChronicleNamedTags(this IEnumerable<NamedTag>? tags) =>
         (tags ?? []).Select(tag => tag is null
             ? throw new Concepts.Events.InvalidNamedTag()
-            : new Concepts.Events.NamedTag(new Concepts.Events.TagName(tag.Name), tag.Value)).ToArray();
+            : new Concepts.Events.NamedTag(new Concepts.Events.TagName(tag.Name), tag.Value))
+            .DistinctBy(tag => (tag.Name.Value, tag.Value))
+            .ToArray();
 
     /// <summary>
     /// Converts a named tag from its generated wire contract.
