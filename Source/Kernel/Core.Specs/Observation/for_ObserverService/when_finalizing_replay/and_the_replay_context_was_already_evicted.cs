@@ -3,12 +3,12 @@
 
 namespace Cratis.Chronicle.Observation.for_ObserverService.when_finalizing_replay;
 
-public class and_a_silo_has_no_replay_context : Specification
+public class and_the_replay_context_was_already_evicted : Specification
 {
     Exception _exception;
 
     void Because() => _exception = Catch.Exception(() => ObserverService.EnsureReplayFinalized(
         [Cratis.Monads.Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle), Cratis.Monads.Result.Failed(ICanHandleReplayForObserver.Error.CouldNotGetReplayContext)]));
 
-    [Fact] void should_not_fail_finalization_on_the_non_owning_silo() => _exception.ShouldBeNull();
+    [Fact] void should_not_fail_finalization_after_another_silo_evicted_it() => _exception.ShouldBeNull();
 }

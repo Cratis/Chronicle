@@ -65,8 +65,9 @@ public class ObserverService(
     {
         foreach (var result in results)
         {
-            // EndReplayFor is sent to every silo. A silo without the replay context did not own
-            // this replay and cannot finalize it; the owner performs the actual finalization.
+            // EndReplayFor is sent to every silo. Replay contexts are shared in storage; CouldNotGetReplayContext
+            // means the context is gone from cache and storage, usually because another silo already finalized
+            // and evicted it. Aggregating per-silo results is tracked as a follow-up.
             if (result.TryGetError(out var error) &&
                 error is not (ICanHandleReplayForObserver.Error.CannotHandle or ICanHandleReplayForObserver.Error.CouldNotGetReplayContext))
             {
