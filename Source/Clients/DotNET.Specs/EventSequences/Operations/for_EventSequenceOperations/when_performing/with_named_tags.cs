@@ -10,6 +10,7 @@ public class with_named_tags : given.event_sequence_operations_without_any_opera
 {
     EventForEventSourceId[] _submitted;
     int _enumerations;
+    IEnumerable<NamedTag> _previewTags;
 
     void Establish()
     {
@@ -19,6 +20,7 @@ public class with_named_tags : given.event_sequence_operations_without_any_opera
                 .GetField("_operations", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(builder)!;
             staged.Add(new AppendOperation("event") { NamedTags = YieldOnce() });
         });
+        _previewTags = _operations.GetEventsToAppend().Single().NamedTags;
         _eventSequence.AppendMany(
             Arg.Any<IEnumerable<EventForEventSourceId>>(),
             Arg.Any<IEnumerable<NamedTag>>(),
@@ -34,6 +36,7 @@ public class with_named_tags : given.event_sequence_operations_without_any_opera
 
     async Task Because() => await _operations.Perform();
 
+    [Fact] void should_keep_tags_after_previewing_events() => _previewTags.Single().Value.ShouldEqual("value");
     [Fact] void should_submit_the_named_tags_once() => _submitted.Single().NamedTags.Single().Value.ShouldEqual("value");
     [Fact] void should_enumerate_input_once() => _enumerations.ShouldEqual(1);
     [Fact] void should_not_use_legacy_append() => _eventSequence.DidNotReceive().AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>(), Arg.Any<CorrelationId?>(), Arg.Any<IEnumerable<string>>(), Arg.Any<IDictionary<EventSourceId, EventSequences.Concurrency.ConcurrencyScope>>());

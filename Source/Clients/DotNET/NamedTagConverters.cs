@@ -32,6 +32,15 @@ internal static class NamedTagConverters
     /// <param name="eventTags">Tags for the event.</param>
     /// <param name="callTags">Tags for the append call.</param>
     /// <returns>A materialized list of distinct named tags.</returns>
-    internal static IReadOnlyList<NamedTag> Merge(IEnumerable<NamedTag> eventTags, IEnumerable<NamedTag> callTags) =>
-        eventTags.Concat(callTags).DistinctBy(_ => (_.Name.Value, _.Value)).ToArray();
+    /// <exception cref="InvalidNamedTag">One of the collections contains a null named tag.</exception>
+    internal static IReadOnlyList<NamedTag> Merge(IEnumerable<NamedTag> eventTags, IEnumerable<NamedTag> callTags)
+    {
+        var tags = eventTags.Concat(callTags).ToArray();
+        if (tags.Any(_ => _ is null))
+        {
+            throw new InvalidNamedTag();
+        }
+
+        return tags.DistinctBy(_ => (_.Name.Value, _.Value)).ToArray();
+    }
 }

@@ -30,5 +30,25 @@ public record AppendOperation(
     /// <summary>
     /// Gets or inits the structured named tags for this event.
     /// </summary>
-    public IEnumerable<NamedTag> NamedTags { get; init; } = [];
+    /// <exception cref="InvalidNamedTag">The collection contains a null named tag.</exception>
+    public IEnumerable<NamedTag> NamedTags
+    {
+        get;
+        init
+        {
+            if (value is null)
+            {
+                field = [];
+                return;
+            }
+
+            var snapshot = value.ToArray();
+            if (snapshot.Any(tag => tag is null))
+            {
+                throw new InvalidNamedTag();
+            }
+
+            field = snapshot.Length == 0 ? Array.Empty<NamedTag>() : Array.AsReadOnly(snapshot);
+        }
+    } = [];
 }
