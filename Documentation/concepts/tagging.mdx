@@ -2,10 +2,6 @@
 
 Tags provide a flexible way to organize, categorize, and identify events and observers (reactors, reducers, projections, read models) within Chronicle. By applying the `[Tag]` or `[Tags]` attribute, you can assign one or more tags that describe the purpose, domain, or context of your artifacts.
 
-:::note[Client coverage]
-Static tags on **events** or **read models** are currently C#-only. Kotlin and Java tag an **observer** with `@Tag`, supply dynamic tags at append time through `AppendOptions`, and read tags back from `EventContext` — as does Elixir for dynamic tags. TypeScript doesn't expose a `tags` append option at all.
-:::
-
 > **Note**: Both `[Tag]` and `[Tags]` attributes can be used interchangeably. Use whichever feels more natural, or mix them - all tags will be merged together.
 
 ## Overview
@@ -19,6 +15,8 @@ Tags are strings that can be attached to:
 - **Read Models** - for categorizing data models
 
 Tags are stored with event metadata and observer definitions, enabling powerful filtering, querying, and organizational capabilities.
+
+Events can also carry [named tags](#named-tags): a name paired with a value, such as `import-batch` = `4711`. Use them for runtime identifiers you want to find events by later.
 
 ## Tagging Events
 
@@ -43,6 +41,57 @@ In this example, the event will have four tags: `["analytics", "user-action", "p
 All tags (both static and dynamic) are available on the `EventContext` when processing events:
 
 <ChronicleClientTabs snippet="concepts/tagging/tags-in-event-context" />
+
+## Named tags
+
+A plain tag says what kind of event you have: `"checkout"`, `"audit"`. Sometimes you also need to record *which* import batch, workflow run, or checkout session produced an event, and find those events again later. Packing that into a string such as `"import-batch:4711"` gives you a tag you can't query by name, and it breaks as soon as a value contains the separator. A named tag keeps the name and the value apart.
+
+### Appending named tags
+
+You supply named tags when you append. Unlike plain tags, there is no attribute that declares them on an event type.
+
+<ChronicleClientTabs snippet="concepts/tagging/named-tags" />
+
+Named tags and plain tags are stored separately. The `[Tag]` attribute and the `tags` values above still produce plain tags, and a named tag never appears in the plain tag list. [Appending with Tags](../events/appending-with-tags.mdx#named-tags) covers batch appends and how per-event and call-level named tags combine.
+
+### Names and values
+
+- **Matching is exact.** Names and values compare ordinally and case-sensitively, so `Import-Batch` and `import-batch` are two different names.
+- **Values are opaque.** Chronicle never parses a value. It can contain `:`, `.`, `,` or any other character, and it can be empty.
+- **Names can't be blank.** Chronicle rejects a named tag whose name is empty or whitespace.
+- **One name, several values.** The same name with different values gives you separate tags. An exact duplicate of a name and value pair is kept once.
+
+### Reading named tags
+
+Named tags come back on the `EventContext` next to the plain tags:
+
+<ChronicleClientTabs snippet="concepts/tagging/named-tags-in-event-context" />
+
+### Querying by named tag
+
+The Chronicle server's event sequence service answers named-tag queries through two operations: `QueryEventsWithNamedTags` returns a page of events, and `SequenceHistogramWithNamedTags` returns event counts over time. Each criterion takes one of three forms:
+
+| Criterion | Matches events that carry |
+| --- | --- |
+| Name only | The name, with any value |
+| Name and a value | Exactly that name and value |
+| Name and a set of values | The name with any of those values |
+
+An event matches when it satisfies any one of the criteria. The named-tag criteria then combine with every other filter on the query: event source, event source type, event stream type, correlation ID, event types, plain tags, and the occurred date range. A named-tag query needs at least one criterion, and a criterion with an empty set of values is rejected. Neither case turns into a query that returns everything.
+
+### Before you use named tags
+
+:::caution[Upgrade the Chronicle server first]
+Named-tag appends and queries use server operations that older Chronicle servers don't have. An older server rejects the call, and the .NET client surfaces it as an `RpcException` with status code `Unimplemented`. The tags are never dropped silently, and a query is never widened to ignore its named-tag criteria. Appends without named tags keep using the existing operations, so they are unaffected.
+:::
+
+:::caution[SQL storage doesn't support named tags yet]
+The MongoDB and in-memory storage providers store and query named tags, and MongoDB indexes them by name and value. With the SQL storage provider, an append that carries named tags and a query that filters on them both fail with `NamedTagsNotSupported`.
+:::
+
+:::danger[Never put secrets or personal data in a named tag]
+Named tags are plaintext, indexed metadata. [PII encryption](../compliance/pii.mdx) and the other compliance features protect event content, not tags, so a named tag is never encrypted. Event exports include named tags too. Use identifiers that are safe to show to anyone who can read the event sequence.
+:::
 
 ## Tagging Observers
 
@@ -80,7 +129,8 @@ Read models and projections can also be tagged:
 - **Be consistent**: Establish tag naming conventions across your organization
 - **Don't over-tag**: Apply only relevant tags; too many can reduce their usefulness
 - **Group related artifacts**: Use tags to group events and observers that serve similar purposes
-- **Consider hierarchies**: Use dot notation for hierarchical tags (e.g., `"customer.registration"`, `"customer.profile"`)
+- **Consider hierarchies**: Use dot notation for fixed, hierarchical categories (e.g., `"customer.registration"`, `"customer.profile"`)
+- **Don't encode runtime values in plain tags**: A batch number, run ID, or session ID belongs in a [named tag](#named-tags), not in a string such as `"batch:4711"` or `"batch.4711"`
 
 ## Common Tagging Patterns
 
