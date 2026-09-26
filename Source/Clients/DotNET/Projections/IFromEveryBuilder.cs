@@ -20,7 +20,8 @@ public interface IFromEveryBuilder<TReadModel>
     IAllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>> Set<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor);
 
     /// <summary>
-    /// Instruct the all definition to include all child projections.
+    /// Stores an exclusion flag on the every-event definition. Currently this flag does not affect which events
+    /// update parent properties: events handled only by child projections do not run parent every-event mappings.
     /// </summary>
     /// <returns>Builder continuation.</returns>
     IFromEveryBuilder<TReadModel> ExcludeChildProjections();

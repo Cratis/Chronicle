@@ -151,7 +151,8 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
             joinDefinitions[EventType.Parse(joinEvent.Event)] = new JoinDefinition(
                 new PropertyPath(join.On),
                 ProcessMappings(joinEvent.Mappings),
-                PropertyExpression.NotSet);
+                PropertyExpression.NotSet,
+                joinEvent.AutoMap == AutoMapMode.Inherit ? AutoMap.Inherit : GetAutoMapValue(joinEvent.AutoMap));
         }
     }
 

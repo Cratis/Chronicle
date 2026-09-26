@@ -58,6 +58,10 @@ This example depends on declarative child collections, which are currently C#-on
 
 <ChronicleClientTabs snippet="projections/declarative/joins/children-join" />
 
+## Automatic mapping in declaration-language joins
+
+A `with <Event>` block inherits the projection's `automap` setting by default. Use `no automap` inside that `with` block to map only properties you declare explicitly, even when the joined event and read model have same-named properties. Use `automap` there to enable matching by name even if the enclosing projection disables it. This setting also applies when Chronicle backfills joined values from earlier events. Per-join `automap` and `no automap` are declaration-language only: the .NET `JoinBuilder` and the C#, Kotlin, and TypeScript code generators do not express them. Code generated from a declaration with a per-join override will not preserve that override; keep the declaration as the source of truth.
+
 ## Performance considerations
 
 - Joins require Chronicle to track relationships between streams

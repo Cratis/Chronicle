@@ -28,7 +28,7 @@ A nested object is:
 - **A nullable, scalar property** on a read model — it holds at most one child object at a time.
 - **Set by one or more events** declared with `from <EventType>`. Each `from` event auto-maps (or explicitly maps) properties onto the nested object, creating it on first touch and merging into the existing instance on subsequent touches.
 - **Cleared by one or more events** declared with `clear with <EventType>`. When the clear event fires the property is set back to `null`.
-- **Recursive** — a nested object can itself contain children, joins, counters, every-blocks, and further nested objects. Every projection primitive that works at the root works inside a `nested` block.
+- **Recursive** — a nested object can contain event-specific and every-event mappings, `remove with`, and further nested objects. A nested object outside a child collection can also contain `join`. The declaration language rejects `children`, `all`, and `remove via join` inside `nested`, and rejects `join` in a nested object under `children`. Declare collections at the parent level instead.
 
 ```mermaid
 stateDiagram-v2
@@ -77,7 +77,7 @@ graph TB
 
 ### PDL syntax
 
-A `nested` block is declared with a property name and contains the same building blocks as a top-level projection or a `children` block:
+A `nested` block is declared with a property name. It supports `from`, `every`, `remove with`, and `clear with`, and can contain further `nested` blocks. `join` is supported only when the nested object is not under `children` (including any deeper nested level there). It does not support `all`, `children`, or `remove via join` inside the nested block:
 
 ```pdl
 projection Slice => SliceReadModel
@@ -110,11 +110,11 @@ Two attributes drive the model-bound surface:
 
 <ChronicleClientTabs snippet="projections/nested-objects-design/model-bound" />
 
-The nested type is scanned for `[FromEvent<T>]`, `[ClearWith<T>]`, `[SetFrom<T>]`, `[AddFrom<T>]`, `[Nested]`, `[ChildrenFrom<T>]`, and the other standard projection annotations. See [Model-Bound Nested Objects](model-bound/nested).
+The nested type is scanned for `[FromEvent<T>]`, `[ClearWith<T>]`, `[SetFrom<T>]`, `[AddFrom<T>]`, and `[Nested]`. Do not declare `[ChildrenFrom<T>]` or `[RemovedWithJoin<T>]` inside a nested scalar object: those definitions are not wired by the engine, and the engine logs a warning. A model-bound or fluent `Join` inside a nested object under children also logs a warning and is not wired. See [Model-Bound Nested Objects](model-bound/nested).
 
 ### Recursive nesting
 
-A `nested` block can appear inside another `nested` block, inside a `children` block, and inside a child of a child — there is no recursion depth limit imposed by the model. Each layer is rendered into the projection definition as a `ChildrenDefinition` with `IdentifiedBy = PropertyPath.NotSet`, which the engine treats as "scalar" rather than "collection".
+A `nested` block can appear inside another `nested` block, inside a `children` block, and inside a child of a child — there is no recursion depth limit imposed by the model. The reverse shape, `children` inside `nested`, is not supported. Each layer is rendered into the projection definition as a `ChildrenDefinition` with `IdentifiedBy = PropertyPath.NotSet`, which the engine treats as "scalar" rather than "collection".
 
 ```pdl
 projection Slice => SliceReadModel
@@ -137,7 +137,7 @@ projection Slice => SliceReadModel
 
 ### Nested within children
 
-A `nested` block may also live inside a [children](declarative/children) collection, attaching a single nullable child object to every item in the collection. The engine resolves the property path with the child's array indexers so each item maintains its own nested state:
+A `nested` block may also live inside a [children](declarative/children) collection, attaching a single nullable child object to every item in the collection. The engine resolves the property path with the child's array indexers so each item maintains its own nested state. Joins inside that nested object (including deeper nested objects) are not supported: live join events cannot yet locate the correct child by its nested join property. PDL rejects them; the model-bound and fluent paths log a warning and omit their subscriptions:
 
 ```pdl
 projection Project => ProjectReadModel
@@ -165,7 +165,7 @@ Nested objects are represented in the contract layer by reusing `ChildrenDefinit
 | `IdentifiedBy` | An event property path that keys the collection | `PropertyPath.NotSet` |
 | `From` | Events that add or update items | Events that set or update the scalar |
 | `RemovedWith` | Events that remove a single item | Events that clear the scalar to `null` |
-| `Children` | Nested collections within items | Nested collections within the scalar |
+| `Children` | Nested collections within items | Not supported within the scalar |
 | `Nested` | Nested scalars within items | Nested scalars within the scalar |
 
 `ProjectionDefinition.Nested` and `ChildrenDefinition.Nested` are dictionaries keyed by the property path of the nested object on the parent. The engine walks this structure recursively to build subscriptions.

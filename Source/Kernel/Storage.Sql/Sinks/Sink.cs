@@ -157,9 +157,18 @@ public class Sink : ISink
             return _noFailedPartitions;
         }
 
-        var hasJoined = changeset.Changes.OfType<Joined>().Any();
+        var joins = changeset.Changes.OfType<Joined>().ToArray();
+        var hasJoined = joins.Length > 0;
         var onlyPropertyUpdates = nonJoinedChanges.All(c => c is PropertiesChanged<ExpandoObject>);
-        if (hasJoined && onlyPropertyUpdates)
+        if (onlyPropertyUpdates && joins.Any(joined => joined.ArrayIndexers.IsEmpty) && !joins.Any(joined => joined.HasKeyedFrom))
+        {
+            // A root join's direct all-event properties have no keyed From target. ApplyJoinedChange
+            // already updated the matched rows; even an existing row at the event source id may be
+            // unrelated to the join. Keep the keyed path only for a genuine From+Join event.
+            return _noFailedPartitions;
+        }
+
+        if (hasJoined && onlyPropertyUpdates && !joins.Any(joined => joined.HasKeyedFrom))
         {
             // When the event was consumed by a Children Join and the only remaining changes are
             // FromEvery-style PropertiesChanged, we must not upsert a phantom row keyed on the

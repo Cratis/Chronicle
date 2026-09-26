@@ -9,6 +9,7 @@ using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
@@ -539,7 +540,9 @@ internal static class ProjectionReadModelProcessor
                 return (null, false);
             }
 
-            keyResult = KernelProjectionEngine::KeyResolverResult.Resolved(resolvedRootKey);
+            // The resolved root key identifies the row, but the join still matches on the source event's id.
+            // Preserve both, just as ForJoin does in the production ResolveKey step.
+            keyResult = KernelProjectionEngine::KeyResolverResult.Resolved(resolvedRootKey, @event.Context.EventSourceId.Value);
         }
         else
         {
@@ -577,7 +580,7 @@ internal static class ProjectionReadModelProcessor
             key = key with { Value = childJoinRootKey.Value };
         }
 
-        var removed = await ApplyResolvedEvent(projection, eventSequenceStorage, sink, @event, key, statesByKey, createSeedState, deferredChildren);
+        var removed = await ApplyResolvedEvent(projection, eventSequenceStorage, sink, @event, key, statesByKey, createSeedState, deferredChildren, (keyResult as KernelProjectionEngine::ResolvedKey)!.JoinKey);
         return (key, removed);
     }
 
@@ -592,6 +595,7 @@ internal static class ProjectionReadModelProcessor
     /// <param name="statesByKey">The state of each instance materialized so far, keyed as the sink keys its documents.</param>
     /// <param name="createSeedState">Produces the state a not-yet-seen instance starts from.</param>
     /// <param name="deferredChildren">Child branches whose keys must be retried after the seeded events.</param>
+    /// <param name="joinKey">The join source value, which may differ from the resolved root key.</param>
     /// <returns>True when the event removed the root instance.</returns>
     /// <remarks>
     /// State is held per instance rather than threaded across every seeded event, mirroring the live pipeline's
@@ -607,7 +611,8 @@ internal static class ProjectionReadModelProcessor
         KernelKey key,
         Dictionary<object, ExpandoObject> statesByKey,
         Func<ExpandoObject> createSeedState,
-        List<(KernelProjectionEngine::IProjection Child, KernelAppendedEvent Event)> deferredChildren)
+        List<(KernelProjectionEngine::IProjection Child, KernelAppendedEvent Event)> deferredChildren,
+        object? joinKey = null)
     {
         var stateKey = sink.GetKeyValue(key);
         if (!statesByKey.TryGetValue(stateKey, out var state))
@@ -622,7 +627,8 @@ internal static class ProjectionReadModelProcessor
             @event,
             changeset,
             projection.GetOperationTypeFor(@event.Context.EventType),
-            false);
+            false,
+            joinKey ?? key.Value);
 
         await HandleEventFor(projection, context, eventSequenceStorage, sink, deferredChildren);
 
@@ -768,7 +774,10 @@ internal static class ProjectionReadModelProcessor
                     break;
 
                 case NestedCleared nestedCleared:
-                    ((IDictionary<string, object?>)state)[nestedCleared.NestedProperty.LastSegment.Value] = null;
+                    if (state.TryGetExistingPath(nestedCleared.NestedProperty, nestedCleared.ArrayIndexers) is { } existingParent)
+                    {
+                        ((IDictionary<string, object?>)existingParent)[nestedCleared.NestedProperty.LastSegment.Value] = null;
+                    }
                     break;
 
                 case Joined joined:
