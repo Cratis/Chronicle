@@ -566,20 +566,44 @@ public class Sink(
             _currentBulkSize = 0;
         }
 
+        var failedPartitions = new List<FailedPartition>();
         try
         {
-            await Collection.BulkWriteAsync(snapshot);
-            return [];
-        }
-        catch (MongoBulkWriteException ex)
-        {
-            var failedPartitions = new List<FailedPartition>();
-
-            foreach (var writeError in ex.WriteErrors)
+            var nextIndex = 0;
+            while (nextIndex < snapshot.Count)
             {
-                if (metadataSnapshot.TryGetValue(writeError.Index, out var metadata))
+                var remaining = snapshot.GetRange(nextIndex, snapshot.Count - nextIndex);
+                try
                 {
-                    failedPartitions.Add(new FailedPartition(metadata.EventSourceId, metadata.SequenceNumber));
+                    await Collection.BulkWriteAsync(remaining);
+                    break;
+                }
+                catch (MongoBulkWriteException<BsonDocument> ex)
+                {
+                    // ProcessedRequests includes the failed request, not just the successful writes.
+                    // An ordered write can resume only when it identifies an exact processed prefix and
+                    // an unprocessed suffix. A write concern error leaves the outcome uncertain.
+                    if (ex.WriteConcernError is not null ||
+                        ex.WriteErrors.Count != 1 ||
+                        ex.Result?.IsAcknowledged != true ||
+                        ex.WriteErrors[0].Index < 0 ||
+                        ex.WriteErrors[0].Index >= remaining.Count ||
+                        ex.Result.ProcessedRequests.Count != ex.WriteErrors[0].Index + 1 ||
+                        !ex.Result.ProcessedRequests.SequenceEqual(remaining.Take(ex.Result.ProcessedRequests.Count)) ||
+                        !ex.UnprocessedRequests.SequenceEqual(remaining.Skip(ex.Result.ProcessedRequests.Count)))
+                    {
+                        AddFailedPartitions(nextIndex, snapshot.Count, metadataSnapshot, failedPartitions);
+                        break;
+                    }
+
+                    var failedIndex = nextIndex + ex.WriteErrors[0].Index;
+                    AddFailedPartitions(failedIndex, failedIndex + 1, metadataSnapshot, failedPartitions);
+                    nextIndex = failedIndex + 1;
+                }
+                catch (MongoBulkWriteException)
+                {
+                    AddFailedPartitions(nextIndex, snapshot.Count, metadataSnapshot, failedPartitions);
+                    break;
                 }
             }
 
@@ -591,6 +615,19 @@ public class Sink(
             {
                 _bulkPendingDeletes.TryRemove(cacheKey, out _);
             }
+        }
+    }
+
+    static void AddFailedPartitions(
+        int start,
+        int end,
+        Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata,
+        List<FailedPartition> failedPartitions)
+    {
+        for (var index = start; index < end; index++)
+        {
+            var (eventSourceId, sequenceNumber) = metadata[index];
+            failedPartitions.Add(new FailedPartition(eventSourceId, sequenceNumber));
         }
     }
 
