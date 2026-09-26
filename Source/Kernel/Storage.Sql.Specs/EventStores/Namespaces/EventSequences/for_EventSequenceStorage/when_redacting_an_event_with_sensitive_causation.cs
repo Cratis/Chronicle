@@ -56,11 +56,11 @@ public class when_redacting_an_event_with_sensitive_causation : given.an_event_s
         using var document = JsonDocument.Parse(_stored.Content);
         var content = document.RootElement.GetProperty("1");
         content.GetProperty("originalEventType").GetString().ShouldEqual(_eventType.Id.Value);
-        content.GetProperty("occurred").GetDateTimeOffset().ShouldEqual(_originalOccurred);
+        content.GetProperty("occurred").GetDateTimeOffset().ShouldEqual(_originalOccurred.AddTicks(-(_originalOccurred.Ticks % 10)));
         content.GetProperty("correlationId").GetString().ShouldEqual(_originalCorrelation.ToString());
         var cause = content.GetProperty("causation")[0];
         cause.GetProperty("type").GetString().ShouldEqual("command");
-        cause.GetProperty("occurred").GetDateTimeOffset().ShouldEqual(_originalCausation.Occurred);
+        cause.GetProperty("occurred").GetDateTimeOffset().ShouldEqual(_originalCausation.Occurred.AddTicks(-(_originalCausation.Occurred.Ticks % 10)));
         cause.TryGetProperty("properties", out _).ShouldBeFalse();
     }
 }

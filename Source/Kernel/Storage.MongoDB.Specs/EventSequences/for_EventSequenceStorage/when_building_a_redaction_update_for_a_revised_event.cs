@@ -15,6 +15,9 @@ public class when_building_a_redaction_update_for_a_revised_event : Specificatio
 {
     const string Secret = "sensitive-revised-payload";
     BsonDocument _changes;
+    string _contentField;
+    string _contentHashesField;
+    string _revisionsField;
 
     void Because()
     {
@@ -44,17 +47,21 @@ public class when_building_a_redaction_update_for_a_revised_event : Specificatio
         var update = EventSequenceStorage.CreateRedactionUpdateModelFor(original, "reason", CorrelationId.New(), [], [], DateTimeOffset.UtcNow, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         var registry = BsonSerializer.SerializerRegistry;
         _changes = update.Update.Render(new RenderArgs<Event>(registry.GetSerializer<Event>(), registry))["$set"].AsBsonDocument;
+        var classMap = BsonClassMap.LookupClassMap(typeof(Event));
+        _contentField = classMap.GetMemberMap(nameof(Event.Content)).ElementName;
+        _contentHashesField = classMap.GetMemberMap(nameof(Event.ContentHashes)).ElementName;
+        _revisionsField = classMap.GetMemberMap(nameof(Event.Revisions)).ElementName;
     }
 
     [Fact] void should_replace_the_content_without_the_revised_payload() => _changes.ToJson().ShouldNotContain(Secret);
     [Fact] void should_keep_only_causation_type_and_time_in_the_content()
     {
-        var cause = _changes["Content"]["1"]["causation"][0].AsBsonDocument;
+        var cause = _changes[_contentField]["1"]["causation"][0].AsBsonDocument;
         cause["type"].AsString.ShouldEqual("command");
         cause.Contains("occurred").ShouldBeTrue();
         cause.Contains("properties").ShouldBeFalse();
     }
-    [Fact] void should_clear_the_revision_history() => _changes["Revisions"].AsBsonArray.ShouldBeEmpty();
+    [Fact] void should_clear_the_revision_history() => _changes[_revisionsField].AsBsonArray.ShouldBeEmpty();
     [Fact] void should_not_retain_the_original_or_revised_hash() => _changes.ToJson().ShouldNotContain("payload-hash");
-    [Fact] void should_clear_the_content_hashes() => _changes["ContentHashes"].AsBsonDocument.ElementCount.ShouldEqual(0);
+    [Fact] void should_clear_the_content_hashes() => _changes[_contentHashesField].AsBsonDocument.ElementCount.ShouldEqual(0);
 }
