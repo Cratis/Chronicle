@@ -207,6 +207,22 @@ public static class EventEntryConverter
     }
 
     /// <summary>
+    /// Update the content hash for a specific event type generation in an <see cref="EventEntry"/>.
+    /// </summary>
+    /// <param name="entry">The event entry to update.</param>
+    /// <param name="generation">The generation to update the hash for.</param>
+    /// <param name="hash">The revised content hash.</param>
+    public static void UpdateHashForGeneration(EventEntry entry, EventTypeGeneration generation, EventHash hash)
+    {
+        var hashesByGeneration = string.IsNullOrEmpty(entry.ContentHashes)
+            ? new Dictionary<string, string>()
+            : JsonSerializer.Deserialize<Dictionary<string, string>>(entry.ContentHashes, _jsonSerializerOptions) ?? [];
+
+        hashesByGeneration[((uint)generation).ToString()] = hash.Value;
+        entry.ContentHashes = JsonSerializer.Serialize(hashesByGeneration, _jsonSerializerOptions);
+    }
+
+    /// <summary>
     /// Replace all generational content in an <see cref="EventEntry"/>.
     /// </summary>
     /// <param name="entry">The event entry to update.</param>

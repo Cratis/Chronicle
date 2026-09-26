@@ -213,6 +213,7 @@ public class EventSequenceStorage(
         }
 
         EventEntryConverter.UpdateContentForGeneration(eventEntry, eventType.Generation, content);
+        EventEntryConverter.UpdateHashForGeneration(eventEntry, eventType.Generation, hash);
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
     }
