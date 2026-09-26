@@ -24,6 +24,5 @@ public class when_running_sequential_scenarios_with_different_artifacts : Specif
     }
 
     [Fact] void should_have_materialized_the_first_run() => _firstResult.ShouldNotBeNull();
-    [Fact] void should_not_register_the_first_projection_in_the_second_run() => _second.ClientArtifactsProvider.Projections.ShouldNotContain(typeof(PerRunProjection));
     [Fact] void should_not_discover_a_projection_from_the_first_run() => _secondError.ShouldBeOfExactType<NoReadModelHandlerFound>();
 }

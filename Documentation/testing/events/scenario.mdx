@@ -68,7 +68,11 @@ For generated event types or constraints, create `new Defaults(artifacts)` with 
 `IClientArtifactsProvider` and pass it to `new EventScenario(defaults)`. This uses the supplied
 provider for event type discovery, serialization, and automatic constraint discovery. You can
 also pass an explicit `ICanProvideConstraints` as the second argument to replace automatic
-constraint discovery. Existing constructors continue using the default shared provider.
+constraint discovery. In the `(Defaults, ICanProvideConstraints?)` overload, passing `null` also
+**discovers constraints from the supplied defaults**; pass an empty provider (one whose `Provide()`
+returns an empty list) to disable constraints. This differs from the older constructors that
+accept a constraint provider, where `null` means no constraints. Existing constructors continue
+using the default shared provider.
 
 ## Isolation
 

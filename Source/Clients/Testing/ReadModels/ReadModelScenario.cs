@@ -26,6 +26,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// Automatically detects how <typeparamref name="TReadModel"/> is projected — either via a reducer
 /// (<see cref="IReducerFor{TReadModel}"/>), a fluent projection (<see cref="IProjectionFor{TReadModel}"/>),
 /// or a model-bound projection — and routes events through the appropriate engine.
+/// <see cref="WithProjection"/> overrides auto-detection for this scenario, including a discovered reducer.
 /// </para>
 /// <para>
 /// Usage:
@@ -211,9 +212,9 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <c language="csharp">[Unique]</c> landing in <see cref="IClientArtifactsProvider.UniqueConstraints"/> while one with a
     /// class-level <c language="csharp">[Unique]</c> lands in <see cref="IClientArtifactsProvider.UniqueEventTypeConstraints"/>.
     /// It is read-only: reading it neither triggers nor alters registration, and every read hands out the
-    /// same instance — the one from the <see cref="Defaults"/> the scenario was constructed with, which by
-    /// default is the process-wide <see cref="Defaults.Instance"/>. The same registry is reachable outside a
-    /// scenario as <c language="csharp">Defaults.Instance.ClientArtifactsProvider</c>.
+    /// same instance — the one from the <see cref="Defaults"/> the scenario was constructed with. For the
+    /// default constructors, it is the process-wide <see cref="Defaults.Instance"/> registry, also reachable
+    /// outside a scenario as <c language="csharp">Defaults.Instance.ClientArtifactsProvider</c>.
     /// </remarks>
     public IClientArtifactsProvider ClientArtifactsProvider { get; } = defaults.ClientArtifactsProvider;
 
@@ -224,6 +225,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <returns>This scenario for chaining.</returns>
     public ReadModelScenario<TReadModel> WithProjection(Action<IProjectionBuilderFor<TReadModel>> define)
     {
+        ArgumentNullException.ThrowIfNull(define);
+
         var builder = new ProjectionBuilderFor<TReadModel>(
             Guid.NewGuid().ToString(), typeof(TReadModel), _namingPolicy, _eventTypes, _jsonSerializerOptions);
         define(builder);

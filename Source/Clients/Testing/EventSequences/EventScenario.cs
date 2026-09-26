@@ -114,7 +114,11 @@ public class EventScenario(
     /// Initializes a new instance of the <see cref="EventScenario"/> class with per-run defaults.
     /// </summary>
     /// <param name="defaults">The defaults used for artifact discovery and event serialization.</param>
-    /// <param name="constraintProvider">Optional explicit constraints; when omitted, discovers from the supplied defaults.</param>
+    /// <param name="constraintProvider">Optional explicit constraints; <see langword="null"/> discovers constraints from the supplied defaults. Pass an empty provider to disable constraints.</param>
+    /// <remarks>
+    /// Unlike the other constructors accepting a constraint provider, this overload treats <see langword="null"/>
+    /// as discovery from <paramref name="defaults"/>, not as no constraints.
+    /// </remarks>
     public EventScenario(Defaults defaults, ICanProvideConstraints? constraintProvider = null)
         : this(EventSequenceId.Log, "test-event-store", "default", constraintProvider ?? CreateDiscoveredConstraintProvider(defaults), defaults)
     {
