@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
@@ -17,7 +18,6 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 public class Generator : IGenerator
 {
     const string Tab = "    ";
-    static readonly string[] _compositeSeparator = [", "];
 
     /// <inheritdoc/>
     public string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
@@ -61,7 +61,7 @@ public class Generator : IGenerator
         // On event blocks
         foreach (var kv in definition.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, 1);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, 1, definition, readModelDefinition);
         }
 
         // Join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -75,7 +75,7 @@ public class Generator : IGenerator
         // Children blocks
         foreach (var kv in definition.Children)
         {
-            GenerateChildrenBlock(sb, kv.Key, kv.Value, definition.AutoMap, 1);
+            GenerateChildrenBlock(sb, kv.Key, kv.Value, definition.AutoMap, 1, definition, readModelDefinition);
         }
 
         // Nested blocks
@@ -164,7 +164,7 @@ public class Generator : IGenerator
         }
     }
 
-    void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, int indent)
+    void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, int indent, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
         // Determine if we should use inline key syntax or block key syntax
         // Use inline syntax for simple keys
@@ -188,28 +188,12 @@ public class Generator : IGenerator
         // Composite key directive (always in block)
         if (hasCompositeKey)
         {
-            var keyValue = from.Key.Value;
+            var composite = CompositeKeyExpression.Parse(from.Key.Value, definition.Identifier, PropertyPath.NotSet);
+            sb.AppendLine($"{Indent(indent + 1)}key {composite.TypeNameOrFrom(readModelDefinition.GetSchemaForLatestGeneration())}");
 
-            // Parse composite key: $composite(TypeName, CustomerId=customerId, OrderNumber=orderNumber)
-            var innerContent = keyValue[(WellKnownExpressions.Composite.Length + 1)..^1];
-            var parts = innerContent.Split(_compositeSeparator, StringSplitOptions.None);
-
-            // Extract type name from first part
-            var typeName = parts.Length > 0 ? parts[0].Trim() : "CompositeKey";
-
-            sb.AppendLine($"{Indent(indent + 1)}key {typeName}");
-
-            // Skip the first part (type name) and process the property mappings
-            for (var i = 1; i < parts.Length; i++)
+            foreach (var (property, expression) in composite.Mappings)
             {
-                var part = parts[i];
-                var equalsIndex = part.IndexOf('=');
-                if (equalsIndex > 0)
-                {
-                    var propertyName = EscapePropertyPath(part.Substring(0, equalsIndex));
-                    var expression = part.Substring(equalsIndex + 1);
-                    sb.AppendLine($"{Indent(indent + 2)}{propertyName} = {ConvertExpressionForOutput(expression)}");
-                }
+                sb.AppendLine($"{Indent(indent + 2)}{EscapePropertyPath(property)} = {ConvertExpressionForOutput(expression)}");
             }
         }
 
@@ -246,7 +230,7 @@ public class Generator : IGenerator
         }
     }
 
-    void GenerateChildrenBlock(StringBuilder sb, PropertyPath collectionName, ChildrenDefinition children, AutoMap parentAutoMap, int indent)
+    void GenerateChildrenBlock(StringBuilder sb, PropertyPath collectionName, ChildrenDefinition children, AutoMap parentAutoMap, int indent, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
         // Determine the effective AutoMap for this children block
         // If the children block has AutoMap set to Inherit, use the parent's setting
@@ -298,7 +282,7 @@ public class Generator : IGenerator
         // Child on event blocks
         foreach (var kv in children.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1, definition, readModelDefinition);
         }
 
         // Child join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -312,7 +296,7 @@ public class Generator : IGenerator
         // Nested children
         foreach (var kv in children.Children)
         {
-            GenerateChildrenBlock(sb, kv.Key, kv.Value, effectiveAutoMap, indent + 1);
+            GenerateChildrenBlock(sb, kv.Key, kv.Value, effectiveAutoMap, indent + 1, definition, readModelDefinition);
         }
 
         // Nested blocks
