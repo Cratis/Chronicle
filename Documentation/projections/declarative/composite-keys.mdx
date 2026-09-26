@@ -57,6 +57,10 @@ Composite keys can be used in join scenarios:
 
 Projection declarations that specify a composite key type require a Chronicle kernel containing the composite-key resolver fix (#4163). Older kernels reject the type name when projecting events. Upgrade the kernel before deploying those declarations. Existing fluent .NET projections continue to emit untyped composite-key expressions so a newer client can still target an older kernel; the updated kernel also reads those stored expressions without migration. The connection-time compatibility check covers wire versions, not this projection-expression behavior.
 
+## Generating declarations from stored projections
+
+When generating a declaration from an older, untyped composite-key expression, Chronicle infers the type from the read model's `Id` property (including nullable object types) or the child item's `Id` for a child collection. If that schema has no composite-key type, generation uses `CompositeKey` as a best-effort placeholder. Such a declaration cannot recompile unless the read-model schema actually defines a `CompositeKey` object with the mapped properties. Supply a typed key in the source projection or update the read model before using the generated declaration.
+
 ## Performance considerations
 
 - **Index efficiency**: Composite keys create complex indexes in the underlying storage

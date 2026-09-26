@@ -69,6 +69,12 @@ public record OrderReadModel(string Id, decimal Total, OrderKey? OrderKey);
 
 public record CompositeOrderReadModel(OrderKey Id, decimal Total, string Name);
 
+public record NullableCompositeOrderReadModel(OrderKey? Id, decimal Total, string Name);
+
+public record CompositeChildReadModel(string Id, List<CompositeChild> Items);
+
+public record CompositeChild(OrderKey? Id, string Name);
+
 public record Users(string Name);
 
 public record ModelWithKeywordProperties(

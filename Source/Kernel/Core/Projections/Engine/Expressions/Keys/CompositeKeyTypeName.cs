@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 
@@ -18,11 +19,29 @@ public static class CompositeKeyTypeName
     /// <returns>The type name.</returns>
     public static string From(ReadModelDefinition readModel)
     {
-        var schema = readModel.GetSchemaForLatestGeneration();
+        return From(readModel.GetSchemaForLatestGeneration());
+    }
+
+    /// <summary>
+    /// Gets the Id type from a read model or child item schema.
+    /// </summary>
+    /// <param name="schema">The schema containing the Id property.</param>
+    /// <returns>The type name, or a best-effort fallback when the schema does not declare one.</returns>
+    public static string From(JsonSchema schema)
+    {
         var id = schema.Properties.FirstOrDefault(_ => _.Key.Equals("id", StringComparison.OrdinalIgnoreCase)).Value;
         if (id is not null)
         {
-            var reference = JsonNode.Parse(id.ToJson())?["$ref"]?.GetValue<string>();
+            var actual = id.OneOf.Select(_ => _.ActualSchema).FirstOrDefault(_ => _.Type.HasFlag(JsonObjectType.Object))
+                ?? id.ActualSchema;
+            if (!string.IsNullOrWhiteSpace(actual.Title))
+            {
+                return actual.Title;
+            }
+
+            var reference = JsonNode.Parse(id.ToJson())?["$ref"]?.GetValue<string>()
+                ?? id.OneOf.Concat(id.AllOf).Where(_ => _.HasReference)
+                    .Select(_ => JsonNode.Parse(_.ToJson())?["$ref"]?.GetValue<string>()).FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(reference))
             {
                 return reference.Split('/')[^1];
@@ -32,6 +51,9 @@ public static class CompositeKeyTypeName
                 return id.Title;
             }
         }
+
+        // A primitive or untyped Id supplies no valid composite type. Keep legacy generation best-effort:
+        // declarations using this placeholder require a CompositeKey object in the read model to recompile.
         return "CompositeKey";
     }
 }

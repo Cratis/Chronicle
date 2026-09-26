@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
@@ -58,10 +59,12 @@ public class Generator : IGenerator
             }
         }
 
+        var readModelSchema = readModelDefinition.GetSchemaForLatestGeneration();
+
         // On event blocks
         foreach (var kv in definition.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, 1, readModelDefinition);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, 1, readModelSchema);
         }
 
         // Join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -75,7 +78,7 @@ public class Generator : IGenerator
         // Children blocks
         foreach (var kv in definition.Children)
         {
-            GenerateChildrenBlock(sb, kv.Key, kv.Value, definition.AutoMap, 1, readModelDefinition);
+            GenerateChildrenBlock(sb, kv.Key, kv.Value, definition.AutoMap, 1, readModelSchema);
         }
 
         // RemovedWith blocks
@@ -158,7 +161,7 @@ public class Generator : IGenerator
         }
     }
 
-    void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, int indent, ReadModelDefinition readModelDefinition)
+    void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, int indent, JsonSchema schema)
     {
         // Determine if we should use inline key syntax or block key syntax
         // Use inline syntax for simple keys
@@ -183,7 +186,7 @@ public class Generator : IGenerator
         if (hasCompositeKey)
         {
             var parsed = CompositeKeyExpression.Parse(from.Key.Value);
-            var typeName = parsed.TypeName ?? CompositeKeyTypeName.From(readModelDefinition);
+            var typeName = parsed.TypeName ?? CompositeKeyTypeName.From(schema);
             sb.AppendLine($"{Indent(indent + 1)}key {typeName}");
             foreach (var (property, expression) in parsed.Mappings)
             {
@@ -224,7 +227,7 @@ public class Generator : IGenerator
         }
     }
 
-    void GenerateChildrenBlock(StringBuilder sb, PropertyPath collectionName, ChildrenDefinition children, AutoMap parentAutoMap, int indent, ReadModelDefinition readModelDefinition)
+    void GenerateChildrenBlock(StringBuilder sb, PropertyPath collectionName, ChildrenDefinition children, AutoMap parentAutoMap, int indent, JsonSchema parentSchema)
     {
         // Determine the effective AutoMap for this children block
         // If the children block has AutoMap set to Inherit, use the parent's setting
@@ -249,10 +252,14 @@ public class Generator : IGenerator
             GenerateEveryBlock(sb, children.All, indent + 1, isChildContext: true);
         }
 
+        var itemSchema = parentSchema.Properties.TryGetValue(collectionName.Path, out var collection)
+            ? collection.Item?.ActualSchema ?? parentSchema
+            : parentSchema;
+
         // Child on event blocks
         foreach (var kv in children.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1, readModelDefinition);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1, itemSchema);
         }
 
         // Child join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -266,7 +273,7 @@ public class Generator : IGenerator
         // Nested children
         foreach (var kv in children.Children)
         {
-            GenerateChildrenBlock(sb, kv.Key, kv.Value, effectiveAutoMap, indent + 1, readModelDefinition);
+            GenerateChildrenBlock(sb, kv.Key, kv.Value, effectiveAutoMap, indent + 1, itemSchema);
         }
 
         // RemovedWith blocks
