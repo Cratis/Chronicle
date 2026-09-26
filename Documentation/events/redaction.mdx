@@ -3,7 +3,7 @@ title: "Event Redaction"
 description: "Remove an event's content from the log with redaction, what it records, and how observers see it."
 ---
 
-Redaction removes the meaningful content of a previously appended event when you need to erase data — for example, to comply with a right-to-erasure request. Rather than deleting the event entirely, Chronicle replaces the event's payload with a redaction marker that preserves the sequence number, original event type, and the full audit context of both the original event and the redaction action itself.
+Redaction removes the meaningful content of a previously appended event when you need to erase data — for example, to comply with a right-to-erasure request. Rather than deleting the event entirely, Chronicle replaces the event's payload with a redaction marker that preserves the sequence number and limited audit metadata. The original event type, occurrence, correlation ID, caused-by identities, and causation types and times remain; original causation property values, revision history, and content hashes do not.
 
 ## Why redaction keeps the event slot
 
@@ -53,9 +53,10 @@ The replacement stores an `EventRedacted` content record inside the event docume
 
 - The reason for the redaction.
 - The original event type, so auditors know what kind of event was removed.
-- The `Occurred`, `CorrelationId`, `Causation`, and `CausedBy` of the **original** event, preserving its full provenance.
+- The **original** `Occurred`, `CorrelationId`, and `CausedBy` identity chain.
+- The original `Causation` entries' types and occurrence times, **without** their property values.
 
-The event's own context fields are then updated to reflect the time and identity of the redaction action, giving a complete two-sided audit record.
+The event's own context fields reflect the redaction action. The original payload, revision history, and content hashes are removed from event sequence storage. Redaction cannot reach copies made before redaction, such as database oplogs or backups, or events already forwarded to other event stores through outbox/inbox. Handle those copies separately.
 
 ## Observing redacted events in Reactors and Reducers
 
@@ -81,7 +82,7 @@ The `EventRedacted` record is defined in `Cratis.Chronicle.Events` and carries:
 | `OriginalEventType` | The CLR `Type` of the event that was redacted. |
 | `Occurred` | When the original event occurred. |
 | `CorrelationId` | The correlation identifier of the original event. |
-| `Causation` | The full causation chain of the original event. |
+| `Causation` | The original causation types and occurrence times, without property values. |
 | `CausedBy` | The identity chain that caused the original event. |
 
 ### Subscribing in a Reducer
