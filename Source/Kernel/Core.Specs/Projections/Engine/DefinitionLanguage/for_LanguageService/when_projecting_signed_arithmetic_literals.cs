@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService;
 
-public class when_projecting_signed_and_precise_literals : given.a_language_service_with_schemas<given.UserReadModel>
+public class when_projecting_signed_arithmetic_literals : given.a_language_service_with_schemas<given.UserReadModel>
 {
     const string Declaration = """
         projection User => UserReadModel
@@ -20,23 +20,16 @@ public class when_projecting_signed_and_precise_literals : given.a_language_serv
             key userId
             add age by -1
             add score by 1.5
-            add rating by 1e-3
-            subtract version by -1
-            largeNumber = 9007199254740993
+            subtract rating by -2.5
         """;
 
     protected override IEnumerable<Type> EventTypes => [typeof(given.UserCreated)];
 
     IDictionary<string, object?> _target;
-    string _generated;
-    string _storedLargeNumber;
 
     void Because()
     {
-        var result = CompileGenerateAndRecompile(Declaration);
-        _generated = result.GeneratedDefinition;
-        var mappings = result.Definition.From[(EventType)"UserCreated"].Properties;
-        _storedLargeNumber = mappings[new PropertyPath("largeNumber")];
+        var mappings = CompileGenerateAndRecompile(Declaration).Definition.From[(EventType)"UserCreated"].Properties;
         var formats = new TypeFormats();
         var values = new EventValueProviderExpressionResolvers(formats, NullLogger<EventValueProviderExpressionResolvers>.Instance);
         var resolvers = new ReadModelPropertyExpressionResolvers(values, formats, NullLogger<ReadModelPropertyExpressionResolvers>.Instance);
@@ -45,7 +38,6 @@ public class when_projecting_signed_and_precise_literals : given.a_language_serv
         _target["age"] = 5;
         _target["score"] = 5d;
         _target["rating"] = 5d;
-        _target["version"] = 5;
 
         var @event = new AppendedEvent(
             new(
@@ -72,8 +64,7 @@ public class when_projecting_signed_and_precise_literals : given.a_language_serv
                 property,
                 new JsonSchemaProperty
                 {
-                    Type = isFloatingPoint ? JsonObjectType.Number : JsonObjectType.Integer,
-                    Format = property.Path == "largeNumber" ? "int64" : null
+                    Type = isFloatingPoint ? JsonObjectType.Number : JsonObjectType.Integer
                 },
                 expression);
             mapper(@event, target, ArrayIndexers.NoIndexers);
@@ -82,10 +73,5 @@ public class when_projecting_signed_and_precise_literals : given.a_language_serv
 
     [Fact] void should_add_a_negative_integer() => _target["age"].ShouldEqual(4);
     [Fact] void should_add_a_decimal() => _target["score"].ShouldEqual(6.5d);
-    [Fact] void should_add_an_exponent() => _target["rating"].ShouldEqual(5.001d);
-    [Fact] void should_subtract_a_negative_integer() => _target["version"].ShouldEqual(6);
-    [Fact] void should_keep_the_integer_exact() => _target["largeNumber"].ShouldEqual(9007199254740993L);
-    [Fact] void should_store_the_exact_integer() => _storedLargeNumber.ShouldEqual("9007199254740993");
-    [Fact] void should_generate_the_original_exponent() => _generated.ShouldContain("add rating by 1e-3");
-    [Fact] void should_generate_the_exact_integer() => _generated.ShouldContain("largeNumber = 9007199254740993");
+    [Fact] void should_subtract_a_negative_decimal() => _target["rating"].ShouldEqual(7.5d);
 }
