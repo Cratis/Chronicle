@@ -722,10 +722,10 @@ public class EventSequence(
         AppendManyResult result,
         DateTimeOffset? occurred)
     {
+        if (events.Count == 0 || _appendedEventsRaised is null) return;
+
         var sequenceNumbers = result.SequenceNumbers.ToList();
         var results = new List<AppendedEventWithResult>(events.Count);
-
-        if (_appendedEventsRaised is null) return;
 
         for (var i = 0; i < events.Count; i++)
         {

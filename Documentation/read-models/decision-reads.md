@@ -26,7 +26,24 @@ if (conflicts.Any())
 // Check result.IsSuccess separately for constraint violations and other append failures.
 ```
 
-For a unit of work, `Get<T>(key)` enrolls into the ambient unit; `GetDetached<T>(key)` does not. Alternatively, enroll a detached read using `IUnitOfWork.AddDecisionRead`. A protected unit must be completed with its owner's capability (`UnitOfWork.ClaimDecisionReadCommitOwnership` and `CommitAsOwner`); calling `Commit()` from application code after enrollment is rejected. A protected commit with **no events** still validates the guard. A kernel too old to allow validate-only returns `DecisionReadValidateOnlyNotSupported`, never success. Units without decision reads keep their previous behavior. The plain Chronicle.AspNetCore middleware owns the request unit but completes it after the response has been written; a conflict is therefore reported too late to change that response. Commit explicitly before writing a response when its status must reflect the outcome. `IUnitOfWork.GetDecisionConflicts()` maps violated labels to the read model type and key without exposing boundaries.
+For a unit of work, `Get<T>(key)` enrolls into the ambient unit; `GetDetached<T>(key)` does not. Alternatively, enroll a detached read using `IUnitOfWork.AddDecisionRead`. A protected unit must be completed with its owner's capability (`UnitOfWork.ClaimDecisionReadCommitOwnership` and `CommitAsOwner`); calling `Commit()` from application code after enrollment is rejected. A protected commit with **no events** still validates the guard. A kernel too old to allow validate-only returns `DecisionReadValidateOnlyNotSupported`, never success. Units without decision reads keep their previous behavior. The Chronicle.AspNetCore middleware owns the request unit and normally completes it after the response has been written; a conflict is therefore reported too late to change that response. To respond to a protected decision's outcome, an action can ask the middleware's owner to commit early via `HttpContext.Features.Get<IUnitOfWorkCompletionFeature>()` (in `Cratis.Chronicle.AspNetCore.Transactions`):
+
+```csharp
+using Cratis.Chronicle.AspNetCore.Transactions;
+using Microsoft.AspNetCore.Http;
+
+var completed = await HttpContext.Features.Get<IUnitOfWorkCompletionFeature>()!.CommitAsync();
+if (completed.GetDecisionConflicts().Any())
+{
+    return Conflict(); // Re-read and retry the decision in a new request.
+}
+if (!completed.IsSuccess)
+{
+    // Handle constraint violations and other append failures before writing the response.
+}
+```
+
+The middleware will not commit the completed unit again. `IUnitOfWork.GetDecisionConflicts()` maps violated labels to the read model type and key without exposing boundaries.
 
 ## Admitted projections
 

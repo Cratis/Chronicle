@@ -70,11 +70,15 @@ public sealed class DecisionReads : IDecisionReads
         cancellationToken.ThrowIfCancellationRequested();
         var agreement = _agreements.GetOrAdd(
             type,
-            static (modelType, state) => state.Self.CheckAgreement(modelType, state.Definition, state.Types, state.CancellationToken),
-            (Self: this, Definition: definition, Types: types, CancellationToken: cancellationToken));
+            static (modelType, state) => state.Self.CheckAgreement(modelType, state.Definition, state.Types),
+            (Self: this, Definition: definition, Types: types));
         try
         {
-            await agreement;
+            await agreement.WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception exception) when (exception is not DecisionReadRefused)
         {
@@ -254,10 +258,10 @@ public sealed class DecisionReads : IDecisionReads
             types.Select(_ => new EventType(_.Id, _.Generation, _.Tombstone)).ToArray(), target == typeof(Guid));
     }
 
-    async Task CheckAgreement(Type type, ProjectionDefinition client, EventType[] types, CancellationToken cancellationToken)
+    async Task CheckAgreement(Type type, ProjectionDefinition client, EventType[] types)
     {
         var services = ((IChronicleServicesAccessor)_eventStore.Connection).Services;
-        var context = new CallContext(new CallOptions(cancellationToken: cancellationToken));
+        var context = CallContext.Default;
         var readModels = await services.ReadModels.GetDefinitions(new() { EventStore = _eventStore.Name }, context);
         var matches = readModels.ReadModels.Where(_ => _.Type.Identifier == type.GetReadModelIdentifier()).ToArray();
         var definitions = await services.Projections.GetAllDefinitions(new() { EventStore = _eventStore.Name }, context);
