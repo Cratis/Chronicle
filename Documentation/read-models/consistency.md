@@ -139,7 +139,7 @@ Materialized projections are the right choice when:
 | Financial or inventory checks requiring exact current state | On-demand computation |
 | Read-after-write in the same request | On-demand computation, or waiting for the append's observers |
 | Command validation against current state | On-demand computation |
-| Rules that must hold when two writers race | A [constraint](../constraints/index.md) — a read, however consistent, cannot stop the race |
+| Rules that must hold when two writers race | A [constraint](../constraints/index.md), or a [decision-consistent read](./decision-reads) when the decision depends on an admitted event-source-keyed projection |
 | Dashboards and list views over large datasets | Materialized projections |
 | Real-time UIs observing changes as they happen | Materialized projections with watchers |
 | Infrequently accessed instances with short event histories | On-demand computation |

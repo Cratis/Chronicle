@@ -467,6 +467,13 @@ public class EventSequence(
         };
     }
 
+    /// <summary>Checks whether this is the event log for the exact decision-read target.</summary>
+    /// <param name="store">The expected event store.</param>
+    /// <param name="targetNamespace">The expected namespace.</param>
+    /// <returns>Whether this sequence belongs to the target.</returns>
+    internal bool MatchesTarget(EventStoreName store, EventStoreNamespaceName targetNamespace) =>
+        eventStoreName == store && @namespace == targetNamespace && eventSequenceId == EventSequenceId.Log;
+
     static EventSourceType ResolveEventSourceType(EventSourceType? value) =>
         string.IsNullOrEmpty(value?.Value) ? EventSourceType.Default : value;
 

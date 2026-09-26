@@ -31,6 +31,7 @@ the events:
 | Topic | What it covers |
 | ------- | ----------- |
 | [Consistency models](./consistency.md) | The key decision: when does the read model have to be correct — immediately, or eventually? |
+| [Decision-consistent reads](./decision-reads) | Guard a .NET command against a projection changing after it was read. |
 | [Empty child collections](./empty-child-collections) | Why a child collection with no children is absent rather than `[]`, and how to say what that means. |
 | [Getting a single instance](./getting-single-instance) | Retrieve one read model instance by its key. |
 | [Getting a collection](./getting-collection-instances) | Retrieve all instances of a read model. |

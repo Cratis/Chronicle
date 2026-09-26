@@ -7,6 +7,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Transactions;
 
@@ -86,6 +87,15 @@ public interface IUnitOfWork : IDisposable
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes) =>
         throw new UnitOfWorkBatchEnrollmentNotSupported(GetType());
+
+    /// <summary>Enroll a protected read as a commit dependency.</summary>
+    /// <param name="read">The protected read.</param>
+    /// <exception cref="UnitOfWorkDecisionReadsNotSupported">This implementation does not support decision reads.</exception>
+    void AddDecisionRead(IDecisionRead read) => throw new UnitOfWorkDecisionReadsNotSupported(GetType());
+
+    /// <summary>Gets decision conflicts without exposing sequence numbers.</summary>
+    /// <returns>Decision conflicts, if any.</returns>
+    IEnumerable<DecisionConflict> GetDecisionConflicts() => [];
 
     /// <summary>
     /// Get the events that have occurred in the <see cref="IUnitOfWork"/>.
