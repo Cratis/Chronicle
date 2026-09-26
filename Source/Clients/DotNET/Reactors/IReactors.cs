@@ -32,6 +32,24 @@ public interface IReactors
         where TReactor : IReactor;
 
     /// <summary>
+    /// Registers a reactor from an explicit event subscription and an awaited callback.
+    /// </summary>
+    /// <param name="id">The stable reactor identifier.</param>
+    /// <param name="configure">Configures the event types, sequence, and replay policy.</param>
+    /// <param name="handle">Handles each delivered event; successful completion acknowledges the event.</param>
+    /// <returns>The registered handler, which can be inspected for state and failed partitions.</returns>
+    /// <remarks>Delegate handlers report <see cref="IReactorHandler.ReactorType"/> as <see cref="object"/>.</remarks>
+    /// <exception cref="NoEventTypesForReactor">Thrown when no event types are configured.</exception>
+    /// <exception cref="ReactorAlreadyRegistered">Thrown when the identifier already belongs to a reactor in this client.</exception>
+    Task<IReactorHandler> Register(ReactorId id, Action<IReactorDefinitionBuilder> configure, Func<ReactorEvent, CancellationToken, Task> handle);
+
+    /// <summary>
+    /// Unregisters a reactor in this client, disconnecting its observation stream. An unknown identifier is ignored.
+    /// </summary>
+    /// <param name="id">The reactor identifier to unregister.</param>
+    void Unregister(ReactorId id);
+
+    /// <summary>
     /// Gets a specific handler by its <typeparamref name="TReactor"/> type.
     /// </summary>
     /// <typeparam name="TReactor">The reactor type.</typeparam>

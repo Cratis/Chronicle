@@ -100,6 +100,15 @@ process — in this order:
 
 If none are found, `NoReadModelHandlerFound` is thrown.
 
+## Define a projection for one run
+
+When a spec generates artifacts at runtime or needs a different mapping for the same read model, pass
+`new Defaults(artifactsProvider)` to `new ReadModelScenario<MyReadModel>(null, defaults)` and call
+`WithProjection(builder => builder.From<MyEvent>(from => from.Set(model => model.Name).To(e => e.Name)))`.
+The callback uses `IProjectionBuilderFor<MyReadModel>` and replaces discovered projection selection for that
+scenario only. Each scenario can have its own `Defaults`, artifact registry, and fluent definition; no wire
+contract or process-wide projection registration is needed. The scenario's event store also uses that registry.
+
 ## Asking what Chronicle registered
 
 That registry is not private to the scenario. `scenario.ClientArtifactsProvider` hands out the very

@@ -50,7 +50,7 @@ public class FailedPartition
     /// <summary>
     /// Gets the last attempt for the failed partition.
     /// </summary>
-    public FailedPartitionAttempt LastAttempt { get; private set; } = FailedPartitionAttempt.NoAttempt;
+    public FailedPartitionAttempt LastAttempt => _attempts.LastOrDefault() ?? FailedPartitionAttempt.NoAttempt;
 
     /// <summary>
     /// Add an attempt to the failed partition.
@@ -58,7 +58,6 @@ public class FailedPartition
     /// <param name="attempt">Attempt to add.</param>
     public void AddAttempt(FailedPartitionAttempt attempt)
     {
-        Attempts = Attempts.Append(attempt);
-        LastAttempt = attempt;
+        _attempts.Add(attempt);
     }
 }

@@ -234,11 +234,12 @@ internal static class ProjectionReadModelProcessor
 
         using var inMemorySink = new InMemorySink(kernelReadModelDefinition, _typeFormats);
 
-        // Process events, retrying any that return DeferredKey once all other events have been processed.
+        // Process events, retrying deferred root and child keys after all seeded events have been processed.
         var deferredEvents = new Queue<KernelAppendedEvent>();
+        var deferredChildren = new List<(KernelProjectionEngine::IProjection Child, KernelAppendedEvent Event)>();
         foreach (var @event in appendedEvents)
         {
-            var (eventKey, eventRemoved) = await ProcessSingleEvent(engineProjection, kernelProjectionDefinition, inMemoryEventSequenceStorage, inMemorySink, @event, statesByKey, CreateSeedState, deferredEvents, strictEventSubscription);
+            var (eventKey, eventRemoved) = await ProcessSingleEvent(engineProjection, kernelProjectionDefinition, inMemoryEventSequenceStorage, inMemorySink, @event, statesByKey, CreateSeedState, deferredEvents, deferredChildren, strictEventSubscription);
             rootKey ??= eventKey;
             if (eventRemoved)
             {
@@ -262,10 +263,46 @@ internal static class ProjectionReadModelProcessor
             var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
             rootKey ??= key;
 
-            if (await ApplyResolvedEvent(engineProjection, inMemoryEventSequenceStorage, inMemorySink, @event, key, statesByKey, CreateSeedState))
+            if (await ApplyResolvedEvent(engineProjection, inMemoryEventSequenceStorage, inMemorySink, @event, key, statesByKey, CreateSeedState, deferredChildren))
             {
                 explicitInitialStateIsPresent = false;
             }
+        }
+
+        // Retry only the deferred child branches. A resolved child can materialize the parent of another
+        // deferred child, so keep going until a pass makes no progress. Never replay the root mappings.
+        var resolvedAny = true;
+        while (resolvedAny && deferredChildren.Count > 0)
+        {
+            resolvedAny = false;
+            foreach (var (child, @event) in deferredChildren.ToArray())
+            {
+                var keyResult = await child.GetKeyResolverFor(@event.Context.EventType)(inMemoryEventSequenceStorage, inMemorySink, @event);
+                if (keyResult is KernelProjectionEngine::DeferredKey)
+                {
+                    continue;
+                }
+
+                deferredChildren.Remove((child, @event));
+                if (keyResult is not KernelProjectionEngine::ResolvedKey resolvedKey)
+                {
+                    continue;
+                }
+
+                resolvedAny = true;
+                if (await ApplyResolvedEvent(child, inMemoryEventSequenceStorage, inMemorySink, @event, resolvedKey.Key, statesByKey, CreateSeedState, deferredChildren))
+                {
+                    explicitInitialStateIsPresent = false;
+                }
+            }
+        }
+
+        if (deferredChildren.Count > 0)
+        {
+            var (child, @event) = deferredChildren[0];
+            throw new InvalidOperationException(
+                $"Could not resolve parent key for child collection '{child.Path}' for event '{@event.Context.EventType.Id}' (EventSourceId '{@event.Context.EventSourceId}'). " +
+                "Ensure the parent event is included in the scenario and appended before the child event.");
         }
 
         // Read every materialized instance per-key from the sink, which keeps one document per resolved
@@ -468,6 +505,7 @@ internal static class ProjectionReadModelProcessor
         Dictionary<object, ExpandoObject> statesByKey,
         Func<ExpandoObject> createSeedState,
         Queue<KernelAppendedEvent> deferredEvents,
+        List<(KernelProjectionEngine::IProjection Child, KernelAppendedEvent Event)> deferredChildren,
         bool strictEventSubscription)
     {
         // The production projection engine filters the event stream to the types the projection
@@ -539,7 +577,7 @@ internal static class ProjectionReadModelProcessor
             key = key with { Value = childJoinRootKey.Value };
         }
 
-        var removed = await ApplyResolvedEvent(projection, eventSequenceStorage, sink, @event, key, statesByKey, createSeedState);
+        var removed = await ApplyResolvedEvent(projection, eventSequenceStorage, sink, @event, key, statesByKey, createSeedState, deferredChildren);
         return (key, removed);
     }
 
@@ -553,6 +591,7 @@ internal static class ProjectionReadModelProcessor
     /// <param name="key">The resolved <see cref="KernelKey"/> the event projects onto.</param>
     /// <param name="statesByKey">The state of each instance materialized so far, keyed as the sink keys its documents.</param>
     /// <param name="createSeedState">Produces the state a not-yet-seen instance starts from.</param>
+    /// <param name="deferredChildren">Child branches whose keys must be retried after the seeded events.</param>
     /// <returns>True when the event removed the root instance.</returns>
     /// <remarks>
     /// State is held per instance rather than threaded across every seeded event, mirroring the live pipeline's
@@ -567,7 +606,8 @@ internal static class ProjectionReadModelProcessor
         KernelAppendedEvent @event,
         KernelKey key,
         Dictionary<object, ExpandoObject> statesByKey,
-        Func<ExpandoObject> createSeedState)
+        Func<ExpandoObject> createSeedState,
+        List<(KernelProjectionEngine::IProjection Child, KernelAppendedEvent Event)> deferredChildren)
     {
         var stateKey = sink.GetKeyValue(key);
         if (!statesByKey.TryGetValue(stateKey, out var state))
@@ -584,7 +624,7 @@ internal static class ProjectionReadModelProcessor
             projection.GetOperationTypeFor(@event.Context.EventType),
             false);
 
-        await HandleEventFor(projection, context, eventSequenceStorage, sink);
+        await HandleEventFor(projection, context, eventSequenceStorage, sink, deferredChildren);
 
         // A root-level removal yields a Removed change, which the real sink applies by deleting the
         // document. Mirror that by resetting the instance state so any subsequent re-create starts clean.
@@ -649,6 +689,7 @@ internal static class ProjectionReadModelProcessor
     /// <param name="context">The <see cref="KernelProjectionEngine::ProjectionEventContext"/> for the event.</param>
     /// <param name="eventSequenceStorage">Storage used by child key resolvers to look up related events.</param>
     /// <param name="sink">Sink used by child key resolvers to look up already projected state.</param>
+    /// <param name="deferredChildren">Child branches whose keys must be retried after the seeded events.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// A child owns its own key resolver, which produces the array indexer identifying the child item within its
@@ -662,7 +703,8 @@ internal static class ProjectionReadModelProcessor
         KernelProjectionEngine::IProjection projection,
         KernelProjectionEngine::ProjectionEventContext context,
         InMemoryEventSequenceStorage eventSequenceStorage,
-        InMemorySink sink)
+        InMemorySink sink,
+        List<(KernelProjectionEngine::IProjection Child, KernelAppendedEvent Event)> deferredChildren)
     {
         var eventType = context.Event.Context.EventType;
         if (projection.Accepts(eventType))
@@ -686,16 +728,22 @@ internal static class ProjectionReadModelProcessor
                 context.MemoizeResolvedKey(keyResolver, keyResult);
             }
 
-            // The harness has no future store to replay a deferred key from, so a deferred or permanently
-            // unresolvable child key skips the child — the same outcome the kernel arrives at for this event.
-            if (keyResult is KernelProjectionEngine::DeferredKey or KernelProjectionEngine::UnresolvableKey)
+            // The kernel stores a deferred child for redelivery once its parent exists. The harness
+            // retries that branch after processing the seeded events; an unresolvable key is still skipped.
+            if (keyResult is KernelProjectionEngine::DeferredKey)
+            {
+                deferredChildren.Add((child, context.Event));
+                continue;
+            }
+
+            if (keyResult is KernelProjectionEngine::UnresolvableKey)
             {
                 continue;
             }
 
             var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
             var operationType = child.GetOperationTypeFor(eventType);
-            await HandleEventFor(child, context with { Key = key, OperationType = operationType }, eventSequenceStorage, sink);
+            await HandleEventFor(child, context with { Key = key, OperationType = operationType }, eventSequenceStorage, sink, deferredChildren);
         }
     }
 

@@ -202,6 +202,7 @@ message EventForEventSourceId {
    repeated string Tags = 7;
    SerializableDateTimeOffset Occurred = 8;
    string Subject = 9;
+   repeated Causation Causation = 10;
 }
 enum EventObservationState {
    EVENT_OBSERVATION_STATE_None = 0;

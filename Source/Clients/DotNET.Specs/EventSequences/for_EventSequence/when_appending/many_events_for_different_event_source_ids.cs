@@ -17,7 +17,6 @@ public class many_events_for_different_event_source_ids : given.an_event_sequenc
     List<EventForEventSourceId> _events;
     EventType _eventType;
     JsonObject _eventContext;
-    Causation _eventCausation;
     IEnumerable<Causation> _causation;
     Identity _causedBy;
     Contracts.Sequences.AppendManyForEventSourcesRequest _command;
@@ -33,8 +32,6 @@ public class many_events_for_different_event_source_ids : given.an_event_sequenc
 
         var causation1 = new Causation(DateTimeOffset.UtcNow, "type1", new Dictionary<string, string> { { "key", "1" } });
         var causation2 = new Causation(DateTimeOffset.UtcNow, "type2", new Dictionary<string, string> { { "key", "2" } });
-        _eventCausation = causation1;
-
         _events =
         [
             new EventForEventSourceId(Guid.NewGuid(), "Event1", causation1),
@@ -86,11 +83,13 @@ public class many_events_for_different_event_source_ids : given.an_event_sequenc
     [Fact] void should_append_correct_number_of_events() => _command.Events.Count().ShouldEqual(_events.Count);
     [Fact] void should_append_events_with_correct_event_source_ids() => _command.Events.Select(e => (EventSourceId)e.EventSourceId).ShouldEqual(_events.Select(e => e.EventSourceId));
     [Fact] void should_append_events_with_correct_event_type() => _command.Events.All(e => e.EventType.ToClient().Equals(_eventType)).ShouldBeTrue();
-    [Fact] void should_append_events_with_correct_causations() => _command.Causation.ToClient().ShouldEqual([_eventCausation]);
+    [Fact] void should_append_events_with_ambient_causation() => _command.Causation.ToClient().ShouldEqual(_causation);
+    [Fact] void should_append_each_event_with_its_own_causation() => _command.Events.Select(e => e.Causation.ToClient().Last()).ShouldEqual(_events.Select(e => e.Causation));
     [Fact] void should_append_events_with_correct_caused_by() => _command.CausedBy.ToClient().ShouldEqual(_causedBy);
     [Fact] void should_append_events_with_strategy_concurrency_scopes() => _command.ConcurrencyScopes.Count().ShouldEqual(_concurrencyScopes.Count);
     [Fact] void should_append_first_event_with_strategy_concurrency_scope() => _command.ConcurrencyScopes.First(s => s.EventSourceId == _events[0].EventSourceId.Value).Scope.SequenceNumber.ShouldEqual((ulong)_concurrencyScopes[_events[0].EventSourceId].SequenceNumber);
     [Fact] void should_append_second_event_with_strategy_concurrency_scope() => _command.ConcurrencyScopes.First(s => s.EventSourceId == _events[1].EventSourceId.Value).Scope.SequenceNumber.ShouldEqual((ulong)_concurrencyScopes[_events[1].EventSourceId].SequenceNumber);
     [Fact] void should_append_third_event_with_strategy_concurrency_scope() => _command.ConcurrencyScopes.First(s => s.EventSourceId == _events[2].EventSourceId.Value).Scope.SequenceNumber.ShouldEqual((ulong)_concurrencyScopes[_events[2].EventSourceId].SequenceNumber);
     [Fact] void should_return_result_with_sequence_numbers() => _result.SequenceNumbers.Select(_ => _.Value).ShouldEqual(_response.SequenceNumbers);
+    [Fact] void should_carry_the_appended_event_type_once() => _result.EventTypes.ShouldContainOnly([_eventType]);
 }

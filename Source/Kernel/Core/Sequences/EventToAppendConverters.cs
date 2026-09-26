@@ -31,5 +31,6 @@ internal static class EventToAppendConverters
             @event.Content,
             @event.Tags,
             @event.Occurred,
-            @event.Subject);
+            @event.Subject,
+            @event.Causation?.ToApi());
 }

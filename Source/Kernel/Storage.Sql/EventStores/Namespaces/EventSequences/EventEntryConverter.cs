@@ -207,6 +207,22 @@ public static class EventEntryConverter
     }
 
     /// <summary>
+    /// Update the content hash for a specific event type generation in an <see cref="EventEntry"/>.
+    /// </summary>
+    /// <param name="entry">The event entry to update.</param>
+    /// <param name="generation">The generation to update the hash for.</param>
+    /// <param name="hash">The revised content hash.</param>
+    public static void UpdateHashForGeneration(EventEntry entry, EventTypeGeneration generation, EventHash hash)
+    {
+        var hashesByGeneration = string.IsNullOrEmpty(entry.ContentHashes)
+            ? new Dictionary<string, string>()
+            : JsonSerializer.Deserialize<Dictionary<string, string>>(entry.ContentHashes, _jsonSerializerOptions) ?? [];
+
+        hashesByGeneration[((uint)generation).ToString()] = hash.Value;
+        entry.ContentHashes = JsonSerializer.Serialize(hashesByGeneration, _jsonSerializerOptions);
+    }
+
+    /// <summary>
     /// Replace all generational content in an <see cref="EventEntry"/>.
     /// </summary>
     /// <param name="entry">The event entry to update.</param>
@@ -408,21 +424,35 @@ public static class EventEntryConverter
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred)
     {
-        var content = new
-        {
-            reason = reason.Value,
-            originalEventType = originalEventTypeId,
-            occurred,
-            correlationId = correlationId.ToString(),
-            causation = causation.Select(c => new { type = c.Type.Value, occurred = c.Occurred }),
-            causedBy = causedByChain.Select(id => id.ToString())
-        };
+        var content = RedactionEventContent.FromOriginal(reason, new EventTypeId(originalEventTypeId), occurred, correlationId, causation, causedByChain).ToPayload();
 
         var contentWrapper = new Dictionary<string, object>
         {
             { EventTypeGeneration.First.ToString(), content }
         };
 
+        return JsonSerializer.Serialize(contentWrapper, _jsonSerializerOptions);
+    }
+
+    /// <summary>
+    /// Build replacement content from an original SQL event entry.
+    /// </summary>
+    /// <param name="original">The event to redact.</param>
+    /// <param name="reason">The redaction reason.</param>
+    /// <returns>Serialized redaction content with the original context and no causation property values.</returns>
+    public static string CreateRedactionContent(EventEntry original, RedactionReason reason)
+    {
+        var content = RedactionEventContent.FromOriginal(
+            reason,
+            original.Type,
+            original.Occurred,
+            new CorrelationId(Guid.Parse(original.CorrelationId)),
+            GetCausation(original),
+            GetCausedBy(original));
+        var contentWrapper = new Dictionary<string, object>
+        {
+            { EventTypeGeneration.First.ToString(), content.ToPayload() }
+        };
         return JsonSerializer.Serialize(contentWrapper, _jsonSerializerOptions);
     }
 

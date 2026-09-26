@@ -28,6 +28,7 @@ public class a_replay_observer_job : Specification
     protected TestKitSilo _silo = new();
     protected TestableReplayObserver _job;
     protected IObserverServiceClient _replayServiceClient;
+    protected IObserver _observer;
     protected IChronicleStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _namespaceStorage;
@@ -89,6 +90,9 @@ public class a_replay_observer_job : Specification
         var loggerFactory = Substitute.For<ILoggerFactory>();
         _silo.AddService(loggerFactory);
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(NullLogger.Instance);
+
+        _observer = Substitute.For<IObserver>();
+        _silo.AddProbe(_ => _observer);
 
         _stateStorage = _silo.StorageManager.GetStorage<JobStateWithLastHandledEvent>(
             typeof(TestableReplayObserver).FullName!);

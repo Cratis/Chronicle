@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
@@ -57,6 +58,7 @@ public class an_observer : Specification
     protected IInFlightEventsStorage _inFlightEventsStorage;
     protected IObserverHandledCountsStorage _observerHandledCountsStorage;
     protected IEventTypesStorage _eventTypesStorage;
+    protected IEventSequenceStorage _eventSequenceStorage;
     protected IEventCompliance _eventCompliance;
     protected Observers _observersConfig;
 
@@ -86,6 +88,7 @@ public class an_observer : Specification
         _inFlightEventsStorage = Substitute.For<IInFlightEventsStorage>();
         _observerHandledCountsStorage = Substitute.For<IObserverHandledCountsStorage>();
         _eventTypesStorage = Substitute.For<IEventTypesStorage>();
+        _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
         _eventCompliance = Substitute.For<IEventCompliance>();
 
         // Wire the storage chain: IStorage → IEventStoreStorage → IEventTypesStorage and IEventStoreNamespaceStorage → IInFlightEventsStorage / IObserverHandledCountsStorage
@@ -95,6 +98,7 @@ public class an_observer : Specification
         _eventStoreNamespaceStorage.InFlightEvents.Returns(_inFlightEventsStorage);
         _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>()).Returns([]);
         _eventStoreNamespaceStorage.ObserverHandledCounts.Returns(_observerHandledCountsStorage);
+        _eventStoreNamespaceStorage.GetEventSequence(Arg.Any<EventSequenceId>()).Returns(_eventSequenceStorage);
         _observerHandledCountsStorage.GetFor(Arg.Any<ObserverId>(), Arg.Any<Key>()).Returns(new Dictionary<EventTypeId, EventCount>());
 
         // By default, no schemas are known — events pass through unchanged.
@@ -150,6 +154,16 @@ public class an_observer : Specification
         _storageStats.ResetCounts();
         _failedPartitionsStorageStats.ResetCounts();
     }
+
+    protected void GivenFailedEventAt(Key partition, EventSequenceNumber sequenceNumber, EventType eventType) =>
+        _eventSequenceStorage.GetEventAt(sequenceNumber).Returns(
+            AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(eventType, sequenceNumber) with
+            {
+                Context = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(eventType, sequenceNumber).Context with
+                {
+                    EventSourceId = partition.ToString()
+                }
+            });
 
     protected void CheckStartedCatchupJob(EventSequenceNumber lastHandled, Key _partition) => _jobsManager.Received(1)
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(

@@ -34,6 +34,9 @@ public record AppendManyResult : IAppendResult, IAppendResultForObserverCompleti
     public EventSequenceNumber TailSequenceNumber => SequenceNumbers.LastOrDefault() ?? EventSequenceNumber.Unavailable;
 
     /// <inheritdoc />
+    public IEnumerable<EventType> EventTypes { get; init; } = [];
+
+    /// <inheritdoc />
     public bool IsSuccess => !HasConstraintViolations && !HasErrors && !HasConcurrencyViolations;
 
     /// <inheritdoc />
@@ -63,6 +66,11 @@ public record AppendManyResult : IAppendResult, IAppendResultForObserverCompleti
     /// Gets the observer service used for waiting for completion.
     /// </summary>
     internal Contracts.Observation.IObservers? Observers { get; init; }
+
+    /// <summary>
+    /// Gets the event types in append order for computing each type's completion target.
+    /// </summary>
+    internal IReadOnlyList<EventType> AppendedEventTypes { get; init; } = [];
 
     /// <summary>
     /// Create a successful result.

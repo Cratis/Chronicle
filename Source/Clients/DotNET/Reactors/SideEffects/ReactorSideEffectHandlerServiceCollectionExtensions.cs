@@ -13,9 +13,9 @@ namespace Microsoft.Extensions.DependencyInjection;
 internal static class ReactorSideEffectHandlerServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the built-in handlers and dispatcher once per scope. Their published singleton metadata is kept
-    /// for compatibility, while these explicit registrations ensure the previous event-store-less contract uses
-    /// the exact <see cref="Cratis.Chronicle.Events.IEventTypes"/> registry selected for the current scope.
+    /// Registers the built-in handlers, reactor metadata providers and dispatcher. The registry-dependent handlers
+    /// resolve once per scope so the previous event-store-less contract uses the exact
+    /// <see cref="Cratis.Chronicle.Events.IEventTypes"/> registry selected for the current scope.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add the handlers to.</param>
     /// <returns>The same <see cref="IServiceCollection"/> for continuation.</returns>
@@ -27,6 +27,18 @@ internal static class ReactorSideEffectHandlerServiceCollectionExtensions
             new(serviceProvider.GetRequiredService<Cratis.Chronicle.Events.IEventTypes>()));
         services.TryAddScoped<MixedSideEffectsResultHandler>(serviceProvider =>
             new(serviceProvider.GetRequiredService<Cratis.Chronicle.Events.IEventTypes>()));
+        foreach (var type in typeof(ReactorSideEffectHandlers).Assembly.GetTypes()
+                     .Where(type => type.IsClass && !type.IsAbstract && typeof(IReactorContextValuesProvider).IsAssignableFrom(type)))
+        {
+            services.TryAddTransient(type);
+        }
+
+        foreach (var type in typeof(ReactorSideEffectHandlers).Assembly.GetTypes()
+                     .Where(type => type.IsClass && !type.IsAbstract && typeof(IReactorSideEffectHandler).IsAssignableFrom(type))
+                     .Except([typeof(EventResultHandler), typeof(EventsResultHandler), typeof(MixedSideEffectsResultHandler)]))
+        {
+            services.TryAddSingleton(type);
+        }
         services.TryAddScoped<ReactorSideEffectHandlers>();
         services.TryAddScoped<IReactorSideEffectHandlers>(serviceProvider =>
             serviceProvider.GetRequiredService<ReactorSideEffectHandlers>());

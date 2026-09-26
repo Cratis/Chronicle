@@ -55,6 +55,7 @@ public class EventStore : IEventStore
     readonly IIdentityProvider _identityProvider;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
+    readonly IReactorSideEffectHandlers _reactorSideEffectHandlers;
     readonly ILogger<EventStore> _logger;
     readonly IActivitySource<EventSequence> _activitySource;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
@@ -116,6 +117,7 @@ public class EventStore : IEventStore
         _identityProvider = identityProvider;
         _jsonSerializerOptions = jsonSerializerOptions;
         _clientArtifactsProvider = clientArtifactsProvider;
+        _reactorSideEffectHandlers = reactorSideEffectHandlers;
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
@@ -156,7 +158,8 @@ public class EventStore : IEventStore
             causationManager,
             UnitOfWorkManager,
             identityProvider,
-            jsonSerializerOptions);
+            jsonSerializerOptions,
+            reactorSideEffectHandlers);
         _sequences[EventLog.Id] = EventLog;
 
         Jobs = new Jobs.Jobs(this);
@@ -401,7 +404,8 @@ public class EventStore : IEventStore
                 state.UnitOfWorkManager,
                 state._identityProvider,
                 state._jsonSerializerOptions,
-                state._activitySource),
+                state._activitySource,
+                state._reactorSideEffectHandlers),
             this);
 
     /// <inheritdoc/>
