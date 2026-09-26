@@ -167,6 +167,54 @@ public class ProjectionFactory(
             .ToList();
     }
 
+    /// <summary>Combines explicit join mappings with matching event properties when AutoMap permits them.</summary>
+    /// <param name="joinDefinition">The event-specific join definition.</param>
+    /// <param name="currentReadModelSchema">The schema being projected into.</param>
+    /// <param name="eventSchema">The joined event's schema, if available.</param>
+    /// <param name="autoMap">The inherited automatic-mapping setting.</param>
+    /// <param name="noAutoMapProperties">Properties excluded from automatic mapping.</param>
+    /// <returns>The effective join property mappings.</returns>
+    internal static List<KeyValuePair<PropertyPath, string>> GetMergedJoinProperties(JoinDefinition joinDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap, IReadOnlySet<string> noAutoMapProperties)
+    {
+        var merged = joinDefinition.Properties.ToList();
+        autoMap = joinDefinition.AutoMap == AutoMap.Inherit ? autoMap : joinDefinition.AutoMap;
+
+        if (autoMap == AutoMap.Disabled || eventSchema is null || currentReadModelSchema is null)
+        {
+            return merged;
+        }
+
+        var existingReadModelProperties = new HashSet<string>(merged.Select(_ => _.Key.LastSegment.Value), StringComparer.OrdinalIgnoreCase);
+        var existingEventProperties = new HashSet<string>(merged.Select(_ => _.Value), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var eventProperty in eventSchema.Properties.Values)
+        {
+            if (existingReadModelProperties.Contains(eventProperty.Name) || existingEventProperties.Contains(eventProperty.Name))
+            {
+                continue;
+            }
+
+            var matchingReadModelProperty = currentReadModelSchema.Properties.Values
+                .FirstOrDefault(rmp => rmp.Name.Equals(eventProperty.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (matchingReadModelProperty is not null)
+            {
+                // A property flagged with [NoAutoMap] is only ever set from its explicit mapping, so a joined
+                // event carrying an identically named property must not auto-map onto it.
+                if (noAutoMapProperties.Contains(matchingReadModelProperty.Name))
+                {
+                    continue;
+                }
+
+                merged.Add(new(new PropertyPath(matchingReadModelProperty.Name), eventProperty.Name));
+                existingReadModelProperties.Add(matchingReadModelProperty.Name);
+                existingEventProperties.Add(eventProperty.Name);
+            }
+        }
+
+        return merged;
+    }
+
     /// <summary>
     /// Determines whether an event is subscribed only to be aggregated — every property it maps is a
     /// <c language="csharp">[Count]</c>/<c language="csharp">[Increment]</c>/<c language="csharp">[Decrement]</c>/<c language="csharp">[Add]</c>/<c language="csharp">[Subtract]</c> operation and
@@ -220,46 +268,6 @@ public class ProjectionFactory(
 
                 merged.Add(new(new PropertyPath(matchingReadModelProperty.Name), eventProperty.Name));
                 existing.Add(matchingReadModelProperty.Name);
-            }
-        }
-
-        return merged;
-    }
-
-    static List<KeyValuePair<PropertyPath, string>> GetMergedJoinProperties(JoinDefinition joinDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap, IReadOnlySet<string> noAutoMapProperties)
-    {
-        var merged = joinDefinition.Properties.ToList();
-
-        if (autoMap == AutoMap.Disabled || eventSchema is null || currentReadModelSchema is null)
-        {
-            return merged;
-        }
-
-        var existingReadModelProperties = new HashSet<string>(merged.Select(_ => _.Key.LastSegment.Value), StringComparer.OrdinalIgnoreCase);
-        var existingEventProperties = new HashSet<string>(merged.Select(_ => _.Value), StringComparer.OrdinalIgnoreCase);
-
-        foreach (var eventProperty in eventSchema.Properties.Values)
-        {
-            if (existingReadModelProperties.Contains(eventProperty.Name) || existingEventProperties.Contains(eventProperty.Name))
-            {
-                continue;
-            }
-
-            var matchingReadModelProperty = currentReadModelSchema.Properties.Values
-                .FirstOrDefault(rmp => rmp.Name.Equals(eventProperty.Name, StringComparison.OrdinalIgnoreCase));
-
-            if (matchingReadModelProperty is not null)
-            {
-                // A property flagged with [NoAutoMap] is only ever set from its explicit mapping, so a joined
-                // event carrying an identically named property must not auto-map onto it.
-                if (noAutoMapProperties.Contains(matchingReadModelProperty.Name))
-                {
-                    continue;
-                }
-
-                merged.Add(new(new PropertyPath(matchingReadModelProperty.Name), eventProperty.Name));
-                existingReadModelProperties.Add(matchingReadModelProperty.Name);
-                existingEventProperties.Add(eventProperty.Name);
             }
         }
 

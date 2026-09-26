@@ -20,7 +20,8 @@ public static class JoinDefinitionConverters
         new(
             source.On,
             source.Properties.ToDictionary(kv => (PropertyPath)kv.Key, kv => kv.Value),
-            source.Key);
+            source.Key,
+            source.AutoMap);
 
     /// <summary>
     /// Converts a Kernel JoinDefinition to a MongoDB JoinDefinition.
@@ -32,6 +33,7 @@ public static class JoinDefinitionConverters
         {
             On = source.On,
             Properties = source.Properties.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
-            Key = source.Key
+            Key = source.Key,
+            AutoMap = source.AutoMap
         };
 }
