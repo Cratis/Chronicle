@@ -13,8 +13,6 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -34,39 +32,13 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="collections">Provider for <see cref="ISinkCollections"/> to use.</param>
 /// <param name="changesetConverter">Provider for <see cref="IChangesetConverter"/> for converting changesets.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
-/// <param name="logger">Logger for legacy null-parent repairs.</param>
 public class Sink(
     ReadModelDefinition readModel,
     IMongoDBConverter converter,
     ISinkCollections collections,
     IChangesetConverter changesetConverter,
-    IExpandoObjectConverter expandoObjectConverter,
-    ILogger<Sink> logger) : ISink
+    IExpandoObjectConverter expandoObjectConverter) : ISink
 {
-    /// <summary>
-    /// Initializes a sink without a logger, preserving the previous constructor.
-    /// </summary>
-    /// <param name="readModel">The read-model definition.</param>
-    /// <param name="converter">The MongoDB converter.</param>
-    /// <param name="collections">The collection provider.</param>
-    /// <param name="changesetConverter">The changeset converter.</param>
-    /// <param name="expandoObjectConverter">The expando converter.</param>
-    public Sink(
-        ReadModelDefinition readModel,
-        IMongoDBConverter converter,
-        ISinkCollections collections,
-        IChangesetConverter changesetConverter,
-        IExpandoObjectConverter expandoObjectConverter)
-        : this(readModel, converter, collections, changesetConverter, expandoObjectConverter, NullLogger<Sink>.Instance)
-    {
-    }
-
-    /// <summary>
-    /// Flushes the pending bulk operations and returns any failed partitions.
-    /// </summary>
-    /// <returns>The failed partitions from the flush.</returns>
-    internal Task<IEnumerable<FailedPartition>> FlushBulk() => ExecuteBulk();
-
     const int MaxBulkOperations = 1000;
 
     /// <summary>
@@ -75,10 +47,9 @@ public class Sink(
     /// </summary>
     const int MaxBulkSizeInBytes = 48 * 1024 * 1024;
 
-    readonly ILogger<Sink> _logger = logger;
     readonly object _bulkLock = new();
     readonly List<WriteModel<BsonDocument>> _bulkOperations = [];
-    readonly Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber, bool IsKeyScoped)> _bulkOperationMetadata = [];
+    readonly Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
     readonly ConcurrentDictionary<string, ExpandoObject> _bulkStateCache = new();
     readonly ConcurrentDictionary<string, Key> _bulkKeysByCacheKey = new();
 
@@ -204,7 +175,7 @@ public class Sink(
         {
             if (_isBulkMode)
             {
-                AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, eventSequenceNumber, !usesJoinTargetsOnlyFilter);
+                AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, eventSequenceNumber);
                 var cacheKey = converter.ToBsonValue(key).ToString()!;
                 _bulkStateCache.TryRemove(cacheKey, out _);
                 _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
@@ -270,7 +241,7 @@ public class Sink(
                 IsUpsert = isUpsert,
                 ArrayFilters = converted.ArrayFilters
             };
-            AddToBulk(updateModel, key, eventSequenceNumber, !usesJoinTargetsOnlyFilter);
+            AddToBulk(updateModel, key, eventSequenceNumber);
             if (!changeset.HasJoined())
             {
                 var cacheKey = converter.ToBsonValue(key).ToString()!;
@@ -291,25 +262,14 @@ public class Sink(
             return await FlushBulkIfNeeded();
         }
 
-        var collection = Collection;
-        var options = new UpdateOptions
-        {
-            IsUpsert = isUpsert,
-            ArrayFilters = converted.ArrayFilters
-        };
-        try
-        {
-            await collection.UpdateOneAsync(filter, converted.UpdateDefinition, options);
-        }
-        catch (MongoWriteException exception) when (exception.WriteError.Code == NullParentRepair.CannotCreateField && !usesJoinTargetsOnlyFilter)
-        {
-            _logger.RepairingNullParent(readModel.Identifier);
-            await NullParentRepair.RepairAndRetry(
-                collection,
-                converter.ToBsonValue(key),
-                converted.UpdateDefinition,
-                async () => await collection.UpdateOneAsync(filter, converted.UpdateDefinition, options));
-        }
+        await Collection.UpdateOneAsync(
+            filter,
+            converted.UpdateDefinition,
+            new UpdateOptions
+            {
+                IsUpsert = isUpsert,
+                ArrayFilters = converted.ArrayFilters
+            });
         return [];
     }
 
@@ -557,13 +517,13 @@ public class Sink(
         return indexNames;
     }
 
-    void AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber, bool isKeyScoped)
+    void AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber)
     {
         lock (_bulkLock)
         {
             var operationIndex = _bulkOperations.Count;
             _bulkOperations.Add(operation);
-            _bulkOperationMetadata[operationIndex] = (key, eventSequenceNumber, isKeyScoped);
+            _bulkOperationMetadata[operationIndex] = (key, eventSequenceNumber);
             _currentBulkSize += EstimateOperationSize(operation);
         }
     }
@@ -587,7 +547,7 @@ public class Sink(
     async Task<IEnumerable<FailedPartition>> ExecuteBulk()
     {
         List<WriteModel<BsonDocument>> snapshot;
-        Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber, bool IsKeyScoped)> metadataSnapshot;
+        Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadataSnapshot;
         string[] flushedPendingDeletes;
 
         lock (_bulkLock)
@@ -610,53 +570,22 @@ public class Sink(
 
         try
         {
-            var collection = Collection;
-            var offset = 0;
-            while (offset < snapshot.Count)
+            await Collection.BulkWriteAsync(snapshot);
+            return [];
+        }
+        catch (MongoBulkWriteException ex)
+        {
+            var failedPartitions = new List<FailedPartition>();
+
+            foreach (var writeError in ex.WriteErrors)
             {
-                try
+                if (metadataSnapshot.TryGetValue(writeError.Index, out var metadata))
                 {
-                    await collection.BulkWriteAsync(snapshot.Skip(offset).ToArray());
-                    return [];
-                }
-                catch (MongoBulkWriteException ex)
-                {
-                    var writeError = ex.WriteErrors.Count > 0 ? ex.WriteErrors[0] : null;
-                    var failedIndex = offset + (writeError?.Index ?? 0);
-                    if (writeError?.Code != NullParentRepair.CannotCreateField ||
-                        failedIndex >= snapshot.Count ||
-                        snapshot[failedIndex] is not UpdateOneModel<BsonDocument> failedUpdate ||
-                        !metadataSnapshot.TryGetValue(failedIndex, out var failedMetadata) ||
-                        !failedMetadata.IsKeyScoped)
-                    {
-                        return ex.WriteErrors
-                            .Where(error => metadataSnapshot.ContainsKey(offset + error.Index))
-                            .Select(error => metadataSnapshot[offset + error.Index])
-                            .Select(metadata => new FailedPartition(metadata.EventSourceId, metadata.SequenceNumber))
-                            .ToArray();
-                    }
-
-                    _logger.RepairingNullParent(readModel.Identifier);
-                    try
-                    {
-                        // The ordered bulk already committed operations before this index. Retry only the
-                        // rejected write; replaying the prefix could duplicate $push and other side effects.
-                        await NullParentRepair.RepairAndRetry(
-                            collection,
-                            converter.ToBsonValue(failedMetadata.EventSourceId),
-                            failedUpdate.Update,
-                            async () => await collection.BulkWriteAsync([failedUpdate]));
-                    }
-                    catch (MongoException)
-                    {
-                        return [new FailedPartition(failedMetadata.EventSourceId, failedMetadata.SequenceNumber)];
-                    }
-
-                    offset = failedIndex + 1;
+                    failedPartitions.Add(new FailedPartition(metadata.EventSourceId, metadata.SequenceNumber));
                 }
             }
 
-            return [];
+            return failedPartitions;
         }
         finally
         {

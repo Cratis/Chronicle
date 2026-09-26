@@ -156,60 +156,6 @@ public static class ExpandoObjectExtensions
     }
 
     /// <summary>
-    /// Clears a nested value only when all of its parents already exist.
-    /// </summary>
-    /// <param name="target">The object holding the value.</param>
-    /// <param name="property">The nested property to clear.</param>
-    /// <param name="arrayIndexers">Indexers for any collections along the path.</param>
-    public static void ClearNestedValue(this ExpandoObject target, PropertyPath property, ArrayIndexers arrayIndexers)
-    {
-        object? current = target;
-        var currentPath = PropertyPath.Root;
-        var segments = property.Segments.ToArray();
-
-        foreach (var segment in segments[..^1])
-        {
-            if (current is not ExpandoObject expando ||
-                !((IDictionary<string, object?>)expando).TryGetValue(segment.Value, out current) ||
-                current is null)
-            {
-                return;
-            }
-
-            currentPath += segment;
-            if (segment is ArrayProperty && arrayIndexers.HasFor(currentPath))
-            {
-                var indexer = arrayIndexers.GetFor(currentPath);
-                if (current is not IEnumerable collection)
-                {
-                    return;
-                }
-
-                var items = collection.Cast<object>();
-                if (!indexer.IdentifierProperty.IsSet && indexer.Identifier is int index)
-                {
-                    current = index >= 0 ? items.Skip(index).FirstOrDefault() : null;
-                }
-                else
-                {
-                    current = items.OfType<ExpandoObject>().FirstOrDefault(item =>
-                        ((IDictionary<string, object?>)item).TryGetValue(indexer.IdentifierProperty.Path, out var id) &&
-                        Equals(id, indexer.Identifier));
-                }
-            }
-        }
-
-        if (current is ExpandoObject parent)
-        {
-            var values = (IDictionary<string, object?>)parent;
-            if (values.ContainsKey(segments[^1].Value))
-            {
-                values[segments[^1].Value] = null;
-            }
-        }
-    }
-
-    /// <summary>
     /// Ensure a specific path for a <see cref="PropertyPath"/> exists on an <see cref="ExpandoObject"/>..
     /// </summary>
     /// <param name="target">Target <see cref="ExpandoObject"/>.</param>
@@ -232,7 +178,7 @@ public static class ExpandoObjectExtensions
             {
                 case PropertyName propertyName:
                     {
-                        if (!currentTarget.TryGetValue(propertyName.Value, out var currentValue) || currentValue is null)
+                        if (!currentTarget.ContainsKey(propertyName.Value))
                         {
                             var nested = new ExpandoObject();
                             currentTarget[segment.Value] = nested;
@@ -240,7 +186,7 @@ public static class ExpandoObjectExtensions
                         }
                         else
                         {
-                            currentTarget = ((ExpandoObject)currentValue)!;
+                            currentTarget = ((ExpandoObject)currentTarget[segment.Value])!;
                         }
                     }
                     break;

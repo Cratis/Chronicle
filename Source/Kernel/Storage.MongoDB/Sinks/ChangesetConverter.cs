@@ -11,7 +11,6 @@ using Cratis.Chronicle.Schemas;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
@@ -308,8 +307,8 @@ public class ChangesetConverter(
         arrayFiltersForDocument.AddRange(arrayFilters);
 
         updateBuilder = updateBuilder is not null
-            ? updateBuilder.Unset(property)
-            : updateDefinitionBuilder.Unset(property);
+            ? updateBuilder.Set(property, BsonNull.Value)
+            : updateDefinitionBuilder.Set(property, BsonNull.Value);
     }
 
     void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildRemoved childRemoved)
@@ -379,34 +378,14 @@ public class ChangesetConverter(
         }
 
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
-        var joinFilter = Builders<BsonDocument>.Filter.Eq(target.Property, target.Value);
-        var options = new UpdateOptions
-        {
-            IsUpsert = false,
-            ArrayFilters = [.. joinArrayFiltersForDocument]
-        };
-        UpdateResult result;
-        try
-        {
-            result = await collection.UpdateManyAsync(joinFilter, joinUpdateBuilder, options);
-        }
-        catch (MongoWriteException exception) when (exception.WriteError.Code == NullParentRepair.CannotCreateField && eventSequenceNumber.IsActualValue)
-        {
-            // UpdateMany may have committed a prefix. $push is not idempotent, and $max cannot tell
-            // whether a document ahead of this event has already received this join. Leave the error
-            // visible rather than double-push or silently omit those documents from a guarded retry.
-            var rendered = joinUpdateBuilder!.Render(new RenderArgs<BsonDocument>(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry));
-            if (rendered.AsBsonDocument.Contains("$push"))
+        var result = await collection.UpdateManyAsync(
+            Builders<BsonDocument>.Filter.Eq(target.Property, target.Value),
+            joinUpdateBuilder,
+            new UpdateOptions
             {
-                throw;
-            }
-
-            // All other emitted operators can safely be applied again to the full join target set,
-            // including documents whose watermark was advanced by a different out-of-order event.
-            logger.RepairingJoinedNullParents(readModel.Identifier);
-            await NullParentRepair.RepairJoined(collection, joinFilter, joinUpdateBuilder);
-            result = await collection.UpdateManyAsync(joinFilter, joinUpdateBuilder, options);
-        }
+                IsUpsert = false,
+                ArrayFilters = [.. joinArrayFiltersForDocument]
+            });
 
         // A join that matches nothing is a successful zero-row update — the write is simply lost. That is
         // legitimate when no root carries the joined value yet (the row-creation-time backfill covers it),

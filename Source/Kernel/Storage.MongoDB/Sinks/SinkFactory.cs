@@ -61,7 +61,6 @@ public class SinkFactory(
             mongoDBConverter,
             mongoDBSinkCollections,
             mongoDBChangesetConverter,
-            expandoObjectConverter,
-            serviceProvider.GetRequiredService<ILogger<Sink>>());
+            expandoObjectConverter);
     }
 }

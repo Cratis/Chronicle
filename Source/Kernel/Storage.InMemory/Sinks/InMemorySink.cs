@@ -476,7 +476,8 @@ public class InMemorySink(
                     break;
 
                 case NestedCleared nestedCleared:
-                    state.ClearNestedValue(nestedCleared.NestedProperty, nestedCleared.ArrayIndexers);
+                    var stateDict = (IDictionary<string, object?>)state;
+                    stateDict[nestedCleared.NestedProperty.LastSegment.Value] = null;
                     break;
 
                 case Joined joined:

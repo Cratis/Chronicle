@@ -7,8 +7,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
-using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ChangesetConverter.when_converting_to_update_definition;
 
@@ -41,7 +39,6 @@ public class and_there_is_a_nested_cleared : given.a_changeset_converter
 
     async Task Because() => _result = await _converter.ToUpdateDefinition(_key, _changeset, _eventSequenceNumber);
 
-    [Fact] void should_unset_the_nested_object() => _result.UpdateDefinition.Render(new RenderArgs<BsonDocument>(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry))["$unset"]["command"].ShouldEqual(1);
     [Fact] void should_indicate_has_changes() => _result.hasChanges.ShouldBeTrue();
     [Fact] void should_have_update_definition() => _result.UpdateDefinition.ShouldNotBeNull();
     [Fact] void should_convert_nested_property_to_mongodb_property() => _mongoDBConverter.Received(1).ToMongoDBProperty(_nestedProperty, ArrayIndexers.NoIndexers);
