@@ -324,6 +324,7 @@ message ExportedEventResponse {
    SerializableDateTimeOffset Occurred = 7;
    repeated string Tags = 8;
    string Content = 9;
+   repeated NamedTag NamedTags = 10;
 }
 message ForEventSourceIdAndEventTypesRequest {
    string EventStore = 2;
@@ -370,6 +371,11 @@ message NamedTag {
    string Name = 1;
    string Value = 2;
 }
+message NamedTagQueryCriterion {
+   string Name = 1;
+   repeated string Values = 2;
+   bool AnyValue = 3;
+}
 message ParseResolutionRequest {
    string Resolution = 1;
 }
@@ -385,6 +391,21 @@ message QueryEventsRequest {
    string Tags = 10;
    SerializableDateTimeOffset OccurredFrom = 11;
    SerializableDateTimeOffset OccurredTo = 12;
+}
+message QueryEventsWithNamedTagsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   repeated NamedTagQueryCriterion NamedTags = 4;
+   string EventSourceId = 5;
+   string EventSourceType = 6;
+   string EventStreamType = 7;
+   string CorrelationId = 8;
+   string EventTypeIds = 9;
+   string Tags = 10;
+   SerializableDateTimeOffset OccurredFrom = 11;
+   SerializableDateTimeOffset OccurredTo = 12;
+   string NamedTagsJson = 13;
 }
 message QueryResult_EventSequenceTailResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -498,6 +519,22 @@ message SequenceHistogramRequest {
    SerializableDateTimeOffset OccurredFrom = 11;
    SerializableDateTimeOffset OccurredTo = 12;
 }
+message SequenceHistogramWithNamedTagsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   repeated NamedTagQueryCriterion NamedTags = 4;
+   string Resolution = 5;
+   string EventSourceId = 6;
+   string EventSourceType = 7;
+   string EventStreamType = 8;
+   string CorrelationId = 9;
+   string EventTypeIds = 10;
+   string Tags = 11;
+   SerializableDateTimeOffset OccurredFrom = 12;
+   SerializableDateTimeOffset OccurredTo = 13;
+   string NamedTagsJson = 14;
+}
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
    string Value = 1;
@@ -540,9 +577,11 @@ service EventSequences {
    rpc HasEventsForEventSourceId (HasEventsForEventSourceIdRequest) returns (QueryResult_EventSourceEventsResponse);
    rpc ParseResolution (ParseResolutionRequest) returns (QueryResult_HistogramResolution);
    rpc QueryEvents (QueryEventsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
+   rpc QueryEventsWithNamedTags (QueryEventsWithNamedTagsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc Redact (RedactRequest) returns (CommandResult);
    rpc RedactForEventSource (RedactForEventSourceRequest) returns (CommandResult);
    rpc Revise (ReviseRequest) returns (CommandResult);
    rpc SequenceHistogram (SequenceHistogramRequest) returns (QueryResult_IEnumerable_SequenceHistogramBucketResponse);
+   rpc SequenceHistogramWithNamedTags (SequenceHistogramWithNamedTagsRequest) returns (QueryResult_IEnumerable_SequenceHistogramBucketResponse);
    rpc TailSequenceNumber (TailSequenceNumberRequest) returns (QueryResult_EventSequenceTailResponse);
 }

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.EventSequences;
 
@@ -11,6 +12,11 @@ namespace Cratis.Chronicle.Sequences;
 /// </summary>
 public static class EventSequenceQueryCriteriaFactory
 {
+    static readonly JsonSerializerOptions _strictNamedTagJsonOptions = new(JsonSerializerOptions.Web)
+    {
+        UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow
+    };
+
     /// <summary>
     /// Create criteria from the narrowing values of a workbench query.
     /// </summary>
@@ -30,6 +36,55 @@ public static class EventSequenceQueryCriteriaFactory
             Tags: [.. Split(narrowing.Tags).Select(tag => (Tag)tag)],
             OccurredFrom: narrowing.OccurredFrom,
             OccurredTo: narrowing.OccurredTo);
+
+    /// <summary>
+    /// Create criteria with required named tag narrowing. Unlike the legacy query, an empty or invalid
+    /// named criterion must not silently turn into an unfiltered read.
+    /// </summary>
+    /// <param name="narrowing">The existing query dimensions.</param>
+    /// <param name="namedTags">One or more named tag criteria for gRPC callers.</param>
+    /// <param name="namedTagsJson">Optional JSON array of named tag criteria for HTTP callers.</param>
+    /// <returns>The combined criteria.</returns>
+    /// <exception cref="InvalidNamedTagCriterion">No valid named tag criteria were supplied.</exception>
+    public static EventSequenceQueryCriteria CreateWithNamedTags(
+        EventSequenceQueryNarrowing narrowing,
+        IEnumerable<NamedTagQueryCriterion>? namedTags,
+        string? namedTagsJson = default)
+    {
+        if (namedTagsJson is not null)
+        {
+            if (namedTags?.Any() == true)
+            {
+                throw new InvalidNamedTagCriterion();
+            }
+
+            try
+            {
+                namedTags = JsonSerializer.Deserialize<NamedTagQueryCriterion[]>(namedTagsJson, _strictNamedTagJsonOptions);
+            }
+            catch (JsonException)
+            {
+                throw new InvalidNamedTagCriterion();
+            }
+        }
+
+        if (namedTags is null)
+        {
+            throw new InvalidNamedTagCriterion();
+        }
+
+        var snapshot = namedTags.ToArray();
+        if (snapshot.Length == 0 || snapshot.Any(tag => tag is null || string.IsNullOrWhiteSpace(tag.Name) ||
+            (tag.Values is null ? !tag.AnyValue : tag.AnyValue || !tag.Values.Any())))
+        {
+            throw new InvalidNamedTagCriterion();
+        }
+
+        return Create(narrowing) with
+        {
+            NamedTags = snapshot.Select(tag => new NamedTagCriterion((TagName)tag.Name, tag.Values)).ToArray()
+        };
+    }
 
     /// <summary>
     /// Splits a comma separated list of event type identifiers into <see cref="Concepts.Events.EventType"/>.

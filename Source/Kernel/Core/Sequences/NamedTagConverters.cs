@@ -24,4 +24,15 @@ internal static class NamedTagConverters
     /// <param name="tag">The wire tag.</param>
     /// <returns>The append command tag.</returns>
     public static NamedTag ToApi(this Contracts.Sequences.NamedTag tag) => new(tag.Name, tag.Value);
+
+    /// <summary>
+    /// Converts a named tag to its generated wire contract.
+    /// </summary>
+    /// <param name="tag">The named tag.</param>
+    /// <returns>The wire tag.</returns>
+    public static Contracts.Sequences.NamedTag ToContract(this NamedTag tag) => new()
+    {
+        Name = tag.Name,
+        Value = tag.Value
+    };
 }

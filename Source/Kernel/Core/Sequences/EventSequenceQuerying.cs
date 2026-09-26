@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Arc.Queries;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -14,6 +15,48 @@ namespace Cratis.Chronicle.Sequences;
 /// </summary>
 internal static class EventSequenceQuerying
 {
+    /// <summary>
+    /// Queries events with storage paging and updates the total number of matching events in the query context.
+    /// </summary>
+    /// <param name="storage">The event storage.</param>
+    /// <param name="eventCompliance">The compliance release service.</param>
+    /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
+    /// <param name="queryContextManager">The paging and sorting context.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="criteria">The criteria to narrow by.</param>
+    /// <returns>The matching page of events.</returns>
+    internal static async Task<IEnumerable<AppendedEvent>> QueryEvents(
+        IStorage storage,
+        IEventCompliance eventCompliance,
+        JsonSerializerOptions jsonSerializerOptions,
+        IQueryContextManager queryContextManager,
+        string eventStore,
+        string @namespace,
+        string eventSequenceId,
+        EventSequenceQueryCriteria criteria)
+    {
+        var queryContext = queryContextManager.Current;
+        var paging = queryContext.Paging;
+        var (sortBy, descending) = EventSequenceQuerySortByParser.From(queryContext.Sorting);
+        var (events, totalCount) = await QueryPage(
+            storage,
+            eventCompliance,
+            eventStore,
+            @namespace,
+            eventSequenceId,
+            criteria,
+            paging.IsPaged ? paging.Page * paging.Size : 0,
+            paging.IsPaged ? paging.Size : int.MaxValue,
+            new EventSequenceQuerySort(sortBy, descending));
+
+        // Paging is over the events matching the criteria, not over the whole sequence.
+        queryContext.TotalItems = (int)totalCount;
+
+        return events.ToApi(jsonSerializerOptions);
+    }
+
     /// <summary>
     /// Reads a page of events matching criteria from an event sequence, with PII content released.
     /// </summary>
@@ -52,6 +95,30 @@ internal static class EventSequenceQuerying
 
         var released = await ReleaseCompliance(appendedEvents, storage, eventStore, eventCompliance);
         return (released, totalCount);
+    }
+
+    /// <summary>
+    /// Gets time buckets for the matching events.
+    /// </summary>
+    /// <param name="storage">The event storage.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="resolution">The bucket resolution.</param>
+    /// <param name="criteria">The criteria to narrow by.</param>
+    /// <returns>Nonempty buckets, ordered by time.</returns>
+    internal static async Task<IEnumerable<SequenceHistogramBucket>> Histogram(
+        IStorage storage,
+        string eventStore,
+        string @namespace,
+        string eventSequenceId,
+        HistogramResolution resolution,
+        EventSequenceQueryCriteria criteria)
+    {
+        var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
+        var buckets = await eventSequence.GetHistogram(resolution, criteria);
+
+        return buckets.Select(_ => new SequenceHistogramBucket(_.Occurred, SequenceHistogramBucket.EndOf(_.Occurred, resolution), _.Count)).ToArray();
     }
 
     /// <summary>

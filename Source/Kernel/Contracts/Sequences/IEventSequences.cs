@@ -108,6 +108,14 @@ public interface IEventSequences
     [Operation]
     Task<QueryResult<IEnumerable<AppendedEventResponse>>> QueryEvents(QueryEventsRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the QueryEventsWithNamedTags query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<AppendedEventResponse>>> QueryEventsWithNamedTags(QueryEventsWithNamedTagsRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the AppendedEvents query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -171,6 +179,14 @@ public interface IEventSequences
     /// <returns>The query result.</returns>
     [Operation]
     Task<QueryResult<IEnumerable<SequenceHistogramBucketResponse>>> SequenceHistogram(SequenceHistogramRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the SequenceHistogramWithNamedTags query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<SequenceHistogramBucketResponse>>> SequenceHistogramWithNamedTags(SequenceHistogramWithNamedTagsRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the ParseResolution query.
     /// </summary>
@@ -1141,6 +1157,91 @@ public class QueryEventsRequest
 }
 
 /// <summary>
+/// Represents the QueryEventsWithNamedTagsRequest message.
+/// </summary>
+[ProtoContract]
+public class QueryEventsWithNamedTagsRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the eventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namedTags.
+    /// </summary>
+    [ProtoMember(4)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.NamedTagQueryCriterion>? NamedTags { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceId.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceType.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? EventSourceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStreamType.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the correlationId.
+    /// </summary>
+    [ProtoMember(8)]
+    public string? CorrelationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventTypeIds.
+    /// </summary>
+    [ProtoMember(9)]
+    public string? EventTypeIds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tags.
+    /// </summary>
+    [ProtoMember(10)]
+    public string? Tags { get; set; }
+
+    /// <summary>
+    /// Gets or sets the occurredFrom.
+    /// </summary>
+    [ProtoMember(11)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset OccurredFrom { get; set; }
+
+    /// <summary>
+    /// Gets or sets the occurredTo.
+    /// </summary>
+    [ProtoMember(12)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset OccurredTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the namedTagsJson.
+    /// </summary>
+    [ProtoMember(13)]
+    public string? NamedTagsJson { get; set; }
+}
+
+/// <summary>
 /// Represents the AppendedEventsRequest message.
 /// </summary>
 [ProtoContract]
@@ -1478,6 +1579,12 @@ public class ExportedEventResponse
     /// </summary>
     [ProtoMember(9)]
     public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the NamedTags.
+    /// </summary>
+    [ProtoMember(10)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.NamedTag> NamedTags { get; set; } = new List<global::Cratis.Chronicle.Contracts.Sequences.NamedTag>();
 }
 
 /// <summary>
@@ -1655,6 +1762,97 @@ public class SequenceHistogramRequest
     /// </summary>
     [ProtoMember(12)]
     public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset OccurredTo { get; set; }
+}
+
+/// <summary>
+/// Represents the SequenceHistogramWithNamedTagsRequest message.
+/// </summary>
+[ProtoContract]
+public class SequenceHistogramWithNamedTagsRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the eventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namedTags.
+    /// </summary>
+    [ProtoMember(4)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.NamedTagQueryCriterion>? NamedTags { get; set; }
+
+    /// <summary>
+    /// Gets or sets the resolution.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? Resolution { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceId.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceType.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? EventSourceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStreamType.
+    /// </summary>
+    [ProtoMember(8)]
+    public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the correlationId.
+    /// </summary>
+    [ProtoMember(9)]
+    public string? CorrelationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventTypeIds.
+    /// </summary>
+    [ProtoMember(10)]
+    public string? EventTypeIds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tags.
+    /// </summary>
+    [ProtoMember(11)]
+    public string? Tags { get; set; }
+
+    /// <summary>
+    /// Gets or sets the occurredFrom.
+    /// </summary>
+    [ProtoMember(12)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset OccurredFrom { get; set; }
+
+    /// <summary>
+    /// Gets or sets the occurredTo.
+    /// </summary>
+    [ProtoMember(13)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset OccurredTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the namedTagsJson.
+    /// </summary>
+    [ProtoMember(14)]
+    public string? NamedTagsJson { get; set; }
 }
 
 /// <summary>
