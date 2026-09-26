@@ -214,6 +214,38 @@ public class ChangesetConverter(
         }
     }
 
+    static FilterDefinition<BsonDocument> BuildNullArrayParentFilter(string path, IReadOnlyList<BsonDocumentArrayFilterDefinition<BsonDocument>> filters)
+    {
+        // Reuse the element identifiers and null type check from the positional update filters,
+        // but nest them inside $elemMatch so they apply to the same element in each array.
+        var segments = path.Split('.');
+        BsonDocument? elementMatch = null;
+        var childMarkerIndex = segments.Length;
+        for (var index = filters.Count - 1; index >= 0; index--)
+        {
+            var filter = filters[index].Document;
+            var identifier = filter.GetElement(0).Name.Split('.')[0];
+            var markerIndex = Array.IndexOf(segments, $"$[{identifier}]");
+            var predicate = new BsonDocument();
+            foreach (var field in filter.Elements)
+            {
+                predicate.Add(field.Name[(identifier.Length + 1)..], field.Value);
+            }
+
+            if (elementMatch is not null)
+            {
+                var childPath = string.Join('.', segments.Skip(markerIndex + 1).Take(childMarkerIndex - markerIndex - 1));
+                predicate[childPath] = new BsonDocument("$elemMatch", elementMatch);
+            }
+
+            elementMatch = predicate;
+            childMarkerIndex = markerIndex;
+        }
+
+        var arrayPath = string.Join('.', segments.Take(childMarkerIndex));
+        return new BsonDocument(arrayPath, new BsonDocument("$elemMatch", elementMatch));
+    }
+
     Task ApplyActualChanges(
         Key key,
         IEnumerable<Change> changes,
@@ -458,9 +490,10 @@ public class ChangesetConverter(
                      .Concat(nullArrayParents.DistinctBy(_ => (_.Path, string.Join('|', _.ArrayFilters.Select(filter => filter.Document.ToJson())))).Select(_ => (_.Path, Filters: _.ArrayFilters)))
                      .OrderBy(_ => _.Path.Count(ch => ch == '.')))
         {
-            var repairFilter = parent.Filters.Count == 0
-                ? Builders<BsonDocument>.Filter.And(joinFilter, Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null))
-                : joinFilter;
+            var nullFilter = parent.Filters.Count == 0
+                ? Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null)
+                : BuildNullArrayParentFilter(parent.Path, parent.Filters);
+            var repairFilter = Builders<BsonDocument>.Filter.And(joinFilter, nullFilter);
             await collection.UpdateManyAsync(
                 repairFilter,
                 updateDefinitionBuilder.Unset(parent.Path),

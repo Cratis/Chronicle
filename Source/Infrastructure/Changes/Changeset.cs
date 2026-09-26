@@ -230,7 +230,8 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         else
         {
             var parentPath = PropertyPath.CreateFrom([.. nestedProperty.Segments.SkipLast(1)]);
-            if (TryGetValueAtPath(workingState, parentPath, arrayIndexers, out var existingParent) && existingParent is not null)
+            object? existingParent = workingState;
+            if ((parentPath.IsRoot || TryGetValueAtPath(workingState, parentPath, arrayIndexers, out existingParent)) && existingParent is not null)
             {
                 PropertyPath.CreateFrom([nestedProperty.LastSegment]).GetPropertyInfoFor(existingParent.GetType()).SetValue(existingParent, null);
             }

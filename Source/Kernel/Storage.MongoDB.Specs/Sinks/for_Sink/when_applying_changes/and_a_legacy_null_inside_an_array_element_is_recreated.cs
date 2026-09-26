@@ -32,6 +32,7 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
         public BsonDocument NestedArrays = default!;
         public BsonDocument JoinedNull = default!;
         public BsonDocument JoinedExisting = default!;
+        public BsonDocument JoinedUnrelated = default!;
 
         public async Task InitializeAsync()
         {
@@ -61,6 +62,7 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
             NestedArrays = await Find("nested-arrays");
             JoinedNull = await Find("joined-null");
             JoinedExisting = await Find("joined-existing");
+            JoinedUnrelated = await Find("joined-unrelated");
         }
 
         public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
@@ -131,13 +133,24 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
                 {
                     { "_id", "joined-null" },
                     { "joinKey", "common" },
-                    { "items", new BsonArray { new BsonDocument { { "_id", "first" }, { "info", BsonNull.Value } } } }
+                    { "items", new BsonArray
+                        {
+                            new BsonDocument { { "_id", "first" }, { "info", BsonNull.Value } },
+                            new BsonDocument { { "_id", "second" }, { "info", new BsonDocument("name", "Keep") } }
+                        }
+                    }
                 },
                 new BsonDocument
                 {
                     { "_id", "joined-existing" },
                     { "joinKey", "common" },
                     { "items", new BsonArray { new BsonDocument { { "_id", "first" }, { "info", new BsonDocument("name", "Keep") } } } }
+                },
+                new BsonDocument
+                {
+                    { "_id", "joined-unrelated" },
+                    { "joinKey", "common" },
+                    { "items", new BsonArray { new BsonDocument { { "_id", "second" }, { "info", BsonNull.Value } } } }
                 }
             ]);
             var indexers = new ArrayIndexers([new ArrayIndexer("[items]", "id", "first")]);
@@ -172,4 +185,6 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
     [Fact] void should_leave_the_outer_array_sibling_untouched() => ctx.NestedArrays["items"][1]["children"][0]["info"].IsBsonNull.ShouldBeTrue();
     [Fact] void should_recreate_a_legacy_null_for_each_joined_document() => ctx.JoinedNull["items"][0]["info"]["name"].AsString.ShouldEqual("Joined");
     [Fact] void should_update_an_existing_joined_child() => ctx.JoinedExisting["items"][0]["info"]["name"].AsString.ShouldEqual("Joined");
+    [Fact] void should_leave_a_joined_child_sibling_untouched() => ctx.JoinedNull["items"][1]["info"]["name"].AsString.ShouldEqual("Keep");
+    [Fact] void should_leave_a_joined_document_without_the_identified_child_untouched() => ctx.JoinedUnrelated["items"][0]["info"].IsBsonNull.ShouldBeTrue();
 }
