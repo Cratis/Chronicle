@@ -118,7 +118,7 @@ public class EventScenario(
     /// Symmetric to <see cref="Given"/>: where <c language="csharp">Given</c> seeds pre-existing events, <c language="csharp">When</c> performs the act being
     /// tested. Its terminal <see cref="EventSourceWhenBuilder.Events"/> returns the <see cref="AppendResult"/> — the same
     /// "the act returns its result" shape as <c language="csharp">CommandScenario.Execute</c>, so constraint/append specs read as
-    /// Given / When / then without binding a raw event-sequence append overload by hand.
+    /// Given / When / then without binding the raw <see cref="IEventSequence.Append"/> overload by hand.
     /// <code language="csharp">
     /// await scenario.Given.ForEventSource(id).Events(seedEvent);
     /// var result = await scenario.When.ForEventSource(id).Events(actEvent);
