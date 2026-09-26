@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -137,14 +138,14 @@ public class DeclarativeCodeGenerator
         return expression;
     }
 
-    static string GenerateKeyExpression(string keyExpression, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
+    static string GenerateKeyExpression(string keyExpression, JsonSchema schema)
     {
         if (keyExpression.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal))
         {
-            var composite = CompositeKeyExpression.Parse(keyExpression, definition.Identifier, PropertyPath.NotSet);
-            var typeName = composite.TypeNameOrFrom(readModelDefinition.GetSchemaForLatestGeneration());
+            var parsed = CompositeKeyExpression.Parse(keyExpression);
+            var typeName = parsed.TypeName ?? CompositeKeyTypeName.From(schema);
             var result = new List<string> { $".UsingCompositeKey<{typeName}>(_ => _" };
-            foreach (var (property, expression) in composite.Mappings)
+            foreach (var (property, expression) in parsed.Mappings)
             {
                 result.Add($"    .Set(k => k.{property}).To({ConvertExpression(expression)})");
             }
@@ -161,14 +162,14 @@ public class DeclarativeCodeGenerator
         return $".UsingKey({ConvertExpression(keyExpression)})";
     }
 
-    static string GenerateParentKeyExpression(string keyExpression, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
+    static string GenerateParentKeyExpression(string keyExpression, JsonSchema schema)
     {
         if (keyExpression.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal))
         {
-            var composite = CompositeKeyExpression.Parse(keyExpression, definition.Identifier, PropertyPath.NotSet);
-            var typeName = composite.TypeNameOrFrom(readModelDefinition.GetSchemaForLatestGeneration());
+            var parsed = CompositeKeyExpression.Parse(keyExpression);
+            var typeName = parsed.TypeName ?? CompositeKeyTypeName.From(schema);
             var result = new List<string> { $".UsingParentCompositeKey<{typeName}>(_ => _" };
-            foreach (var (property, expression) in composite.Mappings)
+            foreach (var (property, expression) in parsed.Mappings)
             {
                 result.Add($"    .Set(k => k.{property}).To({ConvertExpression(expression)})");
             }
@@ -232,13 +233,13 @@ public class DeclarativeCodeGenerator
         var lines = new List<string>();
 
         // Generate From blocks
-        GenerateFromBlocks(definition.From, definition.AutoMap, lines, definition, readModelDefinition);
+        GenerateFromBlocks(definition.From, definition.AutoMap, lines, readModelDefinition.GetSchemaForLatestGeneration());
 
         // Generate Join blocks
         GenerateJoinBlocks(definition.Join, definition.AutoMap, lines);
 
         // Generate Children blocks
-        GenerateChildrenBlocks(definition.Children, lines, definition, readModelDefinition);
+        GenerateChildrenBlocks(definition.Children, lines, readModelDefinition.GetSchemaForLatestGeneration());
 
         // Generate FromAll/FromEvery blocks
         GenerateFromEveryBlocks(definition.FromEvery, definition.SubscribesToAllEvents, lines);
@@ -254,7 +255,7 @@ public class DeclarativeCodeGenerator
         return "\n        " + string.Join("\n        ", lines);
     }
 
-    void GenerateFromBlocks(IDictionary<EventType, FromDefinition> fromBlocks, AutoMap autoMap, List<string> lines, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
+    void GenerateFromBlocks(IDictionary<EventType, FromDefinition> fromBlocks, AutoMap autoMap, List<string> lines, JsonSchema schema)
     {
         foreach (var from in fromBlocks)
         {
@@ -276,13 +277,13 @@ public class DeclarativeCodeGenerator
             // Add key configuration
             if (hasKey)
             {
-                propLines.Add(GenerateKeyExpression(fromDef.Key!, definition, readModelDefinition));
+                propLines.Add(GenerateKeyExpression(fromDef.Key!, schema));
             }
 
             // Add parent key configuration
             if (hasParentKey)
             {
-                propLines.Add(GenerateParentKeyExpression(fromDef.ParentKey!, definition, readModelDefinition));
+                propLines.Add(GenerateParentKeyExpression(fromDef.ParentKey!, schema));
             }
 
             // Add property mappings
@@ -372,12 +373,15 @@ public class DeclarativeCodeGenerator
         }
     }
 
-    void GenerateChildrenBlocks(IDictionary<PropertyPath, ChildrenDefinition> childrenBlocks, List<string> lines, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
+    void GenerateChildrenBlocks(IDictionary<PropertyPath, ChildrenDefinition> childrenBlocks, List<string> lines, JsonSchema parentSchema)
     {
         foreach (var child in childrenBlocks)
         {
             var propertyName = child.Key.Path;
             var childDef = child.Value;
+            var itemSchema = parentSchema.Properties.TryGetValue(propertyName, out var collection)
+                ? collection.Item?.ActualSchema ?? parentSchema
+                : parentSchema;
 
             lines.Add($".Children(m => m.{propertyName}, children => children");
             lines.Add($"    .IdentifiedBy(e => e.{childDef.IdentifiedBy})");
@@ -386,7 +390,7 @@ public class DeclarativeCodeGenerator
             if (childDef.From.Count > 0)
             {
                 var childLines = new List<string>();
-                GenerateFromBlocks(childDef.From, childDef.AutoMap, childLines, definition, readModelDefinition);
+                GenerateFromBlocks(childDef.From, childDef.AutoMap, childLines, itemSchema);
                 lines.AddRange(childLines.Select(l => "    " + l));
             }
 
@@ -402,7 +406,7 @@ public class DeclarativeCodeGenerator
             if (childDef.Children.Count > 0)
             {
                 var childLines = new List<string>();
-                GenerateChildrenBlocks(childDef.Children, childLines, definition, readModelDefinition);
+                GenerateChildrenBlocks(childDef.Children, childLines, itemSchema);
                 lines.AddRange(childLines.Select(l => "    " + l));
             }
 

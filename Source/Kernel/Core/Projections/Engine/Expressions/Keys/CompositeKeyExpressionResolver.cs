@@ -25,10 +25,25 @@ public class CompositeKeyExpressionResolver(IEventValueProviderExpressionResolve
     /// <inheritdoc/>
     public KeyResolver Resolve(IProjection projection, string expression, PropertyPath identifiedByProperty)
     {
-        var composite = CompositeKeyExpression.Parse(expression, projection.Identifier, identifiedByProperty);
-        var propertiesWithKeyValueProviders = composite.Mappings.Select(mapping =>
+        CompositeKeyExpression parsed;
+        try
         {
-            var actualProperty = identifiedByProperty + mapping.Key;
+            parsed = CompositeKeyExpression.Parse(expression);
+        }
+        catch (InvalidCompositeKeyExpression exception)
+        {
+            var prefix = $"{WellKnownExpressions.Composite}(";
+            if (expression.StartsWith(prefix, StringComparison.Ordinal) && expression.EndsWith(')') &&
+                string.IsNullOrWhiteSpace(expression[prefix.Length..^1]))
+            {
+                throw new MissingCompositeExpressions(projection.Identifier, identifiedByProperty, expression);
+            }
+            throw new InvalidCompositeKeyPropertyMappingExpression(projection.Identifier, identifiedByProperty, exception.Component);
+        }
+
+        var propertiesWithKeyValueProviders = parsed.Mappings.Select(mapping =>
+        {
+            var actualProperty = identifiedByProperty + mapping.Property;
 
             var schemaProperty = projection.ReadModel.GetSchemaForLatestGeneration().GetSchemaPropertyForPropertyPath(actualProperty);
             schemaProperty ??= new JsonSchemaProperty
@@ -38,8 +53,8 @@ public class CompositeKeyExpressionResolver(IEventValueProviderExpressionResolve
 
             return new
             {
-                Property = new PropertyPath(mapping.Key),
-                KeyResolver = resolvers.Resolve(schemaProperty, mapping.Value)
+                Property = new PropertyPath(mapping.Property),
+                KeyResolver = resolvers.Resolve(schemaProperty, mapping.Expression)
             };
         }).ToDictionary(_ => _.Property, _ => _.KeyResolver);
 
