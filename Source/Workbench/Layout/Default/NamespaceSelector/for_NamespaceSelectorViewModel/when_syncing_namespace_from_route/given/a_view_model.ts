@@ -9,11 +9,14 @@ import { INamespaces } from 'State/Namespaces';
 export class a_view_model {
     constructor() {
         this.setCurrentNamespace = sinon.stub();
+        this.setRouteNamespace = sinon.stub();
+        this.currentNamespaceSubject = new BehaviorSubject<string>('');
         this.namespaces = {
-            currentNamespace: new BehaviorSubject<string>(''),
+            currentNamespace: this.currentNamespaceSubject,
             setCurrentNamespace: this.setCurrentNamespace,
             namespaces: new BehaviorSubject<string[]>([]),
-            setEventStore: sinon.stub()
+            setEventStore: sinon.stub(),
+            setRouteNamespace: this.setRouteNamespace
         };
         this.props = {
             onNamespaceSelected: sinon.stub()
@@ -26,5 +29,7 @@ export class a_view_model {
     namespaces: INamespaces;
     props: INamespaceSelectorProps;
     setCurrentNamespace: SinonStub;
+    setRouteNamespace: SinonStub;
+    currentNamespaceSubject: BehaviorSubject<string>;
     viewModel: NamespaceSelectorViewModel;
 }

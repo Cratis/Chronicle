@@ -35,4 +35,11 @@ public interface IRecommendationsManager : IGrainWithIntegerCompoundKey
     /// <param name="recommendationId">The <see cref="RecommendationId"/> to ignore.</param>
     /// <returns>Awaitable task.</returns>
     Task Ignore(RecommendationId recommendationId);
+
+    /// <summary>
+    /// Stop ignoring a recommendation, bringing it back into view.
+    /// </summary>
+    /// <param name="recommendationId">The <see cref="RecommendationId"/> to stop ignoring.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Unignore(RecommendationId recommendationId);
 }

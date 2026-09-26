@@ -32,6 +32,12 @@ internal sealed class Recommendations(
             new global::Cratis.Chronicle.Recommendations.PerformRecommendation((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Recommendations.RecommendationId)request.RecommendationId));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> UnignoreRecommendation(global::Cratis.Chronicle.Contracts.Recommendations.UnignoreRecommendationRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Recommendations.UnignoreRecommendation((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Recommendations.RecommendationId)request.RecommendationId));
+
+    /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>> AllRecommendations(global::Cratis.Chronicle.Contracts.Recommendations.AllRecommendationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>(
             () => global::Cratis.Chronicle.Recommendations.RecommendationDetails.AllRecommendations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
@@ -48,6 +54,14 @@ internal sealed class Recommendations(
                 return result.Select(ToRecommendationDetailsResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Recommendations", "GetRecommendations"));
+
+    /// <inheritdoc/>
+    public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>> IgnoredRecommendations(global::Cratis.Chronicle.Contracts.Recommendations.IgnoredRecommendationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>(
+            () => global::Cratis.Chronicle.Recommendations.RecommendationDetails.IgnoredRecommendations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
+                .CompletedBy(callContext.CancellationToken)
+                .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>)_.Select(ToRecommendationDetailsResponse).ToList()),
+            exception => logger.QueryFailed(exception, "Recommendations", "IgnoredRecommendations"));
 
     static global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse ToRecommendationDetailsResponse(global::Cratis.Chronicle.Recommendations.RecommendationDetails source) =>
         new()
