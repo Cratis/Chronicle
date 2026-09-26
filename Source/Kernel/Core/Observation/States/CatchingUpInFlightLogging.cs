@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.States;
@@ -19,6 +20,9 @@ internal static partial class CatchingUpInFlightLogMessages
 
     [LoggerMessage(LogLevel.Information, "Starting in-flight catch-up for partition {Partition} from event sequence number {FromSequenceNumber}")]
     internal static partial void StartingInFlightCatchUpForPartition(this ILogger<CatchingUpInFlight> logger, Key partition, EventSequenceNumber fromSequenceNumber);
+
+    [LoggerMessage(LogLevel.Error, "Could not start in-flight catch-up for partition {Partition}: {Error}; transitioning observer to quarantine")]
+    internal static partial void CouldNotStartInFlightCatchUpForPartition(this ILogger<CatchingUpInFlight> logger, Key partition, StartJobError error);
 
     [LoggerMessage(LogLevel.Error, "Failed to enqueue in-flight catch-up for one or more partitions; transitioning observer to quarantine")]
     internal static partial void FailedToCatchUpInFlightPartitions(this ILogger<CatchingUpInFlight> logger, Exception exception);
