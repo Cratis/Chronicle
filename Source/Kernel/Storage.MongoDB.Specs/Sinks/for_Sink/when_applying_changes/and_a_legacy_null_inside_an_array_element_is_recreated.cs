@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
@@ -12,6 +13,7 @@ using Cratis.Chronicle.Schemas;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Events;
 using context = Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes.and_a_legacy_null_inside_an_array_element_is_recreated.context;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes;
@@ -25,7 +27,10 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
         IMongoClient _client = default!;
         IMongoCollection<BsonDocument> _collection = default!;
         Sink _sink = default!;
+        readonly ConcurrentDictionary<int, byte> _joinedRepairRequests = new();
+        bool _observingJoinedRepair;
 
+        public long? JoinedRepairMatchedCount { get; private set; }
         public BsonDocument Direct = default!;
         public BsonDocument Bulk = default!;
         public BsonDocument Nested = default!;
@@ -36,7 +41,11 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
 
         public async Task InitializeAsync()
         {
-            _client = new MongoClient(fixture.ConnectionString);
+            var settings = MongoClientSettings.FromConnectionString(fixture.ConnectionString);
+            settings.ClusterConfigurator = cluster => cluster
+                .Subscribe<CommandStartedEvent>(OnCommandStarted)
+                .Subscribe<CommandSucceededEvent>(OnCommandSucceeded);
+            _client = new MongoClient(settings);
             var database = _client.GetDatabase(_databaseName);
             var schema = await JsonSchema.FromJsonAsync("""
                 {"type":"object","properties":{"id":{"type":"string"},"joinKey":{"type":"string"},"items":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"info":{"type":"object","properties":{"name":{"type":"string"}}},"children":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"info":{"type":"object","properties":{"name":{"type":"string"}}}}}}}}},"outer":{"type":"object","properties":{"items":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"info":{"type":"object","properties":{"name":{"type":"string"}}}}}}}}}}
@@ -55,7 +64,9 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
             await _sink.EndBulk();
             await Recreate("nested", "outer.[items].info.name", "outer.[items]");
             await RecreateNestedArrays();
+            _observingJoinedRepair = true;
             await RecreateJoinedArray();
+            _observingJoinedRepair = false;
             Direct = await Find("direct");
             Bulk = await Find("bulk");
             Nested = await Find("nested");
@@ -66,6 +77,24 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
         }
 
         public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
+
+        void OnCommandStarted(CommandStartedEvent started)
+        {
+            if (_observingJoinedRepair && started.CommandName == "update" &&
+                started.Command["updates"].AsBsonArray.Any(update => update["u"].AsBsonDocument.Contains("$unset")))
+            {
+                _joinedRepairRequests.TryAdd(started.RequestId, 0);
+            }
+        }
+
+        void OnCommandSucceeded(CommandSucceededEvent succeeded)
+        {
+            if (_joinedRepairRequests.TryRemove(succeeded.RequestId, out _))
+            {
+                // The update command's n is the number of documents matched, not the number modified.
+                JoinedRepairMatchedCount = succeeded.Reply["n"].ToInt64();
+            }
+        }
 
         async Task Recreate(string id, PropertyPath leaf, PropertyPath array)
         {
@@ -184,6 +213,7 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
     [Fact] void should_leave_the_inner_array_sibling_untouched() => ctx.NestedArrays["items"][0]["children"][1]["info"]["name"].AsString.ShouldEqual("Keep");
     [Fact] void should_leave_the_outer_array_sibling_untouched() => ctx.NestedArrays["items"][1]["children"][0]["info"].IsBsonNull.ShouldBeTrue();
     [Fact] void should_recreate_a_legacy_null_for_each_joined_document() => ctx.JoinedNull["items"][0]["info"]["name"].AsString.ShouldEqual("Joined");
+    [Fact] void should_match_only_the_joined_document_with_a_null_child_for_repair() => ctx.JoinedRepairMatchedCount.ShouldEqual(1L);
     [Fact] void should_update_an_existing_joined_child() => ctx.JoinedExisting["items"][0]["info"]["name"].AsString.ShouldEqual("Joined");
     [Fact] void should_leave_a_joined_child_sibling_untouched() => ctx.JoinedNull["items"][1]["info"]["name"].AsString.ShouldEqual("Keep");
     [Fact] void should_leave_a_joined_document_without_the_identified_child_untouched() => ctx.JoinedUnrelated["items"][0]["info"].IsBsonNull.ShouldBeTrue();
