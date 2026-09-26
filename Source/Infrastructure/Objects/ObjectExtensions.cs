@@ -120,6 +120,66 @@ public static class ObjectExtensions
     }
 
     /// <summary>
+    /// Resolve the instance holding the last segment of a <see cref="PropertyPath"/> without creating anything.
+    /// </summary>
+    /// <param name="source">Object to resolve from.</param>
+    /// <param name="propertyPath"><see cref="PropertyPath"/> to resolve.</param>
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+    /// <returns>The instance at the path, or <see langword="null"/> when any part of the path is absent.</returns>
+    /// <exception cref="UnableToResolvePropertyPathOnType">Thrown if a segment does not exist on the type being traversed.</exception>
+    /// <remarks>
+    /// The read-only counterpart of <see cref="EnsurePath"/>. A read must not write: resolving a path through
+    /// EnsurePath materialized every missing intermediate and assigned it back to its parent, so merely asking
+    /// whether a value was there created it (#4128).
+    /// </remarks>
+    public static object? TryResolvePath(this object source, PropertyPath propertyPath, ArrayIndexers arrayIndexers)
+    {
+        var currentType = source.GetType();
+        var currentInstance = source;
+        var currentPath = new PropertyPath(string.Empty);
+
+        var segments = propertyPath.Segments.ToArray();
+        for (var segmentIndex = 0; segmentIndex < segments.Length - 1; segmentIndex++)
+        {
+            var segment = segments[segmentIndex];
+            currentPath += segment;
+
+            var currentPropertyInfo = currentType.GetProperties().SingleOrDefault(_ => _.Name == segment.Value || _.Name == segment.Value.ToPascalCase())
+                ?? throw new UnableToResolvePropertyPathOnType(currentType, propertyPath);
+
+            currentInstance = currentPropertyInfo.GetValue(currentInstance);
+            if (currentInstance is null)
+            {
+                return null;
+            }
+
+            currentType = currentPropertyInfo.PropertyType;
+
+            if (segment is ArrayProperty)
+            {
+                var indexer = arrayIndexers.GetFor(currentPath);
+                var element = (currentInstance as IEnumerable)?
+                    .Cast<object>()
+                    .SingleOrDefault(_ =>
+                    {
+                        var property = _.GetType().GetProperties().SingleOrDefault(_ => _.Name == segment.Value || _.Name == segment.Value.ToPascalCase());
+                        return property is not null && (property.GetValue(_)?.Equals(indexer.Identifier) ?? false);
+                    });
+
+                if (element is null)
+                {
+                    return null;
+                }
+
+                currentInstance = element;
+                currentType = element.GetType();
+            }
+        }
+
+        return currentInstance;
+    }
+
+    /// <summary>
     /// Check for equality between two objects.
     /// </summary>
     /// <param name="left">Left object to compare with.</param>
