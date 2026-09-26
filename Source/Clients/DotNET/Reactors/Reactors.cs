@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Reactors;
 /// <summary>
 /// Represents an implementation of <see cref="IReactors"/>.
 /// </summary>
-public class Reactors : IReactors
+public class Reactors : IReactors, IReactorPartitionRecovery
 {
 #if NET8_0
     static readonly object _registerLock = new();
@@ -216,6 +216,22 @@ public class Reactors : IReactors
     {
         var handler = _handlers[reactorType];
         return handler.GetFailedPartitions();
+    }
+
+    /// <inheritdoc/>
+    public async Task<ReactorPartitionRetryOutcome> RetryFailedPartitionFor(Type reactorType, Partition partition)
+    {
+        var handler = _handlers[reactorType];
+        var response = await _servicesAccessor.Services.Observers.RetryPartition(new RetryPartition
+        {
+            EventStore = _eventStore.Name,
+            Namespace = _eventStore.Namespace,
+            ObserverId = handler.Id,
+            EventSequenceId = handler.EventSequenceId,
+            Partition = partition
+        });
+
+        return response.Outcome.ToClient();
     }
 
     /// <inheritdoc/>
