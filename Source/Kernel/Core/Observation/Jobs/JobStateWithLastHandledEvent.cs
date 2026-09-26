@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
@@ -33,6 +34,16 @@ public class JobStateWithLastHandledEvent : JobState
     /// Gets or sets the per-partition replay steps and their successfully handled watermarks.
     /// </summary>
     public IList<ReplayPartitionStep> ReplayPartitionSteps { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the failed partition keys captured before the replay began.
+    /// </summary>
+    public IList<Key> FailedPartitionKeys { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the instant before replay steps were prepared. Failures recorded later cannot be resolved by this replay.
+    /// </summary>
+    public DateTimeOffset ReplayStartedAt { get; set; } = DateTimeOffset.MinValue;
 
     /// <summary>
     /// Gets a value indicating whether the step completed successfully without handling a single event.

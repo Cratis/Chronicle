@@ -39,6 +39,11 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverRequest request)
     {
+        var observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
+        State.ReplayStartedAt = DateTimeOffset.UtcNow;
+        State.FailedPartitionKeys = (await observer.GetFailedPartitionKeys()).Distinct().ToList();
+        State.ReplayPartitionSteps.Clear();
+
         if (request.ObserverType == ObserverType.Projection)
         {
             return
@@ -59,7 +64,7 @@ public class ReplayObserver(
 
         var keys = index.GetKeys(EventSequenceNumber.First);
         var steps = new List<JobStepDetails>();
-        State.ReplayPartitionSteps.Clear();
+        var failedKeys = State.FailedPartitionKeys.ToHashSet();
 
         await foreach (var key in keys)
         {
@@ -73,7 +78,13 @@ public class ReplayObserver(
                     EventObservationState.Replay,
                     request.EventTypes));
             steps.Add(step);
-            State.ReplayPartitionSteps.Add(new(step.Id, key, EventSequenceNumber.Unavailable));
+            if (failedKeys.Contains(key))
+            {
+                // Only failures present at preparation need coverage tracked in the job state.
+                // A step without a recorded successful result (including after a restart before its
+                // completion is stored) has no proven watermark and leaves its failure in place.
+                State.ReplayPartitionSteps.Add(new(step.Id, key, EventSequenceNumber.Unavailable));
+            }
         }
 
         return steps.ToImmutableList();
@@ -191,7 +202,7 @@ public class ReplayObserver(
                 // A projection's single ordered step covers every partition up to its own global watermark.
                 // Reactors and reducers have independent steps: only a successful result from that partition counts.
                 coveredPartitions = Request.ObserverType == ObserverType.Projection
-                    ? (await observer.GetFailedPartitionKeys()).ToDictionary(_ => _, _ => State.LastHandledEventSequenceNumber)
+                    ? State.FailedPartitionKeys.ToDictionary(_ => _, _ => State.LastHandledEventSequenceNumber)
                     : State.ReplayPartitionSteps
                         .Where(_ => _.LastHandledEventSequenceNumber.IsActualValue)
                         .ToDictionary(_ => _.Partition, _ => _.LastHandledEventSequenceNumber);
@@ -221,7 +232,7 @@ public class ReplayObserver(
         {
             if (canResolve)
             {
-                await observer.ReplayedSuccessfully(lastHandledEventSequenceNumber, coveredPartitions, eventTypes);
+                await observer.ReplayedSuccessfullySince(lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt);
             }
             else
             {

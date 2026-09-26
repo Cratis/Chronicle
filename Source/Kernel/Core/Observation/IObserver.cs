@@ -188,6 +188,16 @@ public interface IObserver : IGrainWithStringKey
     Task ReplayedSuccessfully(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes);
 
     /// <summary>
+    /// Complete a replay, resolving only failures already present when it began.
+    /// </summary>
+    /// <param name="lastHandledEventSequenceNumber">The last event handled by the replay.</param>
+    /// <param name="replayedPartitions">Partitions and their successfully handled sequence numbers.</param>
+    /// <param name="replayedEventTypes">The event types read during the replay.</param>
+    /// <param name="replayStartedAt">The time before replay steps were prepared.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReplayedSuccessfullySince(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt);
+
+    /// <summary>
     /// Notify that the partition has been replayed.
     /// </summary>
     /// <param name="partition">The partition that has been replayed.</param>

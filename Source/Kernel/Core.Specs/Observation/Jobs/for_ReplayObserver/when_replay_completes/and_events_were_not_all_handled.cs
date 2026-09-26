@@ -23,5 +23,5 @@ public class and_events_were_not_all_handled : given.a_replay_observer_job
     }
 
     [Fact] void should_notify_observer_of_incomplete_replay() => _observer.Received(1).Replayed(_lastHandled);
-    [Fact] void should_not_notify_observer_of_successful_replay() => _observer.DidNotReceive().ReplayedSuccessfully(Arg.Any<EventSequenceNumber>(), Arg.Any<IReadOnlyDictionary<Key, EventSequenceNumber>>(), Arg.Any<EventType[]>());
+    [Fact] void should_not_notify_observer_of_successful_replay() => _observer.DidNotReceive().ReplayedSuccessfullySince(Arg.Any<EventSequenceNumber>(), Arg.Any<IReadOnlyDictionary<Key, EventSequenceNumber>>(), Arg.Any<EventType[]>(), Arg.Any<DateTimeOffset>());
 }

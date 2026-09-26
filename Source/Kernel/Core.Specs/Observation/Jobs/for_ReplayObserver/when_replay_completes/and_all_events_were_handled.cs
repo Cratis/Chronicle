@@ -21,10 +21,11 @@ public class and_all_events_were_handled : given.a_replay_observer_job
     async Task Because()
     {
         await _job.Start(_request);
+        await _job.PrepareStepsForTesting(_request);
         await _job.CompleteForTesting();
     }
 
-    [Fact] void should_notify_observer_of_successful_replay() => _observer.Received(1).ReplayedSuccessfully(
-        _lastHandled, Arg.Is<IReadOnlyDictionary<Key, EventSequenceNumber>>(_ => _[_failedPartition] == _lastHandled), Arg.Any<EventType[]>());
+    [Fact] void should_notify_observer_of_successful_replay() => _observer.Received(1).ReplayedSuccessfullySince(
+        _lastHandled, Arg.Is<IReadOnlyDictionary<Key, EventSequenceNumber>>(_ => _[_failedPartition] == _lastHandled), Arg.Any<EventType[]>(), Arg.Is<DateTimeOffset>(_ => _ > DateTimeOffset.MinValue));
     [Fact] void should_not_notify_observer_of_partial_replay() => _observer.DidNotReceive().Replayed(Arg.Any<EventSequenceNumber>());
 }

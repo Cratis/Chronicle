@@ -66,6 +66,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Attempting to replay partition {Partition} to event sequence number {ToEventSequenceNumber}")]
     internal static partial void AttemptReplayPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber toEventSequenceNumber);
 
+    [LoggerMessage(LogLevel.Warning, "Could not read failed event {SequenceNumber} for partition {Partition} while completing replay; keeping the partition failed")]
+    internal static partial void FailedLookingUpReplayFailure(this ILogger<Observer> logger, Exception exception, Key partition, EventSequenceNumber sequenceNumber);
+
     [LoggerMessage(LogLevel.Debug, "Finished replay for partition {Partition}")]
     internal static partial void FinishedReplayForPartition(this ILogger<Observer> logger, Key partition);
 

@@ -20,7 +20,7 @@ public class and_all_events_were_handled : given.an_observer
         GivenFailedEventAt(_partition, 12UL, _eventType);
     }
 
-    async Task Because() => await _observer.ReplayedSuccessfully(42UL, new Dictionary<Key, EventSequenceNumber> { [_partition] = 42UL }, [_eventType]);
+    async Task Because() => await _observer.ReplayedSuccessfullySince(42UL, new Dictionary<Key, EventSequenceNumber> { [_partition] = 42UL }, [_eventType], DateTimeOffset.UtcNow.AddMinutes(1));
 
     [Fact] void should_resolve_failed_partition() => _failedPartitionsStorage.State.ResolvedPartitions.Single().IsResolved.ShouldBeTrue();
     [Fact] void should_remove_failed_partition() => _failedPartitionsStorage.State.Partitions.ShouldBeEmpty();

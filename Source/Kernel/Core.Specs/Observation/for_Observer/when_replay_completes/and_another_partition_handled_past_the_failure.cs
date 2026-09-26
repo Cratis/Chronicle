@@ -11,14 +11,16 @@ public class and_another_partition_handled_past_the_failure : given.an_observer
 {
     static readonly Key _failedPartition = "failed-partition";
     static readonly Key _otherPartition = "other-partition";
+    static readonly EventType _replayedType = new("d9a13e10-21a4-4cfc-896e-fda8dfeb79bb", EventTypeGeneration.First);
 
     void Establish()
     {
         _stateStorage.State = _stateStorage.State with { FailedPartitionCount = 1 };
         _failedPartitionsStorage.State.AddFailedPartition(_failedPartition, 12UL);
+        GivenFailedEventAt(_failedPartition, 12UL, _replayedType);
     }
 
-    async Task Because() => await _observer.ReplayedSuccessfully(42UL, new Dictionary<Key, EventSequenceNumber> { [_otherPartition] = 42UL }, []);
+    async Task Because() => await _observer.ReplayedSuccessfully(42UL, new Dictionary<Key, EventSequenceNumber> { [_otherPartition] = 42UL }, [_replayedType]);
 
     [Fact] void should_keep_failed_partition() => _failedPartitionsStorage.State.Partitions.Single().IsResolved.ShouldBeFalse();
     [Fact] void should_keep_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual((FailedPartitionCount)1);

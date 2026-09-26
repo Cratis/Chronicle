@@ -65,7 +65,10 @@ public class ObserverService(
     {
         foreach (var result in results)
         {
-            if (result.TryGetError(out var error) && error != ICanHandleReplayForObserver.Error.CannotHandle)
+            // EndReplayFor is sent to every silo. A silo without the replay context did not own
+            // this replay and cannot finalize it; the owner performs the actual finalization.
+            if (result.TryGetError(out var error) &&
+                error is not (ICanHandleReplayForObserver.Error.CannotHandle or ICanHandleReplayForObserver.Error.CouldNotGetReplayContext))
             {
                 throw new ReplayFinalizationFailed(error);
             }

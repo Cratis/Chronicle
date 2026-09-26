@@ -21,7 +21,7 @@ public class and_finalization_fails : given.a_replay_observer_job
         await _job.CompleteForTesting();
     }
 
-    [Fact] void should_not_report_a_successful_replay() => _observer.DidNotReceive().ReplayedSuccessfully(
-        Arg.Any<EventSequenceNumber>(), Arg.Any<Dictionary<Key, EventSequenceNumber>>(), Arg.Any<EventType[]>());
+    [Fact] void should_not_report_a_successful_replay() => _observer.DidNotReceive().ReplayedSuccessfullySince(
+        Arg.Any<EventSequenceNumber>(), Arg.Any<IReadOnlyDictionary<Key, EventSequenceNumber>>(), Arg.Any<EventType[]>(), Arg.Any<DateTimeOffset>());
     [Fact] void should_report_an_incomplete_replay() => _observer.Received(1).Replayed(42UL);
 }
