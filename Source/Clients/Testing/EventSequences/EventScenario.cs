@@ -68,13 +68,15 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// <param name="eventStoreName">The event store name.</param>
 /// <param name="namespaceName">The event store namespace name.</param>
 /// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies client-side constraint definitions. Pass <see langword="null"/> for no constraints.</param>
+/// <param name="defaults">The <see cref="Defaults"/> used for event types and serialization.</param>
 public class EventScenario(
     EventSequenceId eventSequenceId,
     EventStoreName eventStoreName,
     EventStoreNamespaceName namespaceName,
-    ICanProvideConstraints? constraintProvider) : IDisposable
+    ICanProvideConstraints? constraintProvider,
+    Defaults defaults) : IDisposable
 {
-    readonly (EventLog EventLog, InProcessChronicleConnection Connection, InMemoryEventSequenceStorage Storage) _created = CreateEventLog(eventSequenceId, eventStoreName, namespaceName, constraintProvider);
+    readonly (EventLog EventLog, InProcessChronicleConnection Connection, InMemoryEventSequenceStorage Storage) _created = CreateEventLog(eventSequenceId, eventStoreName, namespaceName, constraintProvider, defaults);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventScenario"/> class.
@@ -89,7 +91,23 @@ public class EventScenario(
             EventSequenceId.Log,
             "test-event-store",
             "default",
-            CreateDiscoveredConstraintProvider())
+            CreateDiscoveredConstraintProvider(Defaults.Instance),
+            Defaults.Instance)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventScenario"/> class with per-run defaults.
+    /// </summary>
+    /// <param name="defaults">The <see cref="Defaults"/> whose artifacts and event types to use.</param>
+    /// <param name="constraintProvider">Optional explicit constraints; if omitted they are discovered from the given defaults.</param>
+    public EventScenario(Defaults defaults, ICanProvideConstraints? constraintProvider = null)
+        : this(
+            EventSequenceId.Log,
+            "test-event-store",
+            "default",
+            constraintProvider ?? CreateDiscoveredConstraintProvider(defaults),
+            defaults)
     {
     }
 
@@ -102,7 +120,24 @@ public class EventScenario(
             EventSequenceId.Log,
             "test-event-store",
             "default",
-            constraintProvider)
+            constraintProvider,
+            Defaults.Instance)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventScenario"/> class for a specific sequence, store and namespace.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence identifier.</param>
+    /// <param name="eventStoreName">The event store name.</param>
+    /// <param name="namespaceName">The event store namespace name.</param>
+    /// <param name="constraintProvider">The explicit constraints, or <see langword="null"/> for none.</param>
+    public EventScenario(
+        EventSequenceId eventSequenceId,
+        EventStoreName eventStoreName,
+        EventStoreNamespaceName namespaceName,
+        ICanProvideConstraints? constraintProvider)
+        : this(eventSequenceId, eventStoreName, namespaceName, constraintProvider, Defaults.Instance)
     {
     }
 
@@ -158,9 +193,9 @@ public class EventScenario(
         EventSequenceId eventSequenceId,
         EventStoreName eventStoreName,
         EventStoreNamespaceName namespaceName,
-        ICanProvideConstraints? constraintProvider)
+        ICanProvideConstraints? constraintProvider,
+        Defaults defaults)
     {
-        var defaults = Defaults.Instance;
         var compliance = new InProcessCompliance();
         var kernelEventSequenceId = (KernelSequenceConcepts::EventSequenceId)(string)eventSequenceId;
         var kernelEventStoreName = (KernelConceptsNs::EventStoreName)(string)eventStoreName;
@@ -238,9 +273,8 @@ public class EventScenario(
         return (eventLog, connection, eventSequenceStorage);
     }
 
-    static CompositeConstraintProvider CreateDiscoveredConstraintProvider()
+    static CompositeConstraintProvider CreateDiscoveredConstraintProvider(Defaults defaults)
     {
-        var defaults = Defaults.Instance;
         var namingPolicy = new CamelCaseNamingPolicy();
         using var serviceProvider = new DefaultServiceProvider();
         using var loggerFactory = new NullLoggerFactory();
