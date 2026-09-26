@@ -47,11 +47,16 @@ public static class ExpandoObjectExistingPathExtensions
 
                 var indexer = arrayIndexers.GetFor(currentPath);
                 var children = enumerable.OfType<ExpandoObject>().ToArray();
-                current = !indexer.IdentifierProperty.IsSet && indexer.Identifier is int index && index >= 0 && index < children.Length
-                    ? children[index]
-                    : children.SingleOrDefault(child =>
+                if (!indexer.IdentifierProperty.IsSet)
+                {
+                    current = indexer.Identifier is int index && index >= 0 && index < children.Length ? children[index] : null;
+                }
+                else
+                {
+                    current = children.SingleOrDefault(child =>
                         ((IDictionary<string, object?>)child).TryGetValue(indexer.IdentifierProperty.Path, out var identifier) &&
                         identifier?.IsEqualTo(indexer.Identifier) == true);
+                }
             }
             else
             {
