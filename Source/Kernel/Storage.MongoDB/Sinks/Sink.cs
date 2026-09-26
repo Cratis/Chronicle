@@ -436,6 +436,7 @@ public class Sink(
         var totalCount = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
         var documents = await collection
             .Find(FilterDefinition<BsonDocument>.Empty)
+            .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
             .Skip(skip)
             .Limit(take)
             .ToListAsync();
@@ -456,6 +457,7 @@ public class Sink(
             // Get initial instances
             var documents = await collection
                 .Find(FilterDefinition<BsonDocument>.Empty)
+                .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
                 .Skip(skip)
                 .Limit(take)
                 .ToListAsync();
@@ -467,7 +469,7 @@ public class Sink(
                 allDocuments =>
                 {
                     // Re-query with skip/take when changes occur
-                    var updatedDocuments = allDocuments.Skip(skip).Take(take);
+                    var updatedDocuments = allDocuments.OrderBy(doc => doc["_id"]).Skip(skip).Take(take);
                     observer.OnNext(updatedDocuments.Select(doc => expandoObjectConverter.ToExpandoObject(doc, schema)));
                 },
                 observer.OnError,
