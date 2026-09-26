@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.RegularExpressions;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
@@ -17,13 +16,10 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 /// </remarks>
 /// <param name="resolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event values.</param>
 /// <param name="keyResolvers"><see cref="IKeyResolvers" /> for resolving the <see cref="Key"/>.</param>
-public partial class CompositeKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers, IKeyResolvers keyResolvers) : IKeyExpressionResolver
+public class CompositeKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers, IKeyResolvers keyResolvers) : IKeyExpressionResolver
 {
-    [GeneratedRegex("\\$composite\\((?<expressions>[\\w=$\\({\\)., ]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    static partial Regex CompositeKeyRegEx { get; }
-
     /// <inheritdoc/>
-    public bool CanResolve(string expression) => CompositeKeyRegEx.Match(expression).Success;
+    public bool CanResolve(string expression) => expression.StartsWith("$composite(", StringComparison.Ordinal);
 
     /// <inheritdoc/>
     public KeyResolver Resolve(IProjection projection, string expression, PropertyPath identifiedByProperty)
