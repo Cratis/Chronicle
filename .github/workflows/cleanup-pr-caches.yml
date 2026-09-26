@@ -1,0 +1,40 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+name: Clean up pull request caches
+
+# Safe for fork pull requests: no code is checked out or executed; this workflow only deletes
+# Actions caches attached to the closed pull request's refs.
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Delete pull request caches
+        run: |
+          set -euo pipefail
+          deleted=0
+          for ref in "refs/pull/${PR_NUMBER}/merge" "refs/pull/${PR_NUMBER}/head"; do
+            while :; do
+              ids=$(gh cache list --ref "$ref" --limit 100 --json id -q '.[].id')
+              if [ -z "$ids" ]; then
+                break
+              fi
+              while IFS= read -r id; do
+                gh cache delete "$id"
+                ((deleted+=1))
+              done <<< "$ids"
+            done
+          done
+          echo "Deleted $deleted pull request caches."
