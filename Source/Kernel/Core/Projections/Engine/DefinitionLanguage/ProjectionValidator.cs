@@ -105,6 +105,7 @@ public class ProjectionValidator(
     {
         var seenEvents = new HashSet<string>(StringComparer.Ordinal);
         var seenJoinEvents = new HashSet<string>(StringComparer.Ordinal);
+        var seenEveryOrAll = false;
 
         foreach (var block in blocks)
         {
@@ -130,6 +131,13 @@ public class ProjectionValidator(
 
             switch (block)
             {
+                case EverySyntax or AllSyntax:
+                    if (seenEveryOrAll)
+                    {
+                        errors.Add("Only one 'every' or 'all' block is allowed at each level", block.Location.Line, block.Location.Column);
+                    }
+                    seenEveryOrAll = true;
+                    break;
                 case FromSyntax from:
                     foreach (var eventSpec in from.Events)
                     {
