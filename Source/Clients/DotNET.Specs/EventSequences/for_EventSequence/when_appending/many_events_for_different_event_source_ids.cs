@@ -91,4 +91,5 @@ public class many_events_for_different_event_source_ids : given.an_event_sequenc
     [Fact] void should_append_second_event_with_strategy_concurrency_scope() => _command.ConcurrencyScopes.First(s => s.EventSourceId == _events[1].EventSourceId.Value).Scope.SequenceNumber.ShouldEqual((ulong)_concurrencyScopes[_events[1].EventSourceId].SequenceNumber);
     [Fact] void should_append_third_event_with_strategy_concurrency_scope() => _command.ConcurrencyScopes.First(s => s.EventSourceId == _events[2].EventSourceId.Value).Scope.SequenceNumber.ShouldEqual((ulong)_concurrencyScopes[_events[2].EventSourceId].SequenceNumber);
     [Fact] void should_return_result_with_sequence_numbers() => _result.SequenceNumbers.Select(_ => _.Value).ShouldEqual(_response.SequenceNumbers);
+    [Fact] void should_carry_the_appended_event_type_once() => _result.EventTypes.ShouldContainOnly([_eventType]);
 }

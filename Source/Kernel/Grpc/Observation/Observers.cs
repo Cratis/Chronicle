@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Events;
@@ -47,6 +48,10 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     /// <inheritdoc/>
     public async Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForObserverCompletionRequest request, CallContext context = default)
     {
+        var eventTypeTails = request.EventTypeTails
+            .GroupBy(_ => _.EventType.Id, StringComparer.Ordinal)
+            .ToDictionary(_ => _.Key, _ => _.Max(tail => tail.SequenceNumber), StringComparer.Ordinal);
+        var stopwatch = Stopwatch.StartNew();
         while (true)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
@@ -58,7 +63,8 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                     Namespace = request.Namespace
                 },
                 context))
-                .Where(_ => _.EventSequenceId == request.EventSequenceId)
+                .Where(_ => _.EventSequenceId == request.EventSequenceId &&
+                    (eventTypeTails.Count == 0 || !_.EventTypes.Any() || _.EventTypes.Any(type => eventTypeTails.ContainsKey(type.Id))))
                 .ToArray();
 
             if (observers.Length == 0)
@@ -76,15 +82,28 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 .FailedPartitions
                 .GetFor(observerIds);
             var failedObserverIds = failedPartitions.Partitions.Select(_ => _.ObserverId.Value).ToHashSet(StringComparer.Ordinal);
-            if (observers.All(_ =>
-                (((EventSequenceNumber)_.LastHandledEventSequenceNumber).IsActualValue &&
-                 _.LastHandledEventSequenceNumber >= request.TailEventSequenceNumber) ||
-                failedObserverIds.Contains(_.Id)))
+            var outstanding = observers.Where(_ =>
+                !failedObserverIds.Contains(_.Id) &&
+                (!((EventSequenceNumber)_.LastHandledEventSequenceNumber).IsActualValue ||
+                 _.LastHandledEventSequenceNumber < (eventTypeTails.Count == 0 || !_.EventTypes.Any()
+                     ? request.TailEventSequenceNumber
+                     : _.EventTypes.Where(type => eventTypeTails.ContainsKey(type.Id)).Max(type => eventTypeTails[type.Id])))).Select(_ => _.Id).ToArray();
+            if (outstanding.Length == 0)
             {
                 return new WaitForObserverCompletionResponse
                 {
                     IsSuccess = !failedPartitions.Partitions.Any(),
                     FailedPartitions = failedPartitions.Partitions.ToContract().ToArray()
+                };
+            }
+
+            if (request.TimeoutMilliseconds > 0 && stopwatch.ElapsedMilliseconds >= request.TimeoutMilliseconds)
+            {
+                return new WaitForObserverCompletionResponse
+                {
+                    TimedOut = true,
+                    FailedPartitions = failedPartitions.Partitions.ToContract().ToArray(),
+                    OutstandingObservers = outstanding
                 };
             }
 
