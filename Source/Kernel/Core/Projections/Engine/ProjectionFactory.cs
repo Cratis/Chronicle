@@ -701,7 +701,7 @@ public class ProjectionFactory(
             var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType)?.Schema, projection.AutoMap, projection.NoAutoMapProperties);
             var propertyMappers = mergedJoinProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
             propertyMappers.AddRange(propertyMappersForEveryEventType);
-            var joinObservable = projection.Event
+            projection.Event
                 .WhereEventTypeEquals(eventType)
                 .Join(childrenAccessorProperty + joinDefinition.On)
                 .Project(
@@ -709,15 +709,6 @@ public class ProjectionFactory(
                     actualIdentifiedByProperty,
                     propertyMappers,
                     subscriptions: projection.Subscriptions);
-
-            if (projectionDefinition.FromEvery.IncludeChildren)
-            {
-                joinObservable.Project(
-                    childrenAccessorProperty,
-                    actualIdentifiedByProperty,
-                    propertyMappersForEveryEventType,
-                    subscriptions: projection.Subscriptions);
-            }
         }
 
         foreach (var unmapped in FindUnmappedCollectionProperties(projectionDefinition, currentReadModelSchema, projection.AutoMap, projection.NoAutoMapProperties, eventTypeSchemas))
