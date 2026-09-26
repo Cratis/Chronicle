@@ -24,6 +24,22 @@ public class ProjectionValidator(
     readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _readModelLookup = readModelDefinitions.DistinctBy(_ => _.Identifier).ToDictionary(_ => _.Identifier);
     readonly Dictionary<EventType, EventTypeSchema> _eventTypeLookup = eventTypeSchemas.DistinctBy(_ => _.Type).ToDictionary(_ => _.Type);
 
+    /// <summary>Support by block type and projection level. Unlisted types are rejected.</summary>
+    internal static IReadOnlyDictionary<Type, IReadOnlySet<ProjectionLevel>> ProjectionBlockSupport { get; } =
+        new Dictionary<Type, IReadOnlySet<ProjectionLevel>>
+        {
+            [typeof(FromSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
+            [typeof(EverySyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
+            [typeof(AllSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
+            [typeof(JoinSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
+            [typeof(ChildrenSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
+            [typeof(NestedSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
+            [typeof(RemoveWithSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
+            [typeof(RemoveViaJoinSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
+            [typeof(ClearWithSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
+            [typeof(ProjectionVariantSyntax)] = new HashSet<ProjectionLevel>()
+        };
+
     /// <summary>
     /// Validates a projection against the available read models and event type schemas.
     /// </summary>
@@ -47,7 +63,6 @@ public class ProjectionValidator(
 
         var readModelSchema = readModelDefinition.GetSchemaForLatestGeneration();
 
-        ValidateDuplicateEvents(projection.Blocks, errors);
         ValidateBlocks(projection, readModelSchema, errors);
         return readModelSchema;
     }
@@ -60,8 +75,6 @@ public class ProjectionValidator(
     /// <returns>The inferred read model schema if validation succeeds, null otherwise.</returns>
     public JsonSchema? ValidateAndInferSchema(ProjectionSyntax projection, CompilerErrors errors)
     {
-        ValidateDuplicateEvents(projection.Blocks, errors);
-
         var aggregatedEventProperties = new Dictionary<string, (JsonObjectType Type, string? Format)>(StringComparer.Ordinal);
 
         CollectEventProperties(projection.Blocks, aggregatedEventProperties, errors);
@@ -85,28 +98,64 @@ public class ProjectionValidator(
     /// </summary>
     /// <param name="blocks">The projection blocks to check.</param>
     /// <param name="errors">The compiler errors collection to add errors to.</param>
-    internal static void ValidateSupportedBlocks(IEnumerable<ProjectionBlockSyntax> blocks, CompilerErrors errors)
+    internal static void ValidateSupportedBlocks(IEnumerable<ProjectionBlockSyntax> blocks, CompilerErrors errors) =>
+        ValidateSupportedBlocks(blocks, errors, ProjectionLevel.Root);
+
+    static void ValidateSupportedBlocks(IEnumerable<ProjectionBlockSyntax> blocks, CompilerErrors errors, ProjectionLevel level)
     {
+        var seenEvents = new HashSet<string>(StringComparer.Ordinal);
+        var seenJoinEvents = new HashSet<string>(StringComparer.Ordinal);
+
         foreach (var block in blocks)
         {
+            if (!ProjectionBlockSupport.TryGetValue(block.GetType(), out var supportedLevels))
+            {
+                errors.Add($"Projection block of type '{block.GetType().Name}' is not supported", block.Location.Line, block.Location.Column);
+                continue;
+            }
+
+            if (!supportedLevels.Contains(level))
+            {
+                var message = block switch
+                {
+                    AllSyntax => "An 'all' block is only supported at the root; use a root 'all' with a dotted property path",
+                    RemoveViaJoinSyntax when level == ProjectionLevel.Root => "'remove via join' at the root is not supported",
+                    RemoveViaJoinSyntax => "'remove via join' inside 'nested' is not supported",
+                    ChildrenSyntax => "'children' inside 'nested' is not supported",
+                    _ => $"Projection block of type '{block.GetType().Name}' is not supported"
+                };
+                errors.Add(message, block.Location.Line, block.Location.Column);
+                continue;
+            }
+
             switch (block)
             {
+                case FromSyntax from:
+                    foreach (var eventSpec in from.Events)
+                    {
+                        CheckDuplicateEvent(eventSpec.Event, eventSpec.Location, seenEvents, errors);
+                    }
+                    break;
                 case ChildrenSyntax children:
-                    ValidateSupportedBlocks(children.Blocks, errors);
+                    ValidateSupportedBlocks(children.Blocks, errors, ProjectionLevel.Children);
                     break;
                 case NestedSyntax nested:
-                    ValidateSupportedBlocks(nested.Blocks, errors);
+                    ValidateSupportedBlocks(nested.Blocks, errors, ProjectionLevel.Nested);
                     break;
-                case FromSyntax:
-                case EverySyntax:
-                case AllSyntax:
-                case JoinSyntax:
-                case RemoveWithSyntax:
-                case RemoveViaJoinSyntax:
-                case ClearWithSyntax:
+                case JoinSyntax join:
+                    foreach (var joinEvent in join.Events)
+                    {
+                        CheckDuplicateEvent(joinEvent.Event, joinEvent.Location, seenJoinEvents, errors);
+                    }
                     break;
-                default:
-                    errors.Add($"Projection block of type '{block.GetType().Name}' is not supported", block.Location.Line, block.Location.Column);
+                case RemoveWithSyntax removeWith:
+                    CheckDuplicateEvent(removeWith.Event, removeWith.Location, seenEvents, errors);
+                    break;
+                case RemoveViaJoinSyntax removeViaJoin:
+                    CheckDuplicateEvent(removeViaJoin.Event, removeViaJoin.Location, seenEvents, errors);
+                    break;
+                case ClearWithSyntax clearWith:
+                    CheckDuplicateEvent(clearWith.Event, clearWith.Location, seenEvents, errors);
                     break;
             }
         }
@@ -121,47 +170,7 @@ public class ProjectionValidator(
         return char.ToLowerInvariant(value[0]) + value[1..];
     }
 
-    void ValidateDuplicateEvents(IEnumerable<ProjectionBlockSyntax> blocks, CompilerErrors errors)
-    {
-        var seenEvents = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (var block in blocks)
-        {
-            switch (block)
-            {
-                case FromSyntax from:
-                    foreach (var eventSpec in from.Events)
-                    {
-                        CheckDuplicateEvent(eventSpec.Event, eventSpec.Location, seenEvents, errors);
-                    }
-                    break;
-                case ChildrenSyntax children:
-                    ValidateDuplicateEvents(children.Blocks, errors);
-                    break;
-                case JoinSyntax join:
-                    ValidateDuplicateEventsInJoin(join, errors);
-                    break;
-                case RemoveWithSyntax removeWith:
-                    CheckDuplicateEvent(removeWith.Event, removeWith.Location, seenEvents, errors);
-                    break;
-                case RemoveViaJoinSyntax removeViaJoin:
-                    CheckDuplicateEvent(removeViaJoin.Event, removeViaJoin.Location, seenEvents, errors);
-                    break;
-            }
-        }
-    }
-
-    void ValidateDuplicateEventsInJoin(JoinSyntax join, CompilerErrors errors)
-    {
-        var seenEvents = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (var joinEvent in join.Events)
-        {
-            CheckDuplicateEvent(joinEvent.Event, joinEvent.Location, seenEvents, errors);
-        }
-    }
-
-    void CheckDuplicateEvent(string eventName, SourceLocation location, HashSet<string> seenEvents, CompilerErrors errors)
+    static void CheckDuplicateEvent(string eventName, SourceLocation location, HashSet<string> seenEvents, CompilerErrors errors)
     {
         if (!seenEvents.Add(eventName))
         {
