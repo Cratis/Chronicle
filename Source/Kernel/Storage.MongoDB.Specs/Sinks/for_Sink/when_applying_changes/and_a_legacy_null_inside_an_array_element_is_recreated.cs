@@ -29,8 +29,6 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
         public BsonDocument Direct = default!;
         public BsonDocument Bulk = default!;
         public BsonDocument Nested = default!;
-        public BsonDocument IndexedDirect = default!;
-        public BsonDocument IndexedBulk = default!;
         public BsonDocument NestedArrays = default!;
         public BsonDocument JoinedNull = default!;
         public BsonDocument JoinedExisting = default!;
@@ -55,17 +53,11 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
             await Recreate("bulk", "[items].info.name", "[items]");
             await _sink.EndBulk();
             await Recreate("nested", "outer.[items].info.name", "outer.[items]");
-            await RecreateByIndex("indexed-direct");
-            await _sink.BeginBulk();
-            await RecreateByIndex("indexed-bulk");
-            await _sink.EndBulk();
             await RecreateNestedArrays();
             await RecreateJoinedArray();
             Direct = await Find("direct");
             Bulk = await Find("bulk");
             Nested = await Find("nested");
-            IndexedDirect = await Find("indexed-direct");
-            IndexedBulk = await Find("indexed-bulk");
             NestedArrays = await Find("nested-arrays");
             JoinedNull = await Find("joined-null");
             JoinedExisting = await Find("joined-existing");
@@ -97,31 +89,6 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
             changeset.InitialState.Returns(initial);
             changeset.CurrentState.Returns(initial);
             changeset.Changes.Returns([new PropertiesChanged<ExpandoObject>(new ExpandoObject(), [new PropertyDifference(leaf, null, "Again", new ArrayIndexers([new ArrayIndexer(array, "id", "first")]))])]);
-            await _sink.ApplyChanges(key, changeset, 1UL);
-        }
-
-        async Task RecreateByIndex(string id)
-        {
-            await _collection.InsertOneAsync(new BsonDocument
-            {
-                { "_id", id },
-                {
-                    "items",
-                    new BsonArray
-                    {
-                        new BsonDocument("info", BsonNull.Value),
-                        new BsonDocument("info", new BsonDocument("name", "Keep"))
-                    }
-                }
-            });
-            var key = new Key(id, ArrayIndexers.NoIndexers);
-            var initial = await _sink.FindOrDefault(key);
-            var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
-            changeset.InitialState.Returns(initial);
-            changeset.Changes.Returns([new PropertiesChanged<ExpandoObject>(new ExpandoObject(),
-            [
-                new PropertyDifference("[items].info.name", null, "Again", new ArrayIndexers([new ArrayIndexer("[items]", PropertyPath.NotSet, 0)]))
-            ])]);
             await _sink.ApplyChanges(key, changeset, 1UL);
         }
 
@@ -197,10 +164,6 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
     [Fact] void should_recreate_only_the_matching_child() => ctx.Direct["items"][0]["info"]["name"].AsString.ShouldEqual("Again");
     [Fact] void should_leave_the_sibling_untouched() => ctx.Direct["items"][1]["info"]["name"].AsString.ShouldEqual("Keep");
     [Fact] void should_recreate_the_child_inside_a_nested_object() => ctx.Nested["outer"]["items"][0]["info"]["name"].AsString.ShouldEqual("Again");
-    [Fact] void should_recreate_the_identifierless_element_by_index() => ctx.IndexedDirect["items"][0]["info"]["name"].AsString.ShouldEqual("Again");
-    [Fact] void should_leave_the_identifierless_sibling_untouched() => ctx.IndexedDirect["items"][1]["info"]["name"].AsString.ShouldEqual("Keep");
-    [Fact] void should_recreate_the_identifierless_element_in_bulk() => ctx.IndexedBulk["items"][0]["info"]["name"].AsString.ShouldEqual("Again");
-    [Fact] void should_leave_the_identifierless_bulk_sibling_untouched() => ctx.IndexedBulk["items"][1]["info"]["name"].AsString.ShouldEqual("Keep");
     [Fact] void should_leave_the_nested_sibling_untouched() => ctx.Nested["outer"]["items"][1]["info"]["name"].AsString.ShouldEqual("Keep");
     [Fact] void should_recreate_the_child_in_an_ordered_bulk() => ctx.Bulk["items"][0]["info"]["name"].AsString.ShouldEqual("Again");
     [Fact] void should_leave_the_bulk_sibling_untouched() => ctx.Bulk["items"][1]["info"]["name"].AsString.ShouldEqual("Keep");

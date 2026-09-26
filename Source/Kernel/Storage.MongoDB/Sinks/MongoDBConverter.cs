@@ -3,7 +3,6 @@
 
 using System.Collections;
 using System.Dynamic;
-using System.Globalization;
 using System.Text;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -63,22 +62,12 @@ public class MongoDBConverter(
                         {
                             var arrayIndexer = arrayIndexers.GetFor(currentPropertyPath);
                             var arrayPropertyName = segment.Value.ToMongoDBPropertyName();
-                            if (!arrayIndexer.IdentifierProperty.IsSet)
-                            {
-                                // Identifier-less children are indexed by their position in the changeset.
-                                // Use the same numeric path for leaf sets and legacy-null parent unsets.
-                                var index = int.Parse(arrayIndexer.Identifier.ToString()!, NumberStyles.None, CultureInfo.InvariantCulture);
-                                propertyBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0}.{1}", arrayPropertyName, index);
-                            }
-                            else
-                            {
-                                propertyBuilder.AppendFormat("{0}.$[{1}]", arrayPropertyName, collectionIdentifier);
-                                var identifierPropertyName = arrayIndexer.IdentifierProperty.Path.ToMongoDBPropertyName();
-                                var identifierPath = currentPropertyPath + arrayIndexer.IdentifierProperty;
-                                var identifierBsonValue = ToBsonValueForArrayIndexer(arrayIndexer.Identifier, identifierPath);
-                                var filterDocument = new BsonDocument { [$"{collectionIdentifier}.{identifierPropertyName}"] = identifierBsonValue };
-                                arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(filterDocument));
-                            }
+                            propertyBuilder.AppendFormat("{0}.$[{1}]", arrayPropertyName, collectionIdentifier);
+                            var identifierPropertyName = arrayIndexer.IdentifierProperty.Path.ToMongoDBPropertyName();
+                            var identifierPath = currentPropertyPath + arrayIndexer.IdentifierProperty;
+                            var identifierBsonValue = ToBsonValueForArrayIndexer(arrayIndexer.Identifier, identifierPath);
+                            var filterDocument = new BsonDocument { [$"{collectionIdentifier}.{identifierPropertyName}"] = identifierBsonValue };
+                            arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(filterDocument));
                         }
                         else
                         {

@@ -176,6 +176,14 @@ public class ChangesetConverter(
 
     static IEnumerable<PropertyPath> MissingParents(ExpandoObject? initialState, PropertyPath path, ArrayIndexers indexers)
     {
+        // Identifier-less indexers cannot safely select a child for a pre-unset: their MongoDB
+        // filter has no stable identity, and a numeric path can shift between reading and writing.
+        // Leave their leaf update on the existing path rather than risk unsetting the wrong child.
+        if (indexers.All.Any(_ => !_.IdentifierProperty.IsSet))
+        {
+            yield break;
+        }
+
         var segments = path.Segments.ToArray();
         var current = initialState as IDictionary<string, object?>;
         var parentPath = PropertyPath.Root;
