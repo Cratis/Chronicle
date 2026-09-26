@@ -100,3 +100,5 @@
   href: CHR0052.mdx
 - name: CHR0053 - [PII] and [Encrypted] cannot both apply to the same value
   href: CHR0053.mdx
+- name: CHR0054 - Reactor method has an unsupported return type
+  href: CHR0054.mdx

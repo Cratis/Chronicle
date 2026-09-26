@@ -33,9 +33,7 @@ env:
   DOTNET8_VERSION: "8.0.410"
   DOTNET9_VERSION: "9.0.x"
   DOTNET_VERSION: "10.0.x"
-  # Own cache and image tag. Sharing `.NET Build & Integration`'s would mean racing a workflow this
-  # one cannot wait on, and losing that race silently produces an empty restore.
-  HOT_CORE_DEV_CACHE: "hot-core-dev-cache-${{ github.sha }}"
+  # Own image tag; this workflow builds and uploads its own output for its matrix.
   HOT_CORE_IMAGE: "ghcr.io/cratis/chronicle:hot-core-${{ github.sha }}"
 
 jobs:
@@ -75,11 +73,9 @@ jobs:
 
           python3 .github/scripts/detect-hot-core-changes.py --base "$BASE_SHA" --head "$HEAD_SHA"
 
-  # Builds what the matrix consumes. This deliberately does not restore `.NET Build & Integration`'s
-  # caches: they are keyed on the same commit but written by a workflow this one neither depends on
-  # nor can wait for, so reading them is a race whose losing branch is an empty `bin` and a matrix
-  # that passes without running anything. A gate that fails open is the failure mode this program
-  # exists to remove. The cost is paid only by pull requests that touch the hot core.
+  # Builds what the matrix consumes. It uploads its own artifact rather than depending on
+  # another workflow's build, which it cannot wait for. The cost is paid only by pull
+  # requests that touch the hot core.
   build:
     needs: [detect]
     if: needs.detect.outputs.touched == 'true'
@@ -89,7 +85,6 @@ jobs:
       contents: read
       packages: write
     outputs:
-      dotnet-cache-key: ${{ steps.export.outputs.key }}
       chronicle-image: ${{ steps.export.outputs.image }}
 
     steps:
@@ -122,11 +117,6 @@ jobs:
           restore-keys: |
             hot-core-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
 
-      - uses: actions/cache@v4
-        with:
-          path: ./**/bin
-          key: ${{ env.HOT_CORE_DEV_CACHE }}
-
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
         with:
@@ -139,8 +129,7 @@ jobs:
           dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
           dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
 
-      # The integration shards run `--no-build` against the DEVELOPMENT-symbol build, so that is the
-      # variant the cache has to hold.
+      # The integration shards run `--no-build` against this DEVELOPMENT-symbol build.
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
@@ -155,11 +144,26 @@ jobs:
           docker build -t "${{ env.HOT_CORE_IMAGE }}" -f Docker/Local/Dockerfile .
           docker push ${{ env.HOT_CORE_IMAGE }}
 
-      - name: Export cache key and image
-        id: export
+      - name: Pack hot-core build output
         run: |
-          echo "key=${{ env.HOT_CORE_DEV_CACHE }}" >> "$GITHUB_OUTPUT"
-          echo "image=${{ env.HOT_CORE_IMAGE }}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          for project in Integration/Client Integration/Kernel Integration/Clustering; do
+            test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
+          done
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -czf hot-core-build-output.tar.gz -T -
+
+      - name: Upload hot-core build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: hot-core-build-output
+          path: hot-core-build-output.tar.gz
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Export image
+        id: export
+        run: echo "image=${{ env.HOT_CORE_IMAGE }}" >> "$GITHUB_OUTPUT"
 
   # The same reusable workflow the nightly run uses, with `all-providers` on: every storage backend,
   # out of process, not just the default one a pull request gets.
@@ -172,7 +176,7 @@ jobs:
     uses: ./.github/workflows/integration.yml
     secrets: inherit
     with:
-      dotnet-cache-key: ${{ needs.build.outputs.dotnet-cache-key }}
+      build-output-artifact: hot-core-build-output
       chronicle-image: ${{ needs.build.outputs.chronicle-image }}
       all-providers: true
 

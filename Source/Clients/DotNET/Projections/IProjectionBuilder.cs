@@ -70,14 +70,16 @@ public interface IProjectionBuilder<TReadModel, TBuilder>
     TBuilder Join<TEvent>(Action<IJoinBuilder<TReadModel, TEvent>>? builderCallback = default);
 
     /// <summary>
-    /// Start building property expressions that applies for every events being projected from.
+    /// Start building property expressions that apply to the projection's subscribed event types.
+    /// When combined with FromAll, these mappings apply to all event types.
     /// </summary>
     /// <param name="builderCallback">Callback for building.</param>
     /// <returns>Builder continuation.</returns>
     TBuilder FromEvery(Action<IFromEveryBuilder<TReadModel>> builderCallback);
 
     /// <summary>
-    /// Start building property expressions that applies for all event types in the system.
+    /// Start building property expressions that apply to all event types in the system.
+    /// When combined with FromEvery, both sets of mappings apply to all event types.
     /// </summary>
     /// <param name="builderCallback">Callback for building.</param>
     /// <returns>Builder continuation.</returns>

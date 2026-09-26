@@ -405,7 +405,7 @@ internal sealed class ReadModels(
 
         return Observable.Create<ReadModelChangeset>(async observer =>
         {
-            var definition = await WaitForReadModelDefinition(readModel, context.CancellationToken);
+            var definition = await WaitForReadModelDefinition(readModel, request.ReadModelIdentifier, context.CancellationToken);
 
             if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
             {
@@ -575,7 +575,7 @@ internal sealed class ReadModels(
         return jsonObject.ToJsonString(jsonSerializerOptions);
     }
 
-    async Task<Concepts.ReadModels.ReadModelDefinition> WaitForReadModelDefinition(IReadModel readModel, CancellationToken cancellationToken)
+    async Task<Concepts.ReadModels.ReadModelDefinition> WaitForReadModelDefinition(IReadModel readModel, ReadModelIdentifier readModelIdentifier, CancellationToken cancellationToken)
     {
         const int maxRetries = 50;
         const int delayMs = 100;
@@ -585,7 +585,7 @@ internal sealed class ReadModels(
             cancellationToken.ThrowIfCancellationRequested();
 
             var definition = await readModel.GetDefinition();
-            if (!string.IsNullOrEmpty(definition.ObserverIdentifier))
+            if (definition?.Sink is not null && !string.IsNullOrEmpty(definition.ObserverIdentifier?.Value))
             {
                 return definition;
             }
@@ -593,7 +593,7 @@ internal sealed class ReadModels(
             await Task.Delay(delayMs, cancellationToken);
         }
 
-        throw new InvalidOperationException($"Read model definition not registered within {maxRetries * delayMs}ms. Ensure the read model is registered before watching.");
+        throw new ReadModelNotFound(readModelIdentifier);
     }
 
     async Task<ConnectedReducerContext> GetConnectedReducerContext(

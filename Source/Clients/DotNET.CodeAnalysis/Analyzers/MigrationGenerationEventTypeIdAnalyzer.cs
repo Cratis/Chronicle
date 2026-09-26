@@ -48,11 +48,13 @@ public class MigrationGenerationEventTypeIdAnalyzer : DiagnosticAnalyzer
         var upgrade = migrationBase.TypeArguments[0];
         var previous = migrationBase.TypeArguments[1];
 
+        var upgradeGenerationFor = WellKnownTypes.GetEventTypeGenerationForAttributeData(upgrade);
         var previousGenerationFor = WellKnownTypes.GetEventTypeGenerationForAttributeData(previous);
-        if (previousGenerationFor is not null)
+        if (upgradeGenerationFor is not null || previousGenerationFor is not null)
         {
-            var referencedType = WellKnownTypes.GetEventTypeGenerationForTarget(previousGenerationFor);
-            if (referencedType is null || !SymbolEqualityComparer.Default.Equals(referencedType, upgrade))
+            var resolvedUpgradeId = ResolveEventTypeId(upgrade);
+            var resolvedPreviousId = ResolveEventTypeId(previous);
+            if (resolvedUpgradeId is null || resolvedPreviousId is null || resolvedUpgradeId != resolvedPreviousId)
             {
                 context.ReportDiagnostic(Diagnostic.Create(
                     Rule,
@@ -84,5 +86,18 @@ public class MigrationGenerationEventTypeIdAnalyzer : DiagnosticAnalyzer
                 previous.Name,
                 typeSymbol.Name));
         }
+    }
+
+    static string? ResolveEventTypeId(ITypeSymbol type)
+    {
+        var generationFor = WellKnownTypes.GetEventTypeGenerationForAttributeData(type);
+        var eventType = generationFor is null ? type : WellKnownTypes.GetEventTypeGenerationForTarget(generationFor);
+        if (eventType is null)
+        {
+            return null;
+        }
+
+        var eventTypeAttribute = WellKnownTypes.GetEventTypeAttributeData(eventType);
+        return eventTypeAttribute is null ? null : WellKnownTypes.GetEventTypeExplicitId(eventTypeAttribute) ?? eventType.Name;
     }
 }

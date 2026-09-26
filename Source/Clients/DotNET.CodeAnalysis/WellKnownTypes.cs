@@ -108,6 +108,11 @@ public static class WellKnownTypes
     public const string EventForEventSourceIdName = "Cratis.Chronicle.EventSequences.EventForEventSourceId";
 
     /// <summary>
+    /// The full name of the EventsWithConcurrencyScopes type.
+    /// </summary>
+    public const string EventsWithConcurrencyScopesName = "Cratis.Chronicle.EventSequences.EventsWithConcurrencyScopes";
+
+    /// <summary>
     /// The full name of IEventLog interface.
     /// </summary>
     public const string IEventLogName = "Cratis.Chronicle.EventSequences.IEventLog";

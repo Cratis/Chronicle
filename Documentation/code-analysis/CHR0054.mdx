@@ -1,0 +1,26 @@
+---
+title: "CHR0054: Reactor method has an unsupported return type"
+description: "CHR0054 reports a reactor handler return type that Chronicle does not discover."
+---
+
+## Rule description
+
+A reactor method whose first parameter is an `[EventType]` but whose synchronous return type is not one of the supported shapes is skipped during handler discovery. CHR0054 reports that return type, rather than treating it as an unresolvable parameter.
+
+## Severity
+
+Warning
+
+## Supported returns
+
+- `void` or `Task`.
+- A registered event type, `EventForEventSourceId`, or `EventsWithConcurrencyScopes`.
+- `IEnumerable<T>` where `T` is a registered event type, `EventForEventSourceId`, or `object` (for mixed events and targeted events).
+- `Task<T>` for any side effect that a registered reactor side-effect handler can process, including the shapes above.
+
+A synchronous custom side-effect type cannot be discovered as a reactor handler. Return it from `Task<T>` instead and register an `IReactorSideEffectHandler` that can handle its value.
+
+## Related rules
+
+- [CHR0004](CHR0004): Reactor method has a parameter that cannot be resolved.
+- [CHR0005](CHR0005): Reactor event parameter must have `[EventType]` attribute.

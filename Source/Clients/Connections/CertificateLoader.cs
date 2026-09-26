@@ -19,7 +19,7 @@ public static class CertificateLoader
     /// <returns>The loaded certificate or null if TLS is disabled or no certificate is available.</returns>
     /// <exception cref="CertificateDoesNotExist">Thrown when the specified certificate file does not exist.</exception>
     /// <exception cref="InvalidCertificateOrPassword">Thrown when the specified certificate file is invalid or the password is incorrect.</exception>
-    public static X509Certificate2 LoadCertificate(string certificatePath, string certificatePassword)
+    public static X509Certificate2 LoadCertificate(string certificatePath, string? certificatePassword)
     {
         if (!File.Exists(certificatePath))
         {
@@ -65,14 +65,7 @@ public static class CertificateLoader
 
     static X509Certificate2 LoadCertificateFromPath(string path, string? password)
     {
-        if (string.IsNullOrEmpty(password))
-        {
-#if NET8_0
-            return new X509Certificate2(path);
-#else
-            return X509CertificateLoader.LoadCertificateFromFile(path);
-#endif
-        }
+        // A client certificate needs the private key; read PKCS#12 whether or not a password is configured.
 #if NET8_0
         return new X509Certificate2(path, password);
 #else

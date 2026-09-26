@@ -9,7 +9,7 @@ public class when_resolving_expression_missing_content : given.a_resolver
 {
     Exception _result;
 
-    void Because() => _result = Catch.Exception(() => _resolver.Resolve(_projection, $"{WellKnownExpressions.Composite}()", string.Empty));
+    void Because() => _result = Catch.Exception(() => _resolver.Resolve(_projection, $"{WellKnownExpressions.Composite}( \t\n )", string.Empty));
 
     [Fact] void should_throw_missing_composite_expression() => _result.ShouldBeOfExactType<MissingCompositeExpressions>();
 }

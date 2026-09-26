@@ -20,6 +20,7 @@ public class OrderDeclarativeAllProjection : IProjectionFor<OrderDeclarativeAll>
             .Set(m => m.LastModified)
             .ToEventContextProperty(c => c.Occurred))
         .From<OrderCreatedDeclarativeAll>(_ => _
+            .Set(m => m.OrderNumber).To(e => e.OrderNumber)
             .Set(m => m.Status)
             .ToValue("Placed"))
         .From<OrderShippedDeclarativeAll>(_ => _

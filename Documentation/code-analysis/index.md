@@ -61,6 +61,7 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0051](CHR0051) | Reducer current read model parameter must be nullable | Warning | Chronicle passes null as the current read model for the event that brings an instance into existence |
 | [CHR0052](CHR0052) | `[Encrypted]` cannot be applied to an `EventSourceId<T>` | Error | The event source id is used to correlate events and cannot be encrypted |
 | [CHR0053](CHR0053) | `[PII]` and `[Encrypted]` cannot both apply to the same value | Error | Combining them encrypts the value twice, under two different keys, and it cannot be released correctly |
+| [CHR0054](CHR0054) | Reactor method has an unsupported return type | Warning | A reactor method with an event parameter must return a shape Chronicle discovers as a handler |
 
 ## Quick Fixes
 

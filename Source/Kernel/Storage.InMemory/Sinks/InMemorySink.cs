@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -157,6 +158,11 @@ public class InMemorySink(
         foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
         {
             RemoveChildFromAll(childRemovedFromAll);
+        }
+
+        foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
+        {
+            RemoveChildFromDocument(state, childRemovedFromAll);
         }
 
         var result = ApplyActualChanges(key, changeset.Changes, state);
@@ -383,12 +389,44 @@ public class InMemorySink(
         {
             foreach (var document in Collection.Values)
             {
-                var children = document.EnsureCollection<ExpandoObject, object>(childRemoved.ChildrenProperty, childRemoved.ArrayIndexers);
-                var child = children.FindByKey(childRemoved.IdentifiedByProperty, childRemoved.Key);
+                RemoveChildFromDocument(document, childRemoved);
+            }
+        }
+    }
+
+    void RemoveChildFromDocument(ExpandoObject document, ChildRemovedFromAll childRemoved) =>
+        RemoveChildFromPath(document, childRemoved.ChildrenProperty.Segments.Select(_ => _.Value).ToArray(), 0, childRemoved);
+
+    void RemoveChildFromPath(IDictionary<string, object?> document, string[] segments, int index, ChildRemovedFromAll childRemoved)
+    {
+        if (index >= segments.Length || !document.TryGetValue(segments[index], out var value) || value is null)
+        {
+            return;
+        }
+
+        if (index == segments.Length - 1)
+        {
+            if (value is IList children)
+            {
+                var child = children.Cast<object>().FindByKey(childRemoved.IdentifiedByProperty, childRemoved.Key);
                 if (child is not null)
                 {
                     children.Remove(child);
                 }
+            }
+
+            return;
+        }
+
+        if (value is IDictionary<string, object?> nested)
+        {
+            RemoveChildFromPath(nested, segments, index + 1, childRemoved);
+        }
+        else if (value is IEnumerable collection)
+        {
+            foreach (var item in collection.OfType<IDictionary<string, object?>>())
+            {
+                RemoveChildFromPath(item, segments, index + 1, childRemoved);
             }
         }
     }

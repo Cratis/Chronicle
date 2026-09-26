@@ -7,7 +7,7 @@ services:
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     profiles: [mongodb, ""]
     ports:
-      - 27017:27017
+      - "127.0.0.1:27017:27017"
 
   # One-shot initializer: waits for mongo to answer, then initiates the rs0 replica set with the
   # member advertising localhost:27017 so host clients reach it after replica-set host discovery.
@@ -43,7 +43,7 @@ services:
       - POSTGRES_USER=chronicle
       - POSTGRES_PASSWORD=chronicle
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
   # ─── Microsoft SQL Server ──────────────────────────────────────────────────────
   mssql:
@@ -53,7 +53,7 @@ services:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=Chronicle_Str0ng!
     ports:
-      - "1433:1433"
+      - "127.0.0.1:1433:1433"
 
   # ─── Aspire dashboard (all profiles) ──────────────────────────────────────────
   aspire-dashboard:
@@ -63,5 +63,5 @@ services:
       - ALLOW_UNSECURED_TRANSPORT=true
       - DOTNET_ENVIRONMENT=Development
     ports:
-      - 18888:18888
-      - 4317:18889
+      - "127.0.0.1:18888:18888"
+      - "127.0.0.1:4317:18889"

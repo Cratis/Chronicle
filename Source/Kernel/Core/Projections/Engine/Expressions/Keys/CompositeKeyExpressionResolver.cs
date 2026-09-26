@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.RegularExpressions;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
@@ -17,34 +17,33 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 /// </remarks>
 /// <param name="resolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event values.</param>
 /// <param name="keyResolvers"><see cref="IKeyResolvers" /> for resolving the <see cref="Key"/>.</param>
-public partial class CompositeKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers, IKeyResolvers keyResolvers) : IKeyExpressionResolver
+public class CompositeKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers, IKeyResolvers keyResolvers) : IKeyExpressionResolver
 {
-    [GeneratedRegex("\\$composite\\((?<expressions>[\\w=$\\({\\)., ]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    static partial Regex CompositeKeyRegEx { get; }
-
     /// <inheritdoc/>
-    public bool CanResolve(string expression) => CompositeKeyRegEx.Match(expression).Success;
+    public bool CanResolve(string expression) => expression.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal);
 
     /// <inheritdoc/>
     public KeyResolver Resolve(IProjection projection, string expression, PropertyPath identifiedByProperty)
     {
-        var match = CompositeKeyRegEx.Match(expression);
-        var rawExpressions = match.Groups["expressions"].Value;
-        var expressions = rawExpressions.Split(',').Select(_ => _.Trim()).ToArray();
-
-        if (rawExpressions.Length == 0 || expressions.Length == 0)
+        CompositeKeyExpression parsed;
+        try
         {
-            throw new MissingCompositeExpressions(projection.Identifier, identifiedByProperty, expression);
+            parsed = CompositeKeyExpression.Parse(expression);
+        }
+        catch (InvalidCompositeKeyExpression exception)
+        {
+            var prefix = $"{WellKnownExpressions.Composite}(";
+            if (expression.StartsWith(prefix, StringComparison.Ordinal) && expression.EndsWith(')') &&
+                string.IsNullOrWhiteSpace(expression[prefix.Length..^1]))
+            {
+                throw new MissingCompositeExpressions(projection.Identifier, identifiedByProperty, expression);
+            }
+            throw new InvalidCompositeKeyPropertyMappingExpression(projection.Identifier, identifiedByProperty, exception.Component);
         }
 
-        var propertiesWithKeyValueProviders = expressions.Select(_ =>
+        var propertiesWithKeyValueProviders = parsed.Mappings.Select(mapping =>
         {
-            var keyValue = _.Split('=');
-            if (keyValue.Length != 2)
-            {
-                throw new InvalidCompositeKeyPropertyMappingExpression(projection.Identifier, identifiedByProperty, _);
-            }
-            var actualProperty = identifiedByProperty + keyValue[0];
+            var actualProperty = identifiedByProperty + mapping.Property;
 
             var schemaProperty = projection.ReadModel.GetSchemaForLatestGeneration().GetSchemaPropertyForPropertyPath(actualProperty);
             schemaProperty ??= new JsonSchemaProperty
@@ -54,8 +53,8 @@ public partial class CompositeKeyExpressionResolver(IEventValueProviderExpressio
 
             return new
             {
-                Property = new PropertyPath(keyValue[0]),
-                KeyResolver = resolvers.Resolve(schemaProperty, keyValue[1])
+                Property = new PropertyPath(mapping.Property),
+                KeyResolver = resolvers.Resolve(schemaProperty, mapping.Expression)
             };
         }).ToDictionary(_ => _.Property, _ => _.KeyResolver);
 

@@ -21,8 +21,18 @@ public class Defaults
     /// Initializes a new instance of the <see cref="Defaults"/> class.
     /// </summary>
     public Defaults()
+        : this(DefaultClientArtifactsProvider.Default)
     {
-        EventStore = new EventStoreForTesting();
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Defaults"/> class with per-run artifact discovery.
+    /// </summary>
+    /// <param name="clientArtifactsProvider">The artifacts available to this run.</param>
+    /// <param name="serviceProvider">Optional service provider for activating artifacts.</param>
+    public Defaults(IClientArtifactsProvider clientArtifactsProvider, IServiceProvider? serviceProvider = null)
+    {
+        EventStore = new EventStoreForTesting(serviceProvider, clientArtifactsProvider);
         var testingStore = (EventStoreForTesting)EventStore;
         JsonSchemaGenerator = testingStore.JsonSchemaGenerator;
         ClientArtifactsProvider = testingStore.ClientArtifactsProvider;

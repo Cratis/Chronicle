@@ -175,6 +175,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             Join = _joinDefinitions,
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
             All = _fromEveryDefinition,
+            SubscribesToAllEvents = SubscribesToAllEvents,
             RemovedWith = _removedWithDefinitions,
             Tags = _projectionType.GetTags().ToArray(),
             AutoMap = (Contracts.Projections.AutoMap)_autoMap,

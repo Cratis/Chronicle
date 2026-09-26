@@ -32,14 +32,14 @@ public class ChronicleHealthCheck(IChronicleClient client, IOptions<ChronicleAsp
             var store = await client.GetEventStore(eventStore);
             return store.Connection.Lifecycle.IsConnected
                 ? HealthCheckResult.Healthy($"Connected to the Chronicle kernel for event store '{eventStore}'.")
-                : HealthCheckResult.Unhealthy($"Not connected to the Chronicle kernel for event store '{eventStore}'.");
+                : new HealthCheckResult(context.Registration.FailureStatus, $"Not connected to the Chronicle kernel for event store '{eventStore}'.");
         }
         catch (Exception ex)
         {
             // Reaching the client at all can fail while the kernel is unreachable, and a health check that
             // propagates that is a health check that reports nothing. An unreachable kernel is precisely the
             // state this exists to report.
-            return HealthCheckResult.Unhealthy($"Could not reach the Chronicle kernel for event store '{eventStore}'.", ex);
+            return new HealthCheckResult(context.Registration.FailureStatus, $"Could not reach the Chronicle kernel for event store '{eventStore}'.", ex);
         }
     }
 }

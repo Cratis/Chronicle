@@ -90,11 +90,11 @@ public class and_subscribing_to_all_events_with_a_dynamic_dictionary_key : Speci
     }
 
     [Fact] void should_accept_event_types_it_was_never_explicitly_registered_for() =>
-        _projection.Accepts(_activityLogged).ShouldBeTrue();
+        _projection.Accepts(_userRegistered).ShouldBeTrue();
 
     [Fact] void should_be_event_source_keyed_by_default() => _projection.IsEventSourceKeyed.ShouldBeTrue();
 
-    [Fact] void should_count_the_first_event_type_under_its_own_key() =>
+    [Fact] void should_count_the_derivative_event_type_once_per_event() =>
         ((long)((IDictionary<string, object>)((dynamic)_changeset.CurrentState).eventCountByType)[_activityLogged.Id.Value]).ShouldEqual(2);
 
     [Fact] void should_count_the_second_event_type_under_its_own_key() =>
@@ -129,7 +129,7 @@ public class and_subscribing_to_all_events_with_a_dynamic_dictionary_key : Speci
         new Dictionary<EventType, FromDefinition>(),
         new Dictionary<EventType, JoinDefinition>(),
         new Dictionary<PropertyPath, ChildrenDefinition>(),
-        [],
+        [new FromDerivatives([_activityLogged], new FromDefinition(new Dictionary<PropertyPath, string>(), PropertyExpression.NotSet, null))],
         new FromEveryDefinition(
             new Dictionary<PropertyPath, string>
             {

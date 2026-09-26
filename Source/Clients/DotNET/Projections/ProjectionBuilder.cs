@@ -49,6 +49,8 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         : autoMap;
     protected ReadModelIdentifier _readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
 
+    internal bool SubscribesToAllEvents { get; private set; }
+
     /// <inheritdoc/>
     public TBuilder WithInitialValues(Func<TReadModel> initialValueProviderCallback)
     {
@@ -142,6 +144,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         var builder = new FromAllBuilder<TReadModel>(namingPolicy);
         builderCallback(builder);
         var fromAllDefinition = builder.Build();
+        SubscribesToAllEvents = true;
         _fromEveryDefinition = new FromEveryDefinition
         {
             Properties = new Dictionary<string, string>(_fromEveryDefinition.Properties.Concat(fromAllDefinition.Properties)),

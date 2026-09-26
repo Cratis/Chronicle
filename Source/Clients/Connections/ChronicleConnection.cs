@@ -509,7 +509,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // still connects over TLS (server-authenticated) — it simply does not present a client
             // certificate for mutual TLS. This is the common case against a TLS server with no mutual-TLS.
             certificate = !string.IsNullOrEmpty(_certificatePath)
-                ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword!)
+                ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword)
                 : null;
             var httpHandler = new SocketsHttpHandler
             {

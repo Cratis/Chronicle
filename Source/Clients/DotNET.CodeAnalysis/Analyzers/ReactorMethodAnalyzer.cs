@@ -24,6 +24,15 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true,
         description: "A reactor handler method takes the event it reacts to as its first parameter. Any further parameters are resolved as dependencies: the EventContext, a read model (materialized from its reducer or projection), or a service from the service provider. A parameter that is a primitive, value type, or string is almost certainly a mistake and would fail to resolve at runtime.");
 
+    static readonly DiagnosticDescriptor ReturnTypeRule = new(
+        id: DiagnosticIds.ReactorMethodReturnTypeMustBeSupported,
+        title: "Reactor method has an unsupported return type",
+        messageFormat: "Reactor method '{0}' has unsupported return type '{1}'. Return void, Task, an event type, EventForEventSourceId, EventsWithConcurrencyScopes, IEnumerable of events, or a Task-wrapped side effect.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "Chronicle discovers reactor methods only when their return type is void, Task, an event type, EventForEventSourceId, EventsWithConcurrencyScopes, an IEnumerable of events or targeted events, or a Task-wrapped side effect. Other synchronous return types are skipped at runtime.");
+
     static readonly DiagnosticDescriptor EventTypeRule = new(
         id: DiagnosticIds.ReactorEventParameterMustHaveAttribute,
         title: "Reactor event parameter must have [EventType] attribute",
@@ -34,7 +43,7 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
         description: "Chronicle uses the [EventType] attribute to route incoming events to the correct reactor method. Without it, the event cannot be matched and the handler will never be called. Add [EventType(\"<guid>\")] to the class used as the event parameter in this method.");
 
     /// <inheritdoc/>
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(SignatureRule, EventTypeRule);
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(SignatureRule, ReturnTypeRule, EventTypeRule);
 
     /// <inheritdoc/>
     public override void Initialize(AnalysisContext context)
@@ -92,9 +101,10 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
             if (isHandler)
             {
                 context.ReportDiagnostic(Diagnostic.Create(
-                    SignatureRule,
+                    ReturnTypeRule,
                     methodSymbol.Locations.FirstOrDefault(),
-                    methodSymbol.Name));
+                    methodSymbol.Name,
+                    methodSymbol.ReturnType.ToDisplayString()));
             }
 
             return;
@@ -169,20 +179,14 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
 
         var returnType = method.ReturnType;
 
+        // The runtime accepts any type assignable to Task, including Task<T> and derived task types.
         var taskType = compilation.GetTypeByMetadataName("System.Threading.Tasks.Task");
-        if (taskType != null && SymbolEqualityComparer.Default.Equals(returnType, taskType))
+        for (var current = returnType as INamedTypeSymbol; current is not null; current = current.BaseType)
         {
-            return true;
-        }
-
-        // Any Task<T> is accepted — the returned value is dispatched to a side-effect handler at runtime.
-        var taskOfTType = compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1");
-        if (taskOfTType != null &&
-            returnType is INamedTypeSymbol task &&
-            task.IsGenericType &&
-            SymbolEqualityComparer.Default.Equals(task.OriginalDefinition, taskOfTType))
-        {
-            return true;
+            if (taskType != null && SymbolEqualityComparer.Default.Equals(current, taskType))
+            {
+                return true;
+            }
         }
 
         return IsSupportedSyncSideEffectReturnType(returnType, compilation);
@@ -197,6 +201,12 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
 
         var eventForEventSourceId = compilation.GetTypeByMetadataName(WellKnownTypes.EventForEventSourceIdName);
         if (eventForEventSourceId != null && SymbolEqualityComparer.Default.Equals(returnType, eventForEventSourceId))
+        {
+            return true;
+        }
+
+        var eventsWithConcurrencyScopes = compilation.GetTypeByMetadataName(WellKnownTypes.EventsWithConcurrencyScopesName);
+        if (eventsWithConcurrencyScopes != null && SymbolEqualityComparer.Default.Equals(returnType, eventsWithConcurrencyScopes))
         {
             return true;
         }

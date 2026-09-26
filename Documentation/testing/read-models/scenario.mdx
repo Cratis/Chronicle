@@ -68,6 +68,26 @@ instances and delegates everything else to the real read model implementation. O
 back from it: the rest of that surface is the production one and wants a running Chronicle, so reading the
 instances the scenario itself materialized means `Instances` or `InstanceForEventSourceId`, not `GetInstances`.
 
+## Per-run projections and artifacts
+
+Supply a `Defaults` built from your own `IClientArtifactsProvider` when artifacts are generated
+for a single spec run. Its event types, serializers, and projection discovery also apply to
+seeding; the next scenario can use a different provider without inheriting this one's artifacts.
+Register an `IProjectionFor<TReadModel>` type in the provider to use normal discovery, or
+configure a projection directly on this scenario:
+
+```csharp
+var scenario = new ReadModelScenario<MyReadModel>(null, new Defaults(artifacts))
+    .WithProjection(builder => builder.From<MyEvent>(from =>
+        from.Set(model => model.Name).To(e => e.Name)));
+await scenario.Given.ForEventSource(id).Events(new MyEvent("example"));
+var result = scenario.Instance;
+```
+
+`WithProjection` takes precedence over discovered projections and reducers for that scenario only.
+It does not add a projection to the shared artifact registry. Create another scenario for another
+projection of the same read model, even in the same test assembly.
+
 ## Auto-detection
 
 `ReadModelScenario<TReadModel>` looks up a handler in the client artifacts registry — the same reflection-based

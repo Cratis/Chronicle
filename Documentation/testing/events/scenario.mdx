@@ -62,6 +62,18 @@ Your specs can use the public append-result and event-sequence assertions, or re
 
 Keys are held only in memory and are not shared between scenario instances. This exercises event encryption and release, not production database persistence, read-model sink encryption, key-store durability, or subject erasure. **Erasure is unsupported in `EventScenario`**; test it against a running kernel and the intended storage provider.
 
+## Per-run artifacts and constraints
+
+For generated event types or constraints, create `new Defaults(artifacts)` with a run-specific
+`IClientArtifactsProvider` and pass it to `new EventScenario(defaults)`. This uses the supplied
+provider for event type discovery, serialization, and automatic constraint discovery. You can
+also pass an explicit `ICanProvideConstraints` as the second argument to replace automatic
+constraint discovery. In the `(Defaults, ICanProvideConstraints?)` overload, passing `null` also
+**discovers constraints from the supplied defaults**; pass an empty provider (one whose `Provide()`
+returns an empty list) to disable constraints. This differs from the older constructors that
+accept a constraint provider, where `null` means no constraints. Existing constructors continue
+using the default shared provider.
+
 ## Isolation
 
 Create a **new `EventScenario` instance per test** to keep tests isolated. The in-memory store accumulates state across calls on the same instance. Each instance starts with an empty event log and sequence number zero.
