@@ -12,7 +12,7 @@ public class and_isolating_sequences : given.a_storage_with_named_tags
     async Task Establish()
     {
         await using var context = CreateContext();
-        context.NamedTags.Add(NamedTagEntry.From("another-sequence", 0, 0, new(new TagName("foreign"), "one")));
+        context.NamedTags.Add(NamedTagEntry.From($"another-{_tableName}", 0, 0, new(new TagName("foreign"), "one")));
         await context.SaveChangesAsync();
     }
 

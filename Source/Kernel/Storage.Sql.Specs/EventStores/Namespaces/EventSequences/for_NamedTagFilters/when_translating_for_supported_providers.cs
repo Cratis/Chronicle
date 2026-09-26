@@ -29,10 +29,16 @@ public class when_translating_for_supported_providers : Specification
         return NamedTagFilters.Apply(context.Events, context.NamedTags, "events", [new(new TagName("account"), ["one", "two"])]).ToQueryString();
     }
 
-    [Fact] void should_generate_correlated_exists_with_hash_and_binary_comparisons() => _queries.All(query =>
-        query.Contains("EXISTS", StringComparison.OrdinalIgnoreCase) &&
-        query.Contains("NameHash", StringComparison.Ordinal) &&
-        query.Contains("ValueHash", StringComparison.Ordinal) &&
-        query.Contains("Name", StringComparison.Ordinal) &&
-        query.Contains("Value", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_generate_correlated_exists_with_hash_and_binary_column_equalities()
+    {
+        foreach (var query in _queries)
+        {
+            query.ShouldContain("EXISTS");
+            var quote = query.Contains("[Name]", StringComparison.Ordinal) ? ("[", "]") : ("\"", "\"");
+            foreach (var column in new[] { "EventSequenceId", "SequenceNumber", "NameHash", "ValueHash", "Name", "Value" })
+            {
+                query.ShouldContain($"{quote.Item1}{column}{quote.Item2} = ");
+            }
+        }
+    }
 }

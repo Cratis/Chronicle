@@ -3,8 +3,11 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
@@ -28,13 +31,35 @@ public class EventSequenceMigrator(
             throw new NamedTagsTableCollision();
         }
 
-        await tableMigrator.EnsureTableMigrated(NamedTagsTable, context, CreateNamedTagsTable, ValidateNamedTagsTable);
-        await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable, UpgradeTable);
+        await tableMigrator.EnsureTableMigrated(
+            tableName,
+            context,
+            async (db, name) =>
+            {
+                await EnsureNamedTagsTable(db);
+                await CreateTable(db, name);
+            },
+            async (db, name) =>
+            {
+                await EnsureNamedTagsTable(db);
+                await UpgradeTable(db, name);
+            });
     }
 
     /// <inheritdoc/>
     public void ClearMigrationCache(string connectionStringPrefix) =>
         tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
+
+    static bool IsTableAlreadyExists(Exception exception) => exception switch
+    {
+        PostgresException postgres => postgres.SqlState == PostgresErrorCodes.DuplicateTable,
+        SqlException sql => sql.Number == 2714,
+        SqliteException sqlite => sqlite.SqliteErrorCode == 1 && sqlite.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase),
+        _ => false
+    };
+
+    Task EnsureNamedTagsTable(EventSequenceDbContext context) =>
+        tableMigrator.EnsureTableMigrated(NamedTagsTable, context, CreateNamedTagsTable, ValidateNamedTagsTable);
 
     async Task CreateNamedTagsTable(EventSequenceDbContext context, string tableName)
     {
@@ -43,7 +68,7 @@ public class EventSequenceMigrator(
             name: tableName,
             columns: table => new
             {
-                EventSequenceId = table.StringColumn(migration, maxLength: 200),
+                EventSequenceId = table.StringColumn(migration, maxLength: 200, nullable: false),
                 SequenceNumber = table.Column<ulong>(nullable: false),
                 Position = table.Column<int>(nullable: false),
                 Name = table.Column<byte[]>(nullable: false),
@@ -56,7 +81,15 @@ public class EventSequenceMigrator(
         migration.CreateIndex("IX_cratis_tags_name", tableName, ["EventSequenceId", "NameHash", "SequenceNumber"]);
         migration.CreateIndex("IX_cratis_tags_value", tableName, ["EventSequenceId", "NameHash", "ValueHash", "SequenceNumber"]);
         migration.CreateIndex("IX_cratis_tags_event", tableName, ["EventSequenceId", "SequenceNumber"]);
-        await tableMigrator.ExecuteMigrationOperations(context, migration);
+        try
+        {
+            await tableMigrator.ExecuteMigrationOperations(context, migration);
+        }
+        catch (Exception exception) when (IsTableAlreadyExists(exception))
+        {
+            // Another silo won the first-touch race. Only adopt the table if it is ours.
+            await ValidateNamedTagsTable(context, tableName);
+        }
     }
 
     async Task ValidateNamedTagsTable(EventSequenceDbContext context, string tableName)

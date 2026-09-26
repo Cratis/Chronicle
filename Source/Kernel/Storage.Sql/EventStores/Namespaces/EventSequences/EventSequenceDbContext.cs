@@ -76,6 +76,7 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
             entity.HasIndex(tag => new { tag.EventSequenceId, tag.NameHash, tag.SequenceNumber });
             entity.HasIndex(tag => new { tag.EventSequenceId, tag.NameHash, tag.ValueHash, tag.SequenceNumber });
             entity.HasIndex(tag => new { tag.EventSequenceId, tag.SequenceNumber });
+            entity.Property(tag => tag.EventSequenceId).HasMaxLength(200).IsRequired();
             entity.Property(tag => tag.NameHash).HasMaxLength(32).IsRequired();
             entity.Property(tag => tag.ValueHash).HasMaxLength(32).IsRequired();
             entity.Property(tag => tag.Name).IsRequired();

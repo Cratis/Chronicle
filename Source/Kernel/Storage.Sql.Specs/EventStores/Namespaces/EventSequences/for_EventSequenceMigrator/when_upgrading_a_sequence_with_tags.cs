@@ -10,7 +10,7 @@ public class when_upgrading_a_sequence_with_tags : given.a_named_tag_migrator
 
     async Task Establish()
     {
-        await Execute("CREATE TABLE \"event-sequence\" (SequenceNumber INTEGER PRIMARY KEY, Tags TEXT NOT NULL)");
+        await Execute($"CREATE TABLE \"event-sequence\" (SequenceNumber INTEGER PRIMARY KEY, Tags {(_provider == "SQLServer" ? "NVARCHAR(MAX)" : "TEXT")} NOT NULL)");
         await Execute("INSERT INTO \"event-sequence\" (SequenceNumber, Tags) VALUES (1, '[\"historic\"]')");
     }
 
