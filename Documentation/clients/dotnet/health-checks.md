@@ -45,7 +45,7 @@ liveness probe that failed on this would restart a healthy host in a loop while 
 
 ## Choosing the failure status
 
-Report a failure as `Degraded` instead when your host can still do useful work without Chronicle:
+`AddChronicleHealthCheck` takes a failure status, and you can pass `Degraded` when your host can still do useful work without Chronicle:
 
 ```csharp
 builder.Services.AddChronicleHealthCheck(HealthStatus.Degraded);

@@ -143,7 +143,7 @@ openssl pkcs12 -export -out encryption-cert.pfx \
 
 ## Docker Configuration
 
-Mount the certificate when running Chronicle in Docker:
+Mount the certificate when running Chronicle in Docker. This excerpt shows only the encryption certificate: the production image also needs the TLS certificate from the next section and a reachable replica-set MongoDB, and keep passwords in your secret store rather than in the file — see [Production hosting](production.md) for a complete Compose file.
 
 ```yaml
 version: '3.8'

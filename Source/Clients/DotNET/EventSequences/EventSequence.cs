@@ -169,7 +169,8 @@ public class EventSequence(
                 occurred) with
             {
                 Causation = causation,
-                CausedBy = identity
+                CausedBy = identity,
+                Subject = subject ?? new Subject(eventSourceId.Value)
             };
             _appendedEventsRaised([new AppendedEventWithResult(new AppendedEvent(context, @event), result)]);
         }
@@ -272,6 +273,7 @@ public class EventSequence(
         };
         NotifyAppendMany(
             eventsList,
+            eventsToAppend,
             resolvedCorrelationId,
             eventSourceId,
             resolvedEventSourceType,
@@ -657,7 +659,8 @@ public class EventSequence(
                     evt.Occurred) with
                 {
                     Causation = causation,
-                    CausedBy = identity
+                    CausedBy = identity,
+                    Subject = new Subject(eventsToAppend[i].Subject ?? evt.EventSourceId.Value)
                 };
 
                 allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(resolvedCorrelationId, sequenceNumber, result)));
@@ -701,6 +704,7 @@ public class EventSequence(
 
     void NotifyAppendMany(
         List<object> events,
+        List<Contracts.Sequences.EventToAppend> eventsToAppend,
         CorrelationId correlationId,
         EventSourceId eventSourceId,
         EventSourceType eventSourceType,
@@ -737,7 +741,8 @@ public class EventSequence(
                 occurred) with
             {
                 Causation = causation,
-                CausedBy = identity
+                CausedBy = identity,
+                Subject = new Subject(eventsToAppend[i].Subject ?? eventSourceId.Value)
             };
 
             results.Add(new AppendedEventWithResult(new AppendedEvent(context, events[i]), ToAppendResult(correlationId, sequenceNumber, result)));

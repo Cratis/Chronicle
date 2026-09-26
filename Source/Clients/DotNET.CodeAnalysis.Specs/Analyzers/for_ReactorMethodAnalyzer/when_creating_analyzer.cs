@@ -11,5 +11,6 @@ public class when_creating_analyzer : Specification
 
     [Fact] void should_have_supported_diagnostics() => _analyzer.SupportedDiagnostics.ShouldNotBeEmpty();
     [Fact] void should_support_chr0004_diagnostic() => _analyzer.SupportedDiagnostics.Any(d => d.Id == DiagnosticIds.ReactorMethodSignatureMustMatchAllowed).ShouldBeTrue();
+    [Fact] void should_support_chr0054_diagnostic() => _analyzer.SupportedDiagnostics.Any(d => d.Id == DiagnosticIds.ReactorMethodReturnTypeMustBeSupported).ShouldBeTrue();
     [Fact] void should_support_chr0005_diagnostic() => _analyzer.SupportedDiagnostics.Any(d => d.Id == DiagnosticIds.ReactorEventParameterMustHaveAttribute).ShouldBeTrue();
 }

@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
-
 using DomainChanges = Cratis.Chronicle.Changes;
 
 namespace Cratis.Chronicle.Storage.InMemory.Sinks.for_InMemorySink.when_trying_to_find_root_key_by_child_value;

@@ -36,4 +36,3 @@ public class counter_operations : given.a_language_service_with_schemas<given.Mo
     [Fact] void should_generate_decrement_without_escaping() => _result.GeneratedDefinition.ShouldContain("decrement retryCount");
     [Fact] void should_not_have_at_symbol_for_decrement() => _result.GeneratedDefinition.ShouldNotContain("@decrement");
 }
-

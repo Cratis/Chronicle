@@ -15,6 +15,10 @@ Implement the `IReadModelReactor` marker interface and add a method named `Added
 
 There is nothing to register. Reactors are discovered and started automatically, and their subscriptions are tracked and cleaned up when the client is disposed. React to as many read models as you like — one method per change, per model.
 
+:::note[Kotlin and Java]
+The JVM client does not discover read model reactors. Register each one with `ReadModelReactors`, as the Kotlin and Java tabs show, and stop them when your application shuts down.
+:::
+
 ## Handle a single instance or a collection
 
 A handler may be synchronous or asynchronous — return `void`, `Task`, or `Task<T>`. Its first parameter is either a single read model or a collection of them:

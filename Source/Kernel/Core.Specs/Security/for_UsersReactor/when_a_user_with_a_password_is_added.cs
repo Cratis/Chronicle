@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.Extensions.Logging;
-
 using StoredUser = Cratis.Chronicle.Storage.Security.User;
 
 namespace Cratis.Chronicle.Security.for_UsersReactor;

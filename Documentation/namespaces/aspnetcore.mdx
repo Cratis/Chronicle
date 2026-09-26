@@ -1,4 +1,7 @@
-# ASP.NET Core namespace resolution
+---
+title: "ASP.NET Core namespace resolution"
+description: "Resolve the Chronicle namespace per request in ASP.NET Core, and the trust each built-in resolver assumes."
+---
 
 The ASP.NET Core client provides namespace resolution designed for multi-tenant web applications. It integrates with HTTP context and offers built-in resolvers for common request patterns.
 
@@ -13,6 +16,10 @@ The default resolver reads the namespace from an HTTP header. Configure it throu
 <ChronicleClientTabs snippet="namespaces/aspnetcore/http-header-resolver" />
 
 When the header is present, its value becomes the namespace for the request. If the header is missing, the default namespace is used.
+
+:::caution[The caller chooses the namespace]
+The header resolver takes the header's value as it arrives and performs no authorization. Any caller that can reach the endpoint can read from and append to any tenant's namespace by setting the header, and a request without it lands in the default namespace. Use it only behind something you trust to set the header from an authenticated tenant, such as a gateway, or write a resolver that derives the namespace from the authenticated user.
+:::
 
 ### Subdomain resolution
 

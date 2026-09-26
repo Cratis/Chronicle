@@ -15,12 +15,12 @@ namespace Cratis.Chronicle.Jobs;
 /// <param name="JobId">The unique identifier of the job to resume.</param>
 [Command]
 [BelongsTo(WellKnownServices.Jobs)]
-public record ResumeJob(EventStoreName EventStore, EventStoreNamespaceName Namespace, Concepts.Jobs.JobId JobId)
+public record ResumeJob(EventStoreName EventStore, EventStoreNamespaceName Namespace, Cratis.Orleans.Jobs.JobId JobId)
 {
     /// <summary>
-    /// Handles the command by invoking <see cref="IJobsManager.Resume"/> on the jobs manager grain.
+    /// Handles the command by invoking <see cref="Cratis.Orleans.Jobs.IJobsManager.Resume"/> on the jobs manager grain.
     /// </summary>
-    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get jobs manager grains with.</param>
+    /// <param name="grainFactory">The <see cref="Cratis.Orleans.Jobs.IJobsManager"/> to get the jobs manager grain with.</param>
     /// <returns>Awaitable task.</returns>
     public Task Handle(IGrainFactory grainFactory) =>
         grainFactory.GetJobsManager(EventStore, Namespace).Resume(JobId);

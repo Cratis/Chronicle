@@ -2,13 +2,11 @@
 public class DecRemoveWithJoinDeveloperProjectsProjection : IProjectionFor<DecRemoveWithJoinDeveloperProfile>
 {
     public void Define(IProjectionBuilderFor<DecRemoveWithJoinDeveloperProfile> builder) => builder
-        .AutoMap()
         .From<DecRemoveWithJoinDeveloperOnboarded>(_ => _
             .Set(m => m.DeveloperId).ToEventSourceId()
             .Set(m => m.OnboardedAt).ToEventContextProperty(c => c.Occurred))
         .Children(m => m.CurrentProjects, children => children
             .IdentifiedBy(e => e.ProjectId)
-            .AutoMap()
             .From<DecRemoveWithJoinDeveloperAssignedToProject>(_ => _
                 .UsingParentKey(e => e.DeveloperId)
                 .UsingKey(e => e.ProjectId)

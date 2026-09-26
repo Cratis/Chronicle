@@ -21,11 +21,9 @@ public record DecRemoveWithJoinExplicitEmployee(string Name, IEnumerable<DecRemo
 public class DecRemoveWithJoinExplicitEmployeeProjection : IProjectionFor<DecRemoveWithJoinExplicitEmployee>
 {
     public void Define(IProjectionBuilderFor<DecRemoveWithJoinExplicitEmployee> builder) => builder
-        .AutoMap()
         .From<DecRemoveWithJoinExplicitEmployeeHired>()
         .Children(m => m.Projects, children => children
             .IdentifiedBy(e => e.ProjectId)
-            .AutoMap()
             .From<DecRemoveWithJoinExplicitEmployeeAssignedToProject>(_ => _
                 .UsingParentKey(e => e.EmployeeId)
                 .UsingKey(e => e.ProjectId)

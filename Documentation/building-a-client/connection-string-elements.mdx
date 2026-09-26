@@ -1,4 +1,7 @@
-# Connection string elements
+---
+title: "Connection string elements"
+description: "The Chronicle connection string grammar a client must implement: scheme, hosts, credentials, and every query parameter."
+---
 
 [Connection Strings → Server support](../connection-strings/server.md) is the grammar reference —
 the scheme, every query parameter, and what each one means. Don't re-derive that grammar from
@@ -41,9 +44,10 @@ used to construct a connection string from discrete settings:
 
 with equivalents for `WithServerAddresses(...)` (multiple hosts), `WithDevelopmentCredentials()`,
 `WithApiKey(...)`, `WithoutAuthentication()` (`auth=none`), `WithTlsValidationSkipped()`, and
-`WithCertificate(path, password)`. `Build()` should validate as it assembles — the same
-"credentials and API key together is an error" rule the parser enforces should be enforced here
-too, at construction time rather than at first-connect time.
+`WithCertificate(path, password)`. A new client's `Build()` should validate as it assembles — the same
+"credentials and API key together is an error" rule the parser enforces should be enforced there
+too, at construction time rather than at first-connect time. The .NET builder does not do this yet:
+it reports the conflict only when the authentication mode is first read.
 
 ## Never log the unredacted form
 

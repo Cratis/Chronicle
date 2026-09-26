@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
@@ -16,10 +15,12 @@ using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Orleans.Hosting;
@@ -32,6 +33,7 @@ namespace Orleans.Hosting;
 /// <param name="reactors"><see cref="IReactors"/> for managing kernel reactors.</param>
 /// <param name="patternCapture"><see cref="IPatternCapture"/> for observing events for behavior pattern mining.</param>
 /// <param name="projectionsServiceClient"><see cref="IProjectionsServiceClient"/> for registering projections with local silos.</param>
+/// <param name="kernelProjections"><see cref="IKernelProjections"/> for registering the projections the kernel declares for itself.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
 /// <param name="logger">The logger.</param>
@@ -52,6 +54,7 @@ internal sealed class ChronicleServerStartupTask(
     IReactors reactors,
     IPatternCapture patternCapture,
     IProjectionsServiceClient projectionsServiceClient,
+    IKernelProjections kernelProjections,
     IGrainFactory grainFactory,
     IAuthenticationService authenticationService,
     ILogger<ChronicleServerStartupTask> logger,
@@ -107,6 +110,10 @@ internal sealed class ChronicleServerStartupTask(
 
             var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
             await Step("EnsureProjections", projectionsManager.Ensure);
+
+            // Before the persisted definitions are registered below, so the kernel's own projections are part of
+            // the set that pass registers rather than a second registration racing it.
+            await Step("DiscoverAndRegisterKernelProjections", () => kernelProjections.DiscoverAndRegister(eventStore));
 
             var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventStore);
             await Step("EnsureWebhooks", webhooksManager.Ensure);

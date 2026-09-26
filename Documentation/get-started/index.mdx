@@ -31,13 +31,26 @@ Java examples are owned by the Kotlin/JVM client repo. Use the JVM setup guide, 
 
 ## Start Chronicle
 
-Chronicle application code connects to a running Chronicle kernel. For local development, the fastest path is the development image:
+Chronicle application code connects to a running Chronicle kernel. For local development, the fastest path is the development image. It bundles MongoDB, so Docker is the only prerequisite:
 
 ```shell
-docker run -d -p 27017:27017 -p 35000:35000 cratis/chronicle:latest-development
+docker run -d --name chronicle \
+  -p 127.0.0.1:35000:35000 \
+  -p 127.0.0.1:27017:27017 \
+  cratis/chronicle:latest-development
 ```
 
-The kernel listens on `chronicle://localhost:35000`, the workbench runs on `https://localhost:35000` — the same, single TLS-secured port — and the bundled MongoDB stores materialized read models. If you need Docker Compose, Aspire, a separate database, or production-style hosting, use [Choose an application host model](./choose-hosting-model).
+The `127.0.0.1:` prefixes publish both ports on this machine only. The development image's workbench accepts well-known credentials and its MongoDB has no authentication, so keep both off shared networks.
+
+The kernel listens on `chronicle://localhost:35000`, and the workbench runs on `https://localhost:35000`, the same TLS-secured port. The bundled MongoDB on port `27017` stores the materialized read models; the guides below query it directly. Startup takes a few seconds. This command waits until the kernel reports itself ready and prints `Healthy`:
+
+```shell
+curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 https://localhost:35000/health
+```
+
+`--insecure` is there because the development image serves a self-signed certificate. Remove the container with `docker rm -f chronicle` when you are done; its data goes with it.
+
+If you need Docker Compose, Aspire, a separate database, or production-style hosting, use [Choose an application host model](./choose-hosting-model).
 
 ## The Chronicle loop
 

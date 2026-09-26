@@ -34,7 +34,8 @@ public record UserReadModel(
     DateTimeOffset? UpdatedAt,
     Group[]? Groups,
     string? ContactInfoEmail,
-    string? AddressCity);
+    string? AddressCity,
+    long LargeNumber = 0);
 
 public record GroupReadModel(string Name, string? Description, List<Member> Members);
 
@@ -65,6 +66,14 @@ public record Employee(string Id, string Name);
 public record OrderKey(string CustomerId, string OrderNumber);
 
 public record OrderReadModel(string Id, decimal Total, OrderKey? OrderKey);
+
+public record CompositeOrderReadModel(OrderKey Id, decimal Total, string Name);
+
+public record NullableCompositeOrderReadModel(OrderKey? Id, decimal Total, string Name);
+
+public record CompositeChildReadModel(string Id, List<CompositeChild> Items);
+
+public record CompositeChild(OrderKey? Id, string Name);
 
 public record Users(string Name);
 

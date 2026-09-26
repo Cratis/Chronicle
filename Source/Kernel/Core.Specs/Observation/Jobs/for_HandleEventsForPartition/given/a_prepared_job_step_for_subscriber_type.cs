@@ -3,11 +3,10 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;
@@ -53,7 +52,7 @@ public abstract class a_prepared_job_step_for_subscriber_type : Specification
         var loggerFactory = Substitute.For<ILoggerFactory>();
         _silo.AddService(loggerFactory);
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
-        _silo.AddPersistentStateStorage<HandleEventsForPartitionState>(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps);
+        _silo.AddPersistentStateStorage<HandleEventsForPartitionState>(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
 
         _jobStep = await _silo.CreateGrainAsync<TestableHandleEventsForPartition>(
             JobStepId.New(),

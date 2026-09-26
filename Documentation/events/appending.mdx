@@ -20,7 +20,7 @@ When you append an event, Chronicle:
 - Persists the event and metadata atomically
 - Updates the sequence state
 
-The append returns an operation result you can use to detect schema errors, concurrency violations, constraint violations, and other append-time problems. This makes it safe to retry or revise without duplicating events.
+The append returns an operation result you can use to detect schema errors, concurrency violations, constraint violations, and other append-time problems. A result that reports a schema, constraint, or concurrency violation means the event was rejected and not appended, so you can correct the problem and append again without duplicating it. A result that reports *errors* is different: an infrastructure failure can happen after the event was stored, so the outcome is unknown — and so is it when the call fails without a result, such as a timeout or a dropped connection. Appending again blindly after an unknown outcome can store the event twice. Make that retry safe with an [expected sequence number](./concurrency) or a [constraint](../constraints/).
 
 ## AppendResult
 
@@ -28,7 +28,7 @@ Appending returns an `AppendResult` that describes whether the operation succeed
 
 ## Schema validation
 
-Chronicle validates every event's content against its registered JSON schema before persisting it. If the content does not conform to the schema — for example, a required property is missing or has the wrong type — the append fails and the errors appear in `AppendResult.Errors`.
+Chronicle validates every event's content against its registered JSON schema before persisting it. If the content does not conform to the schema — for example, a required property is missing or has the wrong type — the append fails and each problem comes back as a **constraint violation** of type `Schema`, with the offending path in its details — not as an error. In the .NET client that is an entry in `AppendResult.ConstraintViolations` while `AppendResult.Errors` stays empty, so check `IsSuccess` or the violations rather than the errors alone.
 
 <ChronicleClientTabs snippet="events/appending/schema-validation" />
 

@@ -127,7 +127,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     public string GenerateSharedType(Type type, string outputDirectory)
     {
         // Namespace mapping goes through the registry, not BuildTargetNamespace/BuildFolderPath below - a shared
-        // type reused from a project Core depends on (Concepts.Jobs.JobStatus, say) does not necessarily sit at
+        // type reused from a project Core depends on (Cratis.Orleans.Jobs.JobStatus, say) does not necessarily sit at
         // the same relative namespace depth a service's own artifacts do, and the registry is what already
         // resolved that once, when this type was first referenced. Deriving the folder from anything else risks
         // the two disagreeing about where the file belongs.

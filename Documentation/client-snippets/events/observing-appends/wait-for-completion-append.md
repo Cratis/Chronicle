@@ -11,6 +11,13 @@ public class ObservingAppendsCompletionWaiter(IEventLog eventLog)
     public async Task AppendAndWait(EventSourceId eventSourceId)
     {
         var appendResult = await eventLog.Append(eventSourceId, new ObservingAppendsSomeEvent("example"));
+
+        // A failed append has nothing to wait for, and waiting on it reports success.
+        if (!appendResult.IsSuccess)
+        {
+            return;
+        }
+
         var completion = await appendResult.WaitForCompletion();
 
         if (!completion.IsSuccess)

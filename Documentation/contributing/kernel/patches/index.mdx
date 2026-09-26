@@ -1,4 +1,7 @@
-# Version Patch System
+---
+title: "Version Patch System"
+description: "Write kernel patches that upgrade stored state between Chronicle versions, and how they are applied."
+---
 
 Chronicle includes a version-based patch system to handle breaking changes during upgrades. Patches are automatically discovered and applied during server startup, ensuring the system state is migrated correctly between versions.
 
@@ -9,7 +12,7 @@ The patch system:
 - **Automatically discovers** patches using reflection (`IInstancesOf<ICanApplyPatch>`)
 - **Applies patches in order** based on semantic version
 - **Tracks applied patches** to prevent re-execution
-- **Supports rollback** through `Down()` methods for safe downgrades
+- **Declares a reverse step** through `Down()` — which Chronicle does not run for you; see below
 - **Runs at startup** before other Chronicle services initialize
 
 ## Key Concepts
@@ -64,7 +67,7 @@ Use proper semantic logging with `LoggerMessage` attributes:
 
 ### 2. Implement Down() for Safety
 
-Always implement `Down()` to support rollback scenarios:
+Implement `Down()` so that the reverse of each patch is written down and reviewed alongside it. Chronicle only ever applies `Up()`: nothing calls `Down()` automatically, and running an older Chronicle version against patched storage does not undo a patch. Rolling back means restoring a backup taken before the upgrade:
 
 <ChronicleClientTabs snippet="contributing/kernel/patches/index/implement-down" />
 

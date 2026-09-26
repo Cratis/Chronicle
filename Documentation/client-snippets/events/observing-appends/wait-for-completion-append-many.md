@@ -19,6 +19,12 @@ public class ObservingAppendsBatchCompletionWaiter(IEventLog eventLog)
             new ObservingAppendsSecondEvent("second")
         });
 
+        // A failed append has nothing to wait for, and waiting on it reports success.
+        if (!appendManyResult.IsSuccess)
+        {
+            return;
+        }
+
         var completion = await appendManyResult.WaitForCompletion();
         if (!completion.IsSuccess)
         {

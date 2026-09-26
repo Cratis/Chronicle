@@ -1,6 +1,9 @@
-# Running Integration Tests
+---
+title: "Running Integration Tests"
+description: "Run Chronicle's client integration tests in-process or out-of-process against each supported database."
+---
 
-Integration tests run from the `Integration/Client` project and can execute in either in-process or out-of-process mode. They require Docker to be running on your machine and a short manual wait between consecutive runs so Docker has time to tear down and release the fixed MongoDB port.
+Integration tests run from the `Integration/Client` project and can execute in either in-process or out-of-process mode. They require Docker to be running on your machine.
 
 When you provide no runtime arguments, the suite defaults to:
 
@@ -36,18 +39,7 @@ Each test package carries its own embedded kernel runtime assemblies, including 
 
 ### From the command line
 
-Run all tests in a suite with the convenience scripts at the root of each project:
-
-```bash
-# Release build (CI default)
-cd Integration/Client
-./run.sh
-
-# Debug build (faster iteration locally)
-./run-debug.sh
-```
-
-Or invoke `dotnet test` directly from the repository root:
+Run the suite with `dotnet test` from the repository root. `--configuration Release` matches CI; use `Debug` for faster local iteration:
 
 ```bash
 dotnet test Integration/Client/Client.csproj \
@@ -138,11 +130,11 @@ For in-process mode, change the last two arguments to `"inprocess"` and `"mongod
 
 For database changes in out-of-process mode, set the second argument to `"postgresql"`, `"mssql"`, or `"sqlite"`.
 
-## Important: Wait Between Consecutive Runs
+## Consecutive runs
 
-The MongoDB container binds to a fixed host port (`27018`). After a test run ends, Docker's Ryuk reaper removes the container, but the port is not immediately available. If you start a second run before the port is released, the Docker startup will hang until it times out.
+The `Integration/Client` fixtures publish every container port on a random host port, so consecutive runs — or two runs at once — of that suite do not compete for a port. Docker's Ryuk reaper removes the containers when a run ends.
 
-**Always wait a few seconds between runs** when re-running tests manually. In CI, each run starts a fresh agent so this is not a concern.
+The `Integration/Api` suite, and the reusable out-of-process fixture in `Cratis.Chronicle.XUnit.Integration`, bind fixed host ports (`27018` and `35001`). Two of those runs at once collide, and a run started immediately after another can wait for Docker to release the ports.
 
 ## Test Backups
 

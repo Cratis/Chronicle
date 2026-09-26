@@ -49,6 +49,7 @@ message FromEveryDefinition {
    map<string,string> Properties = 1;
    bool IncludeChildren = 2;
    AutoMap AutoMap = 3;
+   string Key = 4;
 }
 message GetAllDeclarationsRequest {
    string EventStore = 1;
@@ -131,6 +132,8 @@ enum ProjectionOwner {
    PROJECTION_OWNER_None = 0;
    PROJECTION_OWNER_Client = 1;
    PROJECTION_OWNER_Server = 2;
+   Parent = 3;
+   Kernel = 4;
 }
 message ProjectionPreview {
    repeated string ReadModelEntries = 1;

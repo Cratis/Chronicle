@@ -1,4 +1,7 @@
-# Code Analysis Rules
+---
+title: "Code Analysis Rules"
+description: "Every CHR analyzer rule for the .NET client, its severity, and how the analyzers reach your build."
+---
 
 This section documents the code analysis rules provided by the Chronicle Code Analyzer for the .NET client.
 
@@ -58,6 +61,7 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0051](CHR0051) | Reducer current read model parameter must be nullable | Warning | Chronicle passes null as the current read model for the event that brings an instance into existence |
 | [CHR0052](CHR0052) | `[Encrypted]` cannot be applied to an `EventSourceId<T>` | Error | The event source id is used to correlate events and cannot be encrypted |
 | [CHR0053](CHR0053) | `[PII]` and `[Encrypted]` cannot both apply to the same value | Error | Combining them encrypts the value twice, under two different keys, and it cannot be released correctly |
+| [CHR0054](CHR0054) | Reactor method has an unsupported return type | Warning | A reactor method with an event parameter must return a shape Chronicle discovers as a handler |
 
 ## Quick Fixes
 
@@ -68,4 +72,16 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 
 ## Installation
 
-The analyzer is automatically included when you reference the `Cratis.Chronicle` NuGet package.
+The rules ship in the `Cratis.Chronicle.CodeAnalysis` package. From **19.4.8**, `Cratis.Chronicle` depends on it, so referencing `Cratis.Chronicle` — or a package that depends on it, such as `Cratis.Chronicle.AspNetCore` — runs the rules in your build with nothing else to add.
+
+Before 19.4.8, `Cratis.Chronicle` did not carry that dependency, and no rule ran in a consuming build unless the project referenced the analyzer package itself. On an older version, add it at the same version as the client:
+
+```shell
+dotnet add package Cratis.Chronicle.CodeAnalysis --version <your Cratis.Chronicle version>
+```
+
+The analyzers inspect C# only; the other Chronicle clients have no equivalent.
+
+:::caution[Upgrading to 19.4.8 or later can fail a build that used to pass]
+From 19.4.8, code that violates an **Error** rule no longer compiles, and under `TreatWarningsAsErrors` neither does code that violates a **Warning** rule. The code did not change; the rules had simply never run against it. Fix what the build reports — each rule page says how. Suppress a rule only when you have checked that the code is correct.
+:::

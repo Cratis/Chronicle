@@ -85,9 +85,9 @@ The gRPC compatibility check is integrated into:
    - Surfaces any breaking changes through the workflow's `has-breaking-changes` and `breaking-changes` outputs
 
 2. **Publish Workflow** (`publish.yml`):
-   - Runs on releases
-   - Compares against the `main` branch
-   - Ensures release notes capture any breaking changes
+   - Runs on releases, before anything is published
+   - Does not use this schema comparison: it calls `wire-compatibility.yml` with the version being released, which checks that the wire contract still serves every released minor of the current major
+   - A release that fails that check is not published
 
 ## Breaking Changes Detection
 

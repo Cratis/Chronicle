@@ -169,7 +169,7 @@ Building a client for another language? The [building a client](https://www.crat
 
 ```shell
 docker run -d --name chronicle \
-  -p 35000:35000 \
+  -p 127.0.0.1:35000:35000 \
   cratis/chronicle:latest-development
 ```
 
@@ -180,8 +180,10 @@ services:
   chronicle:
     image: cratis/chronicle:latest-development
     ports:
-      - "35000:35000"   # gRPC, REST API and Web Workbench (single TLS port)
+      - "127.0.0.1:35000:35000"   # gRPC, REST API and Web Workbench (single TLS port)
 ```
+
+Both publish the port on this machine only. The development image is for local development: its Workbench accepts the well-known development credentials, so don't expose it on a shared network. Open the Workbench at `https://localhost:35000` and accept the self-signed development certificate.
 
 ```shell
 docker compose up -d

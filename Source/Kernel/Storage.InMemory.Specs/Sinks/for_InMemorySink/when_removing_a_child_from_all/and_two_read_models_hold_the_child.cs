@@ -20,27 +20,34 @@ public class and_two_read_models_hold_the_child : Specification
     InMemorySink _sink;
     Key _written;
     Key _other;
+    Key _withoutChildren;
+    bool _missingCollectionWasCreated;
+    IEnumerable<string> _remainingOnWritten;
     IEnumerable<string> _remainingOnOther;
 
     async Task Establish()
     {
         _written = new Key("parent-1", ArrayIndexers.NoIndexers);
         _other = new Key("parent-2", ArrayIndexers.NoIndexers);
+        _withoutChildren = new Key("parent-3", ArrayIndexers.NoIndexers);
         _sink = new InMemorySink(CreateReadModelDefinition(), new TypeFormats());
 
-        // The read model being written has its state rebuilt from the changeset, so only a model the
-        // write does not touch can show that the removal reached every model holding the child.
-        await _sink.ApplyChanges(_other, ChangesetAddingChildren("shared-child", "kept-child"), 1UL);
+        await _sink.ApplyChanges(_written, ChangesetAddingChildren("shared-child", "kept-on-written"), 1UL);
+        await _sink.ApplyChanges(_other, ChangesetAddingChildren("shared-child", "kept-on-other"), 1UL);
+        _sink.Collection[_sink.GetKeyValue(_withoutChildren)] = new ExpandoObject();
     }
 
     async Task Because()
     {
-        await _sink.ApplyChanges(_written, ChangesetRemovingChildFromAll("shared-child"), 2UL);
+        await _sink.ApplyChanges(_written, ChangesetRemovingChildFromAll("shared-child", (await _sink.FindOrDefault(_written))!), 2UL);
+        _remainingOnWritten = await ChildIdsFor(_written);
         _remainingOnOther = await ChildIdsFor(_other);
+        _missingCollectionWasCreated = ((IDictionary<string, object?>)(await _sink.FindOrDefault(_withoutChildren))!).ContainsKey(ChildrenProperty);
     }
 
-    [Fact] void should_remove_the_child_from_a_read_model_the_write_never_touched() => _remainingOnOther.ShouldNotContain("shared-child");
-    [Fact] void should_leave_the_children_that_do_not_match() => _remainingOnOther.ShouldContainOnly(["kept-child"]);
+    [Fact] void should_not_create_a_collection_on_an_unrelated_document() => _missingCollectionWasCreated.ShouldBeFalse();
+    [Fact] void should_remove_the_child_from_the_read_model_being_written() => _remainingOnWritten.ShouldContainOnly(["kept-on-written"]);
+    [Fact] void should_remove_the_child_from_the_other_read_model() => _remainingOnOther.ShouldContainOnly(["kept-on-other"]);
 
     static IChangeset<AppendedEvent, ExpandoObject> ChangesetAddingChildren(params string[] childIds)
     {
@@ -63,17 +70,17 @@ public class and_two_read_models_hold_the_child : Specification
         return changeset;
     }
 
-    static IChangeset<AppendedEvent, ExpandoObject> ChangesetRemovingChildFromAll(string childId) =>
-        ChangesetWith(new ChildRemovedFromAll(
+    static IChangeset<AppendedEvent, ExpandoObject> ChangesetRemovingChildFromAll(string childId, ExpandoObject initialState) =>
+        ChangesetWith(initialState, new ChildRemovedFromAll(
             new PropertyPath(ChildrenProperty),
             new PropertyPath(IdentifiedByProperty),
             childId,
             ArrayIndexers.NoIndexers));
 
-    static IChangeset<AppendedEvent, ExpandoObject> ChangesetWith(Change change)
+    static IChangeset<AppendedEvent, ExpandoObject> ChangesetWith(ExpandoObject initialState, Change change)
     {
         var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
-        changeset.InitialState.Returns(new ExpandoObject());
+        changeset.InitialState.Returns(initialState);
         Change[] changes = [change];
         changeset.Changes.Returns(changes);
         return changeset;

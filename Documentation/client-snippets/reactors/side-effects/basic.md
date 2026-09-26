@@ -10,9 +10,11 @@ public record StockDecreased(string Isbn, int Quantity);
 
 public class WarehouseReactor : IReactor
 {
+    [OnceOnly]
     public StockDecreased BookReserved(SideEffectsBookReserved @event, EventContext context) =>
         new(@event.Isbn, 1);
 
+    [OnceOnly]
     public async Task<StockDecreased> BookReservedAsync(SideEffectsBookReserved @event, EventContext context)
     {
         var available = await FetchCurrentStockAsync(@event.Isbn);

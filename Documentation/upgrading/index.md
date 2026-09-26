@@ -49,6 +49,11 @@ The label on the pull request that cut the release records which of these applie
 major was raised for a compile-time break on one client, users of the other clients are
 unaffected beyond taking the new package.
 
+A minor or patch release does not change a published surface, but it can still change what
+your build reports. The .NET client's [code analysis rules](../code-analysis/index.md) can
+gain new diagnostics in any release, and they reached consuming builds for the first time in
+19.4.8.
+
 ## Upgrading across several majors
 
 Take them one at a time and read each guide. Chronicle's wire compatibility is verified
