@@ -31,6 +31,9 @@ internal static partial class ProjectionFactoryLogMessages
     [LoggerMessage(LogLevel.Warning, "Projection '{ProjectionId}' declares root remove via join, which is not supported; no root removal subscription was created.")]
     internal static partial void RootRemovalViaJoinNotSupported(this ILogger<ProjectionFactory> logger, string projectionId);
 
+    [LoggerMessage(LogLevel.Warning, "Projection '{ProjectionId}' declares children inside nested object '{NestedPath}', which is not supported; its child subscriptions were not created.")]
+    internal static partial void NestedChildrenNotSupported(this ILogger<ProjectionFactory> logger, string projectionId, string nestedPath);
+
     [LoggerMessage(LogLevel.Warning, "Read model '{ReadModel}' collection property '{Property}' auto-maps to nothing: no property named '{Property}' exists on its source event(s) '{EventTypes}', and it has no explicit mapping, so it will always project as an empty collection. Rename the property to match the event, or map it explicitly with [SetFrom<TEvent>(nameof(...))].")]
     internal static partial void CollectionPropertyAutoMapsToNothing(this ILogger<ProjectionFactory> logger, string readModel, string property, string eventTypes);
 }

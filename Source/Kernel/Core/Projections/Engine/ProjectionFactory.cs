@@ -462,6 +462,11 @@ public class ProjectionFactory(
         {
             var nestedPropertyPath = childrenAccessorProperty.IsRoot ? kvp.Key : childrenAccessorProperty + kvp.Key;
             var nestedDefinition = kvp.Value;
+            if (nestedDefinition.Children.Count > 0)
+            {
+                logger.NestedChildrenNotSupported(projection.Identifier.Value, nestedPropertyPath.Path);
+            }
+
             var nestedSchema = currentReadModelSchema.Properties.TryGetValue(kvp.Key.LastSegment.Value, out var schemaProp)
                 ? schemaProp.ActualSchema ?? currentReadModelSchema
                 : currentReadModelSchema;
