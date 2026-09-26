@@ -140,6 +140,54 @@ public class InMemorySink(
     public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode)
     {
         var state = changeset.InitialState.Clone();
+        var rootJoins = changeset.Changes.OfType<Joined>().Where(joined => joined.ArrayIndexers.IsEmpty).ToArray();
+        if (!changeset.HasBeenRemoved() && rootJoins.Length > 0)
+        {
+            // Root joins enrich existing rows selected by their join column, not by the incoming
+            // event source id. Never create a phantom row for a join-only event. In particular,
+            // the root all-event mapper is inside the Joined change, not a keyed From change.
+            var updatedKeys = new List<object>();
+            lock (_collectionLock)
+            {
+                foreach (var (rowKey, row) in Collection.ToArray())
+                {
+                    var matching = rootJoins.Where(joined =>
+                        joined.Changes.Any() && TryFindValueInDocument(row, joined.OnProperty.Segments.ToArray(), 0, joined.Key)).ToArray();
+                    if (matching.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    var joinedState = row.Clone();
+                    foreach (var joined in matching)
+                    {
+                        joinedState = ApplyActualChanges(new Key(rowKey, ArrayIndexers.NoIndexers), joined.Changes, joinedState);
+                    }
+
+                    Collection[rowKey] = joinedState;
+                    if (eventSequenceNumber.IsActualValue)
+                    {
+                        LastHandledEventSequenceNumbers[rowKey] =
+                            LastHandledEventSequenceNumbers.TryGetValue(rowKey, out var current)
+                                ? Math.Max(current, eventSequenceNumber.Value)
+                                : eventSequenceNumber.Value;
+                    }
+
+                    updatedKeys.Add(rowKey);
+                }
+            }
+
+            foreach (var updatedKey in updatedKeys)
+            {
+                _changeSubject.OnNext(updatedKey);
+            }
+
+            if (rootJoins.All(joined => !joined.HasKeyedFrom))
+            {
+                return Task.FromResult<IEnumerable<FailedPartition>>([]);
+            }
+        }
+
         var keyValue = GetKeyValue(key);
 
         if (changeset.HasBeenRemoved())
@@ -167,7 +215,21 @@ public class InMemorySink(
             RemoveChildFromDocument(state, childRemovedFromAll);
         }
 
-        var result = ApplyActualChanges(key, changeset.Changes, state);
+        if (rootJoins.Any(joined => joined.HasKeyedFrom))
+        {
+            // The joined update may have touched this same row. Apply only the keyed From changes
+            // on top of the now-current row, without replaying the join against the From key.
+            lock (_collectionLock)
+            {
+                if (Collection.TryGetValue(keyValue, out var joinedRow))
+                {
+                    state = joinedRow.Clone();
+                }
+            }
+        }
+
+        var directChanges = changeset.Changes.Where(change => change is not Joined joined || !rootJoins.Contains(joined));
+        var result = ApplyActualChanges(key, directChanges, state);
         ((dynamic)result).id = key.Value;
         lock (_collectionLock)
         {

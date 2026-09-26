@@ -529,6 +529,7 @@ public class ProjectionFactory(
                     eventTypeSchemas,
                     propertyMappersForEveryEventType,
                     everyMappedEventTypeIds,
+                    nestedDefinition.From.Keys.Select(_ => _.Id).ToHashSet(),
                     nestedAutoMap,
                     nestedNoAutoMapProperties,
                     isNested: true);
@@ -698,6 +699,9 @@ public class ProjectionFactory(
         // event types that do not exist yet. Give it one subscription against every event instead, skipping event
         // types already mapped by root `from`, derivative or join registrations so those do not get the
         // every-event mappers applied again. Removal registrations do not carry every-event mappers.
+        // Known limitation: a join-only event whose join matches no read model receives no all-event
+        // fallback under its own event source id. A fallback would require observing join matches
+        // before routing the event, rather than independently subscribing to the same event twice.
         if (projectionDefinition.SubscribesToAllEvents && !isChild)
         {
             var mappedEventTypeIds = projectionDefinition.From.Keys
@@ -772,6 +776,9 @@ public class ProjectionFactory(
             eventTypeSchemas,
             propertyMappersForEveryEventType,
             everyMappedEventTypeIds,
+            projectionDefinition.From.Keys.Select(_ => _.Id)
+                .Concat(projectionDefinition.FromDerivatives?.SelectMany(_ => _.EventTypes.Select(type => type.Id)) ?? [])
+                .ToHashSet(),
             projection.AutoMap,
             projection.NoAutoMapProperties,
             isNested: false);
@@ -792,6 +799,7 @@ public class ProjectionFactory(
         IEnumerable<EventTypeSchema> eventTypeSchemas,
         IReadOnlyList<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappersForEveryEventType,
         HashSet<EventTypeId> everyMappedEventTypeIds,
+        HashSet<EventTypeId> keyedFromEventTypeIds,
         AutoMap autoMap,
         IReadOnlySet<string> noAutoMapProperties,
         bool isNested)
@@ -806,7 +814,7 @@ public class ProjectionFactory(
             }
             var joinObservable = projection.Event
                 .WhereEventTypeEquals(eventType)
-                .Join(accessorPath + joinDefinition.On);
+                .Join(accessorPath + joinDefinition.On, !isNested && keyedFromEventTypeIds.Contains(eventType.Id));
 
             if (isNested)
             {

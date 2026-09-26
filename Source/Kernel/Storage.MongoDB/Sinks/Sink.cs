@@ -148,7 +148,11 @@ public class Sink(
         // in this case so only existing documents are updated.
         var hasJoined = changeset.HasJoined();
         var hasActualRootLevelJoin = HasActualRootLevelJoin(changeset.Changes);
-        var onlyPropertyUpdatesAlongsideJoin = hasJoined && hasDirectKeyScopedChanges && !hasConstructiveChanges;
+        var hasKeyedFrom = changeset.Changes.OfType<Joined>().Any(joined => joined.HasKeyedFrom);
+
+        // A From and a Join can consume the same event. Only a From owns the direct keyed write;
+        // a join-only event's direct properties have no safe _id target and must still be suppressed.
+        var onlyPropertyUpdatesAlongsideJoin = hasJoined && hasDirectKeyScopedChanges && !hasConstructiveChanges && !hasKeyedFrom;
         var shouldSuppressRootUpdateAfterRootLevelJoin = hasActualRootLevelJoin && onlyPropertyUpdatesAlongsideJoin;
 
         // Compute the _id filter value only when the document is actually keyed by _id. For a join whose
@@ -169,7 +173,7 @@ public class Sink(
         // coerces it back to the key type ("Unrecognized Guid format"). A CHILD join (has array indexers)
         // still upserts so it can construct the child structure regardless of seed order.
         var isRootLevelJoin = hasJoined && !key.ArrayIndexers.All.Any();
-        var isUpsert = !onlyPropertyUpdatesAlongsideJoin && !isRootLevelJoin;
+        var isUpsert = !onlyPropertyUpdatesAlongsideJoin && (!isRootLevelJoin || hasKeyedFrom);
 
         if (changeset.HasBeenRemoved())
         {

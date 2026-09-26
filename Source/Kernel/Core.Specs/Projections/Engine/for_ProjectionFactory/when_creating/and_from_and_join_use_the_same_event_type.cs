@@ -5,9 +5,10 @@ namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_creatin
 
 public class and_from_and_join_use_the_same_event_type : Specification
 {
-    long _count;
+    (int Subscriptions, long Count, bool HasKeyedFrom) _result;
 
-    async Task Because() => _count = (await and_joining_with_every_event_mappings.ProjectJoin(false, fromAlsoJoins: true)).Count;
+    async Task Because() => _result = await and_joining_with_every_event_mappings.ProjectJoin(false, fromAlsoJoins: true);
 
-    [Fact] void should_apply_the_every_mapper_once() => _count.ShouldEqual(1);
+    [Fact] void should_apply_the_every_mapper_once_to_the_final_state() => _result.Count.ShouldEqual(1);
+    [Fact] void should_identify_the_keyed_from_write() => _result.HasKeyedFrom.ShouldBeTrue();
 }
