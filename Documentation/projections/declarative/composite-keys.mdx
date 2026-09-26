@@ -55,7 +55,7 @@ Composite keys can be used in join scenarios:
 
 ## Kernel compatibility
 
-Projection declarations that specify a composite key type require a Chronicle kernel from the release that added typed composite-key resolution, or later (see the release notes). Older kernels reject the type name when projecting events. Upgrade the kernel before deploying those declarations. Existing fluent .NET projections continue to emit untyped composite-key expressions so a newer client can still target an older kernel; the updated kernel also reads those stored expressions without migration. The connection-time compatibility check covers wire versions, not this projection-expression behavior.
+Projection declarations that specify a composite key type require Chronicle kernel v19.8.1 or later. Older kernels reject the type name when projecting events. Upgrade the kernel before deploying those declarations. Existing fluent .NET projections continue to emit untyped composite-key expressions so a newer client can still target an older kernel; the updated kernel also reads those stored expressions without migration. The connection-time compatibility check covers wire versions, not this projection-expression behavior.
 
 ## Generating declarations from stored projections
 
