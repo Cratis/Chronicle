@@ -479,6 +479,7 @@ public class ProjectionFactory(
                 ? schemaProp.ActualSchema ?? currentReadModelSchema
                 : currentReadModelSchema;
             var propertyMappersForEveryEventType = nestedDefinition.FromEvery.Properties.Select(p => ResolvePropertyMapper(projection, nestedPropertyPath + p.Key, p.Value)).ToList();
+            var everyMappedEventTypeIds = new HashSet<EventTypeId>();
 
             // Resolve mappings against the scalar object's schema and its own AutoMap exclusions.
             var nestedNoAutoMapProperties = (nestedDefinition.NoAutoMapProperties ?? [])
@@ -490,7 +491,10 @@ public class ProjectionFactory(
                 var matchingSchema = eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType);
                 var mergedProperties = GetMergedFromProperties(fromDefinition, nestedSchema, matchingSchema?.Schema, nestedAutoMap, nestedNoAutoMapProperties);
                 var propertyMappers = mergedProperties.ConvertAll(p => ResolvePropertyMapper(projection, nestedPropertyPath + p.Key, p.Value));
-                propertyMappers.AddRange(propertyMappersForEveryEventType);
+                if (everyMappedEventTypeIds.Add(eventType.Id))
+                {
+                    propertyMappers.AddRange(propertyMappersForEveryEventType);
+                }
 
                 var fromObservable = projection.Event.WhereEventTypeEquals(eventType);
                 projection.Subscriptions.Add(fromObservable.ProjectNested(propertyMappers).Subscribe());
@@ -524,6 +528,7 @@ public class ProjectionFactory(
                     nestedSchema,
                     eventTypeSchemas,
                     propertyMappersForEveryEventType,
+                    everyMappedEventTypeIds,
                     nestedAutoMap,
                     nestedNoAutoMapProperties,
                     isNested: true);
@@ -661,6 +666,7 @@ public class ProjectionFactory(
         // projection has any per-event-type `from` block to piggyback the enumeration on - an `all`-only
         // projection has none.
         var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
+        var everyMappedEventTypeIds = new HashSet<EventTypeId>();
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
             var fromObservable = SetupFromDefinition(
@@ -669,7 +675,7 @@ public class ProjectionFactory(
                 eventType,
                 childrenAccessorProperty,
                 actualIdentifiedByProperty,
-                propertyMappersForEveryEventType,
+                everyMappedEventTypeIds.Add(eventType.Id) ? propertyMappersForEveryEventType : [],
                 currentReadModelSchema,
                 eventTypeSchemas);
 
@@ -737,7 +743,7 @@ public class ProjectionFactory(
                         eventType,
                         childrenAccessorProperty,
                         actualIdentifiedByProperty,
-                        propertyMappersForEveryEventType,
+                        everyMappedEventTypeIds.Add(eventType.Id) ? propertyMappersForEveryEventType : [],
                         currentReadModelSchema,
                         eventTypeSchemas);
 
@@ -765,6 +771,7 @@ public class ProjectionFactory(
             currentReadModelSchema,
             eventTypeSchemas,
             propertyMappersForEveryEventType,
+            everyMappedEventTypeIds,
             projection.AutoMap,
             projection.NoAutoMapProperties,
             isNested: false);
@@ -784,6 +791,7 @@ public class ProjectionFactory(
         JsonSchema currentReadModelSchema,
         IEnumerable<EventTypeSchema> eventTypeSchemas,
         IReadOnlyList<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappersForEveryEventType,
+        HashSet<EventTypeId> everyMappedEventTypeIds,
         AutoMap autoMap,
         IReadOnlySet<string> noAutoMapProperties,
         bool isNested)
@@ -792,7 +800,10 @@ public class ProjectionFactory(
         {
             var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType)?.Schema, autoMap, noAutoMapProperties);
             var propertyMappers = mergedJoinProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, accessorPath + kvp.Key, kvp.Value));
-            propertyMappers.AddRange(propertyMappersForEveryEventType);
+            if (everyMappedEventTypeIds.Add(eventType.Id))
+            {
+                propertyMappers.AddRange(propertyMappersForEveryEventType);
+            }
             var joinObservable = projection.Event
                 .WhereEventTypeEquals(eventType)
                 .Join(accessorPath + joinDefinition.On);

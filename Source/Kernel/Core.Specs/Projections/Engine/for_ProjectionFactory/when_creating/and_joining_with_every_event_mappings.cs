@@ -40,7 +40,7 @@ public class and_joining_with_every_event_mappings : Specification
     [Fact] void should_count_the_join_once_when_children_are_included() => _withChildren.Count.ShouldEqual(1);
     [Fact] void should_count_the_join_once_when_children_are_excluded() => _withoutChildren.Count.ShouldEqual(1);
 
-    internal static async Task<(int Subscriptions, long Count)> ProjectJoin(bool includeChildren, bool isChild = false)
+    internal static async Task<(int Subscriptions, long Count)> ProjectJoin(bool includeChildren, bool isChild = false, bool fromAlsoJoins = false, bool subscribeToAllEvents = false)
     {
         EventStoreName eventStore = "event-store";
         EventStoreNamespaceName @namespace = "namespace";
@@ -66,7 +66,7 @@ public class and_joining_with_every_event_mappings : Specification
 
         var from = new Dictionary<EventType, FromDefinition>
         {
-            [(EventType)"Created"] = new FromDefinition(new Dictionary<PropertyPath, string> { [(PropertyPath)"joinId"] = "joinId" }, PropertyExpression.NotSet, null)
+            [(EventType)(fromAlsoJoins ? "Joined" : "Created")] = new FromDefinition(fromAlsoJoins ? new Dictionary<PropertyPath, string>() : new Dictionary<PropertyPath, string> { [(PropertyPath)"joinId"] = "joinId" }, PropertyExpression.NotSet, null)
         };
         var joins = new Dictionary<EventType, JoinDefinition>
         {
@@ -100,7 +100,8 @@ public class and_joining_with_every_event_mappings : Specification
             isChild ? new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false) : every,
             new Dictionary<EventType, RemovedWithDefinition>(),
             new Dictionary<EventType, RemovedWithJoinDefinition>(),
-            AutoMap: AutoMap.Disabled);
+            AutoMap: AutoMap.Disabled,
+            SubscribesToAllEvents: subscribeToAllEvents);
         var schema = await JsonSchema.FromJsonAsync("""
             {"type":"object","properties":{"id":{"type":"string"},"joinId":{"type":"string"},"count":{"type":"integer"},"items":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"joinId":{"type":"string"},"count":{"type":"integer"}}}}}}
             """);
@@ -150,7 +151,9 @@ public class and_joining_with_every_event_mappings : Specification
             : ArrayIndexers.NoIndexers;
         projection.OnNext(new ProjectionEventContext(new Key("root", indexers), incoming, changeset, ProjectionOperationType.Join, false, "join-source"));
         var joined = changeset.Changes.OfType<Joined>().Single();
-        var changed = joined.Changes.OfType<PropertiesChanged<ExpandoObject>>().Single();
+        var changed = fromAlsoJoins
+            ? changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().Single()
+            : joined.Changes.OfType<PropertiesChanged<ExpandoObject>>().Single();
         var resultState = (IDictionary<string, object?>)changed.State;
         var count = isChild
             ? Convert.ToInt64(((IDictionary<string, object?>)((IEnumerable<object>)resultState["items"]!).Single())["count"])
