@@ -65,6 +65,26 @@ public static class JsonSchemaCompatibilityExtensions
     }
 
     /// <summary>
+    /// Compares two serialized schemas without treating CLR type titles as a stored schema change.
+    /// </summary>
+    /// <param name="stored">The stored schema JSON.</param>
+    /// <param name="incoming">The incoming schema JSON.</param>
+    /// <returns><see langword="true"/> if the schemas differ only by titles, or are identical.</returns>
+    /// <remarks>
+    /// Unlike <see cref="IsCompatibleWith"/>, this is a strict equality check: a new enumeration member
+    /// or nullability marker still changes the stored representation.
+    /// </remarks>
+    public static bool EqualsIgnoringTitles(string stored, string incoming)
+    {
+        var storedNode = JsonNode.Parse(stored);
+        var incomingNode = JsonNode.Parse(incoming);
+        StripTitles(storedNode);
+        StripTitles(incomingNode);
+
+        return storedNode?.ToJsonString() == incomingNode?.ToJsonString();
+    }
+
+    /// <summary>
     /// Strips every <c language="csharp">title</c> declaration from a schema node.
     /// </summary>
     /// <param name="node">The <see cref="JsonNode"/> to strip, which may be <see langword="null"/>.</param>

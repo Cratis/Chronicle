@@ -59,7 +59,7 @@ Projection declarations that specify a composite key type require Chronicle kern
 
 ## Generating declarations from stored projections
 
-When generating a declaration from an older, untyped composite-key expression, Chronicle infers the type from the read model's `Id` property (including nullable object types) or the child item's `Id` for a child collection. If that schema has no composite-key type, generation uses `CompositeKey` as a best-effort placeholder. Such a declaration cannot recompile unless the read-model schema actually defines a `CompositeKey` object with the mapped properties. Supply a typed key in the source projection or update the read model before using the generated declaration.
+When generating a declaration from an untyped fluent composite-key expression, Chronicle infers the type from the read model's `Id` property (including nullable object types) or the child item's `Id` for a child collection. The .NET client now includes the CLR key type name in the generated schema, so declarations generated from these fluent projections can be compiled again. Fluent expressions remain untyped for compatibility with older kernels. For a manually supplied schema without a key type name, generation still uses `CompositeKey` as a best-effort placeholder; that declaration cannot recompile unless the schema defines a `CompositeKey` object with the mapped properties.
 
 ## Performance considerations
 

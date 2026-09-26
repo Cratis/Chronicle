@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Screenplay.Diagnostics;
@@ -416,17 +417,32 @@ public class ProjectionValidator(
     {
         var typeName = compositeKey.Type;
 
-        // Check if the composite key type exists in the read model schema
+        // The Id schema identifies the key being generated. Two unrelated CLR types can share a short
+        // name and title, so a property named after the type (or a title search) must not win over Id.
         JsonSchema? keySchema = null;
+        var idProperty = readModelSchema.Properties.FirstOrDefault(_ => _.Key.Equals("id", StringComparison.OrdinalIgnoreCase)).Value;
+        if (idProperty is not null)
+        {
+            var idSchema = idProperty.OneOf.Select(_ => _.ActualSchema).FirstOrDefault(_ => _.Type.HasFlag(JsonObjectType.Object))
+                ?? idProperty.ActualSchema;
+            var namedId = string.Equals(idSchema.Title, typeName, StringComparison.Ordinal) ||
+                string.Equals(idProperty.Title, typeName, StringComparison.Ordinal) ||
+                ((idProperty.HasReference || idProperty.OneOf.Concat(idProperty.AllOf).Any(_ => _.HasReference)) &&
+                    CompositeKeyTypeName.From(readModelSchema) == typeName);
+            if (namedId)
+            {
+                keySchema = idSchema;
+            }
+        }
 
-        // First, check in the definitions (most likely place for complex types)
-        if (readModelSchema.Definitions.TryGetValue(typeName, out var definedType))
+        // Legacy declarations can name a key type not used as the read model's Id.
+        if (keySchema is null && readModelSchema.Definitions.TryGetValue(typeName, out var definedType))
         {
             keySchema = definedType;
         }
 
         // If not in definitions, check if it's a property in the read model (camelCase)
-        else
+        else if (keySchema is null)
         {
             var camelCaseTypeName = LowercaseFirstLetter(typeName);
             if (readModelSchema.Properties.TryGetValue(camelCaseTypeName, out var keyProperty))
