@@ -217,6 +217,27 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     public IClientArtifactsProvider ClientArtifactsProvider { get; } = defaults.ClientArtifactsProvider;
 
     /// <summary>
+    /// Defines the projection for this scenario using the fluent client builder, without assembly discovery.
+    /// </summary>
+    /// <param name="define">The projection definition for this run.</param>
+    /// <returns>This scenario for chaining.</returns>
+    public ReadModelScenario<TReadModel> WithProjection(Action<IProjectionBuilderFor<TReadModel>> define)
+    {
+        var builder = new ProjectionBuilderFor<TReadModel>(
+            new ProjectionId(typeof(TReadModel).FullName!),
+            typeof(TReadModel),
+            _namingPolicy,
+            _eventTypes,
+            _jsonSerializerOptions);
+        define(builder);
+        _projectionDefinition = builder.Build();
+        _projectionDefinitionResolved = true;
+        _substitutions = null;
+        _processed = false;
+        return this;
+    }
+
+    /// <summary>
     /// Enables strict event subscription: seeding an event the projection does not subscribe to raises
     /// <see cref="UnsubscribedEventSeeded"/> instead of being silently skipped.
     /// </summary>
@@ -334,7 +355,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     {
         if (_eventStore is null)
         {
-            _eventStore = new EventStoreForTesting(ResolvedServiceProvider());
+            _eventStore = new EventStoreForTesting(ResolvedServiceProvider(), defaults.ClientArtifactsProvider);
             foreach (var seed in _readModelSeeds)
             {
                 seed(_eventStore);
@@ -358,7 +379,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 
     IReadOnlyList<ReadModelSubstitution> DetectSubstitutions()
     {
-        var isReduced = FindReducerType(typeof(TReadModel)) is not null;
+        var isReduced = _projectionDefinition is null && FindReducerType(typeof(TReadModel)) is not null;
         return SubstitutedLayers.DetectFor(
             typeof(TReadModel),
             isReduced ? null : ProjectionDefinition(),
@@ -396,7 +417,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         var eventsList = events.ToList();
         var readModelType = typeof(TReadModel);
 
-        var reducerType = FindReducerType(readModelType);
+        var reducerType = _projectionDefinitionResolved && _projectionDefinition is not null ? null : FindReducerType(readModelType);
         if (reducerType is not null)
         {
             var reduced = await ReducerReadModelProcessor.Process<TReadModel>(

@@ -66,6 +66,11 @@ Keys are held only in memory and are not shared between scenario instances. This
 
 Create a **new `EventScenario` instance per test** to keep tests isolated. The in-memory store accumulates state across calls on the same instance. Each instance starts with an empty event log and sequence number zero.
 
+If your specs supply event types or constraints at runtime, construct `new Defaults(artifactsProvider)`
+and pass it to `new EventScenario(defaults)`. This uses that registry for event serialization and
+constraint discovery instead of the process-wide default. Pass an explicit constraint provider as the
+second argument when you want to override discovery for this scenario.
+
 ## Example: full test
 
 <ChronicleClientTabs snippet="testing/events/scenario/full-example" />
