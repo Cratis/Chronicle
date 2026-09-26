@@ -317,9 +317,17 @@ public class EventSequenceStorage(
 
             foreach (var eventToAppend in eventsArray)
             {
-                var schema = await eventTypesStorage.GetFor(eventToAppend.EventType.Id, eventToAppend.EventType.Generation);
-                var jsonObject = expandoObjectConverter.ToJsonObject(eventToAppend.Content, schema.Schema);
-                var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+                var generationalContent = new Dictionary<string, BsonDocument>();
+                foreach (var (generation, content) in eventToAppend.GenerationalContent)
+                {
+                    var schema = await eventTypesStorage.GetFor(eventToAppend.EventType.Id, generation);
+                    var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
+                    generationalContent[generation.ToString()] = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+                }
+
+                var hashesForStorage = eventToAppend.ContentHashes.ToDictionary(
+                    kvp => kvp.Key.ToString(),
+                    kvp => kvp.Value.Value);
                 var resolvedSubject = eventToAppend.Subject?.IsSet == true
                     ? eventToAppend.Subject
                     : new Subject(eventToAppend.EventSourceId.Value);
@@ -336,19 +344,14 @@ public class EventSequenceStorage(
                     eventToAppend.EventStreamType,
                     eventToAppend.EventStreamId,
                     eventToAppend.Tags.Select(_ => _.Value),
-                    new Dictionary<string, BsonDocument>
-                    {
-                        { eventToAppend.EventType.Generation.ToString(), document }
-                    },
-                    new Dictionary<string, string>
-                    {
-                        { eventToAppend.EventType.Generation.ToString(), eventToAppend.Hash.Value }
-                    },
+                    generationalContent,
+                    hashesForStorage,
                     [],
                     Subject: eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
 
                 eventsToInsert.Add(@event);
 
+                var appendedHash = eventToAppend.ContentHashes.TryGetValue(eventToAppend.EventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
                 appendedEvents.Add(new AppendedEvent(
                     new(
                         eventToAppend.EventType,
@@ -364,9 +367,12 @@ public class EventSequenceStorage(
                         eventToAppend.Causation,
                         await identityStorage.GetFor(eventToAppend.CausedByChain),
                         eventToAppend.Tags,
-                        eventToAppend.Hash,
+                        appendedHash,
                         Subject: resolvedSubject),
-                    eventToAppend.Content));
+                    eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
+                {
+                    GenerationalContent = generationalContent.ToDictionary(kvp => int.Parse(kvp.Key), kvp => kvp.Value.ToString())
+                });
             }
 
             logger.AppendingInserting(eventsToInsert.Count, eventSequenceId);

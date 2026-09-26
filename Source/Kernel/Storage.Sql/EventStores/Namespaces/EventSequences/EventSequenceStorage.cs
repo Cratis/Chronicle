@@ -272,8 +272,8 @@ public class EventSequenceStorage(
                     eventToAppend.CausedByChain,
                     eventToAppend.Tags,
                     truncatedOccurred,
-                    eventToAppend.Content,
-                    eventToAppend.Hash,
+                    eventToAppend.GenerationalContent,
+                    eventToAppend.ContentHashes,
                     eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
 
                 scope.DbContext.Events.Add(eventEntry);
@@ -281,6 +281,7 @@ public class EventSequenceStorage(
                 var resolvedSubject = eventToAppend.Subject?.IsSet == true
                     ? eventToAppend.Subject
                     : new Subject(eventToAppend.EventSourceId.Value);
+                var appendedHash = eventToAppend.ContentHashes.TryGetValue(eventToAppend.EventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
                 var eventContext = new EventContext(
                     eventToAppend.EventType,
                     eventToAppend.EventSourceType,
@@ -295,10 +296,13 @@ public class EventSequenceStorage(
                     eventToAppend.Causation,
                     await identityStorage.GetFor(eventToAppend.CausedByChain),
                     eventToAppend.Tags,
-                    eventToAppend.Hash,
+                    appendedHash,
                     Subject: resolvedSubject);
 
-                appendedEvents.Add(new AppendedEvent(eventContext, eventToAppend.Content));
+                appendedEvents.Add(new AppendedEvent(eventContext, eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
+                {
+                    GenerationalContent = EventEntryConverter.BuildGenerationalContent(eventToAppend.GenerationalContent)
+                });
             }
 
             await scope.DbContext.SaveChangesAsync();
