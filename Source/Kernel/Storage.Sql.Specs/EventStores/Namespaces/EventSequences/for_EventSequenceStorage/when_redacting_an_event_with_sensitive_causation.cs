@@ -64,6 +64,8 @@ public class when_redacting_an_event_with_sensitive_causation : given.an_event_s
         cause.TryGetProperty("properties", out _).ShouldBeFalse();
     }
 
-    // SQL storage keeps timestamps at microsecond precision, so the originals start at that precision.
-    static DateTimeOffset AtMicroseconds(DateTimeOffset value) => value.AddTicks(-(value.Ticks % 10));
+    static DateTimeOffset AtMicroseconds(DateTimeOffset value) =>
+
+        // SQL storage keeps timestamps at microsecond precision, so the originals start at that precision.
+        value.AddTicks(-(value.Ticks % 10));
 }
