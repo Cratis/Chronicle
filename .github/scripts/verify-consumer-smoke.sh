@@ -22,6 +22,7 @@ set -euo pipefail
 
 CHRONICLE_VERSION="${1:?Usage: verify-consumer-smoke.sh <chronicle-version> [local-package-feed]}"
 LOCAL_FEED="${2:-}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
@@ -54,7 +55,21 @@ CONFIG
 
 # Arc floats to whatever is current, because that is what an application installing both gets today.
 # Keep separate consumers: one embedded kernel package must not supply an assembly missing from the other.
-mkdir -p "$WORK_DIR/Testing" "$WORK_DIR/XUnitIntegration"
+# TestingOnly installs no Arc package explicitly: the testing package must carry its own kernel dependencies.
+mkdir -p "$WORK_DIR/Testing" "$WORK_DIR/XUnitIntegration" "$WORK_DIR/TestingOnly"
+cat > "$WORK_DIR/TestingOnly/Consumer.csproj" <<PROJECT
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Cratis.Chronicle.Testing" Version="$CHRONICLE_VERSION" />
+    <Compile Include="$SCRIPT_DIR/TestingOnlyProgram.cs" Link="Program.cs" />
+  </ItemGroup>
+</Project>
+PROJECT
 cat > "$WORK_DIR/Testing/Consumer.csproj" <<PROJECT
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -108,6 +123,18 @@ if (services.Count == 0)
 Console.WriteLine($"Registered {services.Count} services.");
 return 0;
 PROGRAM
+
+# Exercise the actual packaged scenario entry points without any direct Arc reference. Merely restoring
+# the package or resolving the testing assembly does not catch missing kernel runtime dependencies.
+echo "Starting Chronicle $CHRONICLE_VERSION testing scenarios with only the Testing package referenced..."
+if dotnet run --project "$WORK_DIR/TestingOnly/Consumer.csproj" > "$WORK_DIR/TestingOnly/run.log" 2>&1; then
+    tail -1 "$WORK_DIR/TestingOnly/run.log"
+else
+    echo "::error::Chronicle $CHRONICLE_VERSION testing scenarios failed with only the Testing package referenced."
+    echo "--- output ---"
+    tail -30 "$WORK_DIR/TestingOnly/run.log"
+    exit 1
+fi
 
 for consumer in Testing XUnitIntegration; do
     echo "Installing Chronicle $CHRONICLE_VERSION ($consumer) beside the current Arc packages and starting it..."
