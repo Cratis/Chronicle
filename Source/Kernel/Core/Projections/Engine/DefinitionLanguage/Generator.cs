@@ -81,7 +81,7 @@ public class Generator : IGenerator
         // Nested blocks
         foreach (var kv in definition.Nested ?? new Dictionary<PropertyPath, ChildrenDefinition>())
         {
-            GenerateNestedBlock(sb, kv.Key, kv.Value, definition.AutoMap, 1);
+            GenerateNestedBlock(sb, kv.Key, kv.Value, definition.AutoMap, 1, definition, readModelDefinition);
         }
 
         // RemovedWith blocks
@@ -238,7 +238,7 @@ public class Generator : IGenerator
         var effectiveAutoMap = children.AutoMap == AutoMap.Inherit ? parentAutoMap : children.AutoMap;
 
         sb.AppendLine($"{Indent(indent)}children {collectionName.Path} identified by {children.IdentifiedBy.Path}");
-        GenerateBlockBody(sb, children, effectiveAutoMap, parentAutoMap, indent);
+        GenerateBlockBody(sb, children, effectiveAutoMap, parentAutoMap, indent, definition, readModelDefinition);
     }
 
     /// <summary>
@@ -249,19 +249,21 @@ public class Generator : IGenerator
     /// <param name="nested">The <see cref="ChildrenDefinition"/> holding the nested block's content.</param>
     /// <param name="parentAutoMap">The enclosing block's <see cref="AutoMap"/> setting.</param>
     /// <param name="indent">The indent level to write at.</param>
+    /// <param name="definition">The projection definition.</param>
+    /// <param name="readModelDefinition">The read model definition.</param>
     /// <remarks>
     /// A nested block is stored as a <see cref="ChildrenDefinition"/> with an unset IdentifiedBy - there is one
     /// object, so there is nothing to identify it by - which is the only difference from a children block.
     /// </remarks>
-    void GenerateNestedBlock(StringBuilder sb, PropertyPath property, ChildrenDefinition nested, AutoMap parentAutoMap, int indent)
+    void GenerateNestedBlock(StringBuilder sb, PropertyPath property, ChildrenDefinition nested, AutoMap parentAutoMap, int indent, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
         var effectiveAutoMap = nested.AutoMap == AutoMap.Inherit ? parentAutoMap : nested.AutoMap;
 
         sb.AppendLine($"{Indent(indent)}nested {property.Path}");
-        GenerateBlockBody(sb, nested, effectiveAutoMap, parentAutoMap, indent, isNested: true);
+        GenerateBlockBody(sb, nested, effectiveAutoMap, parentAutoMap, indent, definition, readModelDefinition, isNested: true);
     }
 
-    void GenerateBlockBody(StringBuilder sb, ChildrenDefinition children, AutoMap effectiveAutoMap, AutoMap parentAutoMap, int indent, bool isNested = false)
+    void GenerateBlockBody(StringBuilder sb, ChildrenDefinition children, AutoMap effectiveAutoMap, AutoMap parentAutoMap, int indent, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, bool isNested = false)
     {
         // NoAutoMap directive - only output if disabled and different from parent
         if (effectiveAutoMap == AutoMap.Disabled && parentAutoMap != AutoMap.Disabled)
@@ -302,7 +304,7 @@ public class Generator : IGenerator
         // Nested blocks
         foreach (var kv in children.Nested ?? new Dictionary<PropertyPath, ChildrenDefinition>())
         {
-            GenerateNestedBlock(sb, kv.Key, kv.Value, effectiveAutoMap, indent + 1);
+            GenerateNestedBlock(sb, kv.Key, kv.Value, effectiveAutoMap, indent + 1, definition, readModelDefinition);
         }
 
         // RemovedWith blocks
