@@ -76,51 +76,55 @@ public class UnitOfWork(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        var scope = concurrencyScope ?? ConcurrencyScope.NotSet;
-        if (_decisionScopes.Count != 0)
+        lock (_decisionLock)
         {
-            ValidateLegacyEventSequenceIdsForOrderedBatch(eventSequenceId);
-            EnsureEventSequenceCanBeUsed(eventSequenceId);
-        }
-        if (scope != ConcurrencyScope.NotSet && _decisionScopes.TryGetValue(eventSourceId, out var decisionScope))
-        {
-            throw new ConflictingConcurrencyScopesForLabel(eventSourceId, decisionScope, scope);
-        }
-        if (_hasOrderedBatch)
-        {
-            ThrowIfLabelIsNotSpecified(eventSourceId);
-            scope = MaterializeConcurrencyScope(scope);
-            EnsureEventSequenceCanBeUsed(eventSequenceId);
-            ValidateConcurrencyScope(eventSourceId, scope, _concurrencyScopes);
-            BindToEventSequence(eventSequenceId);
-        }
-        else
-        {
-            BindLegacyEventSequence(eventSequenceId);
-        }
+            ThrowIfProtectedUnitOfWorkIsCompleting();
+            var scope = concurrencyScope ?? ConcurrencyScope.NotSet;
+            if (_decisionScopes.Count != 0)
+            {
+                ValidateLegacyEventSequenceIdsForOrderedBatch(eventSequenceId);
+                EnsureEventSequenceCanBeUsed(eventSequenceId);
+            }
+            if (scope != ConcurrencyScope.NotSet && _decisionScopes.TryGetValue(eventSourceId, out var decisionScope))
+            {
+                throw new ConflictingConcurrencyScopesForLabel(eventSourceId, decisionScope, scope);
+            }
+            if (_hasOrderedBatch)
+            {
+                ThrowIfLabelIsNotSpecified(eventSourceId);
+                scope = MaterializeConcurrencyScope(scope);
+                EnsureEventSequenceCanBeUsed(eventSequenceId);
+                ValidateConcurrencyScope(eventSourceId, scope, _concurrencyScopes);
+                BindToEventSequence(eventSequenceId);
+            }
+            else
+            {
+                BindLegacyEventSequence(eventSequenceId);
+            }
 
-        if (_currentLegacyEvents is null)
-        {
-            _currentLegacyEvents = new LegacyStagedEvents();
-            _stagedEvents.Add(_currentLegacyEvents);
-        }
+            if (_currentLegacyEvents is null)
+            {
+                _currentLegacyEvents = new LegacyStagedEvents();
+                _stagedEvents.Add(_currentLegacyEvents);
+            }
 
-        _currentLegacyEvents.Add(new EventForEventSourceId(eventSourceId, @event, causation)
-        {
-            EventStreamType = eventStreamType ?? EventStreamType.All,
-            EventStreamId = eventStreamId ?? EventStreamId.Default,
-            EventSourceType = eventSourceType ?? EventSourceType.Default,
-            Tags = tags ?? [],
-            Occurred = occurred,
-            Subject = subject
-        });
-        if (_hasOrderedBatch)
-        {
-            EnrollStrictConcurrencyScope(eventSourceId, scope);
-        }
-        else
-        {
-            SetLegacyConcurrencyScope(eventSourceId, scope);
+            _currentLegacyEvents.Add(new EventForEventSourceId(eventSourceId, @event, causation)
+            {
+                EventStreamType = eventStreamType ?? EventStreamType.All,
+                EventStreamId = eventStreamId ?? EventStreamId.Default,
+                EventSourceType = eventSourceType ?? EventSourceType.Default,
+                Tags = tags ?? [],
+                Occurred = occurred,
+                Subject = subject
+            });
+            if (_hasOrderedBatch)
+            {
+                EnrollStrictConcurrencyScope(eventSourceId, scope);
+            }
+            else
+            {
+                SetLegacyConcurrencyScope(eventSourceId, scope);
+            }
         }
     }
 
@@ -130,29 +134,33 @@ public class UnitOfWork(
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
     {
-        var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
-        foreach (var (label, scope) in batch.ConcurrencyScopes)
+        lock (_decisionLock)
         {
-            if (scope != ConcurrencyScope.NotSet && _decisionScopes.TryGetValue(label, out var decisionScope))
+            ThrowIfProtectedUnitOfWorkIsCompleting();
+            var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
+            foreach (var (label, scope) in batch.ConcurrencyScopes)
             {
-                throw new ConflictingConcurrencyScopesForLabel(label, decisionScope, scope);
+                if (scope != ConcurrencyScope.NotSet && _decisionScopes.TryGetValue(label, out var decisionScope))
+                {
+                    throw new ConflictingConcurrencyScopesForLabel(label, decisionScope, scope);
+                }
             }
-        }
-        ValidateLegacyEventSequenceIdsForOrderedBatch(eventSequenceId);
-        EnsureEventSequenceCanBeUsed(eventSequenceId);
-        ValidateExistingEventTargetsForOrderedBatch();
-        var materializedConcurrencyScopes = MaterializeConcurrencyScopes(_concurrencyScopes);
-        ValidateExistingConcurrencyScopesForOrderedBatch(materializedConcurrencyScopes);
-        ValidateConcurrencyScopes(batch.ConcurrencyScopes, materializedConcurrencyScopes);
+            ValidateLegacyEventSequenceIdsForOrderedBatch(eventSequenceId);
+            EnsureEventSequenceCanBeUsed(eventSequenceId);
+            ValidateExistingEventTargetsForOrderedBatch();
+            var materializedConcurrencyScopes = MaterializeConcurrencyScopes(_concurrencyScopes);
+            ValidateExistingConcurrencyScopesForOrderedBatch(materializedConcurrencyScopes);
+            ValidateConcurrencyScopes(batch.ConcurrencyScopes, materializedConcurrencyScopes);
 
-        BindToEventSequence(eventSequenceId);
-        _concurrencyScopes = materializedConcurrencyScopes;
-        _hasOrderedBatch = true;
-        _currentLegacyEvents = null;
-        _stagedEvents.Add(new OrderedStagedEvents(batch.Events));
-        foreach (var (scopeLabel, concurrencyScope) in batch.ConcurrencyScopes)
-        {
-            EnrollStrictConcurrencyScope(scopeLabel, concurrencyScope);
+            BindToEventSequence(eventSequenceId);
+            _concurrencyScopes = materializedConcurrencyScopes;
+            _hasOrderedBatch = true;
+            _currentLegacyEvents = null;
+            _stagedEvents.Add(new OrderedStagedEvents(batch.Events));
+            foreach (var (scopeLabel, concurrencyScope) in batch.ConcurrencyScopes)
+            {
+                EnrollStrictConcurrencyScope(scopeLabel, concurrencyScope);
+            }
         }
     }
 
@@ -344,6 +352,11 @@ public class UnitOfWork(
                 _appendManyResult = result;
             }
         }
+        catch (Exception exception) when (protectedCommit)
+        {
+            _appendManyResult = AppendManyResult.Failed(correlationId, [new AppendError(exception.Message)]);
+            throw;
+        }
         finally
         {
             // Completion must run even when the append throws (RpcException, unknown event type,
@@ -351,6 +364,14 @@ public class UnitOfWork(
             // AsyncLocal Current keeps pointing at a completed unit. The exception still propagates.
             _isCommitted = true;
             _onCompleted(this);
+        }
+    }
+
+    void ThrowIfProtectedUnitOfWorkIsCompleting()
+    {
+        if (_decisionScopes.Count != 0 && (_completing || IsCompleted))
+        {
+            throw new ProtectedUnitOfWorkEventsAfterCompletion();
         }
     }
 
