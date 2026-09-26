@@ -84,20 +84,15 @@ public class ReactorHandler(
     {
         try
         {
-            identityProvider.SetCurrentIdentity((Identity.System with { OnBehalfOf = context.CausedBy }).WithoutDuplicates());
-            causationManager.Add(CausationType, new Dictionary<string, string>
+            BeginHandling(context);
+            try
             {
-                { CausationReactorIdProperty, Id.ToString() },
-                { CausationEventTypeIdProperty, context.EventType.Id.ToString() },
-                { CausationEventTypeGenerationProperty, context.EventType.Generation.ToString() },
-                { CausationEventSequenceIdProperty, EventSequenceId.ToString() },
-                { CausationEventSequenceNumberProperty, context.SequenceNumber.ToString() }
-            });
-
-            var invocationResult = await reactorInvoker.Invoke(content, context);
-
-            identityProvider.ClearCurrentIdentity();
-            return invocationResult;
+                return await reactorInvoker.Invoke(content, context);
+            }
+            finally
+            {
+                EndHandling();
+            }
         }
         catch (Exception ex)
         {
@@ -146,4 +141,47 @@ public class ReactorHandler(
 
     /// <inheritdoc/>
     public void Dispose() => _cancellationTokenSource.Dispose();
+
+    /// <summary>
+    /// Sets the identity and causation for handling an event.
+    /// </summary>
+    /// <param name="context">The delivered event context.</param>
+    internal void BeginHandling(EventContext context)
+    {
+        identityProvider.SetCurrentIdentity((Identity.System with { OnBehalfOf = context.CausedBy }).WithoutDuplicates());
+        causationManager.Add(CausationType, GetCausationProperties(context));
+    }
+
+    /// <summary>
+    /// Sets identity and scopes causation for one delivered event.
+    /// </summary>
+    /// <param name="context">The delivered event context.</param>
+    /// <returns>A scope to dispose after handling the event.</returns>
+    internal IDisposable BeginHandlingScope(EventContext context)
+    {
+        identityProvider.SetCurrentIdentity((Identity.System with { OnBehalfOf = context.CausedBy }).WithoutDuplicates());
+        try
+        {
+            return causationManager.BeginScope(CausationType, GetCausationProperties(context));
+        }
+        catch
+        {
+            identityProvider.ClearCurrentIdentity();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Clears the identity after handling an event.
+    /// </summary>
+    internal void EndHandling() => identityProvider.ClearCurrentIdentity();
+
+    Dictionary<string, string> GetCausationProperties(EventContext context) => new()
+    {
+        { CausationReactorIdProperty, Id.ToString() },
+        { CausationEventTypeIdProperty, context.EventType.Id.ToString() },
+        { CausationEventTypeGenerationProperty, context.EventType.Generation.ToString() },
+        { CausationEventSequenceIdProperty, EventSequenceId.ToString() },
+        { CausationEventSequenceNumberProperty, context.SequenceNumber.ToString() }
+    };
 }
