@@ -8,7 +8,6 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.AspNetCore.Identity;
-
 using StoredUser = Cratis.Chronicle.Storage.Security.User;
 
 namespace Cratis.Chronicle.Security.for_ChangeUserPassword.given;

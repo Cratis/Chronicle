@@ -25,10 +25,15 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         try
         {
             var httpClient = webhookHttpClientFactory.Create(webhookTarget, accessToken);
-            await httpClient.PostAsJsonAsync(
+            using var response = await httpClient.PostAsJsonAsync(
                 string.Empty,
                 new EventsToObserve(partition.ToString(), events.ToArray()),
                 jsonSerializerOptions);
+            if (!response.IsSuccessStatusCode)
+            {
+                return Catch.Failed(new WebhookDeliveryFailed(webhookTarget.Url, response.StatusCode, response.ReasonPhrase));
+            }
+
             return Catch.Success();
         }
         catch (Exception e)

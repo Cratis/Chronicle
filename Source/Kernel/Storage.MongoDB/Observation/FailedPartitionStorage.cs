@@ -47,6 +47,13 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     }
 
     /// <inheritdoc/>
+    public async Task RemoveAllFor(ObserverId observerId)
+    {
+        await EnsureIndexes().ConfigureAwait(false);
+        await _collection.DeleteManyAsync(_ => _.ObserverId == observerId).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     public async Task<FailedPartitions> GetFor(ObserverId? observerId)
     {
         await EnsureIndexes().ConfigureAwait(false);

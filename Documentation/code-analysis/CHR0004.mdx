@@ -1,11 +1,14 @@
-# CHR0004: Reactor method has a parameter that cannot be resolved
+---
+title: "CHR0004: Reactor method has a parameter that cannot be resolved"
+description: "CHR0004 reports a reactor handler parameter that Chronicle cannot resolve when it invokes the handler."
+---
 
 ## Rule Description
 
 A reactor handler method takes the event it reacts to as its first parameter. Any further parameters are resolved as dependencies when the method is invoked:
 
 - The `EventContext` for the triggering event.
-- A read model — a type that has a reducer or projection. It is materialized strongly consistent from that reducer or projection.
+- A read model — a type that has a reducer or projection. A materialized read model is read from its sink (eventually consistent); a `[Passive]` one is computed from its events when the handler runs.
 - A service resolved from the service provider.
 
 A parameter that is a primitive, value type, or string can never be a read model and is almost never a service, so it is flagged: at runtime it would fail to resolve and the partition would fail.
@@ -16,7 +19,7 @@ Warning
 
 ## Allowed Signatures
 
-<ChronicleClientTabs snippet="code-analysis/chr0004/allowed-signatures" />
+<ChronicleClientTabs snippet="code-analysis/chr0004/allowed-signatures" variants="csharp" />
 
 Where `TEvent` is a type marked with `[EventType]`, and `TReadModel` is a type that has a reducer or projection.
 
@@ -24,11 +27,11 @@ Where `TEvent` is a type marked with `[EventType]`, and `TReadModel` is a type t
 
 ### Violation
 
-<ChronicleClientTabs snippet="code-analysis/chr0004/violation" />
+<ChronicleClientTabs snippet="code-analysis/chr0004/violation" variants="csharp" />
 
 ### Fix
 
-<ChronicleClientTabs snippet="code-analysis/chr0004/fix" />
+<ChronicleClientTabs snippet="code-analysis/chr0004/fix" variants="csharp" />
 
 ## Why This Rule Exists
 

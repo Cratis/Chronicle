@@ -62,21 +62,21 @@ In a worker you append from your `BackgroundService` rather than inline. Inject 
 
 <ChronicleClientTabs snippet="get-started/worker/worker-service" />
 
-The projections and the `BookReturnedNotifier` reactor pick those events up from the kernel — the worker stays alive to keep processing them.
+The projections and the `GetStartedBookReturnedNotifier` reactor pick those events up from the kernel — the worker stays alive to keep processing them.
 
 ## Configure the MongoDB client
 
-The `Books` query reads documents Chronicle wrote, so the MongoDB driver needs to match how Chronicle stores them — register these conventions once at startup:
+The `GetStartedBooks` query reads documents Chronicle wrote, so the MongoDB driver needs to match how Chronicle stores them — register these conventions once at startup:
 
 [!INCLUDE [mongodb](./_includes/mongodb.mdx)]
 
-Then register the database and the collection so a type can take an `IMongoCollection<Book>` dependency:
+Then register the database and the collection so a type can take an `IMongoCollection<GetStartedBook>` dependency:
 
 <ChronicleClientTabs snippet="get-started/worker/mongo-registration" />
 
 ## Register your artifacts
 
-Chronicle creates its discovered artifacts through the container, so they need to be registered as services. For a handful, register them explicitly; as the solution grows, let Cratis Fundamentals do it by convention:
+Chronicle creates its discovered artifacts — reactors, reducers, projections — through the container. If an artifact is registered as a service, Chronicle uses that registration; otherwise it constructs the artifact itself and resolves its constructor parameters from the container. So you never have to register the reactor, but you do have to register what it depends on, such as the notification service a real waitlist reactor would take. As the solution grows, let Cratis Fundamentals register those services by convention:
 
 <ChronicleClientTabs snippet="get-started/worker/register-by-convention" />
 

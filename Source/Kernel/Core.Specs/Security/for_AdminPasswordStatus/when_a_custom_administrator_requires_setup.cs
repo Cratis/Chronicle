@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.Extensions.Options;
-
 using StoredUser = Cratis.Chronicle.Storage.Security.User;
 
 namespace Cratis.Chronicle.Security.for_AdminPasswordStatus;

@@ -99,6 +99,18 @@ public interface IEventStore
     IEventStoreSubscriptions Subscriptions { get; }
 
     /// <summary>
+    /// Gets the <see cref="IObservers"/> for the event store, for operating on its observers.
+    /// </summary>
+    /// <remarks>
+    /// Optional, so that an existing implementation of this interface - a test double, a scenario harness in a
+    /// consuming framework - keeps compiling and loading without change. Adding a required member to an interface
+    /// this widely implemented breaks every implementer at type-load time, before any of their code runs. The real
+    /// event store implements it; anything that does not says so by throwing rather than by quietly answering.
+    /// </remarks>
+    /// <exception cref="ObserversNotSupported">Thrown when the implementation does not support operating on observers.</exception>
+    IObservers Observers => throw new ObserversNotSupported(GetType());
+
+    /// <summary>
     /// Gets the <see cref="IFailedPartitions"/> for the event store.
     /// </summary>
     IFailedPartitions FailedPartitions { get; }

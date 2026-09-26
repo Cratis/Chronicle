@@ -21,7 +21,8 @@ namespace Cratis.Chronicle.Projections.Engine;
 public class Projection : IProjection, IDisposable
 {
     readonly Subject<ProjectionEventContext> _subject = new();
-    readonly KeyResolver? _allEventsKeyResolver;
+    KeyResolver? _allEventsKeyResolver;
+    bool _allEventsResolvesToEventSourceId = true;
     Dictionary<EventTypeId, KeyResolver> _keyResolverByEventTypeId = [];
     Dictionary<EventTypeId, ProjectionOperationType> _operationTypeByEventTypeId = [];
 
@@ -42,6 +43,7 @@ public class Projection : IProjection, IDisposable
     /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
     /// <param name="subscribesToAllEvents">Whether the projection subscribes to every event type in the system, including ones not yet known when it was created.</param>
     /// <param name="allEventsKeyResolver">The <see cref="KeyResolver"/> to fall back to for an event type that has no explicit key resolver, used only when <paramref name="subscribesToAllEvents"/> is <see langword="true"/>.</param>
+    /// <param name="scope">The <see cref="ProjectionScope"/> the projection materializes its read model in.</param>
     public Projection(
         EventSequenceId eventSequenceId,
         ProjectionId identifier,
@@ -56,8 +58,10 @@ public class Projection : IProjection, IDisposable
         IReadOnlySet<string> noAutoMapProperties,
         IEnumerable<IProjection> childProjections,
         bool subscribesToAllEvents = false,
-        KeyResolver? allEventsKeyResolver = null)
+        KeyResolver? allEventsKeyResolver = null,
+        ProjectionScope scope = ProjectionScope.Namespaced)
     {
+        Scope = scope;
         EventSequenceId = eventSequenceId;
         Identifier = identifier;
         InitialModelState = initialModelState;
@@ -104,6 +108,9 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public bool IsRewindable { get; }
+
+    /// <inheritdoc/>
+    public ProjectionScope Scope { get; }
 
     /// <inheritdoc/>
     public AutoMap AutoMap { get; }
@@ -201,6 +208,13 @@ public class Projection : IProjection, IDisposable
     }
 
     /// <inheritdoc/>
+    public void SetAllEventsKeyResolver(KeyResolver keyResolver, bool resolvesToEventSourceId)
+    {
+        _allEventsKeyResolver = keyResolver;
+        _allEventsResolvesToEventSourceId = resolvesToEventSourceId;
+    }
+
+    /// <inheritdoc/>
     public void SetEventTypesWithKeyResolvers(
         IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
         IEnumerable<EventType> ownEventTypes,
@@ -226,12 +240,15 @@ public class Projection : IProjection, IDisposable
 
         // A child collection routes events to a parent document, so a projection with any child projection can
         // collapse distinct event sources and must keep the coarse lock regardless of its own resolvers.
-        // A projection that subscribes to all events falls back to the event-source-id key resolver for any
-        // event type it has no explicit registration for (see GetKeyResolverFor), so it counts as event-source-
-        // keyed on its own even with zero explicitly-registered event types.
+        // A projection that subscribes to all events falls back to a single resolver for any event type it has no
+        // explicit registration for (see GetKeyResolverFor), so it counts as event-source-keyed on its own even
+        // with zero explicitly-registered event types - but only while that fallback really is the event source id.
+        // A from-every clause that declares its own key folds many event sources onto one document, which is the
+        // same reason a join or a parent hierarchy is never event-source-keyed, and it must keep the coarse lock.
         IsEventSourceKeyed =
             (eventTypes.Length > 0 || SubscribesToAllEvents) &&
             !ChildProjections.Any() &&
+            (!SubscribesToAllEvents || _allEventsResolvesToEventSourceId) &&
             eventTypes.All(_ => _.ResolvesToEventSourceId);
 
         OwnEventTypes = ownEventTypes;

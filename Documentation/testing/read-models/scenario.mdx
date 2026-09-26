@@ -39,9 +39,9 @@ case-insensitive CLR member matching cannot collapse distinct dictionary keys. T
 spelling; it is not a verification of the network marshaller or wire compatibility.
 
 This fidelity applies to **event input** for fluent and model-bound projections. Reducers still receive typed
-events directly. The optional initial read model state follows a separate conversion path; do not pass an
-initial state containing nonempty `JsonObject` values, because that path still reflects over their parent
-links.
+events directly. The optional initial read model state goes through the same schema-aware conversion: it is
+serialized, re-read as case-sensitive JSON data, and converted against the read model's schema, so an initial
+state may contain nonempty `JsonObject` values. Reducers receive the initial state as the typed instance.
 
 ## Optional initial state
 
@@ -67,6 +67,26 @@ fetches a read model by ID without replaying events through a full projection:
 instances and delegates everything else to the real read model implementation. Only what you registered comes
 back from it: the rest of that surface is the production one and wants a running Chronicle, so reading the
 instances the scenario itself materialized means `Instances` or `InstanceForEventSourceId`, not `GetInstances`.
+
+## Per-run projections and artifacts
+
+Supply a `Defaults` built from your own `IClientArtifactsProvider` when artifacts are generated
+for a single spec run. Its event types, serializers, and projection discovery also apply to
+seeding; the next scenario can use a different provider without inheriting this one's artifacts.
+Register an `IProjectionFor<TReadModel>` type in the provider to use normal discovery, or
+configure a projection directly on this scenario:
+
+```csharp
+var scenario = new ReadModelScenario<MyReadModel>(null, new Defaults(artifacts))
+    .WithProjection(builder => builder.From<MyEvent>(from =>
+        from.Set(model => model.Name).To(e => e.Name)));
+await scenario.Given.ForEventSource(id).Events(new MyEvent("example"));
+var result = scenario.Instance;
+```
+
+`WithProjection` takes precedence over discovered projections and reducers for that scenario only.
+It does not add a projection to the shared artifact registry. Create another scenario for another
+projection of the same read model, even in the same test assembly.
 
 ## Auto-detection
 

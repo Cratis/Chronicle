@@ -37,16 +37,19 @@
     </PropertyGroup>
 
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
-        <!-- Wipe the publish output before each build. `dotnet publish` merges into the target
-             directory rather than replacing it, so a previous publish with different args
-             (e.g. without -r, leaving a RID-specific subfolder) can shadow the RID-targeted
-             assemblies the current publish produces - see Integration/Client/Client.csproj, which
-             this target mirrors. A plain bin-output copy (this target's previous approach) carries
-             the host's own architecture, not the container's, and made the Linux image fail with
-             "exec format error" on any non-Linux-x64 build host. -->
-        <RemoveDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-        <Exec Command="dotnet publish $(MSBuildThisFileDirectory)../../Source/Kernel/Server/Server.csproj -c Debug -p:DefineConstants=DEVELOPMENT --no-restore $(_DockerRidArg) -o $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
+        <!-- Publishes through Integration/LocalKernelPublish.proj rather than a local Exec. Integration/Client
+             needs the identical publish, and a solution build runs both projects in parallel; two independent
+             `dotnet publish` invocations wiped and wrote the same Server/out directory at the same time, and
+             each nested build of Contracts re-ran the proto generator - which deletes Source/Kernel/Protobuf
+             before writing it - so the two generator runs tore each other's output down. Calling the shared
+             target with the same global properties makes MSBuild's build-result cache run the publish once per
+             build, whichever project reaches it first; the other caller reuses that result instead of racing it. -->
+        <MSBuild Projects="$(MSBuildThisFileDirectory)../LocalKernelPublish.proj" Targets="PublishKernel" Properties="KernelPublishRid=$(_DockerPublishRid)" />
         <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../"/>
     </Target>
 
+    <ItemGroup>
+        <!-- Direct pin: Cratis.Arc.MongoDB floats Castle.Core to 5.2.1, whose proxy mapping regression breaks NSubstitute class proxies. -->
+        <PackageReference Include="Castle.Core" />
+    </ItemGroup>
 </Project>

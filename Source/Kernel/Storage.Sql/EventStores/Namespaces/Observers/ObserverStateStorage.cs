@@ -68,6 +68,26 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     }
 
     /// <inheritdoc/>
+    public async Task Delete(ObserverId observerId)
+    {
+        if (observerId is null || string.IsNullOrEmpty(observerId.Value))
+        {
+            return;
+        }
+
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var observerIdValue = observerId.Value;
+        var existing = await scope.DbContext.Observers.FirstOrDefaultAsync(observer => observer.Id == observerIdValue);
+        if (existing is null)
+        {
+            return;
+        }
+
+        scope.DbContext.Observers.Remove(existing);
+        await scope.DbContext.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task Rename(ObserverId currentId, ObserverId newId)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);

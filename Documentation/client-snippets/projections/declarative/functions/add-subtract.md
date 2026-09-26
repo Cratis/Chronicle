@@ -16,7 +16,6 @@ public record DecFunctionsAccount(string Number, decimal Balance);
 public class DecFunctionsAccountProjection : IProjectionFor<DecFunctionsAccount>
 {
     public void Define(IProjectionBuilderFor<DecFunctionsAccount> builder) => builder
-        .AutoMap()
         .From<DecFunctionsAccountOpened>(_ => _
             .Set(m => m.Balance).ToValue(0m))
         .From<DecFunctionsMoneyDeposited>(_ => _

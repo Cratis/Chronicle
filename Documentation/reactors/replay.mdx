@@ -22,5 +22,5 @@ a replay needs to do something *different* rather than nothing. Neither covers t
 failed partition being recovered — for that, see [Delivery identity](delivery-identity).
 
 :::note[Client coverage]
-Elixir and TypeScript have no equivalent marker, so a replay always re-runs the regular handler there.
+TypeScript supports `@replay()` from `@cratis/chronicle` 6.9.0, with the same meaning as `Replay`. Elixir has no equivalent marker, so a replay always re-runs the regular handler there.
 :::

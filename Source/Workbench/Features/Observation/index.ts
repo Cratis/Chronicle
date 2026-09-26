@@ -13,6 +13,7 @@ export * from './ObserveObservers';
 export * from './ObserveObserversForEventType';
 export * from './ObserverInformation';
 export * from './ObserverInformationForEventType';
+export * from './RemoveObserver';
 export * from './ReplayObserver';
 export * from './ReplayPartition';
 export * from './RetryPartition';

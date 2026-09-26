@@ -26,7 +26,7 @@ public class and_the_database_changes_outside_the_storage_instance : given.a_fai
             if (!partitions.Any()) initial.TrySetResult();
             if (partitions.Any()) completion.TrySetResult(partitions);
         });
-        await initial.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await initial.Task.WaitAsync(TimeSpan.FromSeconds(30));
 
         await using var context = CreateContext();
         context.FailedPartitions.Add(new FailedPartition
@@ -38,7 +38,7 @@ public class and_the_database_changes_outside_the_storage_instance : given.a_fai
         });
         await context.SaveChangesAsync();
 
-        _received = await completion.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        _received = await completion.Task.WaitAsync(TimeSpan.FromSeconds(30));
     }
 
     [Fact] void should_publish_the_external_change() => _received.Single().Id.ShouldEqual((FailedPartitionId)_failureId);

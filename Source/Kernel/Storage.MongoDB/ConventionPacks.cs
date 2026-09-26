@@ -26,7 +26,6 @@ public class ConventionPacks : ICanProvideMongoDBConventionPacks
         {
             new CamelCaseElementNameConvention(predicate)
         };
-        ConventionRegistry.Register("CamelCase", conventionPack, predicate);
         return [new("CamelCase", conventionPack)];
     }
 }

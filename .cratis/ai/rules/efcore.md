@@ -11,226 +11,74 @@ profile: application
 > **⚠️ APPLIES ONLY TO PROJECTS USING ENTITY FRAMEWORK CORE**
 > If your project does not reference `Microsoft.EntityFrameworkCore` or any EF Core packages, **ignore this entire file**. These rules are irrelevant outside of EF Core contexts.
 
-## Project Structure
+`Cratis.Arc.EntityFrameworkCore` gives an Arc application EF Core-backed read models: two `DbContext` base types, convention-based registration, provider selection from the connection string, cross-database column helpers for migrations, concept-aware value conversion, and live observation of a `DbSet`. **That is the whole of what Arc ships** — it has no migration runner, no table-name constant convention, no design-time factory and no prescribed project split. Where an application adds one of those, it is that application's local convention, not Cratis; keep such conventions in the repository's own instructions, never present them as framework. The step-by-step workflow, the exact signatures and the traps live in the **cratis-arc-ef-core-migration** skill; this rule states the invariants.
 
-Responsibilities are split across three projects:
+## DbContext base types **[contract]**
 
-| Project | Responsibility |
-|---------|----------------|
-| `Database` | Migrations only – no entities, no DbContexts |
-| `Core` | Entities and feature DbContexts (co-located with features) |
-| `Infrastructure` | DbContext registration, migration runner, cross-cutting EF setup |
+Always derive from one of Arc's base types — never directly from `DbContext`:
 
-**Critical dependency rule**: `Database` must NEVER import from `Core`. Migrations reference only `WellKnownTables` constants (strings) and EF migration types. The dependency chain is:
-
-```
-Core → Infrastructure → Database
-```
-
-## DbContext Base Types
-
-Always use the Cratis Arc base types — never inherit directly from `DbContext`:
-
-- **`ReadOnlyDbContext`** — for all read model / projection contexts (the vast majority)
-- **`BaseDbContext`** — only for writable contexts that own state (e.g. device state, infrastructure state)
+- **`ReadOnlyDbContext`** — for every read model / projection context (the vast majority). Its save-changes interceptor **throws** on any `SaveChanges`, so a projection cannot be bypassed by accident.
+- **`BaseDbContext`** — only for a writable context that genuinely owns state (device state, infrastructure state).
 
 ```csharp
-// ✅ Read model context
 public class StartupPhaseDbContext(DbContextOptions<StartupPhaseDbContext> options)
     : ReadOnlyDbContext(options)
 {
     public DbSet<StartupPhase> StartupPhases => Set<StartupPhase>();
-    public DbSet<PersonnelAssignment> PersonnelAssignments => Set<PersonnelAssignment>();
-}
-
-// ✅ Writable (state-owning) context
-public class DeviceStateDbContext(DbContextOptions<DeviceStateDbContext> options)
-    : BaseDbContext(options)
-{
-    public DbSet<DeviceState> DeviceStates => Set<DeviceState>();
 }
 ```
 
-Use the primary constructor pattern. Expose `DbSet<T>` as expression-bodied properties using `Set<T>()`.
+Use the primary constructor; expose each `DbSet<T>` as an expression-bodied property over `Set<T>()`. Co-locate the context with the feature whose read models it holds.
 
-## Feature Contexts — Not God Contexts
+## Feature contexts — not god contexts **[convention]**
 
-Create one focused DbContext per feature or tightly-related feature group. Never aggregate unrelated entities into a single context.
+One focused `DbContext` per feature or tightly related feature group. Never aggregate unrelated entities into a single context: a context's shape is a cohesion boundary, and a god context couples every feature's schema change to every other's.
 
-```csharp
-// ❌ God context
-public class AppDbContext : DbContext
-{
-    public DbSet<Mission> Missions { get; set; }
-    public DbSet<User> Users { get; set; }
-    public DbSet<Station> Stations { get; set; }
-    // ... many more
-}
-
-// ✅ Focused feature context
-public class StartupPhaseDbContext(DbContextOptions<StartupPhaseDbContext> options)
-    : ReadOnlyDbContext(options)
-{
-    public DbSet<StartupPhase> StartupPhases => Set<StartupPhase>();
-    public DbSet<PersonnelAssignment> PersonnelAssignments => Set<PersonnelAssignment>();
-}
-```
-
-Co-locate the DbContext file with its feature:
-
-```
-Missions/Ongoing/StartupPhase/
-├── StartupPhase.cs
-├── StartupPhaseDbContext.cs
-└── ...
-```
-
-## State Mutation — The Golden Rule
+## State mutation — the golden rule **[convention]**
 
 > **Never mutate state directly through a DbContext.**
 
-All state changes must flow through events and Chronicle projections. Direct writes bypass the audit trail and event log.
+All state changes flow through events and Chronicle projections; a direct write bypasses the event log and the audit trail. Only projection infrastructure, the Chronicle engine, and deliberate reference-data synchronization write through a context — and those are `BaseDbContext`s, never `ReadOnlyDbContext`s.
+
+## Registration **[contract]**
+
+Wire EF Core through the Arc builder and give it the connection string:
 
 ```csharp
-// ❌ Direct mutation — forbidden
-dbContext.StartupPhases.Add(new StartupPhase(...));
-await dbContext.SaveChangesAsync();
-
-// ✅ Correct: emit an event, let the projection handle writes
-[Command]
-public record UpdateStartupPhase(MissionId MissionId, ...) { ... }
+builder.AddCratisArc(arc => arc.WithEntityFrameworkCore(
+    options => options.ConnectionString = connectionString));
 ```
 
-Only infrastructure projection code, the Chronicle event engine, and reference data sync may write through DbContexts.
+With a non-empty connection string and `AutoDiscoverDbContexts` (the default), Arc discovers every public `BaseDbContext` subtype not marked `[IgnoreAutoRegistration]`, registering `ReadOnlyDbContext` subtypes read-only and the rest read-write. ⚠️ `WithEntityFrameworkCore()` with **no** connection string discovers nothing. Explicit registration remains available (`AddDbContextWithConnectionString<T>`, `AddReadOnlyDbContextWithConnectionString<T>`, `AddReadModelDbContextsFromAssemblies`, `AddReadModelDbContextsWithConnectionStringFromAssemblies`).
 
-## Registration
+Select the provider with **`UseDatabaseFromConnectionString(connectionString)`** — never hard-code `UseSqlite` / `UseNpgsql` / `UseSqlServer`. It infers `DatabaseType` (`Sqlite`, `SqlServer`, `PostgreSql`) from the connection string, ensures a SQLite file's directory exists, and installs Arc's migrations SQL generator for that provider (which is what adds the JSON validation constraint for `[Json]` columns). An unsupported connection string throws `UnsupportedDatabaseType`.
 
-Use the Cratis Arc `Cratis.Arc.EntityFrameworkCore` extension methods:
+## Migrations **[contract]/[convention]**
 
-```csharp
-// Register a single writable DbContext
-services.AddDbContextWithConnectionString<DeviceStateDbContext>(connectionString, optionalConfigure);
-
-// Auto-discover and register ALL ReadOnlyDbContext subtypes from given assemblies
-services.AddReadModelDbContextsWithConnectionStringFromAssemblies(
-    connectionString,
-    configureOptions,
-    [Assembly.GetExecutingAssembly()]);
-```
-
-Configure the database provider using `UseDatabaseFromConnectionString`, which auto-detects PostgreSQL vs SQLite from the connection string:
-
-```csharp
-options.UseDatabaseFromConnectionString(connectionString);
-```
-
-Centralize all DbContext setup in a single `AddApplicationDbContexts` extension method per layer.
-
-## Multiple Database Support
-
-The application supports both PostgreSQL (ASP.NET mode) and SQLite (MAUI mode) from the same code. The provider is selected at runtime via the connection string — `UseDatabaseFromConnectionString` handles the detection.
-
-Never hardcode a provider (e.g. `UseSqlite` or `UseNpgsql`) in application code. Always use `UseDatabaseFromConnectionString`.
-
-## Migrations
-
-Migrations live exclusively in the **`Database`** project, never in `Core` or `Infrastructure`.
-
-### Organization
-
-Each entity category has its own folder with versioned migration files:
-
-```
-Database/
-├── Missions/
-│   ├── v1_0_0.cs
-│   └── v1_1_0.cs
-├── Users/
-│   └── v1_0_0.cs
-└── WellKnownTables.cs
-```
-
-### Naming
-
-Version files using the pattern `v{major}_{minor}_{patch}.cs` and place them inside a namespace matching their folder:
-
-```csharp
-namespace Database.Missions;
-
-public class v1_0_0 : Migration
-{
-    protected override void Up(MigrationBuilder migrationBuilder) { ... }
-    protected override void Down(MigrationBuilder migrationBuilder) { ... }
-}
-```
-
-The migration ID is composed as `{folder}_{ClassName}` (e.g. `Missions_v1_0_0`).
-
-### Cross-Database Column Helpers
-
-Always use the Cratis Arc `MigrationBuilder` extension helpers to define columns. These abstract over PostgreSQL and SQLite type differences:
+Migrations are created and applied with the **standard EF Core tooling** (`dotnet ef migrations add`, `dotnet ef database update`, or `Database.Migrate()` at startup). Arc adds only the column helpers that keep one migration valid across all three providers — use them instead of raw `table.Column<T>()`:
 
 | Helper | Use for |
-|--------|---------|
-| `table.StringColumn(migrationBuilder)` | Text / varchar columns |
-| `table.GuidColumn(migrationBuilder)` | UUID / GUID columns |
-| `table.NumberColumn<T>(migrationBuilder)` | Integer, long, or numeric columns |
-| `table.DateTimeOffsetColumn(migrationBuilder)` | Timestamps with timezone |
+| --- | --- |
+| `table.StringColumn(migrationBuilder, …)` | text |
+| `table.GuidColumn(migrationBuilder, …)` | GUID / UUID |
+| `table.NumberColumn<T>(migrationBuilder, …)` | integers, longs, decimals |
+| `table.BoolColumn(migrationBuilder, …)` | booleans |
+| `table.DateTimeOffsetColumn(migrationBuilder, …)` | timestamps with offset |
+| `table.AutoIncrementColumn(migrationBuilder, …)` | identity columns |
+| `table.JsonColumn<TProperty>(migrationBuilder, …)` | a `[Json]`-mapped property |
+| `migrationBuilder.Add{String,Guid,Number,Bool,DateTimeOffset,AutoIncrement,Json,Point,LineString,Polygon}Column(…)` | adding a column to an existing table |
 
-Never use raw EF `table.Column<string>()` etc. — the helpers ensure cross-database compatibility.
+Where a repository organizes its migrations (a dedicated project, a versioned file naming scheme, a table-name constants class) is its own convention: follow what the repository already does, and do not introduce one as if Arc required it.
 
-```csharp
-// ✅ Cross-database migration
-migrationBuilder.CreateTable(
-    name: WellKnownTables.Missions,
-    columns: table => new
-    {
-        Id = table.StringColumn(migrationBuilder, nullable: false),
-        Title = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
-        ResourceId = table.NumberColumn<int>(migrationBuilder, nullable: true),
-        DispatchTime = table.DateTimeOffsetColumn(migrationBuilder),
-        UrgencyId = table.GuidColumn(migrationBuilder)
-    },
-    constraints: table =>
-    {
-        table.PrimaryKey("PK_Missions", x => x.Id);
-        table.ForeignKey("FK_Missions_Urgency", x => x.UrgencyId,
-            WellKnownTables.MissionUrgencies, "Id", onDelete: ReferentialAction.SetNull);
-    });
-```
+## Concepts and JSON **[contract]**
 
-### Table Names — WellKnownTables
+`ConceptAs<T>` properties map to their underlying primitive without per-property value converters: `BaseDbContext.OnModelCreating` applies the concept conversions, and every Arc registration path calls `AddConceptAsSupport()` so concepts also work inside LINQ predicates. (A context you register with plain EF `AddDbContext` must call `options.AddConceptAsSupport()` itself.) Mark a property `[Json]` to store it as a JSON column with the provider's validation constraint.
 
-Always reference table names from `WellKnownTables` constants. Never use magic strings directly in migrations.
+## Observation **[contract]**
 
-```csharp
-// ❌ Magic string
-migrationBuilder.CreateTable(name: "Missions", ...);
+An EF Core read model can back an observable query: `dbSet.Observe(...)`, `ObserveById(...)` and `ObserveSingle(...)` (extension methods declared in the `Microsoft.EntityFrameworkCore` namespace, so they are in scope wherever the `DbSet` is) push changes through the provider's change notifier — see the skill for what each provider supports.
 
-// ✅ Constant
-migrationBuilder.CreateTable(name: WellKnownTables.Missions, ...);
-```
+## See also
 
-Add new table names to `Database/WellKnownTables.cs` before writing the migration.
-
-### Applying Migrations
-
-Migrations are applied via a custom runner from the `Database` project (not `dotnet ef database update`):
-
-```csharp
-// ASP.NET mode
-await app.ApplyAllMigrations(connectionString);
-
-// MAUI / IServiceProvider mode
-await services.ApplyAllMigrations(connectionString);
-```
-
-The runner discovers all `Migration` subclasses from the `Database` assembly, checks the EF history table, and applies pending migrations in version order within a transaction. Both PostgreSQL and SQLite are supported through the same runner.
-
-## Auto-Discovery
-
-The Cratis Arc `IImplementationsOf<T>` mechanism discovers DbContext types at runtime:
-
-- `IImplementationsOf<BaseDbContext>` — all `DbContext` subtypes across all loaded assemblies.
-- `DiscoverAndFilterDbContextTypes<ReadOnlyDbContext>(assemblies)` — discovers the read-model contexts; the registration helpers (`AddReadModelDbContextsWithConnectionStringFromAssemblies` / `AddReadModelDbContextsFromAssemblies`) build on it.
-- To isolate **writable** contexts, filter the discovered set on assignability — `types.Where(t => !typeof(ReadOnlyDbContext).IsAssignableFrom(t))` — rather than a dedicated extension.
+- the **cratis-arc-ef-core-migration** skill — wiring, making an EF read model injectable into a command, writing a migration, observing, and specs.
+- [efcore.specs.md](./efcore.specs.md) — `DbContext` specs with SQLite in-memory.

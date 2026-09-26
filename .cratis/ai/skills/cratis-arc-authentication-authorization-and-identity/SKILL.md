@@ -16,10 +16,12 @@ told about them. Each has its own extension point.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Core` | `22.10.4` | `Cratis.Arc.Identity`, `Cratis.Arc.Authorization`, `Cratis.Arc.Authentication`, `Cratis.Arc.Tenancy` |
-| `Cratis.Arc` | `22.10.4` | ASP.NET Core hosting, `AddMicrosoftIdentityPlatformIdentityAuthentication` |
-| `@cratis/arc` | `22.10.4` | `IdentityProvider`, `IIdentity` |
-| `@cratis/arc.react` | `22.10.4` | `IdentityProvider` component, `useIdentity`, `RequireRole` |
+| `Cratis.Arc.Core` | `22.16.0` | `Cratis.Arc.Identity`, `Cratis.Arc.Authorization`, `Cratis.Arc.Authentication`, `Cratis.Arc.Tenancy` |
+| `Cratis.Arc` | `22.16.0` | ASP.NET Core hosting, `AddMicrosoftIdentityPlatformIdentityAuthentication` |
+| `@cratis/arc` | `22.16.0` | `IdentityProvider`, `IIdentity` |
+| `@cratis/arc.react` | `22.16.0` | `IdentityProvider` component, `useIdentity`, `RequireRole` |
+
+> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
 
 Reverify before claiming support for another version.
 

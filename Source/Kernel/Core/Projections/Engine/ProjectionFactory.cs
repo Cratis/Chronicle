@@ -321,6 +321,19 @@ public class ProjectionFactory(
         return schemaProperty;
     }
 
+    /// <summary>
+    /// Answers whether a key expression is a constant rather than something read off the event.
+    /// </summary>
+    /// <param name="key">The <see cref="PropertyExpression"/> to consider.</param>
+    /// <returns>True when the expression is a constant.</returns>
+    /// <remarks>
+    /// Asked of a parent key, because a constant names the parent document outright and therefore has no
+    /// parent event behind it. Uses the same recognition that resolves the expression, so the two cannot
+    /// drift apart.
+    /// </remarks>
+    static bool IsConstantExpression(PropertyExpression? key) =>
+        key is not null && key.Value.Length != 0 && new ValueExpressionResolver().CanResolve(key.Value);
+
     static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema readModelSchema) =>
         projectionDefinition.InitialModelState.Count == 0 ?
             CreateInitialState(readModelSchema) :
@@ -520,7 +533,8 @@ public class ProjectionFactory(
             noAutoMapProperties,
             childProjections,
             projectionDefinition.SubscribesToAllEvents,
-            projectionDefinition.SubscribesToAllEvents ? keyResolvers.FromEventSourceId : null);
+            projectionDefinition.SubscribesToAllEvents ? keyResolvers.FromEventSourceId : null,
+            projectionDefinition.Scope);
 
         // Set parent relationships immediately after creation
         // This ensures children have their Parent set before any event resolution
@@ -616,12 +630,17 @@ public class ProjectionFactory(
         // A projection that subscribes to all events (the `all` block / .FromAll()) has no per-event-type `From`
         // registration to hang its every-event mappers off - by design, since the entire point is to also cover
         // event types that do not exist yet. Give it one subscription against every event instead, skipping event
-        // types already handled by an explicit `from` above so those do not get the every-event mappers applied twice.
+        // types already mapped by root `from`, derivative or join registrations so those do not get the
+        // every-event mappers applied again. Removal registrations do not carry every-event mappers.
         if (projectionDefinition.SubscribesToAllEvents && !isChild)
         {
-            var explicitlyHandledEventTypeIds = projectionDefinition.From.Keys.Select(_ => _.Id).ToHashSet();
+            var mappedEventTypeIds = projectionDefinition.From.Keys
+                .Concat(projectionDefinition.Join.Keys)
+                .Concat(projectionDefinition.FromDerivatives?.SelectMany(_ => _.EventTypes) ?? [])
+                .Select(_ => _.Id)
+                .ToHashSet();
             projection.Event
-                .Where(_ => !explicitlyHandledEventTypeIds.Contains(_.Event.Context.EventType.Id))
+                .Where(_ => !mappedEventTypeIds.Contains(_.Event.Context.EventType.Id))
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,
@@ -916,6 +935,28 @@ public class ProjectionFactory(
         // can only be used once for a projection, including child projections.
         var distinctEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).ToArray();
         logger.ResolveEventsForProjectionComplete(distinctEventTypes.Length, projection.Path);
+
+        // An event reached only by subscribing to every event type has no FromDefinition to carry a key, so the
+        // one declared for the from-every clause is resolved here - where the projection it belongs to exists.
+        // Defaulting to the event source id keeps every definition written before a key could be declared keying
+        // exactly as it did.
+        if (projectionDefinition.SubscribesToAllEvents)
+        {
+            var allEventsKey = projectionDefinition.FromEvery.Key;
+
+            // The default key is the event source id expression, which has a resolver of its own and so comes back
+            // from GetKeyResolverFor reporting that it did not resolve to the event source id. It plainly does, and
+            // saying otherwise costs every existing from-every projection its fine-grained locking.
+            var resolvesToEventSourceId =
+                allEventsKey is null ||
+                allEventsKey.Value.Length == 0 ||
+                allEventsKey.Value == WellKnownExpressions.EventSourceId;
+
+            projection.SetAllEventsKeyResolver(
+                GetKeyResolverFor(projection, allEventsKey, actualIdentifiedByProperty).Resolver,
+                resolvesToEventSourceId);
+        }
+
         projection.SetEventTypesWithKeyResolvers(
             distinctEventTypes,
             distinctOwnEventTypes,
@@ -999,7 +1040,7 @@ public class ProjectionFactory(
         var parentProjection = projection.HasParent ? projection.Parent! : projection;
         var parentIdentifiedByProperty = projection.HasParent ? projection.Parent!.IdentifiedByProperty : actualIdentifiedByProperty;
         var parentKeyResolver = GetParentKeyResolverFor(parentProjection, effectiveParentKey, parentIdentifiedByProperty);
-        keyResolver = keyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty);
+        keyResolver = keyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty, IsConstantExpression(effectiveParentKey));
 
         // A parent-hierarchy resolver routes the child event to its parent document, collapsing distinct event
         // sources onto one document, so it is never purely event-source-keyed.

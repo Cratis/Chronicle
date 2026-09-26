@@ -219,5 +219,3 @@ public class EventTypeMigrations(
         return result;
     }
 }
-
-

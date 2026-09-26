@@ -3,10 +3,10 @@
 
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Orleans.Jobs;
 using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Observation;
@@ -248,6 +248,19 @@ public interface IObserver : IGrainWithStringKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task ClearObserverQuarantine();
+
+    /// <summary>
+    /// Remove the observer: stop it consuming events, forget everything it holds in memory and deactivate it.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The counterpart to deleting the observer's stored records. Deleting those alone is not enough: a live
+    /// activation keeps its definition, failure records and reminders in memory and writes them back on its next
+    /// state flush, resurrecting the very documents the removal deleted. This unsubscribes the observer, stops its
+    /// jobs, cancels every reminder it registered and deactivates the grain, so the storage deletion is the last
+    /// word rather than a race against an activation that outlives it.
+    /// </remarks>
+    Task Remove();
 
     /// <summary>
     /// Catch up the observer.

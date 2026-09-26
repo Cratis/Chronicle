@@ -9,7 +9,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
-
 using ConceptsEventStoreName = Cratis.Chronicle.Concepts.EventStoreName;
 using ConceptsEventStoreNamespaceName = Cratis.Chronicle.Concepts.EventStoreNamespaceName;
 using context = Cratis.Chronicle.Kernel.Integration.Events.Constraints.for_UniqueEventTypesConstraintsStorage.when_a_released_event_type_is_appended_again.context;

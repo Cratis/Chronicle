@@ -89,7 +89,18 @@ public class <ClassName>(IServiceProvider provider)
 }
 ```
 
-## Service lifetimes — `[Singleton]` is a narrow choice
+## Service lifetimes — anything taking a scoped dependency is scoped or transient
+
+**The rule, before any of the reasoning:**
+
+> **A type that takes a scoped dependency is itself scoped or transient. If you
+> are reaching for `[Singleton]` on something that needs the event store, a
+> database, or a read model, the answer is to not make it a singleton.**
+
+`[Singleton]` is the exception, not the default. It is for what is genuinely
+process-wide *and* holds nothing belonging to a tenant, a user, or a request.
+Everything else takes the convention (transient) or a scoped lifetime, and
+inherits the resolving scope — and therefore the right tenant — for free.
 
 **Assume every application is multi-tenant**, even when it ships with a single
 tenant and no tenant resolution configured. A single-tenant application is a
@@ -97,7 +108,7 @@ multi-tenant one with one tenant in it, and the code shape that serves both is
 the same. The shape that serves only one has to be found and rewritten later,
 from the far side of a data migration, in production.
 
-That gives one rule with two faces:
+So the rule has a second face:
 
 > **A singleton may not depend on anything that belongs to a tenant, a user, or
 > a request.**
@@ -125,16 +136,15 @@ on. The application starts, pages render, the build is green, and configuration
 a tenant spent an afternoon entering is simply absent. It is invisible while
 there is one tenant; every symptom appears the day a second arrives.
 
-**What to use instead.** Default to the convention (transient), which inherits
-the resolving scope's tenant for free, or a scoped lifetime when a service must
-be shared within one request. Reserve `[Singleton]` for what is genuinely
-process-wide and holds no tenant-, user-, or request-bound state: implementation
-aggregators, HTTP client wrappers, options readers, pure computation, framework
-plumbing.
+**What to do instead — in this order.**
 
-When something must be a singleton and still needs data — a hosted service, a
-dispatcher, a poller — inject `IServiceScopeFactory` and open a scope per unit
-of work:
+**1. Drop `[Singleton]`.** This is the answer almost every time. Delete the
+attribute and let the type be transient by convention, or mark it scoped when
+one request should share one instance. Nothing else changes: the constructor
+keeps the collaborator it wanted, and now gets the caller's tenant instead of
+the root scope's. Reserve `[Singleton]` for what is genuinely process-wide and
+holds no tenant-, user-, or request-bound state: implementation aggregators,
+HTTP client wrappers, options readers, pure computation, framework plumbing.
 
 ```csharp
 // Wrong — the scoped collaborator captures the root scope's default namespace forever
@@ -144,20 +154,40 @@ public class <ClassName>(<IScopedCollaboratorType> <collaborator>) : <IInterface
     public Task<<ResultType>?> <MethodName>() => <collaborator>.<Method>(<argument>);
 }
 
-// Right — a scope per call, so collaborators bind to the caller's tenant
-[Singleton]
-public class <ClassName>(IServiceScopeFactory scopeFactory) : <IInterfaceName>
+// Right — no attribute at all. Transient by convention, so it resolves in the
+// caller's scope and reads that caller's tenant.
+public class <ClassName>(<IScopedCollaboratorType> <collaborator>) : <IInterfaceName>
 {
-    public async Task<<ResultType>?> <MethodName>()
+    public Task<<ResultType>?> <MethodName>() => <collaborator>.<Method>(<argument>);
+}
+```
+
+**2. Only when the lifetime is forced on you, open a scope per unit of work.** A
+hosted or background service is resolved once by the host, so it *is* a
+singleton whether or not you asked — and it runs with no request to inherit a
+scope from. That, and only that, is what `IServiceScopeFactory` is for:
+
+```csharp
+// Right for a hosted service — a scope per unit of work
+public class <ClassName>(IServiceScopeFactory scopeFactory) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         using var scope = scopeFactory.CreateScope();
         var <collaborator> = scope.ServiceProvider
             .GetRequiredService<<IScopedCollaboratorType>>();
 
-        return await <collaborator>.<Method>(<argument>);
+        await <collaborator>.<Method>(<argument>);
     }
 }
 ```
+
+`IServiceScopeFactory` is **not** a way to keep `[Singleton]` on a service that
+had no reason to be one. It is more code, it hides the lifetime question behind
+a scope nobody asked for, and — because a scope with no request still resolves
+no tenant — it does not by itself make an off-request flow tenant-correct.
+Reaching for it first is how a codebase ends up with dozens of these. If the
+type is not the host's own, the fix is the attribute, not the factory.
 
 A client that names its store and namespace explicitly **is** singleton-safe,
 and is the right collaborator when a flow knows which namespace it means and has
@@ -180,6 +210,36 @@ nothing to read. Observers may be instantiated per namespace, but the
 collaborators they call are not — a flow that reaches a tenant-blind singleton
 has left its namespace behind without saying so. Such a flow states its tenant
 explicitly rather than inheriting whatever the root scope happens to be.
+
+**Enforce it, do not remember it.** This failure is silent, so review will not
+reliably catch it. Two gates, and an application wants both.
+
+Turn .NET's own scope validation on in **every** environment, not just
+Development. `ValidateScopes` rejects resolving a scoped service from the root
+provider, and `ValidateOnBuild` walks every registration at startup so a captive
+dependency fails the host immediately rather than at whichever request first
+needs it. The host enables both in Development by default and neither outside
+it — which is backwards for a failure whose whole character is that it stays
+quiet:
+
+```csharp
+builder.Host.UseDefaultServiceProvider(options =>
+{
+    options.ValidateScopes = true;
+    options.ValidateOnBuild = true;
+});
+```
+
+Enable it on an existing codebase in this order, or it will simply refuse to
+start: turn it on locally first, fix everything it names, and only then let it
+reach the deployed environments. Turning it on before the sweep converts a
+silent multi-tenant bug into a production outage.
+
+And add an architecture specification, because validation only catches what a
+run actually resolves. Reflect over the assembly, find every `[Singleton]` whose
+constructor takes a scope-bound service, and assert the set is empty. It names
+every offender in one pass rather than one per restart, and it covers the types
+no startup path touches.
 
 ## Discovering implementations — `IInstancesOf<T>`, never `IEnumerable<T>`
 

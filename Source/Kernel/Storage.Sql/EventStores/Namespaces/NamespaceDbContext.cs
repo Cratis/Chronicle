@@ -29,16 +29,6 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     public DbSet<Identities.Identity> Identities { get; set; } = null!;
 
     /// <summary>
-    /// Gets or sets the jobs DbSet.
-    /// </summary>
-    public DbSet<Jobs.Job> Jobs { get; set; } = null!;
-
-    /// <summary>
-    /// Gets or sets the job steps DbSet.
-    /// </summary>
-    public DbSet<JobSteps.JobStep> JobSteps { get; set; } = null!;
-
-    /// <summary>
     /// Gets or sets the failed partitions DbSet.
     /// </summary>
     public DbSet<FailedPartitions.FailedPartition> FailedPartitions { get; set; } = null!;

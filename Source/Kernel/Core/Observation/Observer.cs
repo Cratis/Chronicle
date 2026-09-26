@@ -7,13 +7,11 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.States;
@@ -21,6 +19,7 @@ using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
+using Cratis.Orleans.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -63,6 +62,16 @@ public partial class Observer(
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
+
+    /// <summary>
+    /// Set once the observer has been removed, so nothing this activation does afterwards writes it back.
+    /// </summary>
+    /// <remarks>
+    /// Deactivation normally flushes progress and transitions to <see cref="Disconnected"/>, both of which persist
+    /// observer state. For a removed observer that would recreate the very documents the removal deleted, moments
+    /// after deleting them, and leave the store looking exactly as it did before.
+    /// </remarks>
+    bool _removed;
     IEventSequence _eventSequence = null!;
     IAppendedEventsQueues _appendedEventsQueues = null!;
     IMeterScope<Observer>? _metrics;
@@ -104,6 +113,12 @@ public partial class Observer(
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        if (_removed)
+        {
+            await base.OnDeactivateAsync(reason, cancellationToken);
+            return;
+        }
+
         await FlushDebouncedProgressState();
         if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
         {
@@ -151,6 +166,25 @@ public partial class Observer(
         {
             await ReviveFromQuarantine();
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task Remove()
+    {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.RemovingObserver();
+
+        await PauseJobs();
+        _subscription = ObserverSubscription.Unsubscribed;
+        await RemoveFailedPartitionReminders();
+
+        // From here on this activation must not touch storage again. The caller deletes the observer's records
+        // immediately after, and every write this activation could still make - the deactivation flush, the
+        // Disconnected transition - would put them straight back.
+        _removed = true;
+        _stateWritingSuspended = true;
+
+        DeactivateOnIdle();
     }
 
     /// <inheritdoc/>

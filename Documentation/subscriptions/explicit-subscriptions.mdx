@@ -44,11 +44,11 @@ A typical naming convention:
 
 ## Filtering Event Types
 
-Without a configuration callback, **all events** from the source outbox are forwarded. Use `WithEventType<T>()` to limit the subscription to specific types:
+Without a configuration callback, the subscription forwards every event type **your client knows about** when it registers the subscription — in practice, the contract types your application references. Source events of a type your client does not have are not forwarded. Use `WithEventType<T>()` to limit the subscription to specific types:
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/filtering" />
 
-If you need to subscribe to all events without filtering, omit the configuration callback entirely:
+To subscribe without filtering — every event type your client knows about — omit the configuration callback entirely:
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/no-filter" />
 

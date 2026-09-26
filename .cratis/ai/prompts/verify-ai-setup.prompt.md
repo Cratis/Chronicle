@@ -1,20 +1,30 @@
 ---
 agent: agent
-description: Validate AI framework setup integrity, canonical source conventions, and symlink health.
+description: Check the installed Cratis AI corpus for drift, conflicts, and healthy harness adapters.
 ---
 <!-- cratis-ai-managed: prompts/verify-ai-setup.prompt.md -->
 
 # Verify AI Setup
 
-Validate the repository AI setup by running:
+Check the repository's installed Cratis AI setup by running:
 
 ```bash
-bash .cratis/ai/hooks/scripts/validate-ai-setup.sh
+cratis ai status
 ```
 
-If anything fails:
+It reports the configured harnesses, profiles and languages, the installed corpus revision against the
+available one (`updateAvailable`), and every managed file that was modified locally — exiting non-zero
+when there is any. (A user-owned path that collides with a managed one is reported and refused by
+`cratis ai install` / `cratis ai update`, not by `status`.) Then confirm
+the harness adapters this repository uses (`.claude/`, `.agents/`, `.github/`, `.pi/`, `.cursor/`,
+`.opencode/` as applicable) still resolve into `.cratis/ai/` — a broken or dangling symlink is a setup
+fault, not corpus drift.
 
-1. List every failure with the exact file path.
-2. Explain whether the issue is canonical-source drift, missing metadata, or broken links.
-3. Propose the smallest safe fix.
+If anything is reported:
+
+1. List every finding with the exact file path.
+2. Explain whether it is a hand-edited managed file, a pending update, or a broken adapter.
+3. Propose the smallest safe fix. A managed file is never patched by hand — `cratis ai update`
+   replaces it (with `--force` only for content already recorded as Cratis-managed); a user-owned
+   file is the repository's and stays.
 4. Apply fixes if requested.

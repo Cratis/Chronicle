@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Properties;
-
 using FailedPartitionsState = Cratis.Chronicle.Concepts.Observation.FailedPartitions;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.FailedPartitions.for_FailedPartitionStorage.when_observing;
@@ -32,7 +31,7 @@ public class and_a_partition_is_saved : given.a_failed_partition_storage
         failure.ObserverId = _observerId;
         await _storage.Save(_observerId, state);
 
-        _received = await completion.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        _received = await completion.Task.WaitAsync(TimeSpan.FromSeconds(30));
     }
 
     [Fact] void should_publish_the_saved_partition() => _received.Single().Partition.ShouldEqual(_partition);

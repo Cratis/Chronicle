@@ -34,14 +34,16 @@ That's expected — reactors can run more than once for the same event during re
 
 ## My reactor throws and the stream seems stuck
 
-When a reactor throws, the failing event source partition pauses until the problem is resolved — by design, so it doesn't silently skip events. Fix the underlying error (and make the reactor resilient), then use the [Cratis CLI](/cli/) to resume processing:
+When a reactor throws, the failing event source partition pauses — by design, so it doesn't silently skip events. Chronicle retries it on its own, with an exponential backoff, and tries again whenever the observer subscribes, for example after you redeploy. A partition that keeps failing is **quarantined** once it has used up its retry attempts (10 by default), and a quarantined partition is not retried automatically. The limits are set in [observer configuration](/chronicle/hosting/configuration/observers/).
+
+So fix the underlying error (and make the reactor resilient), and redeploy. Then use the [Cratis CLI](/cli/) to see where each partition stands and resume what did not recover on its own:
 
 - [`cratis chronicle failed-partitions list`](/cli/chronicle/failed-partitions/#list) shows all failed partitions.
 - [`cratis chronicle failed-partitions show`](/cli/chronicle/failed-partitions/#show) shows the error message and failing sequence number for a specific partition.
 - [`cratis chronicle observers retry-partition`](/cli/chronicle/observers/#retry-partition) retries the partition after you've fixed the bug.
 - [`cratis chronicle observers replay-partition`](/cli/chronicle/observers/#replay-partition) replays the partition from the beginning if the state is corrupt.
 
-Failed reactor processing does **not** resume automatically after fixing code and redeploying — you must explicitly retry or replay the partition.
+A partition that ran out of retries before your fix was deployed is quarantined, and does **not** resume on its own. Inspect it with `failed-partitions show` before choosing how to resume it: an ordinary retry is refused for a quarantined partition, and a quarantined *observer* needs `observers clear-quarantine` first. Remember that every retry and replay runs the handler again, so a side effect the handler completed before it failed happens again unless you guard it; see [Delivery identity](/chronicle/reactors/delivery-identity/).
 
 ## A constraint is rejecting an append I expected to succeed
 
@@ -66,7 +68,7 @@ Two shapes *are* a cause, deliberately: a polymorphic base type and a dictionary
 
 ## I can't connect to the Chronicle kernel
 
-- **Confirm the kernel is running** — for local development, the quickest path is `docker run -d -p 27017:27017 -p 35000:35000 cratis/chronicle:latest-development`. For other setups (Docker Compose, Aspire, or production), see [Choose an application host model](/chronicle/get-started/choose-hosting-model/).
+- **Confirm the kernel is running** — `curl --insecure https://localhost:35000/health` prints `Healthy` when a local kernel is up. For local development, the quickest path is `docker run -d --name chronicle -p 127.0.0.1:35000:35000 -p 127.0.0.1:27017:27017 cratis/chronicle:latest-development`, which publishes the ports on this machine only. For other setups (Docker Compose, Aspire, or production), see [Choose an application host model](/chronicle/get-started/choose-hosting-model/).
 - **Confirm the client URL matches the kernel's address and port** — the default is `chronicle://localhost:35000`.
 - **Confirm your storage is reachable** — the development image bundles MongoDB on port 27017; if you're using separate storage, verify the kernel can reach it.
 

@@ -24,7 +24,7 @@ This skill is verified against these exact sources:
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle` | `16.45.2` | `Cratis.Chronicle.Events`, `Cratis.Chronicle.Keys`, `Cratis.Chronicle.ReadModels` |
+| `Cratis.Chronicle` | `18.3.0` | `Cratis.Chronicle.Events`, `Cratis.Chronicle.Keys`, `Cratis.Chronicle.ReadModels` |
 | `Cratis.Arc.Core` | current | `Cratis.Arc.Queries.ModelBound.ReadModelAttribute` and `PathAttribute` |
 | `Cratis.Arc.MongoDB` | current | the `Observe` family of `IMongoCollection<T>` extensions |
 

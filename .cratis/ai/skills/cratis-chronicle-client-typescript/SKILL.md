@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-client-typescript
-description: Talk to a Chronicle server from a Node.js or TypeScript application with @cratis/chronicle - reflect-metadata and decorator compiler settings, ChronicleClient and connection strings, @eventType classes, eventLog.append, reactors and reducers dispatched by camelCase method name, model-bound and declarative projections, glob-based artifact discovery, and the lazy connect and keepalive lifecycle. Use when a Node application appends to or observes a Chronicle event store. Do not use for the .NET, Kotlin, or Elixir clients, and do not use for Arc React frontends or generated Arc proxies.
+description: Talk to a Chronicle server from a Node.js or TypeScript application with @cratis/chronicle - reflect-metadata and decorator compiler settings, ChronicleClient and connection strings, @eventType classes, eventLog.append, reactors and reducers dispatched by camelCase method name, model-bound and declarative projections, variants (@variantOf/@entersOn/@globalFor or .variantOf()/.entersOn()) for an entity with mutually exclusive lifecycle shapes, glob-based artifact discovery, and the lazy connect and keepalive lifecycle. Use when a Node application appends to or observes a Chronicle event store. Do not use for the .NET, Kotlin, or Elixir clients, and do not use for Arc React frontends or generated Arc proxies.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-typescript/SKILL.md -->
@@ -14,13 +14,17 @@ HTTP and never sees this package.
 
 ## Verified product sources
 
-This skill is verified against `Cratis/Chronicle.TypeScript` at tag `v4.0.0`
-(commit `bed0b86`), which is the version published on npm.
+This skill was written against `Cratis/Chronicle.TypeScript` at tag `v4.0.0`
+(commit `bed0b86`) and re-verified at **`v5.1.0`** (published on npm as
+`5.1.0`): every class, function and option this skill names exists there. The
+`4→5` major is the Chronicle 17/18 wire migration (internal gRPC shapes; it adds
+`ensureCommandResponse` for server-side command results). The `file:line`
+citations below were taken at `v4.0.0` and may have shifted.
 
 | Package | Version | Where |
 | --- | --- | --- |
-| `@cratis/chronicle` | `4.0.0` | `Source/package.json:2` |
-| `@cratis/chronicle.contracts` | `17.0.0` | `Source/package.json` dependency |
+| `@cratis/chronicle` | `5.1.0` | npm; `Source/package.json` carries a `1.0.0` placeholder |
+| `@cratis/chronicle.contracts` | `18.2.0` | `Source/package.json` dependency at `v5.1.0` |
 | `@cratis/fundamentals` | `^7.14.0` | **peer dependency** — you install it |
 
 > **Do not read the version out of the repository.** `Source/package.json` says
@@ -76,7 +80,7 @@ try {
 }
 ```
 
-`IChronicleClient` is three members — `Source/IChronicleClient.ts:16-39`:
+`IChronicleClient` is four members — `Source/IChronicleClient.ts:16-39`:
 
 | Member | Line |
 | --- | --- |
@@ -126,7 +130,7 @@ Two facts to carry into production guidance:
   is not validated, because a development kernel serves a self-signed
   certificate. Set `?skipTlsValidation=false` against a real server.
 - **A connection string with no credentials silently falls back to the
-  development client credentials** (`Source/connection/ChronicleConnection.ts`).
+  development client credentials** (`Source/connection/ChronicleConnection.ts:319-326`; the constants live in `ChronicleConnectionString.ts:453-454`).
   An anonymous-looking connection string is not anonymous; it is
   `chronicle-dev-client`.
 
@@ -209,13 +213,13 @@ if (!result.isSuccess) {
   `EventContext.sequenceNumber` is a `bigint` too.
 - `AppendOptions` — `Source/eventSequences/AppendOptions.ts`: `correlationId?`,
   `eventSourceId?`, `concurrencyScope?`, `concurrencyScopes?`, and **`tags?`**
-  (`:22-29`, new in `4.0.0`).
+  (`:22-29`, since `4.0.0`; unchanged at `5.1.0`).
 
 > **Single `append()` cannot target a stream or a subject.** It hardcodes
 > `EventSourceType: 'Default'`, `EventStreamType: 'Default'`,
 > `EventStreamId: eventSourceId`, and `Subject: eventSourceId`
-> (`Source/eventSequences/EventSequence.ts:100-119`). Only `tags` became a real
-> option in `4.0.0` (`:117`). To target a different stream or subject, use the
+> (`Source/eventSequences/EventSequence.ts:100-120`). Only `tags` became a real
+> option in `4.0.0` (`:118`). To target a different stream or subject, use the
 > `EventForEventSourceId[]` overload, whose entries carry `eventStreamType`,
 > `eventStreamId`, `eventSourceType`, `subject`, and `tags`.
 
@@ -253,7 +257,7 @@ Reducers do the same (`Source/reducers/Reducers.ts:454-460`). A handler whose
 method name does not match is simply never called — **there is no error**.
 
 > The docstring at `Source/reactors/reactor.ts:28-29` claims dispatch is by the
-> first parameter's type. **It is wrong**, and it is still wrong at `4.0.0`. The
+> first parameter's type. **It is wrong**, and it is still wrong at `5.1.0`. The
 > code is the authority; so are the client snippets under `Documentation/`, which
 > state the name rule explicitly.
 
@@ -282,7 +286,7 @@ a failed side-effect append fails the partition.
 
 `@reducer(id?, eventSequenceId?, readModel?, isActive?)` —
 `Source/reducers/reducer.ts:58`. Passing `readModel` also registers that type as a
-read model. **The reducer handler takes three arguments at `4.0.0`** —
+read model. **The reducer handler takes three arguments (`4.0.0` through `5.1.0`)** —
 `reducerInstance[methodName](content, currentState, context)`
 (`Source/reducers/Reducers.ts:400`). The third is optional by arity, and a handler
 may be sync or async.
@@ -313,6 +317,70 @@ Constraints are `@constraint()` on a class implementing `IConstraint` with a
 `perEventSourceType`, `perEventStreamType`, `perEventStreamId`. **There are no
 model-bound constraint decorators in this client** — the class-plus-builder form
 is the only one.
+
+### Variants — mutually exclusive read models for one entity's lifecycle
+
+> Requires `@cratis/chronicle` `6.2.0` or later — newer than this skill's
+> `5.1.0` baseline (`Source/projections/VariantReclassifier.ts` and siblings).
+> Reverify before claiming support; take the version from npm.
+
+Some entities do not have one shape for their whole lifetime — a work item is a
+backlog entry until a pull request exists for it, then it is a pull request
+until it merges. **Model-bound** — `@variantOf(identity, key)` and
+`@entersOn(eventType, key?)`, alongside the ordinary `@fromEvent`/`@setFrom`
+decorators:
+
+```typescript
+class WorkItem {}   // anchors the group; not itself a read model
+
+@variantOf(WorkItem, 'id')
+@entersOn(IssueCreated)
+@fromEvent(IssueCreated)
+@readModel()
+class BacklogItem {
+    id = '';
+    @setFrom(IssueCreated, 'title') title = '';
+}
+
+@variantOf(WorkItem, 'id')
+@entersOn(PullRequestCreated)
+@fromEvent(PullRequestCreated)
+@fromEvent(BuildCompleted)          // not the entering event -> update-only join
+@readModel()
+class PullRequestItem {
+    id = '';
+    @setFrom(PullRequestCreated, 'pullRequestUrl') pullRequestUrl = '';
+    @setFrom(BuildCompleted, 'buildStatus') buildStatus = '';
+}
+```
+
+`entersOn` is repeatable (a variant may enter on more than one event) and its
+`key` argument names an *event* property, defaulting to the event source id. A
+mapping shared by every variant of an identity goes on a class decorated
+`@globalFor(identity)` instead of being repeated on each variant — every
+variant it targets must actually declare the property it maps, or
+`GlobalHandlerPropertyNotOnVariant` is thrown when the group is built. A class
+carrying only `@globalFor` is never itself registered as a projection.
+
+**Declarative** — `variantOf` and `entersOn` are members of
+`IProjectionBuilderFor<TReadModel>` itself:
+
+```typescript
+@projection()
+class PullRequestItemProjection implements IProjectionFor<PullRequestItem> {
+    define(builder: IProjectionBuilderFor<PullRequestItem>): void {
+        builder
+            .variantOf(WorkItem, m => m.id)
+            .entersOn(PullRequestCreated)
+            .from(BuildCompleted);   // update-only, same reason
+    }
+}
+```
+
+**A variant that declares no `@entersOn`/`entersOn(...)` throws
+`VariantMustDeclareEntersOnEvent`** when the group is built — a variant that
+could never be entered could never be written to at all, since every other
+handler on it is update-only.
 
 ## Discovery is a runtime file glob — this is the biggest difference
 
@@ -379,6 +447,8 @@ not work**. Use module-scope collaborators, as the shipped sample does.
 | Constructor-injecting a dependency into a reactor | There is no DI; the client constructs it |
 | Carrying a `3.x` example forward | Tags, the reducer context parameter, and two RPC names changed in `4.0.0` |
 | Reading `result.sequenceNumber` as a number | It is a `bigint` behind `.value` |
+| A `@globalFor` mapping targeting a property one variant lacks | `GlobalHandlerPropertyNotOnVariant` when the group is built, not a silently skipped mapping |
+| Expecting a `@globalFor`-only class to appear as a projection | It is never registered on its own; it is merged into its variants |
 
 ## Verify
 
@@ -394,4 +464,6 @@ not work**. Use module-scope collaborators, as the shipped sample does.
   class, and an appended event demonstrably reaches it.
 - A production connection string carries credentials and `skipTlsValidation=false`.
 - `client.dispose()` runs on shutdown.
+- Every variant group has at least one `@entersOn`/`entersOn(...)` per variant,
+  and every `@globalFor` member exists on every variant it targets.
 - Lint, `tsc`, and the test suite are clean against the verified package version.

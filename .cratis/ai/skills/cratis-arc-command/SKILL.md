@@ -15,12 +15,14 @@ whatever `Handle()` returns into appended events, a response, or both.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Core` | `22.10.4` | `Cratis.Arc.Commands.ModelBound.CommandAttribute`, `CommandResult`, `CommandValidator<T>` |
-| `Cratis.Arc.Chronicle` | `22.10.4` | event append handling, `Cratis.Arc.Chronicle.Commands.NotAuditedAttribute` |
-| `Cratis.Arc.ProxyGenerator.Build` | `22.10.4` | `CratisProxiesOutputPath` MSBuild integration |
-| `Cratis.Fundamentals` | `7.18.2` | `Cratis.Monads.Result<TResult, TError>` |
-| `Cratis.Chronicle` | `16.39.1` | `EventTypeAttribute`, `EventForEventSourceId`, `ICanProvideEventSourceId` |
-| `@cratis/arc` | `22.10.4` | `ICommand`, `CommandResult`, `ValidationResult` |
+| `Cratis.Arc.Core` | `22.16.0` | `Cratis.Arc.Commands.ModelBound.CommandAttribute`, `CommandResult`, `CommandValidator<T>` |
+| `Cratis.Arc.Chronicle` | `22.16.0` | event append handling, `Cratis.Arc.Chronicle.Commands.NotAuditedAttribute` |
+| `Cratis.Arc.ProxyGenerator.Build` | `22.16.0` | `CratisProxiesOutputPath` MSBuild integration |
+| `Cratis.Fundamentals` | `7.19.2` | `Cratis.Monads.Result<TResult, TError>` |
+| `Cratis.Chronicle` | `18.3.0` | `EventTypeAttribute`, `EventForEventSourceId`, `ICanProvideEventSourceId` |
+| `@cratis/arc` | `22.16.0` | `ICommand`, `CommandResult`, `ValidationResult` |
+
+> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
 
 Reverify before claiming support for another version. Arc without Chronicle is a
 supported setup; everything on this page that appends events needs Chronicle.
@@ -215,7 +217,7 @@ either way, so the reading is all a reviewer has to go on.
 ## Generate the TypeScript proxy
 
 ```xml
-<PackageReference Include="Cratis.Arc.ProxyGenerator.Build" Version="22.10.4" />
+<PackageReference Include="Cratis.Arc.ProxyGenerator.Build" Version="22.16.0" />
 
 <PropertyGroup>
   <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../<Web>/src/api</CratisProxiesOutputPath>

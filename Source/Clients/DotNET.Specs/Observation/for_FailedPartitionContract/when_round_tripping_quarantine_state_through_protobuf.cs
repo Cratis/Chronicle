@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using ProtoBuf;
-
 using FailedPartitionContract = Cratis.Chronicle.Contracts.Observation.FailedPartition;
 
 namespace Cratis.Chronicle.Observation.for_FailedPartitionContract;

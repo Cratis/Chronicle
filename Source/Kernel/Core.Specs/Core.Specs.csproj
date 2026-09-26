@@ -26,4 +26,6 @@
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="protobuf-net.Grpc.Reflection" />
     </ItemGroup>
+    <ItemGroup>
+    </ItemGroup>
 </Project>

@@ -41,6 +41,41 @@ jq -e . "$config" >/dev/null 2>&1 || {
     printf 'cratis-quality-gate: %s is not valid JSON — gate skipped.\n' "$config" >&2
     exit 0
 }
+
+# ── Project-owned overrides ──────────────────────────────────────────────────
+# Where a repository's own answer to "which directory does this gate build in" lives. It is
+# outside the managed tree on purpose: a repository that instead edits the managed
+# quality-gates.json mixes project facts into Cratis-owned content, so the next managed update
+# either reports drift or silently discards the repository's own configuration. The override
+# states only what differs, keyed by gate id, and nothing here needs a script fork.
+overrides="$root/.cratis/ai/quality-gates.project.json"
+if [ -f "$overrides" ]; then
+    if jq -e . "$overrides" >/dev/null 2>&1; then
+        merged="$(mktemp "${TMPDIR:-/tmp}/cratis-quality-gates.XXXXXX")"
+        if jq -s '
+            .[0] as $base | .[1] as $over
+            | ($over.gates // []) as $gates
+            | $base
+            + ($over | del(.gates))
+            + { gates: [ $base.gates[] as $gate
+                | ($gates | map(select(.id == $gate.id)) | first) as $patch
+                | if $patch == null then $gate else $gate + ($patch | del(.id)) end ] }
+        ' "$config" "$overrides" >"$merged" 2>/dev/null; then
+            unknown="$(jq -r --slurpfile base "$config" '[.gates // [] | .[].id] - [$base[0].gates[].id] | .[]' "$overrides" 2>/dev/null || true)"
+            [ -n "$unknown" ] && printf 'cratis-quality-gate: %s overrides unknown gate(s): %s\n' \
+                "${overrides#"$root"/}" "$(printf '%s' "$unknown" | tr '\n' ' ')" >&2
+            config="$merged"
+        else
+            rm -f "$merged"
+            printf 'cratis-quality-gate: %s could not be merged — managed gates used unchanged.\n' \
+                "${overrides#"$root"/}" >&2
+        fi
+    else
+        printf 'cratis-quality-gate: %s is not valid JSON — managed gates used unchanged.\n' \
+            "${overrides#"$root"/}" >&2
+    fi
+fi
+
 [ "$(jq -r '.enabled // true' "$config")" = "true" ] || exit 0
 
 # ── What changed in the working tree ─────────────────────────────────────────

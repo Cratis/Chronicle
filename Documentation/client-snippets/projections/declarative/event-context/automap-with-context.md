@@ -8,7 +8,6 @@ public record DecEventContextUserAction(string UserId, string ActionType);
 public class DecEventContextAuditTrailProjection : IProjectionFor<DecEventContextAuditEntry>
 {
     public void Define(IProjectionBuilderFor<DecEventContextAuditEntry> builder) => builder
-        .AutoMap()
         .From<DecEventContextUserAction>(_ => _
             .Set(m => m.EventId).ToEventContextProperty(c => c.SequenceNumber)
             .Set(m => m.OccurredAt).ToEventContextProperty(c => c.Occurred)

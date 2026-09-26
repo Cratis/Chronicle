@@ -1,6 +1,6 @@
 ---
 title: "Deep dive: consistency"
-description: Immediate vs eventual consistency, the Dynamic Consistency Boundary, and how to choose — the model that trips people up most, explained.
+description: Eventual and on-demand read consistency, the Dynamic Consistency Boundary, and how to choose — the model that trips people up most, explained.
 ---
 
 Consistency is where event sourcing feels different from CRUD, and where most early confusion lives. The short version: **writes are validated immediately; reads are usually eventual.** This page unpacks that and shows how to choose the right tool for each decision.
@@ -23,7 +23,7 @@ flowchart LR
 
 Because eventual reads are what make the model scale and stay simple: projections run independently, read models specialize per use case, and the write path doesn't wait on every view being updated. The cost is the small lag — and most UIs handle it naturally, especially with [observable queries](../scenarios/real-time-query) that update the moment the projection catches up.
 
-When you genuinely need read-after-write for a specific case, Chronicle offers **immediate projections** — a read model materialized synchronously so it's current the instant the command returns. Use them deliberately and sparingly; they trade the benefits above for strong read consistency. See [Immediate projections](../projections/immediate-projections.md).
+When you genuinely need read-after-write for a specific case, you have two tools. A **passive** read model is never stored: Chronicle computes it from its events when you read it, so it always includes the latest append, at the price of replaying the instance's history — for a read model keyed by its event source id, since only that event source's events are replayed. Or keep the read model materialized and have the one caller that needs its own write back **wait for the append's observers** before reading. Neither makes other writers wait. See [Read model consistency](../read-models/consistency.md).
 
 ## Protecting invariants: don't read, constrain
 
@@ -45,7 +45,7 @@ A [Dynamic Consistency Boundary](../dynamic-consistency-boundary/) lets the *dec
 | A view to read and render | A normal [projection](./projection.md) — embrace eventual consistency |
 | The UI to update as data changes | An [observable query](../scenarios/real-time-query) |
 | An invariant guaranteed at write time | A [constraint](../constraints/) or a [DCB](../dynamic-consistency-boundary/) |
-| Read-after-write for one specific case | An [immediate projection](../projections/immediate-projections.md), deliberately |
+| Read-after-write for one specific case | A [passive read model](../projections/declarative/passive.mdx), or [waiting for the append's observers](../read-models/consistency.md#read-after-write--waiting-for-a-materialized-read-model) |
 
 ## See also
 

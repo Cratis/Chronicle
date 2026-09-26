@@ -76,6 +76,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ClusterDbContext>> _clusterOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<EventStoreDbContext>> _eventStoreOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<NamespaceDbContext>> _namespaceOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext>> _jobsOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<UniqueConstraintDbContext>> _uniqueConstraintOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<EventSequenceDbContext>> _eventSequenceOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ReadModelDbContext>> _readModelOptions = new();
@@ -138,6 +139,17 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     }
 
     /// <inheritdoc/>
+    public DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace)
+    {
+        var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
+        var key = $"jobs:{eventStore}:{@namespace}:{connectionString}";
+        return _jobsOptions.GetOrAdd(
+            key,
+            static (_, args) => BuildOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext>(args.serviceProvider, args.connectionString),
+            (serviceProvider, connectionString));
+    }
+
+    /// <inheritdoc/>
     public Task<DbContextScope<UniqueConstraintDbContext>> UniqueConstraintTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string constraintName) =>
         GetOrCreateTableDbContext(
             eventStore,
@@ -188,8 +200,9 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     {
         var storageType = options.Value.Storage.Type;
         var connectionDetails = options.Value.Storage.ConnectionDetails;
+        var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);
 
-        if (string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase))
+        if (isSqlite)
         {
             // SQLite: each event store, namespace, and read-model namespace lives in its own
             // file. The cluster file path is the configured Data Source; the derived files
@@ -218,6 +231,18 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         // Cache invalidation must happen AFTER the wipe so that any in-flight migration that
         // populates the cache concurrently with the wipe is overwritten by a final empty cache.
         ClearTableMigrationCache(string.Empty);
+
+        // Only SQLite drops the job tables - the other backends truncate, so their schema survives
+        // the wipe. The job system caches the storage it resolves, and applying its migrations is
+        // part of resolving, so on SQLite it has to forget: otherwise it holds storage for tables
+        // that are gone and the next write says there is no such table as Jobs. Telling it to
+        // forget where the tables never went away is not harmless - the next job in every event
+        // store and namespace would re-run the migrations, and on a real database server that is
+        // slow enough to push the integration specs past their deadlines.
+        if (isSqlite)
+        {
+            serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
+        }
     }
 
     static string ExtractSqliteDataSource(string connectionString)

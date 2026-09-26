@@ -4,12 +4,13 @@ description: >
   Specialist for writing C# specs (the in-process scenario family) and
   TypeScript/React specs for vertical slices. Ensures every slice has
   comprehensive behavior coverage following the project's BDD conventions.
-model: claude-sonnet-4-5
 tools:
-  - githubRepo
-  - codeSearch
-  - usages
-  - terminalLastCommand
+  - Read
+  - Grep
+  - Glob
+  - Bash
+  - Edit
+  - Write
 ---
 <!-- cratis-ai-managed: agents/spec-writer.md -->
 

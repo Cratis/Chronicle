@@ -3,7 +3,7 @@
 
 Detail for the plain `Cratis.Specifications` surface: phases, substitution,
 assertions, and exception capture. Verified against `Cratis.Specifications`
-`4.1.0` and NSubstitute as consumed by that package.
+`4.1.1` and NSubstitute as consumed by that package.
 
 ## Phases
 

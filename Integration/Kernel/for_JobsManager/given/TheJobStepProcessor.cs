@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.DependencyInjection;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 

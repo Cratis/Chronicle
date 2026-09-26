@@ -28,5 +28,3 @@ public class and_event_in_context_is_remove_event : Specification
 
     [Fact] void should_not_save_to_storage() => _storage.Received(1).Remove(_context.EventSourceId, _definition.Name);
 }
-
-

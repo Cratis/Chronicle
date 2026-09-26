@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/authorization.md -->
 # Authorization
 
-Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.10.4`. Everything below
+Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.16.0`. Everything below
 is in `Cratis.Arc.Authorization` unless stated.
 
 ## Default access differs by hosting model

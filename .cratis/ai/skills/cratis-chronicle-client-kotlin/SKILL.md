@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-client-kotlin
-description: Talk to a Chronicle server from a Kotlin or Java application with the io.cratis:chronicle client - connection strings, ChronicleClient and the Spring Boot starter, @EventType classes, suspending append, reactors and reducers dispatched by first-parameter type, model-bound read models, classpath artifact discovery, and the blocking API Java uses. Use when building a JVM application that appends to or observes a Chronicle event store. Do not use for the .NET, TypeScript, or Elixir clients, and do not use for Chronicle kernel or Arc work.
+description: Talk to a Chronicle server from a Kotlin or Java application with the io.cratis:chronicle client - connection strings, ChronicleClient and the Spring Boot starter, @EventType classes, suspending append, reactors and reducers dispatched by first-parameter type, model-bound and declarative projections, variants (@VariantOf/@EntersOn/@GlobalFor or variantOf()/entersOn()) for an entity with mutually exclusive lifecycle shapes, classpath artifact discovery, and the blocking API Java uses. Use when building a JVM application that appends to or observes a Chronicle event store. Do not use for the .NET, TypeScript, or Elixir clients, and do not use for Chronicle kernel or Arc work.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-kotlin/SKILL.md -->
@@ -14,14 +14,20 @@ you construct a client, ask it for an event store, and append or observe.
 
 ## Verified product sources
 
-This skill is verified against this exact source:
+This skill was written against `Chronicle.Kotlin` at tag `v4.0.0` (commit
+`63ff629`) and re-verified at **`v5.1.0`**: every class, function, option and
+Spring bean this skill names exists there. The `4→5` major is the Chronicle 17/18
+wire migration (gRPC request/response shapes and `ensureSuccess` result
+envelopes — internal to the client); `5.0.0` also adds a `ChronicleCommandRejected`
+exception for a rejected server-side command. The `file:line` citations below
+were taken at `v4.0.0` and may have shifted.
 
 | Artifact | Version | Verified from |
 | --- | --- | --- |
-| `io.cratis:chronicle` | `4.0.0` | `Chronicle.Kotlin` at tag `v4.0.0` (commit `63ff629`) |
-| `io.cratis:chronicle-spring-boot-starter` | `4.0.0` | same tag, `Integrations/SpringBoot` |
-| `io.cratis:chronicle-testing` | `4.0.0` | same tag, `Testing` |
-| `io.cratis:chronicle-contracts` | `16.44.1` | `Source/build.gradle.kts:11` |
+| `io.cratis:chronicle` | `5.1.0` | `Chronicle.Kotlin` at tag `v5.1.0` |
+| `io.cratis:chronicle-spring-boot-starter` | `5.1.0` | same tag, `Integrations/SpringBoot` |
+| `io.cratis:chronicle-testing` | `5.1.0` | same tag, `Testing` |
+| `io.cratis:chronicle-contracts` | `18.2.0` | `Source/build.gradle.kts` (`chronicleContractsVersion`) |
 
 All three artifacts are published to Maven Central under `io.cratis`
 (`Source/build.gradle.kts:54`, `Testing/build.gradle.kts:32`,
@@ -36,9 +42,10 @@ All three artifacts are published to Maven Central under `io.cratis`
 > the checked-in source never carries the real number. Take it from Maven
 > Central.
 
-> **The client and the kernel version independently.** Client `4.0.0` is built
-> against `chronicle-contracts` `16.44.1`; the Chronicle server has since moved
-> to a `17.x` line. Confirm the client/server pair you intend to run is
+> **The client and the kernel version independently.** Client `5.1.0` is built
+> against `chronicle-contracts` `18.2.0` (the `4.x` line was built against
+> `16.44.1` and does not speak the 17/18 wire shapes); the Chronicle server is
+> on `18.x`. Confirm the client/server pair you intend to run is
 > supported before relying on it — do not infer compatibility from the fact that
 > both are "latest".
 
@@ -83,11 +90,11 @@ fun main() = runBlocking {
 | `fun evictEventStores()` | `:36` | drops the local cache, keeps the client |
 | `fun dispose()` | `:39` | `IChronicleClient : AutoCloseable`, `close()` delegates to it (`:41`) |
 
-**The client connects in its constructor.** `ChronicleClient.kt:13` is
+**The client connects in its constructor.** `ChronicleClient.kt:12` is
 `ChronicleConnection(options.connectionString).also { it.connect() }` — there is
 no separate `connect()` step to call, and constructing the client is the
 connecting act. Event stores are cached per `"$name/$namespace"`
-(`ChronicleClient.kt:22`), so repeated `getEventStore` calls return the same
+(`ChronicleClient.kt:21`), so repeated `getEventStore` calls return the same
 instance.
 
 The default namespace is the literal `"Default"` —
@@ -356,13 +363,93 @@ A model-bound projection puts the projection on the read model with `@FromEvent`
 (`projections/SetFrom.kt:22`); the full family also includes `SetValue`,
 `SetFromContext`, `AddFrom`, `SubtractFrom`, `Increment`, `Decrement`, `Count`,
 `Join`, `RemovedWith`, `RemovedWithJoin`, `ChildrenFrom`, `ClearWith`,
-`FromAll`, `FromEvery`, `Nested`, `NoAutoMap`, `NotRewindable`. The declarative
+`FromAll`, `FromEvery`, `FromEventSourceId`, `CountFromAll`, `IncrementFromAll`,
+`DecrementFromAll`, `Nested`, `NoAutoMap`, `NoAutoMapProperties`,
+`NotRewindable`. The declarative
 alternative is a class implementing `IProjectionFor<TReadModel>`.
+
+### Variants — mutually exclusive read models for one entity's lifecycle
+
+> Requires `io.cratis:chronicle` `6.3.0` or later — newer than this skill's
+> `5.1.0` baseline (`Source/src/main/kotlin/io/cratis/chronicle/projections/VariantOf.kt`
+> and siblings). Reverify before claiming support; take the version from Maven
+> Central, not the checked-in source.
+
+Some entities do not have one shape for their whole lifetime — a work item is a
+backlog entry until a pull request exists for it, then it is a pull request
+until it merges. **Variants** let several read models share one logical
+identity and be mutually exclusive: entering one variant removes the entity
+from every other variant in the group, and only the event named by
+`@EntersOn`/`entersOn(...)` can create or resurrect a variant — every other
+event it handles is automatically reclassified into an update-only join.
+
+**Model-bound** (the annotations are ordinary Java annotations, so Kotlin and
+Java use the identical shape):
+
+```kotlin
+class WorkItem  // anchors the group; not itself a read model
+
+@ReadModel
+@VariantOf(WorkItem::class, key = "id")
+@EntersOn(IssueCreated::class)
+@FromEvent(IssueCreated::class)
+data class BacklogItem(
+    @FromEventSourceId val id: String = "",
+    @SetFrom("title", IssueCreated::class) val title: String = ""
+)
+
+@ReadModel
+@VariantOf(WorkItem::class, key = "id")
+@EntersOn(PullRequestCreated::class)
+@FromEvent(PullRequestCreated::class)
+@FromEvent(BuildCompleted::class)   // not the entering event -> update-only join
+data class PullRequestItem(
+    @FromEventSourceId val id: String = "",
+    @SetFrom("pullRequestUrl", PullRequestCreated::class) val pullRequestUrl: String = "",
+    @SetFrom("buildStatus", BuildCompleted::class) val buildStatus: String = ""
+)
+```
+
+`@VariantOf(identity, key)` — **`key` is always an explicit property-name
+string**, on both Kotlin and Java, because reflection resolves it rather than a
+compile-time property reference. `@EntersOn(eventType, key = "EventSourceId")`
+is repeatable — a variant may enter on more than one event — and its `key`
+names an *event* property (not the read model's), defaulting to the event
+source id. A mapping shared by every variant of an identity goes on a type
+annotated `@GlobalFor(identity)` instead of being repeated per variant; every
+variant it targets must actually have the member it maps, or
+`GlobalHandlerPropertyNotOnVariant` is thrown at registration.
+
+**Declarative** — `variantOf` and `entersOn` are members of
+`IProjectionBuilderFor<TReadModel>` itself:
+
+```kotlin
+class PullRequestItemProjection : IProjectionFor<PullRequestItem> {
+    override fun define(builder: IProjectionBuilderFor<PullRequestItem>) {
+        builder
+            .variantOf(WorkItem::class, PullRequestItem::id)   // or variantOf(WorkItem::class, "id")
+            .entersOn(PullRequestCreated::class)
+            .from(BuildCompleted::class)                        // update-only, same reason
+    }
+}
+```
+
+Java calls the same builder with a `Class` and a string key — there is no
+property-reference overload in Java:
+
+```java
+builder.variantOf(WorkItem.class, "id").entersOn(PullRequestCreated.class);
+```
+
+**A variant that declares no `@EntersOn`/`entersOn(...)` throws
+`VariantMustDeclareEntersOnEvent`** at registration — a variant that could
+never be entered could never be written to at all, since every other handler
+on it is update-only.
 
 ## Discovery and registration
 
 `ClientArtifacts` scans the classpath with ClassGraph
-(`artifacts/ClientArtifacts.kt:44-48`), and `ClientArtifacts.default` is a
+(`artifacts/ClientArtifacts.kt:66-98`), and `ClientArtifacts.default` is a
 process-wide lazy singleton (`:156`). What it looks for (`:66-98`):
 
 | Kind | Rule |
@@ -378,6 +465,8 @@ process-wide lazy singleton (`:156`). What it looks for (`:66-98`):
 | seeders | implements `ICanSeedEvents` |
 | webhooks | implements `IWebhookDefiner` |
 | captures | implements `ICapture` |
+| reactor middlewares | implements `IReactorMiddleware` or `BlockingReactorMiddleware` |
+| reactor argument resolvers | implements `IReactorMethodArgumentResolver` or `BlockingReactorMethodArgumentResolver` |
 
 > The `FromEvent$Container` entry is not incidental: Kotlin's `@Repeatable`
 > replaces repeated annotations with a synthetic container, so a class carrying
@@ -465,7 +554,7 @@ In Spring Boot, Java injects the `Chronicle` bean instead — it already takes
 folds a reducer through the same handler-shape rules as production
 (`ReadModelScenario.kt:139-150`). Its scope is small — appends and reducer folds
 only; there is no in-process reactor, projection, or constraint scenario
-(`Testing/api/Testing.api` is 56 lines).
+(`Testing/api/Testing.api` is 57 lines).
 
 ## Common pitfalls
 
@@ -475,13 +564,15 @@ only; there is no in-process reactor, projection, or constraint scenario
 | Two `@EventType` classes sharing a simple name | The id defaults to the simple name, so they collide on the wire (`EventTypesService.kt:67`) |
 | Shipping the default connection string to production | `skipTlsValidation` defaults to **true**; certificate validation is off (`ChronicleConnectionString.kt:28`) |
 | Copying a version from the README or docs | Both are stale at `v4.0.0`; the real version comes from the release, not the source |
-| Expecting `getEventStore` to suspend | It does not — the client already connected in its constructor (`ChronicleClient.kt:13`) |
+| Expecting `getEventStore` to suspend | It does not — the client already connected in its constructor (`ChronicleClient.kt:12`) |
 | Expecting `awaitRegistration()` to mean "registered" | It completes in a `finally`, so it also returns after a failed pass (`ArtifactRegistrations.kt:47-57`) |
-| Expecting a registration failure to throw | Failures are printed to `System.err`, not raised (`EventStore.kt:236`) |
+| Expecting a registration failure to throw | Failures are printed to `System.err`, not raised (`EventStore.kt:244`) |
 | Expecting read model reactors to be discovered | `IReadModelReactor` is absent from the scan and from `IEventStore`; construct `ReadModelReactors(...)` yourself |
 | Leaving the default classpath scan on in a large app | Use `withArtifactsFrom(...)` or `artifact-packages` to narrow it (`ChronicleOptions.kt:58`) |
 | Expecting WebFlux support from the starter | The web auto-configuration is `SERVLET`-only (`ChronicleWebAutoConfiguration.kt:29`) |
 | Exiting `main` after an append | Reactors and reducers stop with the process; the stream is live |
+| Passing a `KProperty1` as `@VariantOf`'s `key` | The annotation form always takes a plain string; only the declarative `variantOf(...)` builder accepts a property reference |
+| A `@GlobalFor` mapping targeting a property one variant lacks | `GlobalHandlerPropertyNotOnVariant` at registration, not a silently skipped mapping |
 
 ## Verify
 
@@ -495,5 +586,7 @@ only; there is no in-process reactor, projection, or constraint scenario
   class.
 - `awaitRegistration()` is followed by a check that registration actually
   succeeded, not treated as proof on its own.
+- Every variant group has at least one `@EntersOn`/`entersOn(...)` per variant,
+  and every `@GlobalFor` member exists on every variant it targets.
 - The build is clean and the specifications pass against the verified artifact
   version.

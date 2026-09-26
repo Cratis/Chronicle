@@ -99,6 +99,7 @@ Cratis__Chronicle__Authentication__AdminUser__RequirePasswordChangeOnFirstLogin=
 ### `requirePasswordChangeOnFirstLogin`
 
 When this option is `true`:
+
 - The admin user is created with the configured password
 - On first login, Chronicle redirects the admin to the password change screen
 - The admin must set a new password before accessing the Workbench
@@ -108,6 +109,7 @@ When this option is `true`:
 The `password` value should be sourced from a secrets management solution such as Azure Key Vault, Kubernetes Secrets, or Docker Secrets rather than stored directly in `chronicle.json`.
 
 **Key security properties of admin user bootstrap:**
+
 - Credentials are hashed before being appended or persisted. Plaintext configuration values can remain in the process configuration; protect that configuration and never log it.
 - Bootstrap never replaces existing credentials. It may finish initialization of an existing administrator that still has no password.
 
@@ -138,6 +140,8 @@ Cratis__Chronicle__Authentication__AdminUser__Username=admin
 Cratis__Chronicle__Authentication__AdminUser__Password=@Microsoft.KeyVault(SecretUri=https://my-vault.vault.azure.net/secrets/chronicle-admin-password)
 Cratis__Chronicle__Authentication__AdminUser__RequirePasswordChangeOnFirstLogin=true
 ```
+
+The `@Microsoft.KeyVault(...)` reference is resolved by Azure App Service and Azure Functions when you set it as an application setting — Chronicle does not resolve it. On any other platform the literal text would be used as the value, so inject the resolved secret through that platform's secret mechanism instead, as in the Kubernetes example below.
 
 ### Kubernetes Secrets
 

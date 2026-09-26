@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts;
+using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 

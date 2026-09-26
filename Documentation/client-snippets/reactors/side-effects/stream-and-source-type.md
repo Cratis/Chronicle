@@ -6,6 +6,7 @@ using Cratis.Chronicle.Reactors;
 [EventSourceType("product")]
 public class WarehouseMetadataReactor : IReactor
 {
+    [OnceOnly]
     public StockDecreased BookReserved(SideEffectsBookReserved @event, EventContext context) =>
         new(@event.Isbn, 1);
 }

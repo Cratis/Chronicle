@@ -8,7 +8,6 @@ public record MbIndexAutoMapAccountOpened(string Name, decimal Balance);
 public class MbIndexAutoMapAccountProjection : IProjectionFor<MbIndexAutoMapAccountInfo>
 {
     public void Define(IProjectionBuilderFor<MbIndexAutoMapAccountInfo> builder) => builder
-        .AutoMap()
         .From<MbIndexAutoMapAccountOpened>();
 }
 

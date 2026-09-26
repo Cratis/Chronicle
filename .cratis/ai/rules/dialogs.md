@@ -8,14 +8,14 @@ paths:
 
 # Using Dialogs
 
-The Cratis dialog wrappers handle command execution, validation timing, loading states, and footer buttons consistently. Using PrimeReact's raw `Dialog` bypasses all of this and leads to inconsistent UX.
+The Cratis dialogs handle command execution, validation timing, busy state, focus, dismissal and footer buttons consistently. A vendor dialog, or a hand-rolled modal, bypasses all of this and leads to inconsistent UX — and a second focus trap around a Components dialog breaks keyboard and screen-reader behavior.
 
 ## Choose the Correct Dialog Type
 
 - If confirm executes a command, use `CommandDialog` from `@cratis/components/CommandDialog`.
 - If no command is executed on confirm, use `Dialog` from `@cratis/components/Dialogs`.
 - If you are **asking the user to confirm** or **showing that something is in progress**, do not build a dialog at all — raise the host-rendered one through its hook (below).
-- **Never** import `Dialog` from `primereact/dialog` directly.
+- **Never** use a vendor or hand-rolled modal. Dialogs are Components-owned; the optional renderer adapters do not replace them.
 
 ## Confirmations and busy indicators are host-rendered — register once, raise by hook
 
@@ -110,24 +110,24 @@ if (result === DialogResult.Ok) {
 
 ### `onBeforeExecute` is a transformer
 
-It receives the current command values and **must return them** (mutated or not). **Returning `void` executes the command with `undefined` values.** It runs only on submit — never use it to seed *required* values (validation runs against pre-transform state, so a value seeded here never makes the form valid and the submit button stays permanently disabled). Seed required values via `initialValues`; reserve `onBeforeExecute` for transforms that don't affect validity (e.g. a generated id).
+It receives the current command values and **must return them** (mutated or not). **Returning `void` does not execute with `undefined`** — the current values are kept and a `console.warn` is logged; still, always return the values. It runs only on submit — never use it to seed *required* values (validation runs against pre-transform state, so a value seeded here never makes the form valid and the submit button stays permanently disabled). Seed required values via `initialValues`; reserve `onBeforeExecute` for transforms that don't affect validity (e.g. a generated id).
 
 ### CommandForm fields
 
-Use built-in `CommandForm` fields (from `@cratis/components/CommandForm`) for every user-input value — a raw PrimeReact control inside a command dialog bypasses `CommandFormFieldWrapper`, so validation never re-runs and the submit button stays **permanently disabled**. Catalog: `InputTextField`, `PasswordField`, `NumberField`, `DropdownField`, `CheckboxField`, `ToggleSwitchField`, `TextAreaField`, `CalendarField`, `RadioButtonField`, `RadioGroupField`, `ChipsField`, `MultiSelectField`, `ColorPickerField`, `SliderField`, `RatingField`.
+Use built-in `CommandForm` fields (from `@cratis/components/CommandForm`) for every user-input value — a raw control (a `Common` `TextInput`, a native `<input>`) inside a command dialog is not bound to the command, so validation never re-runs and the submit button stays **permanently disabled**. Catalog: `InputTextField`, `PasswordField`, `NumberField`, `NumberInputField`, `DropdownField`, `CheckboxField`, `ToggleSwitchField`, `TextAreaField`, `CalendarField`, `RadioButtonField`, `RadioGroupField`, `ChipsField`, `MultiSelectField`, `ColorPickerField`, `SliderField`, `RatingField`. `AutoCommandForm` generates the field list from the command's properties (`string` → `InputTextField`, `number` → `NumberField`, `boolean` → `CheckboxField`, `Date` → `CalendarField`; other types need a registered field-type provider) — use it for plain forms, hand-write fields when the layout or a concept type needs it. Several `RadioButtonField`s bound to one property need the same explicit `name`.
 
-- The `value={c => c.name}` **accessor lambda doubles as the binding and type-checked field selection** — renaming a command property surfaces a compile error at every binding.
+- The `value={c => c.name}` **accessor lambda doubles as the binding and type-checked field selection** — renaming a command property surfaces a compile error at every binding. The binding is inferred from the accessor's *source text*, so a computed accessor (`c => c[descriptor.name]`) cannot be inferred — name it explicitly with `fieldName="…"` (Arc ≥ 22.16.0).
 - **`RadioGroupField<T>`** renders a whole group from data (`options`/`optionLabel`/`optionValue`, `layout='horizontal'|'vertical'`); **`RadioButtonField<T>`** is one component per option (each takes a `buttonValue`). Both infer the value type from the accessor — no `as string` casts.
 - **`asCommandFormField(Component, opts)`** (`asCommandFormField`, `WrappedFieldProps` from `@cratis/arc.react/commands`) wraps a custom input so it participates in `CommandForm` like a built-in. `WrappedFieldProps<T>` gives `{ value, onChange, invalid, required, errors }` (`errors` is `string[]` → `errors.join(', ')`); options are `{ defaultValue, extractValue: e => ... }`.
-- **`useCommandInstance(Command)`** (`@cratis/arc.react/commands`) returns the live reactive instance the form is bound to — **read** it to drive dependent fields (e.g. read `command.country` to choose a `DropdownField`'s options); never mutate (mutations go through field bindings).
+- **`useCommandInstance<TCommand>()`** (`@cratis/arc.react/commands`, no argument — reads the enclosing form's context) returns the live reactive instance the form is bound to — **read** it to drive dependent fields (e.g. read `command.country` to choose a `DropdownField`'s options); never mutate (mutations go through field bindings).
 
 ### Opening dialogs — `useDialog` / `useDialogContext`
 
-`useDialog<TResponse, TInput>(Component)` returns `[Wrapper, showFn]`: render `<Wrapper />` in JSX and call `showFn(input)` to open it; it resolves to `[DialogResult, TResponse?]` when the dialog closes. For a new dialog, prefer reading input as **plain typed props** (`<Name>Input`) and obtaining `closeDialog` from **`useDialogContext<TResponse>()`** — rather than declaring a props interface that extends `DialogProps` to thread both input and `closeDialog`. (Existing dialogs that destructure `closeDialog` from `DialogProps` remain valid.) Signal the outcome with `closeDialog(DialogResult.Ok | Cancelled, response?)`.
+`useDialog<TResponse, TInput>(Component)` returns `[Wrapper, showFn, context]` (the third element is rarely needed): render `<Wrapper />` in JSX and call `showFn(input)` to open it; it resolves to `[DialogResult, TResponse?]` when the dialog closes. For a new dialog, prefer reading input as **plain typed props** (`<Name>Input`) and obtaining `closeDialog` from **`useDialogContext<TRequest, TResponse>()`** (request type first) — rather than declaring a props interface that extends `DialogProps` to thread both input and `closeDialog`. (Existing dialogs that destructure `closeDialog` from `DialogProps` remain valid.) Signal the outcome with `closeDialog(DialogResult.Ok | Cancelled, response?)`.
 
 ### Multi-step wizards — `StepperCommandDialog`
 
-For a command split across named steps use `StepperCommandDialog` (`@cratis/components/CommandDialog`) — see the **stepper-command-dialog** skill. Conditional steps written as `{condition && <StepperPanel/>}` are supported **from 2.7.1**: only the steps that actually render are counted, so Next and Submit appear where the user expects them. ⚠️ On earlier versions a hidden step is still counted — Submit never appears on the real last step and a dead Next takes its place, so check what you are pinned to before relying on this. ⚠️ A `<>…</>` fragment wrapping several panels still counts as **one** step — give each step its own `StepperPanel` child. When a step needs non-CommandForm inputs, or cross-step state is complex, fall back to a manual `Dialog` + PrimeReact `Stepper`.
+For a command split across named steps use `StepperCommandDialog` (`@cratis/components/CommandDialog`) — see the **cratis-components-stepper-command-dialog** skill. Conditional steps written as `{condition && <StepperPanel/>}` are supported: only the steps that actually render are counted, so Next and Submit appear where the user expects them, and the active step is clamped if a late-resolving condition removes a step the user had passed. ⚠️ A `<>…</>` fragment wrapping several panels counts as **one** step — give each step its own `StepperPanel` child. Stepper parts are Cratis-owned (`root`, `list`, `step`, `header`, `number`, `title`, `separator`, `panels`, `panel`; `StepperParts` from `@cratis/components/CommandDialog`). When the wizard belongs inline in a page region rather than in a modal, use the sibling `CommandStepper` (`@cratis/components/CommandStepper`) — same steps, same command execution, no dialog chrome.
 
 ## When Using `Dialog`
 
@@ -137,7 +137,7 @@ Use this for dialogs that collect data and return it without executing a command
 import { useState } from 'react';
 import { DialogProps, DialogResult } from '@cratis/arc.react/dialogs';
 import { Dialog } from '@cratis/components/Dialogs';
-import { InputText } from 'primereact/inputtext';
+import { TextInput } from '@cratis/components/Common';
 
 export const AddProject = ({ closeDialog }: DialogProps<{ name: string }>) => {
     const [name, setName] = useState('');
@@ -151,10 +151,10 @@ export const AddProject = ({ closeDialog }: DialogProps<{ name: string }>) => {
             onConfirm={() => closeDialog(DialogResult.Ok, { name })}
             onCancel={() => closeDialog(DialogResult.Cancelled)}
         >
-            <InputText
+            <TextInput
                 value={name}
-                onChange={event => setName(event.target.value)}
-                autoFocus
+                onChange={value => setName(value)}
+                aria-label="Project name"
             />
         </Dialog>
     );
@@ -250,16 +250,20 @@ Use `buttons={null}` for dialogs that contain their own internal actions (e.g. a
 
 | Prop | Type | Notes |
 |---|---|---|
-| `title` | `string` | Header text (replaces PrimeReact `header`) |
-| `visible` | `boolean` | Controls visibility |
+| `title` | `string` | Header text |
+| `visible` | `boolean` | Controlled open state; defaults to `true` |
 | `buttons` | `DialogButtons \| ReactNode \| null` | Prefer `DialogButtons` enum; `null` for no footer |
 | `isValid` | `boolean` | Disables the confirm button when `false` |
-| `okLabel` | `string` | Override the Ok/Confirm button label |
-| `cancelLabel` | `string` | Override the Cancel button label |
+| `isBusy` | `boolean` | Disables every action **and every dismissal path** while work is in flight |
+| `initialFocus` | `DialogInitialFocus` | Where focus lands on open; defaults to the confirmation action — the **cratis-components-accessibility** skill covers the armed-Enter hazard |
+| `okLabel` / `cancelLabel` / `yesLabel` / `noLabel` | `string` | Per-dialog label; falls back to the provider's `messages.dialog`, then English |
+| `closeAriaLabel` | `string` | Accessible name of the header close button; same fallback chain |
 | `onConfirm` | `() => boolean \| void \| Promise<boolean> \| Promise<void>` | Called when Ok is clicked; return `false` to keep dialog open, `true` to close |
-| `onCancel` | `() => void \| Promise<void>` | Called when Cancel is clicked |
+| `onCancel` | `() => boolean \| void \| Promise<boolean> \| Promise<void>` | Called when Cancel is clicked |
 | `onClose` | `(result: DialogResult) => boolean \| void \| Promise<...>` | Combined handler for both Ok and Cancel |
-| `width` | `string` | Dialog width (e.g. `'50vw'`) — replaces PrimeReact `style={{ width }}` |
-| `resizable` | `boolean` | Default `false` |
+| `width` | `string` | Dialog width (e.g. `'50vw'`); defaults to `450px` |
+| `dismissable` | `boolean` | Header close, Escape and backdrop dismissal (when not busy) |
+| `style` / `contentStyle` / `className` | | Modal-root and content-region styling |
+| `pt` | `DialogParts` | Per-part attributes: `backdrop`, `positioner`, `root`, `header`, `title`, `close`, `content`, `footer`, `confirm`, `cancel` |
 
-`style`, `contentStyle`, and `dismissable` **are** supported. The other v10 PrimeReact Dialog props (`modal`, `dismissableMask`, `draggable`, `footer`, `onHide`) are **not** available — do not use them. (`resizable` is accepted for compatibility but is a no-op in PrimeReact 11.)
+`resizable`, `ptOptions` and `unstyled` are accepted for source compatibility and do nothing. There is no `modal`, `draggable`, `footer` or `onHide` — the dialog is always modal, the footer comes from `buttons`, and closing is reported through `onCancel`/`onClose`. Style the dialog through its parts (`pt`, or `[data-cratis-part='root']` selectors), never through React Aria class names.

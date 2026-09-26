@@ -74,6 +74,8 @@
   href: workbench/toc.yml
 - name: Hosting
   href: hosting/toc.yml
+- name: Client differences
+  href: clients/where-the-clients-differ.md
 - name: Building a Client
   href: building-a-client/toc.yml
 - name: Contributing

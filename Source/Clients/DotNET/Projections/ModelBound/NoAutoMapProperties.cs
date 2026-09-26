@@ -29,6 +29,8 @@ public static class NoAutoMapProperties
     /// Records carry the attribute on the primary constructor's parameters, plain models on properties, so both
     /// are read. The naming-policy conversion has to be the same one the root uses, because the kernel matches
     /// these against a property path's last segment, case-insensitively.
+    /// <see cref="NotProjectedAttribute"/> counts as an exclusion too: a member the reader assembles must never be
+    /// written by the projection, and a subscribed event carrying the same name would otherwise auto-map over it.
     /// </remarks>
     public static IReadOnlyList<string> CollectFrom(Type? modelType, INamingPolicy namingPolicy)
     {
@@ -46,7 +48,8 @@ public static class NoAutoMapProperties
 
         foreach (var parameter in primaryConstructor?.GetParameters() ?? [])
         {
-            if (parameter.IsDefined(typeof(NoAutoMapAttribute), inherit: true))
+            if (parameter.IsDefined(typeof(NoAutoMapAttribute), inherit: true) ||
+                parameter.IsDefined(typeof(NotProjectedAttribute), inherit: true))
             {
                 names.Add(namingPolicy.GetPropertyName(new PropertyPath(parameter.Name!)));
             }
@@ -54,7 +57,8 @@ public static class NoAutoMapProperties
 
         foreach (var property in modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
-            if (Attribute.IsDefined(property, typeof(NoAutoMapAttribute), inherit: true))
+            if (Attribute.IsDefined(property, typeof(NoAutoMapAttribute), inherit: true) ||
+                Attribute.IsDefined(property, typeof(NotProjectedAttribute), inherit: true))
             {
                 names.Add(namingPolicy.GetPropertyName(new PropertyPath(property.Name)));
             }

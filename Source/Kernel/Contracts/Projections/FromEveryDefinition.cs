@@ -26,4 +26,13 @@ public class FromEveryDefinition
     /// </summary>
     [ProtoMember(3)]
     public AutoMap AutoMap { get; set; }
+
+    /// <summary>
+    /// Gets or sets the key expression the projection folds every event into.
+    /// </summary>
+    /// <remarks>
+    /// Empty means the event source id, which is what every definition written before this field existed means.
+    /// </remarks>
+    [ProtoMember(4)]
+    public string Key { get; set; } = string.Empty;
 }

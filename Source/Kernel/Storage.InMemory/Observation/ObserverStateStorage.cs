@@ -40,6 +40,17 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task Delete(ObserverId observerId)
+    {
+        if (_states.TryRemove(observerId, out _))
+        {
+            _allSubject.OnNext(Snapshot());
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task Rename(ObserverId currentId, ObserverId newId)
     {
         if (_states.TryRemove(currentId, out var state))

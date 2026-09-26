@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserver;
@@ -34,4 +34,3 @@ public class TestableReplayObserver(
     public Task<IImmutableList<JobStepDetails>> PrepareStepsForTesting(ReplayObserverRequest request) =>
         PrepareSteps(request);
 }
-

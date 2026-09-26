@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 /// <remarks>
 /// A provider rather than a serializer, because a serializer would never be reached. The driver ships a provider
 /// that resolves every interface to a <c language="csharp">DiscriminatedInterfaceSerializer</c>, so the serializer auto-registration
-/// in <see cref="Serialization.CustomSerializers"/> sees a serializer already available for
+/// in <see cref="Cratis.Orleans.Storage.MongoDB.Serialization.CustomSerializers"/> sees a serializer already available for
 /// <see cref="IConstraintDefinition"/> and skips its own. A provider registered afterwards is consulted first, so
 /// this is what actually puts <see cref="ConstraintDefinitionSerializer"/> - and with it the upgrade of definitions
 /// persisted before a unique event type constraint could cover several event types - on the read path.

@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
-
 using StoredUser = Cratis.Chronicle.Storage.Security.User;
 
 namespace Cratis.Chronicle.Security.for_SetInitialAdminPassword;

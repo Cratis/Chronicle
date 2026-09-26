@@ -1,4 +1,7 @@
-# Contracts
+---
+title: "Contracts"
+description: "How Chronicle's gRPC contracts are produced from Core, and the conventions for the hand-written contracts that remain."
+---
 
 The Contracts project contains all gRPC definitions for data and services, representing the complete protocol of the **Kernel**.
 Contracts are defined as C# types: data is represented using classes, and services as interfaces.
@@ -6,6 +9,12 @@ Contracts are defined as C# types: data is represented using classes, and servic
 We use [protobuf-net.Grpc](https://github.com/protobuf-net/protobuf-net.Grpc) to enable a *code-first* approach to defining protobuf contracts.
 
 The implementation of these contracts resides in the **Kernel**. For more details, see the [services documentation](./services.md).
+
+:::caution[New services are generated from Core, not written here]
+You do not hand-write a new gRPC contract or its implementation. Write the operation as an Arc `[Command]` or `[ReadModel]` artifact in `Source/Kernel/Core`, attach it to a service with `[BelongsTo(WellKnownServices.<Service>)]`, and build Core. The build generates the contract interface and messages in `Source/Kernel/Contracts`, the implementation in `Source/Kernel/Grpc`, and the registrations in `Source/Kernel/Server/GeneratedGrpcServices.cs`. Never edit those generated files by hand.
+
+What this page describes applies to the hand-written contracts that remain: services listed in `NonDerivedGrpcServices` in `Source/Kernel/Core/Core.csproj` (today `Observers`), and legacy contracts not yet converted.
+:::
 
 ## Attributes
 

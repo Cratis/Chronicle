@@ -21,7 +21,7 @@ using var client = new ChronicleClient(ChronicleConnectionString.Development);
 var eventStore = await client.GetEventStore("Quickstart");
 ```
 
-`ChronicleConnectionString.Development` points at the default local Chronicle kernel with development credentials. Use `ChronicleConnectionString.Default` or an explicit `new ChronicleConnectionString("chronicle://...")` when connecting to another environment.
+`ChronicleConnectionString.Development` points at the default local Chronicle kernel with development credentials. `ChronicleConnectionString.Default` also points at `localhost:35000`; it names no credentials, so connecting with it falls back to the same development credentials (`auth=none` is the anonymous option). To connect to any other environment, pass an explicit `new ChronicleConnectionString("chronicle://...")` carrying that environment's host and credentials, and set `skipTlsValidation=false` when its certificate is verifiable — see [Client TLS](/chronicle/configuration/tls/).
 
 ## Define an event
 
@@ -55,10 +55,10 @@ After the append succeeds, Chronicle persists the event and forwards it to the p
 
 ## Use a host integration
 
-For ASP.NET Core and Worker Service applications, prefer the host integration instead of creating the client manually:
+For ASP.NET Core and Worker Service applications, prefer the host integration instead of creating the client manually. `AddCratisChronicle` extends the application builder (`WebApplicationBuilder` or `IHostApplicationBuilder`), not `builder.Services`:
 
 ```csharp
-builder.Services.AddCratisChronicle(options => options.EventStore = "Quickstart");
+builder.AddCratisChronicle(options => options.EventStore = "Quickstart");
 ```
 
 The host integration registers the event store, event log, read models, projections, reducers, reactors, constraints, and related services in dependency injection.

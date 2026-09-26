@@ -26,6 +26,12 @@
                 "title": "Add Event Store",
                 "name": "Name"
             }
+        },
+        "keyFigures": {
+            "events": "Events",
+            "eventTypes": "Event types",
+            "namespaces": "Namespaces",
+            "unavailable": "Key figures unavailable"
         }
     },
     "connectedClients": {
@@ -79,7 +85,8 @@
             "connectedClients": "Connected Clients",
             "servers": "Servers",
             "developmentTools": "Development Tools"
-        }
+        },
+        "dashboard": "Dashboard"
     },
     "eventStore": {
         "general": {
@@ -547,7 +554,19 @@
                 "search": "Search observers...",
                 "actions": {
                     "replay": "Replay",
-                    "clearQuarantine": "Clear quarantine"
+                    "clearQuarantine": "Clear quarantine",
+                    "remove": "Remove"
+                },
+                "dialogs": {
+                    "removeObserver": {
+                        "title": "Remove observer",
+                        "message": "Remove '{observerId}' and everything the event store keeps for it?\n\nThis deletes its definition, its state and handled counts in every namespace of this event store, its failed partitions and, if it is a projection, its projection definition. Read models and their data are not touched.\n\nThis cannot be undone. The observer comes back only if the code that declared it registers it again - and it will then start over from the beginning of the event sequence.",
+                        "refusedTitle": "Observer not removed",
+                        "refusedBecauseActive": "'{observerId}' is still running in namespace '{namespace}', so it was not removed. Stop the application that declares it, then try again.",
+                        "refusedBecauseSubscribed": "'{observerId}' still has a client subscribed to it in namespace '{namespace}', so it was not removed. Stop the application that declares it, then try again.",
+                        "refusedBecauseNotFound": "'{observerId}' is no longer registered in this event store, so there was nothing to remove.",
+                        "failed": "Removing '{observerId}' failed: {error}"
+                    }
                 },
                 "columns": {
                     "id": "Identifier",
@@ -789,6 +808,18 @@
                 },
                 "unavailable": "This server was not built with development tools, so there is nothing to do here."
             }
+        },
+        "dashboard": {
+            "title": "Dashboard",
+            "keyFigures": "Key figures",
+            "totalEvents": "Events",
+            "eventTypes": "Event types",
+            "namespaces": "Namespaces",
+            "namespacesSubtitle": "Drill into a namespace",
+            "noNamespaces": "No namespaces yet.",
+            "eventTypeDistribution": "Event type distribution",
+            "eventTypeDistributionSubtitle": "Relative to the most frequent event type",
+            "noEvents": "No events have been appended yet."
         }
     },
     "components": {

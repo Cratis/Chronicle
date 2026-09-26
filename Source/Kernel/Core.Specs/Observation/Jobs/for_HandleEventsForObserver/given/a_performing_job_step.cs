@@ -5,15 +5,14 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
-using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -123,13 +122,17 @@ public class a_performing_job_step : Specification
         _silo.AddService(loggerFactory);
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
 
-        var options = Substitute.For<IOptions<ChronicleOptions>>();
-        options.Value.Returns(new ChronicleOptions { Jobs = CreateJobsConfig() });
+        var jobsConfig = CreateJobsConfig();
+        var options = Options.Create(new JobsOptions
+        {
+            StepCheckpointBatchInterval = jobsConfig.StepCheckpointBatchInterval,
+            StepCheckpointFlushInterval = jobsConfig.StepCheckpointFlushInterval
+        });
         _silo.AddService(options);
 
         _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForObserverState>(
             nameof(JobStepState),
-            WellKnownGrainStorageProviders.JobSteps);
+            Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
 
         _performState = new HandleEventsForObserverState
         {
