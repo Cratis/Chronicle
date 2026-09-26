@@ -36,11 +36,19 @@ public class UniqueConstraintIndexUpdater(
                 return;
             }
 
-            var value = definition.GetPropertiesAndValues(context).GetValue(definition.IgnoreCasing);
-            if (value is not null)
+            // The same guard the validator applies: properties that carry no value are dropped, so an event
+            // whose constrained properties are all absent yields nothing to constrain. Without this the empty
+            // sequence still reaches GetValue, which hashes the empty string rather than answering null - so
+            // every such event claimed one shared SHA-256("") key and the second one collided, while the
+            // validator had already waved it through on the very same emptiness.
+            var propertiesWithValues = definition.GetPropertiesAndValues(context).ToList();
+            if (propertiesWithValues.Count == 0)
             {
-                await storage.Save(context.EventSourceId, definition.Name, eventSequenceNumber, value, scopeKey);
+                return;
             }
+
+            var value = propertiesWithValues.GetValue(definition.IgnoreCasing);
+            await storage.Save(context.EventSourceId, definition.Name, eventSequenceNumber, value, scopeKey);
         }
     }
 }
