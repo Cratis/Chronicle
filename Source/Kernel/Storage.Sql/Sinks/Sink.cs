@@ -50,6 +50,7 @@ public class Sink : ISink
     readonly IDatabase _database;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSchema _schema;
+    readonly ReadModelIdentifier _readModelIdentifier;
     readonly string _tableName;
     readonly IReadOnlyList<ProjectedColumn> _columns;
 
@@ -75,6 +76,7 @@ public class Sink : ISink
         _database = database;
         _expandoObjectConverter = expandoObjectConverter;
         _schema = readModel.GetSchemaForLatestGeneration();
+        _readModelIdentifier = readModel.Identifier;
         _tableName = readModel.ContainerName.Value;
         _columns = ProjectedColumns.ForSchema(_schema);
     }
@@ -412,7 +414,8 @@ public class Sink : ISink
         var containerName = occurrence?.Value ?? ActiveTableName;
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
         var totalCount = await scope.DbContext.Entries.CountAsync();
-        var entries = await scope.DbContext.Entries.AsNoTracking().Skip(skip).Take(take).ToListAsync();
+        var keyName = _columns.First(column => column.IsKey).Name;
+        var entries = await scope.DbContext.Entries.AsNoTracking().OrderBy(entry => EF.Property<object>(entry, keyName)).Skip(skip).Take(take).ToListAsync();
         return new ReadModelInstances(entries.Select(MaterializeExpando), totalCount);
     }
 
@@ -421,38 +424,21 @@ public class Sink : ISink
     {
         var containerName = occurrence?.Value ?? ActiveTableName;
 
-        // Return an observable that transforms Entity Framework change tracking into instance collections
-        return Observable.Create<IEnumerable<ExpandoObject>>(async observer =>
+        // Watch notifies projection changes, but misses reducer writes, removals, and the replay
+        // rename swap. Poll stored state like other SQL live queries to observe all of these changes.
+        async Task<IEnumerable<ObservedPage>> ReadPage()
         {
-            // Create a scope that will live for the duration of the subscription
-            var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+            await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+            var totalCount = await scope.DbContext.Entries.CountAsync();
+            var keyName = _columns.First(column => column.IsKey).Name;
+            var entries = await scope.DbContext.Entries.AsNoTracking().OrderBy(entry => EF.Property<object>(entry, keyName)).Skip(skip).Take(take).ToArrayAsync();
+            return [new ObservedPage(totalCount, entries)];
+        }
 
-            try
-            {
-                // Get initial instances
-                var initialEntries = await scope.DbContext.Entries.AsNoTracking().Skip(skip).Take(take).ToListAsync();
-                observer.OnNext(initialEntries.Select(MaterializeExpando));
-
-                // Subscribe to changes using Arc's Observe extension
-                var changeSubscription = scope.DbContext.Entries.Observe().Subscribe(
-                    allEntries =>
-                    {
-                        // Re-query with skip/take when changes occur
-                        observer.OnNext(allEntries.Skip(skip).Take(take).Select(MaterializeExpando));
-                    },
-                    observer.OnError,
-                    observer.OnCompleted);
-
-                // Return a disposable that cleans up both the subscription and the scope
-                return new ObservableInstancesDisposable(changeSubscription, scope);
-            }
-            catch
-            {
-                // If anything goes wrong, dispose the scope immediately
-                await scope.DisposeAsync();
-                throw;
-            }
-        });
+        return LiveQuery.Observe(ReadPage, _database.LiveQueryPollingInterval, ObservedPageComparer.Instance)
+            .Select(pages => pages.Single().Entries.Select(MaterializeExpando).ToArray().AsEnumerable())
+            .Catch<IEnumerable<ExpandoObject>, Exception>(error =>
+                Observable.Throw<IEnumerable<ExpandoObject>>(new FailedToObserveReadModelInstances(TypeId, _readModelIdentifier, containerName, error)));
     }
 
     async Task ApplyJoinedChange(DbContextScope<ReadModelDbContext> scope, Joined joined, EventSequenceNumber eventSequenceNumber)
@@ -1612,20 +1598,29 @@ public class Sink : ISink
         return key.Value?.ToString() ?? string.Empty;
     }
 
-    sealed class ObservableInstancesDisposable(IDisposable subscription, IDisposable scope) : IDisposable
+    sealed record ObservedPage(long TotalCount, DynamicReadModelEntity[] Entries);
+
+    sealed class ObservedPageComparer : IEqualityComparer<ObservedPage>
     {
-        bool _disposed;
+        public static readonly ObservedPageComparer Instance = new();
 
-        public void Dispose()
-        {
-            if (_disposed)
-            {
-                return;
-            }
+        public bool Equals(ObservedPage? x, ObservedPage? y) =>
+            ReferenceEquals(x, y) ||
+            (x is not null && y is not null && x.TotalCount == y.TotalCount &&
+             x.Entries.SequenceEqual(y.Entries, DynamicReadModelEntityComparer.Instance));
 
-            subscription.Dispose();
-            scope.Dispose();
-            _disposed = true;
-        }
+        public int GetHashCode(ObservedPage obj) => HashCode.Combine(obj.TotalCount, obj.Entries.Length);
+    }
+
+    sealed class DynamicReadModelEntityComparer : IEqualityComparer<DynamicReadModelEntity>
+    {
+        public static readonly DynamicReadModelEntityComparer Instance = new();
+
+        public bool Equals(DynamicReadModelEntity? x, DynamicReadModelEntity? y) =>
+            ReferenceEquals(x, y) ||
+            (x is not null && y is not null && x.Count == y.Count &&
+             x.All(column => y.TryGetValue(column.Key, out var value) && Equals(column.Value, value)));
+
+        public int GetHashCode(DynamicReadModelEntity obj) => obj.Count;
     }
 }
