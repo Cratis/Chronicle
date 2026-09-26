@@ -35,6 +35,7 @@ public class SliceProjectionWithMultipleNested : IProjectionFor<SliceWithMultipl
         .From<SliceCreatedWithMultipleNested>()
         .Nested(m => m.Command, nested => nested
             .From<CommandSetWithMultipleNested>()
+            // A later CommandSetWithMultipleNested recreates Command after it is cleared.
             .ClearWith<CommandClearedWithMultipleNested>())
         .Nested(m => m.Validation, nested => nested
             .From<ValidationConfiguredWithMultipleNested>()

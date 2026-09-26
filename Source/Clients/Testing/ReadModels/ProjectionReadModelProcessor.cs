@@ -9,6 +9,7 @@ using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
@@ -720,7 +721,7 @@ internal static class ProjectionReadModelProcessor
                     break;
 
                 case NestedCleared nestedCleared:
-                    ((IDictionary<string, object?>)state)[nestedCleared.NestedProperty.LastSegment.Value] = null;
+                    ((IDictionary<string, object?>)state.EnsurePath(nestedCleared.NestedProperty, nestedCleared.ArrayIndexers))[nestedCleared.NestedProperty.LastSegment.Value] = null;
                     break;
 
                 case Joined joined:
