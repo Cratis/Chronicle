@@ -10,7 +10,8 @@ using Cratis.Serialization;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IFromAllBuilder{TReadModel}"/>.
+/// Represents an implementation of <see cref="IFromAllBuilder{TReadModel}"/>. Its all-events subscription
+/// observes child event types and unrelated event types; the stored child-inclusion flag is not a filter.
 /// </summary>
 /// <typeparam name="TReadModel">Type of read model to build for.</typeparam>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>

@@ -3,11 +3,13 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Traces;
 
 namespace Cratis.Chronicle.Transactions;
@@ -34,6 +36,9 @@ public class UnitOfWork(
     readonly IActivitySource<UnitOfWork> _activitySource = activitySource ?? DefaultActivitySource;
     readonly List<StagedEvents> _stagedEvents = [];
     readonly HashSet<EventSequenceId> _legacyEventSequenceIds = [];
+    readonly object _decisionLock = new();
+    readonly Dictionary<EventSourceId, ConcurrencyScope> _decisionScopes = [];
+    readonly Dictionary<EventSourceId, List<DecisionConflict>> _decisionConflicts = [];
     Dictionary<EventSourceId, ConcurrencyScope> _concurrencyScopes = [];
 
     AppendManyResult _appendManyResult = new();
@@ -41,10 +46,12 @@ public class UnitOfWork(
     Action<IUnitOfWork> _onCompleted = onCompleted;
     bool _isCommitted;
     bool _isRolledBack;
+    bool _completing;
     bool _hasOrderedBatch;
     IEventSequence? _eventSequence;
     EventSequenceId? _eventSequenceId;
     LegacyStagedEvents? _currentLegacyEvents;
+    DecisionReadCommitOwner? _commitOwner;
 
     /// <inheritdoc/>
     public bool IsCompleted => _isCommitted || _isRolledBack;
@@ -69,42 +76,55 @@ public class UnitOfWork(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        var scope = concurrencyScope ?? ConcurrencyScope.NotSet;
-        if (_hasOrderedBatch)
+        lock (_decisionLock)
         {
-            ThrowIfLabelIsNotSpecified(eventSourceId);
-            scope = MaterializeConcurrencyScope(scope);
-            EnsureEventSequenceCanBeUsed(eventSequenceId);
-            ValidateConcurrencyScope(eventSourceId, scope, _concurrencyScopes);
-            BindToEventSequence(eventSequenceId);
-        }
-        else
-        {
-            BindLegacyEventSequence(eventSequenceId);
-        }
+            ThrowIfProtectedUnitOfWorkIsCompleting();
+            var scope = concurrencyScope ?? ConcurrencyScope.NotSet;
+            if (_decisionScopes.Count != 0)
+            {
+                ValidateLegacyEventSequenceIdsForOrderedBatch(eventSequenceId);
+                EnsureEventSequenceCanBeUsed(eventSequenceId);
+            }
+            if (scope != ConcurrencyScope.NotSet && _decisionScopes.TryGetValue(eventSourceId, out var decisionScope))
+            {
+                throw new ConflictingConcurrencyScopesForLabel(eventSourceId, decisionScope, scope);
+            }
+            if (_hasOrderedBatch)
+            {
+                ThrowIfLabelIsNotSpecified(eventSourceId);
+                scope = MaterializeConcurrencyScope(scope);
+                EnsureEventSequenceCanBeUsed(eventSequenceId);
+                ValidateConcurrencyScope(eventSourceId, scope, _concurrencyScopes);
+                BindToEventSequence(eventSequenceId);
+            }
+            else
+            {
+                BindLegacyEventSequence(eventSequenceId);
+            }
 
-        if (_currentLegacyEvents is null)
-        {
-            _currentLegacyEvents = new LegacyStagedEvents();
-            _stagedEvents.Add(_currentLegacyEvents);
-        }
+            if (_currentLegacyEvents is null)
+            {
+                _currentLegacyEvents = new LegacyStagedEvents();
+                _stagedEvents.Add(_currentLegacyEvents);
+            }
 
-        _currentLegacyEvents.Add(new EventForEventSourceId(eventSourceId, @event, causation)
-        {
-            EventStreamType = eventStreamType ?? EventStreamType.All,
-            EventStreamId = eventStreamId ?? EventStreamId.Default,
-            EventSourceType = eventSourceType ?? EventSourceType.Default,
-            Tags = tags ?? [],
-            Occurred = occurred,
-            Subject = subject
-        });
-        if (_hasOrderedBatch)
-        {
-            EnrollStrictConcurrencyScope(eventSourceId, scope);
-        }
-        else
-        {
-            SetLegacyConcurrencyScope(eventSourceId, scope);
+            _currentLegacyEvents.Add(new EventForEventSourceId(eventSourceId, @event, causation)
+            {
+                EventStreamType = eventStreamType ?? EventStreamType.All,
+                EventStreamId = eventStreamId ?? EventStreamId.Default,
+                EventSourceType = eventSourceType ?? EventSourceType.Default,
+                Tags = tags ?? [],
+                Occurred = occurred,
+                Subject = subject
+            });
+            if (_hasOrderedBatch)
+            {
+                EnrollStrictConcurrencyScope(eventSourceId, scope);
+            }
+            else
+            {
+                SetLegacyConcurrencyScope(eventSourceId, scope);
+            }
         }
     }
 
@@ -114,23 +134,96 @@ public class UnitOfWork(
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
     {
-        var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
-        ValidateLegacyEventSequenceIdsForOrderedBatch(eventSequenceId);
-        EnsureEventSequenceCanBeUsed(eventSequenceId);
-        ValidateExistingEventTargetsForOrderedBatch();
-        var materializedConcurrencyScopes = MaterializeConcurrencyScopes(_concurrencyScopes);
-        ValidateExistingConcurrencyScopesForOrderedBatch(materializedConcurrencyScopes);
-        ValidateConcurrencyScopes(batch.ConcurrencyScopes, materializedConcurrencyScopes);
-
-        BindToEventSequence(eventSequenceId);
-        _concurrencyScopes = materializedConcurrencyScopes;
-        _hasOrderedBatch = true;
-        _currentLegacyEvents = null;
-        _stagedEvents.Add(new OrderedStagedEvents(batch.Events));
-        foreach (var (scopeLabel, concurrencyScope) in batch.ConcurrencyScopes)
+        lock (_decisionLock)
         {
-            EnrollStrictConcurrencyScope(scopeLabel, concurrencyScope);
+            ThrowIfProtectedUnitOfWorkIsCompleting();
+            var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
+            foreach (var (label, scope) in batch.ConcurrencyScopes)
+            {
+                if (scope != ConcurrencyScope.NotSet && _decisionScopes.TryGetValue(label, out var decisionScope))
+                {
+                    throw new ConflictingConcurrencyScopesForLabel(label, decisionScope, scope);
+                }
+            }
+            ValidateLegacyEventSequenceIdsForOrderedBatch(eventSequenceId);
+            EnsureEventSequenceCanBeUsed(eventSequenceId);
+            ValidateExistingEventTargetsForOrderedBatch();
+            var materializedConcurrencyScopes = MaterializeConcurrencyScopes(_concurrencyScopes);
+            ValidateExistingConcurrencyScopesForOrderedBatch(materializedConcurrencyScopes);
+            ValidateConcurrencyScopes(batch.ConcurrencyScopes, materializedConcurrencyScopes);
+
+            BindToEventSequence(eventSequenceId);
+            _concurrencyScopes = materializedConcurrencyScopes;
+            _hasOrderedBatch = true;
+            _currentLegacyEvents = null;
+            _stagedEvents.Add(new OrderedStagedEvents(batch.Events));
+            foreach (var (scopeLabel, concurrencyScope) in batch.ConcurrencyScopes)
+            {
+                EnrollStrictConcurrencyScope(scopeLabel, concurrencyScope);
+            }
         }
+    }
+
+    /// <inheritdoc/>
+    public void AddDecisionRead(IDecisionRead read)
+    {
+        lock (_decisionLock)
+        {
+            if (IsCompleted || _completing) throw new DecisionReadAfterCompletion();
+            DecisionReadScopes.Validate(read, eventStore.Name, eventStore.Namespace, EventSequenceId.Log);
+            ValidateLegacyEventSequenceIdsForOrderedBatch(EventSequenceId.Log);
+            EnsureEventSequenceCanBeUsed(EventSequenceId.Log);
+            var label = (EventSourceId)read.Key;
+            if (_decisionScopes.TryGetValue(label, out var existing))
+            {
+                _decisionScopes[label] = DecisionReadScopes.Merge(existing, read.Scope);
+            }
+            else
+            {
+                if (_concurrencyScopes.TryGetValue(label, out var explicitScope))
+                {
+                    throw new ConflictingConcurrencyScopesForLabel(label, explicitScope, read.Scope);
+                }
+                _decisionScopes.Add(label, read.Scope);
+            }
+            if (!_decisionConflicts.TryGetValue(label, out var conflicts))
+            {
+                conflicts = [];
+                _decisionConflicts.Add(label, conflicts);
+            }
+            var conflict = new DecisionConflict(read.ReadModelType, read.Key);
+            if (!conflicts.Contains(conflict)) conflicts.Add(conflict);
+            BindToEventSequence(EventSequenceId.Log);
+        }
+    }
+
+    /// <inheritdoc/>
+    public IEnumerable<DecisionConflict> GetDecisionConflicts() =>
+        _appendManyResult.ConcurrencyViolations
+            .SelectMany(_ => _decisionConflicts.TryGetValue(_.EventSourceId, out var conflicts) ? conflicts : [])
+            .Distinct().ToArray();
+
+    /// <summary>Claims exclusive completion ownership for protected units of work.</summary>
+    /// <returns>The opaque owner capability.</returns>
+    /// <exception cref="ProtectedUnitOfWorkRequiresOwner">An owner has already claimed this unit.</exception>
+    public DecisionReadCommitOwner ClaimDecisionReadCommitOwnership()
+    {
+        lock (_decisionLock)
+        {
+            ThrowIfUnitOfWorkIsCompleted();
+            if (_commitOwner is not null) throw new ProtectedUnitOfWorkRequiresOwner();
+            return _commitOwner = new DecisionReadCommitOwner();
+        }
+    }
+
+    /// <summary>Commits using the capability obtained by the transaction owner.</summary>
+    /// <param name="owner">The claimed owner capability.</param>
+    /// <returns>The commit task.</returns>
+    /// <exception cref="ProtectedUnitOfWorkRequiresOwner">A different owner attempted to complete the unit.</exception>
+    public async Task CommitAsOwner(DecisionReadCommitOwner owner)
+    {
+        if (!ReferenceEquals(owner, _commitOwner)) throw new ProtectedUnitOfWorkRequiresOwner();
+        await CommitCore(true);
     }
 
     /// <inheritdoc/>
@@ -146,33 +239,7 @@ public class UnitOfWork(
     public IEnumerable<AppendError> GetAppendErrors() => [.. _appendManyResult.Errors];
 
     /// <inheritdoc/>
-    public async Task Commit()
-    {
-        using var span = _activitySource.Commit(correlationId.ToString());
-
-        ThrowIfUnitOfWorkIsCompleted();
-
-        try
-        {
-            if (_eventSequence is not null)
-            {
-                var result = await _eventSequence.AppendMany(GetEventsToCommit(), concurrencyScopes: _concurrencyScopes);
-                if (result.SequenceNumbers?.Any() == true)
-                {
-                    _lastCommittedEventSequenceNumber = result.SequenceNumbers.MaxBy(_ => _.Value);
-                }
-                _appendManyResult = result;
-            }
-        }
-        finally
-        {
-            // Completion must run even when the append throws (RpcException, unknown event type,
-            // serialization error) - otherwise the unit leaks in the manager's dictionary and the
-            // AsyncLocal Current keeps pointing at a completed unit. The exception still propagates.
-            _isCommitted = true;
-            _onCompleted(this);
-        }
-    }
+    public Task Commit() => CommitCore(false);
 
     /// <inheritdoc/>
     public Task Rollback()
@@ -240,6 +307,71 @@ public class UnitOfWork(
         if (label == EventSourceId.Unspecified || string.IsNullOrWhiteSpace(label.Value))
         {
             throw new ConcurrencyScopeLabelMustBeSpecified();
+        }
+    }
+
+    async Task CommitCore(bool fromOwner)
+    {
+        using var span = _activitySource.Commit(correlationId.ToString());
+
+        Dictionary<EventSourceId, ConcurrencyScope> scopes;
+        bool protectedCommit;
+        lock (_decisionLock)
+        {
+            ThrowIfUnitOfWorkIsCompleted();
+            if (_completing) throw new DecisionReadAfterCompletion();
+            protectedCommit = _decisionScopes.Count != 0;
+            if (protectedCommit && (!fromOwner || _commitOwner is null)) throw new ProtectedUnitOfWorkRequiresOwner();
+            _completing = true;
+
+            // Keep legacy scope resolution and append bytes unchanged for units without decisions.
+            scopes = !protectedCommit ? _concurrencyScopes :
+                _concurrencyScopes.Concat(_decisionScopes).ToDictionary(_ => _.Key, _ => _.Value);
+        }
+
+        try
+        {
+            if (_eventSequence is not null)
+            {
+                var events = GetEventsToCommit();
+                AppendManyResult result;
+                try
+                {
+                    result = await _eventSequence.AppendMany(events, concurrencyScopes: scopes);
+                }
+                catch (CommandFailed exception) when (
+                    protectedCommit && events.Length == 0 &&
+                    exception.Result?.ValidationResults.Any(_ => _.Message == "At least one event is required.") == true)
+                {
+                    throw new DecisionReadValidateOnlyNotSupported();
+                }
+                if (result.SequenceNumbers?.Any() == true)
+                {
+                    _lastCommittedEventSequenceNumber = result.SequenceNumbers.MaxBy(_ => _.Value);
+                }
+                _appendManyResult = result;
+            }
+        }
+        catch (Exception exception) when (protectedCommit)
+        {
+            _appendManyResult = AppendManyResult.Failed(correlationId, [new AppendError(exception.Message)]);
+            throw;
+        }
+        finally
+        {
+            // Completion must run even when the append throws (RpcException, unknown event type,
+            // serialization error) - otherwise the unit leaks in the manager's dictionary and the
+            // AsyncLocal Current keeps pointing at a completed unit. The exception still propagates.
+            _isCommitted = true;
+            _onCompleted(this);
+        }
+    }
+
+    void ThrowIfProtectedUnitOfWorkIsCompleting()
+    {
+        if (_decisionScopes.Count != 0 && (_completing || IsCompleted))
+        {
+            throw new ProtectedUnitOfWorkEventsAfterCompletion();
         }
     }
 

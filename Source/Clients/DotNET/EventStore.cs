@@ -116,6 +116,8 @@ public class EventStore : IEventStore
         _causationManager = causationManager;
         _identityProvider = identityProvider;
         _jsonSerializerOptions = jsonSerializerOptions;
+        DecisionReadSchemas = schemaGenerator;
+        DecisionReadJsonOptions = jsonSerializerOptions;
         _clientArtifactsProvider = clientArtifactsProvider;
         _reactorSideEffectHandlers = reactorSideEffectHandlers;
         Name = eventStoreName;
@@ -346,6 +348,12 @@ public class EventStore : IEventStore
     /// Gets the serializer owned by this event store.
     /// </summary>
     internal IEventSerializer EventSerializer { get; }
+
+    /// <summary>Gets the schema generator used for decision reads.</summary>
+    internal IJsonSchemaGenerator DecisionReadSchemas { get; }
+
+    /// <summary>Gets the JSON serializer options used for decision reads.</summary>
+    internal JsonSerializerOptions DecisionReadJsonOptions { get; }
 
     /// <summary>
     /// Gets the currently running background registration retry loop, if <see cref="StartBackgroundRegistrationRetry"/>
