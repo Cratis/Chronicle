@@ -6,6 +6,7 @@ using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Execution;
 using Cratis.Serialization;
 using Cratis.Traces;
@@ -94,6 +95,7 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reducers);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().ReadModels);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().GetDecisionReads());
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().PII);
 
         services.AddSingleton(_ => chronicleBuilder?.ClientArtifactsProvider ?? DefaultClientArtifactsProvider.Default);

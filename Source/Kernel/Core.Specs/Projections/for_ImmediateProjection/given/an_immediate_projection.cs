@@ -86,7 +86,7 @@ public class an_immediate_projection : Specification
         return cursor;
     }
 
-    static ProjectionDefinition CreateProjectionDefinition() => new(
+    protected static ProjectionDefinition CreateProjectionDefinition() => new(
         ProjectionOwner.Client,
         EventSequenceId.Log,
         Projection,

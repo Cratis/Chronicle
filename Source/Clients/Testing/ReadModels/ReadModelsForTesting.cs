@@ -78,6 +78,14 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     public Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances) =>
         inner.Release(instances);
 
+    /// <summary>Gets a pre-seeded model instance, if present.</summary>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="key">The model key.</param>
+    /// <returns>The seeded model or null.</returns>
+    internal TReadModel? GetSeededInstance<TReadModel>(ReadModelKey key)
+        where TReadModel : class =>
+        _instances.TryGetValue((typeof(TReadModel).GetReadModelIdentifier(), key.Value), out var instance) ? (TReadModel)instance : null;
+
     /// <summary>
     /// Registers a pre-seeded read model instance so that subsequent <c language="csharp">GetInstanceById</c> calls
     /// return it directly without hitting the server.

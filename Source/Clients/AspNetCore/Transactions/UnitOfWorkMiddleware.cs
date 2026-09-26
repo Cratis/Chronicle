@@ -33,6 +33,9 @@ public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddle
             CorrelationIdAccessor.SetCurrent(correlationId);
         }
         var unitOfWork = unitOfWorkManager.Begin(correlationId);
+        var owner = (unitOfWork as UnitOfWork)?.ClaimDecisionReadCommitOwnership();
+        var previousFeature = context.Features.Get<IUnitOfWorkCompletionFeature>();
+        context.Features.Set<IUnitOfWorkCompletionFeature>(new UnitOfWorkCompletionFeature(unitOfWork, owner));
         try
         {
             await next(context);
@@ -40,7 +43,14 @@ public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddle
             // Handle unit of work completion and constraint violations
             if (!unitOfWork.IsCompleted)
             {
-                await unitOfWork.Commit();
+                if (owner is not null)
+                {
+                    await ((UnitOfWork)unitOfWork).CommitAsOwner(owner);
+                }
+                else
+                {
+                    await unitOfWork.Commit();
+                }
             }
             else
             {
@@ -68,6 +78,10 @@ public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddle
                 unitOfWork.Dispose();
             }
             throw;
+        }
+        finally
+        {
+            context.Features.Set(previousFeature);
         }
     }
 }

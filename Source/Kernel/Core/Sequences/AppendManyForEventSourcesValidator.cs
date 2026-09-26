@@ -20,7 +20,9 @@ internal class AppendManyForEventSourcesValidator : CommandValidator<AppendManyF
         RuleFor(_ => _.Namespace).NotEmpty().WithMessage("Namespace name is required.");
         RuleFor(_ => _.EventSequenceId).NotEmpty().WithMessage("Event sequence identifier is required.");
 
-        RuleFor(_ => _.Events).NotEmpty().WithMessage("At least one event is required.");
+        RuleFor(_ => _.Events)
+            .Must((command, events) => events is not null && (events.Any() || command.ConcurrencyScopes?.Any(_ => !string.IsNullOrWhiteSpace(_.EventSourceId) && _.Scope is { } scope && (scope.ExpectsNoMatchingEvent || scope.SequenceNumber < Concepts.Events.EventSequenceNumber.BeforeFirst.Value)) == true))
+            .WithMessage("At least one event is required.");
 
         // Omitted or empty routing metadata is accepted per event. The handler resolves it to
         // canonical append defaults before validating constraints or persisting the batch.

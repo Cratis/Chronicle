@@ -467,6 +467,13 @@ public class EventSequence(
         };
     }
 
+    /// <summary>Checks whether this is the event log for the exact decision-read target.</summary>
+    /// <param name="store">The expected event store.</param>
+    /// <param name="targetNamespace">The expected namespace.</param>
+    /// <returns>Whether this sequence belongs to the target.</returns>
+    internal bool MatchesTarget(EventStoreName store, EventStoreNamespaceName targetNamespace) =>
+        eventStoreName == store && @namespace == targetNamespace && eventSequenceId == EventSequenceId.Log;
+
     static EventSourceType ResolveEventSourceType(EventSourceType? value) =>
         string.IsNullOrEmpty(value?.Value) ? EventSourceType.Default : value;
 
@@ -632,7 +639,7 @@ public class EventSequence(
             Observers = GetObservers()
         };
 
-        if (_appendedEventsRaised is not null)
+        if (eventsList.Count > 0 && _appendedEventsRaised is not null)
         {
             var sequenceNumbers = result.SequenceNumbers.ToList();
             var allResults = new List<AppendedEventWithResult>(eventsList.Count);
@@ -715,10 +722,10 @@ public class EventSequence(
         AppendManyResult result,
         DateTimeOffset? occurred)
     {
+        if (events.Count == 0 || _appendedEventsRaised is null) return;
+
         var sequenceNumbers = result.SequenceNumbers.ToList();
         var results = new List<AppendedEventWithResult>(events.Count);
-
-        if (_appendedEventsRaised is null) return;
 
         for (var i = 0; i < events.Count; i++)
         {
