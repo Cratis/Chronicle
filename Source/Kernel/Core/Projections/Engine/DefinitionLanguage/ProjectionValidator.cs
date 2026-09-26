@@ -35,7 +35,7 @@ public class ProjectionValidator(
             [typeof(ChildrenSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
             [typeof(NestedSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
             [typeof(RemoveWithSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
-            [typeof(RemoveViaJoinSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Children, ProjectionLevel.Nested },
+            [typeof(RemoveViaJoinSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Children },
             [typeof(ClearWithSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
             [typeof(ProjectionVariantSyntax)] = new HashSet<ProjectionLevel>()
         };
