@@ -259,7 +259,7 @@ public class Reactors : IReactors
 
     IReactorHandler CreateHandlerFor(Type reactorType)
     {
-        var eventTypes = ReactorInvoker.GetEventTypesFor(_eventStore.EventTypes, reactorType);
+        var eventTypes = ReactorInvoker.GetEventTypesFor(_eventStore.EventTypes, reactorType, _sideEffectHandlers);
         var handler = new ReactorHandler(
             _eventStore,
             reactorType.GetReactorId(),

@@ -65,11 +65,13 @@ A reactor can take a read model as a handler-method parameter, which Chronicle m
 
 ## Asserting produced side effects
 
-When a reactor returns a side effect — an event or a command — assert it directly with `ShouldHaveProduced<T>`, with no mocks or event-store wiring:
+When a reactor returns a built-in event side effect or an asynchronous command, assert it directly with `ShouldHaveProduced<T>`, with no mocks or event-store wiring:
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/produced-side-effects" />
 
 The scenario records everything the reactor returns — flattening collections and unwrapping cross-stream event wrappers — so `ShouldHaveProduced<T>()`, its predicate overload, and `ShouldNotHaveProduced<T>()` all work against events and commands alike. The raw list is available on `Produced`.
+
+For a custom synchronous return type, register an `IReactorSideEffectHandler` in `scenario.Services` whose `CanHandleReturnType(Type)` claims that type, as you would in the host. The scenario records the result rather than executing the handler. Unclaimed synchronous types are rejected, just as they are in production; built-in event return types need no extra registration.
 
 ## Example: email notification
 
