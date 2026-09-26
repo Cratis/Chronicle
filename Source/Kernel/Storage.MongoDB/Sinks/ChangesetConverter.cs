@@ -65,10 +65,12 @@ public class ChangesetConverter(
         var normalizedChanges = NormalizeJoinedChanges(changeset.Changes);
 
         var arrayFiltersForDocument = new ArrayFilters();
+        var nullParentPaths = new HashSet<string>();
         await ApplyActualChanges(
             key,
             normalizedChanges,
             changeset.InitialState,
+            nullParentPaths,
             updateDefinitionBuilder,
             ref updateBuilder,
             ref hasChanges,
@@ -85,7 +87,7 @@ public class ChangesetConverter(
 
         var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
 
-        return new(updateBuilder!, distinctArrayFilters, hasChanges);
+        return new(updateBuilder!, distinctArrayFilters, hasChanges) { NullParentPaths = nullParentPaths.OrderBy(_ => _.Count(ch => ch == '.')).ToArray() };
     }
 
     /// <summary>
@@ -166,10 +168,38 @@ public class ChangesetConverter(
         }
     }
 
+    static IEnumerable<PropertyPath> MissingParents(ExpandoObject? initialState, PropertyPath path, ArrayIndexers indexers)
+    {
+        // An indexed leaf needs a per-element filter and cannot be repaired by unsetting its
+        // containing array field. Legacy nulls within array elements remain unsupported here.
+        if (!indexers.IsEmpty || path.Segments.Any(_ => _ is ArrayProperty))
+        {
+            yield break;
+        }
+
+        var segments = path.Segments.ToArray();
+        var current = initialState as IDictionary<string, object?>;
+        var parentPath = PropertyPath.Root;
+        for (var index = 0; index < segments.Length - 1; index++)
+        {
+            parentPath += segments[index];
+            if (current is null || !current.TryGetValue(segments[index].Value, out var value) || value is null)
+            {
+                yield return parentPath;
+                current = null;
+            }
+            else
+            {
+                current = value as IDictionary<string, object?>;
+            }
+        }
+    }
+
     Task ApplyActualChanges(
         Key key,
         IEnumerable<Change> changes,
-        ExpandoObject initialState,
+        ExpandoObject? initialState,
+        ISet<string> nullParentPaths,
         UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder,
         ref UpdateDefinition<BsonDocument>? updateBuilder,
         ref bool hasChanges,
@@ -180,14 +210,13 @@ public class ChangesetConverter(
         var changesToApply = changes.ToList();
         var collectionPathsWithChildOperations = changesToApply.GetCollectionPathsWithChildOperations();
         var wholeCollectionReplacementPaths = changesToApply.GetWholeCollectionReplacementPaths();
-        var replacedParents = new HashSet<PropertyPath>();
 
         foreach (var change in changesToApply)
         {
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    hasChanges |= BuildPropertiesChanged(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, collectionPathsWithChildOperations, wholeCollectionReplacementPaths, propertiesChanged, initialState, replacedParents);
+                    hasChanges |= BuildPropertiesChanged(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, collectionPathsWithChildOperations, wholeCollectionReplacementPaths, propertiesChanged, initialState, nullParentPaths);
                     break;
 
                 case ChildAdded childAdded:
@@ -210,7 +239,7 @@ public class ChangesetConverter(
                     break;
 
                 case ResolvedJoin resolvedJoined:
-                    var applyActualChangesTask = ApplyActualChanges(key, resolvedJoined.Changes, initialState, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber);
+                    var applyActualChangesTask = ApplyActualChanges(key, resolvedJoined.Changes, initialState, nullParentPaths, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber);
                     joinTasks.Add(applyActualChangesTask);
                     break;
             }
@@ -238,7 +267,7 @@ public class ChangesetConverter(
         }
     }
 
-    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ISet<PropertyPath> collectionPathsWithChildOperations, ISet<PropertyPath> wholeCollectionReplacementPaths, PropertiesChanged<ExpandoObject> propertiesChanged, ExpandoObject initialState, HashSet<PropertyPath> replacedParents)
+    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ISet<PropertyPath> collectionPathsWithChildOperations, ISet<PropertyPath> wholeCollectionReplacementPaths, PropertiesChanged<ExpandoObject> propertiesChanged, ExpandoObject? initialState, ISet<string> nullParentPaths)
     {
         var allArrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
 
@@ -255,22 +284,15 @@ public class ChangesetConverter(
 
         foreach (var propertyDifference in applicableDifferences)
         {
-            var parent = FirstMissingParent(initialState, propertyDifference.PropertyPath, propertyDifference.ArrayIndexers);
-            if (parent is not null && !replacedParents.Add(parent))
+            foreach (var parent in MissingParents(initialState, propertyDifference.PropertyPath, propertyDifference.ArrayIndexers))
             {
-                continue;
+                var (parentProperty, _) = converter.ToMongoDBProperty(parent, ArrayIndexers.NoIndexers);
+                nullParentPaths.Add(parentProperty);
             }
 
-            var path = parent ?? propertyDifference.PropertyPath;
-            var (property, arrayFilters) = converter.ToMongoDBProperty(path, propertyDifference.ArrayIndexers);
+            var (property, arrayFilters) = converter.ToMongoDBProperty(propertyDifference.PropertyPath, propertyDifference.ArrayIndexers);
             allArrayFilters.AddRange(arrayFilters);
-
-            // A document written by an older sink may still have a null parent. MongoDB cannot
-            // $set a dotted child of that null; replace the parent with the completed state instead.
-            // Emit the parent only once, or MongoDB would reject overlapping $set paths.
-            var value = converter.ToBsonValue(
-                parent is null ? propertyDifference.Changed : GetNestedValue((ExpandoObject)propertiesChanged.State, parent),
-                path);
+            var value = converter.ToBsonValue(propertyDifference.Changed, propertyDifference.PropertyPath);
 
             if (updateBuilder != default)
             {
@@ -289,47 +311,6 @@ public class ChangesetConverter(
         // still semantically a change as far as the read-modify-write cycle is concerned, and
         // BuildLastHandledEventSequenceNumber needs to fire to advance the sequence number.
         return propertiesChanged.Differences.Any();
-    }
-
-    PropertyPath? FirstMissingParent(ExpandoObject initialState, PropertyPath path, ArrayIndexers indexers)
-    {
-        // Indexed paths need the array element, not the collection itself, as their initial state.
-        if (!indexers.IsEmpty || path.Segments.Any(_ => _ is ArrayProperty))
-        {
-            return null;
-        }
-
-        var segments = path.Segments.ToArray();
-        var current = (IDictionary<string, object>)initialState!;
-        var parentPath = PropertyPath.Root;
-        for (var index = 0; index < segments.Length - 1; index++)
-        {
-            parentPath += segments[index];
-            if (!current.TryGetValue(segments[index].Value, out var value) || value is null)
-            {
-                return parentPath;
-            }
-
-            if (value is not ExpandoObject nested)
-            {
-                return null;
-            }
-
-            current = nested!;
-        }
-
-        return null;
-    }
-
-    object GetNestedValue(ExpandoObject state, PropertyPath path)
-    {
-        object current = state;
-        foreach (var segment in path.Segments)
-        {
-            current = ((IDictionary<string, object>)current)[segment.Value];
-        }
-
-        return current;
     }
 
     void BuildChildAdded(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildAdded childAdded)
@@ -414,7 +395,11 @@ public class ChangesetConverter(
         var collection = collections.GetCollection();
 
         var joinArrayFiltersForDocument = new ArrayFilters();
-        await ApplyActualChanges(key, joined.Changes, (ExpandoObject)joined.State, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber);
+        var nullParentPaths = new HashSet<string>();
+
+        // A join can match many documents with different parent shapes. Check each matched
+        // document for legacy nulls rather than using one joined state for the whole batch.
+        await ApplyActualChanges(key, joined.Changes, null, nullParentPaths, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber);
 
         if (!hasJoinChanges)
         {
@@ -433,9 +418,17 @@ public class ChangesetConverter(
             return;
         }
 
+        var joinFilter = Builders<BsonDocument>.Filter.Eq(target.Property, target.Value);
+        foreach (var parent in nullParentPaths.OrderBy(_ => _.Count(ch => ch == '.')))
+        {
+            await collection.UpdateManyAsync(
+                Builders<BsonDocument>.Filter.And(joinFilter, Builders<BsonDocument>.Filter.Type(parent, BsonType.Null)),
+                updateDefinitionBuilder.Unset(parent));
+        }
+
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
         var result = await collection.UpdateManyAsync(
-            Builders<BsonDocument>.Filter.Eq(target.Property, target.Value),
+            joinFilter,
             joinUpdateBuilder,
             new UpdateOptions
             {

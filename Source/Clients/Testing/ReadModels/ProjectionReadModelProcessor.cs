@@ -721,7 +721,10 @@ internal static class ProjectionReadModelProcessor
                     break;
 
                 case NestedCleared nestedCleared:
-                    ((IDictionary<string, object?>)state.EnsurePath(nestedCleared.NestedProperty, nestedCleared.ArrayIndexers))[nestedCleared.NestedProperty.LastSegment.Value] = null;
+                    if (state.TryGetExistingPath(nestedCleared.NestedProperty, nestedCleared.ArrayIndexers) is { } existingParent)
+                    {
+                        ((IDictionary<string, object?>)existingParent)[nestedCleared.NestedProperty.LastSegment.Value] = null;
+                    }
                     break;
 
                 case Joined joined:

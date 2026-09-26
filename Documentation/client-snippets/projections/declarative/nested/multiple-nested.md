@@ -42,3 +42,5 @@ public class SliceProjectionWithMultipleNested : IProjectionFor<SliceWithMultipl
             .ClearWith<ValidationRemovedWithMultipleNested>());
 }
 ```
+
+MongoDB documents written by older versions may contain explicit `null` values for cleared nested objects. Recreating a nested object at the document level repairs these legacy values automatically. Explicit `null` values **inside array elements** are not repaired automatically; replay the projection into a fresh collection or migrate those documents before recreating nested fields there.

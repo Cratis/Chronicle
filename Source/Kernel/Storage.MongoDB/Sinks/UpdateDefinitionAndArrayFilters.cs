@@ -12,4 +12,10 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="UpdateDefinition">The actual update definition.</param>
 /// <param name="ArrayFilters">Any array filters associated.</param>
 /// <param name="hasChanges">Whether or not there are changes.</param>
-public record UpdateDefinitionAndArrayFilters(UpdateDefinition<BsonDocument> UpdateDefinition, IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters, bool hasChanges);
+public record UpdateDefinitionAndArrayFilters(UpdateDefinition<BsonDocument> UpdateDefinition, IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters, bool hasChanges)
+{
+    /// <summary>
+    /// Gets parent paths that may contain legacy BSON nulls and must be conditionally unset before the leaf update.
+    /// </summary>
+    internal IReadOnlyList<string> NullParentPaths { get; init; } = [];
+}
