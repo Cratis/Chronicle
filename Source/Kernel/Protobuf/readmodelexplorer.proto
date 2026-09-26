@@ -39,6 +39,7 @@ enum EventObservationState {
    None = 0;
    Initial = 1;
    Replay = 2;
+   CatchUp = 4;
 }
 message EventType {
    string Id = 1;

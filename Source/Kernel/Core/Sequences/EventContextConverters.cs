@@ -54,10 +54,22 @@ internal static class EventContextConverters
         Subject = context.Subject?.IsSet == true ? context.Subject.Value : context.EventSourceId.Value
     };
 
-    static Contracts.Events.EventObservationState ToContract(this Concepts.Events.EventObservationState state) => state switch
+    /// <summary>
+    /// Convert to contract version of the observation state.
+    /// </summary>
+    /// <param name="state">The state to convert.</param>
+    /// <returns>The converted contract version.</returns>
+    /// <remarks>
+    /// Mapped flag by flag rather than by whole value: this is a [Flags] enum, so a switch on the exact value
+    /// silently answers None for any combination - which is how CatchUp, which travels alongside Initial,
+    /// would have been erased on the way to the client.
+    /// </remarks>
+    static Contracts.Events.EventObservationState ToContract(this Concepts.Events.EventObservationState state)
     {
-        Concepts.Events.EventObservationState.Initial => Contracts.Events.EventObservationState.Initial,
-        Concepts.Events.EventObservationState.Replay => Contracts.Events.EventObservationState.Replay,
-        _ => Contracts.Events.EventObservationState.None
-    };
+        var result = Contracts.Events.EventObservationState.None;
+        if (state.HasFlag(Concepts.Events.EventObservationState.Initial)) result |= Contracts.Events.EventObservationState.Initial;
+        if (state.HasFlag(Concepts.Events.EventObservationState.Replay)) result |= Contracts.Events.EventObservationState.Replay;
+        if (state.HasFlag(Concepts.Events.EventObservationState.CatchUp)) result |= Contracts.Events.EventObservationState.CatchUp;
+        return result;
+    }
 }
