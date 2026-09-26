@@ -38,6 +38,21 @@ internal static class NullParentRepair
     /// <returns>A task completing when the null ancestors have been removed.</returns>
     internal static async Task Repair(IMongoCollection<BsonDocument> collection, BsonValue id, UpdateDefinition<BsonDocument> update)
     {
+        await RepairMatching(collection, Builders<BsonDocument>.Filter.Eq("_id", id), update, false);
+    }
+
+    /// <summary>
+    /// Unsets explicit null ancestors in documents matched by a join, without reading their identifiers.
+    /// </summary>
+    /// <param name="collection">The collection containing the legacy documents.</param>
+    /// <param name="filter">The join target filter.</param>
+    /// <param name="update">The rejected update.</param>
+    /// <returns>A task completing when the null ancestors have been removed.</returns>
+    internal static Task RepairJoined(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update) =>
+        RepairMatching(collection, filter, update, true);
+
+    static async Task RepairMatching(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, bool multiple)
+    {
         var rendered = update.Render(new RenderArgs<BsonDocument>(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry));
         var ancestors = new HashSet<string>();
 
@@ -65,15 +80,23 @@ internal static class NullParentRepair
             }
         }
 
-        // Repair the outermost parent first. The existence condition prevents Eq(null) from
-        // matching an absent field and never touches a non-null parent.
+        // Repair the outermost parent first. Require an explicit BSON null and exclude arrays,
+        // whose null elements would otherwise also satisfy a $type: null query.
         foreach (var ancestor in ancestors.OrderBy(path => path.Count(character => character == '.')))
         {
-            var filter = Builders<BsonDocument>.Filter.And(
-                Builders<BsonDocument>.Filter.Eq("_id", id),
-                Builders<BsonDocument>.Filter.Eq(ancestor, BsonNull.Value),
-                Builders<BsonDocument>.Filter.Exists(ancestor, true));
-            await collection.UpdateOneAsync(filter, Builders<BsonDocument>.Update.Unset(ancestor));
+            var repairFilter = Builders<BsonDocument>.Filter.And(
+                filter,
+                Builders<BsonDocument>.Filter.Type(ancestor, BsonType.Null),
+                Builders<BsonDocument>.Filter.Not(Builders<BsonDocument>.Filter.Type(ancestor, BsonType.Array)));
+            var repairUpdate = Builders<BsonDocument>.Update.Unset(ancestor);
+            if (multiple)
+            {
+                await collection.UpdateManyAsync(repairFilter, repairUpdate);
+            }
+            else
+            {
+                await collection.UpdateOneAsync(repairFilter, repairUpdate);
+            }
         }
     }
 }

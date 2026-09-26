@@ -11,6 +11,7 @@ using Cratis.Chronicle.Schemas;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
@@ -391,29 +392,20 @@ public class ChangesetConverter(
         }
         catch (MongoWriteException exception) when (exception.WriteError.Code == NullParentRepair.CannotCreateField && eventSequenceNumber.IsActualValue)
         {
-            // UpdateMany can write some documents before reporting a failure. The watermark keeps the
-            // retry from applying non-idempotent changes ($push in particular) to those documents twice.
-            var watermark = converter.ToBsonValue(eventSequenceNumber);
-            var behindWatermark = Builders<BsonDocument>.Filter.And(
-                joinFilter,
-                Builders<BsonDocument>.Filter.Or(
-                    Builders<BsonDocument>.Filter.Exists(WellKnownProperties.LastHandledEventSequenceNumber, false),
-                    Builders<BsonDocument>.Filter.Lt(WellKnownProperties.LastHandledEventSequenceNumber, watermark)));
-            logger.RepairingJoinedNullParents(readModel.Identifier);
-            using (var cursor = await collection.FindAsync(
-                behindWatermark,
-                new FindOptions<BsonDocument> { Projection = Builders<BsonDocument>.Projection.Include("_id") }))
+            // UpdateMany may have committed a prefix. $push is not idempotent, and $max cannot tell
+            // whether a document ahead of this event has already received this join. Leave the error
+            // visible rather than double-push or silently omit those documents from a guarded retry.
+            var rendered = joinUpdateBuilder!.Render(new RenderArgs<BsonDocument>(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry));
+            if (rendered.AsBsonDocument.Contains("$push"))
             {
-                while (await cursor.MoveNextAsync())
-                {
-                    foreach (var document in cursor.Current)
-                    {
-                        await NullParentRepair.Repair(collection, document["_id"], joinUpdateBuilder!);
-                    }
-                }
+                throw;
             }
 
-            result = await collection.UpdateManyAsync(behindWatermark, joinUpdateBuilder, options);
+            // All other emitted operators can safely be applied again to the full join target set,
+            // including documents whose watermark was advanced by a different out-of-order event.
+            logger.RepairingJoinedNullParents(readModel.Identifier);
+            await NullParentRepair.RepairJoined(collection, joinFilter, joinUpdateBuilder);
+            result = await collection.UpdateManyAsync(joinFilter, joinUpdateBuilder, options);
         }
 
         // A join that matches nothing is a successful zero-row update — the write is simply lost. That is
