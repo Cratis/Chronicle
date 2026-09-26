@@ -28,23 +28,23 @@ public partial class CompositeKeyExpressionResolver(IEventValueProviderExpressio
     /// <inheritdoc/>
     public KeyResolver Resolve(IProjection projection, string expression, PropertyPath identifiedByProperty)
     {
-        var match = CompositeKeyRegEx.Match(expression);
-        var rawExpressions = match.Groups["expressions"].Value;
-        var expressions = rawExpressions.Split(',').Select(_ => _.Trim()).ToArray();
-
-        if (rawExpressions.Length == 0 || expressions.Length == 0)
+        CompositeKeyExpression parsed;
+        try
         {
-            throw new MissingCompositeExpressions(projection.Identifier, identifiedByProperty, expression);
+            parsed = CompositeKeyExpression.Parse(expression);
+        }
+        catch (InvalidCompositeKeyExpression exception)
+        {
+            if (expression == "$composite()" || expression == "$composite( )")
+            {
+                throw new MissingCompositeExpressions(projection.Identifier, identifiedByProperty, expression);
+            }
+            throw new InvalidCompositeKeyPropertyMappingExpression(projection.Identifier, identifiedByProperty, exception.Component);
         }
 
-        var propertiesWithKeyValueProviders = expressions.Select(_ =>
+        var propertiesWithKeyValueProviders = parsed.Mappings.Select(mapping =>
         {
-            var keyValue = _.Split('=');
-            if (keyValue.Length != 2)
-            {
-                throw new InvalidCompositeKeyPropertyMappingExpression(projection.Identifier, identifiedByProperty, _);
-            }
-            var actualProperty = identifiedByProperty + keyValue[0];
+            var actualProperty = identifiedByProperty + mapping.Property;
 
             var schemaProperty = projection.ReadModel.GetSchemaForLatestGeneration().GetSchemaPropertyForPropertyPath(actualProperty);
             schemaProperty ??= new JsonSchemaProperty
@@ -54,8 +54,8 @@ public partial class CompositeKeyExpressionResolver(IEventValueProviderExpressio
 
             return new
             {
-                Property = new PropertyPath(keyValue[0]),
-                KeyResolver = resolvers.Resolve(schemaProperty, keyValue[1])
+                Property = new PropertyPath(mapping.Property),
+                KeyResolver = resolvers.Resolve(schemaProperty, mapping.Expression)
             };
         }).ToDictionary(_ => _.Property, _ => _.KeyResolver);
 
