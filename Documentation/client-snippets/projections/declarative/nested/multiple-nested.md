@@ -35,9 +35,12 @@ public class SliceProjectionWithMultipleNested : IProjectionFor<SliceWithMultipl
         .From<SliceCreatedWithMultipleNested>()
         .Nested(m => m.Command, nested => nested
             .From<CommandSetWithMultipleNested>()
+            // A later CommandSetWithMultipleNested recreates Command after it is cleared.
             .ClearWith<CommandClearedWithMultipleNested>())
         .Nested(m => m.Validation, nested => nested
             .From<ValidationConfiguredWithMultipleNested>()
             .ClearWith<ValidationRemovedWithMultipleNested>());
 }
 ```
+
+MongoDB documents written by older versions may contain explicit `null` values for cleared nested objects. Property updates recreate a cleared nested object and repair legacy `null` parents, including those inside identifier-based array elements. This repair does not apply to positional (identifier-less) children or to adding a child (`$push`) under a null parent.
