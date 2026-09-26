@@ -15,7 +15,7 @@ public class and_the_failed_event_cannot_be_read : given.an_observer
         _eventSequenceStorage.GetEventAt(12UL).Returns<Task<Cratis.Chronicle.Concepts.Events.AppendedEvent>>(_ => throw new InvalidOperationException("Event is unavailable"));
     }
 
-    async Task Because() => await _observer.ReplayedSuccessfully(42UL, new Dictionary<Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber> { [_partition] = 42UL }, [_eventType]);
+    async Task Because() => await _observer.ReplayedSuccessfullySince(42UL, new Dictionary<Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber> { [_partition] = 42UL }, [_eventType], DateTimeOffset.UtcNow);
 
     [Fact] void should_keep_the_failure() => _failedPartitionsStorage.State.Partitions.Single().IsResolved.ShouldBeFalse();
     [Fact] void should_complete_the_replay() => _stateStorage.State.IsReplaying.ShouldBeFalse();

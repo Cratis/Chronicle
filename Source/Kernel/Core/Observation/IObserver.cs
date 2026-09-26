@@ -179,15 +179,6 @@ public interface IObserver : IGrainWithStringKey
     Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
-    /// Notify that the observer replayed events successfully for the given partitions.
-    /// </summary>
-    /// <param name="lastHandledEventSequenceNumber">The last event sequence number handled by the replay.</param>
-    /// <param name="replayedPartitions">Partitions and their own successfully handled sequence numbers.</param>
-    /// <param name="replayedEventTypes">The event types read during this replay.</param>
-    /// <returns>Awaitable task.</returns>
-    Task ReplayedSuccessfully(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes);
-
-    /// <summary>
     /// Complete a replay, resolving only failures already present when it began.
     /// </summary>
     /// <param name="lastHandledEventSequenceNumber">The last event handled by the replay.</param>

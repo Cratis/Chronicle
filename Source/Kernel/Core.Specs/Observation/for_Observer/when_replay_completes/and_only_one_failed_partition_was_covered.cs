@@ -23,10 +23,11 @@ public class and_only_one_failed_partition_was_covered : given.an_observer
         GivenFailedEventAt(_recoveredPartition, 17UL, _includedType);
     }
 
-    async Task Because() => await _observer.ReplayedSuccessfully(
+    async Task Because() => await _observer.ReplayedSuccessfullySince(
         42UL,
         new Dictionary<Key, EventSequenceNumber> { [_filteredPartition] = 19UL, [_recoveredPartition] = 42UL },
-        [_includedType]);
+        [_includedType],
+        DateTimeOffset.UtcNow);
 
     [Fact] void should_keep_the_filtered_failure() => _failedPartitionsStorage.State.Partitions.Single().Partition.ShouldEqual(_filteredPartition);
     [Fact] void should_resolve_the_covered_failure() => _failedPartitionsStorage.State.ResolvedPartitions.Single().Partition.ShouldEqual(_recoveredPartition);

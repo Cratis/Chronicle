@@ -20,7 +20,7 @@ public class and_another_partition_handled_past_the_failure : given.an_observer
         GivenFailedEventAt(_failedPartition, 12UL, _replayedType);
     }
 
-    async Task Because() => await _observer.ReplayedSuccessfully(42UL, new Dictionary<Key, EventSequenceNumber> { [_otherPartition] = 42UL }, [_replayedType]);
+    async Task Because() => await _observer.ReplayedSuccessfullySince(42UL, new Dictionary<Key, EventSequenceNumber> { [_otherPartition] = 42UL }, [_replayedType], DateTimeOffset.UtcNow);
 
     [Fact] void should_keep_failed_partition() => _failedPartitionsStorage.State.Partitions.Single().IsResolved.ShouldBeFalse();
     [Fact] void should_keep_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual((FailedPartitionCount)1);

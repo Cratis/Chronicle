@@ -14,7 +14,7 @@ public class and_failed_event_was_not_replayed : given.an_observer
         _failedPartitionsStorage.State.AddFailedPartition((Key)"some-partition", 50UL);
     }
 
-    async Task Because() => await _observer.ReplayedSuccessfully(42UL, new Dictionary<Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber> { [(Key)"some-partition"] = 42UL }, []);
+    async Task Because() => await _observer.ReplayedSuccessfullySince(42UL, new Dictionary<Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber> { [(Key)"some-partition"] = 42UL }, [], DateTimeOffset.UtcNow);
 
     [Fact] void should_keep_failed_partition() => _failedPartitionsStorage.State.Partitions.Single().IsResolved.ShouldBeFalse();
     [Fact] void should_keep_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual((FailedPartitionCount)1);

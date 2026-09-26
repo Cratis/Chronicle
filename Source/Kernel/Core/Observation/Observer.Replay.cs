@@ -44,10 +44,6 @@ public partial class Observer
     public Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber) => CompleteReplay(lastHandledEventSequenceNumber, new Dictionary<Key, EventSequenceNumber>(), [], DateTimeOffset.MinValue);
 
     /// <inheritdoc/>
-    public Task ReplayedSuccessfully(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes) =>
-        CompleteReplay(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, DateTimeOffset.MaxValue);
-
-    /// <inheritdoc/>
     public Task ReplayedSuccessfullySince(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt) =>
         CompleteReplay(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt);
 
