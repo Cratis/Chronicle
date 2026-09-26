@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Auditing;
 using Cratis.Collections;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Primitives;
 
 namespace Cratis.Chronicle.AspNetCore.Auditing;
@@ -19,9 +20,14 @@ namespace Cratis.Chronicle.AspNetCore.Auditing;
 public class CausationMiddleware(ICausationManager causationManager, RequestDelegate next)
 {
     /// <summary>
-    /// The causation property for the route.
+    /// The causation property for the actual request path.
     /// </summary>
     public const string CausationRouteProperty = "route";
+
+    /// <summary>
+    /// The causation property for the matched route template.
+    /// </summary>
+    public const string CausationRouteTemplateProperty = "routeTemplate";
 
     /// <summary>
     /// The causation property for the method.
@@ -86,6 +92,11 @@ public class CausationMiddleware(ICausationManager causationManager, RequestDele
                     { CausationSchemeProperty, context.Request.Scheme },
                     { CausationQueryProperty, context.Request.QueryString.ToString() },
                 };
+
+            if (context.GetEndpoint() is RouteEndpoint { RoutePattern.RawText: { Length: > 0 } template })
+            {
+                properties[CausationRouteTemplateProperty] = template;
+            }
 
             if (context.Request.Headers.Origin != StringValues.Empty)
             {
