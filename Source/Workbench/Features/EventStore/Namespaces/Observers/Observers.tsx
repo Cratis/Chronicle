@@ -22,6 +22,9 @@ import { getObserverTypeAsText } from './getObserverTypeAsText';
 import { getObserverOwnerAsText } from './getObserverOwnerAsText';
 import { ObserverDetails } from './ObserverDetails';
 import { ObserverSequenceType } from './ObserverSequenceType';
+import { AllFailedPartitions } from 'Features/Observation';
+import { ObserverOwner, ObserverRunningState, ObserverType } from 'Features/Contracts/Observation';
+import { Link } from 'react-router-dom';
 
 const legacyEventLogSequenceId = '00000000-0000-0000-0000-000000000000';
 
@@ -54,6 +57,65 @@ const runningState = (observer: ObserverInformation) => {
     return getObserverRunningStateAsText(observer.runningState);
 };
 
+/** An observer row, with the values the table derives for display, filtering and sorting. */
+type ObserverRow = ObserverInformation & {
+    sequenceType: ObserverSequenceType;
+    isQuarantined: boolean;
+    failedPartitionCount: number;
+};
+
+// Nothing at all in the cell when there is nothing to report - the column exists to be scanned, and a
+// column of blanks and ticks is scannable in a way that a column of 'no' is not.
+const quarantined = (observer: ObserverRow) => observer.isQuarantined
+    ? <faIcons.FaCheck aria-label={strings.eventStore.namespaces.observers.columns.quarantinedTooltip} />
+    : null;
+
+const failedPartitionsLink = (observer: ObserverRow, eventStore: string, namespace: string) => {
+    if (observer.failedPartitionCount === 0) {
+        return null;
+    }
+
+    // A real link, so middle-click, modifier-click and copy-link-address all behave. A div with an
+    // onClick looks the same and is none of those things.
+    return (
+        <Link
+            className='underline'
+            to={`/event-store/${eventStore}/${namespace}/failed-partitions?observerId=${encodeURIComponent(observer.id)}`}>
+            {observer.failedPartitionCount}
+        </Link>
+    );
+};
+
+const enumFilterOptions = <TEnum extends number>(values: TEnum[], toText: (value: TEnum) => string) =>
+    values.map(value => ({ label: toText(value), value }));
+
+const observerTypeFilterOptions = enumFilterOptions(
+    [ObserverType.unknown, ObserverType.reactor, ObserverType.projection, ObserverType.reducer, ObserverType.external],
+    getObserverTypeAsText);
+
+const observerOwnerFilterOptions = enumFilterOptions(
+    [ObserverOwner.none, ObserverOwner.client, ObserverOwner.kernel],
+    getObserverOwnerAsText);
+
+const runningStateFilterOptions = enumFilterOptions(
+    [
+        ObserverRunningState.unknown,
+        ObserverRunningState.active,
+        ObserverRunningState.suspended,
+        ObserverRunningState.replaying,
+        ObserverRunningState.disconnected,
+        ObserverRunningState.quarantined
+    ],
+    getObserverRunningStateAsText);
+
+const sequenceTypeFilterOptions = [
+    { label: strings.eventStore.namespaces.observers.sequenceTypes.eventLog, value: ObserverSequenceType.eventLog },
+    { label: strings.eventStore.namespaces.observers.sequenceTypes.system, value: ObserverSequenceType.system },
+    { label: strings.eventStore.namespaces.observers.sequenceTypes.outbox, value: ObserverSequenceType.outbox },
+    { label: strings.eventStore.namespaces.observers.sequenceTypes.inbox, value: ObserverSequenceType.inbox },
+    { label: strings.eventStore.namespaces.observers.sequenceTypes.custom, value: ObserverSequenceType.custom }
+];
+
 export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [searchText, setSearchText] = useState('');
@@ -64,6 +126,15 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     };
 
     const [observers] = AllObservers.when(!!params.namespace).use(queryArgs);
+    const [failedPartitions] = AllFailedPartitions.when(!!params.namespace).use(queryArgs);
+
+    // Counted here rather than carried on ObserverInformation, which is a hand-written gRPC contract
+    // this change deliberately leaves alone. The trade is a namespace-wide subscription in the browser
+    // for a per-row number; see #4140 for the server-side alternative.
+    const failedPartitionCounts = (failedPartitions.data ?? []).reduce((counts, failedPartition) => {
+        counts.set(failedPartition.observerId, (counts.get(failedPartition.observerId) ?? 0) + 1);
+        return counts;
+    }, new Map<string, number>());
 
     const searchTerm = searchText.trim().toLowerCase();
 
@@ -71,6 +142,8 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
         .map(observer => ({
             ...observer,
             sequenceType: getObserverSequenceType(observer.eventSequenceId),
+            isQuarantined: observer.runningState === ObserverRunningState.quarantined,
+            failedPartitionCount: failedPartitionCounts.get(observer.id) ?? 0,
         }))
         .filter(observer => searchTerm === ''
             || observer.id.toLowerCase().includes(searchTerm)
@@ -129,6 +202,21 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                             scrollable
                             scrollHeight='flex'
                             style={{ height: '100%' }}>
+                            <Column
+                                field='isQuarantined'
+                                header={strings.eventStore.namespaces.observers.columns.quarantined}
+                                sortable
+                                showFilterMatchModes={false}
+                                filter
+                                dataType='boolean'
+                                filterField='isQuarantined'
+                                body={quarantined} />
+                            <Column
+                                field='failedPartitionCount'
+                                header={strings.eventStore.namespaces.observers.columns.failedPartitions}
+                                sortable
+                                dataType='numeric'
+                                body={(observer: ObserverRow) => failedPartitionsLink(observer, params.eventStore!, params.namespace!)} />
                             <Column field='id' header={strings.eventStore.namespaces.observers.columns.id} sortable />
                             <Column
                                 field='eventSequenceId'
@@ -136,24 +224,25 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                                 sortable
                                 showFilterMatchModes={false}
                                 filter
-                                filterField='sequenceType' />
+                                filterField='sequenceType'
+                                filterOptions={sequenceTypeFilterOptions} />
                             <Column
                                 field='type'
                                 header={strings.eventStore.namespaces.observers.columns.observerType}
                                 sortable
-                                dataType='numeric'
                                 showFilterMatchModes={false}
                                 filter
                                 filterField='type'
+                                filterOptions={observerTypeFilterOptions}
                                 body={observerType} />
                             <Column
                                 field='owner'
                                 header={strings.eventStore.namespaces.observers.columns.owner}
                                 sortable
-                                dataType='numeric'
                                 showFilterMatchModes={false}
                                 filter
                                 filterField='owner'
+                                filterOptions={observerOwnerFilterOptions}
                                 body={observerOwner} />
                             <Column
                                 field='nextEventSequenceNumber'
@@ -167,12 +256,12 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                                 sortable />
                             <Column
                                 field='runningState'
-                                dataType='numeric'
                                 header={strings.eventStore.namespaces.observers.columns.state}
                                 sortable
                                 showFilterMatchModes={false}
                                 filter
                                 filterField='runningState'
+                                filterOptions={runningStateFilterOptions}
                                 body={runningState} />
                         </DataTableCore>
                     </Allotment.Pane>

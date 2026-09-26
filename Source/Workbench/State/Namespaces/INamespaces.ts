@@ -27,5 +27,12 @@ export abstract class INamespaces {
      * @param eventStore - The name of the now-active event store.
      */
     abstract setEventStore(eventStore: string): void;
+
+    /**
+     * Tells the service which namespace the route currently names, so it can settle on a namespace
+     * without holding a stale one of its own.
+     * @param namespace - The namespace in the current route, or undefined on a route that has none.
+     */
+    abstract setRouteNamespace(namespace: string | undefined): void;
 }
 

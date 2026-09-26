@@ -23,6 +23,10 @@ message IgnoreRecommendationRequest {
    string Namespace = 2;
    .bcl.Guid RecommendationId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
+message IgnoredRecommendationsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+}
 message PerformRecommendationRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -47,6 +51,11 @@ message RecommendationDetailsResponse {
 message SerializableDateTimeOffset {
    string Value = 1;
 }
+message UnignoreRecommendationRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid RecommendationId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
 message ValidationResult {
    ValidationResultSeverity Severity = 1; // default value could not be applied: Error
    string Message = 2;
@@ -61,6 +70,8 @@ enum ValidationResultSeverity {
 service Recommendations {
    rpc AllRecommendations (AllRecommendationsRequest) returns (stream QueryResult_IEnumerable_RecommendationDetailsResponse);
    rpc GetRecommendations (GetRecommendationsRequest) returns (QueryResult_IEnumerable_RecommendationDetailsResponse);
+   rpc IgnoredRecommendations (IgnoredRecommendationsRequest) returns (stream QueryResult_IEnumerable_RecommendationDetailsResponse);
    rpc IgnoreRecommendation (IgnoreRecommendationRequest) returns (CommandResult);
    rpc PerformRecommendation (PerformRecommendationRequest) returns (CommandResult);
+   rpc UnignoreRecommendation (UnignoreRecommendationRequest) returns (CommandResult);
 }

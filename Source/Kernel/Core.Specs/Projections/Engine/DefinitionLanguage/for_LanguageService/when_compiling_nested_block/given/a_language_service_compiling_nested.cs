@@ -76,6 +76,19 @@ public abstract class a_language_service_compiling_nested<TReadModel> : Specific
             errors => throw new InvalidOperationException($"Compilation failed: {string.Join(", ", errors.Errors)}"));
     }
 
+    /// <summary>
+    /// Compile a declaration, generate the declaration back from the definition, and compile that.
+    /// </summary>
+    /// <param name="declaration">The declaration to round-trip.</param>
+    /// <returns>The <see cref="ProjectionDefinition"/> compiled from the generated declaration.</returns>
+    /// <remarks>
+    /// The generator dropped nested blocks entirely, so anything that loaded a definition, generated text and
+    /// saved the result wrote back a projection with its nested mappings gone (#4116). Compiling what was
+    /// generated is the only check that catches it - the first compile is unaffected.
+    /// </remarks>
+    protected ProjectionDefinition CompileGenerateAndRecompile(string declaration) =>
+        Compile(_languageService.Generate(Compile(declaration), _readModelDefinition));
+
     static ReadModelDefinition CreateReadModelDefinition<T>()
         where T : class
     {

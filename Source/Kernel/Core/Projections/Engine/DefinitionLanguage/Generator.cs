@@ -81,6 +81,12 @@ public class Generator : IGenerator
             GenerateChildrenBlock(sb, kv.Key, kv.Value, definition.AutoMap, 1, readModelSchema);
         }
 
+        // Nested blocks
+        foreach (var kv in definition.Nested ?? new Dictionary<PropertyPath, ChildrenDefinition>())
+        {
+            GenerateNestedBlock(sb, kv.Key, kv.Value, definition.AutoMap, 1, readModelSchema);
+        }
+
         // RemovedWith blocks
         foreach (var kv in definition.RemovedWith)
         {
@@ -235,7 +241,38 @@ public class Generator : IGenerator
         var effectiveAutoMap = children.AutoMap == AutoMap.Inherit ? parentAutoMap : children.AutoMap;
 
         sb.AppendLine($"{Indent(indent)}children {collectionName.Path} identified by {children.IdentifiedBy.Path}");
+        var itemSchema = parentSchema.Properties.TryGetValue(collectionName.Path, out var collection)
+            ? collection.Item?.ActualSchema ?? parentSchema
+            : parentSchema;
+        GenerateBlockBody(sb, children, effectiveAutoMap, parentAutoMap, indent, itemSchema);
+    }
 
+    /// <summary>
+    /// Generate a nested block.
+    /// </summary>
+    /// <param name="sb">The <see cref="StringBuilder"/> to append to.</param>
+    /// <param name="property">The property the nested object sits on.</param>
+    /// <param name="nested">The <see cref="ChildrenDefinition"/> holding the nested block's content.</param>
+    /// <param name="parentAutoMap">The enclosing block's <see cref="AutoMap"/> setting.</param>
+    /// <param name="indent">The indent level to write at.</param>
+    /// <param name="parentSchema">The schema containing the nested property.</param>
+    /// <remarks>
+    /// A nested block is stored as a <see cref="ChildrenDefinition"/> with an unset IdentifiedBy - there is one
+    /// object, so there is nothing to identify it by - which is the only difference from a children block.
+    /// </remarks>
+    void GenerateNestedBlock(StringBuilder sb, PropertyPath property, ChildrenDefinition nested, AutoMap parentAutoMap, int indent, JsonSchema parentSchema)
+    {
+        var effectiveAutoMap = nested.AutoMap == AutoMap.Inherit ? parentAutoMap : nested.AutoMap;
+        var nestedSchema = parentSchema.Properties.TryGetValue(property.Path, out var nestedProperty)
+            ? nestedProperty.ActualSchema
+            : parentSchema;
+
+        sb.AppendLine($"{Indent(indent)}nested {property.Path}");
+        GenerateBlockBody(sb, nested, effectiveAutoMap, parentAutoMap, indent, nestedSchema, isNested: true);
+    }
+
+    void GenerateBlockBody(StringBuilder sb, ChildrenDefinition children, AutoMap effectiveAutoMap, AutoMap parentAutoMap, int indent, JsonSchema schema, bool isNested = false)
+    {
         // NoAutoMap directive - only output if disabled and different from parent
         if (effectiveAutoMap == AutoMap.Disabled && parentAutoMap != AutoMap.Disabled)
         {
@@ -252,14 +289,10 @@ public class Generator : IGenerator
             GenerateEveryBlock(sb, children.All, indent + 1, isChildContext: true);
         }
 
-        var itemSchema = parentSchema.Properties.TryGetValue(collectionName.Path, out var collection)
-            ? collection.Item?.ActualSchema ?? parentSchema
-            : parentSchema;
-
         // Child on event blocks
         foreach (var kv in children.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1, itemSchema);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1, schema);
         }
 
         // Child join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -273,12 +306,26 @@ public class Generator : IGenerator
         // Nested children
         foreach (var kv in children.Children)
         {
-            GenerateChildrenBlock(sb, kv.Key, kv.Value, effectiveAutoMap, indent + 1, itemSchema);
+            GenerateChildrenBlock(sb, kv.Key, kv.Value, effectiveAutoMap, indent + 1, schema);
+        }
+
+        // Nested blocks
+        foreach (var kv in children.Nested ?? new Dictionary<PropertyPath, ChildrenDefinition>())
+        {
+            GenerateNestedBlock(sb, kv.Key, kv.Value, effectiveAutoMap, indent + 1, schema);
         }
 
         // RemovedWith blocks
         foreach (var kv in children.RemovedWith)
         {
+            // Inside a nested block the removal spells 'clear with' - there is no instance to remove, only
+            // content to blank - and that is what the parser turns into this same keyless RemovedWith.
+            if (isNested && !kv.Value.Key.IsSet() && kv.Value.ParentKey is null)
+            {
+                sb.AppendLine($"{Indent(indent + 1)}clear with {kv.Key.Id.Value}");
+                continue;
+            }
+
             GenerateRemovedWithBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1);
         }
 
