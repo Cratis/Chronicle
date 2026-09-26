@@ -234,6 +234,31 @@ public class Sink(
             return [];
         }
 
+        // Reads omit BSON nulls, so a missing parent in the initial state can still be
+        // present as null in an older document. Unset only that legacy null (not an
+        // existing object) before dotted leaf sets. Keep these ordered with the main
+        // write in bulk mode, and preserve the watermark guard on redelivery.
+        if (!usesJoinTargetsOnlyFilter)
+        {
+            foreach (var parent in converted.NullParentPaths.Select(path => (Path: path, Filters: (IReadOnlyList<BsonDocumentArrayFilterDefinition<BsonDocument>>)[]))
+                         .Concat(converted.NullArrayParents.Select(_ => (_.Path, Filters: _.ArrayFilters)))
+                         .OrderBy(_ => _.Path.Count(ch => ch == '.')))
+            {
+                var nullFilter = parent.Filters.Count == 0
+                    ? Builders<BsonDocument>.Filter.And(filter, Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null))
+                    : filter;
+                var unset = Builders<BsonDocument>.Update.Unset(parent.Path);
+                if (_isBulkMode)
+                {
+                    AddToBulk(new UpdateOneModel<BsonDocument>(nullFilter, unset) { ArrayFilters = parent.Filters }, key, eventSequenceNumber);
+                }
+                else
+                {
+                    await Collection.UpdateOneAsync(nullFilter, unset, new UpdateOptions { ArrayFilters = parent.Filters });
+                }
+            }
+        }
+
         if (_isBulkMode)
         {
             var updateModel = new UpdateOneModel<BsonDocument>(filter, converted.UpdateDefinition)

@@ -35,9 +35,12 @@ public class SliceProjectionWithMultipleNested : IProjectionFor<SliceWithMultipl
         .From<SliceCreatedWithMultipleNested>()
         .Nested(m => m.Command, nested => nested
             .From<CommandSetWithMultipleNested>()
+            // A later CommandSetWithMultipleNested recreates Command after it is cleared.
             .ClearWith<CommandClearedWithMultipleNested>())
         .Nested(m => m.Validation, nested => nested
             .From<ValidationConfiguredWithMultipleNested>()
             .ClearWith<ValidationRemovedWithMultipleNested>());
 }
 ```
+
+MongoDB documents written by older versions may contain explicit `null` values for cleared nested objects. Recreating a nested object repairs these legacy values automatically, including nested objects inside array elements.
