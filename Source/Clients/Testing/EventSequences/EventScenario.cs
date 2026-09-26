@@ -68,7 +68,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// <param name="eventStoreName">The event store name.</param>
 /// <param name="namespaceName">The event store namespace name.</param>
 /// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies client-side constraint definitions. Pass <see langword="null"/> for no constraints.</param>
-/// <param name="defaults">The <see cref="Defaults"/> used for event types and serialization.</param>
+/// <param name="defaults">The defaults used for event types and serialization.</param>
 public class EventScenario(
     EventSequenceId eventSequenceId,
     EventStoreName eventStoreName,
@@ -97,21 +97,6 @@ public class EventScenario(
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventScenario"/> class with per-run defaults.
-    /// </summary>
-    /// <param name="defaults">The <see cref="Defaults"/> whose artifacts and event types to use.</param>
-    /// <param name="constraintProvider">Optional explicit constraints; if omitted they are discovered from the given defaults.</param>
-    public EventScenario(Defaults defaults, ICanProvideConstraints? constraintProvider = null)
-        : this(
-            EventSequenceId.Log,
-            "test-event-store",
-            "default",
-            constraintProvider ?? CreateDiscoveredConstraintProvider(defaults),
-            defaults)
-    {
-    }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="EventScenario"/> class with an explicit constraint provider.
     /// </summary>
     /// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies client-side constraint definitions. Pass <see langword="null"/> for no constraints.</param>
@@ -126,17 +111,27 @@ public class EventScenario(
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventScenario"/> class for a specific sequence, store and namespace.
+    /// Initializes a new instance of the <see cref="EventScenario"/> class with per-run defaults.
+    /// </summary>
+    /// <param name="defaults">The defaults used for artifact discovery and event serialization.</param>
+    /// <param name="constraintProvider">Optional explicit constraints; <see langword="null"/> discovers constraints from the supplied defaults. Pass an empty provider to disable constraints.</param>
+    /// <remarks>
+    /// Unlike the other constructors accepting a constraint provider, this overload treats <see langword="null"/>
+    /// as discovery from <paramref name="defaults"/>, not as no constraints.
+    /// </remarks>
+    public EventScenario(Defaults defaults, ICanProvideConstraints? constraintProvider = null)
+        : this(EventSequenceId.Log, "test-event-store", "default", constraintProvider ?? CreateDiscoveredConstraintProvider(defaults), defaults)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventScenario"/> class with explicit identifiers and constraints.
     /// </summary>
     /// <param name="eventSequenceId">The event sequence identifier.</param>
     /// <param name="eventStoreName">The event store name.</param>
-    /// <param name="namespaceName">The event store namespace name.</param>
-    /// <param name="constraintProvider">The explicit constraints, or <see langword="null"/> for none.</param>
-    public EventScenario(
-        EventSequenceId eventSequenceId,
-        EventStoreName eventStoreName,
-        EventStoreNamespaceName namespaceName,
-        ICanProvideConstraints? constraintProvider)
+    /// <param name="namespaceName">The namespace name.</param>
+    /// <param name="constraintProvider">The constraint provider; null means no constraints.</param>
+    public EventScenario(EventSequenceId eventSequenceId, EventStoreName eventStoreName, EventStoreNamespaceName namespaceName, ICanProvideConstraints? constraintProvider)
         : this(eventSequenceId, eventStoreName, namespaceName, constraintProvider, Defaults.Instance)
     {
     }

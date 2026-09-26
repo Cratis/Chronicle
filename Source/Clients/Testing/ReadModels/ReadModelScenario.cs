@@ -26,6 +26,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// Automatically detects how <typeparamref name="TReadModel"/> is projected — either via a reducer
 /// (<see cref="IReducerFor{TReadModel}"/>), a fluent projection (<see cref="IProjectionFor{TReadModel}"/>),
 /// or a model-bound projection — and routes events through the appropriate engine.
+/// <see cref="WithProjection"/> overrides auto-detection for this scenario, including a discovered reducer.
 /// </para>
 /// <para>
 /// Usage:
@@ -59,6 +60,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     IReadOnlyList<ReadModelSubstitution>? _substitutions;
     Contracts.Projections.ProjectionDefinition? _projectionDefinition;
     bool _projectionDefinitionResolved;
+    bool _inlineProjection;
     bool _processed;
     bool _strictEventSubscription;
     bool _strictFidelity;
@@ -210,28 +212,27 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <c language="csharp">[Unique]</c> landing in <see cref="IClientArtifactsProvider.UniqueConstraints"/> while one with a
     /// class-level <c language="csharp">[Unique]</c> lands in <see cref="IClientArtifactsProvider.UniqueEventTypeConstraints"/>.
     /// It is read-only: reading it neither triggers nor alters registration, and every read hands out the
-    /// same instance — the one from the <see cref="Defaults"/> the scenario was constructed with, which by
-    /// default is the process-wide <see cref="Defaults.Instance"/>. The same registry is reachable outside a
-    /// scenario as <c language="csharp">Defaults.Instance.ClientArtifactsProvider</c>.
+    /// same instance — the one from the <see cref="Defaults"/> the scenario was constructed with. For the
+    /// default constructors, it is the process-wide <see cref="Defaults.Instance"/> registry, also reachable
+    /// outside a scenario as <c language="csharp">Defaults.Instance.ClientArtifactsProvider</c>.
     /// </remarks>
     public IClientArtifactsProvider ClientArtifactsProvider { get; } = defaults.ClientArtifactsProvider;
 
     /// <summary>
-    /// Defines the projection for this scenario using the fluent client builder, without assembly discovery.
+    /// Defines a projection for this scenario only, instead of discovering a projection or reducer.
     /// </summary>
-    /// <param name="define">The projection definition for this run.</param>
+    /// <param name="define">Configures the projection for <typeparamref name="TReadModel"/>.</param>
     /// <returns>This scenario for chaining.</returns>
     public ReadModelScenario<TReadModel> WithProjection(Action<IProjectionBuilderFor<TReadModel>> define)
     {
+        ArgumentNullException.ThrowIfNull(define);
+
         var builder = new ProjectionBuilderFor<TReadModel>(
-            new ProjectionId(typeof(TReadModel).FullName!),
-            typeof(TReadModel),
-            _namingPolicy,
-            _eventTypes,
-            _jsonSerializerOptions);
+            Guid.NewGuid().ToString(), typeof(TReadModel), _namingPolicy, _eventTypes, _jsonSerializerOptions);
         define(builder);
         _projectionDefinition = builder.Build();
         _projectionDefinitionResolved = true;
+        _inlineProjection = true;
         _substitutions = null;
         _processed = false;
         return this;
@@ -379,7 +380,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 
     IReadOnlyList<ReadModelSubstitution> DetectSubstitutions()
     {
-        var isReduced = _projectionDefinition is null && FindReducerType(typeof(TReadModel)) is not null;
+        var isReduced = !_inlineProjection && FindReducerType(typeof(TReadModel)) is not null;
         return SubstitutedLayers.DetectFor(
             typeof(TReadModel),
             isReduced ? null : ProjectionDefinition(),
@@ -417,7 +418,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         var eventsList = events.ToList();
         var readModelType = typeof(TReadModel);
 
-        var reducerType = _projectionDefinitionResolved && _projectionDefinition is not null ? null : FindReducerType(readModelType);
+        var reducerType = _inlineProjection ? null : FindReducerType(readModelType);
         if (reducerType is not null)
         {
             var reduced = await ReducerReadModelProcessor.Process<TReadModel>(
