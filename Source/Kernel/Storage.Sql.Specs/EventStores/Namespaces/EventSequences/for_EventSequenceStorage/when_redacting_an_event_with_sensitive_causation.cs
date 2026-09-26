@@ -21,9 +21,9 @@ public class when_redacting_an_event_with_sensitive_causation : given.an_event_s
     async Task Establish()
     {
         _redactionCausation = new Causation(DateTimeOffset.UtcNow, "redaction", new Dictionary<string, string> { ["actor"] = "operator" });
-        _originalCausation = new Causation(DateTimeOffset.UtcNow, "command", new Dictionary<string, string> { ["apiKey"] = Secret });
+        _originalCausation = new Causation(AtMicroseconds(DateTimeOffset.UtcNow), "command", new Dictionary<string, string> { ["apiKey"] = Secret });
         _originalCorrelation = CorrelationId.New();
-        _originalOccurred = DateTimeOffset.UtcNow;
+        _originalOccurred = AtMicroseconds(DateTimeOffset.UtcNow);
         await _storage.Append(
             1,
             EventSourceType.Default,
@@ -56,11 +56,14 @@ public class when_redacting_an_event_with_sensitive_causation : given.an_event_s
         using var document = JsonDocument.Parse(_stored.Content);
         var content = document.RootElement.GetProperty("1");
         content.GetProperty("originalEventType").GetString().ShouldEqual(_eventType.Id.Value);
-        content.GetProperty("occurred").GetDateTimeOffset().ShouldEqual(_originalOccurred.AddTicks(-(_originalOccurred.Ticks % 10)));
+        content.GetProperty("occurred").GetDateTimeOffset().ShouldEqual(_originalOccurred);
         content.GetProperty("correlationId").GetString().ShouldEqual(_originalCorrelation.ToString());
         var cause = content.GetProperty("causation")[0];
         cause.GetProperty("type").GetString().ShouldEqual("command");
-        cause.GetProperty("occurred").GetDateTimeOffset().ShouldEqual(_originalCausation.Occurred.AddTicks(-(_originalCausation.Occurred.Ticks % 10)));
+        cause.GetProperty("occurred").GetDateTimeOffset().ShouldEqual(_originalCausation.Occurred);
         cause.TryGetProperty("properties", out _).ShouldBeFalse();
     }
+
+    // SQL storage keeps timestamps at microsecond precision, so the originals start at that precision.
+    static DateTimeOffset AtMicroseconds(DateTimeOffset value) => value.AddTicks(-(value.Ticks % 10));
 }
