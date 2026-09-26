@@ -90,7 +90,6 @@ public record SequenceHistogramBucket(DateTimeOffset From, DateTimeOffset To, lo
     /// <param name="tags">Optional comma separated legacy tags.</param>
     /// <param name="occurredFrom">Optional inclusive occurred bound.</param>
     /// <param name="occurredTo">Optional exclusive occurred bound.</param>
-    /// <param name="namedTagsJson">Optional JSON array of named tag criteria for HTTP callers.</param>
     /// <returns>The buckets containing matching events.</returns>
     public static Task<IEnumerable<SequenceHistogramBucket>> SequenceHistogramWithNamedTags(
         IStorage storage,
@@ -106,8 +105,7 @@ public record SequenceHistogramBucket(DateTimeOffset From, DateTimeOffset To, lo
         string? eventTypeIds = default,
         string? tags = default,
         DateTimeOffset? occurredFrom = default,
-        DateTimeOffset? occurredTo = default,
-        string? namedTagsJson = default)
+        DateTimeOffset? occurredTo = default)
     {
         var criteria = EventSequenceQueryCriteriaFactory.CreateWithNamedTags(
             new(
@@ -119,8 +117,7 @@ public record SequenceHistogramBucket(DateTimeOffset From, DateTimeOffset To, lo
                 tags,
                 occurredFrom,
                 occurredTo),
-            namedTags,
-            namedTagsJson);
+            namedTags);
 
         return EventSequenceQuerying.Histogram(storage, eventStore, @namespace, eventSequenceId, ParseResolution(resolution), criteria);
     }

@@ -105,7 +105,6 @@ public record AppendedEvent(
     /// <param name="tags">Optional comma separated legacy tags.</param>
     /// <param name="occurredFrom">Optional inclusive occurred bound.</param>
     /// <param name="occurredTo">Optional exclusive occurred bound.</param>
-    /// <param name="namedTagsJson">Optional JSON array of named tag criteria for HTTP callers.</param>
     /// <returns>A page of matching appended events.</returns>
     public static Task<IEnumerable<AppendedEvent>> QueryEventsWithNamedTags(
         IStorage storage,
@@ -123,8 +122,7 @@ public record AppendedEvent(
         string? eventTypeIds = default,
         string? tags = default,
         DateTimeOffset? occurredFrom = default,
-        DateTimeOffset? occurredTo = default,
-        string? namedTagsJson = default)
+        DateTimeOffset? occurredTo = default)
     {
         var criteria = EventSequenceQueryCriteriaFactory.CreateWithNamedTags(
             new(
@@ -136,8 +134,7 @@ public record AppendedEvent(
                 tags,
                 occurredFrom,
                 occurredTo),
-            namedTags,
-            namedTagsJson);
+            namedTags);
 
         return EventSequenceQuerying.QueryEvents(storage, eventCompliance, jsonSerializerOptions, queryContextManager, eventStore, @namespace, eventSequenceId, criteria);
     }

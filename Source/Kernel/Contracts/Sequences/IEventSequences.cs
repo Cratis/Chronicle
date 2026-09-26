@@ -1233,12 +1233,6 @@ public class QueryEventsWithNamedTagsRequest
     /// </summary>
     [ProtoMember(12)]
     public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset OccurredTo { get; set; }
-
-    /// <summary>
-    /// Gets or sets the namedTagsJson.
-    /// </summary>
-    [ProtoMember(13)]
-    public string? NamedTagsJson { get; set; }
 }
 
 /// <summary>
@@ -1847,12 +1841,6 @@ public class SequenceHistogramWithNamedTagsRequest
     /// </summary>
     [ProtoMember(13)]
     public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset OccurredTo { get; set; }
-
-    /// <summary>
-    /// Gets or sets the namedTagsJson.
-    /// </summary>
-    [ProtoMember(14)]
-    public string? NamedTagsJson { get; set; }
 }
 
 /// <summary>

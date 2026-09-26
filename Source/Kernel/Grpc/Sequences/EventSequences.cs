@@ -133,7 +133,7 @@ internal sealed class EventSequences(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.QueryEventsWithNamedTags(storage, eventCompliance, jsonSerializerOptions, queryContextManager, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.NamedTags?.Select(x => x.ToApi()), (request.EventSourceId is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId), request.EventSourceType, request.EventStreamType, request.CorrelationId, request.EventTypeIds, request.Tags, request.OccurredFrom, request.OccurredTo, request.NamedTagsJson);
+                var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.QueryEventsWithNamedTags(storage, eventCompliance, jsonSerializerOptions, queryContextManager, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.NamedTags?.Select(x => x.ToApi()), (request.EventSourceId is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId), request.EventSourceType, request.EventStreamType, request.CorrelationId, request.EventTypeIds, request.Tags, request.OccurredFrom, request.OccurredTo);
                 return result.Select(ToAppendedEventResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "EventSequences", "QueryEventsWithNamedTags"));
@@ -213,7 +213,7 @@ internal sealed class EventSequences(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.SequenceHistogramBucketResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Sequences.SequenceHistogramBucket.SequenceHistogramWithNamedTags(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.NamedTags?.Select(x => x.ToApi()), request.Resolution, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.CorrelationId, request.EventTypeIds, request.Tags, request.OccurredFrom, request.OccurredTo, request.NamedTagsJson);
+                var result = await global::Cratis.Chronicle.Sequences.SequenceHistogramBucket.SequenceHistogramWithNamedTags(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.NamedTags?.Select(x => x.ToApi()), request.Resolution, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.CorrelationId, request.EventTypeIds, request.Tags, request.OccurredFrom, request.OccurredTo);
                 return result.Select(ToSequenceHistogramBucketResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "EventSequences", "SequenceHistogramWithNamedTags"));

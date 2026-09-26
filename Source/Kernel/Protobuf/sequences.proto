@@ -405,7 +405,6 @@ message QueryEventsWithNamedTagsRequest {
    string Tags = 10;
    SerializableDateTimeOffset OccurredFrom = 11;
    SerializableDateTimeOffset OccurredTo = 12;
-   string NamedTagsJson = 13;
 }
 message QueryResult_EventSequenceTailResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -533,7 +532,6 @@ message SequenceHistogramWithNamedTagsRequest {
    string Tags = 11;
    SerializableDateTimeOffset OccurredFrom = 12;
    SerializableDateTimeOffset OccurredTo = 13;
-   string NamedTagsJson = 14;
 }
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
