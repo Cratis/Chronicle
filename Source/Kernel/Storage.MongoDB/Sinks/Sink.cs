@@ -61,6 +61,12 @@ public class Sink(
     {
     }
 
+    /// <summary>
+    /// Flushes the pending bulk operations and returns any failed partitions.
+    /// </summary>
+    /// <returns>The failed partitions from the flush.</returns>
+    internal Task<IEnumerable<FailedPartition>> FlushBulk() => ExecuteBulk();
+
     const int MaxBulkOperations = 1000;
 
     /// <summary>
@@ -72,7 +78,7 @@ public class Sink(
     readonly ILogger<Sink> _logger = logger;
     readonly object _bulkLock = new();
     readonly List<WriteModel<BsonDocument>> _bulkOperations = [];
-    readonly Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
+    readonly Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber, bool IsKeyScoped)> _bulkOperationMetadata = [];
     readonly ConcurrentDictionary<string, ExpandoObject> _bulkStateCache = new();
     readonly ConcurrentDictionary<string, Key> _bulkKeysByCacheKey = new();
 
@@ -198,7 +204,7 @@ public class Sink(
         {
             if (_isBulkMode)
             {
-                AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, eventSequenceNumber);
+                AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, eventSequenceNumber, !usesJoinTargetsOnlyFilter);
                 var cacheKey = converter.ToBsonValue(key).ToString()!;
                 _bulkStateCache.TryRemove(cacheKey, out _);
                 _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
@@ -264,7 +270,7 @@ public class Sink(
                 IsUpsert = isUpsert,
                 ArrayFilters = converted.ArrayFilters
             };
-            AddToBulk(updateModel, key, eventSequenceNumber);
+            AddToBulk(updateModel, key, eventSequenceNumber, !usesJoinTargetsOnlyFilter);
             if (!changeset.HasJoined())
             {
                 var cacheKey = converter.ToBsonValue(key).ToString()!;
@@ -549,13 +555,13 @@ public class Sink(
         return indexNames;
     }
 
-    void AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber)
+    void AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber, bool isKeyScoped)
     {
         lock (_bulkLock)
         {
             var operationIndex = _bulkOperations.Count;
             _bulkOperations.Add(operation);
-            _bulkOperationMetadata[operationIndex] = (key, eventSequenceNumber);
+            _bulkOperationMetadata[operationIndex] = (key, eventSequenceNumber, isKeyScoped);
             _currentBulkSize += EstimateOperationSize(operation);
         }
     }
@@ -579,7 +585,7 @@ public class Sink(
     async Task<IEnumerable<FailedPartition>> ExecuteBulk()
     {
         List<WriteModel<BsonDocument>> snapshot;
-        Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadataSnapshot;
+        Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber, bool IsKeyScoped)> metadataSnapshot;
         string[] flushedPendingDeletes;
 
         lock (_bulkLock)
@@ -618,7 +624,8 @@ public class Sink(
                     if (writeError?.Code != NullParentRepair.CannotCreateField ||
                         failedIndex >= snapshot.Count ||
                         snapshot[failedIndex] is not UpdateOneModel<BsonDocument> failedUpdate ||
-                        !metadataSnapshot.TryGetValue(failedIndex, out var failedMetadata))
+                        !metadataSnapshot.TryGetValue(failedIndex, out var failedMetadata) ||
+                        !failedMetadata.IsKeyScoped)
                     {
                         return ex.WriteErrors
                             .Where(error => metadataSnapshot.ContainsKey(offset + error.Index))
@@ -638,7 +645,7 @@ public class Sink(
                             failedUpdate.Update,
                             async () => await collection.BulkWriteAsync([failedUpdate]));
                     }
-                    catch (MongoBulkWriteException)
+                    catch (MongoException)
                     {
                         return [new FailedPartition(failedMetadata.EventSourceId, failedMetadata.SequenceNumber)];
                     }
