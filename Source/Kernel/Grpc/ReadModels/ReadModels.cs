@@ -49,6 +49,9 @@ internal sealed class ReadModels(
     IMaterializedReadModelStore materializedReadModels,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {
+    /// <summary>Waits between registration checks; replaceable in specs without changing the production retry cadence.</summary>
+    internal Func<TimeSpan, CancellationToken, Task> DelayBetweenReadModelChecks { get; set; } = Task.Delay;
+
     /// <inheritdoc/>
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
     {
@@ -590,7 +593,7 @@ internal sealed class ReadModels(
                 return definition;
             }
 
-            await Task.Delay(delayMs, cancellationToken);
+            await DelayBetweenReadModelChecks(TimeSpan.FromMilliseconds(delayMs), cancellationToken);
         }
 
         throw new ReadModelNotFound(readModelIdentifier);

@@ -17,6 +17,7 @@ public class and_the_read_model_is_never_registered : given.all_dependencies
     {
         var unpopulated = (Concepts.ReadModels.ReadModelDefinition)RuntimeHelpers.GetUninitializedObject(typeof(Concepts.ReadModels.ReadModelDefinition));
         _readModel.GetDefinition().Returns(unpopulated);
+        ((ReadModels)_service).DelayBetweenReadModelChecks = (_, _) => Task.CompletedTask;
     }
 
     async Task Because()
@@ -24,8 +25,9 @@ public class and_the_read_model_is_never_registered : given.all_dependencies
         _service.Watch(new WatchRequest { EventStore = "test-store", ReadModelIdentifier = "test-read-model" })
             .Subscribe(_ => { }, error => _faulted.TrySetResult(error));
 
-        _result = await _faulted.Task.WaitAsync(TimeSpan.FromSeconds(8));
+        _result = await _faulted.Task.WaitAsync(TimeSpan.FromSeconds(1));
     }
 
     [Fact] void should_report_the_missing_read_model() => _result.ShouldBeOfExactType<ReadModelNotFound>();
+    [Fact] void should_exhaust_the_registration_checks() => _readModel.Received(50).GetDefinition();
 }
