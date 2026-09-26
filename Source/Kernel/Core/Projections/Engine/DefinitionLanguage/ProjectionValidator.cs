@@ -431,19 +431,17 @@ public class ProjectionValidator(
             var camelCaseTypeName = LowercaseFirstLetter(typeName);
             if (readModelSchema.Properties.TryGetValue(camelCaseTypeName, out var keyProperty))
             {
-                keySchema = keyProperty.ActualSchema;
+                keySchema = keyProperty.OneOf.Select(_ => _.ActualSchema).FirstOrDefault(_ => _.Type.HasFlag(JsonObjectType.Object))
+                    ?? keyProperty.ActualSchema;
             }
             else
             {
                 // Fallback: search for a property whose schema title matches the type name.
                 // This handles cases where the property name differs from the type name
                 // (e.g., property "key" of type "KeywordKey").
-                var matchByTitle = readModelSchema.Properties
-                    .FirstOrDefault(p => string.Equals(p.Value.ActualSchema.Title, typeName, StringComparison.Ordinal));
-                if (matchByTitle.Value is not null)
-                {
-                    keySchema = matchByTitle.Value.ActualSchema;
-                }
+                keySchema = readModelSchema.Properties.Values
+                    .SelectMany(property => property.OneOf.Count > 0 ? property.OneOf.Select(_ => _.ActualSchema) : [property.ActualSchema])
+                    .FirstOrDefault(schema => string.Equals(schema.Title, typeName, StringComparison.Ordinal));
             }
         }
 
