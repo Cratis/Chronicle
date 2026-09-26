@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
@@ -19,7 +20,7 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 public class CompositeKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers, IKeyResolvers keyResolvers) : IKeyExpressionResolver
 {
     /// <inheritdoc/>
-    public bool CanResolve(string expression) => expression.StartsWith("$composite(", StringComparison.Ordinal);
+    public bool CanResolve(string expression) => expression.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal);
 
     /// <inheritdoc/>
     public KeyResolver Resolve(IProjection projection, string expression, PropertyPath identifiedByProperty)
@@ -31,7 +32,9 @@ public class CompositeKeyExpressionResolver(IEventValueProviderExpressionResolve
         }
         catch (InvalidCompositeKeyExpression exception)
         {
-            if (expression == "$composite()" || expression == "$composite( )")
+            var prefix = $"{WellKnownExpressions.Composite}(";
+            if (expression.StartsWith(prefix, StringComparison.Ordinal) && expression.EndsWith(')') &&
+                string.IsNullOrWhiteSpace(expression[prefix.Length..^1]))
             {
                 throw new MissingCompositeExpressions(projection.Identifier, identifiedByProperty, expression);
             }

@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 
@@ -32,21 +34,42 @@ public record CompositeKeyExpression(string? TypeName, IReadOnlyList<(string Pro
             throw new InvalidCompositeKeyExpression(expression, string.Empty);
         }
 
-        var components = content.Split(',').Select(_ => _.Trim()).ToArray();
+        // Generic type arguments may contain commas; only top-level commas separate mappings.
+        var components = new List<string>();
+        var startOfComponent = 0;
+        var genericDepth = 0;
+        for (var index = 0; index < content.Length; index++)
+        {
+            if (content[index] == '<') genericDepth++;
+            if (content[index] == '>') genericDepth--;
+            if (content[index] == ',' && genericDepth == 0)
+            {
+                components.Add(content[startOfComponent..index].Trim());
+                startOfComponent = index + 1;
+            }
+        }
+        components.Add(content[startOfComponent..].Trim());
         string? typeName = null;
         var start = 0;
         if (!components[0].Contains('='))
         {
             typeName = components[0];
+            var parsedType = SyntaxFactory.ParseTypeName(typeName);
+            if (parsedType is not IdentifierNameSyntax and not GenericNameSyntax and not QualifiedNameSyntax ||
+                parsedType.ContainsDiagnostics || parsedType.ToFullString() != typeName)
+            {
+                throw new InvalidCompositeKeyExpression(expression, typeName);
+            }
             start = 1;
         }
 
-        if ((string.IsNullOrWhiteSpace(typeName) && start == 1) || components.Length == start)
+        if ((string.IsNullOrWhiteSpace(typeName) && start == 1) || components.Count == start)
         {
             throw new InvalidCompositeKeyExpression(expression, components[0]);
         }
 
         var mappings = new List<(string Property, string Expression)>();
+        var seenProperties = new HashSet<string>(StringComparer.Ordinal);
         foreach (var component in components.Skip(start))
         {
             var separator = component.IndexOf('=');
@@ -57,7 +80,7 @@ public record CompositeKeyExpression(string? TypeName, IReadOnlyList<(string Pro
 
             var property = component[..separator].Trim();
             var value = component[(separator + 1)..].Trim();
-            if (property.Length == 0 || value.Length == 0)
+            if (property.Length == 0 || value.Length == 0 || !seenProperties.Add(property))
             {
                 throw new InvalidCompositeKeyExpression(expression, component);
             }

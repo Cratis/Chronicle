@@ -7,6 +7,7 @@ public class when_parsing_spacing_and_type_variants : Specification
 {
     [Theory]
     [InlineData("$composite(Key, first=one,second=two)", "Key")]
+    [InlineData("$composite(Company.Keys.OrderKey<string, int>, first=one,second=two)", "Company.Keys.OrderKey<string, int>")]
     [InlineData("$composite( Key , first = one , second = two )", "Key")]
     [InlineData("$composite(first=one, second=two)", null)]
     [InlineData("$composite(first=one,second=two)", null)]
@@ -26,6 +27,11 @@ public class when_parsing_spacing_and_type_variants : Specification
     [InlineData("$composite(first=)")]
     [InlineData("$composite(first=one, Wrong, second=two)")]
     [InlineData("$composite(first=one=two)")]
+    [InlineData("$composite(customerId:userId, second=two)")]
+    [InlineData("$composite(9Wrong, first=one)")]
+    [InlineData("$composite(global::Key, first=one)")]
+    [InlineData("$composite(first=one,first=two)")]
+    [InlineData("$composite(Key, first=one,first=two)")]
     void should_reject_malformed_input(string expression) =>
         Catch.Exception(() => CompositeKeyExpression.Parse(expression)).ShouldBeOfExactType<InvalidCompositeKeyExpression>();
 }
