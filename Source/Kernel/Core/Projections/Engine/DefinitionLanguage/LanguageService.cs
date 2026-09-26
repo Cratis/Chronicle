@@ -49,6 +49,13 @@ public class LanguageService(
             return errors;
         }
 
+        // Unsupported blocks must be reported even when no schemas are available for semantic validation.
+        ProjectionValidator.ValidateSupportedBlocks(syntax.Blocks, errors);
+        if (errors.HasErrors)
+        {
+            return errors;
+        }
+
         // Validate the projection if schemas are provided
         if (readModelDefinitions.Any() || eventTypeSchemas.Any())
         {
