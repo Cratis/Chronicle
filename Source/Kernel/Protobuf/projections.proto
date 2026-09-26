@@ -70,6 +70,7 @@ message JoinDefinition {
    string On = 1;
    map<string,string> Properties = 2;
    string Key = 3;
+   AutoMap AutoMap = 4;
 }
 message KeyValuePair_EventType_FromDefinition {
    EventType Key = 1;

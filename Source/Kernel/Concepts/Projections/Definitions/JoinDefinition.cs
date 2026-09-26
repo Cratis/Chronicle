@@ -11,7 +11,9 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="On">The property representing the model property one is joining on.</param>
 /// <param name="Properties">Properties and expressions for each property.</param>
 /// <param name="Key">Key expression, represents the key to use for identifying the model instance.</param>
+/// <param name="AutoMap">Whether same-named event properties should be mapped automatically; inherits the projection setting by default.</param>
 public record JoinDefinition(
     PropertyPath On,
     IDictionary<PropertyPath, string> Properties,
-    PropertyExpression Key);
+    PropertyExpression Key,
+    AutoMap AutoMap = AutoMap.Inherit);
