@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionsManager.when_registering;
 
-public class and_only_the_read_model_key_title_has_changed : given.a_projections_manager_grain
+public class and_the_existing_read_model_key_has_a_title : given.a_projections_manager_grain
 {
     ProjectionDefinition _existing;
     ProjectionDefinition _incoming;
