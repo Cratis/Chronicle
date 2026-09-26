@@ -261,10 +261,15 @@ public class ResolveFutures(
 
         if (chain.Count == 0)
         {
-            // A first-level child's parent is the root being processed. Storage need not return
-            // its synthetic id as a schema property. Only attach after the root's FROM event
-            // has initialized it; a key-bearing child-created placeholder is not a parent.
-            return KeysMatch(rootKey, parentKey) && IsRootInitialized(currentState, changeset);
+            // A first-level child can be created under the root or updated after it already
+            // exists there. The creator's parent key is the root key, whereas an update whose
+            // parent key comes from its event source names the child in the root collection.
+            // Neither may resolve against a child-created placeholder before the root's FROM.
+            if (!IsRootInitialized(currentState, changeset)) return false;
+            if (KeysMatch(rootKey, parentKey)) return true;
+
+            var directCollection = AsExpandoCollection(childProjection.ChildrenPropertyPath.GetValue(currentState, ArrayIndexers.NoIndexers));
+            return directCollection?.ToList().Contains(parentIdentifiedByProperty, parentKey) == true;
         }
 
         if (chain.Count == 1)
