@@ -22,19 +22,11 @@ A read model can be removed by multiple different events:
 
 <ChronicleClientTabs snippet="projections/model-bound/removal/multiple-triggers" />
 
-In this example, an account can be removed by:
-
-- An `AccountClosed` event (direct removal)
-- An `AccountMerged` event when it's the source account
-- A removal event declared on a child collection through a join relationship (root-level `RemovedWithJoin` does not remove the account)
+In this example, an account can be removed by an `AccountClosed` event or an `AccountMerged` event when it is the source account.
 
 ## RemovedWithJoin
 
-`RemovedWithJoin` on a root class is not yet supported. The following declaration is illustrative only; it does **not** remove root read models:
-
-<ChronicleClientTabs snippet="projections/model-bound/removal/join-on-class" />
-
-A company-dissolution event will not remove its employees from a root read-model collection with this attribute. Use child-level `RemovedWithJoin` for child items; root deletion by a join relationship requires a future engine feature.
+`RemovedWithJoin` on a root class is **not yet supported**. The engine logs a warning and does not subscribe to the removal event. Do not add this attribute to a root read model: it will not delete its instances. Use `RemovedWith` for root deletion, or use `RemovedWithJoin` on a child collection for child-item removal.
 
 ## Removing Children
 
@@ -69,7 +61,7 @@ For children that should be removed based on join events, apply `RemovedWithJoin
 
 ## Complete Example
 
-This example shows root and child removal declarations. Any root-level `RemovedWithJoin` in it is unsupported and will be ignored:
+This example shows supported root `RemovedWith` and child `RemovedWith` declarations:
 
 <ChronicleClientTabs snippet="projections/model-bound/removal/full-example" />
 

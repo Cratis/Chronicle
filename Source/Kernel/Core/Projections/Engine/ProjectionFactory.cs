@@ -466,6 +466,14 @@ public class ProjectionFactory(
             {
                 logger.NestedChildrenNotSupported(projection.Identifier.Value, nestedPropertyPath.Path);
             }
+            if (nestedDefinition.RemovedWithJoin.Count > 0)
+            {
+                logger.NestedRemovalViaJoinNotSupported(projection.Identifier.Value, nestedPropertyPath.Path);
+            }
+            if (projection.HasParent && nestedDefinition.Join.Count > 0)
+            {
+                logger.NestedJoinInChildrenNotSupported(projection.Identifier.Value, nestedPropertyPath.Path);
+            }
 
             var nestedSchema = currentReadModelSchema.Properties.TryGetValue(kvp.Key.LastSegment.Value, out var schemaProp)
                 ? schemaProp.ActualSchema ?? currentReadModelSchema
@@ -486,34 +494,40 @@ public class ProjectionFactory(
 
                 var fromObservable = projection.Event.WhereEventTypeEquals(eventType);
                 projection.Subscriptions.Add(fromObservable.ProjectNested(propertyMappers).Subscribe());
-                SetupJoinsForFromDefinition(
-                    fromObservable,
-                    eventSequenceStorage,
+                if (!projection.HasParent)
+                {
+                    SetupJoinsForFromDefinition(
+                        fromObservable,
+                        eventSequenceStorage,
+                        nestedDefinition,
+                        nestedPropertyPath,
+                        actualIdentifiedByProperty,
+                        projection,
+                        nestedSchema,
+                        fromDefinition,
+                        eventType,
+                        projection.HasParent,
+                        eventTypeSchemas,
+                        isNested: true,
+                        nestedAutoMap,
+                        nestedNoAutoMapProperties);
+                }
+            }
+
+            if (!projection.HasParent)
+            {
+                SetupJoinSubscriptions(
+                    projection,
                     nestedDefinition,
                     nestedPropertyPath,
                     actualIdentifiedByProperty,
-                    projection,
                     nestedSchema,
-                    fromDefinition,
-                    eventType,
-                    projection.HasParent,
                     eventTypeSchemas,
-                    isNested: true,
+                    propertyMappersForEveryEventType,
                     nestedAutoMap,
-                    nestedNoAutoMapProperties);
+                    nestedNoAutoMapProperties,
+                    isNested: true);
             }
-
-            SetupJoinSubscriptions(
-                projection,
-                nestedDefinition,
-                nestedPropertyPath,
-                actualIdentifiedByProperty,
-                nestedSchema,
-                eventTypeSchemas,
-                propertyMappersForEveryEventType,
-                nestedAutoMap,
-                nestedNoAutoMapProperties,
-                isNested: true);
 
             foreach (var (eventType, _) in nestedDefinition.RemovedWith)
             {
@@ -964,7 +978,9 @@ public class ProjectionFactory(
         var fromEventTypes = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToArray();
         var joinEventTypes = projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, kvp.Value.On)).ToArray();
         var removedWithEventTypes = projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToArray();
-        var removedWithJoinEventTypes = projectionDefinition.RemovedWithJoin.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, actualIdentifiedByProperty)).ToArray();
+        var removedWithJoinEventTypes = hasParent
+            ? projectionDefinition.RemovedWithJoin.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, actualIdentifiedByProperty)).ToArray()
+            : [];
 
         // Collect event types from all nested definitions (nested objects use the same key resolver as the parent)
         var nestedEventTypes = CollectNestedEventTypes(projection, projectionDefinition.Nested, actualIdentifiedByProperty, hasParent, projection.ChildrenPropertyPath);
@@ -1061,9 +1077,12 @@ public class ProjectionFactory(
                 GetEventTypeWithKeyResolver(projection, f.Key, f.Value.Key, actualIdentifiedByProperty, hasParent, f.Value.ParentKey),
                 ProjectionOperationType.From)));
 
-            result.AddRange(nestedDefinition.Join.Select(j => (
-                GetEventTypeWithKeyResolverForJoin(projection, j.Key, j.Value.Key, actualIdentifiedByProperty, nestedPath + j.Value.On),
-                ProjectionOperationType.Join)));
+            if (!hasParent)
+            {
+                result.AddRange(nestedDefinition.Join.Select(j => (
+                    GetEventTypeWithKeyResolverForJoin(projection, j.Key, j.Value.Key, actualIdentifiedByProperty, nestedPath + j.Value.On),
+                    ProjectionOperationType.Join)));
+            }
 
             result.AddRange(nestedDefinition.RemovedWith.Select(r => (
                 GetEventTypeWithKeyResolver(projection, r.Key, r.Value.Key, actualIdentifiedByProperty, hasParent, r.Value.ParentKey),

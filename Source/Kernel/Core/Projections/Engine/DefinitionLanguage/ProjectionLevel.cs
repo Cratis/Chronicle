@@ -13,5 +13,8 @@ internal enum ProjectionLevel
     Children = 1,
 
     /// <summary>A scalar nested object.</summary>
-    Nested = 2
+    Nested = 2,
+
+    /// <summary>A scalar nested object inside a child collection, including deeper nested objects.</summary>
+    NestedInChildren = 3
 }

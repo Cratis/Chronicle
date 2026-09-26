@@ -28,15 +28,15 @@ public class ProjectionValidator(
     internal static IReadOnlyDictionary<Type, IReadOnlySet<ProjectionLevel>> ProjectionBlockSupport { get; } =
         new Dictionary<Type, IReadOnlySet<ProjectionLevel>>
         {
-            [typeof(FromSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
-            [typeof(EverySyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
+            [typeof(FromSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested, ProjectionLevel.NestedInChildren },
+            [typeof(EverySyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested, ProjectionLevel.NestedInChildren },
             [typeof(AllSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root },
             [typeof(JoinSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
             [typeof(ChildrenSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children },
-            [typeof(NestedSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
-            [typeof(RemoveWithSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested },
+            [typeof(NestedSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested, ProjectionLevel.NestedInChildren },
+            [typeof(RemoveWithSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Root, ProjectionLevel.Children, ProjectionLevel.Nested, ProjectionLevel.NestedInChildren },
             [typeof(RemoveViaJoinSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Children },
-            [typeof(ClearWithSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Nested },
+            [typeof(ClearWithSyntax)] = new HashSet<ProjectionLevel> { ProjectionLevel.Nested, ProjectionLevel.NestedInChildren },
             [typeof(ProjectionVariantSyntax)] = new HashSet<ProjectionLevel>()
         };
 
@@ -123,6 +123,7 @@ public class ProjectionValidator(
                     RemoveViaJoinSyntax when level == ProjectionLevel.Root => "'remove via join' at the root is not supported",
                     RemoveViaJoinSyntax => "'remove via join' inside 'nested' is not supported",
                     ChildrenSyntax => "'children' inside 'nested' is not supported",
+                    JoinSyntax when level == ProjectionLevel.NestedInChildren => "'join' inside 'nested' under 'children' is not supported",
                     _ => $"Projection block of type '{block.GetType().Name}' is not supported"
                 };
                 errors.Add(message, block.Location.Line, block.Location.Column);
@@ -148,7 +149,7 @@ public class ProjectionValidator(
                     ValidateSupportedBlocks(children.Blocks, errors, ProjectionLevel.Children);
                     break;
                 case NestedSyntax nested:
-                    ValidateSupportedBlocks(nested.Blocks, errors, ProjectionLevel.Nested);
+                    ValidateSupportedBlocks(nested.Blocks, errors, level is ProjectionLevel.Children or ProjectionLevel.NestedInChildren ? ProjectionLevel.NestedInChildren : ProjectionLevel.Nested);
                     break;
                 case JoinSyntax join:
                     foreach (var joinEvent in join.Events)

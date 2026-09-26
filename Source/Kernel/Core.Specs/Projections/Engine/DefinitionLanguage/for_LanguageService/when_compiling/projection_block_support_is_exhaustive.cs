@@ -57,12 +57,13 @@ public class projection_block_support_is_exhaustive : for_LanguageService.given.
 
     static string DeclarationFor(ProjectionLevel level, string snippet)
     {
-        var block = Indent(snippet, level == ProjectionLevel.Root ? 2 : 4);
+        var block = Indent(snippet, level switch { ProjectionLevel.Root => 2, ProjectionLevel.NestedInChildren => 6, _ => 4 });
         return level switch
         {
             ProjectionLevel.Root => $"projection Test => CompanyReadModel\n{block}",
             ProjectionLevel.Children => $"projection Test => CompanyReadModel\n  children departments identified by id\n    from DepartmentCreated\n{block}",
-            _ => $"projection Test => CompanyReadModel\n  nested details\n    from DepartmentCreated\n{block}"
+            ProjectionLevel.Nested => $"projection Test => CompanyReadModel\n  nested details\n    from DepartmentCreated\n{block}",
+            _ => $"projection Test => CompanyReadModel\n  children departments identified by id\n    from DepartmentCreated\n    nested details\n      from DepartmentCreated\n{block}"
         };
     }
 
