@@ -11,6 +11,11 @@ public class DeepNestedProbeProjection : IProjectionFor<DeepNestedProbe>
     /// <inheritdoc/>
     public void Define(IProjectionBuilderFor<DeepNestedProbe> builder)
     {
+        builder.From<ProbeProjectCreatedWithoutOuter>(from =>
+        {
+            from.UsingKey(e => e.ProjectId);
+            from.Set(m => m.Name).To(e => e.Name);
+        });
         builder.From<ProbeProjectRegistered>(from =>
         {
             from.UsingKey(e => e.ProjectId);

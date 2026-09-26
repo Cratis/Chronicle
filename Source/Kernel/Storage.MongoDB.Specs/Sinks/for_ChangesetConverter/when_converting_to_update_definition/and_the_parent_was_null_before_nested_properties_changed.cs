@@ -15,39 +15,25 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ChangesetConverter.when_con
 public class and_the_parent_was_null_before_nested_properties_changed : given.a_changeset_converter
 {
     IChangeset<AppendedEvent, ExpandoObject> _changeset;
-    UpdateDefinitionAndArrayFilters _result;
     BsonDocument _rendered;
 
     void Establish()
     {
-        dynamic initial = new ExpandoObject();
-        initial.outer = new ExpandoObject();
-        initial.outer.info = null;
-        dynamic info = new ExpandoObject();
-        info.name = "Again";
-        info.description = "Other";
-        dynamic changed = new ExpandoObject();
-        changed.outer = new ExpandoObject();
-        changed.outer.info = info;
-        var parent = new PropertyPath("outer.info");
+        var leaf = new PropertyPath("outer.info.name");
         _changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
-        _changeset.InitialState.Returns((ExpandoObject)initial);
-        _changeset.Changes.Returns([new PropertiesChanged<ExpandoObject>((ExpandoObject)changed,
-            [new PropertyDifference(new PropertyPath("outer.info.name"), null, "Again"),
-             new PropertyDifference(new PropertyPath("outer.info.description"), null, "Other")])]);
-        _mongoDBConverter.ToMongoDBProperty(parent, ArrayIndexers.NoIndexers).Returns(new MongoDBProperty("outer.info", []));
-        _mongoDBConverter.ToBsonValue(Arg.Any<object?>(), parent).Returns(new BsonDocument { ["name"] = "Again", ["description"] = "Other" });
-        _mongoDBConverter.ToBsonValue(Arg.Any<EventSequenceNumber>()).Returns(BsonValue.Create(42UL));
+        _changeset.InitialState.Returns(new ExpandoObject());
+        _changeset.Changes.Returns([new PropertiesChanged<ExpandoObject>(new ExpandoObject(),
+            [new PropertyDifference(leaf, null, "Again")])]);
+        _mongoDBConverter.ToMongoDBProperty(leaf, ArrayIndexers.NoIndexers).Returns(new MongoDBProperty("outer.info.name", []));
+        _mongoDBConverter.ToBsonValue("Again", leaf).Returns(BsonString.Create("ciphertext"));
     }
 
     async Task Because()
     {
-        _result = await _converter.ToUpdateDefinition(new Key("probe-1", ArrayIndexers.NoIndexers), _changeset, 42UL);
-        _rendered = _result.UpdateDefinition.Render(new RenderArgs<BsonDocument>(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry)).AsBsonDocument;
+        var result = await _converter.ToUpdateDefinition(new Key("probe-1", ArrayIndexers.NoIndexers), _changeset, EventSequenceNumber.Unavailable);
+        _rendered = result.UpdateDefinition.Render(new RenderArgs<BsonDocument>(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry)).AsBsonDocument;
     }
 
-    [Fact] void should_set_the_whole_parent() => _rendered["$set"]["outer.info"].AsBsonDocument["name"].AsString.ShouldEqual("Again");
-    [Fact] void should_preserve_the_other_property() => _rendered["$set"]["outer.info"].AsBsonDocument["description"].AsString.ShouldEqual("Other");
-    [Fact] void should_not_set_a_leaf_beside_its_parent() => _rendered["$set"].AsBsonDocument.ElementCount.ShouldEqual(1);
-    [Fact] void should_indicate_changes() => _result.hasChanges.ShouldBeTrue();
+    [Fact] void should_set_only_the_dotted_leaf_to_the_converted_value() => _rendered["$set"]["outer.info.name"].AsString.ShouldEqual("ciphertext");
+    [Fact] void should_not_set_the_whole_parent() => _rendered["$set"].AsBsonDocument.Contains("outer.info").ShouldBeFalse();
 }

@@ -461,7 +461,7 @@ public class InMemorySink(
                     break;
 
                 case NestedCleared nestedCleared:
-                    nestedCleared.NestedProperty.SetValue(state, null!, nestedCleared.ArrayIndexers);
+                    state.ClearNestedValue(nestedCleared.NestedProperty, nestedCleared.ArrayIndexers);
                     break;
 
                 case Joined joined:
