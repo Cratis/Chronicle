@@ -630,12 +630,17 @@ public class ProjectionFactory(
         // A projection that subscribes to all events (the `all` block / .FromAll()) has no per-event-type `From`
         // registration to hang its every-event mappers off - by design, since the entire point is to also cover
         // event types that do not exist yet. Give it one subscription against every event instead, skipping event
-        // types already handled by an explicit `from` above so those do not get the every-event mappers applied twice.
+        // types already mapped by root `from`, derivative or join registrations so those do not get the
+        // every-event mappers applied again. Removal registrations do not carry every-event mappers.
         if (projectionDefinition.SubscribesToAllEvents && !isChild)
         {
-            var explicitlyHandledEventTypeIds = projectionDefinition.From.Keys.Select(_ => _.Id).ToHashSet();
+            var mappedEventTypeIds = projectionDefinition.From.Keys
+                .Concat(projectionDefinition.Join.Keys)
+                .Concat(projectionDefinition.FromDerivatives?.SelectMany(_ => _.EventTypes) ?? [])
+                .Select(_ => _.Id)
+                .ToHashSet();
             projection.Event
-                .Where(_ => !explicitlyHandledEventTypeIds.Contains(_.Event.Context.EventType.Id))
+                .Where(_ => !mappedEventTypeIds.Contains(_.Event.Context.EventType.Id))
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,
