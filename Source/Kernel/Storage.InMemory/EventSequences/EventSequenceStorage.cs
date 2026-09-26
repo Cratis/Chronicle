@@ -32,6 +32,7 @@ public class EventSequenceStorage(
     static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
 
     readonly List<AppendedEvent> _events = [];
+    readonly Dictionary<EventSequenceNumber, IdentityId[]> _originalCausedByChains = [];
     readonly object _lock = new();
 
     /// <summary>
@@ -150,6 +151,7 @@ public class EventSequenceStorage(
             var hash = contentHashes.TryGetValue(eventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
             var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, tags, occurred, content, hash, subject);
             _events.Add(appended);
+            _originalCausedByChains[sequenceNumber] = causedByChain.ToArray();
 
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(appended);
         }
@@ -203,6 +205,7 @@ public class EventSequenceStorage(
                     e.Subject);
 
                 _events.Add(appendedEvent);
+                _originalCausedByChains[e.SequenceNumber] = e.CausedByChain.ToArray();
                 appended.Add(appendedEvent);
             }
         }
@@ -268,17 +271,13 @@ public class EventSequenceStorage(
             }
 
             var original = _events[index];
-
-            // Already redacted — return it as-is so the caller can skip the duplicate rewind, matching
-            // how the persistent providers signal "redaction already applied".
             if (original.Context.EventType.Id == GlobalEventTypes.Redaction)
             {
                 return Task.FromResult(original);
             }
 
-            _events[index] = Redacted(original, reason, correlationId, causation, causedByChain, occurred);
-
-            // The pre-redaction event is returned, as the persistent providers do.
+            _events[index] = Redacted(original, reason, correlationId, causation, occurred, _originalCausedByChains[sequenceNumber]);
+            _originalCausedByChains.Remove(sequenceNumber);
             return Task.FromResult(original);
         }
     }
@@ -309,7 +308,8 @@ public class EventSequenceStorage(
                 }
 
                 affectedEventTypes.Add(new EventType(original.Context.EventType.Id, EventTypeGeneration.First, false));
-                _events[index] = Redacted(original, reason, correlationId, causation, causedByChain, occurred);
+                _events[index] = Redacted(original, reason, correlationId, causation, occurred, _originalCausedByChains[original.Context.SequenceNumber]);
+                _originalCausedByChains.Remove(original.Context.SequenceNumber);
             }
         }
 
@@ -525,26 +525,24 @@ public class EventSequenceStorage(
     /// <param name="reason">The <see cref="RedactionReason"/>.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> of the redaction.</param>
     /// <param name="causation">The causation chain behind the redaction.</param>
-    /// <param name="causedByChain">The identities that caused the redaction.</param>
     /// <param name="occurred">When the redaction occurred.</param>
+    /// <param name="originalCausedBy">The original caused-by identity chain.</param>
     /// <returns>The redacted <see cref="AppendedEvent"/>.</returns>
     static AppendedEvent Redacted(
         AppendedEvent original,
         RedactionReason reason,
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
-        IEnumerable<IdentityId> causedByChain,
-        DateTimeOffset occurred)
+        DateTimeOffset occurred,
+        IEnumerable<IdentityId> originalCausedBy)
     {
-        // This provider stores a single Identity per event rather than an identity chain, so the original
-        // chain cannot be carried into the redaction content; everything else mirrors the persistent providers.
-        var content = new RedactionEventContent(
+        var content = RedactionEventContent.FromOriginal(
             reason,
             original.Context.EventType.Id,
             original.Context.Occurred,
             original.Context.CorrelationId,
             original.Context.Causation,
-            causedByChain);
+            originalCausedBy);
 
         return original with
         {
@@ -554,35 +552,14 @@ public class EventSequenceStorage(
                 Occurred = occurred,
                 CorrelationId = correlationId,
                 Causation = causation,
-                CausedBy = Identity.System
+                CausedBy = Identity.System,
+                Hash = EventHash.NotSet
             },
-            Content = ToExpandoObject(content),
+            Content = content.ToPayload(),
             OriginalContent = string.Empty,
+            Revisions = [],
             GenerationalContent = new Dictionary<int, string>()
         };
-    }
-
-    /// <summary>
-    /// Lays out a <see cref="RedactionEventContent"/> the way the persistent providers store it — the
-    /// camel-cased property names its serialized form produces, which the converters then read back raw.
-    /// </summary>
-    /// <remarks>
-    /// Keep this in step with <see cref="RedactionEventContent"/>: a property added there is not written
-    /// here automatically, and a redacted event would then carry less than it does in the other providers.
-    /// </remarks>
-    /// <param name="content">The redaction content to lay out.</param>
-    /// <returns>The redaction content as an <see cref="ExpandoObject"/> payload.</returns>
-    static ExpandoObject ToExpandoObject(RedactionEventContent content)
-    {
-        var expando = new ExpandoObject();
-        var values = (IDictionary<string, object?>)expando;
-        values["reason"] = content.Reason.Value;
-        values["originalEventType"] = content.OriginalEventType.Value;
-        values["occurred"] = content.Occurred;
-        values["correlationId"] = content.CorrelationId.Value;
-        values["causation"] = content.Causation;
-        values["causedBy"] = content.CausedBy;
-        return expando;
     }
 
     /// <summary>

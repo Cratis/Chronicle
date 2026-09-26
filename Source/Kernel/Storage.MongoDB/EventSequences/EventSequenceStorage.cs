@@ -469,7 +469,7 @@ public class EventSequenceStorage(
             return await converter.ToAppendedEvent(redactedRaw);
         }
 
-        var updateModel = CreateRedactionUpdateModelFor(existingRaw, reason, correlationId, causation, causedByChain, occurred);
+        var updateModel = CreateRedactionUpdateModelFor(existingRaw, reason, correlationId, causation, causedByChain, occurred, jsonSerializerOptions);
         var updateResult = await collection.UpdateOneAsync(
             Builders<Event>.Filter.And(updateModel.Filter, Builders<Event>.Filter.Ne(_ => _.Type, GlobalEventTypes.Redaction)),
             updateModel.Update).ConfigureAwait(false);
@@ -533,7 +533,7 @@ public class EventSequenceStorage(
                     continue;
                 }
 
-                updates.Add(CreateRedactionUpdateModelFor(rawEvent, reason, correlationId, causation, causedByChain, occurred));
+                updates.Add(CreateRedactionUpdateModelFor(rawEvent, reason, correlationId, causation, causedByChain, occurred, jsonSerializerOptions));
                 affectedEventTypes.Add(new EventType(rawEvent.Type, EventTypeGeneration.First, false));
             }
 
@@ -985,6 +985,55 @@ public class EventSequenceStorage(
                 new CreateIndexOptions { Sparse = true, Name = "subject_index" })).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Builds replacement content from the original metadata without causation property values.
+    /// </summary>
+    /// <param name="originalRawEvent">The event being redacted.</param>
+    /// <param name="reason">The reason for redaction.</param>
+    /// <returns>Content describing the redacted event without causation property values.</returns>
+    internal static RedactionEventContent CreateRedactionContent(Event originalRawEvent, RedactionReason reason) =>
+        RedactionEventContent.FromOriginal(reason, originalRawEvent.Type, originalRawEvent.Occurred, originalRawEvent.CorrelationId, originalRawEvent.Causation, originalRawEvent.CausedBy);
+
+    /// <summary>
+    /// Creates a MongoDB update model replacing an event with redaction content and clearing its revisions and hashes.
+    /// </summary>
+    /// <param name="originalRawEvent">The event being redacted.</param>
+    /// <param name="reason">The redaction reason.</param>
+    /// <param name="redactionCorrelationId">The redaction correlation identifier.</param>
+    /// <param name="redactionCausation">The redaction causation chain.</param>
+    /// <param name="redactionCausedByChain">The redaction caused-by identity chain.</param>
+    /// <param name="redactionOccurred">When the redaction occurred.</param>
+    /// <param name="jsonSerializerOptions">Options for serializing the replacement content.</param>
+    /// <returns>The in-place replacement update.</returns>
+    internal static UpdateOneModel<Event> CreateRedactionUpdateModelFor(
+        Event originalRawEvent,
+        RedactionReason reason,
+        CorrelationId redactionCorrelationId,
+        IEnumerable<Causation> redactionCausation,
+        IEnumerable<IdentityId> redactionCausedByChain,
+        DateTimeOffset redactionOccurred,
+        JsonSerializerOptions jsonSerializerOptions)
+    {
+        var content = CreateRedactionContent(originalRawEvent, reason);
+        var document = BsonDocument.Parse(JsonSerializer.Serialize(content.ToPayload(), jsonSerializerOptions));
+        var generationalContent = new Dictionary<string, BsonDocument>
+        {
+            { EventTypeGeneration.First.ToString(), document }
+        };
+
+        return new UpdateOneModel<Event>(
+            Builders<Event>.Filter.Eq(e => e.SequenceNumber, originalRawEvent.SequenceNumber),
+            Builders<Event>.Update
+                .Set(e => e.Type, GlobalEventTypes.Redaction)
+                .Set(e => e.Content, generationalContent)
+                .Set(e => e.Occurred, redactionOccurred)
+                .Set(e => e.CorrelationId, redactionCorrelationId)
+                .Set(e => e.Causation, redactionCausation)
+                .Set(e => e.CausedBy, redactionCausedByChain)
+                .Set(e => e.Revisions, [])
+                .Set(e => e.ContentHashes, new Dictionary<string, string>()));
+    }
+
     static EventSequenceNumber ToEventSequenceNumber(BsonValue value)
     {
         var sequenceNumber = Convert.ToUInt64(value.ToDecimal());
@@ -1043,52 +1092,6 @@ public class EventSequenceStorage(
         return filters.Count == 0
             ? FilterDefinition<Event>.Empty
             : Builders<Event>.Filter.And([.. filters]);
-    }
-
-    /// <summary>
-    /// Creates a MongoDB update model for replacing an event in-place with the <see cref="GlobalEventTypes.Redaction"/> event type.
-    /// The replacement content stores the ORIGINAL event's context (type, occurred, correlation, causation, caused-by) so it
-    /// can be audited after the fact. The CURRENT redaction context (correlationId, causation, causedByChain, occurred) is
-    /// written directly to the event document's own context fields.
-    /// </summary>
-    /// <param name="originalRawEvent">The raw MongoDB <see cref="Event"/> document for the event being redacted.</param>
-    /// <param name="reason">The <see cref="RedactionReason"/> for the redaction.</param>
-    /// <param name="redactionCorrelationId">The <see cref="CorrelationId"/> of the redaction operation.</param>
-    /// <param name="redactionCausation">The <see cref="Causation"/> chain of the redaction operation.</param>
-    /// <param name="redactionCausedByChain">The identity chain that caused the redaction.</param>
-    /// <param name="redactionOccurred">The time the redaction was applied.</param>
-    /// <returns>A <see cref="UpdateOneModel{Event}"/> that performs the in-place replacement.</returns>
-    UpdateOneModel<Event> CreateRedactionUpdateModelFor(
-        Event originalRawEvent,
-        RedactionReason reason,
-        CorrelationId redactionCorrelationId,
-        IEnumerable<Causation> redactionCausation,
-        IEnumerable<IdentityId> redactionCausedByChain,
-        DateTimeOffset redactionOccurred)
-    {
-        var content = new RedactionEventContent(
-            reason,
-            originalRawEvent.Type,
-            originalRawEvent.Occurred,
-            originalRawEvent.CorrelationId,
-            originalRawEvent.Causation,
-            originalRawEvent.CausedBy);
-
-        var document = BsonDocument.Parse(JsonSerializer.Serialize(content, jsonSerializerOptions));
-        var generationalContent = new Dictionary<string, BsonDocument>
-        {
-            { EventTypeGeneration.First.ToString(), document }
-        };
-
-        return new UpdateOneModel<Event>(
-            Builders<Event>.Filter.Eq(e => e.SequenceNumber, originalRawEvent.SequenceNumber),
-            Builders<Event>.Update
-                .Set(e => e.Type, GlobalEventTypes.Redaction)
-                .Set(e => e.Content, generationalContent)
-                .Set(e => e.Occurred, redactionOccurred)
-                .Set(e => e.CorrelationId, redactionCorrelationId)
-                .Set(e => e.Causation, redactionCausation)
-                .Set(e => e.CausedBy, redactionCausedByChain));
     }
 
     async Task<DuplicateEventSequenceNumber> AbortAndResolveNextAvailableSequenceNumber(IClientSessionHandle session)
