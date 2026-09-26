@@ -55,6 +55,7 @@ public class EventStoreSubscriptionObserverSubscriber(
         var inboxSequenceId = new EventSequenceId($"{EventSequenceId.InboxPrefix}{_key.EventStore}");
         var inboxSequence = grainFactory.GetEventSequence(inboxSequenceId, targetEventStore, _key.Namespace);
 
+        var lastSuccessfullyForwardedSequenceNumber = EventSequenceNumber.Unavailable;
         try
         {
             var copiedSubjects = new HashSet<Subject>();
@@ -65,7 +66,7 @@ public class EventStoreSubscriptionObserverSubscriber(
                     await CopyEncryptionKeyIfMissingForTargetStore(@event.Context.Subject, targetEventStore);
                 }
                 var content = SerializeContent(@event.Content);
-                await inboxSequence.Append(
+                var appendResult = await inboxSequence.Append(
                     @event.Context.EventSourceType,
                     @event.Context.EventSourceId,
                     @event.Context.EventStreamType,
@@ -78,17 +79,34 @@ public class EventStoreSubscriptionObserverSubscriber(
                     [],
                     ConcurrencyScope.None,
                     subject: @event.Context.Subject);
+
+                if (!appendResult.IsSuccess)
+                {
+                    var failureKind = appendResult switch
+                    {
+                        { HasConstraintViolations: true } => "constraint violation",
+                        { HasConcurrencyViolations: true } => "concurrency violation",
+                        { HasErrors: true } => "append error",
+                        _ => "unknown append failure"
+                    };
+                    logger.FailedForwardingEvent(_key, targetEventStore, inboxSequenceId, @event.Context.EventType.Id, failureKind);
+                    return ObserverSubscriberResult.Failed(
+                        lastSuccessfullyForwardedSequenceNumber,
+                        $"Inbox append {failureKind} for event type '{@event.Context.EventType.Id}'");
+                }
+
+                lastSuccessfullyForwardedSequenceNumber = @event.Context.SequenceNumber;
             }
 
             logger.SuccessfullyForwardedEvents(_key, targetEventStore, inboxSequenceId);
-            return ObserverSubscriberResult.Ok(events.LastOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable);
+            return ObserverSubscriberResult.Ok(lastSuccessfullyForwardedSequenceNumber);
         }
         catch (Exception ex)
         {
             logger.ErrorForwardingEvents(ex, _key, targetEventStore, inboxSequenceId);
             return new ObserverSubscriberResult(
                 ObserverSubscriberState.Failed,
-                EventSequenceNumber.Unavailable,
+                lastSuccessfullyForwardedSequenceNumber,
                 [ex.Message],
                 ex.StackTrace ?? string.Empty);
         }
