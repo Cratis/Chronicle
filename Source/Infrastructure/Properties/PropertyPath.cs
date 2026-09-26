@@ -234,16 +234,11 @@ public partial class PropertyPath
 
         if (target is ExpandoObject targetAsExpandoObject)
         {
-            return targetAsExpandoObject.TryResolvePath(this, arrayIndexers) is IDictionary<string, object> innerInstance &&
-                   innerInstance.ContainsKey(LastSegment.Value);
+            var innerInstance = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
+            return innerInstance.ContainsKey(LastSegment.Value);
         }
 
-        var inner = target.TryResolvePath(this, arrayIndexers);
-        if (inner is null)
-        {
-            return false;
-        }
-
+        var inner = target.EnsurePath(this, arrayIndexers);
         var propertyInfo = GetPropertyInfoFor(target.GetType());
         return propertyInfo.GetValue(inner) != null;
     }
@@ -273,18 +268,11 @@ public partial class PropertyPath
 
         if (target is ExpandoObject targetAsExpandoObject)
         {
-            return targetAsExpandoObject.TryResolvePath(this, arrayIndexers) is IDictionary<string, object> innerInstance &&
-                   innerInstance.TryGetValue(LastSegment.Value, out var value)
-                ? value
-                : null;
+            var innerInstance = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
+            return innerInstance.TryGetValue(LastSegment.Value, out var value) ? value : null;
         }
 
-        var inner = target.TryResolvePath(this, arrayIndexers);
-        if (inner is null)
-        {
-            return null;
-        }
-
+        var inner = target.EnsurePath(this, arrayIndexers);
         var propertyInfo = GetPropertyInfoFor(target.GetType());
         return propertyInfo.GetValue(inner);
     }

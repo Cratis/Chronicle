@@ -46,7 +46,7 @@ public class Generator : IGenerator
         // All/Every block - only output if it has meaningful content
         // Don't output if it only has 'exclude children' directive without any other content
         var hasEveryContent = definition.FromEvery.Properties.Count > 0 || definition.FromEvery.AutoMap == AutoMap.Disabled;
-        var hasNoOtherBlocks = definition.From.Count == 0 && definition.Join.Count == 0 && definition.Children.Count == 0 && (definition.Nested?.Count ?? 0) == 0;
+        var hasNoOtherBlocks = definition.From.Count == 0 && definition.Join.Count == 0 && definition.Children.Count == 0;
         if (hasEveryContent || hasNoOtherBlocks)
         {
             if (definition.SubscribesToAllEvents)
@@ -79,12 +79,6 @@ public class Generator : IGenerator
         foreach (var kv in definition.Children)
         {
             GenerateChildrenBlock(sb, kv.Key, kv.Value, definition.AutoMap, 1, readModelSchema);
-        }
-
-        // Nested blocks
-        foreach (var kv in definition.Nested ?? new Dictionary<PropertyPath, ChildrenDefinition>())
-        {
-            GenerateNestedBlock(sb, kv.Key, kv.Value, definition.AutoMap, 1, readModelSchema);
         }
 
         // RemovedWith blocks
@@ -241,25 +235,7 @@ public class Generator : IGenerator
         var effectiveAutoMap = children.AutoMap == AutoMap.Inherit ? parentAutoMap : children.AutoMap;
 
         sb.AppendLine($"{Indent(indent)}children {collectionName.Path} identified by {children.IdentifiedBy.Path}");
-        var itemSchema = parentSchema.Properties.TryGetValue(collectionName.Path, out var collection)
-            ? collection.Item?.ActualSchema ?? parentSchema
-            : parentSchema;
-        GenerateBlockBody(sb, children, effectiveAutoMap, parentAutoMap, indent, itemSchema);
-    }
 
-    void GenerateNestedBlock(StringBuilder sb, PropertyPath property, ChildrenDefinition nested, AutoMap parentAutoMap, int indent, JsonSchema parentSchema)
-    {
-        var effectiveAutoMap = nested.AutoMap == AutoMap.Inherit ? parentAutoMap : nested.AutoMap;
-        var nestedSchema = parentSchema.Properties.TryGetValue(property.Path, out var schemaProperty)
-            ? schemaProperty.ActualSchema ?? parentSchema
-            : parentSchema;
-
-        sb.AppendLine($"{Indent(indent)}nested {property.Path}");
-        GenerateBlockBody(sb, nested, effectiveAutoMap, parentAutoMap, indent, nestedSchema, isNested: true);
-    }
-
-    void GenerateBlockBody(StringBuilder sb, ChildrenDefinition children, AutoMap effectiveAutoMap, AutoMap parentAutoMap, int indent, JsonSchema itemSchema, bool isNested = false)
-    {
         // NoAutoMap directive - only output if disabled and different from parent
         if (effectiveAutoMap == AutoMap.Disabled && parentAutoMap != AutoMap.Disabled)
         {
@@ -275,6 +251,10 @@ public class Generator : IGenerator
         {
             GenerateEveryBlock(sb, children.All, indent + 1, isChildContext: true);
         }
+
+        var itemSchema = parentSchema.Properties.TryGetValue(collectionName.Path, out var collection)
+            ? collection.Item?.ActualSchema ?? parentSchema
+            : parentSchema;
 
         // Child on event blocks
         foreach (var kv in children.From)
@@ -296,21 +276,9 @@ public class Generator : IGenerator
             GenerateChildrenBlock(sb, kv.Key, kv.Value, effectiveAutoMap, indent + 1, itemSchema);
         }
 
-        // Nested objects
-        foreach (var kv in children.Nested ?? new Dictionary<PropertyPath, ChildrenDefinition>())
-        {
-            GenerateNestedBlock(sb, kv.Key, kv.Value, effectiveAutoMap, indent + 1, itemSchema);
-        }
-
         // RemovedWith blocks
         foreach (var kv in children.RemovedWith)
         {
-            if (isNested && !kv.Value.Key.IsSet() && kv.Value.ParentKey is null)
-            {
-                sb.AppendLine($"{Indent(indent + 1)}clear with {kv.Key.Id.Value}");
-                continue;
-            }
-
             GenerateRemovedWithBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1);
         }
 

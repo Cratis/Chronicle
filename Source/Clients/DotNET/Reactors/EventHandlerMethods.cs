@@ -89,16 +89,12 @@ public static class EventHandlerMethods
     /// <summary>
     /// Check whether a <see cref="Type"/> is a valid synchronous side-effect return type for a reactor handler method.
     /// Valid types are: a registered event type, <see cref="EventForEventSourceId"/>,
-    /// <see cref="EventsWithConcurrencyScopes"/>, or any sequence of either a registered event type or
+    /// <see cref="EventsWithConcurrencyScopes"/>, or <see cref="IEnumerable{T}"/> of either a registered event type or
     /// <see cref="EventForEventSourceId"/>.
     /// </summary>
     /// <param name="returnType">The return <see cref="Type"/> to check.</param>
     /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>True if it is a valid sync side-effect return type, false if not.</returns>
-    /// <remarks>
-    /// Any sequence counts, not only a declared <see cref="IEnumerable{T}"/>. Side-effect handlers accept arrays
-    /// and lists of events as well as enumerable interfaces.
-    /// </remarks>
     public static bool IsValidSyncSideEffectReturnType(Type returnType, IEnumerable<Type> eventTypes) =>
         IsValidSyncSideEffectReturnType(returnType, eventTypes, null);
 
@@ -113,34 +109,15 @@ public static class EventHandlerMethods
     {
         if (returnType == typeof(EventForEventSourceId)) return true;
         if (returnType == typeof(EventsWithConcurrencyScopes)) return true;
-        if (eventTypes.Contains(returnType)) return true;
 
-        return GetSequenceElementTypes(returnType).Any(elementType =>
-            elementType == typeof(object) ||
-            elementType == typeof(EventForEventSourceId) ||
-            eventTypes.Contains(elementType)) || sideEffectHandlers?.CanHandleReturnType(returnType) == true;
-    }
-
-    /// <summary>
-    /// Get the element types of every <see cref="IEnumerable{T}"/> a <see cref="Type"/> represents or implements.
-    /// </summary>
-    /// <param name="type">The <see cref="Type"/> to get for.</param>
-    /// <returns>The element types, empty when the type is not a sequence.</returns>
-    static IEnumerable<Type> GetSequenceElementTypes(Type type)
-    {
-        if (type == typeof(string))
+        if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
         {
-            return [];
+            var elementType = returnType.GetGenericArguments()[0];
+            if (elementType == typeof(object)) return true;
+            if (elementType == typeof(EventForEventSourceId)) return true;
+            if (eventTypes.Contains(elementType)) return true;
         }
 
-        if (type.IsArray)
-        {
-            return type.GetElementType() is { } elementType ? [elementType] : [];
-        }
-
-        var interfaces = type.IsInterface ? new[] { type }.Concat(type.GetInterfaces()) : type.GetInterfaces();
-        return interfaces
-            .Where(candidate => candidate.IsGenericType && candidate.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-            .Select(candidate => candidate.GetGenericArguments()[0]);
+        return eventTypes.Contains(returnType) || sideEffectHandlers?.CanHandleReturnType(returnType) == true;
     }
 }
