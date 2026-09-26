@@ -4,6 +4,7 @@
 using System.Collections;
 using System.Dynamic;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -412,7 +413,7 @@ public class Sink : ISink
         var containerName = occurrence?.Value ?? ActiveTableName;
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
         var totalCount = await scope.DbContext.Entries.CountAsync();
-        var entries = await scope.DbContext.Entries.AsNoTracking().Skip(skip).Take(take).ToListAsync();
+        var entries = await OrderByKey(scope.DbContext.Entries.AsNoTracking()).Skip(skip).Take(take).ToListAsync();
         return new ReadModelInstances(entries.Select(MaterializeExpando), totalCount);
     }
 
@@ -430,7 +431,7 @@ public class Sink : ISink
             try
             {
                 // Get initial instances
-                var initialEntries = await scope.DbContext.Entries.AsNoTracking().Skip(skip).Take(take).ToListAsync();
+                var initialEntries = await OrderByKey(scope.DbContext.Entries.AsNoTracking()).Skip(skip).Take(take).ToListAsync();
                 observer.OnNext(initialEntries.Select(MaterializeExpando));
 
                 // Subscribe to changes using Arc's Observe extension
@@ -438,7 +439,7 @@ public class Sink : ISink
                     allEntries =>
                     {
                         // Re-query with skip/take when changes occur
-                        observer.OnNext(allEntries.Skip(skip).Take(take).Select(MaterializeExpando));
+                        observer.OnNext(OrderEntriesByKey(allEntries).Skip(skip).Take(take).Select(MaterializeExpando));
                     },
                     observer.OnError,
                     observer.OnCompleted);
@@ -453,6 +454,34 @@ public class Sink : ISink
                 throw;
             }
         });
+    }
+
+    IQueryable<DynamicReadModelEntity> OrderByKey(IQueryable<DynamicReadModelEntity> entries)
+    {
+        var keyColumn = _columns.First(column => column.IsKey);
+        var entry = Expression.Parameter(typeof(DynamicReadModelEntity), "entry");
+        var key = Expression.Call(
+            typeof(EF).GetMethod(nameof(EF.Property))!.MakeGenericMethod(keyColumn.ClrType),
+            entry,
+            Expression.Constant(keyColumn.Name));
+        var selector = Expression.Lambda(key, entry);
+        var orderBy = Expression.Call(
+            typeof(Queryable),
+            nameof(Queryable.OrderBy),
+            [typeof(DynamicReadModelEntity), keyColumn.ClrType],
+            entries.Expression,
+            Expression.Quote(selector));
+        return entries.Provider.CreateQuery<DynamicReadModelEntity>(orderBy);
+    }
+
+    IEnumerable<DynamicReadModelEntity> OrderEntriesByKey(IEnumerable<DynamicReadModelEntity> entries)
+    {
+        var keyColumn = _columns.First(column => column.IsKey);
+        return entries.OrderBy(entry => entry[keyColumn.Name], Comparer<object?>.Create((left, right) =>
+        {
+            if (left is IComparable comparable) return comparable.CompareTo(right);
+            return StringComparer.Ordinal.Compare(left?.ToString(), right?.ToString());
+        }));
     }
 
     async Task ApplyJoinedChange(DbContextScope<ReadModelDbContext> scope, Joined joined, EventSequenceNumber eventSequenceNumber)

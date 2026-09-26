@@ -3,9 +3,11 @@
 
 using System.Collections;
 using System.Dynamic;
+using System.Globalization;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
+using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -354,10 +356,23 @@ public class InMemorySink(
 
     (IReadOnlyList<ExpandoObject> Instances, int TotalCount) SnapshotInstances(int skip, int take)
     {
+        static string KeyOrderValue(object key)
+        {
+            var value = key switch
+            {
+                ExpandoObject composite => JsonSerializer.Serialize(composite
+                    .OrderBy(entry => entry.Key, StringComparer.Ordinal).ToDictionary(entry => entry.Key, entry => entry.Value)),
+                IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+                _ => Convert.ToString(key, CultureInfo.InvariantCulture) ?? string.Empty
+            };
+            return $"{key.GetType().FullName}:{value}";
+        }
+
         lock (_collectionLock)
         {
             var collection = Collection;
-            var instances = collection.Values.Skip(skip).Take(take).ToArray();
+            var instances = collection.OrderBy(entry => KeyOrderValue(entry.Key), StringComparer.Ordinal)
+                .Skip(skip).Take(take).Select(entry => entry.Value).ToArray();
             return (instances, collection.Count);
         }
     }
