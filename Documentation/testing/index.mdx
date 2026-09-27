@@ -3,17 +3,24 @@ title: Testing
 description: Test event appends, read models, and reactor side effects in process without running infrastructure.
 ---
 
-Chronicle provides lightweight test utilities that let you verify event appending behavior, read model projections, and reactor side-effects. `Cratis.Chronicle.Testing` and its in-process `*Scenario` helpers run the real Chronicle engines with in-memory storage, so tests are fast and isolated. `Cratis.Chronicle.XUnit.Integration` exercises the full client and kernel stack against MongoDB via Testcontainers when you need to prove storage, network, or full-stack behavior.
+Chronicle provides in-process scenarios for testing event appends and read models without a running kernel. The .NET testing library also covers reactor side effects and offers integration fixtures. `Cratis.Chronicle.XUnit.Integration` exercises the full client and kernel stack against MongoDB via Testcontainers when you need to prove storage, network, or full-stack behavior.
 
 :::note[Client coverage]
-`Cratis.Chronicle.Testing` and its in-process `*Scenario` helpers (`EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>`) are a C#-specific test library layered on xUnit and Cratis.Specifications. Kotlin has its own, smaller in-process library, `io.cratis:chronicle-testing`, with an `EventScenario` for what a slice appends and a `ReadModelScenario` for what a reducer folds; it has no projection or reactor scenarios. See [Testing](/chronicle/clients/kotlin/guides/testing/) in the Kotlin client docs. Elixir and TypeScript have no Chronicle-specific in-process test utility package, so testing a Chronicle-backed slice there means exercising the real client SDK against a running event store. The examples in `testing/**` in this section are C#-only.
+The clients offer different in-process boundaries:
+
+- **.NET:** `Cratis.Chronicle.Testing` provides `EventScenario`, `ReadModelScenario<T>` and `ReactorScenario<T>` for C# specs, alongside the separate integration fixtures described below.
+- **Kotlin:** `io.cratis:chronicle-testing` provides `EventScenario` for appends and `ReadModelScenario` for reducers, but not projection or reactor scenarios. See the [Kotlin testing guide](/chronicle/clients/kotlin/guides/testing/).
+- **TypeScript:** `@cratis/chronicle/testing` exports `EventScenario` for appends and `ReadModelScenario` for reducers and supported projections. It does not provide a reactor scenario; some .NET-only workflows below have explicit unsupported tabs.
+- **Elixir:** No Chronicle-specific in-process scenarios; use the client against a running event store to test a Chronicle-backed slice. Unsupported tabs mark unavailable workflows.
+
+Examples in this section use client tabs where the workflow is supported. Package instructions, named fixture APIs, and other .NET-only details are labeled as such.
 :::
 
-In Cratis applications, Chronicle tests usually sit inside [Cratis Specifications](/testing-with-cratis/). That makes the event-sourced shape explicit: `Establish()` or a scenario's `Given` builder seeds facts that already happened, `Because()` appends or provides the event under test, and each `[Fact]` asserts the new facts, read model state, or side effect.
+In .NET applications, Chronicle tests usually sit inside [Cratis Specifications](/testing-with-cratis/). That makes the event-sourced shape explicit: `Establish()` or a scenario's `Given` builder seeds facts that already happened, `Because()` appends or provides the event under test, and each `[Fact]` asserts the new facts, read model state, or side effect.
 
 ## Choosing the right test boundary
 
-Start with the in-process scenarios. They prove the Chronicle slice—appending, projection, reactor logic—with no infrastructure cost. Use the integration fixtures when the thing you need to prove crosses the boundary the in-process harness stands in for.
+Start with the in-process scenarios your client supports. They test the slice without infrastructure; use a kernel-backed test when you need to prove behavior the client's scenario does not cover. The table below names the .NET scenarios and integration fixtures:
 
 | What to prove | Start with | What it does not prove |
 |---|---|---|
@@ -22,7 +29,7 @@ Start with the in-process scenarios. They prove the Chronicle slice—appending,
 | Reactor side effects and event ordering | `ReactorScenario<T>` | Network observer registration, kernel event dispatch, redelivery — each event is handed to the reactor once, so a repeated delivery (and the idempotence it requires) needs a spec that delivers the event twice |
 | Actual storage writes, kernel connectivity, change streams | `ChronicleInProcessFixture` / `ChronicleOutOfProcessFixture` | Client isolation—the kernel is shared across tests |
 
-The integration fixtures available in `Cratis.Chronicle.XUnit.Integration` are:
+The .NET integration fixtures available in `Cratis.Chronicle.XUnit.Integration` are:
 
 - `ChronicleInProcessFixture` — an in-process Chronicle kernel with MongoDB via Testcontainers.
 - `ChronicleOutOfProcessFixture` — a Chronicle kernel in a separate container, also using Testcontainers.
@@ -31,7 +38,7 @@ The integration fixtures available in `Cratis.Chronicle.XUnit.Integration` are:
 
 Only the in-process and out-of-process fixtures are documented here; the others are for framework or advanced scenarios.
 
-## Packages
+## .NET packages
 
 ```xml
 <PackageReference Include="Cratis.Specifications.XUnit" />
@@ -57,13 +64,13 @@ Application command execution scopes, including Chronicle transactions, belong t
 
 <ChronicleClientTabs snippet="testing/index/example-spec" />
 
-The projection runs in-process, but the spec still reads like the domain: given the `AuthorRegistered` fact, the `Author` read model should contain the name the screen needs.
+The projection runs in-process, and the assertion stays close to the domain: given the `AuthorRegistered` fact, the `Author` read model should contain the name the screen needs.
 
 ## What the harness stands in for
 
-The in-process scenario helpers run the real projection and reducer engines, the real constraint evaluation, and the real reactor dispatch — but they substitute in-memory storage for the kernel's gRPC boundary and the persistent event log. That substitution is what makes them fast and isolated, and it's also the boundary they don't cross.
+The .NET in-process scenario helpers run the real projection and reducer engines, constraint evaluation, and reactor dispatch — but substitute in-memory storage for the kernel's gRPC boundary and persistent event log. That substitution is what makes them fast and isolated, and it's also the boundary they don't cross.
 
-When a test needs to prove behavior **across** that boundary — that a projection's sink writes actually landed in MongoDB, that a reactor registered its observer subscription with a running kernel, that change streams fired and advanced the checkpoint — reach for the [integration fixtures](#choosing-the-right-test-boundary) and `IEventAppendCollection` instead. Those exercise the full client-to-kernel-to-storage stack.
+When a .NET test needs to prove behavior **across** that boundary — that a projection's sink writes actually landed in MongoDB, that a reactor registered its observer subscription with a running kernel, that change streams fired and advanced the checkpoint — reach for the [integration fixtures](#choosing-the-right-test-boundary) and `IEventAppendCollection` instead. Those exercise the full client-to-kernel-to-storage stack.
 
 For a worked example of `IEventAppendCollection` and the integration fixtures, see [Event append collection](event-append-collection). For the full slice testing story — how `/chronicle/scenarios/test-a-slice/` fits with the in-process helpers and the integration boundary — see [Test a slice](/chronicle/scenarios/test-a-slice/).
 

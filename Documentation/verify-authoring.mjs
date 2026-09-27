@@ -39,12 +39,16 @@ function isSharedPage(file) {
     return firstDirectory !== 'client-snippets' && firstDirectory !== 'clients';
 }
 
-function directClientFenceLines(content) {
+function directClientFenceLines(content, isMdx = false) {
     const violations = [];
     const containers = [];
     let fence;
+    let paragraph = false;
     for (const [index, line] of content.split('\n').entries()) {
-        if (!line.trim()) continue;
+        if (!line.trim()) {
+            paragraph = false;
+            continue;
+        }
 
         let remainder = line;
         for (let position = 0; position < containers.length; position++) {
@@ -53,12 +57,19 @@ function directClientFenceLines(content) {
                 ? remainder.match(/^ {0,3}> ?/)
                 : remainder.match(new RegExp(`^ {${container.indent}}`));
             if (!prefix) {
+                // A paragraph can continue a list item without repeating its indentation.
+                // Keep the list context so a fenced block after a blank line remains in it.
+                if (!fence && paragraph && !/^ {0,3}(?:>|[-+*] +|\d{1,9}[.)] +|#{1,6}(?:\s|$)|`{3,}|~{3,})/.test(line)) {
+                    remainder = undefined;
+                    break;
+                }
                 containers.length = position;
                 fence = undefined;
                 break;
             }
             remainder = remainder.slice(prefix[0].length);
         }
+        if (remainder === undefined) continue;
 
         if (!fence) {
             while (true) {
@@ -79,10 +90,17 @@ function directClientFenceLines(content) {
             }
         }
 
-        // Fences may be indented at most three spaces inside their container.
-        const match = remainder.match(/^ {0,3}(`{3,}|~{3,})[ \t]*([^\s`~]*)(.*)$/);
-        if (!match) continue;
+        // MDX disables indented code blocks: even a fence indented four spaces
+        // inside an MDX component or list is parsed as a fenced code block.
+        const match = remainder.match(isMdx
+            ? /^ *(`{3,}|~{3,})[ \t]*([^\s`~]*)(.*)$/
+            : /^ {0,3}(`{3,}|~{3,})[ \t]*([^\s`~]*)(.*)$/);
+        if (!match) {
+            paragraph = !fence && remainder.trim().length > 0;
+            continue;
+        }
 
+        paragraph = false;
         const marker = match[1];
         if (!fence) {
             fence = { character: marker[0], length: marker.length };
@@ -114,9 +132,17 @@ function selfTestClientFences() {
         ['info-string closer in list', '- ~~~md\n  ~~~kt\n  ~~~ \n  ~~~c#\n  example\n  ~~~', '4'],
         ['indented code block', '    ```csharp\n    example\n    ```', ''],
         ['indented list content', '-     ```csharp\n      example', ''],
-        ['sibling list item', '- ```text\n- ```java\n  example\n  ```', '2']
+        ['sibling list item', '- ```text\n- ```java\n  example\n  ```', '2'],
+        ['lazy nested-list continuation', '- outer\n  - inner\nlazy continuation\n\n    ```csharp\n    example\n    ```', '5'],
+        ['lazy continuation then sibling', '- outer\n  - inner\nlazy continuation\n\n- sibling\n    ```csharp\n    example\n    ```', '6'],
+        ['indented fence in MDX', '    ```csharp\n    example\n    ```', '1', true],
+        ['indented fence inside MDX Aside', '<Aside>\n    ```ts\n    example\n    ```\n</Aside>', '2', true],
+        ['indented fence inside MDX TabItem', '<TabItem>\n    ~~~java\n    example\n    ~~~\n</TabItem>', '2', true],
+        ['indented fence inside Markdown Aside', '<Aside>\n    ```ts\n    example\n    ```\n</Aside>', '', false],
+        ['indented fence inside Markdown TabItem', '<TabItem>\n    ~~~java\n    example\n    ~~~\n</TabItem>', '', false],
+        ['lazy continuation with MDX indentation', '- outer\n  - inner\nlazy continuation\n\n        ```csharp\n        example\n        ```', '5', true]
     ];
-    const failedCase = containerCases.find(([, input, expected]) => directClientFenceLines(input).join(',') !== expected);
+    const failedCase = containerCases.find(([, input, expected, isMdx]) => directClientFenceLines(input, isMdx).join(',') !== expected);
     const excluded = ['client-snippets/example.md', 'clients/dotnet/example.md']
         .every(file => !isSharedPage(path.join(documentationRoot, file)));
     if (found !== clientFenceLanguages.size || nested !== 0 || failedCase ||
@@ -321,7 +347,7 @@ for (const file of markdownFiles) {
     const content = await readFile(file, 'utf8');
     validateContent(file, content);
     if (!isSharedPage(file)) continue;
-    for (const line of directClientFenceLines(content)) {
+    for (const line of directClientFenceLines(content, path.extname(file).toLowerCase() === '.mdx')) {
         errors.push(`${relative(file)}:${line}: Direct client-language fence in a shared page; use <ChronicleClientTabs> in .mdx.`);
     }
 }
