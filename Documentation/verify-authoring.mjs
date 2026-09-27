@@ -16,7 +16,7 @@ async function filesBelow(directory, predicate) {
     const files = [];
     for (const entry of await readdir(directory, { withFileTypes: true })) {
         const entryPath = path.join(directory, entry.name);
-        if (entry.isDirectory()) {
+        if (entry.isDirectory() && entry.name !== 'node_modules') {
             files.push(...await filesBelow(entryPath, predicate));
         } else if (predicate(entry.name)) {
             files.push(entryPath);
@@ -39,81 +39,38 @@ function isSharedPage(file) {
     return firstDirectory !== 'client-snippets' && firstDirectory !== 'clients';
 }
 
-function directClientFenceLines(content, isMdx = false) {
-    const violations = [];
-    const containers = [];
-    let fence;
-    let paragraph = false;
-    for (const [index, line] of content.split('\n').entries()) {
-        if (!line.trim()) {
-            paragraph = false;
-            continue;
-        }
+async function loadClientFenceDetector() {
+    // Load the site-compatible Markdown/MDX parser only for the shared-page audit or its self-test.
+    const [{ fromMarkdown }, { gfm }, { gfmFromMarkdown }, { mdxjs }, { mdxFromMarkdown }, { visit }] = await Promise.all([
+        import('mdast-util-from-markdown'),
+        import('micromark-extension-gfm'),
+        import('mdast-util-gfm'),
+        import('micromark-extension-mdxjs'),
+        import('mdast-util-mdx'),
+        import('unist-util-visit')
+    ]);
 
-        let remainder = line;
-        for (let position = 0; position < containers.length; position++) {
-            const container = containers[position];
-            const prefix = container.type === 'quote'
-                ? remainder.match(/^ {0,3}> ?/)
-                : remainder.match(new RegExp(`^ {${container.indent}}`));
-            if (!prefix) {
-                // A paragraph can continue a list item without repeating its indentation.
-                // Keep the list context so a fenced block after a blank line remains in it.
-                if (!fence && paragraph && !/^ {0,3}(?:>|[-+*] +|\d{1,9}[.)] +|#{1,6}(?:\s|$)|`{3,}|~{3,})/.test(line)) {
-                    remainder = undefined;
-                    break;
-                }
-                containers.length = position;
-                fence = undefined;
-                break;
+    return (content, isMdx = false) => {
+        // The site handles YAML frontmatter and converts DocFX xrefs before MDX parsing.
+        // Retain newlines so code node positions still refer to the original page.
+        const siteContent = content
+            .replace(/^---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*(?=\r?\n|$)/, match => match.replace(/[^\r\n]/g, ' '))
+            .replace(/<xref:([^>\n]+)>/g, (_, inner) => `\`${inner.split('?')[0]}\``);
+        const tree = fromMarkdown(siteContent, {
+            extensions: [gfm(), ...(isMdx ? [mdxjs()] : [])],
+            mdastExtensions: [gfmFromMarkdown(), ...(isMdx ? [mdxFromMarkdown()] : [])]
+        });
+        const violations = [];
+        visit(tree, 'code', node => {
+            if (node.lang && clientFenceLanguages.has(node.lang.toLowerCase())) {
+                violations.push(node.position.start.line);
             }
-            remainder = remainder.slice(prefix[0].length);
-        }
-        if (remainder === undefined) continue;
-
-        if (!fence) {
-            while (true) {
-                const quote = remainder.match(/^ {0,3}> ?/);
-                if (quote) {
-                    containers.push({ type: 'quote' });
-                    remainder = remainder.slice(quote[0].length);
-                    continue;
-                }
-
-                const list = remainder.match(/^( {0,3})([-+*]|\d{1,9}[.)])( +)/);
-                if (!list) break;
-                // A list item's content starts after 1–4 spaces; more than 4
-                // leaves the excess as indentation (possibly an indented code block).
-                const padding = list[3].length <= 4 ? list[3].length : 1;
-                containers.push({ type: 'list', indent: list[1].length + list[2].length + padding });
-                remainder = remainder.slice(list[1].length + list[2].length + padding);
-            }
-        }
-
-        // MDX disables indented code blocks: even a fence indented four spaces
-        // inside an MDX component or list is parsed as a fenced code block.
-        const match = remainder.match(isMdx
-            ? /^ *(`{3,}|~{3,})[ \t]*([^\s`~]*)(.*)$/
-            : /^ {0,3}(`{3,}|~{3,})[ \t]*([^\s`~]*)(.*)$/);
-        if (!match) {
-            paragraph = !fence && remainder.trim().length > 0;
-            continue;
-        }
-
-        paragraph = false;
-        const marker = match[1];
-        if (!fence) {
-            fence = { character: marker[0], length: marker.length };
-            if (clientFenceLanguages.has(match[2].toLowerCase())) violations.push(index + 1);
-        } else if (marker[0] === fence.character && marker.length >= fence.length &&
-            match[2] === '' && /^[ \t]*$/.test(match[3])) {
-            fence = undefined;
-        }
-    }
-    return violations;
+        });
+        return violations;
+    };
 }
 
-function selfTestClientFences() {
+function selfTestClientFences(directClientFenceLines) {
     const planted = [...clientFenceLanguages].map(language => `\`\`\`${language}\nexample\n\`\`\``).join('\n\n');
     const found = directClientFenceLines(planted).length;
     const nested = directClientFenceLines('````md\n```csharp\nexample\n````\n').length;
@@ -126,6 +83,10 @@ function selfTestClientFences() {
         ['ordered list', '1. ```elixir\n   example\n   ```', '1'],
         ['list continuation', '- item\n\n  ```tsx\n  example\n  ```', '3'],
         ['nested list', '- item\n  1. ```cs\n     example\n     ```', '2'],
+        ['nested-list outdent', '1. outer\n   1. inner\n    ```csharp\n    example\n    ```', '3'],
+        ['nested blockquote outdent', '> > inner\n> ```csharp\n> example\n> ```', '2'],
+        ['tab list marker', '-\t```csharp\n\texample\n\t```', '1'],
+        ['YAML frontmatter', '---\ntitle: "ConceptAs<T>"\n---\n```cs\nexample\n```', '4', true],
         ['quote and list', '> - ```typescript\n>   example\n>   ```', '1'],
         ['nested fence in quote', '> ````md\n> ```csharp\n> ````', ''],
         ['info-string closer in quote', '> ```md\n> ```tsx\n> ``` \n> ```java\n> example\n> ```', '4'],
@@ -137,6 +98,7 @@ function selfTestClientFences() {
         ['lazy continuation then sibling', '- outer\n  - inner\nlazy continuation\n\n- sibling\n    ```csharp\n    example\n    ```', '6'],
         ['indented fence in MDX', '    ```csharp\n    example\n    ```', '1', true],
         ['indented fence inside MDX Aside', '<Aside>\n    ```ts\n    example\n    ```\n</Aside>', '2', true],
+        ['tab-indented fence inside MDX Aside', '<Aside>\n\t```csharp\n\texample\n\t```\n</Aside>', '2', true],
         ['indented fence inside MDX TabItem', '<TabItem>\n    ~~~java\n    example\n    ~~~\n</TabItem>', '2', true],
         ['indented fence inside Markdown Aside', '<Aside>\n    ```ts\n    example\n    ```\n</Aside>', '', false],
         ['indented fence inside Markdown TabItem', '<TabItem>\n    ~~~java\n    example\n    ~~~\n</TabItem>', '', false],
@@ -335,20 +297,25 @@ if (process.argv.length > 3 || (process.argv[2] && process.argv[2] !== '--self-t
     process.exit(2);
 }
 if (process.argv[2] === '--self-test') {
-    selfTestClientFences();
+    selfTestClientFences(await loadClientFenceDetector());
     process.exit(0);
 }
 
 const markdownFiles = await filesBelow(documentationRoot, name => /\.mdx?$/i.test(name));
 const sharedPages = markdownFiles.filter(isSharedPage);
 if (sharedPages.length === 0) errors.push('No shared Chronicle pages found; client fence audit cannot run.');
+const directClientFenceLines = sharedPages.length > 0 ? await loadClientFenceDetector() : undefined;
 const tocFiles = await filesBelow(documentationRoot, name => /^toc\.ya?ml$/i.test(name));
 for (const file of markdownFiles) {
     const content = await readFile(file, 'utf8');
     validateContent(file, content);
     if (!isSharedPage(file)) continue;
-    for (const line of directClientFenceLines(content, path.extname(file).toLowerCase() === '.mdx')) {
-        errors.push(`${relative(file)}:${line}: Direct client-language fence in a shared page; use <ChronicleClientTabs> in .mdx.`);
+    try {
+        for (const line of directClientFenceLines(content, path.extname(file).toLowerCase() === '.mdx')) {
+            errors.push(`${relative(file)}:${line}: Direct client-language fence in a shared page; use <ChronicleClientTabs> in .mdx.`);
+        }
+    } catch (error) {
+        errors.push(`${relative(file)}:${error.line ?? 1}: Could not parse shared page for client-language fences: ${error.reason ?? error.message}`);
     }
 }
 await validateLandingCollisions(markdownFiles);
