@@ -14,6 +14,7 @@ public class a_remove_redundant_auto_map_call_code_fix_provider : Specification
             "namespace Cratis.Chronicle.Projections",
             "{",
             "    public interface IProjection { }",
+            "    public sealed class NoAutoMapAttribute : Attribute { }",
             "    public interface IFromBuilder<TReadModel, TEvent> { }",
             "    public interface IProjectionBuilderFor<TReadModel>",
             "    {",

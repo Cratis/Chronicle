@@ -55,6 +55,7 @@ public class EventStore : IEventStore
     readonly IIdentityProvider _identityProvider;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
+    readonly IReactorSideEffectHandlers _reactorSideEffectHandlers;
     readonly ILogger<EventStore> _logger;
     readonly IActivitySource<EventSequence> _activitySource;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
@@ -115,7 +116,10 @@ public class EventStore : IEventStore
         _causationManager = causationManager;
         _identityProvider = identityProvider;
         _jsonSerializerOptions = jsonSerializerOptions;
+        DecisionReadSchemas = schemaGenerator;
+        DecisionReadJsonOptions = jsonSerializerOptions;
         _clientArtifactsProvider = clientArtifactsProvider;
+        _reactorSideEffectHandlers = reactorSideEffectHandlers;
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
@@ -156,7 +160,8 @@ public class EventStore : IEventStore
             causationManager,
             UnitOfWorkManager,
             identityProvider,
-            jsonSerializerOptions);
+            jsonSerializerOptions,
+            reactorSideEffectHandlers);
         _sequences[EventLog.Id] = EventLog;
 
         Jobs = new Jobs.Jobs(this);
@@ -344,6 +349,12 @@ public class EventStore : IEventStore
     /// </summary>
     internal IEventSerializer EventSerializer { get; }
 
+    /// <summary>Gets the schema generator used for decision reads.</summary>
+    internal IJsonSchemaGenerator DecisionReadSchemas { get; }
+
+    /// <summary>Gets the JSON serializer options used for decision reads.</summary>
+    internal JsonSerializerOptions DecisionReadJsonOptions { get; }
+
     /// <summary>
     /// Gets the currently running background registration retry loop, if <see cref="StartBackgroundRegistrationRetry"/>
     /// has started one that has not yet finished.
@@ -401,7 +412,8 @@ public class EventStore : IEventStore
                 state.UnitOfWorkManager,
                 state._identityProvider,
                 state._jsonSerializerOptions,
-                state._activitySource),
+                state._activitySource,
+                state._reactorSideEffectHandlers),
             this);
 
     /// <inheritdoc/>

@@ -148,7 +148,11 @@ public class Sink(
         // in this case so only existing documents are updated.
         var hasJoined = changeset.HasJoined();
         var hasActualRootLevelJoin = HasActualRootLevelJoin(changeset.Changes);
-        var onlyPropertyUpdatesAlongsideJoin = hasJoined && hasDirectKeyScopedChanges && !hasConstructiveChanges;
+        var hasKeyedFrom = changeset.Changes.OfType<Joined>().Any(joined => joined.HasKeyedFrom);
+
+        // A From and a Join can consume the same event. Only a From owns the direct keyed write;
+        // a join-only event's direct properties have no safe _id target and must still be suppressed.
+        var onlyPropertyUpdatesAlongsideJoin = hasJoined && hasDirectKeyScopedChanges && !hasConstructiveChanges && !hasKeyedFrom;
         var shouldSuppressRootUpdateAfterRootLevelJoin = hasActualRootLevelJoin && onlyPropertyUpdatesAlongsideJoin;
 
         // Compute the _id filter value only when the document is actually keyed by _id. For a join whose
@@ -169,7 +173,7 @@ public class Sink(
         // coerces it back to the key type ("Unrecognized Guid format"). A CHILD join (has array indexers)
         // still upserts so it can construct the child structure regardless of seed order.
         var isRootLevelJoin = hasJoined && !key.ArrayIndexers.All.Any();
-        var isUpsert = !onlyPropertyUpdatesAlongsideJoin && !isRootLevelJoin;
+        var isUpsert = !onlyPropertyUpdatesAlongsideJoin && (!isRootLevelJoin || hasKeyedFrom);
 
         if (changeset.HasBeenRemoved())
         {
@@ -232,6 +236,31 @@ public class Sink(
         if (shouldSuppressRootUpdateAfterRootLevelJoin)
         {
             return [];
+        }
+
+        // Reads omit BSON nulls, so a missing parent in the initial state can still be
+        // present as null in an older document. Unset only that legacy null (not an
+        // existing object) before dotted leaf sets. Keep these ordered with the main
+        // write in bulk mode, and preserve the watermark guard on redelivery.
+        if (!usesJoinTargetsOnlyFilter)
+        {
+            foreach (var parent in converted.NullParentPaths.Select(path => (Path: path, Filters: (IReadOnlyList<BsonDocumentArrayFilterDefinition<BsonDocument>>)[]))
+                         .Concat(converted.NullArrayParents.Select(_ => (_.Path, Filters: _.ArrayFilters)))
+                         .OrderBy(_ => _.Path.Count(ch => ch == '.')))
+            {
+                var nullFilter = parent.Filters.Count == 0
+                    ? Builders<BsonDocument>.Filter.And(filter, Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null))
+                    : filter;
+                var unset = Builders<BsonDocument>.Update.Unset(parent.Path);
+                if (_isBulkMode)
+                {
+                    AddToBulk(new UpdateOneModel<BsonDocument>(nullFilter, unset) { ArrayFilters = parent.Filters }, key, eventSequenceNumber);
+                }
+                else
+                {
+                    await Collection.UpdateOneAsync(nullFilter, unset, new UpdateOptions { ArrayFilters = parent.Filters });
+                }
+            }
         }
 
         if (_isBulkMode)
@@ -436,6 +465,7 @@ public class Sink(
         var totalCount = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
         var documents = await collection
             .Find(FilterDefinition<BsonDocument>.Empty)
+            .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
             .Skip(skip)
             .Limit(take)
             .ToListAsync();
@@ -456,6 +486,7 @@ public class Sink(
             // Get initial instances
             var documents = await collection
                 .Find(FilterDefinition<BsonDocument>.Empty)
+                .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
                 .Skip(skip)
                 .Limit(take)
                 .ToListAsync();
@@ -467,7 +498,7 @@ public class Sink(
                 allDocuments =>
                 {
                     // Re-query with skip/take when changes occur
-                    var updatedDocuments = allDocuments.Skip(skip).Take(take);
+                    var updatedDocuments = allDocuments.OrderBy(doc => doc["_id"]).Skip(skip).Take(take);
                     observer.OnNext(updatedDocuments.Select(doc => expandoObjectConverter.ToExpandoObject(doc, schema)));
                 },
                 observer.OnError,

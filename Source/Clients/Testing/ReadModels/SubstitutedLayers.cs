@@ -152,7 +152,7 @@ internal static class SubstitutedLayers
         substitutions.Add(new(
             ReadModelSubstitutedLayer.DeferredKeyHandling,
             $"a cross-stream parent key on child collection '{string.Join("', '", crossStreamChildren)}'",
-            "a child whose parent has not arrived yet is retried once here after every other seeded event, where a deployed Chronicle defers the partition and redelivers, so arrival order and redelivery are not modeled"));
+            "deferred child keys are retried to a fixed point after the seeded events, where a deployed Chronicle defers the partition and redelivers it as the parent arrives"));
     }
 
     static IEnumerable<(string Path, ChildrenDefinition Definition)> Descendants(ProjectionDefinition definition) =>

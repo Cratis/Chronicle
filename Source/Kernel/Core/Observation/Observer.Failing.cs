@@ -78,14 +78,7 @@ public partial class Observer
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FailingPartitionRecovered(partition);
-        var partitionWasFailed = Failures.IsFailed(partition);
-        failures.State.Remove(partition);
-        await failures.WriteStateAsync();
-        if (partitionWasFailed)
-        {
-            State = State with { FailedPartitionCount = State.FailedPartitionCount - 1 };
-        }
-
+        await ResolveFailedPartition(partition);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
@@ -206,6 +199,17 @@ public partial class Observer
     /// </remarks>
     static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
         retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
+
+    async Task ResolveFailedPartition(Key partition)
+    {
+        var partitionWasFailed = Failures.IsFailed(partition);
+        failures.State.Remove(partition);
+        await failures.WriteStateAsync();
+        if (partitionWasFailed)
+        {
+            State = State with { FailedPartitionCount = State.FailedPartitionCount - 1 };
+        }
+    }
 
     async Task StartRecoverJobForFailedPartition(FailedPartition failedPartition)
     {

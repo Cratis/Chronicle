@@ -11,8 +11,8 @@ import * as faIcons from 'react-icons/fa6';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Page } from 'Components/Common/Page';
+import { SelectionCheckbox } from 'Components/Common/SelectionCheckbox';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
-import { toast } from '@cratis/components/Notifications';
 
 const occurred = (recommendation: RecommendationDetails) => {
     return recommendation.occurred.toLocaleString();
@@ -26,66 +26,36 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
         eventStore: params.eventStore!,
         namespace: params.namespace!
     };
-
-    const confirm = async (single: string, bulk: string, count: number, name: string) => {
-        const isBulk = count > 1;
-        const result = await showConfirmation(
-            isBulk ? bulk : single,
-            isBulk
-                ? strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendations.message.replace('{count}', count.toString())
-                : strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendation.message.replace('{name}', name),
-            DialogButtons.YesNo);
-        return result === DialogResult.Yes;
-    };
+    const [recommendations] = AllRecommendations.use(queryArgs);
 
     const handleIgnore = async () => {
-        const selected = viewModel.selectedRecommendations;
-        if (selected.length === 0) {
+        const recommendationIds = viewModel.selectedRecommendationIds;
+        if (recommendationIds.length === 0) {
             return;
         }
 
-        const confirmed = await confirm(
-            strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendation.title,
-            strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendations.title,
-            selected.length,
-            selected[0].name);
+        const isBulk = recommendationIds.length > 1;
+        const singleRecommendation = isBulk
+            ? undefined
+            : recommendations.data.find(recommendation => recommendation.id.equals(recommendationIds[0]));
 
-        if (!confirmed) {
+        const result = await showConfirmation(
+            isBulk
+                ? strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendations.title
+                : strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendation.title,
+            isBulk
+                ? strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendations.message.replace('{count}', recommendationIds.length.toString())
+                : strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendation.message.replace('{name}', singleRecommendation?.name ?? ''),
+            DialogButtons.YesNo);
+
+        if (result !== DialogResult.Yes) {
             return;
         }
 
-        // A failure here has to reach the user. Reporting it only to the console left the dialog
-        // closing on an unchanged list with nothing said, which reads exactly like the action having
-        // silently done nothing.
-        const outcome = await viewModel.ignoreRecommendations(selected.map(recommendation => recommendation.id));
-        if (outcome.failed === 0) {
-            toast.success({ title: strings.eventStore.namespaces.recommendations.notifications.ignored });
-        } else {
-            toast.error({
-                title: strings.eventStore.namespaces.recommendations.notifications.ignoreFailed,
-                description: strings.eventStore.namespaces.recommendations.notifications.partialFailure
-                    .replace('{failed}', outcome.failed.toString())
-                    .replace('{total}', outcome.total.toString())
-            });
-        }
-    };
-
-    const handlePerform = async () => {
-        const selected = viewModel.selectedRecommendations;
-        if (selected.length === 0) {
-            return;
-        }
-
-        const outcome = await viewModel.performRecommendations(selected.map(recommendation => recommendation.id));
-        if (outcome.failed === 0) {
-            toast.success({ title: strings.eventStore.namespaces.recommendations.notifications.performed });
-        } else {
-            toast.error({
-                title: strings.eventStore.namespaces.recommendations.notifications.performFailed,
-                description: strings.eventStore.namespaces.recommendations.notifications.partialFailure
-                    .replace('{failed}', outcome.failed.toString())
-                    .replace('{total}', outcome.total.toString())
-            });
+        try {
+            await viewModel.ignoreRecommendations(recommendationIds);
+        } catch (error) {
+            console.error('Failed to ignore recommendations:', error);
         }
     };
 
@@ -95,25 +65,31 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
             title={strings.eventStore.namespaces.recommendations.title}
             query={AllRecommendations}
             queryArguments={queryArgs}
-            selectionMode='multiple'
-            selectedItems={viewModel.selectedRecommendations}
-            onSelectedItemsChange={(items) => (viewModel.selectedRecommendations = items as RecommendationDetails[])}
+            onSelectionChange={(e) => (viewModel.selectedRecommendation = e.value as RecommendationDetails)}
             dataKey='id'
             emptyMessage={strings.eventStore.namespaces.recommendations.empty}>
 
             <DataPage.MenuItems>
                 <MenuItem
+                    label={strings.eventStore.namespaces.recommendations.actions.selectAll} icon={faIcons.FaSquareCheck}
+                    command={() => viewModel.selectAllRecommendations(recommendations.data.map((recommendation: RecommendationDetails) => recommendation.id))} />
+                <MenuItem
                     label={strings.eventStore.namespaces.recommendations.actions.perform} icon={faIcons.FaArrowsRotate}
                     disableOnUnselected
-                    command={() => handlePerform()} />
+                    command={() => viewModel.perform()} />
                 <MenuItem
                     label={strings.eventStore.namespaces.recommendations.actions.ignore} icon={faIcons.FaBan}
-                    disableOnUnselected
+                    disabled={viewModel.selectedRecommendationIds.length === 0}
                     command={() => handleIgnore()} />
             </DataPage.MenuItems>
 
             <DataPage.Columns>
-                <Column selectionMode='multiple' />
+                <Column
+                    body={(recommendation: RecommendationDetails) => (
+                        <SelectionCheckbox
+                            checked={viewModel.isRecommendationSelected(recommendation.id)}
+                            onToggle={() => viewModel.toggleRecommendationSelection(recommendation.id)} />
+                    )} />
                 <Column field='name' header={strings.eventStore.namespaces.recommendations.columns.name} sortable />
                 <Column field='description' header={strings.eventStore.namespaces.recommendations.columns.description} />
                 <Column field='occurred' header={strings.eventStore.namespaces.recommendations.columns.occurred} body={occurred} />

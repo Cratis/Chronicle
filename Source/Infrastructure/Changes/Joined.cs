@@ -13,4 +13,11 @@ namespace Cratis.Chronicle.Changes;
 /// <param name="OnProperty">The property being joined.</param>
 /// <param name="ArrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
 /// <param name="Changes">Changes applicable for the join change.</param>
-public record Joined(object State, object Key, PropertyPath OnProperty, ArrayIndexers ArrayIndexers, IEnumerable<Change> Changes) : Change(State);
+public record Joined(object State, object Key, PropertyPath OnProperty, ArrayIndexers ArrayIndexers, IEnumerable<Change> Changes) : Change(State)
+{
+    /// <summary>
+    /// Gets or sets whether this event also has a keyed From mapping at this projection level.
+    /// A root join alone cannot construct a document, but a From mapping can.
+    /// </summary>
+    public bool HasKeyedFrom { get; set; }
+}

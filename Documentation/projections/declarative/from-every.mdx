@@ -24,11 +24,11 @@ Map the event source id when the read model's primary identifier is not otherwis
 
 ## Child Projection Inclusion
 
-Some clients let the projection decide whether child projection events should update parent-level every-event fields.
+`FromEvery` maps events handled at the level where it is declared: `from` events and `join` events. It does not subscribe the parent to events handled only by child projections. `ExcludeChildProjections()` (or `exclude children` in the declaration language) stores an inclusion flag, but that flag currently does not change which events update the parent. The default is to store the flag as included; neither setting makes child-only events update parent-level fields.
 
 <ChronicleClientTabs snippet="projections/declarative/from-every/exclude-children" />
 
-When child projections are included, parent metadata can update for events that only affect a child item.
+Use a root `FromAll` mapping if the parent must observe every event type in the sequence, including events handled by children. Unlike `FromEvery`, that also observes unrelated event types.
 
 :::note[Client coverage]
 This example depends on declarative child collections, which are currently C#-only (see [Children](./children)). It stays C#-only until child projection scopes are available in the other clients.

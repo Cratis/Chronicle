@@ -202,6 +202,10 @@ public class EventStoreForTesting : IEventStore
 
         _readModelsForTesting = new ReadModelsForTesting(realReadModels);
         ReadModels = _readModelsForTesting;
+        DecisionReads.RegisterTesting(this, new DecisionReadsForTesting(
+            this,
+            new DecisionReads(this, _projections, JsonSchemaGenerator, _jsonSerializerOptions),
+            _readModelsForTesting));
 
         _constraintProvider = CreateConstraintProvider(_artifactActivator);
 

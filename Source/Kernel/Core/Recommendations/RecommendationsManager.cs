@@ -26,11 +26,6 @@ public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsM
         var recommendationType = (RecommendationType)typeof(TRecommendation);
         var existingRecommendations = await recommendationStorage.GetAll();
         var requestAsJson = JsonSerializer.Serialize((object)request);
-
-        // The match includes recommendations a human has ignored. That is the point of keeping them:
-        // the request carries everything that makes this recommendation what it is - for a replay
-        // candidate, the observer and the reasons - so an identical request is the same recommendation
-        // and stays declined, while a changed situation serializes differently and is raised afresh.
         var existing = existingRecommendations.FirstOrDefault(r =>
             r.Type == recommendationType &&
             JsonSerializer.Serialize((object)r.Request) == requestAsJson);
@@ -51,13 +46,6 @@ public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsM
     {
         var recommendation = await GetGrainFor(recommendationId);
         await recommendation.Ignore();
-    }
-
-    /// <inheritdoc/>
-    public async Task Unignore(RecommendationId recommendationId)
-    {
-        var recommendation = await GetGrainFor(recommendationId);
-        await recommendation.Unignore();
     }
 
     /// <inheritdoc/>

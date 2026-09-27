@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
@@ -25,11 +26,11 @@ namespace Cratis.Chronicle.Reactors;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="sideEffectHandlers">
 /// Optional <see cref="IReactorSideEffectHandlers"/> used to process events returned by handler methods.
-/// When <see langword="null"/>, any return values are silently discarded.
+/// When <see langword="null"/>, a non-null return value fails the invocation.
 /// </param>
 /// <param name="eventStore">
 /// Optional <see cref="IEventStore"/> supplied to side effect handlers when appending events.
-/// When <see langword="null"/>, any return values are silently discarded even if handlers are registered.
+/// When <see langword="null"/>, a non-null return value fails the invocation even if handlers are registered.
 /// </param>
 /// <param name="reactorContextValuesBuilder">
 /// Optional <see cref="IReactorContextValuesBuilder"/> used to resolve append-metadata for side-effect events.
@@ -56,7 +57,8 @@ public class ReactorInvoker(
     IServiceProvider? serviceProvider = null) : IReactorInvoker
 {
     static readonly ConcurrentDictionary<Type, HandlerMethods> _methodsByEventTypeCache = [];
-    readonly HandlerMethods _methodsByEventType = MethodsByEventType.Get(targetType, eventTypes.AllClrTypes);
+    static readonly ConditionalWeakTable<IReactorSideEffectHandlers, ConcurrentDictionary<Type, HandlerMethods>> _methodsByHandlersCache = new();
+    readonly HandlerMethods _methodsByEventType = MethodsByEventType.Get(targetType, eventTypes.AllClrTypes, sideEffectHandlers);
     readonly IReactorMethodArgumentsResolver _argumentsResolver = argumentsResolver ?? new ReactorMethodArgumentsResolver();
 
     /// <summary>
@@ -66,7 +68,17 @@ public class ReactorInvoker(
     /// <param name="reactorType">The reactor <see cref="Type"/> to get event types for.</param>
     /// <returns>Collection of discovered <see cref="EventType"/>.</returns>
     public static IImmutableList<EventType> GetEventTypesFor(IEventTypes eventTypes, Type reactorType) =>
-        MethodsByEventType.Get(reactorType, eventTypes.AllClrTypes)
+        GetEventTypesFor(eventTypes, reactorType, null);
+
+    /// <summary>
+    /// Gets the event types for a reactor, including methods returning handler-claimed synchronous side effects.
+    /// </summary>
+    /// <param name="eventTypes">Registry of known event types.</param>
+    /// <param name="reactorType">The reactor type to inspect.</param>
+    /// <param name="sideEffectHandlers">Handlers claiming synchronous return types.</param>
+    /// <returns>The event types handled by the reactor.</returns>
+    public static IImmutableList<EventType> GetEventTypesFor(IEventTypes eventTypes, Type reactorType, IReactorSideEffectHandlers? sideEffectHandlers) =>
+        MethodsByEventType.Get(reactorType, eventTypes.AllClrTypes, sideEffectHandlers)
             .AllEventTypes
             .Select(eventTypes.GetEventTypeFor)
             .ToImmutableList();
@@ -99,10 +111,10 @@ public class ReactorInvoker(
 
                 var returnValue = method.Invoke(activatedReactor.Instance, arguments);
 
-                var sideEffectFailure = await HandleReturnValue(method, returnValue, eventContext);
-                if (sideEffectFailure is not null)
+                var returnValueFailure = await HandleReturnValue(method, returnValue, eventContext);
+                if (returnValueFailure is not null)
                 {
-                    return ReactorInvocationResult.FromSideEffectFailure(sideEffectFailure);
+                    return returnValueFailure;
                 }
             }
             else
@@ -132,7 +144,7 @@ public class ReactorInvoker(
         }
     }
 
-    async Task<ReactorSideEffectFailure?> HandleReturnValue(MethodInfo method, object? returnValue, EventContext eventContext)
+    async Task<ReactorInvocationResult?> HandleReturnValue(MethodInfo method, object? returnValue, EventContext eventContext)
     {
         if (method.ReturnType == typeof(void))
         {
@@ -148,16 +160,16 @@ public class ReactorInvoker(
                 return null;
             }
 
-            if (sideEffectHandlers is null || eventStore is null)
-            {
-                return null;
-            }
-
             var resultProperty = task.GetType().GetProperty(nameof(Task<object>.Result));
             var result = resultProperty?.GetValue(task);
             if (result is null)
             {
                 return null;
+            }
+
+            if (sideEffectHandlers is null || eventStore is null)
+            {
+                return ReactorInvocationResult.FromException(new UnhandledReactorReturnValue(targetType, result.GetType()));
             }
 
             var reactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext))
@@ -169,21 +181,26 @@ public class ReactorInvoker(
                 var handleResult = await sideEffectHandlers.Handle(reactorContext, eventStore, result);
                 if (!handleResult.IsSuccess && handleResult.TryGetError(out var failure) && failure is not null)
                 {
-                    return failure;
+                    return ReactorInvocationResult.FromSideEffectFailure(failure);
                 }
             }
             else
             {
-                logger.ReactorReturnValueNotHandled(targetType.GetReactorId(), result.GetType().Name);
+                return ReactorInvocationResult.FromException(new UnhandledReactorReturnValue(targetType, result.GetType()));
             }
 
             return null;
         }
 
         // Synchronous side-effect return value (e.g. TEvent, IEnumerable<T>)
-        if (sideEffectHandlers is null || eventStore is null || returnValue is null)
+        if (returnValue is null)
         {
             return null;
+        }
+
+        if (sideEffectHandlers is null || eventStore is null)
+        {
+            return ReactorInvocationResult.FromException(new UnhandledReactorReturnValue(targetType, returnValue.GetType()));
         }
 
         var syncReactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext))
@@ -195,12 +212,12 @@ public class ReactorInvoker(
             var handleResult = await sideEffectHandlers.Handle(syncReactorContext, eventStore, returnValue);
             if (!handleResult.IsSuccess && handleResult.TryGetError(out var failure) && failure is not null)
             {
-                return failure;
+                return ReactorInvocationResult.FromSideEffectFailure(failure);
             }
         }
         else
         {
-            logger.ReactorReturnValueNotHandled(targetType.GetReactorId(), returnValue.GetType().Name);
+            return ReactorInvocationResult.FromException(new UnhandledReactorReturnValue(targetType, returnValue.GetType()));
         }
 
         return null;
@@ -261,13 +278,13 @@ public class ReactorInvoker(
 
     static class MethodsByEventType
     {
-        public static HandlerMethods Get(Type targetType, IEnumerable<Type> eventTypes) =>
-            _methodsByEventTypeCache.GetOrAdd(
-                targetType,
-                static (key, keyEventTypes) => Build(key, keyEventTypes),
-                eventTypes);
+        public static HandlerMethods Get(Type targetType, IEnumerable<Type> eventTypes, IReactorSideEffectHandlers? sideEffectHandlers = null) =>
+            sideEffectHandlers is null
+                ? _methodsByEventTypeCache.GetOrAdd(targetType, static (key, keyEventTypes) => Build(key, keyEventTypes, null), eventTypes)
+                : _methodsByHandlersCache.GetValue(sideEffectHandlers, static _ => new ConcurrentDictionary<Type, HandlerMethods>())
+                    .GetOrAdd(targetType, static (key, state) => Build(key, state.EventTypes, state.Handlers), (EventTypes: eventTypes, Handlers: sideEffectHandlers));
 
-        static HandlerMethods Build(Type targetType, IEnumerable<Type> eventTypes)
+        static HandlerMethods Build(Type targetType, IEnumerable<Type> eventTypes, IReactorSideEffectHandlers? sideEffectHandlers)
         {
             var liveMethodsByEventType = new Dictionary<Type, MethodInfo>();
             var replayMethodsByEventType = new Dictionary<Type, MethodInfo>();
@@ -278,7 +295,7 @@ public class ReactorInvoker(
             // and without this it could overwrite the real handler purely on reflection order.
             foreach (var method in targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ByPrecedence())
             {
-                if (!method.IsEventHandlerMethod(eventTypes))
+                if (!method.IsEventHandlerMethod(eventTypes, sideEffectHandlers))
                 {
                     // A public method shaped like a handler (its first parameter is a known event type) but with
                     // an unrecognized return type is almost always a mistake. Left unchecked it is silently

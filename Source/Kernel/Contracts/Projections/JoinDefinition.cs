@@ -26,4 +26,10 @@ public class JoinDefinition
     /// </summary>
     [ProtoMember(3)]
     public string Key { get; set; }
+
+    /// <summary>
+    /// Gets or sets the join event's automatic mapping mode. Zero inherits the projection setting.
+    /// </summary>
+    [ProtoMember(4)]
+    public AutoMap AutoMap { get; set; }
 }

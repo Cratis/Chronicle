@@ -32,6 +32,14 @@ public interface IReactorSideEffectHandlers
     bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) => CanHandle(reactorContext, value);
 
     /// <summary>
+    /// Determines whether any registered handler claims a synchronous reactor return type.
+    /// </summary>
+    /// <param name="type">The declared return type of the reactor method.</param>
+    /// <returns><see langword="true"/> if any handler claims the type; otherwise <see langword="false"/>.</returns>
+    /// <remarks>Defaults to false for existing dispatcher implementations.</remarks>
+    bool CanHandleReturnType(Type type) => false;
+
+    /// <summary>
     /// Dispatches the return value to all handlers that can process it.
     /// </summary>
     /// <param name="reactorContext">The <see cref="ReactorContext"/> for the reactor invocation.</param>

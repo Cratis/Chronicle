@@ -33,6 +33,7 @@ public class SqlSinkHarness : ISinkHarness
         // writes to its own container and the sink swaps that in when the replay ends, so a harness that
         // ignored the name would fail every replay case for a reason that has nothing to do with the sink.
         var database = Substitute.For<IDatabase>();
+        database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
             .Returns(callInfo => Task.FromResult(new DbContextScope<ReadModelDbContext>(CreateContext(callInfo.ArgAt<string>(2)), () => { })));
 

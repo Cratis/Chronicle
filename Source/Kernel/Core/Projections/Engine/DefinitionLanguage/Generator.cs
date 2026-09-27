@@ -224,6 +224,14 @@ public class Generator : IGenerator
             var join = kv.Value;
 
             sb.AppendLine($"{Indent(indent + 1)}with {eventType}");
+            if (join.AutoMap == AutoMap.Disabled)
+            {
+                sb.AppendLine($"{Indent(indent + 2)}no automap");
+            }
+            else if (join.AutoMap == AutoMap.Enabled)
+            {
+                sb.AppendLine($"{Indent(indent + 2)}automap");
+            }
 
             // Property mappings - filter out redundant mappings when automap is enabled
             foreach (var prop in join.Properties)
@@ -318,8 +326,7 @@ public class Generator : IGenerator
         // RemovedWith blocks
         foreach (var kv in children.RemovedWith)
         {
-            // Inside a nested block the removal spells 'clear with' - there is no instance to remove, only
-            // content to blank - and that is what the parser turns into this same keyless RemovedWith.
+            // A nested object has no instance to remove; clearing its content uses the keyless form.
             if (isNested && !kv.Value.Key.IsSet() && kv.Value.ParentKey is null)
             {
                 sb.AppendLine($"{Indent(indent + 1)}clear with {kv.Key.Id.Value}");

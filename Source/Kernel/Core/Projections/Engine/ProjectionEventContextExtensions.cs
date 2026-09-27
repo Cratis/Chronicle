@@ -41,13 +41,33 @@ public static class ProjectionEventContextExtensions
     /// <returns>A new observable for the Join operation.</returns>
     public static IObservable<ProjectionEventContext> Join(
         this IObservable<ProjectionEventContext> observable,
-        PropertyPath onModelProperty)
+        PropertyPath onModelProperty) => Join(observable, onModelProperty, false);
+
+    /// <summary>
+    /// Join with an event, preserving whether a keyed From at this level also consumes it.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="onModelProperty">The property on the model to join on.</param>
+    /// <param name="hasKeyedFrom">Whether the same event is also projected through a keyed From at this level.</param>
+    /// <returns>A new observable for the Join operation.</returns>
+    public static IObservable<ProjectionEventContext> Join(
+        this IObservable<ProjectionEventContext> observable,
+        PropertyPath onModelProperty,
+        bool hasKeyedFrom)
     {
         return Observable.Create<ProjectionEventContext>(observer =>
             observable.Subscribe(
                 _ =>
                 {
                     var changeset = _.Changeset.Join(onModelProperty, _.JoinKey ?? _.Key.Value, _.Key.ArrayIndexers);
+                    if (hasKeyedFrom)
+                    {
+                        // Join creates the outer change before the child changeset receives its mappings.
+                        // Preserve the From origin so sinks can distinguish a keyed write from a join-only
+                        // event whose direct all-event changes must not upsert a phantom root.
+                        _.Changeset.Changes.OfType<Joined>().Last().HasKeyedFrom = true;
+                    }
+
                     observer.OnNext(_ with { Changeset = changeset });
                 },
                 observer.OnError,

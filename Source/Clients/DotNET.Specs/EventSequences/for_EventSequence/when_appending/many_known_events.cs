@@ -68,4 +68,5 @@ public class many_known_events : given.an_event_sequence
     [Fact] void should_append_events_with_correct_caused_by() => _command.CausedBy.ToClient().ShouldEqual(_causedBy);
     [Fact] void should_append_events_with_strategy_concurrency_scope() => _command.ConcurrencyScope.SequenceNumber.ShouldEqual((ulong)_scope.SequenceNumber);
     [Fact] void should_return_result_with_sequence_numbers() => _result.SequenceNumbers.Select(_ => _.Value).ShouldEqual(_response.SequenceNumbers);
+    [Fact] void should_carry_the_appended_event_type_once() => _result.EventTypes.ShouldContainOnly([_eventType]);
 }

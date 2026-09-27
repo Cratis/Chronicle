@@ -8,4 +8,15 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 /// <param name="IsSuccess">Whether all affected observers completed successfully.</param>
 /// <param name="FailedPartitions">Collection of failed partitions discovered while waiting.</param>
-public record AppendResultWaitForCompletionResult(bool IsSuccess, IEnumerable<FailedPartition> FailedPartitions);
+public record AppendResultWaitForCompletionResult(bool IsSuccess, IEnumerable<FailedPartition> FailedPartitions)
+{
+    /// <summary>
+    /// Gets whether the wait timed out before every observer completed or failed.
+    /// </summary>
+    public bool TimedOut { get; init; }
+
+    /// <summary>
+    /// Gets the identifiers of observers still outstanding when the wait timed out.
+    /// </summary>
+    public IEnumerable<string> OutstandingObservers { get; init; } = [];
+}

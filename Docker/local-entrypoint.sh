@@ -1,31 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
-# Only start the embedded MongoDB when the kernel is actually going to use it as its own
-# storage. Cratis.Chronicle.XUnit.Integration's ChronicleOutOfProcessFixture relies on exactly
-# this embedded instance (it never sets Cratis__Chronicle__Storage__ConnectionDetails, so the
-# kernel falls back to localhost:27017). Cratis.Chronicle.Integration's ChronicleConfigurableFixture
-# never does that - even for MongoDB it always starts a dedicated, separate MongoDB container and
-# points ConnectionDetails at that container's hostname - so this embedded mongod would be entirely
-# redundant there. Redundant is not harmless: this mongod is a lone-member replica set that can
-# never find a sync source ("Could not find member to sync from"), so it re-elects itself every
-# few seconds for as long as the container lives, continuously opening and closing loopback
-# connections while the Chronicle server's own Kestrel bind to the fixed, in-ephemeral-range port
-# 35000 (see Docker/report-port-holder.sh) is still in flight - a plausible source of the
-# intermittent "address already in use" container-start failures tracked in #4048.
-STORAGE_TYPE="${Cratis__Chronicle__Storage__Type:-MongoDB}"
-CONNECTION_DETAILS="${Cratis__Chronicle__Storage__ConnectionDetails:-}"
+/usr/bin/mongod --replSet "rs0" --bind_ip 0.0.0.0 > /dev/null &
 
-if [ "${STORAGE_TYPE,,}" = "mongodb" ] && { [ -z "$CONNECTION_DETAILS" ] || [[ "$CONNECTION_DETAILS" == *"localhost"* || "$CONNECTION_DETAILS" == *"127.0.0.1"* ]]; }; then
-  /usr/bin/mongod --replSet "rs0" --bind_ip 0.0.0.0 > /dev/null &
+# Wait for MongoDB to start
+until mongosh --quiet --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
+  sleep 1
+done
 
-  # Wait for MongoDB to start
-  until mongosh --quiet --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
-    sleep 1
-  done
-
-  # Initialize replica set if not already initialized
-  mongosh --quiet --eval "
+# Initialize replica set if not already initialized
+mongosh --quiet --eval "
 try {
   rs.status();
 } catch(e) {
@@ -39,7 +23,6 @@ try {
   }
 }
 "
-fi
 
 # The server aborts when something already holds its port, the container exits 134, and every test
 # sharing the fixture fails on an unresolved fixture argument. That is a container-start failure, so

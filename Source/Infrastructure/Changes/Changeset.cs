@@ -3,6 +3,7 @@
 
 using System.Collections;
 using System.Dynamic;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Properties;
 using Cratis.Collections;
@@ -218,7 +219,26 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     /// <inheritdoc/>
     public void ClearNested(PropertyPath nestedProperty, ArrayIndexers arrayIndexers)
     {
+        var workingState = CurrentState.Clone();
+        if (workingState is ExpandoObject expando)
+        {
+            if (expando.TryGetExistingPath(nestedProperty, arrayIndexers) is { } parent)
+            {
+                ((IDictionary<string, object?>)parent)[nestedProperty.LastSegment.Value] = null;
+            }
+        }
+        else
+        {
+            var parentPath = PropertyPath.CreateFrom([.. nestedProperty.Segments.SkipLast(1)]);
+            object? existingParent = workingState;
+            if ((parentPath.IsRoot || TryGetValueAtPath(workingState, parentPath, arrayIndexers, out existingParent)) && existingParent is not null)
+            {
+                PropertyPath.CreateFrom([nestedProperty.LastSegment]).GetPropertyInfoFor(existingParent.GetType()).SetValue(existingParent, null);
+            }
+        }
+
         Add(new NestedCleared(nestedProperty, arrayIndexers));
+        CurrentState = workingState;
     }
 
     /// <inheritdoc/>

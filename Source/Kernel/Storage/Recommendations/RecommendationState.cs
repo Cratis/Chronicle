@@ -39,17 +39,4 @@ public class RecommendationState
     /// Gets or sets the request associated with the recommendation.
     /// </summary>
     public IRecommendationRequest Request { get; set; } = default!;
-
-    /// <summary>
-    /// Gets or sets a value indicating whether a human has declined this recommendation.
-    /// </summary>
-    /// <remarks>
-    /// An ignored recommendation is kept rather than deleted, because the decision to decline it is
-    /// what has to survive. Recommendations are raised from a pure evaluation of current state, so a
-    /// deleted one is simply re-raised the next time that evaluation runs - which is every client
-    /// reconnect. Keeping it means the duplicate check in the recommendations manager recognizes it
-    /// and declines to raise it again, while a genuinely changed situation - which produces a
-    /// different request, and so a different identity - is raised as the new recommendation it is.
-    /// </remarks>
-    public bool IsIgnored { get; set; }
 }

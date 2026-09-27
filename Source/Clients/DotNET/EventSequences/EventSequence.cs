@@ -15,6 +15,7 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.Transactions;
 using Cratis.Monads;
 using Cratis.Traces;
@@ -42,6 +43,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
 /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
 /// <param name="activitySource">Optional <see cref="IActivitySource{T}"/> for tracing. Defaults to a source named <see cref="ClientActivity.SourceName"/> when not provided.</param>
+/// <param name="sideEffectHandlers">Optional handlers used to recognize synchronous reactor return types.</param>
 public class EventSequence(
     EventStoreName eventStoreName,
     EventStoreNamespaceName @namespace,
@@ -56,7 +58,8 @@ public class EventSequence(
     IUnitOfWorkManager unitOfWorkManager,
     IIdentityProvider identityProvider,
     JsonSerializerOptions jsonSerializerOptions,
-    IActivitySource<EventSequence>? activitySource = null) : IEventSequence
+    IActivitySource<EventSequence>? activitySource = null,
+    IReactorSideEffectHandlers? sideEffectHandlers = null) : IEventSequence
 {
     /// <summary>
     /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client event sequence traces.
@@ -152,6 +155,7 @@ public class EventSequence(
             EventStore = eventStoreName,
             EventStoreNamespace = @namespace,
             EventSequenceId = eventSequenceId,
+            EventTypes = [eventType],
             Observers = GetObservers()
         };
         if (_appendedEventsRaised is not null)
@@ -269,6 +273,8 @@ public class EventSequence(
             EventStore = eventStoreName,
             EventStoreNamespace = @namespace,
             EventSequenceId = eventSequenceId,
+            EventTypes = eventsToAppend.Select(_ => _.EventType.ToClient()).DistinctBy(_ => _.Id).ToArray(),
+            AppendedEventTypes = eventsToAppend.Select(_ => _.EventType.ToClient()).ToArray(),
             Observers = GetObservers()
         };
         NotifyAppendMany(
@@ -379,7 +385,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type)
     {
-        var observerEventTypes = ReactorInvoker.GetEventTypesFor(eventTypes, type);
+        var observerEventTypes = ReactorInvoker.GetEventTypesFor(eventTypes, type, sideEffectHandlers);
         return await GetTailSequenceNumber(filterEventTypes: observerEventTypes);
     }
 
@@ -467,6 +473,13 @@ public class EventSequence(
         };
     }
 
+    /// <summary>Checks whether this is the event log for the exact decision-read target.</summary>
+    /// <param name="store">The expected event store.</param>
+    /// <param name="targetNamespace">The expected namespace.</param>
+    /// <returns>Whether this sequence belongs to the target.</returns>
+    internal bool MatchesTarget(EventStoreName store, EventStoreNamespaceName targetNamespace) =>
+        eventStoreName == store && @namespace == targetNamespace && eventSequenceId == EventSequenceId.Log;
+
     static EventSourceType ResolveEventSourceType(EventSourceType? value) =>
         string.IsNullOrEmpty(value?.Value) ? EventSourceType.Default : value;
 
@@ -503,7 +516,7 @@ public class EventSequence(
     static Contracts.Primitives.SerializableDateTimeOffset ToWireOccurred(DateTimeOffset? occurred) =>
         (Contracts.Primitives.SerializableDateTimeOffset?)occurred ?? new Contracts.Primitives.SerializableDateTimeOffset();
 
-    AppendResult ToAppendResult(CorrelationId correlationId, EventSequenceNumber sequenceNumber, AppendManyResult batchResult)
+    AppendResult ToAppendResult(CorrelationId correlationId, EventSequenceNumber sequenceNumber, AppendManyResult batchResult, EventType eventType)
     {
         if (batchResult.IsSuccess)
         {
@@ -513,6 +526,7 @@ public class EventSequence(
                 EventStoreNamespace = @namespace,
                 EventSequenceId = eventSequenceId,
                 ConcurrencyCheckPerformed = batchResult.ConcurrencyCheckPerformed,
+                EventTypes = [eventType],
                 Observers = GetObservers()
             };
         }
@@ -527,6 +541,7 @@ public class EventSequence(
             ConcurrencyViolation = batchResult.ConcurrencyViolations.FirstOrDefault(),
             Errors = batchResult.Errors,
             ConcurrencyCheckPerformed = batchResult.ConcurrencyCheckPerformed,
+            EventTypes = [eventType],
             Observers = GetObservers()
         };
     }
@@ -569,15 +584,12 @@ public class EventSequence(
             EventStreamId = ResolveEventStreamId(@event.EventStreamId)
         }).ToList();
         var eventsToAppend = new List<Contracts.Sequences.EventForEventSourceId>(eventsList.Count);
-        IImmutableList<Causation>? causation = null;
+        var causation = causationManager.GetCurrentChain();
+        var eventCausations = eventsList.ConvertAll(@event => @event.Causation is null ? causation : causation.Add(@event.Causation));
 
-        foreach (var @event in eventsList)
+        for (var i = 0; i < eventsList.Count; i++)
         {
-            if (causation is null && @event.Causation is not null)
-            {
-                causation = [@event.Causation];
-            }
-
+            var @event = eventsList[i];
             var eventClrType = @event.Event.GetType();
             ThrowIfUnknownEventType(eventTypes, eventClrType);
             var eventType = eventTypes.GetEventTypeFor(eventClrType);
@@ -596,11 +608,10 @@ public class EventSequence(
                 Content = (await eventSerializer.Serialize(@event.Event)).ToJsonString(),
                 Tags = allTags,
                 Occurred = ToWireOccurred(@event.Occurred),
-                Subject = (@event.Subject ?? SubjectResolver.ResolveFrom(@event.Event))?.Value
+                Subject = (@event.Subject ?? SubjectResolver.ResolveFrom(@event.Event))?.Value,
+                Causation = @event.Causation is null ? null : eventCausations[i].ToSequencesContract()
             });
         }
-
-        causation ??= causationManager.GetCurrentChain();
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
         var resolvedConcurrencyScopes = await ResolveConcurrencyScopes(eventsList, concurrencyScopes);
@@ -629,10 +640,12 @@ public class EventSequence(
             EventStore = eventStoreName,
             EventStoreNamespace = @namespace,
             EventSequenceId = eventSequenceId,
+            EventTypes = eventsToAppend.Select(_ => _.EventType.ToClient()).DistinctBy(_ => _.Id).ToArray(),
+            AppendedEventTypes = eventsToAppend.Select(_ => _.EventType.ToClient()).ToArray(),
             Observers = GetObservers()
         };
 
-        if (_appendedEventsRaised is not null)
+        if (eventsList.Count > 0 && _appendedEventsRaised is not null)
         {
             var sequenceNumbers = result.SequenceNumbers.ToList();
             var allResults = new List<AppendedEventWithResult>(eventsList.Count);
@@ -658,12 +671,12 @@ public class EventSequence(
                     resolvedCorrelationId,
                     evt.Occurred) with
                 {
-                    Causation = causation,
+                    Causation = eventCausations[i],
                     CausedBy = identity,
                     Subject = new Subject(eventsToAppend[i].Subject ?? evt.EventSourceId.Value)
                 };
 
-                allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(resolvedCorrelationId, sequenceNumber, result)));
+                allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(resolvedCorrelationId, sequenceNumber, result, evtType)));
             }
 
             _appendedEventsRaised(allResults);
@@ -715,10 +728,10 @@ public class EventSequence(
         AppendManyResult result,
         DateTimeOffset? occurred)
     {
+        if (events.Count == 0 || _appendedEventsRaised is null) return;
+
         var sequenceNumbers = result.SequenceNumbers.ToList();
         var results = new List<AppendedEventWithResult>(events.Count);
-
-        if (_appendedEventsRaised is null) return;
 
         for (var i = 0; i < events.Count; i++)
         {
@@ -745,7 +758,7 @@ public class EventSequence(
                 Subject = new Subject(eventsToAppend[i].Subject ?? eventSourceId.Value)
             };
 
-            results.Add(new AppendedEventWithResult(new AppendedEvent(context, events[i]), ToAppendResult(correlationId, sequenceNumber, result)));
+            results.Add(new AppendedEventWithResult(new AppendedEvent(context, events[i]), ToAppendResult(correlationId, sequenceNumber, result, evtType)));
         }
 
         _appendedEventsRaised(results);

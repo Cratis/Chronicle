@@ -43,6 +43,24 @@ So fix the underlying error (and make the reactor resilient), and redeploy. Then
 - [`cratis chronicle observers retry-partition`](/cli/chronicle/observers/#retry-partition) retries the partition after you've fixed the bug.
 - [`cratis chronicle observers replay-partition`](/cli/chronicle/observers/#replay-partition) replays the partition from the beginning if the state is corrupt.
 
+### Retry one reactor partition from the .NET client
+
+After fixing the cause of a failure, an application can inspect a typed reactor's failed partitions and retry one without supplying the observer or event-sequence identifiers:
+
+```csharp
+using Cratis.Chronicle.Reactors;
+
+var failedPartitions = await eventStore.Reactors.GetFailedPartitionsFor<InvitationMailReactor>();
+var failedPartition = failedPartitions.FirstOrDefault();
+if (failedPartition is not null)
+{
+    var outcome = await eventStore.Reactors.RetryFailedPartitionFor<InvitationMailReactor>(failedPartition.Partition);
+    // Handle outcome before reporting recovery as successful.
+}
+```
+
+`ReactorPartitionRetryOutcome.Started` means a recovery job started or resumed. `PartitionNotFound` means the failure was already cleared (or never existed), not that the call threw. `ObserverQuarantined` and `PartitionQuarantined` mean retry was refused until the corresponding quarantine is cleared. `Unknown` means the server returned an outcome this client version does not recognize; do not treat it as success. This operation does not guarantee exactly-once execution of reactor side effects.
+
 A partition that ran out of retries before your fix was deployed is quarantined, and does **not** resume on its own. Inspect it with `failed-partitions show` before choosing how to resume it: an ordinary retry is refused for a quarantined partition, and a quarantined *observer* needs `observers clear-quarantine` first. Remember that every retry and replay runs the handler again, so a side effect the handler completed before it failed happens again unless you guard it; see [Delivery identity](/chronicle/reactors/delivery-identity/).
 
 ## A constraint is rejecting an append I expected to succeed

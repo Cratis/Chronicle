@@ -36,14 +36,6 @@ public interface IRecommendations
     [Operation]
     Task<CommandResult> PerformRecommendation(PerformRecommendationRequest request, CallContext callContext = default);
     /// <summary>
-    /// Executes the UnignoreRecommendation command.
-    /// </summary>
-    /// <param name = "request">The UnignoreRecommendation request.</param>
-    /// <param name = "callContext">The gRPC call context.</param>
-    /// <returns>The command result.</returns>
-    [Operation]
-    Task<CommandResult> UnignoreRecommendation(UnignoreRecommendationRequest request, CallContext callContext = default);
-    /// <summary>
     /// Executes the GetRecommendations query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -59,14 +51,6 @@ public interface IRecommendations
     /// <returns>The query result.</returns>
     [Operation]
     IObservable<QueryResult<IEnumerable<RecommendationDetailsResponse>>> AllRecommendations(AllRecommendationsRequest request, CallContext callContext = default);
-    /// <summary>
-    /// Executes the IgnoredRecommendations query.
-    /// </summary>
-    /// <param name = "request">The query request parameters.</param>
-    /// <param name = "callContext">The gRPC call context.</param>
-    /// <returns>The query result.</returns>
-    [Operation]
-    IObservable<QueryResult<IEnumerable<RecommendationDetailsResponse>>> IgnoredRecommendations(IgnoredRecommendationsRequest request, CallContext callContext = default);
 }
 
 /// <summary>
@@ -99,31 +83,6 @@ public class IgnoreRecommendationRequest
 /// </summary>
 [ProtoContract]
 public class PerformRecommendationRequest
-{
-    /// <summary>
-    /// Gets or sets the EventStore.
-    /// </summary>
-    [ProtoMember(1)]
-    public string EventStore { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the Namespace.
-    /// </summary>
-    [ProtoMember(2)]
-    public string Namespace { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the RecommendationId.
-    /// </summary>
-    [ProtoMember(3)]
-    public Guid RecommendationId { get; set; } = new();
-}
-
-/// <summary>
-/// Represents the UnignoreRecommendationRequest message.
-/// </summary>
-[ProtoContract]
-public class UnignoreRecommendationRequest
 {
     /// <summary>
     /// Gets or sets the EventStore.
@@ -205,25 +164,6 @@ public class GetRecommendationsRequest
 /// </summary>
 [ProtoContract]
 public class AllRecommendationsRequest
-{
-    /// <summary>
-    /// Gets or sets the eventStore.
-    /// </summary>
-    [ProtoMember(1)]
-    public string EventStore { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the namespace.
-    /// </summary>
-    [ProtoMember(2)]
-    public string Namespace { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// Represents the IgnoredRecommendationsRequest message.
-/// </summary>
-[ProtoContract]
-public class IgnoredRecommendationsRequest
 {
     /// <summary>
     /// Gets or sets the eventStore.

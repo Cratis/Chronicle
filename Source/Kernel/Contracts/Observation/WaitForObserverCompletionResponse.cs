@@ -20,4 +20,16 @@ public class WaitForObserverCompletionResponse
     /// </summary>
     [ProtoMember(2)]
     public IEnumerable<FailedPartition> FailedPartitions { get; set; } = new List<FailedPartition>();
+
+    /// <summary>
+    /// Gets or sets a value indicating that the wait expired before every observer completed or failed.
+    /// </summary>
+    [ProtoMember(3)]
+    public bool TimedOut { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifiers of observers still outstanding when the wait expired.
+    /// </summary>
+    [ProtoMember(4)]
+    public IEnumerable<string> OutstandingObservers { get; set; } = [];
 }

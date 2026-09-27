@@ -77,7 +77,7 @@ The cost of on-demand computation grows linearly with the number of events in th
 
 ## Read-after-write — waiting for a materialized read model
 
-Chronicle has no mode that updates a materialized read model inside the append itself: an append returns once the event is in the log, without waiting for any projection. When one caller needs to read back what it just appended, and the read model should stay materialized for everyone else, wait for the observers affected by that append before reading. In the .NET client, `WaitForCompletion()` on the append result does this and reports any partition that failed while catching up — see [Waiting for observer completion after append](../events/observing-appends.mdx#waiting-for-observer-completion-after-append). Check that the append succeeded before you wait. The wait covers every observer on that event sequence, not only those that handle the appended event, so an unrelated observer that is behind — or one that never handles this event type — can hold it until it times out.
+Chronicle has no mode that updates a materialized read model inside the append itself: an append returns once the event is in the log, without waiting for any projection. When one caller needs to read back what it just appended, and the read model should stay materialized for everyone else, wait for the observers affected by that append before reading. In the .NET client, `WaitForCompletion()` on the append result does this and reports any partition that failed while catching up — see [Waiting for observer completion after append](../events/observing-appends.mdx#waiting-for-observer-completion-after-append). Check that the append succeeded before you wait. With the .NET client and an updated server, the wait includes observers that handle the appended event types, plus observers subscribed to all events. Other clients and older servers still wait for every observer on the sequence.
 
 Waiting adds the projection's latency to that one caller, and only that caller. Use it for the occasional read-after-write, not as a default on every append. When nearly every read needs to include the latest event, a passive read model is usually the simpler choice.
 
@@ -139,7 +139,7 @@ Materialized projections are the right choice when:
 | Financial or inventory checks requiring exact current state | On-demand computation |
 | Read-after-write in the same request | On-demand computation, or waiting for the append's observers |
 | Command validation against current state | On-demand computation |
-| Rules that must hold when two writers race | A [constraint](../constraints/index.md) — a read, however consistent, cannot stop the race |
+| Rules that must hold when two writers race | A [constraint](../constraints/index.md), or a [decision-consistent read](./decision-reads) when the decision depends on an admitted event-source-keyed projection |
 | Dashboards and list views over large datasets | Materialized projections |
 | Real-time UIs observing changes as they happen | Materialized projections with watchers |
 | Infrequently accessed instances with short event histories | On-demand computation |

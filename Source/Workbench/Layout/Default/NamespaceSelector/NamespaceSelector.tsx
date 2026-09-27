@@ -25,10 +25,10 @@ export const NamespaceSelector = withViewModel<NamespaceSelectorViewModel, IName
         }
     }, [params.eventStore, viewModel]);
 
-    // Unconditional on purpose: a route with no namespace has to clear the one the store is holding,
-    // or the store keeps asserting a namespace the user has already navigated away from.
     useEffect(() => {
-        viewModel.syncNamespaceFromRoute(params.namespace ?? '');
+        if (params.namespace) {
+            viewModel.syncNamespaceFromRoute(params.namespace);
+        }
     }, [params.namespace, viewModel]);
 
     const [isNamespacePanelOpen, setIsNamespacePanelOpen] = useState(false);
