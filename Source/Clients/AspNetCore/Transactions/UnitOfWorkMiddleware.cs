@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
 using Microsoft.AspNetCore.Http;
@@ -77,7 +78,22 @@ public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddle
             {
                 if (owner is not null)
                 {
-                    await ((UnitOfWork)unitOfWork).RollbackAsOwner(owner);
+                    try
+                    {
+                        await ((UnitOfWork)unitOfWork).RollbackAsOwner(owner);
+                    }
+                    catch (DecisionReadAfterCompletion)
+                    {
+                        // An early commit is still in flight. No rollback occurred; preserve the action's exception.
+                    }
+                    catch (UnitOfWorkIsCompleting)
+                    {
+                        // Strict lifecycle policy also refuses rollback while an early commit is in flight.
+                    }
+                    catch (UnitOfWorkIsAlreadyCommitted)
+                    {
+                        // The early commit finished between the completion check and the rollback attempt.
+                    }
                 }
                 else
                 {
