@@ -59,6 +59,12 @@ public class Events
     public TimeSpan ConstraintsVersionCheckInterval { get; init; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
+    /// Controls whether causation property values are retained in newly persisted events.
+    /// Defaults to <see cref="Configuration.CausationPropertyRetention.Retain"/>.
+    /// </summary>
+    public CausationPropertyRetention CausationPropertyRetention { get; init; } = CausationPropertyRetention.Retain;
+
+    /// <summary>
     /// Timeout in milliseconds for the final wait on the appended-events queue to become empty when awaiting depletion.
     /// </summary>
     /// <remarks>

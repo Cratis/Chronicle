@@ -16,6 +16,8 @@ Erasure in Chronicle is the deletion of an encryption key. Every `[PII]` value i
 
 Read one of that subject's events afterwards and nothing breaks. The event is still there, its sequence number is still there, and every field that was not marked `[PII]` still holds its value — only the PII properties come back as empty strings. That is the whole point of crypto-shredding: the log stays immutable and the personal data stops existing.
 
+Causation property values are not encrypted under the subject's key, so deleting the key does not erase them. Set [`events.causationPropertyRetention` to `Omit`](../hosting/configuration/events.md) to prevent **new** causation property values from being retained, including on forwarded events, revisions, and redactions. `Omit` does not remove values already stored in historical causation chains; handle those separately when assessing an erasure.
+
 ## What one call reaches
 
 The erasure covers **every event store in the namespace you erased in**, not only the event store you resolved `PII` from.
