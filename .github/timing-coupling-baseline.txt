@@ -60,6 +60,7 @@
 1 Integration/Client/for_Reactors/ReactorWithoutDelay.cs
 1 Integration/Client/for_Reactors/ReactorWithoutDelayHandlingPii.cs
 1 Integration/Client/for_Reactors/SomeReactor.cs  # knob
+1 Integration/Client/for_Reactors/when_registering_fluently/and_handling_typed_and_all_events.cs  # interleave
 1 Integration/Client/for_ReadModels/given/a_projection_with_events.cs
 1 Integration/Client/for_ReadModels/given/a_projection_with_many_instances.cs
 1 Integration/Client/for_ReadModels/when_a_composed_read_model_lifts_pii/given/two_stored_subjects.cs
@@ -96,6 +97,9 @@
 1 Source/Clients/Connections.Specs/for_ConnectionWatchdog/when_starting_twice.cs
 1 Source/Clients/DotNET.Specs/Observation/for_AppendResultWaitForCompletionExtensions/when_waiting_for_completion/and_the_client_timeout_expires.cs  # knob
 1 Source/Clients/DotNET.Specs/Observation/for_AppendResultWaitForCompletionExtensions/when_waiting_for_completion/and_the_timeout_is_infinite.cs  # knob
+2 Source/Clients/DotNET.Specs/Reactors/for_ReactorBuilder/when_handling_an_event/with_every_kind_of_handler.cs  # interleave
+1 Source/Clients/DotNET.Specs/Reactors/for_ReactorBuilder/when_handling_an_event/without_a_typed_handler_for_it.cs  # interleave
+1 Source/Clients/DotNET.Specs/Reactors/for_Reactors/when_registering_fluently/and_delivering_an_event.cs  # interleave
 1 Source/Clients/XUnit.Integration/ChronicleFixture.cs  # readiness
 1 Source/Clients/XUnit.Integration/ChronicleOrleansFixture.cs
 1 Source/Kernel/Core.Specs/ConcurrentCallGate.cs  # deadline
