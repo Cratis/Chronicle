@@ -88,7 +88,22 @@ BODY_SNIPPETS = {
     "testing/read-models/scenario/strict-event-subscription": "",
     "testing/read-models/scenario/substitutions": "",
     "testing/read-models/scenario/strict-fidelity": "",
+    "read-models/decision-reads/detached-read": """
+        IEventStore eventStore = default!;
+        ReadModelKey orderId = new("order-123");
+    """,
+    "testing/read-models/scenario/per-run-projection": """
+        IClientArtifactsProvider artifacts = default!;
+        EventSourceId id = new("source-123");
+    """,
+    "troubleshooting/retry-reactor-partition": """
+        IEventStore eventStore = default!;
+    """,
 }
+
+# This excerpt is from an ASP.NET Core action. Supply only the action context
+# and a final response in the compiler harness; keep the public snippet intact.
+ACTION_SNIPPET = "read-models/decision-reads/early-commit"
 
 # Declaration-style snippets that need a namespace wrapper with aliases for Kernel-only
 # types whose bare name collides with a client type already imported globally (e.g.
@@ -171,10 +186,17 @@ def method_name(relative_path: str) -> str:
     return "Snippet_" + re.sub(r"[^A-Za-z0-9_]", "_", relative_path)
 
 
-def method(relative_path: str, prelude: str, body: str) -> str:
+def method(relative_path: str, prelude: str, body: str, *, action: bool = False) -> str:
+    if action:
+        prelude = """
+            Microsoft.AspNetCore.Http.HttpContext HttpContext = default!;
+            Microsoft.AspNetCore.Mvc.IActionResult Conflict() => new Microsoft.AspNetCore.Mvc.ConflictResult();
+        """
+        body += "\nreturn new Microsoft.AspNetCore.Mvc.OkResult();"
     lines = [line for line in [textwrap.dedent(prelude).strip(), body] if line]
     method_body = textwrap.indent("\n\n".join(lines), "        ")
-    return f"    public static async Task {method_name(relative_path)}()\n    {{\n{method_body}\n    }}"
+    return_type = "Task<Microsoft.AspNetCore.Mvc.IActionResult>" if action else "Task"
+    return f"    public static async {return_type} {method_name(relative_path)}()\n    {{\n{method_body}\n    }}"
 
 
 def generate_source() -> str:
@@ -212,6 +234,9 @@ def generate_source() -> str:
         """
         public record Account(string Id, string Name, decimal Balance, DateTimeOffset CreatedDate);
         """.strip(),
+        "public record MyEvent(string Name);",
+        "public class MyReadModel { public string Name { get; set; } = string.Empty; }",
+        "public class InvitationMailReactor : Cratis.Chronicle.Reactors.IReactor;",
         """
         public enum OrderStatus
         {
@@ -230,10 +255,26 @@ def generate_source() -> str:
     for path in files:
         relative_path = snippet_key(path)
         snippet_usings, body = split_usings(extract_snippet(path))
-        usings.update(snippet_usings)
+        # The action snippet qualifies HttpContext in its compiler-only wrapper.
+        # A global ASP.NET Core import would make Chronicle's [Tags] ambiguous.
+        usings.update(
+            using for using in snippet_usings
+            if relative_path != ACTION_SNIPPET or using != "using Microsoft.AspNetCore.Http;"
+        )
 
-        if relative_path in BODY_SNIPPETS:
+        if relative_path == "read-models/decision-reads/detached-read":
+            declarations.append(
+                "namespace DecisionReadExample\n{\n"
+                "    public record OrderPlaced;\n"
+                "    public class OrderEligibility;\n"
+                "    public static class Example\n    {\n"
+                + method(relative_path, BODY_SNIPPETS[relative_path], body)
+                + "\n    }\n}"
+            )
+        elif relative_path in BODY_SNIPPETS:
             methods.append(method(relative_path, BODY_SNIPPETS[relative_path], body))
+        elif relative_path == ACTION_SNIPPET:
+            methods.append(method(relative_path, "", body, action=True))
         else:
             declarations.append(wrap_in_namespace(relative_path, body))
 
