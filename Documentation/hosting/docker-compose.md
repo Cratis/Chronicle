@@ -8,6 +8,8 @@ The following configures a `docker-compose.yml` with Chronicle and [Microsoft As
 services:
   chronicle:
     image: cratis/chronicle:latest-development
+    sysctls:
+      net.ipv4.ip_local_reserved_ports: "11111,30000,35000"
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
     ports:
@@ -25,7 +27,7 @@ services:
       - 127.0.0.1:4317:18889
 ```
 
-Every port is published on this machine only: the development image's Workbench accepts well-known credentials, its bundled MongoDB has no authentication, and the dashboard allows anonymous access. The Orleans ports (`11111`, `30000`) are left unpublished because a single local node does not need them.
+Every port is published on this machine only: the development image's Workbench accepts well-known credentials, its bundled MongoDB has no authentication, and the dashboard allows anonymous access. The Orleans ports (`11111`, `30000`) are left unpublished because a single local node does not need them. The sysctl reserves those ports and the Chronicle port from ephemeral outbound allocation inside the container. If your container runtime rejects this sysctl, remove the `sysctls` block and retry; Chronicle's bounded bind retry still applies.
 
 With this setup, Chronicle runs alongside Microsoft Aspire, which provides a dashboard for OpenTelemetry.
 

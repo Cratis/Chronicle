@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Docker.DotNet;
+using Docker.DotNet.Models;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
@@ -30,6 +31,7 @@ public abstract class ChronicleFixture : IChronicleFixture
     MongoDBDatabase? _readModels;
     IContainer? _container;
     bool _started;
+    bool _reserveKernelPorts = true;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleFixture"/> class.
@@ -166,6 +168,22 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <returns>The built container.</returns>
     protected abstract IContainer BuildContainer(INetwork network);
 
+    /// <summary>
+    /// Reserves the kernel's listening ports from ephemeral allocation when the container runtime supports it.
+    /// </summary>
+    /// <param name="builder">The kernel container builder.</param>
+    /// <returns>The builder with the reservation applied when supported.</returns>
+    protected ContainerBuilder WithReservedKernelPorts(ContainerBuilder builder) => _reserveKernelPorts
+        ? builder.WithCreateParameterModifier(parameters =>
+        {
+            var hostConfig = parameters.HostConfig ?? new HostConfig();
+            var sysctls = hostConfig.Sysctls ?? new Dictionary<string, string>();
+            sysctls["net.ipv4.ip_local_reserved_ports"] = "11111,30000,35000";
+            hostConfig.Sysctls = sysctls;
+            parameters.HostConfig = hostConfig;
+        })
+        : builder;
+
     async Task StartContainer(IContainer container)
     {
         if (_started) return;
@@ -184,6 +202,16 @@ public abstract class ChronicleFixture : IChronicleFixture
             }
             catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException || e is TimeoutException)
             {
+                // Rootless and some non-Docker runtimes reject this sysctl at container creation.
+                // Retry without it only for an explicit rejection; other startup errors retain their usual handling.
+                if (_reserveKernelPorts && (e is DockerApiException || e.InnerException is DockerApiException)
+                    && (e.Message.Contains("sysctl", StringComparison.OrdinalIgnoreCase)
+                        || e.InnerException?.Message.Contains("sysctl", StringComparison.OrdinalIgnoreCase) == true))
+                {
+                    _reserveKernelPorts = false;
+                    Console.WriteLine("Container runtime rejected the reserved-port sysctl; retrying without it.");
+                }
+
                 Console.WriteLine($"Failed to start the container: {e.Message} - retrying...");
                 failure = e;
 
