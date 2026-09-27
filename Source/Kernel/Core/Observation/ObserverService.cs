@@ -68,7 +68,27 @@ public class ObserverService(
     public async Task ResumeCatchupFor(ObserverDetails observerDetails) => await ForEachCatchupHandler(handler => handler.ResumeCatchupFor(observerDetails));
 
     /// <inheritdoc/>
-    public async Task EndCatchupFor(ObserverDetails observerDetails) => await ForEachCatchupHandler(handler => handler.EndCatchupFor(observerDetails));
+    public async Task EndCatchupFor(ObserverDetails observerDetails)
+    {
+        var results = await Task.WhenAll(catchupHandlers.Select(handler => handler.EndCatchupFor(observerDetails)));
+        EnsureCatchupFinalized(results);
+    }
+
+    /// <summary>
+    /// Ensure every applicable catch-up handler finished successfully.
+    /// </summary>
+    /// <param name="results">The results returned by the catch-up handlers.</param>
+    /// <exception cref="CatchupFinalizationFailed">A handler reported a finalization error.</exception>
+    internal static void EnsureCatchupFinalized(IEnumerable<Result<ICanHandleCatchupForObserver.Error>> results)
+    {
+        foreach (var result in results)
+        {
+            if (result.TryGetError(out var error) && error != ICanHandleCatchupForObserver.Error.CannotHandle)
+            {
+                throw new CatchupFinalizationFailed(error);
+            }
+        }
+    }
 
     /// <summary>
     /// Ensure every applicable replay handler started successfully.

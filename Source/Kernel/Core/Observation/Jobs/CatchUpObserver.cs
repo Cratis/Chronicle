@@ -52,7 +52,20 @@ public class CatchUpObserver(
     protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        await catchupServiceClient.EndCatchupFor(State.ObserverDetails);
+        try
+        {
+            await catchupServiceClient.EndCatchupFor(State.ObserverDetails);
+        }
+        finally
+        {
+            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+
+            // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
+            // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
+            // CatchUp(), so CaughtUp() would be queued and deadlock. Returning first lets the Observer
+            // grain become free to process CaughtUp(), even if finalization fails after recording partitions.
+            _ = observer.CaughtUp(State.LastHandledEventSequenceNumber);
+        }
 
         if (!AllStepsCompletedSuccessfully)
         {
@@ -65,14 +78,6 @@ public class CatchUpObserver(
                 logger.NoEventsWereHandled(nameof(CatchUpObserver));
             }
         }
-
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-
-        // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
-        // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
-        // CatchUp(), so CaughtUp() would be queued and deadlock. Returning first lets the Observer
-        // grain become free to process CaughtUp().
-        _ = observer.CaughtUp(State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>

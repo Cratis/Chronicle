@@ -263,7 +263,7 @@ public class InMemorySink(
     public Task BeginBulk() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task EndBulk() => Task.CompletedTask;
+    public Task<IEnumerable<FailedPartition>> EndBulk() => Task.FromResult<IEnumerable<FailedPartition>>([]);
 
     /// <inheritdoc/>
     public Task BeginReplay(ReplayContext context)
@@ -289,7 +289,7 @@ public class InMemorySink(
     }
 
     /// <inheritdoc/>
-    public Task EndReplay(ReplayContext context)
+    public Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
         lock (_collectionLock)
         {
@@ -322,7 +322,7 @@ public class InMemorySink(
             _isReplaying = false;
         }
 
-        return Task.CompletedTask;
+        return Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
 
     /// <inheritdoc/>
