@@ -26,7 +26,7 @@ dotnet add package Cratis.Chronicle.Testing
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/basic" />
 
-Feed events for an event source through the scenario, then assert against the resulting read model. In .NET, use `Given.ForEventSource(id).Events(...)` and read `Instance`; TypeScript uses `given.forEventSource(id).events(...)` and awaits `instance`. Kotlin folds events with `scenario.fold(...)`, and Java calls the reducer directly.
+Feed events for an event source, then assert against the resulting read model. In .NET, the scenario takes `Given.ForEventSource(id).Events(...)` and exposes `Instance`; in TypeScript, `given.forEventSource(id).events(...)` and an awaited `instance`. Kotlin folds events through `scenario.fold(...)`. The Java example has no scenario: it calls the reducer directly and asserts on what it returns.
 
 ## Event input serialization
 
