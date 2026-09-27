@@ -31,5 +31,5 @@ public class WaitForObserverCompletionResponse
     /// Gets or sets the identifiers of observers still outstanding when the wait expired.
     /// </summary>
     [ProtoMember(4)]
-    public IEnumerable<string> OutstandingObservers { get; set; } = [];
+    public IEnumerable<string> OutstandingObservers { get; set; } = new List<string>();
 }

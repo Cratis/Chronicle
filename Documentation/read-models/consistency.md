@@ -7,7 +7,7 @@ description: "Eventual, on-demand, and read-after-write consistency for read mod
 Read models in Chronicle can be retrieved with different consistency guarantees, depending on how they are computed and when they reflect the latest events. Understanding these models helps you make the right trade-off between data freshness, query latency, and throughput.
 
 > [!TIP]
-> For information on how to define and configure read models in Arc, see [Chronicle read models in Arc](/arc/backend/chronicle/read-models/).
+> For information on how to define and configure read models in Arc, see [Chronicle read models in Arc](/arc/backend/csharp/chronicle/read-models/).
 
 ## The Consistency Spectrum
 

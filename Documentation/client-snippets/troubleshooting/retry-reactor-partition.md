@@ -1,18 +1,12 @@
 ```csharp
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 
-public static class ReactorPartitionRecovery
+var failedPartitions = await eventStore.Reactors.GetFailedPartitionsFor<InvitationMailReactor>();
+var failedPartition = failedPartitions.FirstOrDefault();
+if (failedPartition is not null)
 {
-    public static async Task<ReactorPartitionRetryOutcome?> RetryOne<TReactor>(IEventStore eventStore)
-        where TReactor : IReactor
-    {
-        var failedPartitions = await eventStore.Reactors.GetFailedPartitionsFor<TReactor>();
-        var failedPartition = failedPartitions.FirstOrDefault();
-        if (failedPartition is null) return null;
-
-        return await eventStore.Reactors.RetryFailedPartitionFor<TReactor>(failedPartition.Partition);
-    }
+    var outcome = await eventStore.Reactors.RetryFailedPartitionFor<InvitationMailReactor>(failedPartition.Partition);
+    // Handle outcome before reporting recovery as successful.
 }
 ```
 
