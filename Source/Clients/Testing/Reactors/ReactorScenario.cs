@@ -38,10 +38,11 @@ namespace Cratis.Chronicle.Testing.Reactors;
 public class ReactorScenario<TReactor>
     where TReactor : class, IReactor
 {
+    readonly Defaults _defaults;
     readonly IReactorSideEffectHandlers? _sideEffectHandlers;
     readonly IEventStore? _explicitEventStore;
     readonly IServiceProvider? _explicitServiceProvider;
-    readonly IEventTypes _eventTypes = Defaults.Instance.EventTypes;
+    readonly IEventTypes _eventTypes;
     readonly List<Action<EventStoreForTesting>> _readModelSeeds = [];
     readonly RecordingReactorSideEffectHandlers _recordingHandlers;
     IServiceProvider? _serviceProvider;
@@ -78,7 +79,25 @@ public class ReactorScenario<TReactor>
         IServiceProvider? serviceProvider = null,
         IReactorSideEffectHandlers? sideEffectHandlers = null,
         IEventStore? eventStore = null)
+        : this(Defaults.Instance, serviceProvider, sideEffectHandlers, eventStore)
     {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReactorScenario{TReactor}"/> class with per-run defaults.
+    /// </summary>
+    /// <param name="defaults">The defaults used for event types and artifact discovery.</param>
+    /// <param name="serviceProvider">Optional provider for resolving the reactor and its dependencies.</param>
+    /// <param name="sideEffectHandlers">Optional handlers for returned side effects.</param>
+    /// <param name="eventStore">Optional event store passed to side effect handlers and used for read-model seeding.</param>
+    public ReactorScenario(
+        Defaults defaults,
+        IServiceProvider? serviceProvider = null,
+        IReactorSideEffectHandlers? sideEffectHandlers = null,
+        IEventStore? eventStore = null)
+    {
+        _defaults = defaults;
+        _eventTypes = defaults.EventTypes;
         _explicitServiceProvider = serviceProvider;
         _sideEffectHandlers = sideEffectHandlers;
         _explicitEventStore = eventStore;
@@ -278,7 +297,7 @@ public class ReactorScenario<TReactor>
         }
         else
         {
-            _eventStore = new EventStoreForTesting(serviceProvider);
+            _eventStore = new EventStoreForTesting(serviceProvider, _defaults.ClientArtifactsProvider);
         }
 
         if (_eventStore is EventStoreForTesting inProcessEventStore)

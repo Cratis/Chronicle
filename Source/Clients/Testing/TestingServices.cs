@@ -121,11 +121,13 @@ internal sealed class TestingServices : IServices
     /// <param name="storage">The <see cref="IStorage"/> backed by in-memory implementations.</param>
     /// <param name="compliance">The scenario's shared compliance stack and encryption keys.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
+    /// <param name="eventTypes">Resolves the event types belonging to this test store.</param>
     public TestingServices(
         IGrainFactory grainFactory,
         IStorage storage,
         InProcessCompliance compliance,
-        JsonSerializerOptions jsonSerializerOptions)
+        JsonSerializerOptions jsonSerializerOptions,
+        Func<Cratis.Chronicle.Events.IEventTypes> eventTypes)
     {
         // One pipeline serves every command-dispatching service. Its provider carries the collaborators the
         // command handlers resolve their parameters from - the same instances the service constructors used
@@ -162,7 +164,7 @@ internal sealed class TestingServices : IServices
                     // harmlessly instead.
                     services.AddSingleton<IUnitOfWorkManager>(new EventSequences.NoOpUnitOfWorkManager());
                     services.AddSingleton<Cratis.Chronicle.EventSequences.IEventLog>(new EventSequences.NoOpEventLog());
-                    services.AddSingleton(Defaults.Instance.EventTypes);
+                    services.AddSingleton(eventTypes());
                 }));
 
         _observers = new(() => new KernelObserversService(
