@@ -75,7 +75,14 @@ public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddle
         {
             if (!unitOfWork.IsCompleted)
             {
-                unitOfWork.Dispose();
+                if (owner is not null)
+                {
+                    await ((UnitOfWork)unitOfWork).RollbackAsOwner(owner);
+                }
+                else
+                {
+                    unitOfWork.Dispose();
+                }
             }
             throw;
         }
