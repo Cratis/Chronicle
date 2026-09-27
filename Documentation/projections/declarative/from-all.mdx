@@ -2,6 +2,8 @@
 
 `FromAll` subscribes to **every event type in the event sequence**, not just event types declared by the projection. It can create or update a read-model instance for any event source, keyed by the event source id unless you configure another key. Use [FromEvery](./from-every) instead when mappings should apply only to event types the projection already handles.
 
+A declared `Join` event type is excluded from the separate all-events subscription to avoid processing a matched event twice. Its `FromAll` mapping runs through the join instead. **Known limitation:** if that join finds no read-model instance, the mapping does not fall back to creating one under the event source id. An event type that is also declared in `From` runs the mapping through `From` instead, once, and can construct its own keyed instance.
+
 Use `FromAll` in .NET for sequence-wide mappings such as per-source event counts. The root `all` block in the declaration language has the same subscription scope: it observes child-projection event types as well as unrelated event types. `FromAll` has no child-inclusion switch. Its stored inclusion flag defaults to true, but it is not what causes child events to be observed; the all-events subscription does.
 
 ## Basic Usage

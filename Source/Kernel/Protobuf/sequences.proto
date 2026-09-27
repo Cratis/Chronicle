@@ -246,6 +246,7 @@ message EventForEventSourceId {
    repeated string Tags = 7;
    SerializableDateTimeOffset Occurred = 8;
    string Subject = 9;
+   repeated Causation Causation = 10;
 }
 message EventForEventSourceIdWithNamedTags {
    string EventSourceId = 1;
@@ -258,6 +259,7 @@ message EventForEventSourceIdWithNamedTags {
    repeated NamedTag NamedTags = 8;
    SerializableDateTimeOffset Occurred = 9;
    string Subject = 10;
+   repeated Causation Causation = 11;
 }
 enum EventObservationState {
    EVENT_OBSERVATION_STATE_None = 0;

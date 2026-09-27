@@ -6,7 +6,7 @@ using Aspire.Hosting.ApplicationModel;
 
 namespace Cratis.Chronicle.Aspire.for_ChronicleDistributedApplicationBuilderExtensions.when_adding_chronicle;
 
-public class and_configuring_for_production : given.a_distributed_application_builder
+public class and_configuring_storage_in_run_mode : given.a_distributed_application_builder
 {
     IResourceBuilder<ChronicleResource> _result;
     IChronicleAspireBuilder _configured;
@@ -14,12 +14,11 @@ public class and_configuring_for_production : given.a_distributed_application_bu
 
     void Because()
     {
-        _result = _builder.AddCratisChronicle(configure: chronicle => _configured = chronicle);
+        _result = _builder.AddCratisChronicle(configure: chronicle => _configured = chronicle.WithSqlite("Data Source=/data/chronicle.db"));
         _image = _result.Resource.Annotations.OfType<ContainerImageAnnotation>().Single();
     }
 
-    [Fact] void should_use_the_production_image_tag() => _image.Tag.ShouldEqual(ChronicleContainerImageTags.Tag);
-    [Fact] void should_not_use_the_development_slim_image_tag() => _image.Tag.ShouldNotEqual(ChronicleContainerImageTags.DevelopmentSlimTag);
+    [Fact] void should_use_the_development_image_tag() => _image.Tag.ShouldEqual(ChronicleContainerImageTags.DevelopmentTag);
     [Fact] void should_use_the_chronicle_image() => _image.Image.ShouldEqual(ChronicleContainerImageTags.Image);
     [Fact] void should_invoke_the_configure_callback() => _configured.ShouldNotBeNull();
     [Fact] void should_hand_the_chronicle_resource_to_the_callback() => _configured.ResourceBuilder.Resource.ShouldEqual(_result.Resource);

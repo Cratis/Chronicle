@@ -29,6 +29,7 @@ For explicit model-bound event payload or event context mappings, prefer `[FromE
 
 ## Limitations
 
+- A join-only event type is excluded from the separate all-events subscription to avoid double counting. Its `FromAll` mapping follows the join, so an event with no matching read-model instance does not create a fallback instance under its own event source id. To construct an instance for that type, declare it in `From` as well; it then receives the every-event mapping once through `From`.
 - `FromAll` is a .NET API name; the declaration language calls its sequence-wide subscription `all`.
 - The model-bound `[FromAll]` attribute is best kept to the convention-based form.
 - Use an event-specific mapping when a property should update only for selected event types.

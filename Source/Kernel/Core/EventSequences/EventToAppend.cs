@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -33,4 +34,9 @@ public record EventToAppend(
     /// Gets the structured named tags for this event.
     /// </summary>
     public IReadOnlyCollection<NamedTag> NamedTags { get; init; } = [];
+
+    /// <summary>
+    /// Gets or inits the optional event-specific causation chain. When absent, the batch chain is used.
+    /// </summary>
+    public IEnumerable<Causation>? Causation { get; init; }
 }

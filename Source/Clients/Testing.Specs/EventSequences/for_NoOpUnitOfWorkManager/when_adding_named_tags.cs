@@ -12,7 +12,7 @@ public class when_adding_named_tags : Specification
 {
     Exception _error;
 
-    void Because() => _error = Catch.Exception(() => new NoOpUnitOfWorkManager().Begin(CorrelationId.New()).AddEvent(EventSequenceId.Log, EventSourceId.New(), "event", [new("name", "value")], Causation.Unknown()));
+    void Because() => _error = Catch.Exception(() => new NoOpUnitOfWorkManager().Begin(CorrelationId.New()).AddEventWithNamedTags(EventSequenceId.Log, EventSourceId.New(), "event", [new("name", "value")], Causation.Unknown()));
 
     [Fact] void should_fail_loudly_instead_of_discarding_named_tags() => _error.ShouldBeOfExactType<UnitOfWorkNamedTagsNotSupported>();
 }

@@ -9,7 +9,7 @@ public class when_appending_a_named_tag_batch : Specification
 {
     Exception _error;
 
-    async Task Because() => _error = await Catch.Exception(() => new NoOpEventLog().AppendMany(EventSourceId.New(), ["event"], [new("name", "value")]));
+    async Task Because() => _error = await Catch.Exception(() => new NoOpEventLog().AppendManyWithNamedTags(EventSourceId.New(), ["event"], [new("name", "value")]));
 
     [Fact] void should_report_that_the_event_log_is_unavailable() => _error.ShouldBeOfExactType<EventLogNotAvailableInKernelPipeline>();
 }

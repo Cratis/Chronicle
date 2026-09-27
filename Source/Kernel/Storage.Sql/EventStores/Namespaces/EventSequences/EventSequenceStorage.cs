@@ -233,6 +233,7 @@ public class EventSequenceStorage(
         }
 
         EventEntryConverter.UpdateContentForGeneration(eventEntry, eventType.Generation, content);
+        EventEntryConverter.UpdateHashForGeneration(eventEntry, eventType.Generation, hash);
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
     }
@@ -296,8 +297,8 @@ public class EventSequenceStorage(
                     eventToAppend.CausedByChain,
                     eventToAppend.Tags,
                     truncatedOccurred,
-                    eventToAppend.Content,
-                    eventToAppend.Hash,
+                    eventToAppend.GenerationalContent,
+                    eventToAppend.ContentHashes,
                     eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
 
                 scope.DbContext.Events.Add(eventEntry);
@@ -306,6 +307,7 @@ public class EventSequenceStorage(
                 var resolvedSubject = eventToAppend.Subject?.IsSet == true
                     ? eventToAppend.Subject
                     : new Subject(eventToAppend.EventSourceId.Value);
+                var appendedHash = eventToAppend.ContentHashes.TryGetValue(eventToAppend.EventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
                 var eventContext = new EventContext(
                     eventToAppend.EventType,
                     eventToAppend.EventSourceType,
@@ -320,10 +322,13 @@ public class EventSequenceStorage(
                     eventToAppend.Causation,
                     await identityStorage.GetFor(eventToAppend.CausedByChain),
                     eventToAppend.Tags,
-                    eventToAppend.Hash,
+                    appendedHash,
                     Subject: resolvedSubject) { NamedTags = eventToAppend.NamedTags };
 
-                appendedEvents.Add(new AppendedEvent(eventContext, eventToAppend.Content));
+                appendedEvents.Add(new AppendedEvent(eventContext, eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
+                {
+                    GenerationalContent = EventEntryConverter.BuildGenerationalContent(eventToAppend.GenerationalContent)
+                });
             }
 
             await scope.DbContext.SaveChangesAsync();
@@ -362,7 +367,7 @@ public class EventSequenceStorage(
         // pre-redaction type — observers subscribe to the original type, not the synthetic
         // Redaction marker that replaces it in storage. This matches the MongoDB behavior.
         var originalEventType = EventEntryConverter.GetEventType(eventEntry);
-        var redactionContent = EventEntryConverter.CreateRedactionContent(originalEventType.Id.Value, reason, correlationId, causation, causedByChain, occurred);
+        var redactionContent = EventEntryConverter.CreateRedactionContent(eventEntry, reason);
 
         eventEntry.Type = GlobalEventTypes.Redaction;
         eventEntry.Occurred = occurred;
@@ -370,6 +375,7 @@ public class EventSequenceStorage(
         eventEntry.Causation = EventEntryConverter.SerializeCausation(causation);
         eventEntry.CausedBy = EventEntryConverter.SerializeCausedBy(causedByChain);
         eventEntry.Content = redactionContent;
+        eventEntry.ContentHashes = string.Empty;
 
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
@@ -379,7 +385,7 @@ public class EventSequenceStorage(
         // but metadata carries the original type for routing — main's ToAppendedEvent
         // helper would read the synthetic Redaction marker that just replaced it and
         // route to the wrong observer set.
-        var content = EventEntryConverter.GetContentForGeneration(eventEntry, originalEventType.Generation);
+        var content = EventEntryConverter.GetContentForGeneration(eventEntry, EventTypeGeneration.First);
         var eventCausation = EventEntryConverter.GetCausation(eventEntry);
         var eventCausedBy = EventEntryConverter.GetCausedBy(eventEntry);
 
@@ -397,7 +403,7 @@ public class EventSequenceStorage(
             eventCausation,
             await identityStorage.GetFor(eventCausedBy),
             [],
-            EventEntryConverter.GetHashForGeneration(eventEntry, originalEventType.Generation),
+            EventHash.NotSet,
             Subject: EventEntryConverter.GetSubject(eventEntry))
         {
             NamedTags = NamedTagEntries.At(await NamedTagEntries.LoadFor(scope.DbContext, eventSequenceId.Value, [eventEntry.SequenceNumber]), eventEntry.SequenceNumber)
@@ -429,11 +435,10 @@ public class EventSequenceStorage(
                 continue;
             }
 
-            var originalEventTypeId = eventEntry.Type.Value;
             var originalEventType = EventEntryConverter.GetEventType(eventEntry);
             affectedEventTypes.Add(originalEventType);
 
-            var redactionContent = EventEntryConverter.CreateRedactionContent(originalEventTypeId, reason, correlationId, causation, causedByChain, occurred);
+            var redactionContent = EventEntryConverter.CreateRedactionContent(eventEntry, reason);
 
             eventEntry.Type = GlobalEventTypes.Redaction;
             eventEntry.Occurred = occurred;
@@ -441,6 +446,7 @@ public class EventSequenceStorage(
             eventEntry.Causation = EventEntryConverter.SerializeCausation(causation);
             eventEntry.CausedBy = EventEntryConverter.SerializeCausedBy(causedByChain);
             eventEntry.Content = redactionContent;
+            eventEntry.ContentHashes = string.Empty;
 
             scope.DbContext.Events.Update(eventEntry);
         }

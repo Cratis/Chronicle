@@ -38,6 +38,8 @@ Only the in-process and out-of-process fixtures are documented here; the others 
 <PackageReference Include="Cratis.Chronicle.Testing" />
 ```
 
+`Cratis.Chronicle.Testing` brings in `Cratis.Arc` and `Cratis.Arc.Core` (version 22.19.1 or later), including the ASP.NET Core shared framework. Projects pinned to an older Arc version must upgrade. You do not need to reference Arc separately for Chronicle-only tests.
+
 Use `Cratis.Testing` instead of `Cratis.Chronicle.Testing` when the same spec also tests Arc commands.
 
 Application command execution scopes, including Chronicle transactions, belong to the outer Arc command pipeline. The in-process scenario helpers do not discover or invoke your application's `ICommandExecutionScope` implementations when processing an event append. Your application scopes still run around the application command; you do not need to register their dependencies with the scenario harness.

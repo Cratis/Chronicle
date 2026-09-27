@@ -16,6 +16,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Tags">The tags to associate with the event.</param>
 /// <param name="Occurred">Optional occurred time. If null, the server sets it to approximately the time of append.</param>
 /// <param name="Subject">Optional subject identifying the compliance target for the event. Defaults to the event source.</param>
+/// <param name="Causation">Optional causation chain for this event. Defaults to the batch causation when not provided.</param>
 /// <remarks>
 /// Content travels as a JSON string rather than <see cref="System.Text.Json.Nodes.JsonObject"/> because protobuf-net
 /// has no serializer for that BCL type - it has no plain reflectable shape, so the gRPC contract generated from this
@@ -30,4 +31,5 @@ public record EventForEventSourceId(
     string Content,
     IEnumerable<string>? Tags = default,
     DateTimeOffset? Occurred = default,
-    string? Subject = default);
+    string? Subject = default,
+    IEnumerable<Causation>? Causation = default);

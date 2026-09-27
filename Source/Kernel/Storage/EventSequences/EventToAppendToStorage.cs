@@ -45,4 +45,16 @@ public record EventToAppendToStorage(
     /// Gets the structured named tags to persist with this event.
     /// </summary>
     public IReadOnlyCollection<NamedTag> NamedTags { get; init; } = [];
+
+    /// <summary>
+    /// Gets the content for every generation of the event type.
+    /// </summary>
+    public IDictionary<EventTypeGeneration, ExpandoObject> GenerationalContent { get; init; } =
+        new Dictionary<EventTypeGeneration, ExpandoObject> { [EventType.Generation] = Content };
+
+    /// <summary>
+    /// Gets the content hash for every generation of the event type.
+    /// </summary>
+    public IDictionary<EventTypeGeneration, EventHash> ContentHashes { get; init; } =
+        new Dictionary<EventTypeGeneration, EventHash> { [EventType.Generation] = Hash };
 }

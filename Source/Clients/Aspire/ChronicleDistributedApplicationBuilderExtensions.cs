@@ -16,14 +16,15 @@ public static class ChronicleDistributedApplicationBuilderExtensions
     /// </summary>
     /// <remarks>
     /// <para>
-    /// When called without a <paramref name="configure"/> callback (development mode), the Chronicle
-    /// development container image is used, which includes an embedded MongoDB instance. This is
-    /// ideal for local development and testing without needing an external database.
+    /// In Aspire run mode, the Chronicle development container image is used, which includes an
+    /// embedded MongoDB instance. This is ideal for local development and testing without needing
+    /// an external database. In Aspire publish mode, the production image is used instead.
+    /// The image tag can be overridden by chaining <c language="csharp">WithImageTag</c> on the returned resource builder.
     /// </para>
     /// <para>
-    /// When a <paramref name="configure"/> callback is provided (production mode), the standard
-    /// Chronicle production image is used. Use <see cref="ChronicleAspireBuilderExtensions.WithMongoDB"/>
-    /// inside the callback to wire up an external MongoDB connection string.
+    /// A <paramref name="configure"/> callback configures Chronicle in either mode; it does not
+    /// select the image. Use <see cref="ChronicleAspireBuilderExtensions.WithMongoDB"/> inside the
+    /// callback to wire up an external MongoDB connection string.
     /// </para>
     /// <para>
     /// When wiring up MongoDB with <see cref="ChronicleAspireBuilderExtensions.WithMongoDB"/>, the external
@@ -36,10 +37,9 @@ public static class ChronicleDistributedApplicationBuilderExtensions
     /// <param name="builder">The <see cref="IDistributedApplicationBuilder"/> to add the resource to.</param>
     /// <param name="name">The name for the Chronicle resource. Defaults to <c language="csharp">"chronicle"</c>.</param>
     /// <param name="configure">
-    /// Optional callback for configuring Chronicle for production. When provided, the production
-    /// image is used and the callback receives an <see cref="IChronicleAspireBuilder"/> for further
-    /// configuration (e.g. wiring up an external MongoDB connection string).
-    /// When omitted, the development image with embedded MongoDB is used.
+    /// Optional callback for configuring Chronicle in either Aspire run or publish mode. The callback
+    /// receives an <see cref="IChronicleAspireBuilder"/> for further configuration (e.g. wiring up an
+    /// external MongoDB connection string). It does not affect image selection.
     /// </param>
     /// <returns>An <see cref="IResourceBuilder{T}"/> for the <see cref="ChronicleResource"/>.</returns>
     public static IResourceBuilder<ChronicleResource> AddCratisChronicle(
@@ -48,9 +48,9 @@ public static class ChronicleDistributedApplicationBuilderExtensions
         Action<IChronicleAspireBuilder>? configure = default)
     {
         var resource = new ChronicleResource(name);
-        var imageTag = configure is null
-            ? ChronicleContainerImageTags.DevelopmentTag
-            : ChronicleContainerImageTags.Tag;
+        var imageTag = builder.ExecutionContext.IsPublishMode
+            ? ChronicleContainerImageTags.Tag
+            : ChronicleContainerImageTags.DevelopmentTag;
 
         var resourceBuilder = builder
             .AddResource(resource)

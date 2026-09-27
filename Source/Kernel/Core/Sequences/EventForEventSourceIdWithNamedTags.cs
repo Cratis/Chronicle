@@ -16,6 +16,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="NamedTags">The named tags belonging to this event.</param>
 /// <param name="Occurred">The optional occurrence time.</param>
 /// <param name="Subject">The optional subject.</param>
+/// <param name="Causation">Optional causation chain for this event. Defaults to the batch causation when not provided.</param>
 public record EventForEventSourceIdWithNamedTags(
     string EventSourceId,
     string EventSourceType,
@@ -26,4 +27,5 @@ public record EventForEventSourceIdWithNamedTags(
     IEnumerable<string>? Tags,
     IEnumerable<NamedTag> NamedTags,
     DateTimeOffset? Occurred = default,
-    string? Subject = default);
+    string? Subject = default,
+    IEnumerable<Causation>? Causation = default);

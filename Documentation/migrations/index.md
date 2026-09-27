@@ -31,7 +31,7 @@ This means your migration logic is durable. Once a migrator is registered with t
 
 ## Multi-version storage
 
-When an event with generation migrations arrives at the Kernel, it stores **all generations** of that event:
+When an event with generation migrations arrives at the Kernel, it stores **all generations** of that event, whether appended individually or as part of an `AppendMany` batch:
 
 - Appending a generation 1 event with a 1→2 migration stores gen 1 and gen 2
 - Appending a generation 2 event with a 1→2 migration stores gen 2 and the downcasted gen 1

@@ -29,8 +29,8 @@ public enum ReadModelSubstitutedLayer
     JoinKeyResolution = 1,
 
     /// <summary>
-    /// Deferred key handling. The harness retries an unresolved key once after every other event; a deployed
-    /// Chronicle defers the partition and redelivers, so out-of-order arrival and redelivery are not modeled.
+    /// Deferred key handling. The harness retries root keys once and child keys to a fixed point after the
+    /// seeded events; a deployed Chronicle defers the partition and redelivers when the parent arrives.
     /// </summary>
     DeferredKeyHandling = 2,
 

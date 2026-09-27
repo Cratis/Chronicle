@@ -9,6 +9,7 @@ public class and_observers_have_failed_partitions : given.an_append_result_for_c
 
     void Establish()
     {
+        _appendResult = _appendResult with { EventTypes = [new Cratis.Chronicle.Events.EventType("a-recorded", 1)] };
         _observers
             .WaitForCompletion(Arg.Do<Contracts.Observation.WaitForObserverCompletionRequest>(request => _request = request), Arg.Any<ProtoBuf.Grpc.CallContext>())
             .Returns(new Contracts.Observation.WaitForObserverCompletionResponse
@@ -35,4 +36,6 @@ public class and_observers_have_failed_partitions : given.an_append_result_for_c
     [Fact] void should_pass_namespace() => _request.Namespace.ShouldEqual(_appendResult.EventStoreNamespace.Value);
     [Fact] void should_pass_event_sequence_id() => _request.EventSequenceId.ShouldEqual(_appendResult.EventSequenceId.Value);
     [Fact] void should_pass_tail_sequence_number() => _request.TailEventSequenceNumber.ShouldEqual(_appendResult.TailSequenceNumber.Value);
+    [Fact] void should_pass_appended_event_types() => _request.EventTypeTails.Select(_ => _.EventType.Id).ShouldContain("a-recorded");
+    [Fact] void should_pass_the_matching_sequence_number() => _request.EventTypeTails.Single().SequenceNumber.ShouldEqual(42UL);
 }

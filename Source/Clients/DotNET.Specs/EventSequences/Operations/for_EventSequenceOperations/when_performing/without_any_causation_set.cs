@@ -26,4 +26,5 @@ public class without_any_causation_set : given.event_sequence_operations_without
         Arg.Any<IEnumerable<EventForEventSourceId>>(),
         concurrencyScopes: Arg.Is<Dictionary<EventSourceId, ConcurrencyScope>>(scopes => scopes.Count == 0));
     [Fact] void should_return_append_many_result() => _result.ShouldNotBeNull();
+    [Fact] void should_leave_the_events_causation_unset() => _operations.GetEventsToAppend().Single().Causation.ShouldBeNull();
 }

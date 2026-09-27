@@ -10,7 +10,7 @@ public class when_appending_a_routed_named_tag_batch : Specification
 {
     Exception _error;
 
-    async Task Because() => _error = await Catch.Exception(() => new NoOpEventLog().AppendMany([new EventForEventSourceId(EventSourceId.New(), "event")], []));
+    async Task Because() => _error = await Catch.Exception(() => new NoOpEventLog().AppendManyWithNamedTags([new EventForEventSourceId(EventSourceId.New(), "event")], []));
 
     [Fact] void should_report_that_the_event_log_is_unavailable_even_for_empty_tags() => _error.ShouldBeOfExactType<EventLogNotAvailableInKernelPipeline>();
 }

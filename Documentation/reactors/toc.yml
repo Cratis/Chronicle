@@ -4,6 +4,8 @@
   href: getting-started.mdx
 - name: Event Processing
   href: event-processing.mdx
+- name: Register at Runtime
+  href: runtime-registration.mdx
 - name: Returning Side Effects
   href: side-effects.mdx
 - name: Event Sequence

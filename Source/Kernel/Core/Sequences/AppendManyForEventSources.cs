@@ -84,7 +84,8 @@ public record AppendManyForEventSources(
                 @event.Occurred,
                 Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject))
             {
-                NamedTags = namedTagsPerEvent is null ? [] : namedTagsPerEvent[index]
+                NamedTags = namedTagsPerEvent is null ? [] : namedTagsPerEvent[index],
+                Causation = @event.Causation?.ToChronicle()
             };
         });
 

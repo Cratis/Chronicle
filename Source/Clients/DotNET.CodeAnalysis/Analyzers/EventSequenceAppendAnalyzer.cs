@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
@@ -51,17 +52,18 @@ public class EventSequenceAppendAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // Find the event argument(s)
-        var arguments = invocation.ArgumentList.Arguments;
-        if (arguments.Count == 0)
+        // Resolve against the declared parameter, not the call-site position: the wrapped-event
+        // overload has events first, and named arguments can appear in any order.
+        if (context.SemanticModel.GetOperation(invocation) is not IInvocationOperation operation)
         {
             return;
         }
 
-        // For Append, check the second argument (first is eventSourceId)
-        // For AppendMany, check the second argument which is IEnumerable<object>
-        var eventArgument = GetEventArgument(methodSymbol, arguments);
-        if (eventArgument == null)
+        var eventOperation = operation.Arguments.FirstOrDefault(argument =>
+            argument.Parameter?.Name == (methodSymbol.Name == "Append" ? "event" : "events"));
+        if (eventOperation?.Syntax is not ArgumentSyntax eventArgument ||
+            (methodSymbol.Name == "AppendMany" && eventOperation.Parameter?.Type is INamedTypeSymbol { IsGenericType: true } parameterType &&
+             parameterType.TypeArguments[0].ToDisplayString() == WellKnownTypes.EventForEventSourceIdName))
         {
             return;
         }
@@ -84,7 +86,7 @@ public class EventSequenceAppendAnalyzer : DiagnosticAnalyzer
         {
             var diagnostic = Diagnostic.Create(
                 Rule,
-                eventArgument.GetLocation(),
+                eventArgument.Expression.GetLocation(),
                 eventType.Name);
             context.ReportDiagnostic(diagnostic);
         }
@@ -119,22 +121,16 @@ public class EventSequenceAppendAnalyzer : DiagnosticAnalyzer
         return false;
     }
 
-    static ArgumentSyntax? GetEventArgument(IMethodSymbol methodSymbol, SeparatedSyntaxList<ArgumentSyntax> arguments)
-    {
-        // For both Append and AppendMany, the event(s) parameter is the second one (after eventSourceId)
-        if (arguments.Count < 2)
-        {
-            return null;
-        }
-
-        return arguments[1];
-    }
-
     static ITypeSymbol? GetEventType(ITypeSymbol type, IMethodSymbol methodSymbol)
     {
-        // For AppendMany, extract the element type from IEnumerable<object>
+        // For AppendMany, extract the element type from the collection.
         if (methodSymbol.Name == "AppendMany")
         {
+            if (type is IArrayTypeSymbol arrayType)
+            {
+                return arrayType.ElementType;
+            }
+
             if (type is INamedTypeSymbol namedType && namedType.IsGenericType)
             {
                 var typeArguments = namedType.TypeArguments;

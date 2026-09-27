@@ -33,6 +33,9 @@ public record AppendResult : IAppendResult, IAppendResultForObserverCompletion
     public EventSequenceNumber TailSequenceNumber => SequenceNumber;
 
     /// <inheritdoc />
+    public IEnumerable<EventType> EventTypes { get; init; } = [];
+
+    /// <inheritdoc />
     public bool IsSuccess => !HasConstraintViolations && !HasErrors && !HasConcurrencyViolations;
 
     /// <inheritdoc />

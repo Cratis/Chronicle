@@ -31,6 +31,11 @@ public interface IAppendResultForObserverCompletion
     EventSequenceNumber TailSequenceNumber { get; }
 
     /// <summary>
+    /// Gets the event types appended by this operation. Empty retains the legacy wait-for-all behavior.
+    /// </summary>
+    IEnumerable<EventType> EventTypes => [];
+
+    /// <summary>
     /// Gets the observer service used for waiting for completion.
     /// </summary>
     internal Contracts.Observation.IObservers? Observers =>

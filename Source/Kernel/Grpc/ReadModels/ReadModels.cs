@@ -49,6 +49,11 @@ internal sealed class ReadModels(
     IMaterializedReadModelStore materializedReadModels,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {
+    /// <summary>
+    /// Gets or sets the delay between attempts to resolve a read model definition.
+    /// </summary>
+    internal TimeSpan ReadModelDefinitionRetryDelay { get; set; } = TimeSpan.FromMilliseconds(100);
+
     /// <inheritdoc/>
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
     {
@@ -578,7 +583,6 @@ internal sealed class ReadModels(
     async Task<Concepts.ReadModels.ReadModelDefinition> WaitForReadModelDefinition(IReadModel readModel, ReadModelIdentifier readModelIdentifier, CancellationToken cancellationToken)
     {
         const int maxRetries = 50;
-        const int delayMs = 100;
 
         for (var i = 0; i < maxRetries; i++)
         {
@@ -590,7 +594,7 @@ internal sealed class ReadModels(
                 return definition;
             }
 
-            await Task.Delay(delayMs, cancellationToken);
+            await Task.Delay(ReadModelDefinitionRetryDelay, TimeProvider.System, cancellationToken);
         }
 
         throw new ReadModelNotFound(readModelIdentifier);
