@@ -25,6 +25,14 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     const string MsSqlPassword = "Chronicle_P@ss1";
 
     /// <summary>
+    /// Number of attempts made to start a backing-database container before giving up. The base
+    /// class retries its own (kernel) container ten times because a bind-time port conflict
+    /// resolves in seconds; a backing database whose image simply never becomes ready burns the
+    /// full five-minute wait-strategy timeout per attempt, so the budget here is tighter.
+    /// </summary>
+    const int BackingDatabaseStartAttempts = 3;
+
+    /// <summary>
     /// Extends the global wait-strategy timeout so MSSQL (which runs heavy EF Core migrations
     /// on first startup) doesn't time out before the Chronicle server's health endpoint
     /// responds. Also raises the default in-test polling timeout to 20 seconds for SQL
@@ -375,11 +383,25 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         const string tailLoop = "tail -f /dev/null";
         var replicaSetCommand = mongodStart + waitForPing + initiateReplicaSet + tailLoop;
 
-        // Random host port avoids 'port already allocated' races when one test session
-        // hands over to the next before Docker has released the previous binding, and
-        // lets multiple test processes run side-by-side. The host port is discovered
-        // dynamically through MongoDBContainer.GetMappedPublicPort by every caller.
-        _outOfProcessMongoContainer = new ContainerBuilder(ChronicleInProcessFixture.ImageName)
+        _outOfProcessMongoContainer = BuildAndStartBackingDatabase(() => BuildOutOfProcessMongoContainer(replicaSetCommand, network), "MongoDB");
+
+        return $"mongodb://{MongoDbHostName}:27017/?replicaSet=rs0";
+    }
+
+    /// <summary>
+    /// Builds the out-of-process MongoDB container.
+    /// </summary>
+    /// <param name="replicaSetCommand">The command that starts mongod and initiates the replica set.</param>
+    /// <param name="network">The network to attach the container to.</param>
+    /// <returns>The built container.</returns>
+    /// <remarks>
+    /// Random host port avoids 'port already allocated' races when one test session
+    /// hands over to the next before Docker has released the previous binding, and
+    /// lets multiple test processes run side-by-side. The host port is discovered
+    /// dynamically through MongoDBContainer.GetMappedPublicPort by every caller.
+    /// </remarks>
+    IContainer BuildOutOfProcessMongoContainer(string replicaSetCommand, INetwork network) =>
+        new ContainerBuilder(ChronicleInProcessFixture.ImageName)
             .WithImage(ChronicleInProcessFixture.ImageName)
             .WithCommand("/bin/sh", "-c", replicaSetCommand)
             .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
@@ -391,11 +413,6 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"))
             .Build();
 
-        _outOfProcessMongoContainer.StartAsync().GetAwaiter().GetResult();
-
-        return $"mongodb://{MongoDbHostName}:27017/?replicaSet=rs0";
-    }
-
     string BuildAndStartPostgreSql(INetwork network)
     {
         var envConnectionString = Environment.GetEnvironmentVariable("CHRONICLE_POSTGRESQL_CONNECTION_DETAILS");
@@ -404,7 +421,18 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             return envConnectionString;
         }
 
-        _databaseContainer = new ContainerBuilder("postgres:16")
+        _databaseContainer = BuildAndStartBackingDatabase(() => BuildPostgreSqlContainer(network), "PostgreSQL");
+
+        return $"Host={PostgreSqlHostName};Port=5432;Database={_outOfProcessSqlDatabaseName};Username=postgres;Password={PostgreSqlPassword}";
+    }
+
+    /// <summary>
+    /// Builds the PostgreSQL backing-database container.
+    /// </summary>
+    /// <param name="network">The network to attach the container to.</param>
+    /// <returns>The built container.</returns>
+    IContainer BuildPostgreSqlContainer(INetwork network) =>
+        new ContainerBuilder("postgres:16")
             .WithImage("postgres:16")
             .WithHostname(PostgreSqlHostName)
             .WithPortBinding(5432, assignRandomHostPort: true)
@@ -415,11 +443,6 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
             .Build();
 
-        _databaseContainer.StartAsync().GetAwaiter().GetResult();
-
-        return $"Host={PostgreSqlHostName};Port=5432;Database={_outOfProcessSqlDatabaseName};Username=postgres;Password={PostgreSqlPassword}";
-    }
-
     string BuildAndStartMsSql(INetwork network)
     {
         var envConnectionString = Environment.GetEnvironmentVariable("CHRONICLE_MSSQL_CONNECTION_DETAILS");
@@ -428,6 +451,18 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             return envConnectionString;
         }
 
+        _databaseContainer = BuildAndStartBackingDatabase(() => BuildMsSqlContainer(network), "MSSQL");
+
+        return $"Server={MsSqlHostName},1433;Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
+    }
+
+    /// <summary>
+    /// Builds the SQL Server backing-database container.
+    /// </summary>
+    /// <param name="network">The network to attach the container to.</param>
+    /// <returns>The built container.</returns>
+    IContainer BuildMsSqlContainer(INetwork network)
+    {
         var builder = new ContainerBuilder("mcr.microsoft.com/mssql/server:2025-latest")
             .WithImage("mcr.microsoft.com/mssql/server:2025-latest")
             .WithHostname(MsSqlHostName)
@@ -459,11 +494,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             builder = builder.WithCreateParameterModifier(parameters => parameters.Platform = "linux/amd64");
         }
 
-        _databaseContainer = builder.Build();
-
-        _databaseContainer.StartAsync().GetAwaiter().GetResult();
-
-        return $"Server={MsSqlHostName},1433;Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
+        return builder.Build();
     }
 
     static string GetRequiredEnvironmentVariable(string name) =>
@@ -472,6 +503,56 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             { Length: > 0 } value => value,
             _ => throw new InvalidOperationException($"Missing required environment variable '{name}' for selected storage provider."),
         };
+
+    /// <summary>
+    /// Starts a backing-database container, rebuilding and retrying when the start fails.
+    /// </summary>
+    /// <param name="build">Builds a fresh container. Called once per attempt, because a container instance holds the host port and network aliases it was created with - reusing a failed instance replays the same failure.</param>
+    /// <param name="databaseName">Name of the database, used in log lines.</param>
+    /// <returns>The started container.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the container still fails to start after <see cref="BackingDatabaseStartAttempts"/> attempts.</exception>
+    /// <remarks>
+    /// Mirrors the retry-with-rebuild semantics the base <see cref="XUnit.Integration.ChronicleFixture"/> applies to
+    /// its own container. The backing databases are started directly by the BuildAndStart helpers, so without this
+    /// they get no retry at all - and a container that crashes during startup takes the whole fixture with it:
+    /// every test in the shard then fails on an unresolved <c language="csharp">ChronicleConfigurableFixture</c> constructor argument,
+    /// which the CI retry script correctly classifies as systemic and refuses to retry, reddening the gate for the
+    /// full out-of-process matrix. That exact shape took down the MSSQL shard of Hot Core Gate run 36299040727,
+    /// where a SQL Server 2025 container hit a PAL assertion at startup and exited with code 1; a fresh container
+    /// on the same host starts fine, which is what the retry buys.
+    /// </remarks>
+    static IContainer BuildAndStartBackingDatabase(Func<IContainer> build, string databaseName)
+    {
+        var attempt = 0;
+        Exception? failure;
+        do
+        {
+            attempt++;
+            IContainer? container = null;
+            try
+            {
+                container = build();
+                Console.WriteLine($"Starting {databaseName} container '{container.Image.FullName}' (attempt {attempt} of {BackingDatabaseStartAttempts})...");
+                container.StartAsync().GetAwaiter().GetResult();
+                return container;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Failed to start the {databaseName} container (attempt {attempt} of {BackingDatabaseStartAttempts}): {e.Message}");
+                failure = e;
+
+                // Remove the failed container before rebuilding: it still owns its hostname on the
+                // shared network, and a leftover stopped container would collide with the replacement.
+                container?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                Task.Delay(2000).GetAwaiter().GetResult();
+            }
+        }
+        while (attempt < BackingDatabaseStartAttempts);
+
+        throw new InvalidOperationException(
+            $"Failed to start the {databaseName} container after {attempt} attempts.",
+            failure);
+    }
 
     /// <summary>
     /// Reset the outofprocess Chronicle server's in-memory state via the development-only
