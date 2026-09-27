@@ -4,11 +4,11 @@
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Exception that gets thrown when an projection is missing for a model type.
+/// Legacy exception for a missing projection definition. Chronicle does not throw it; projections use <see cref="IProjectionFor{TReadModel}"/>.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="MissingImmediateProjectionForModel"/>.
 /// </remarks>
 /// <param name="readModelType">Type of read model.</param>
 public class MissingImmediateProjectionForModel(Type readModelType)
-    : Exception($"Missing projection definition for model of type '{readModelType.FullName}'. Implement one by implementing the interface IImmediateProjectionFor<{readModelType.FullName}>.");
+    : Exception($"Missing projection definition for model of type '{readModelType.FullName}'.");

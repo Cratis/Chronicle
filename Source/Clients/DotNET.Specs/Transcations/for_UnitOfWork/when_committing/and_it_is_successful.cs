@@ -26,4 +26,5 @@ public class and_it_is_successful : given.a_unit_of_work_with_two_events_for_dif
 
     [Fact] void should_call_on_completed() => _onCompletedCalled.ShouldBeTrue();
     [Fact] void should_be_successful() => _unitOfWork.IsSuccess.ShouldBeTrue();
+    [Fact] void should_not_report_decision_enrollment() => ((IUnitOfWork)_unitOfWork).HasEnrolledDecisionReads.ShouldBeFalse();
 }

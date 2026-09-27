@@ -73,6 +73,8 @@ public record NullableCompositeOrderReadModel(OrderKey? Id, decimal Total, strin
 
 public record CompositeChildReadModel(string Id, List<CompositeChild> Items);
 
+public record NestedCompositeReadModel(string Id, CompositeChild? Item);
+
 public record CompositeChild(OrderKey? Id, string Name);
 
 public record Users(string Name);

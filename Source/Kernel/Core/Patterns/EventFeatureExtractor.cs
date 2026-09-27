@@ -109,10 +109,10 @@ public class EventFeatureExtractor(ITimeBucketResolver timeBucketResolver) : IEv
 
         if (causation.Type.Value == AspNetRequestCausationType &&
             causation.Properties is not null &&
-            causation.Properties.TryGetValue(WellKnownCausationProperties.Route, out var route) &&
-            !string.IsNullOrEmpty(route))
+            causation.Properties.TryGetValue(WellKnownCausationProperties.RouteTemplate, out var template) &&
+            !string.IsNullOrEmpty(template))
         {
-            return $"Request: {route}";
+            return $"Request: {template}";
         }
 
         return causation.Type.Value;

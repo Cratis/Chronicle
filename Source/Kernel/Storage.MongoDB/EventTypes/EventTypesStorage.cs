@@ -58,6 +58,15 @@ public class EventTypesStorage(
 
         var generationKey = type.Generation.ToString();
         var schemaDocument = BsonDocument.Parse(schema.ToJson());
+        using var cursor = await GetCollection().FindAsync(_ => _.Id == type.Id).ConfigureAwait(false);
+        var existing = await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
+        if (existing is not null &&
+            existing.Owner == owner && existing.Source == source && existing.Tombstone == type.Tombstone &&
+            existing.Schemas.TryGetValue(generationKey, out var storedSchema) &&
+            JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema.ToJson(), schemaDocument.ToJson()))
+        {
+            return false;
+        }
 
         // Merge the incoming generation into the stored document by setting only its schema entry and the
         // metadata fields. Other generations - which another silo may have registered - are left untouched,
@@ -338,7 +347,8 @@ public class EventTypesStorage(
             return true;
         }
 
-        if (schemas.Any(_ => !existing.Schemas.TryGetValue(_.Key, out var storedSchema) || storedSchema != _.Value))
+        if (schemas.Any(_ => !existing.Schemas.TryGetValue(_.Key, out var storedSchema) ||
+            !JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema.ToJson(), _.Value.ToJson())))
         {
             return true;
         }

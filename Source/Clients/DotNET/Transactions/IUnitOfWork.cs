@@ -35,6 +35,15 @@ public interface IUnitOfWork : IDisposable
     bool IsSuccess { get; }
 
     /// <summary>
+    /// Gets a value indicating whether a decision read has ever been successfully enrolled in this unit of work.
+    /// </summary>
+    /// <remarks>
+    /// Once true, the value remains true after commit, rollback, or disposal. Custom implementations that do not
+    /// override this property report false by default.
+    /// </remarks>
+    bool HasEnrolledDecisionReads => false;
+
+    /// <summary>
     /// Add an event that has occurred to the <see cref="IUnitOfWork"/>.
     /// </summary>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> for the event.</param>
