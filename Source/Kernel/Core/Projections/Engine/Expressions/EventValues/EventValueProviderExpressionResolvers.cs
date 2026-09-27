@@ -3,6 +3,7 @@
 
 using System.Collections;
 using System.Dynamic;
+using System.Globalization;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -59,6 +60,20 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
         if (input is null)
         {
             return null!;
+        }
+
+        if (input is DateTimeOffset timestamp && schemaProperty.Type == JsonObjectType.String)
+        {
+            var timestampTargetType = schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats);
+            if (timestampTargetType == typeof(DateTime))
+            {
+                return timestamp.UtcDateTime;
+            }
+
+            if (timestampTargetType == typeof(string))
+            {
+                return timestamp.ToString("O", CultureInfo.InvariantCulture);
+            }
         }
 
         if (input is string text && schemaProperty.Type == JsonObjectType.String)
