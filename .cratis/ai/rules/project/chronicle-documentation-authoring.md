@@ -26,8 +26,9 @@ bash Documentation/verify-markdown.sh
 
 This runs:
 - `markdownlint-cli2` on all `.md` and `.mdx` files under `Documentation/`
-- `Documentation/verify-authoring.mjs` — validates Starlight aside variants, imports/components requiring `.mdx`, `<ChronicleClientTabs>` syntax, and landing-page collisions
+- `Documentation/verify-authoring.mjs` — validates Starlight aside variants, imports/components requiring `.mdx`, `<ChronicleClientTabs>` syntax, landing-page collisions, and zero direct client-language fences in shared pages (`Documentation/**` except `client-snippets/` and `clients/`)
+- `Documentation/verify-authoring.mjs --self-test` — exercises the shared-page fence detector against Markdown/GFM and MDX parsing
 
-The gate MUST pass with **zero errors**. These checks are enforced by the `documentation.yml` workflow on push to `main`.
+The gate MUST pass with **zero errors**. `.github/workflows/markdown-verification.yml` runs the same self-test and authoring check on pull requests.
 
 For detailed Chronicle client snippet workflows (adding shared examples, ownership, validation, and CI), see `Documentation/contributing/clients/index.mdx`.

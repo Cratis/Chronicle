@@ -36,7 +36,7 @@ A shared page that uses `ChronicleClientTabs` must itself be `.mdx`. Put every p
 
 Do not create a public client-specific Chronicle section just to hold equivalent snippets. The snippet folders are source-only and are expanded into the shared pages by the documentation site sync.
 
-Do not add new raw `csharp`, `cs`, `java`, `kotlin`, `elixir`, `typescript`, or `ts` fenced examples to shared Chronicle docs for client SDK behavior. Use `<ChronicleClientTabs />` instead. The Documentation repo runs `npm run chronicle-client-docs:check`, which fails on missing snippets and on any increase in direct client-language fences in shared Chronicle docs.
+Shared pages (`Documentation/**` except `client-snippets/` and `clients/`) must contain **no direct client-language fences**. This includes `csharp`, `cs`, `c#`, `java`, `kotlin`, `kt`, `kts`, `elixir`, `ex`, `exs`, `typescript`, `ts`, and `tsx`. Put client code in `Documentation/client-snippets/<id>.md` and reference it from a shared `.mdx` page with `<ChronicleClientTabs snippet="<id>" />`. `bash Documentation/verify-markdown.sh` enforces this locally, and Markdown Verification CI runs the same authoring check and its detector self-test. The detector parses Markdown/GFM and MDX rather than matching fence-looking text inside other code blocks.
 
 ### Add a shared example
 
@@ -120,7 +120,7 @@ The documentation site imports those pages into the Chronicle navigation under *
 
 If a client-specific page later becomes generally useful across clients, move the explanation into the shared Chronicle docs and use `<ChronicleClientTabs />` for the code.
 
-`npm run chronicle-client-docs:check` audits public client docs for shared-topic overlap using `Documentation/web/chronicle-client-docs.yml`. That count is a ratchet: it can go down as duplicated client pages are consolidated into shared docs, but it must not increase.
+From `Documentation/web`, `npm run variant-docs:check` audits public client docs for shared-topic overlap using `variant-docs.yml`. That count is a ratchet: it can go down as duplicated client pages are consolidated into shared docs, but it must not increase.
 
 If an old client URL must remain as a pointer to the shared docs, mark it as a bridge page:
 
@@ -137,28 +137,21 @@ Bridge pages should only explain where the canonical shared topic lives and wher
 To add another client language later:
 
 1. Add the client repo to the Documentation repo checkout/submodule setup.
-2. Add it to `Documentation/web/chronicle-client-docs.yml`.
+2. Add it to `Documentation/web/variant-docs.yml`.
 3. Add `Documentation/client-snippets/**` to the client repo when it participates in shared tabs. A new client only shows up in a tab group once it has a matching snippet file — no other wiring makes it opt-in or required.
 4. Add `Documentation/validate-client-snippets.py` that compiles snippets against that client.
 5. Add a `Client Snippet Verification` workflow in the client repo.
 6. Add the documentation sync workflow that triggers the Documentation repo after `Documentation/**` changes land on `main`.
 7. Add the new language's snippet files for the shared Chronicle pages that should include it.
-8. Run the affected snippet validators, `npm run chronicle-client-docs:check`, and `npm run build` in `Documentation/web`.
+8. Run the affected snippet validators, `npm run variant-docs:check`, and `npm run build` in `Documentation/web`.
 
 ### Migration audit
 
-The current docs have migrated shared client examples behind `<ChronicleClientTabs />`. The Documentation repo keeps a direct-fence baseline in `web/scripts/chronicle-client-docs-baseline.json`; the normal audit allows direct-fence counts to decrease but fails if they increase.
+Shared Chronicle pages have **zero** allowed direct client-language fences, enforced by `Documentation/verify-authoring.mjs` locally and in CI. The Documentation site's aggregate audit also has an empty Chronicle client-fence baseline in `web/scripts/variant-docs-baseline.json`; it checks missing snippets and audits other products as well.
 
-The aggregate client-doc check also reports public client pages that still look like shared Chronicle topic pages. Treat those counts as migration debt: move the shared explanation into Chronicle docs, replace code with synchronized tabs, then lower the manifest baseline.
+The aggregate check reports public client pages that still look like shared Chronicle topic pages. Treat those counts as migration debt: move the shared explanation into Chronicle docs, replace code with synchronized tabs, then lower the `publicDocsAudit` baseline in `web/variant-docs.yml`.
 
-Use strict mode to see the remaining migration work:
-
-```bash
-cd Documentation/web
-npm run audit:chronicle-client-docs:strict
-```
-
-When migrating a page, replace each client SDK example with `<ChronicleClientTabs snippet="..." />`, add matching snippets in the participating client repos, run each affected client snippet validator, then refresh the baseline after the direct-fence count decreases.
+From `Documentation/web`, run `npm run audit:variant-docs:strict` to audit shared pages across products without the site's baseline. When migrating a page, replace each client SDK example with `<ChronicleClientTabs snippet="..." />`, add matching snippets in the participating client repos, and run each affected client snippet validator.
 
 ## Topics
 
