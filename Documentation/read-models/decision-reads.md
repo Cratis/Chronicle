@@ -43,7 +43,7 @@ if (!completed.IsSuccess)
 }
 ```
 
-The middleware will not commit the completed unit again. `IUnitOfWork.GetDecisionConflicts()` maps violated labels to the read model type and key without exposing boundaries.
+The middleware will not commit the completed unit again. `IUnitOfWork.GetDecisionConflicts()` maps violated labels to the read model type and key without exposing boundaries. `IUnitOfWork.HasEnrolledDecisionReads` is a read-only indication that at least one decision read was successfully enrolled, including through a direct `AddDecisionRead` call. On Chronicle's unit of work it remains true after commit, rollback or disposal. Custom implementations default to false for compatibility; a false value on one of those implementations is not proof that it cannot enroll protected reads. This property does not grant permission to commit a protected unit without its owner capability.
 
 ## Admitted projections
 
