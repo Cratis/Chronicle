@@ -465,7 +465,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         {
             _databaseContainer.StartAsync().GetAwaiter().GetResult();
         }
-        catch (ContainerNotRunningException)
+        catch (ContainerNotRunningException) when (_databaseContainer.State == TestcontainersStates.Exited)
         {
             // Only a process that exited during startup warrants another attempt. Build a new
             // container so Testcontainers does not reuse the failed instance or its host port.

@@ -56,13 +56,8 @@ report_port_holder() {
             local command="unknown"
             [ -r "/proc/$pid/comm" ] && command="$(cat "/proc/$pid/comm" 2>/dev/null)"
 
-            local arguments=""
-            if [ -r "/proc/$pid/cmdline" ]; then
-                # Newlines are folded away too, so one holder is always one line in the job log.
-                arguments="$(tr '\0\n' '  ' < "/proc/$pid/cmdline" 2>/dev/null)"
-            fi
-
-            echo "  port $port state $state remote $remote_address is held by pid $pid ($command): ${arguments:-no command line}"
+            # Command lines can contain credentials (including for outbound connections).
+            echo "  port $port state $state remote $remote_address is held by pid $pid ($command)"
             identified=1
             break
         done
@@ -78,12 +73,11 @@ report_port_holder() {
     return 0
 }
 
-# List every listening socket in this container, with the process holding it.
-#
-# The pre-flight check below looks at one port, so it is only ever as right as its idea of which
-# port the server will bind. This is the port-agnostic fallback: when the server has already failed,
-# print everything, so a wrong guess about the port cannot hide the answer.
+# List every listening socket in this container, with the process holding it, and check the
+# resolved Chronicle port in every state. The latter catches outbound holders that are not listeners.
 report_all_listening_sockets() {
+    report_port_holder "$(resolve_chronicle_port)" || true
+
     local file
     local ports=()
 
