@@ -41,9 +41,46 @@ function isSharedPage(file) {
 
 function directClientFenceLines(content) {
     const violations = [];
+    const containers = [];
     let fence;
     for (const [index, line] of content.split('\n').entries()) {
-        const match = line.match(/^\s*(`{3,}|~{3,})[ \t]*([^\s`~]*)(.*)$/);
+        if (!line.trim()) continue;
+
+        let remainder = line;
+        for (let position = 0; position < containers.length; position++) {
+            const container = containers[position];
+            const prefix = container.type === 'quote'
+                ? remainder.match(/^ {0,3}> ?/)
+                : remainder.match(new RegExp(`^ {${container.indent}}`));
+            if (!prefix) {
+                containers.length = position;
+                fence = undefined;
+                break;
+            }
+            remainder = remainder.slice(prefix[0].length);
+        }
+
+        if (!fence) {
+            while (true) {
+                const quote = remainder.match(/^ {0,3}> ?/);
+                if (quote) {
+                    containers.push({ type: 'quote' });
+                    remainder = remainder.slice(quote[0].length);
+                    continue;
+                }
+
+                const list = remainder.match(/^( {0,3})([-+*]|\d{1,9}[.)])( +)/);
+                if (!list) break;
+                // A list item's content starts after 1–4 spaces; more than 4
+                // leaves the excess as indentation (possibly an indented code block).
+                const padding = list[3].length <= 4 ? list[3].length : 1;
+                containers.push({ type: 'list', indent: list[1].length + list[2].length + padding });
+                remainder = remainder.slice(list[1].length + list[2].length + padding);
+            }
+        }
+
+        // Fences may be indented at most three spaces inside their container.
+        const match = remainder.match(/^ {0,3}(`{3,}|~{3,})[ \t]*([^\s`~]*)(.*)$/);
         if (!match) continue;
 
         const marker = match[1];
@@ -64,14 +101,30 @@ function selfTestClientFences() {
     const nested = directClientFenceLines('````md\n```csharp\nexample\n````\n').length;
     const infoStringIsNotACloser = directClientFenceLines('```md\n```tsx\n``` \n```java\nexample\n```');
     const tildeInfoStringIsNotACloser = directClientFenceLines('~~~md\n~~~c#\n~~~ \n~~~kt\nexample\n~~~');
+    const containerCases = [
+        ['blockquote', '> ```csharp\n> example\n> ```', '1'],
+        ['nested blockquote', '> > ~~~java\n> > example\n> > ~~~', '1'],
+        ['bullet list', '- ```kotlin\n  example\n  ```', '1'],
+        ['ordered list', '1. ```elixir\n   example\n   ```', '1'],
+        ['list continuation', '- item\n\n  ```tsx\n  example\n  ```', '3'],
+        ['nested list', '- item\n  1. ```cs\n     example\n     ```', '2'],
+        ['quote and list', '> - ```typescript\n>   example\n>   ```', '1'],
+        ['nested fence in quote', '> ````md\n> ```csharp\n> ````', ''],
+        ['info-string closer in quote', '> ```md\n> ```tsx\n> ``` \n> ```java\n> example\n> ```', '4'],
+        ['info-string closer in list', '- ~~~md\n  ~~~kt\n  ~~~ \n  ~~~c#\n  example\n  ~~~', '4'],
+        ['indented code block', '    ```csharp\n    example\n    ```', ''],
+        ['indented list content', '-     ```csharp\n      example', ''],
+        ['sibling list item', '- ```text\n- ```java\n  example\n  ```', '2']
+    ];
+    const failedCase = containerCases.find(([, input, expected]) => directClientFenceLines(input).join(',') !== expected);
     const excluded = ['client-snippets/example.md', 'clients/dotnet/example.md']
         .every(file => !isSharedPage(path.join(documentationRoot, file)));
-    if (found !== clientFenceLanguages.size || nested !== 0 ||
+    if (found !== clientFenceLanguages.size || nested !== 0 || failedCase ||
         infoStringIsNotACloser.join(',') !== '4' || tildeInfoStringIsNotACloser.join(',') !== '4' || !excluded) {
-        console.error(`Client fence self-test failed: detected ${found} of ${clientFenceLanguages.size} planted fences; nested: ${nested}; info-string closer: ${infoStringIsNotACloser}; tilde closer: ${tildeInfoStringIsNotACloser}; excluded paths: ${excluded}.`);
+        console.error(`Client fence self-test failed: detected ${found} of ${clientFenceLanguages.size} planted fences; nested: ${nested}; info-string closer: ${infoStringIsNotACloser}; tilde closer: ${tildeInfoStringIsNotACloser}; container case: ${failedCase?.[0] ?? 'none'}; excluded paths: ${excluded}.`);
         process.exit(1);
     }
-    console.log(`Client fence self-test detected ${found} planted fences across ${clientFenceLanguages.size} languages.`);
+    console.log(`Client fence self-test detected ${found} planted fences across ${clientFenceLanguages.size} languages and passed ${containerCases.length} container cases.`);
 }
 
 function validateContent(file, content) {
