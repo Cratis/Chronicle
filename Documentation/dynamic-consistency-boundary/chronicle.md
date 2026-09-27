@@ -41,11 +41,11 @@ You can also attach [custom tags](../events/appending-with-tags#custom-tags) to 
 
 ## Aggregate roots
 
-If you prefer an aggregate root style, Chronicle supports it through Cratis.Arc. See [aggregate roots support](/arc/backend/chronicle/aggregates/).
+If you prefer an aggregate root style, Chronicle supports it through Cratis.Arc. See [aggregate roots support](/arc/backend/csharp/chronicle/aggregates/).
 
 ## Arc command validation flow
 
-When using Arc, command validation runs before decision evaluation. See [Arc Chronicle validation](/arc/backend/chronicle/validation/) for details.
+When using Arc, command validation runs before decision evaluation. See [Arc Chronicle validation](/arc/backend/csharp/chronicle/validation/) for details.
 
 ```mermaid
 flowchart LR
