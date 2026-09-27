@@ -1,7 +1,8 @@
 name: .NET Build & Integration
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # An unrelated label must not cancel a running PR build or requested integration run.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.action || github.event_name }}-${{ github.event.label.name || 'none' }}
   cancel-in-progress: true
 
 env:
@@ -12,41 +13,23 @@ env:
 
 on:
   workflow_dispatch:
-  # Nightly full-coverage run. Pull requests cover the default storage backend
-  # only, so this is where sqlite, postgresql and mssql get exercised.
+  # Nightly full-coverage run; ordinary pull-request events run only the build and specs.
   schedule:
     - cron: "0 2 * * *"
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches:
       - "**"
-    # This list is a committed contract. `.github/build-affecting-paths.txt` records every path that must
-    # reach a build and a test run, and carries the evidence for each one; the "Assert the build-affecting
-    # path contract" step below fails when a required path is not covered by any pattern here. Narrowing
-    # this list therefore requires saying in the pull request what stops being covered - a narrowing to
-    # `.cs`/`.csproj` is how a `Directory.Packages.props` bump once merged with no build at all.
+    # Labeling must start integration even for PRs changing only documentation.
+    # Keep the path contract assertion: the broad filter covers every required build-affecting path.
     paths:
-      - "Source/**"
-      - "Integration/**"
-      - "Benchmarks/**"
-      - "Docker/**"
-      - "Directory.Packages.props"
-      - "Directory.Packages.NET8.props"
-      - "Directory.Packages.NET9.props"
-      - "Directory.Build.props"
-      - "Directory.Build.targets"
-      - "global.json"
-      - ".globalconfig"
-      - ".editorconfig"
-      - "Chronicle.slnx"
-      - "specs.runsettings"
-      - ".github/workflows/**"
-      - ".github/scripts/**"
-      - ".github/build-affecting-paths.txt"
+      - "**"
 
 jobs:
   # First, before anything is built: a change that breaks the wire contract for clients already running against this
   # major cannot ship, so there is nothing to gain from building and testing it. See wire-compatibility.yml.
   wire-compatibility:
+    if: github.event.action != 'labeled' || github.event.label.name == 'run-integration'
     uses: ./.github/workflows/wire-compatibility.yml
 
   dotnet-build:
@@ -111,6 +94,7 @@ jobs:
             dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
 
       - name: Login to GitHub Docker Registry
+        if: github.event_name != 'pull_request' || github.event.action == 'labeled'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -138,14 +122,10 @@ jobs:
           done
           dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
-      # The push is what lets the integration shards, which run on their own runners, get this image.
-      # A Dependabot pull request cannot do it: those runs receive a read-only GITHUB_TOKEN, and the
-      # `permissions` key cannot raise it, so `docker push` ends in "denied: installation not allowed to
-      # Write organization package" and takes the whole build job - build, client packaging, the lot -
-      # down with it. That left every Dependabot pull request permanently red, which is the worst place
-      # to lose a build: a dependency bump is exactly the change that needs one. Build the image either
-      # way so the Dockerfile is still exercised, and push only when the token can.
+      # Only integration runs need an image to share with their shards. Dependabot's read-only token
+      # cannot push it; its labeled runs retain API/MongoDB coverage but skip the reusable matrix.
       - name: Build development Docker image
+        if: github.event_name != 'pull_request' || github.event.action == 'labeled'
         run: |
           dotnet publish Source/Kernel/Server/Server.csproj \
             --configuration Debug \
@@ -154,7 +134,7 @@ jobs:
           docker build -t "${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" -f Docker/Local/Dockerfile .
 
       - name: Push development Docker image
-        if: github.actor != 'dependabot[bot]'
+        if: (github.event_name != 'pull_request' || github.event.action == 'labeled') && github.actor != 'dependabot[bot]'
         run: docker push ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
 
       - name: Pack Release build output
@@ -175,17 +155,14 @@ jobs:
           if-no-files-found: error
 
       - name: Export image
+        if: github.event_name != 'pull_request' || github.event.action == 'labeled'
         id: export-image
         run: echo "image=${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" >> "$GITHUB_OUTPUT"
 
-  # The integration tests run with the DEVELOPMENT compile symbol, which the
-  # Release build above does not define, so every integration shard would
-  # otherwise recompile ~15-20 projects from source before its first test.
-  # Build that variant once here -- in parallel with dotnet-build, so it does
-  # not extend the critical path -- and upload it separately for the shards
-  # to run with --no-build. The non-DEVELOPMENT build output goes to the
-  # specs/mongodb/integration-api jobs, which must exercise production behavior.
+  # Only integration shards consume the DEVELOPMENT-symbol build. Ordinary PR pushes
+  # keep the Release build and specs, without this extra build or artifact.
   dotnet-build-development:
+    if: github.event_name != 'pull_request' || github.event.action == 'labeled'
     needs: [wire-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -289,12 +266,10 @@ jobs:
           path: ./coverage-results/
           retention-days: 1
 
-  # Skipped for Dependabot, whose read-only token cannot push the image these shards pull. The rest of the
-  # gate - build, specs, mongodb, and integration-api, which builds its own image from the downloaded binaries -
-  # still runs, so a bump is checked rather than waved through. A bump that needs the full matrix should be
-  # re-opened as an ordinary pull request, where the token can push.
+  # Dependabot's read-only token cannot push the image these shards pull. A bump needing
+  # the full matrix must be reopened as an ordinary PR, where the token can push.
   integration:
-    if: github.actor != 'dependabot[bot]'
+    if: (github.event_name != 'pull_request' || github.event.action == 'labeled') && github.actor != 'dependabot[bot]'
     needs: [dotnet-build, dotnet-build-development]
     permissions:
       contents: read
@@ -306,11 +281,11 @@ jobs:
       # the Docker image still comes from dotnet-build.
       build-output-artifact: build-output-development
       chronicle-image: ${{ needs.dotnet-build.outputs.chronicle-image }}
-      # Every storage backend on the nightly schedule and on manual dispatch;
-      # pull requests run the default backend only.
+      # Every storage backend nightly and on dispatch; labeled PRs use the PR backend set.
       all-providers: ${{ github.event_name != 'pull_request' }}
 
   integration-api:
+    if: github.event_name != 'pull_request' || github.event.action == 'labeled'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [dotnet-build]
@@ -369,6 +344,7 @@ jobs:
           retention-days: 1
 
   mongodb:
+    if: github.event_name != 'pull_request' || github.event.action == 'labeled'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [dotnet-build]
@@ -418,7 +394,9 @@ jobs:
           retention-days: 1
 
   coverage-merge-and-cache:
-    if: github.event_name != 'pull_request_target'
+    # Merge the available coverage (specs only on ordinary PR pushes); skipped
+    # integration jobs must not suppress the coverage job altogether.
+    if: always() && needs.specs.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [specs, integration, integration-api, mongodb]

@@ -10,6 +10,14 @@ When you provide no runtime arguments, the suite defaults to:
 - mode: `outofprocess`
 - database: `mongodb`
 
+## When CI runs integration
+
+Pull-request pushes run the Release build, specs, and cheap checks, **not** the Docker integration suites. Run the relevant integration namespace locally before requesting CI integration. The [hot-core gate](https://github.com/Cratis/Chronicle/blob/main/.github/hot-core-paths.txt) reports which hot-core paths a PR touches and reminds you to request the full matrix; its ordinary PR check does not run that matrix.
+
+Apply the `run-integration` label to a pull request to start one integration run. This runs the client integration suite against MongoDB and SQLite, plus the API and MongoDB integration jobs. If the PR touches the hot core, the hot-core gate also requires its full out-of-process backend matrix to pass. Remove and re-add the label to request another run after changes; pushing new commits does not rerun integration automatically. Other label changes do not start integration.
+
+The existing nightly schedule on `main` and manual `workflow_dispatch` run the full client backend matrix. Main-branch pushes do not run integration; nightly coverage handles main. For Dependabot PRs, the reusable client matrix cannot run because the read-only token cannot push its image; reopen a bump requiring that matrix as an ordinary PR. The labeled API and MongoDB jobs still run.
+
 ## Prerequisites
 
 - Docker running locally

@@ -4,8 +4,9 @@
 #
 # This file is a committed contract, not documentation. `.github/scripts/assert-build-affecting-paths.py`
 # reads it, reads the `paths:` filter on `.github/workflows/dotnet-build.yml`, and fails the build when a
-# path listed here is not covered by any pattern in that filter. Narrowing the filter for speed is what
-# this exists to make visible: on 2026-04-17 the trigger was scoped to `.cs`/`.csproj` (47a82ad45), and on
+# path listed here is not covered by any pattern in that filter. The filter now covers all paths so a
+# `run-integration` label can trigger even on documentation-only pull requests. This contract still
+# guards against future narrowing: on 2026-04-17 the trigger was scoped to `.cs`/`.csproj` (47a82ad45), and on
 # 2026-08-05 a `Directory.Packages.props` dependency bump - described in its own pull request as the
 # riskiest change in the repository - merged with no build at all (c9fbc8d99), because a change confined
 # to that file matched none of the remaining patterns. Benchmarks broke while landing green for the same
@@ -28,9 +29,9 @@ Integration/**
 # and fails on the next unrelated pull request instead - which is exactly what happened in 51590103c.
 Benchmarks/**
 
-# The build workflow runs `docker build -f Docker/Local/Dockerfile .` and the out-of-process integration
-# jobs consume the image it produces, so a Dockerfile or entrypoint change decides whether they can run
-# at all. A Docker exec-bit fix once could not cut a release because the publish trigger did not list
+# On requested and nightly integration runs the build workflow runs `docker build -f Docker/Local/Dockerfile .`;
+# out-of-process integration jobs consume that image. A Dockerfile or entrypoint change decides whether
+# they can run at all. A Docker exec-bit fix once could not cut a release because the trigger did not list
 # this (fd48b6471).
 Docker/**
 
