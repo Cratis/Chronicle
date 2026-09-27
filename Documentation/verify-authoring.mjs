@@ -40,9 +40,14 @@ function isSharedPage(file) {
 }
 
 async function loadClientFenceDetector() {
-    // Resolve parser dependencies from the verification toolchain outside the published docs root.
-    const { createClientFenceDetector } = await import('../.github/scripts/docs-verification/client-fence-detector.mjs');
-    return createClientFenceDetector(clientFenceLanguages);
+    try {
+        // Resolve parser dependencies from the verification toolchain outside the published docs root.
+        const { createClientFenceDetector } = await import('../.github/scripts/docs-verification/client-fence-detector.mjs');
+        return createClientFenceDetector(clientFenceLanguages);
+    } catch {
+        console.error('Documentation verifier dependencies are missing. Run: npm ci --prefix .github/scripts/docs-verification');
+        process.exit(2);
+    }
 }
 
 function selfTestClientFences(directClientFenceLines) {
