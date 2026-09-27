@@ -16,12 +16,21 @@ public class a_failed_partition_storage : Specification, IDisposable
     protected static readonly EventStoreName _eventStore = "test-store";
     protected static readonly EventStoreNamespaceName _namespace = "test-namespace";
     protected SqliteConnection _connection;
+    string _connectionString;
     protected IDatabase _database;
     protected FailedPartitionStorage _storage;
 
     void Establish()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
+        // Keep a named in-memory database alive while each context uses its own connection.
+        // Sharing one connection between the live query's polling context and Save() races EF operations.
+        _connectionString = new SqliteConnectionStringBuilder
+        {
+            DataSource = $"failed-partitions-{Guid.NewGuid():N}",
+            Mode = SqliteOpenMode.Memory,
+            Cache = SqliteCacheMode.Shared
+        }.ToString();
+        _connection = new SqliteConnection(_connectionString);
         _connection.Open();
 
         using (var schemaContext = CreateContext())
@@ -40,7 +49,7 @@ public class a_failed_partition_storage : Specification, IDisposable
     protected NamespaceDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
-            .UseSqlite(_connection)
+            .UseSqlite(_connectionString)
             .AddConceptAsSupport()
             .Options;
 
