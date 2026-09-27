@@ -25,16 +25,16 @@ public class with_every_kind_of_handler : given.a_reactor_builder
                 _calls.Add("event and context");
                 _receivedContext = context;
             })
-            .On<OrderPlaced>(async _ =>
+            .On<OrderPlaced>(_ =>
             {
-                await Task.Yield();
                 _calls.Add("async event");
+                return Task.CompletedTask;
             })
-            .On<OrderPlaced>(async (_, context) =>
+            .On<OrderPlaced>((_, context) =>
             {
-                await Task.Yield();
                 _calls.Add("async event and context");
                 _receivedAsyncContext = context;
+                return Task.CompletedTask;
             })
             .On<OrderShipped>(_ => _calls.Add("other event"))
             .Subscribe((@event, context) =>

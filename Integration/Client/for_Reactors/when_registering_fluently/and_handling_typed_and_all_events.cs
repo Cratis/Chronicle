@@ -25,10 +25,10 @@ public class and_handling_typed_and_all_events(context context) : Given<context>
             Definition = EventStore.Reactors.Define(
                 "fluent-typed-and-all",
                 reactor => reactor
-                    .On<SomeEvent>(async (@event, eventContext) =>
+                    .On<SomeEvent>((@event, eventContext) =>
                     {
-                        await Task.Yield();
                         _typed.TrySetResult((@event, eventContext));
+                        return Task.CompletedTask;
                     })
                     .Subscribe((@event, _) =>
                     {

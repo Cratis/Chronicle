@@ -16,10 +16,10 @@ public class without_a_typed_handler_for_it : given.a_reactor_builder
     {
         _builder
             .On<OrderPlaced>(_typed.Add)
-            .Subscribe(async (@event, _) =>
+            .Subscribe((@event, _) =>
             {
-                await Task.Yield();
                 _catchAll.Add(@event);
+                return Task.CompletedTask;
             });
         _definition = _builder.Build("orders");
     }

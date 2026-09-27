@@ -16,10 +16,10 @@ public class and_delivering_an_event : given.an_observed_reactor_stream
 
     async Task Because()
     {
-        _handler = await _reactors.Register("orders", reactor => reactor.On<OrderPlaced>(async (@event, context) =>
+        _handler = await _reactors.Register("orders", reactor => reactor.On<OrderPlaced>((@event, context) =>
         {
-            await Task.Yield();
             _received.TrySetResult((@event, context));
+            return Task.CompletedTask;
         }));
         Deliver(_orderPlaced, "{\"orderNumber\":\"42\"}");
         _outcome = await _result.Task.WaitAsync(TimeSpan.FromSeconds(10));
