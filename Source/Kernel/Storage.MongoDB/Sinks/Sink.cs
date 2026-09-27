@@ -321,9 +321,9 @@ public class Sink(
     }
 
     /// <inheritdoc/>
-    public async Task EndBulk()
+    public async Task<IEnumerable<FailedPartition>> EndBulk()
     {
-        await ExecuteBulk();
+        var failedPartitions = await ExecuteBulk();
         lock (_bulkLock)
         {
             _isBulkMode = false;
@@ -336,6 +336,7 @@ public class Sink(
         _bulkKeysByCacheKey.Clear();
         _bulkWatermarks.Clear();
         _bulkPendingDeletes.Clear();
+        return failedPartitions;
     }
 
     /// <inheritdoc/>
@@ -364,10 +365,16 @@ public class Sink(
     }
 
     /// <inheritdoc/>
-    public async Task EndReplay(ReplayContext context)
+    public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
-        await EndBulk();
+        var failedPartitions = (await EndBulk()).ToArray();
+        if (failedPartitions.Length > 0)
+        {
+            return failedPartitions;
+        }
+
         await collections.EndReplay(context);
+        return failedPartitions;
     }
 
     /// <inheritdoc/>

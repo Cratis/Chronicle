@@ -44,13 +44,13 @@ public class ReducerPipeline(
     public Task BeginReplay(ReplayContext context) => Sink.BeginReplay(context);
 
     /// <inheritdoc/>
-    public Task EndReplay(ReplayContext context) => Sink.EndReplay(context);
+    public Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context) => Sink.EndReplay(context);
 
     /// <inheritdoc/>
     public Task BeginBulk() => Sink.BeginBulk();
 
     /// <inheritdoc/>
-    public Task EndBulk() => Sink.EndBulk();
+    public Task<IEnumerable<FailedPartition>> EndBulk() => Sink.EndBulk();
 
     /// <inheritdoc/>
     public async Task Reduce(ReducerContext context, ReducerDelegate reducer)

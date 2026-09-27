@@ -229,7 +229,7 @@ public class Sink : ISink
     public Task BeginBulk() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task EndBulk() => Task.CompletedTask;
+    public Task<IEnumerable<FailedPartition>> EndBulk() => Task.FromResult<IEnumerable<FailedPartition>>([]);
 
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
@@ -253,9 +253,9 @@ public class Sink : ISink
     }
 
     /// <inheritdoc/>
-    public async Task EndReplay(ReplayContext context)
+    public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
-        await EndBulk();
+        var failedPartitions = await EndBulk();
         try
         {
             await PerformRenameSwap(context);
@@ -264,6 +264,8 @@ public class Sink : ISink
         {
             _isReplaying = false;
         }
+
+        return failedPartitions;
     }
 
     /// <inheritdoc/>

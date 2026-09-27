@@ -29,7 +29,7 @@ public class an_ordered_bulk_write : Specification
     protected List<int[]> _attempts = [];
     protected FailedPartition[] _failedPartitions = [];
 
-    Sink _sink;
+    protected Sink _sink;
     IMongoCollection<BsonDocument> _collection;
     IChangeset<AppendedEvent, ExpandoObject> _changeset;
     WriteModel<BsonDocument>[] _initialOperations = [];
@@ -81,6 +81,14 @@ public class an_ordered_bulk_write : Specification
                 metadata.Remove(_missingMetadataIndex);
             }
         }
+    }
+
+    protected async Task<IEnumerable<FailedPartition>> FlushFinal()
+    {
+        await _sink.BeginBulk();
+        var beforeFlush = await _sink.ApplyChanges(KeyFor(0), _changeset, 1UL);
+        beforeFlush.ShouldBeEmpty();
+        return await _sink.EndBulk();
     }
 
     protected virtual Key KeyFor(int index) => new($"key-{index}", ArrayIndexers.NoIndexers);

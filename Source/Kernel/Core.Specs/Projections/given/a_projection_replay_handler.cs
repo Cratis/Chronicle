@@ -29,6 +29,7 @@ public class a_projection_replay_handler : Specification
     protected IProjectionPipeline _projectionPipeline;
     protected ObserverDetails _observerDetails;
     protected IGrainFactory _grainFactory;
+    protected IObserver _observer;
     protected IProjection _projectionGrain;
     protected IReadModelDefinitionsStorage _readModelDefinitions;
     protected IEventTypesStorage _eventTypesStorage;
@@ -52,6 +53,8 @@ public class a_projection_replay_handler : Specification
         _replayedModels = Substitute.For<IReplayedReadModelsStorage>();
         _eventStoreNamespaceStorage.ReplayedReadModels.Returns(_replayedModels);
         _grainFactory = Substitute.For<IGrainFactory>();
+        _observer = Substitute.For<IObserver>();
+        _grainFactory.GetGrain<IObserver>(_observerDetails.Key).Returns(_observer);
         _projectionGrain = Substitute.For<IProjection>();
         _readModelReplayManager = Substitute.For<IReadModelReplayManager>();
         _grainFactory.GetGrain<IProjection>(Arg.Any<string>()).Returns(_projectionGrain);
@@ -65,6 +68,7 @@ public class a_projection_replay_handler : Specification
 
         _projectionPipelineManager = Substitute.For<IProjectionPipelineManager>();
         _projectionPipeline = Substitute.For<IProjectionPipeline>();
+        _projectionPipeline.EndReplay(Arg.Any<ReplayContext>()).Returns(Task.FromResult<IEnumerable<Storage.Sinks.FailedPartition>>([]));
         _projectionPipelineManager.GetFor(
             _observerDetails.Key.EventStore,
             _observerDetails.Key.Namespace,

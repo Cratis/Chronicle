@@ -72,18 +72,24 @@ public class ProjectionPipeline(
     }
 
     /// <inheritdoc/>
-    public async Task EndReplay(ReplayContext context)
+    public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
         replayScopedCache.EndReplaySession();
-        await sink.EndReplay(context);
+        var failedPartitions = (await sink.EndReplay(context)).ToArray();
+        if (failedPartitions.Length > 0)
+        {
+            return failedPartitions;
+        }
+
         await changesetStorage.EndReplay(projection.ReadModel.ContainerName);
+        return failedPartitions;
     }
 
     /// <inheritdoc/>
     public Task BeginBulk() => sink.BeginBulk();
 
     /// <inheritdoc/>
-    public Task EndBulk() => sink.EndBulk();
+    public Task<IEnumerable<FailedPartition>> EndBulk() => sink.EndBulk();
 
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
