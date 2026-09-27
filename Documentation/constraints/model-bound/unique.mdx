@@ -8,6 +8,12 @@ Chronicle discovers `[Unique]`-adorned properties automatically and registers th
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/basic" />
 
+## Re-claiming a value
+
+A unique property value belongs to an event source, not to a single append. The same event source may append its current value again without violating the constraint. If it claims a different value, the new value replaces its previous claim, freeing the old value for another event source.
+
+Do not constrain a property containing the event source's own id to prevent a second event on that source: it will re-claim its own value and pass. To allow an event type only once per event source, use a [unique event type constraint](unique-event-type) instead.
+
 ## Strongly-typed properties
 
 `[Unique]` works on `ConceptAs<T>` properties — the idiomatic way to model a domain value in Cratis. Chronicle treats the concept as the underlying primitive it wraps (`string`, `Guid`, and so on), so a uniqueness rule on a strongly-typed `EmailAddress` or `OrganizationNumber` behaves exactly like one on the raw primitive, and registers and enforces identically through the [declarative](../declarative/unique) form too:
