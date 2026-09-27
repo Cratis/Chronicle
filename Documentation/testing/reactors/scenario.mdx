@@ -57,6 +57,15 @@ You can also pass a pre-built `IServiceProvider` to the constructor when you nee
 
 When neither is used, the scenario builds a provider from `Services` (with logging registered).
 
+## Per-run artifacts
+
+Pass a `Defaults` built with an `IClientArtifactsProvider` to use event types and other client artifacts
+from one test run instead of the process-wide registry. The scenario's in-process event store uses the
+same provider; a second scenario can supply a different registry without inheriting the first one's artifacts.
+The optional service provider, side-effect handlers, and event store can still be supplied with this overload.
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/per-run-artifacts" />
+
 ## Seeding read models
 
 A reactor can take a read model as a handler-method parameter, which Chronicle materializes for the event source when the reactor runs. Seed the expected read-model state with `Given.ForEventSourceId(id).ReadModel(...)`, then drive the triggering event:
