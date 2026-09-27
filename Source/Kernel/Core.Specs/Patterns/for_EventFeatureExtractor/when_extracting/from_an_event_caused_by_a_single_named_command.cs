@@ -13,7 +13,10 @@ public class from_an_event_caused_by_a_single_named_command : given.an_extractor
     void Because() => _result = _extractor.Extract(AnEvent(causation:
     [
         new Causation(Occurred, CausationType.Root, new Dictionary<string, string>()),
-        new Causation(Occurred, "ASP.NET Request", new Dictionary<string, string>()),
+        new Causation(Occurred, "ASP.NET Request", new Dictionary<string, string>
+        {
+            { WellKnownCausationProperties.Route, "/customers/jane@example.com" }
+        }),
         new Causation(Occurred, "Command", new Dictionary<string, string>
         {
             { WellKnownCausationProperties.CommandType, "ApproveExpenseReport" }

@@ -11,8 +11,8 @@ A webhook forwards events Chronicle observes to an external HTTP endpoint — us
 
 If no event types are configured, the webhook forwards the event types the client knows about when it registers the webhook. An event type the client does not have is not forwarded; the list is refreshed the next time the client registers the webhook.
 
-:::caution[An error response does not fail the delivery]
-Chronicle treats a delivery as failed only when the HTTP call itself fails — the endpoint cannot be reached, the connection drops, or the call times out. An HTTP error status such as `400` or `500` is not checked: the batch counts as delivered and the webhook moves on without retrying it. Make the receiving endpoint accept every well-formed batch, and handle its own failures, rather than relying on an error status to trigger a retry.
+:::caution[Failed deliveries are retried]
+A non-2xx response, such as `400` or `500`, fails the webhook batch. Transient failures (`5xx`, `408`, `429`, timeouts and connection errors) are first retried by Chronicle's HTTP client up to three times with exponential backoff, and a circuit breaker can fail calls fast while an endpoint keeps failing. When the batch still fails, Chronicle marks the partition as failed and retries it according to the [observer retry settings](../hosting/configuration/observers.md); after the configured attempts are exhausted, it quarantines the partition (a `maxRetryAttempts` of `0` retries indefinitely). Make your receiving endpoint idempotent: a retried or replayed batch can arrive more than once.
 :::
 
 ## Query registered webhooks

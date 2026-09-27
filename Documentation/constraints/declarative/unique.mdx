@@ -10,6 +10,12 @@ Implement `IConstraint` and call the builder in `Define`:
 
 <ChronicleClientTabs snippet="constraints/declarative/unique/basic" />
 
+## Re-claiming a value
+
+A unique property value belongs to an event source, not to a single append. The same event source may append its current value again without violating the constraint. If it claims a different value, the new value replaces its previous claim, freeing the old value for another event source.
+
+Do not constrain a property containing the event source's own id to prevent a second event on that source: it will re-claim its own value and pass. To allow an event type only once per event source, use a [unique event type constraint](unique-event-type) instead.
+
 ## Uniqueness across multiple event types
 
 Use multiple `.On` calls when several event types each contribute to the same logical uniqueness rule. The constraint fires if any of the tracked events would introduce a duplicate value:

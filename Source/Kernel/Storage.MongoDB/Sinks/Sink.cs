@@ -238,6 +238,31 @@ public class Sink(
             return [];
         }
 
+        // Reads omit BSON nulls, so a missing parent in the initial state can still be
+        // present as null in an older document. Unset only that legacy null (not an
+        // existing object) before dotted leaf sets. Keep these ordered with the main
+        // write in bulk mode, and preserve the watermark guard on redelivery.
+        if (!usesJoinTargetsOnlyFilter)
+        {
+            foreach (var parent in converted.NullParentPaths.Select(path => (Path: path, Filters: (IReadOnlyList<BsonDocumentArrayFilterDefinition<BsonDocument>>)[]))
+                         .Concat(converted.NullArrayParents.Select(_ => (_.Path, Filters: _.ArrayFilters)))
+                         .OrderBy(_ => _.Path.Count(ch => ch == '.')))
+            {
+                var nullFilter = parent.Filters.Count == 0
+                    ? Builders<BsonDocument>.Filter.And(filter, Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null))
+                    : filter;
+                var unset = Builders<BsonDocument>.Update.Unset(parent.Path);
+                if (_isBulkMode)
+                {
+                    AddToBulk(new UpdateOneModel<BsonDocument>(nullFilter, unset) { ArrayFilters = parent.Filters }, key, eventSequenceNumber);
+                }
+                else
+                {
+                    await Collection.UpdateOneAsync(nullFilter, unset, new UpdateOptions { ArrayFilters = parent.Filters });
+                }
+            }
+        }
+
         if (_isBulkMode)
         {
             var updateModel = new UpdateOneModel<BsonDocument>(filter, converted.UpdateDefinition)
@@ -572,30 +597,76 @@ public class Sink(
             _currentBulkSize = 0;
         }
 
+        var failedPartitions = new Dictionary<Key, EventSequenceNumber>();
         try
         {
-            await Collection.BulkWriteAsync(snapshot);
-            return [];
-        }
-        catch (MongoBulkWriteException ex)
-        {
-            var failedPartitions = new List<FailedPartition>();
-
-            foreach (var writeError in ex.WriteErrors)
+            var remainingIndexes = Enumerable.Range(0, snapshot.Count).ToList();
+            while (remainingIndexes.Count > 0)
             {
-                if (metadataSnapshot.TryGetValue(writeError.Index, out var metadata))
+                var remaining = remainingIndexes.ConvertAll(index => snapshot[index]);
+                try
                 {
-                    failedPartitions.Add(new FailedPartition(metadata.EventSourceId, metadata.SequenceNumber));
+                    await Collection.BulkWriteAsync(remaining);
+                    break;
+                }
+                catch (MongoBulkWriteException<BsonDocument> ex)
+                {
+                    // ProcessedRequests includes the failed request, not just the successful writes.
+                    // An ordered write can resume only when it identifies an exact processed prefix and
+                    // an unprocessed suffix. A write concern error leaves the outcome uncertain.
+                    if (ex.WriteConcernError is not null ||
+                        ex.WriteErrors.Count != 1 ||
+                        ex.Result?.IsAcknowledged != true ||
+                        ex.WriteErrors[0].Index < 0 ||
+                        ex.WriteErrors[0].Index >= remaining.Count ||
+                        ex.Result.ProcessedRequests.Count != ex.WriteErrors[0].Index + 1 ||
+                        !ex.Result.ProcessedRequests.SequenceEqual(remaining.Take(ex.Result.ProcessedRequests.Count)) ||
+                        !ex.UnprocessedRequests.SequenceEqual(remaining.Skip(ex.Result.ProcessedRequests.Count)))
+                    {
+                        AddFailedPartitions(remainingIndexes, metadataSnapshot, failedPartitions);
+                        break;
+                    }
+
+                    var failedOffset = ex.WriteErrors[0].Index;
+                    AddFailedPartitions([remainingIndexes[failedOffset]], metadataSnapshot, failedPartitions);
+
+                    // The observer will replay a failed partition from its earliest failed sequence number.
+                    // Do not write any later changes for that partition ahead of the replayed change.
+                    remainingIndexes = remainingIndexes.Skip(failedOffset + 1)
+                        .Where(index => !metadataSnapshot.TryGetValue(index, out var metadata) ||
+                            !failedPartitions.ContainsKey(metadata.EventSourceId))
+                        .ToList();
+                }
+                catch (MongoBulkWriteException)
+                {
+                    AddFailedPartitions(remainingIndexes, metadataSnapshot, failedPartitions);
+                    break;
                 }
             }
 
-            return failedPartitions;
+            return failedPartitions.Select(partition => new FailedPartition(partition.Key, partition.Value)).ToArray();
         }
         finally
         {
             foreach (var cacheKey in flushedPendingDeletes)
             {
                 _bulkPendingDeletes.TryRemove(cacheKey, out _);
+            }
+        }
+    }
+
+    static void AddFailedPartitions(
+        IEnumerable<int> indexes,
+        Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata,
+        Dictionary<Key, EventSequenceNumber> failedPartitions)
+    {
+        foreach (var index in indexes)
+        {
+            if (metadata.TryGetValue(index, out var operationMetadata) &&
+                (!failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var earliest) ||
+                    operationMetadata.SequenceNumber.Value < earliest.Value))
+            {
+                failedPartitions[operationMetadata.EventSourceId] = operationMetadata.SequenceNumber;
             }
         }
     }

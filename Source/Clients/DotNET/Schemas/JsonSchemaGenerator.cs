@@ -434,14 +434,26 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             }
         }
 
-        // Add title and compensation metadata — only applies to top-level type schema (no property context)
+        // Preserve the CLR name on nested object schemas too. Composite Ids are emitted inline by the
+        // serializer, so declaration generation needs the title to recover the key type from the Id schema.
+        if (context.TypeInfo.Kind == JsonTypeInfoKind.Object)
+        {
+            if (context.PropertyInfo is null || schemaObj["properties"] is JsonObject)
+            {
+                schemaObj["title"] = context.PropertyInfo is null ? type.Name : formatType.Name;
+            }
+            else if (schemaObj["oneOf"] is JsonArray alternatives)
+            {
+                foreach (var alternative in alternatives.OfType<JsonObject>().Where(_ => _["properties"] is JsonObject))
+                {
+                    alternative["title"] = formatType.Name;
+                }
+            }
+        }
+
+        // Compensation metadata only applies to the top-level type schema.
         if (context.PropertyInfo is null)
         {
-            if (context.TypeInfo.Kind == JsonTypeInfoKind.Object)
-            {
-                schemaObj["title"] = type.Name;
-            }
-
             var compensationAttribute = type.GetCustomAttribute<CompensationForAttribute>();
             if (compensationAttribute is not null)
             {

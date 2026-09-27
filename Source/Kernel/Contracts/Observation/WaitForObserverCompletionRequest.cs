@@ -37,7 +37,7 @@ public class WaitForObserverCompletionRequest
     /// Gets or sets the last appended sequence number for each event type. Empty waits for all observers for compatibility with older clients.
     /// </summary>
     [ProtoMember(5)]
-    public IEnumerable<AppendedEventTypeTail> EventTypeTails { get; set; } = [];
+    public IEnumerable<AppendedEventTypeTail> EventTypeTails { get; set; } = new List<AppendedEventTypeTail>();
 
     /// <summary>
     /// Gets or sets the maximum time in milliseconds to wait on the server. Zero retains the legacy unbounded wait.
