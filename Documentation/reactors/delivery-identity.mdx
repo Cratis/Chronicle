@@ -17,7 +17,7 @@ event comes back: your handler failed part-way through, the event-source partiti
 partition re-delivers the event as an ordinary observation. That is not a replay, so `OnceOnly` does not suppress
 it — nor should it, since re-running the handler is the entire point of a retry. But if the handler had already
 charged the card before it failed, the retry charges it again (see
-[Troubleshooting](../troubleshooting/index.md) for the symptom, and
+[Troubleshooting](../troubleshooting/index.mdx) for the symptom, and
 [Observers](../hosting/configuration/observers.md) for how retries and quarantine are configured).
 
 The delivery identity is the seam for that case. It is the same across the failure and the recovery, so a record

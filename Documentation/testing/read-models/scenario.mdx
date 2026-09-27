@@ -76,13 +76,7 @@ seeding; the next scenario can use a different provider without inheriting this 
 Register an `IProjectionFor<TReadModel>` type in the provider to use normal discovery, or
 configure a projection directly on this scenario:
 
-```csharp
-var scenario = new ReadModelScenario<MyReadModel>(null, new Defaults(artifacts))
-    .WithProjection(builder => builder.From<MyEvent>(from =>
-        from.Set(model => model.Name).To(e => e.Name)));
-await scenario.Given.ForEventSource(id).Events(new MyEvent("example"));
-var result = scenario.Instance;
-```
+<ChronicleClientTabs snippet="testing/read-models/scenario/per-run-projection" />
 
 `WithProjection` takes precedence over discovered projections and reducers for that scenario only.
 It does not add a projection to the shared artifact registry. Create another scenario for another

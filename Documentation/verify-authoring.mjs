@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 const documentationRoot = path.dirname(fileURLToPath(import.meta.url));
 const validAsideVariants = new Set(['note', 'tip', 'caution', 'danger']);
 const orphanDirectoryExclusions = new Set(['_includes', 'client-snippets']);
+// Keep these names and aliases in step with Documentation/web/variant-docs.yml's Chronicle ratchetLanguages.
+const clientFenceLanguages = new Set(['csharp', 'cs', 'c#', 'java', 'kotlin', 'kt', 'kts', 'elixir', 'ex', 'exs', 'typescript', 'ts', 'tsx']);
 const errors = [];
 
 async function filesBelow(directory, predicate) {
@@ -30,6 +32,46 @@ function relative(file) {
 
 function withoutInlineCode(line) {
     return line.replace(/(`+)(.*?)\1/g, '');
+}
+
+function isSharedPage(file) {
+    const firstDirectory = path.relative(documentationRoot, file).split(path.sep)[0];
+    return firstDirectory !== 'client-snippets' && firstDirectory !== 'clients';
+}
+
+function directClientFenceLines(content) {
+    const violations = [];
+    let fence;
+    for (const [index, line] of content.split('\n').entries()) {
+        const match = line.match(/^\s*(`{3,}|~{3,})[ \t]*([^\s`~]*)(.*)$/);
+        if (!match) continue;
+
+        const marker = match[1];
+        if (!fence) {
+            fence = { character: marker[0], length: marker.length };
+            if (clientFenceLanguages.has(match[2].toLowerCase())) violations.push(index + 1);
+        } else if (marker[0] === fence.character && marker.length >= fence.length &&
+            match[2] === '' && /^[ \t]*$/.test(match[3])) {
+            fence = undefined;
+        }
+    }
+    return violations;
+}
+
+function selfTestClientFences() {
+    const planted = [...clientFenceLanguages].map(language => `\`\`\`${language}\nexample\n\`\`\``).join('\n\n');
+    const found = directClientFenceLines(planted).length;
+    const nested = directClientFenceLines('````md\n```csharp\nexample\n````\n').length;
+    const infoStringIsNotACloser = directClientFenceLines('```md\n```tsx\n``` \n```java\nexample\n```');
+    const tildeInfoStringIsNotACloser = directClientFenceLines('~~~md\n~~~c#\n~~~ \n~~~kt\nexample\n~~~');
+    const excluded = ['client-snippets/example.md', 'clients/dotnet/example.md']
+        .every(file => !isSharedPage(path.join(documentationRoot, file)));
+    if (found !== clientFenceLanguages.size || nested !== 0 ||
+        infoStringIsNotACloser.join(',') !== '4' || tildeInfoStringIsNotACloser.join(',') !== '4' || !excluded) {
+        console.error(`Client fence self-test failed: detected ${found} of ${clientFenceLanguages.size} planted fences; nested: ${nested}; info-string closer: ${infoStringIsNotACloser}; tilde closer: ${tildeInfoStringIsNotACloser}; excluded paths: ${excluded}.`);
+        process.exit(1);
+    }
+    console.log(`Client fence self-test detected ${found} planted fences across ${clientFenceLanguages.size} languages.`);
 }
 
 function validateContent(file, content) {
@@ -209,10 +251,26 @@ function validateOrphans(files, references) {
     }
 }
 
+if (process.argv.length > 3 || (process.argv[2] && process.argv[2] !== '--self-test')) {
+    console.error('Usage: node Documentation/verify-authoring.mjs [--self-test]');
+    process.exit(2);
+}
+if (process.argv[2] === '--self-test') {
+    selfTestClientFences();
+    process.exit(0);
+}
+
 const markdownFiles = await filesBelow(documentationRoot, name => /\.mdx?$/i.test(name));
+const sharedPages = markdownFiles.filter(isSharedPage);
+if (sharedPages.length === 0) errors.push('No shared Chronicle pages found; client fence audit cannot run.');
 const tocFiles = await filesBelow(documentationRoot, name => /^toc\.ya?ml$/i.test(name));
 for (const file of markdownFiles) {
-    validateContent(file, await readFile(file, 'utf8'));
+    const content = await readFile(file, 'utf8');
+    validateContent(file, content);
+    if (!isSharedPage(file)) continue;
+    for (const line of directClientFenceLines(content)) {
+        errors.push(`${relative(file)}:${line}: Direct client-language fence in a shared page; use <ChronicleClientTabs> in .mdx.`);
+    }
 }
 await validateLandingCollisions(markdownFiles);
 const references = await validateTocs(tocFiles);
@@ -226,4 +284,4 @@ if (errors.length > 0) {
 
 const markdownCount = markdownFiles.filter(file => path.extname(file).toLowerCase() === '.md').length;
 const mdxCount = markdownFiles.length - markdownCount;
-console.log(`Documentation authoring validation passed for ${markdownFiles.length} files (${markdownCount} .md, ${mdxCount} .mdx) and ${tocFiles.length} toc files.`);
+console.log(`Documentation authoring validation passed for ${markdownFiles.length} files (${markdownCount} .md, ${mdxCount} .mdx) and ${tocFiles.length} toc files; ${sharedPages.length} shared pages checked for client-language fences.`);
