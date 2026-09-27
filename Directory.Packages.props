@@ -74,15 +74,10 @@
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.3.1" />
     <PackageVersion Include="OrleansTestKit10" Version="10.0.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.5.0" />
-    <!--
-        TEMPORARY: 1.11.0-assurance.1 is an unpublished local build of Cratis.Orleans carrying the extracted generic
-        state machine (Cratis/Orleans#35). It restores from the local assurance feed wired up in Directory.Build.props.
-        Replace with the published Cratis.Orleans release and drop that feed once it ships.
-    -->
-    <PackageVersion Include="Cratis.Orleans" Version="1.11.0-assurance.1" />
-    <PackageVersion Include="Cratis.Orleans.Storage" Version="1.11.0-assurance.1" />
-    <PackageVersion Include="Cratis.Orleans.Storage.MongoDB" Version="1.11.0-assurance.1" />
-    <PackageVersion Include="Cratis.Orleans.Storage.Sql" Version="1.11.0-assurance.1" />
+    <PackageVersion Include="Cratis.Orleans" Version="1.11.0" />
+    <PackageVersion Include="Cratis.Orleans.Storage" Version="1.11.0" />
+    <PackageVersion Include="Cratis.Orleans.Storage.MongoDB" Version="1.11.0" />
+    <PackageVersion Include="Cratis.Orleans.Storage.Sql" Version="1.11.0" />
     <!-- Open Telemetry -->
     <PackageVersion Include="OpenTelemetry" Version="1.19.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
