@@ -95,7 +95,7 @@ the plugin marketplaces) are in [ai-distribution.md](./ai-distribution.md):
 A claim is only as good as the signal behind it — a build result, a test run, a lint pass, observed app behavior — not the model's own confidence. Internal reasoning *plans* the work; external signals *confirm* it.
 
 - **Confirm "done"/"fixed"/"correct" against a fresh signal — never self-assessment.** Run the relevant gate and observe it pass *this time*.
-- **After a fix, re-run the gate that failed.** Don't argue yourself to green.
+- **Check at the right frequency.** Run affected-project checks while iterating; a prompt ending is not task completion. Before claiming a task complete or pushing/opening a PR, run the full CI-equivalent gates required for that repository (including its Tier 1/2 policy where applicable). A change-selected hook gate is not a substitute for the repository's full CI matrix. After a fix, re-run the gate that failed. Don't argue yourself to green.
 - **A green build is not behavioral correctness.** Compilation proves it builds, not that the slice does the right thing — that's what specs and exercising the UI are for.
 - **Report the conclusion and what you didn't verify, in a line or two.** Show the output when asked, when a claim is contested, or when the check failed — see [verification-discipline.md](./verification-discipline.md).
 
