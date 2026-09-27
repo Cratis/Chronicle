@@ -53,10 +53,8 @@ printf '%s\n' \
     "==========================================" \
     ""
 
-if [ ! -d "$ROOT_DIR/.github/scripts/docs-verification/node_modules" ]; then
-    echo "Installing documentation verifier dependencies..."
-    npm ci --prefix .github/scripts/docs-verification
-fi
+echo "Installing documentation verifier dependencies..."
+npm ci --prefix .github/scripts/docs-verification --no-audit --no-fund
 
 node "$SCRIPT_DIR/verify-authoring.mjs" --self-test
 
