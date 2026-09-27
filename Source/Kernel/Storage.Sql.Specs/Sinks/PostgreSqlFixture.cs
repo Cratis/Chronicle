@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using Testcontainers.PostgreSql;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
@@ -22,11 +22,10 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
-        _container = new ContainerBuilder("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-            .WithEnvironment("POSTGRES_DB", "chronicle")
-            .WithPortBinding(Port, assignRandomHostPort: true)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("pg_isready", "-U", "postgres", "-d", "chronicle"))
+        // The module checks pg_isready over TCP, which is unavailable on the temporary init server.
+        _container = new PostgreSqlBuilder("postgres:16-alpine")
+            .WithPassword("postgres")
+            .WithDatabase("chronicle")
             .Build();
         await _container.StartAsync();
     }
