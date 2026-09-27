@@ -16,7 +16,7 @@ public class with_a_rejected_decision_read : given.a_unit_of_work
         _eventStore.Namespace.Returns((EventStoreNamespaceName)"namespace");
     }
 
-    void Because() => _error = Record.Exception(() => _unitOfWork.AddDecisionRead(new DecisionRead<object>(
+    void Because() => _error = Catch.Exception(() => _unitOfWork.AddDecisionRead(new DecisionRead<object>(
         "source", null, (EventStoreName)"another-store", _eventStore.Namespace, 4, [new EventType("created", EventTypeGeneration.First)])));
 
     [Fact] void should_reject_the_read() => _error.ShouldBeOfExactType<DecisionReadTargetMismatch>();
