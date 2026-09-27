@@ -320,7 +320,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 new XUnit.Integration.HttpsHealthWait(35000),
                 s => s.WithRetries(300).WithInterval(TimeSpan.FromSeconds(1)));
 
-        var kernelContainer = builder.WithWaitStrategy(waitStrategy).Build();
+        var kernelContainer = WithReservedKernelPorts(builder).WithWaitStrategy(waitStrategy).Build();
         _outOfProcessKernelContainer = kernelContainer;
         return kernelContainer;
     }
