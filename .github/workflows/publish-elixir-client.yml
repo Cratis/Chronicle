@@ -50,6 +50,12 @@ jobs:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
+      - name: Set contracts package version
+        working-directory: ./Source/Clients/Elixir
+        env:
+          CHRONICLE_VERSION: ${{ inputs.version }}
+        run: printf '%s\n' "$CHRONICLE_VERSION" > VERSION
+
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
@@ -92,9 +98,16 @@ jobs:
         working-directory: ./Source/Clients/Elixir
         run: mix test
 
+      - name: Verify contracts package version
+        working-directory: ./Source/Clients/Elixir
+        env:
+          CHRONICLE_VERSION: ${{ inputs.version }}
+        run: |
+          test "$(mix run --no-compile --no-start -e 'IO.puts(Mix.Project.config()[:version])')" = "$CHRONICLE_VERSION"
+          mix hex.build
+
       - name: Publish to Hex
         working-directory: ./Source/Clients/Elixir
         run: mix hex.publish --yes
         env:
-          CHRONICLE_VERSION: ${{ inputs.version }}
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}

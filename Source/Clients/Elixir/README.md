@@ -11,10 +11,12 @@ top of later.
 ```elixir
 def deps do
   [
-    {:cratis_chronicle_contracts, "~> 0.1.0"}
+    {:cratis_chronicle_contracts, "~> 19.7.0"}
   ]
 end
 ```
+
+Use a contracts version compatible with your Chronicle kernel. The published package reports its release version from its bundled `VERSION` file, so Mix can enforce the requirement.
 
 ## What Is In The Package
 
@@ -58,5 +60,5 @@ Function names follow the rpc names in the `.proto` files (`AllEventStores` beco
 ## Publishing
 
 The repository contains a dedicated GitHub Actions workflow for publishing this
-package to Hex. The publish flow regenerates the Elixir sources from the current
-proto files before running tests and `mix hex.publish --yes`.
+package to Hex. The publish flow writes the release version to `VERSION`, regenerates
+Elixir sources from the current proto files, and tests the package before publishing it.
