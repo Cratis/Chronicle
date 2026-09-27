@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
@@ -102,6 +103,9 @@ else
 }
 
 logger.ServerListening(chronicleOptions.Port);
+
+builder.Services.Configure<SocketTransportOptions>(options =>
+    options.CreateBoundListenSocket = endpoint => ResilientListenSocket.Bind(endpoint, chronicleOptions.BindTimeout, logger));
 
 builder.WebHost.UseKestrel(options =>
 {

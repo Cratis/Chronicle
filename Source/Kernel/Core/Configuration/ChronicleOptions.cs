@@ -27,6 +27,12 @@ public class ChronicleOptions
     public int Port { get; init; } = 35000;
 
     /// <summary>
+    /// Gets the maximum time to retry binding a port occupied by a transient outbound connection.
+    /// Set to zero to fail on the first bind attempt.
+    /// </summary>
+    public TimeSpan BindTimeout { get; init; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Gets the health check endpoint.
     /// </summary>
     public string HealthCheckEndpoint { get; init; } = "/health";
