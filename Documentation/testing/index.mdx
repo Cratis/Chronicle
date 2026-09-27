@@ -65,7 +65,7 @@ Application command execution scopes, including Chronicle transactions, belong t
 
 <ChronicleClientTabs snippet="testing/index/example-spec" />
 
-The projection runs in-process, and the assertion stays close to the domain: given the `AuthorRegistered` fact, the `Author` read model should contain the name the screen needs.
+The read-model logic runs in-process — a projection or reducer, depending on the client — and the assertion stays close to the domain: given the `AuthorRegistered` fact, the `Author` read model should contain the name the screen needs.
 
 ## What the harness stands in for
 
