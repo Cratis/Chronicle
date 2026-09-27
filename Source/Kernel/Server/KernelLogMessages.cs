@@ -19,6 +19,9 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Error, "No TLS certificate is configured. The Chronicle port requires a certificate to serve gRPC and HTTP on a single port")]
     internal static partial void TlsCertificateMissingProduction(this ILogger<Kernel> logger);
 
+    [LoggerMessage(LogLevel.Warning, "Port bind conflict at {Endpoint}; current TCP holders: {Holders}")]
+    internal static partial void PortBindConflict(this ILogger<Kernel> logger, System.Net.EndPoint endpoint, string holders);
+
     [LoggerMessage(LogLevel.Debug, "Configuring server to listen on port {Port} for gRPC (HTTP/2) and Workbench, API and OAuth (HTTP/1.1)")]
     internal static partial void ServerListening(this ILogger<Kernel> logger, int port);
 
