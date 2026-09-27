@@ -33,6 +33,13 @@ public interface IObserverService : IGrainService
     Task EndReplayFor(ObserverDetails observerDetails);
 
     /// <summary>
+    /// End replay and report whether this silo finalized the projection replay.
+    /// </summary>
+    /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
+    /// <returns>Whether this silo finalized the replay.</returns>
+    Task<bool> TryFinalizeReplayFor(ObserverDetails observerDetails);
+
+    /// <summary>
     /// Begin replay for a specific partition of an observer.
     /// </summary>
     /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>

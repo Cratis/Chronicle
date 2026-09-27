@@ -5,10 +5,10 @@ namespace Cratis.Chronicle.Observation.for_ObserverService.when_finalizing_repla
 
 public class and_the_replay_context_was_already_evicted : Specification
 {
-    Exception _exception;
+    bool _finalized;
 
-    void Because() => _exception = Catch.Exception(() => ObserverService.EnsureReplayFinalized(
-        [Cratis.Monads.Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle), Cratis.Monads.Result.Failed(ICanHandleReplayForObserver.Error.CouldNotGetReplayContext)]));
+    void Because() => _finalized = ObserverService.EnsureReplayFinalized(
+        [Cratis.Monads.Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle), Cratis.Monads.Result.Failed(ICanHandleReplayForObserver.Error.CouldNotGetReplayContext)]);
 
-    [Fact] void should_not_fail_finalization_after_another_silo_evicted_it() => _exception.ShouldBeNull();
+    [Fact] void should_report_that_this_silo_did_not_finalize_the_replay() => _finalized.ShouldBeFalse();
 }
