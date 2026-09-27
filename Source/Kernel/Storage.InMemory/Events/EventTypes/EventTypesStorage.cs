@@ -36,29 +36,14 @@ public class EventTypesStorage : IEventTypesStorage, IDisposable
     /// <inheritdoc/>
     public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
     {
+        var sourceChanged = !_sources.TryGetValue(type.Id, out var previousSource) || previousSource != source;
         _sources[type.Id] = source;
 
-        return Register(new EventTypeDefinition(type.Id, owner, type.Tombstone, [new EventTypeGenerationDefinition(type.Generation, schema)], []));
+        return RegisterDefinition(new EventTypeDefinition(type.Id, owner, type.Tombstone, [new EventTypeGenerationDefinition(type.Generation, schema)], []), sourceChanged);
     }
 
     /// <inheritdoc/>
-    public Task<bool> Register(EventTypeDefinition definition)
-    {
-        _definitions.AddOrUpdate(
-            definition.Id,
-            static (_, incoming) => incoming,
-            static (_, existing, incoming) => Merge(existing, incoming),
-            definition);
-
-        lock (_publishing)
-        {
-            _changes.OnNext(Latest());
-        }
-
-        // There is no cache anywhere to evict for an in-memory single-node store, so a registration never asks
-        // anyone to invalidate.
-        return Task.FromResult(false);
-    }
+    public Task<bool> Register(EventTypeDefinition definition) => RegisterDefinition(definition, false);
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes() => Task.FromResult(Latest());
@@ -156,10 +141,38 @@ public class EventTypesStorage : IEventTypesStorage, IDisposable
         {
             Generations = existing.Generations
                 .Where(_ => incoming.Generations.All(incomingGeneration => incomingGeneration.Generation != _.Generation))
-                .Concat(incoming.Generations)
+                .Concat(incoming.Generations.Select(generation =>
+                {
+                    var stored = existing.Generations.FirstOrDefault(_ => _.Generation == generation.Generation);
+                    return stored is not null &&
+                        JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(stored.Schema.ToJson(), generation.Schema.ToJson())
+                        ? stored : generation;
+                }))
                 .ToList(),
             Migrations = incoming.Migrations.Any() ? incoming.Migrations : existing.Migrations
         };
+
+    Task<bool> RegisterDefinition(EventTypeDefinition definition, bool sourceChanged)
+    {
+        lock (_publishing)
+        {
+            _definitions.TryGetValue(definition.Id, out var existing);
+            var merged = existing is null ? definition : Merge(existing, definition);
+            var changed = sourceChanged || existing is null || existing.Owner != merged.Owner ||
+                existing.Tombstone != merged.Tombstone ||
+                !existing.Generations.SequenceEqual(merged.Generations) ||
+                !existing.Migrations.SequenceEqual(merged.Migrations);
+            if (changed)
+            {
+                _definitions[definition.Id] = merged;
+                _changes.OnNext(Latest());
+            }
+        }
+
+        // There is no cache anywhere to evict for an in-memory single-node store, so a registration never asks
+        // anyone to invalidate.
+        return Task.FromResult(false);
+    }
 
     IEnumerable<EventTypeSchema> Latest() => [.. _definitions.Values.Select(LatestFor).OfType<EventTypeSchema>()];
 

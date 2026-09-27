@@ -27,16 +27,13 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     {
         await using var scope = await database.EventStore(eventStore);
 
-        var existingEventType = _eventTypes
-            .FirstOrDefault(_ => _.Id == type.Id && _.Schemas.ContainsKey(type.Generation));
-
-        if (existingEventType is not null)
+        var existingEventType = await scope.DbContext.EventTypes.FirstOrDefaultAsync(_ => _.Id == type.Id);
+        if (existingEventType is not null &&
+            existingEventType.Owner == owner && existingEventType.Source == source && existingEventType.Tombstone == type.Tombstone &&
+            existingEventType.Schemas.TryGetValue(type.Generation, out var storedSchema) &&
+            JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema, schema.ToJson()))
         {
-            var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[type.Generation]);
-            if (existingSchema.ToJson() == schema.ToJson())
-            {
-                return false;
-            }
+            return false;
         }
 
         var eventSchema = new EventTypeSchema(type, owner, source, schema);
@@ -59,6 +56,28 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
         await using var scope = await database.EventStore(eventStore);
 
         var eventType = definition.ToSql();
+        var existing = await scope.DbContext.EventTypes.FirstOrDefaultAsync(_ => _.Id == definition.Id);
+        if (existing is not null)
+        {
+            // Preserve the stored schema when only CLR titles differ; those titles are not needed to
+            // resolve composite keys (which use read-model schemas, not event schemas).
+            foreach (var (generation, incomingSchema) in eventType.Schemas.ToArray())
+            {
+                if (existing.Schemas.TryGetValue(generation, out var storedSchema) &&
+                    JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema, incomingSchema))
+                {
+                    eventType.Schemas[generation] = storedSchema;
+                }
+            }
+
+            if (existing.Owner == eventType.Owner && existing.Source == eventType.Source &&
+                existing.Tombstone == eventType.Tombstone && existing.MigrationsJson == eventType.MigrationsJson &&
+                existing.Schemas.Count == eventType.Schemas.Count &&
+                eventType.Schemas.All(_ => existing.Schemas.TryGetValue(_.Key, out var storedSchema) && storedSchema == _.Value))
+            {
+                return false;
+            }
+        }
 
         _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != definition.Id));
         _eventTypes.Add(eventType);

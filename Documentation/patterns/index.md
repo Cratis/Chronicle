@@ -92,6 +92,10 @@ For `CommandType` and `CausedByCommand` to be meaningful, something above the ev
 
 Without such a link the mined `CommandType` falls back to the event type, which is still a meaningful action in an event-sourced store — the fact that was recorded *is* what happened.
 
+For an ASP.NET Core request, mining uses the matched route **template** (for example, `/customers/{email}`), not the request path (such as `/customers/jane@example.com`). The causation middleware still records the actual path for other consumers, but the miner ignores it. When no route template is available, the request is named by its causation type instead. Place the middleware after endpoint routing if request templates should be available to it.
+
+Patterns persisted before this change may contain actual request paths. Upgrading does not remove those historical values; review stored patterns for cleanup where needed.
+
 ## Querying patterns
 
 Ask what usually happens with the [.NET client's pattern API](/chronicle/clients/dotnet/patterns/), or over gRPC through the `Patterns` service:

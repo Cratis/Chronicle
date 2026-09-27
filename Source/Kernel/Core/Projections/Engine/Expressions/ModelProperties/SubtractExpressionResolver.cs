@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties;
 /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
 public partial class SubtractExpressionResolver(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers, ITypeFormats typeFormats) : IReadModelPropertyExpressionResolver
 {
-    [GeneratedRegex($"\\{WellKnownExpressions.Subtract}\\((?<expression>{EventValueProviderRegularExpressions.Expression}*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex($"^\\{WellKnownExpressions.Subtract}\\((?<expression>{EventValueProviderRegularExpressions.Expression})\\)$", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     static partial Regex SubtractRegEx { get; }
 
     /// <inheritdoc/>
