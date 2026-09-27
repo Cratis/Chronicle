@@ -212,7 +212,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
                 return Task.CompletedTask;
             });
 
-        return builder.Build();
+        return WithReservedKernelPorts(builder).Build();
     }
 
     /// <inheritdoc/>

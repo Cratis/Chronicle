@@ -27,6 +27,13 @@ public class ChronicleOptions
     public int Port { get; init; } = 35000;
 
     /// <summary>
+    /// Gets the maximum time to retry any bind failure with EADDRINUSE. Defaults to 30 seconds.
+    /// This also delays failure for a persistent listener. Set to 00:00:00 to fail on the first bind attempt.
+    /// Configure through Cratis__Chronicle__BindTimeout in the environment.
+    /// </summary>
+    public TimeSpan BindTimeout { get; init; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Gets the health check endpoint.
     /// </summary>
     public string HealthCheckEndpoint { get; init; } = "/health";
