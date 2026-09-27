@@ -543,8 +543,11 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
                 // Remove the failed container before rebuilding: it still owns its hostname on the
                 // shared network, and a leftover stopped container would collide with the replacement.
+                // The awaited removal is also the whole of the spacing between attempts - once it
+                // returns, the daemon has confirmed the name is free - so unlike the base class's
+                // retry there is no clock backoff to wait out (and the timing-coupling ratchet would
+                // rightly flag one here).
                 container?.DisposeAsync().AsTask().GetAwaiter().GetResult();
-                Task.Delay(2000).GetAwaiter().GetResult();
             }
         }
         while (attempt < BackingDatabaseStartAttempts);
