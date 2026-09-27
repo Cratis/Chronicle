@@ -19,7 +19,7 @@ This requires no additional setup — MongoDB is the default when you configure 
 
 Because read model instances land in MongoDB as documents, it's natural to assume that configuring the MongoDB driver configures how Chronicle hands read models back. It doesn't, and the gap is worth knowing before you spend an afternoon on it.
 
-A convention pack — whether you provide one through Arc's [ICanProvideMongoDBConventionPacks](/arc/backend/mongodb/convention-packs/) or call `ConventionRegistry.Register` yourself — is registered in the MongoDB driver's global convention registry. That registry configures the driver's class maps. So a convention pack reaches exactly as far as the driver does, and no further:
+A convention pack — whether you provide one through Arc's [ICanProvideMongoDBConventionPacks](/arc/backend/csharp/mongodb/convention-packs/) or call `ConventionRegistry.Register` yourself — is registered in the MongoDB driver's global convention registry. That registry configures the driver's class maps. So a convention pack reaches exactly as far as the driver does, and no further:
 
 | Path a read model takes | Does the convention pack apply |
 | --- | --- |

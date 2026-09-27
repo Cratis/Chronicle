@@ -40,5 +40,5 @@ the events:
 | [Releasing PII](./releasing-pii) | Decrypt PII in a read model instance you already have, and how the subject is resolved. |
 | [Indexing read models](./indexing) | Declare indexes with `[Index]` so they are recreated whenever the container is — including after a replay. |
 
-To expose a read model to a React frontend, pair it with an [Arc query](/arc/backend/queries/) — or see
+To expose a read model to a React frontend, pair it with an [Arc query](/arc/backend/csharp/queries/) — or see
 the whole loop in [Build a full-stack feature](/build-a-full-app/).
