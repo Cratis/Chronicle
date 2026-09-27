@@ -26,6 +26,14 @@ public interface IReadModels
     /// </summary>
     /// <typeparam name="TReadModel">The type of the read model to register.</typeparam>
     /// <returns>An awaitable task.</returns>
+    /// <remarks>
+    /// A read model that no projection or reducer in this client maintains yet, but that carries model-bound projection
+    /// attributes, is registered explicitly: its model-bound projection is registered through
+    /// <see cref="Projections.IProjections.Register{TReadModel}()"/>, which makes it behave exactly like a discovered
+    /// read model from then on - including in the registration pass that runs when the connection is re-established.
+    /// To register a read model with a projection defined in code rather than by attributes, use
+    /// <see cref="Projections.IProjections.Register{TReadModel}(Action{Projections.IProjectionBuilderFor{TReadModel}}, Projections.ProjectionId?)"/>.
+    /// </remarks>
     Task Register<TReadModel>();
 
     /// <summary>
