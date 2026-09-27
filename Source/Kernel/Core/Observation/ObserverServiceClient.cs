@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Orleans.Runtime.Services;
 
 namespace Cratis.Chronicle.Observation;
@@ -25,7 +26,22 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
     public async Task ResumeReplayFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.ResumeReplayFor(observerDetails));
 
     /// <inheritdoc/>
-    public async Task EndReplayFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.EndReplayFor(observerDetails));
+    public async Task EndReplayFor(ObserverDetails observerDetails) => _ = await TryFinalizeReplayFor(observerDetails);
+
+    /// <inheritdoc/>
+    public async Task<bool> TryFinalizeReplayFor(ObserverDetails observerDetails)
+    {
+        if (observerDetails.Type != ObserverType.Projection)
+        {
+            await ForEachGrainService(service => service.EndReplayFor(observerDetails));
+            return false;
+        }
+
+        var hosts = await _managementGrain.GetHosts(true);
+        var results = await Task.WhenAll(hosts.Keys.Select(host => GetGrainService(host).TryFinalizeReplayFor(observerDetails)));
+        EnsureProjectionReplayFinalized(results);
+        return true;
+    }
 
     /// <inheritdoc/>
     public async Task BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition) => await ForEachGrainService(service => service.BeginReplayPartitionFor(observerDetails, partition));
@@ -41,6 +57,19 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
 
     /// <inheritdoc/>
     public async Task EndCatchupFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.EndCatchupFor(observerDetails));
+
+    /// <summary>
+    /// Ensure at least one silo finalized a projection replay.
+    /// </summary>
+    /// <param name="results">Whether each silo finalized the replay.</param>
+    /// <exception cref="ReplayFinalizationFailed">No silo finalized the replay.</exception>
+    internal static void EnsureProjectionReplayFinalized(IEnumerable<bool> results)
+    {
+        if (!results.Any(_ => _))
+        {
+            throw new ReplayFinalizationFailed(ICanHandleReplayForObserver.Error.CouldNotGetReplayContext);
+        }
+    }
 
     async Task ForEachGrainService(Func<IObserverService, Task> callback)
     {
