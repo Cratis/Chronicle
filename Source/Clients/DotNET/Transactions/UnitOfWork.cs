@@ -48,6 +48,7 @@ public class UnitOfWork(
     bool _isRolledBack;
     bool _completing;
     bool _hasOrderedBatch;
+    bool _hasEnrolledDecisionReads;
     IEventSequence? _eventSequence;
     EventSequenceId? _eventSequenceId;
     LegacyStagedEvents? _currentLegacyEvents;
@@ -61,6 +62,18 @@ public class UnitOfWork(
 
     /// <inheritdoc/>
     public bool IsSuccess => _appendManyResult.IsSuccess;
+
+    /// <inheritdoc/>
+    public bool HasEnrolledDecisionReads
+    {
+        get
+        {
+            lock (_decisionLock)
+            {
+                return _hasEnrolledDecisionReads;
+            }
+        }
+    }
 
     /// <inheritdoc/>
     public void AddEvent(
@@ -194,6 +207,7 @@ public class UnitOfWork(
             var conflict = new DecisionConflict(read.ReadModelType, read.Key);
             if (!conflicts.Contains(conflict)) conflicts.Add(conflict);
             BindToEventSequence(EventSequenceId.Log);
+            _hasEnrolledDecisionReads = true;
         }
     }
 
