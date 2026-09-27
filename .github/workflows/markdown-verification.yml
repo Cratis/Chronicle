@@ -13,6 +13,7 @@ on:
       - ".github/workflows/markdown-verification.yml"
       - ".github/scripts/assert-upgrade-guides-complete.py"
       - ".github/scripts/test-assert-upgrade-guides-complete.py"
+      - ".github/scripts/docs-verification/**"
       - ".markdownlint.json"
       - ".markdownlint-cli2.jsonc"
       - "Documentation/**"
@@ -48,7 +49,7 @@ jobs:
           node-version: 23.x
 
       - name: Install documentation authoring dependencies
-        run: npm ci --prefix Documentation
+        run: npm ci --prefix .github/scripts/docs-verification
 
       - name: Validate Starlight authoring and shared client fences
         run: |

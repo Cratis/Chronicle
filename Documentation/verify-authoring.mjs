@@ -40,34 +40,9 @@ function isSharedPage(file) {
 }
 
 async function loadClientFenceDetector() {
-    // Load the site-compatible Markdown/MDX parser only for the shared-page audit or its self-test.
-    const [{ fromMarkdown }, { gfm }, { gfmFromMarkdown }, { mdxjs }, { mdxFromMarkdown }, { visit }] = await Promise.all([
-        import('mdast-util-from-markdown'),
-        import('micromark-extension-gfm'),
-        import('mdast-util-gfm'),
-        import('micromark-extension-mdxjs'),
-        import('mdast-util-mdx'),
-        import('unist-util-visit')
-    ]);
-
-    return (content, isMdx = false) => {
-        // The site handles YAML frontmatter and converts DocFX xrefs before MDX parsing.
-        // Retain newlines so code node positions still refer to the original page.
-        const siteContent = content
-            .replace(/^---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*(?=\r?\n|$)/, match => match.replace(/[^\r\n]/g, ' '))
-            .replace(/<xref:([^>\n]+)>/g, (_, inner) => `\`${inner.split('?')[0]}\``);
-        const tree = fromMarkdown(siteContent, {
-            extensions: [gfm(), ...(isMdx ? [mdxjs()] : [])],
-            mdastExtensions: [gfmFromMarkdown(), ...(isMdx ? [mdxFromMarkdown()] : [])]
-        });
-        const violations = [];
-        visit(tree, 'code', node => {
-            if (node.lang && clientFenceLanguages.has(node.lang.toLowerCase())) {
-                violations.push(node.position.start.line);
-            }
-        });
-        return violations;
-    };
+    // Resolve parser dependencies from the verification toolchain outside the published docs root.
+    const { createClientFenceDetector } = await import('../.github/scripts/docs-verification/client-fence-detector.mjs');
+    return createClientFenceDetector(clientFenceLanguages);
 }
 
 function selfTestClientFences(directClientFenceLines) {
