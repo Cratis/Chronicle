@@ -10,6 +10,7 @@ The clients offer different in-process boundaries:
 
 - **.NET:** `Cratis.Chronicle.Testing` provides `EventScenario`, `ReadModelScenario<T>` and `ReactorScenario<T>` for C# specs, alongside the separate integration fixtures described below.
 - **Kotlin:** `io.cratis:chronicle-testing` provides `EventScenario` for appends and `ReadModelScenario` for reducers, but not projection or reactor scenarios. See the [Kotlin testing guide](/chronicle/clients/kotlin/guides/testing/).
+- **Java:** The examples test reducers by calling them directly.
 - **TypeScript:** `@cratis/chronicle/testing` exports `EventScenario` for appends and `ReadModelScenario` for reducers and supported projections. It does not provide a reactor scenario; some .NET-only workflows below have explicit unsupported tabs.
 - **Elixir:** No Chronicle-specific in-process scenarios; use the client against a running event store to test a Chronicle-backed slice. Unsupported tabs mark unavailable workflows.
 
