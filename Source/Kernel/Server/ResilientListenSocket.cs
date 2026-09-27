@@ -19,9 +19,10 @@ internal static class ResilientListenSocket
     /// <param name="endpoint">The address to bind.</param>
     /// <param name="timeout">The retry budget.</param>
     /// <param name="logger">The kernel logger.</param>
+    /// <param name="stopping">The host shutdown token.</param>
     /// <returns>The bound socket.</returns>
-    internal static Socket Bind(EndPoint endpoint, TimeSpan timeout, ILogger<Kernel> logger) =>
-        Bind(endpoint, timeout, logger, SocketTransportOptions.CreateDefaultBoundListenSocket);
+    internal static Socket Bind(EndPoint endpoint, TimeSpan timeout, ILogger<Kernel> logger, CancellationToken stopping) =>
+        Bind(endpoint, timeout, logger, SocketTransportOptions.CreateDefaultBoundListenSocket, stopping);
 
     /// <summary>
     /// Binds a socket using the given socket factory, for specifying retries without a real network port.
@@ -30,8 +31,9 @@ internal static class ResilientListenSocket
     /// <param name="timeout">The retry budget.</param>
     /// <param name="logger">The kernel logger.</param>
     /// <param name="createSocket">The socket factory.</param>
+    /// <param name="stopping">The host shutdown token.</param>
     /// <returns>The bound socket.</returns>
-    internal static Socket Bind(EndPoint endpoint, TimeSpan timeout, ILogger<Kernel> logger, Func<EndPoint, Socket> createSocket)
+    internal static Socket Bind(EndPoint endpoint, TimeSpan timeout, ILogger<Kernel> logger, Func<EndPoint, Socket> createSocket, CancellationToken stopping)
     {
         var stopwatch = Stopwatch.StartNew();
         var reported = false;
@@ -49,14 +51,17 @@ internal static class ResilientListenSocket
                     reported = true;
                 }
 
-                if (stopwatch.Elapsed >= timeout)
+                if (stopping.IsCancellationRequested || stopwatch.Elapsed >= timeout)
                 {
                     throw;
                 }
 
                 // An outbound socket without SO_REUSEADDR can briefly own Kestrel's port.
                 // Only retry EADDRINUSE; a persistent listener still fails within the budget.
-                Thread.Sleep(TimeSpan.FromMilliseconds(250));
+                if (stopping.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(250)))
+                {
+                    throw;
+                }
             }
         }
     }

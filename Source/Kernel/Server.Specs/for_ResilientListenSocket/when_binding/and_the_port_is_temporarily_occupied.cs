@@ -25,7 +25,8 @@ public class and_the_port_is_temporarily_occupied : Specification
             }
 
             return SocketTransportOptions.CreateDefaultBoundListenSocket(new IPEndPoint(IPAddress.IPv6Any, 0));
-        });
+        },
+        CancellationToken.None);
 
     [Fact] void should_retry_the_bind() => _attempts.ShouldEqual(2);
     [Fact] void should_return_the_bound_socket() => _socket.IsBound.ShouldBeTrue();

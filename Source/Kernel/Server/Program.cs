@@ -104,8 +104,8 @@ else
 
 logger.ServerListening(chronicleOptions.Port);
 
-builder.Services.Configure<SocketTransportOptions>(options =>
-    options.CreateBoundListenSocket = endpoint => ResilientListenSocket.Bind(endpoint, chronicleOptions.BindTimeout, logger));
+builder.Services.AddOptions<SocketTransportOptions>().Configure<IHostApplicationLifetime>((options, lifetime) =>
+    options.CreateBoundListenSocket = endpoint => ResilientListenSocket.Bind(endpoint, chronicleOptions.BindTimeout, logger, lifetime.ApplicationStopping));
 
 builder.WebHost.UseKestrel(options =>
 {
