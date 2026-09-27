@@ -4,10 +4,10 @@
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
-using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
+using Cratis.Orleans.StateMachines;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.States.for_CatchingUpInFlight.given;
