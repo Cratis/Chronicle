@@ -4,14 +4,12 @@
 """Decides whether a change reaches the hot core, and says which paths made it decide that.
 
 `.github/hot-core-paths.txt` is a committed contract naming the areas where a fix breaks a sibling
-path. `.github/workflows/hot-core-gate.yml` asks this script one question per pull request - does
-this diff touch any of them - and runs the full out-of-process integration matrix when the answer is
-yes. That matrix is the only oracle that has reliably caught the class, and a pull request otherwise
-runs the default storage backend alone.
+path. `.github/workflows/hot-core-gate.yml` asks this script whether a pull request touches
+any of them. The full out-of-process matrix runs only when `run-integration` is applied (or on
+manual dispatch); otherwise the author sees which paths need local integration coverage.
 
-The answer is never just a boolean. A pull request that suddenly waits on ninety integration jobs
-needs to know why, so every run prints the paths it matched under the area heading they belong to,
-to the log and to the job summary. An unexplained wait is a gate people learn to route around.
+The answer is never just a boolean. Every run prints the paths it matched under the area heading
+they belong to, to the log and to the job summary.
 
 `--verify` checks the contract itself instead of a diff: every pattern still matches a tracked file,
 and every pattern is owned in `.github/CODEOWNERS`. Both fail closed. A pattern that matches nothing
@@ -144,7 +142,7 @@ def counted(count, noun):
     return f"{count} {noun}" if count == 1 else f"{count} {noun}s"
 
 
-def report(found, changed):
+def report(found, changed, run_integration=False):
     """Prints why the gate decided what it decided, and returns whether the hot core was touched."""
     if not found:
         emit("## Hot-core gate: no hot-core path touched")
@@ -154,12 +152,19 @@ def report(found, changed):
         return False
 
     total = sum(len(_) for _ in found.values())
-    emit("## Hot-core gate: the full out-of-process integration matrix runs")
-    emit("")
-    emit(f"This pull request changes {counted(total, 'hot-core file')} of "
-         f"{counted(len(changed), 'changed file')}, so it runs every storage backend out of process "
-         "rather than the default one only. That matrix is the only check that has reliably caught a "
-         "fix breaking a sibling path.")
+    if run_integration:
+        emit("## Hot-core gate: the full out-of-process integration matrix runs")
+        emit("")
+        emit(f"This pull request changes {counted(total, 'hot-core file')} of "
+             f"{counted(len(changed), 'changed file')}. The requested run exercises every storage "
+             "backend out of process.")
+    else:
+        emit("## Hot-core gate: request integration for this change")
+        emit("")
+        emit(f"This pull request changes {counted(total, 'hot-core file')} of "
+             f"{counted(len(changed), 'changed file')}. Run the relevant integration namespace "
+             "locally, then apply the `run-integration` label to request the full out-of-process "
+             "matrix. Remove and re-add the label to request another run.")
     emit("")
     for area, paths in found.items():
         emit(f"**{area}**")
@@ -248,7 +253,7 @@ def main():
         return
 
     changed = changed_files(root, arguments.base, arguments.head, arguments.files_from)
-    touched = report(matches(contract, changed), changed)
+    touched = report(matches(contract, changed), changed, os.environ.get("RUN_INTEGRATION") == "true")
     output("touched", "true" if touched else "false")
 
 

@@ -1,0 +1,104 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+# Label events must not create newer skipped checks with the names of the ordinary PR build or
+# hot-core gate. Even inside this workflow, the label is part of each check name: a later semver
+# label cannot mask a failed requested integration run with a skipped check on the same SHA.
+name: Requested Integration
+
+concurrency:
+  # A called .NET workflow uses the caller's github.workflow/ref; this extra PR/label
+  # suffix keeps its concurrency group distinct from the caller's while it runs.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event.label.name || 'none' }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    types: [labeled]
+    branches:
+      - "**"
+
+jobs:
+  requested-integration:
+    name: requested-integration-${{ github.event.label.name }}
+    needs: [requested-detect-hot-core]
+    if: github.event.label.name == 'run-integration' && github.event.pull_request.head.repo.full_name == github.repository
+    # The called build pushes the image consumed by its shards. Pass package write permission
+    # and inherit secrets into the called workflow (which forwards them to integration.yml).
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/dotnet-build.yml
+    secrets: inherit
+    with:
+      integration_requested: true
+      all_providers: ${{ needs.requested-detect-hot-core.outputs.touched == 'true' }}
+
+  requested-detect-hot-core:
+    name: requested-detect-hot-core-${{ github.event.label.name }}
+    if: github.event.label.name == 'run-integration' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      touched: ${{ steps.detect.outputs.touched }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Assert the hot-core contract is intact
+        run: python3 .github/scripts/detect-hot-core-changes.py --verify
+
+      - name: Detect hot-core changes
+        id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+          RUN_INTEGRATION: "true"
+        run: python3 .github/scripts/detect-hot-core-changes.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
+  hot-core-gate-requested:
+    name: hot-core-gate-requested-${{ github.event.label.name }}
+    needs: [requested-integration, requested-detect-hot-core]
+    # !cancelled(): a run superseded by re-adding the label skips the gate instead of reporting a spurious failure.
+    if: ${{ !cancelled() && github.event.label.name == 'run-integration' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Decide
+        env:
+          DETECT: ${{ needs.requested-detect-hot-core.result }}
+          TOUCHED: ${{ needs.requested-detect-hot-core.outputs.touched }}
+          INTEGRATION: ${{ needs.requested-integration.result }}
+          ALL_PROVIDERS: ${{ needs.requested-integration.outputs.all_providers }}
+          FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          if [ "$FORK" = "true" ]; then
+            echo "::notice title=Integration unavailable for fork PR::The fork's token cannot push the integration image. Ask a maintainer to run workflow_dispatch on a trusted branch containing these changes."
+            echo "Integration was not run for this fork PR. Ask a maintainer to use workflow_dispatch on a trusted branch containing the changes." >> "$GITHUB_STEP_SUMMARY"
+            # Fail closed: a fork PR must not satisfy the requested gate without running integration.
+            exit 1
+          fi
+
+          if [ "$DETECT" != "success" ]; then
+            echo "::error::Hot-core detection did not complete ($DETECT). Failing closed."
+            exit 1
+          fi
+
+          if [ "$INTEGRATION" != "success" ]; then
+            echo "::error::Requested integration did not pass ($INTEGRATION)."
+            exit 1
+          fi
+
+          if [ "$TOUCHED" != "true" ]; then
+            echo "No hot-core path is touched; the requested PR integration suites passed."
+            exit 0
+          fi
+
+          if [ "$ALL_PROVIDERS" != "true" ]; then
+            echo "::error::This PR changes the hot core, but the requested integration matrix did not use all storage providers ($ALL_PROVIDERS)."
+            exit 1
+          fi
+
+          echo "This PR changes the hot core, and the single full out-of-process matrix passed."

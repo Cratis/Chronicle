@@ -103,6 +103,10 @@ jobs:
         working-directory: ./Source/Clients/TypeScript
         run: yarn build
 
+      - name: Check packed TypeScript consumers
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn check:consumers
+
       - name: Set package version
         working-directory: ./Source/Clients/TypeScript
         run: npm version ${{ inputs.version }} --no-git-tag-version

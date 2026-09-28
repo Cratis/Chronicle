@@ -28,7 +28,8 @@ internal static class EventContextConverters
         Tags = context.Tags.ToList(),
         Hash = context.Hash,
         ObservationState = context.ObservationState.ToContract(),
-        Subject = context.Subject
+        Subject = context.Subject,
+        NamedTags = context.NamedTags.Select(tag => new Contracts.Sequences.NamedTag { Name = tag.Name, Value = tag.Value }).ToList()
     };
 
     /// <summary>
@@ -51,7 +52,8 @@ internal static class EventContextConverters
         context.Hash,
         context.ObservationState)
     {
-        Subject = context.Subject?.IsSet == true ? context.Subject.Value : context.EventSourceId.Value
+        Subject = context.Subject?.IsSet == true ? context.Subject.Value : context.EventSourceId.Value,
+        NamedTags = context.NamedTags.Select(tag => new NamedTag(tag.Name.Value, tag.Value)).ToArray()
     };
 
     static Contracts.Events.EventObservationState ToContract(this Concepts.Events.EventObservationState state) => state switch

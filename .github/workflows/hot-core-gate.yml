@@ -1,21 +1,9 @@
 # Copyright (c) Cratis. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-# The gate between a hot-core change and main.
-#
-# Twenty of the last seventy-three regressions were fixes that broke a sibling path, concentrated in
-# the areas listed in `.github/hot-core-paths.txt`, and the out-of-process integration matrix is the
-# only oracle that has reliably caught them. On a pull request that matrix runs the default storage
-# backend alone, so a hot-core change can merge today without ever running the three backends where
-# the sibling breakage usually surfaces. This runs the full matrix for exactly those changes.
-#
-# WHY A SEPARATE WORKFLOW, AND WHY NO `paths:` FILTER: required status checks are configured per
-# repository, not per path, so the check has to report on every pull request or it blocks the ones it
-# was never meant to gate - a required check that never reports leaves a pull request "expected"
-# forever. `hot-core-gate` therefore runs unconditionally and is green in one of two ways: instantly,
-# because no hot-core path was touched, or after the full matrix has passed. `.NET Build &
-# Integration` cannot host it, because that workflow carries a `paths:` filter of its own and does
-# not start at all for a documentation-only pull request.
+# Detect hot-core changes on every PR push; ordinary PR checks report affected paths and how
+# to request the matrix. Labeled runs use requested-integration.yml, with distinct check names.
+# This workflow has no paths filter so detection covers documentation-only PRs too.
 
 name: Hot Core Gate
 
@@ -26,6 +14,7 @@ concurrency:
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened]
     branches:
       - "**"
 
@@ -55,15 +44,17 @@ jobs:
       # file - a rename - disarms the gate without failing anything, and a pattern with no owner
       # disarms the review half the same way.
       - name: Assert the hot-core contract is intact
-        run: python3 .github/scripts/detect-hot-core-changes.py --verify
+        run: |
+          python3 .github/scripts/test-detect-hot-core-changes.py
+          python3 .github/scripts/detect-hot-core-changes.py --verify
 
-      # Prints every hot-core path it matched, under its area heading, to the log and the job
-      # summary. An author who is suddenly waiting on the whole matrix has to be able to see why.
+      # Prints every matched path and, on ordinary pushes, how to request integration.
       - name: Detect hot-core changes
         id: detect
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.sha }}
+          RUN_INTEGRATION: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           if [ -z "$BASE_SHA" ]; then
             echo "Manual run - there is no pull request to diff, so the full matrix runs unconditionally."
@@ -73,12 +64,10 @@ jobs:
 
           python3 .github/scripts/detect-hot-core-changes.py --base "$BASE_SHA" --head "$HEAD_SHA"
 
-  # Builds what the matrix consumes. It uploads its own artifact rather than depending on
-  # another workflow's build, which it cannot wait for. The cost is paid only by pull
-  # requests that touch the hot core.
+  # Manual dispatch retains its original full hot-core matrix; ordinary pushes do not build it.
   build:
     needs: [detect]
-    if: needs.detect.outputs.touched == 'true'
+    if: needs.detect.outputs.touched == 'true' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -165,11 +154,10 @@ jobs:
         id: export
         run: echo "image=${{ env.HOT_CORE_IMAGE }}" >> "$GITHUB_OUTPUT"
 
-  # The same reusable workflow the nightly run uses, with `all-providers` on: every storage backend,
-  # out of process, not just the default one a pull request gets.
+  # Requested PR runs have their own matrix in requested-integration.yml.
   full-out-of-process-matrix:
     needs: [detect, build]
-    if: needs.detect.outputs.touched == 'true'
+    if: needs.detect.outputs.touched == 'true' && github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: read
@@ -180,10 +168,7 @@ jobs:
       chronicle-image: ${{ needs.build.outputs.chronicle-image }}
       all-providers: true
 
-  # The single check to mark required in branch protection. It reports on every pull request, which
-  # is the whole point: a required check that is sometimes absent blocks pull requests it does not
-  # apply to. `if: always()` is what lets it run after skipped jobs - without it a skipped dependency
-  # would skip this too, and a skipped required check never reports.
+  # Keep this ordinary PR check name stable; label events never create a newer skipped check.
   hot-core-gate:
     needs: [detect, build, full-out-of-process-matrix]
     if: always()
@@ -197,6 +182,7 @@ jobs:
           TOUCHED: ${{ needs.detect.outputs.touched }}
           BUILD: ${{ needs.build.result }}
           MATRIX: ${{ needs.full-out-of-process-matrix.result }}
+          RUN_INTEGRATION: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           if [ "$DETECT" != "success" ]; then
             echo "::error::Hot-core detection did not complete ($DETECT), so whether this pull request reaches the hot core is unknown. Failing closed."
@@ -205,6 +191,11 @@ jobs:
 
           if [ "$TOUCHED" != "true" ]; then
             echo "No hot-core path is touched by this pull request. The full out-of-process integration matrix is not required here."
+            exit 0
+          fi
+
+          if [ "$RUN_INTEGRATION" != "true" ]; then
+            echo "This PR touches the hot core. Run the relevant integration namespace locally, then apply the run-integration label to request the full out-of-process matrix." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 

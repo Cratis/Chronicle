@@ -41,6 +41,7 @@ public class and_deserializing_single_event : given.an_event_sequence_with_a_wir
                 Causation = [],
                 CausedBy = new Contracts.Sequences.Identity(),
                 Tags = [],
+                NamedTags = [new() { Name = "region", Value = "north" }, new() { Name = "region", Value = "south" }],
                 Subject = "synthetic-subject"
             },
             Content = JsonSerializer.Serialize(_expectedEvent, JsonSerializerOptions.Default)
@@ -59,6 +60,7 @@ public class and_deserializing_single_event : given.an_event_sequence_with_a_wir
     [Fact] void should_pass_correct_sequence_number() => _request.FromEventSequenceNumber.ShouldEqual((ulong)_sequenceNumber);
     [Fact] void should_return_one_event() => _result.Count.ShouldEqual(1);
     [Fact] void should_preserve_the_subject() => _result[0].Context.Subject.Value.ShouldEqual("synthetic-subject");
+    [Fact] void should_preserve_named_tag_pairs_with_the_same_name() => _result[0].Context.NamedTags.Select(tag => (tag.Name.Value, tag.Value)).ShouldEqual([("region", "north"), ("region", "south")]);
     [Fact] void should_preserve_empty_tags() => _result[0].Context.Tags.ShouldBeEmpty();
     [Fact] void should_preserve_empty_causation() => _result[0].Context.Causation.ShouldBeEmpty();
     [Fact] void should_deserialize_content_correctly() => ((_result[0].Content as TestEvent)?.Name).ShouldEqual(_expectedEvent.Name);

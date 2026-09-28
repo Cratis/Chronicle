@@ -24,6 +24,8 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// an unspecified <see cref="EventSourceType"/>, <see cref="EventStreamType.All"/>, a
 /// <see cref="CorrelationId.NotSet"/>, an empty event type or tag set - is treated the same way, so a
 /// caller that passes one of those rather than <see langword="null"/> still gets every event back.
+/// An absent or empty <see cref="NamedTags"/> collection does not narrow; within a named criterion,
+/// absent values match any value for that name, but an explicitly empty value set is invalid.
 /// </remarks>
 public record EventSequenceQueryCriteria(
     EventSourceId? EventSourceId = null,
@@ -39,6 +41,36 @@ public record EventSequenceQueryCriteria(
     /// Gets the criteria that narrows nothing - every event in the sequence matches.
     /// </summary>
     public static readonly EventSequenceQueryCriteria Empty = new();
+
+    /// <summary>
+    /// Gets the optional named tag criteria. Any one of them may match, and the dimension combines with the other dimensions.
+    /// </summary>
+    /// <exception cref="InvalidNamedTagCriterion">The collection contains a null criterion.</exception>
+    public IEnumerable<NamedTagCriterion>? NamedTags
+    {
+        get;
+        init
+        {
+            if (value is null)
+            {
+                field = null;
+                return;
+            }
+
+            var snapshot = value.ToArray();
+            if (snapshot.Any(criterion => criterion is null))
+            {
+                throw new InvalidNamedTagCriterion();
+            }
+
+            field = Array.AsReadOnly(snapshot);
+        }
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether named tags narrow the query.
+    /// </summary>
+    public bool HasNamedTags => NamedTags?.Any() == true;
 
     /// <summary>
     /// Gets a value indicating whether the criteria narrows on the event source.
@@ -103,6 +135,13 @@ public record EventSequenceQueryCriteria(
         }
 
         if (HasTags && !Tags!.Any(tag => context.Tags.Any(_ => _ == tag)))
+        {
+            return false;
+        }
+
+        if (HasNamedTags && !NamedTags!.Any(criterion => context.NamedTags.Any(tag =>
+            string.Equals(tag.Name.Value, criterion.Name.Value, StringComparison.Ordinal) &&
+            criterion.Values?.Contains(tag.Value, StringComparer.Ordinal) != false)))
         {
             return false;
         }

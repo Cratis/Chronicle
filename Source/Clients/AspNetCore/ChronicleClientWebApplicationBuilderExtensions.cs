@@ -117,6 +117,13 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .AddOptions<ChronicleAspNetCoreOptions>()
             .BindConfiguration(configSectionPath)
             .Configure(options => configure?.Invoke(options))
+            .Configure<IOptions<ChronicleClientOptions>>((options, clientOptions) =>
+            {
+                if (string.IsNullOrWhiteSpace(options.EventStore.Value))
+                {
+                    options.EventStore = clientOptions.Value.EventStore;
+                }
+            })
             .ValidateDataAnnotations()
             .ValidateOnStart();
 

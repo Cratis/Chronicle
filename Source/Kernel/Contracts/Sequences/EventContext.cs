@@ -97,4 +97,10 @@ public class EventContext
     /// </summary>
     [ProtoMember(14)]
     public string Subject { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the NamedTags.
+    /// </summary>
+    [ProtoMember(15)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.NamedTag> NamedTags { get; set; } = new List<global::Cratis.Chronicle.Contracts.Sequences.NamedTag>();
 }

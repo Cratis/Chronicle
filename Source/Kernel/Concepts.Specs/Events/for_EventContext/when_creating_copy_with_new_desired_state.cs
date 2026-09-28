@@ -25,7 +25,10 @@ public class when_creating_copy_with_new_desired_state : Specification
         [new Causation(DateTimeOffset.UtcNow, "Something", new Dictionary<string, string>() { { "prop", "42" } })],
         Identity.System,
         ["First Tag", "Second Tag"],
-        EventHash.NotSet);
+        EventHash.NotSet)
+    {
+        NamedTags = [new NamedTag("name", "v")]
+    };
 
     void Because() => _copy = _original.WithState(EventObservationState.Replay);
 
@@ -41,5 +44,6 @@ public class when_creating_copy_with_new_desired_state : Specification
     [Fact] void should_have_same_causation() => _copy.Causation.ShouldEqual(_original.Causation);
     [Fact] void should_have_same_caused_by() => _copy.CausedBy.ShouldEqual(_original.CausedBy);
     [Fact] void should_have_same_tags() => _copy.Tags.ShouldEqual(_original.Tags);
+    [Fact] void should_preserve_named_tags() => _copy.NamedTags.ShouldEqual(_original.NamedTags);
     [Fact] void should_have_new_state() => _copy.ObservationState.ShouldEqual(EventObservationState.Replay);
 }

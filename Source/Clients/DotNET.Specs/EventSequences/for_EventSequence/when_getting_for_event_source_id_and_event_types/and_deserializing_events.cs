@@ -53,6 +53,9 @@ public class and_deserializing_events : given.an_event_sequence_with_a_wire_resp
                 Causation = [],
                 CausedBy = new Contracts.Sequences.Identity(),
                 Tags = [],
+                NamedTags = idx == 0
+                    ? [new() { Name = "Case", Value = "" }, new() { Name = "case", Value = "same" }]
+                    : null!,
                 Subject = $"synthetic-subject-{idx}"
             },
             Content = JsonSerializer.Serialize(evt, JsonSerializerOptions.Default)
@@ -74,6 +77,8 @@ public class and_deserializing_events : given.an_event_sequence_with_a_wire_resp
     [Fact] void should_deserialize_all_events_correctly() => _result.Select(e => (e.Content as TestEvent)?.Name).ShouldEqual(_expectedEvents.Select(e => e.Name));
     [Fact] void should_deserialize_all_event_values_correctly() => _result.Select(e => ((TestEvent)e.Content).Value).ShouldEqual(_expectedEvents.Select(e => e.Value));
     [Fact] void should_preserve_the_subjects() => _result.Select(e => e.Context.Subject.Value).ShouldEqual(["synthetic-subject-0", "synthetic-subject-1"]);
+    [Fact] void should_preserve_exact_named_tag_pairs() => _result[0].Context.NamedTags.Select(tag => (tag.Name.Value, tag.Value)).ShouldEqual([("Case", ""), ("case", "same")]);
+    [Fact] void should_return_empty_named_tags_for_an_untagged_event() => _result[1].Context.NamedTags.ShouldBeEmpty();
     [Fact] void should_preserve_empty_tags() => _result.SelectMany(e => e.Context.Tags).ShouldBeEmpty();
     [Fact] void should_preserve_empty_causation() => _result.SelectMany(e => e.Context.Causation).ShouldBeEmpty();
 

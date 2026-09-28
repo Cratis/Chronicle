@@ -31,6 +31,7 @@ message EventContext {
    repeated string Tags = 14;
    string Hash = 15;
    string Subject = 16;
+   repeated NamedTag NamedTags = 17;
 }
 enum EventObservationState {
    EVENT_OBSERVATION_STATE_None = 0;
@@ -58,6 +59,10 @@ message Identity {
    string Name = 2;
    string UserName = 3;
    Identity OnBehalfOf = 4;
+}
+message NamedTag {
+   string Name = 1;
+   string Value = 2;
 }
 enum ObservationState {
    OBSERVATION_STATE_None = 0;

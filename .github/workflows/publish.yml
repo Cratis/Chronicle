@@ -382,7 +382,10 @@ jobs:
   # would otherwise add), and there is no #if DEBUG, Debug.Assert or [Conditional("DEBUG")] anywhere in Source,
   # so no conditional code changes - only Optimize. It was built Debug until the unoptimized kernel showed up as
   # startup cost in every container based on this image: the kernel's boot is serial and CPU-bound, so it lands
-  # directly on time-to-ready on slower cloud vCPUs.
+  # directly on time-to-ready on slower cloud vCPUs. Framework-dependent ReadyToRun precompiles
+  # application and package assemblies (Orleans, MongoDB, OpenIddict, protobuf-net); the aspnet base
+  # image already supplies ReadyToRun framework assemblies. The file set stays the same, but the publish
+  # output grows from roughly 82 to 167 MB and crossgen adds about two minutes per architecture job.
   dotnet-x64-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -404,7 +407,7 @@ jobs:
       - name: Build development x64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Release -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/x64
+          dotnet publish -c Release -f net10.0 -r linux-x64 -p:PublishReadyToRun=true -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/x64
 
       - name: Upload x64 development kernel output
         uses: actions/upload-artifact@v4
@@ -433,7 +436,7 @@ jobs:
       - name: Build development arm64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Release -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/arm64
+          dotnet publish -c Release -f net10.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/arm64
 
       - name: Upload arm64 development kernel output
         uses: actions/upload-artifact@v4

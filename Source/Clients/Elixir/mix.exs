@@ -4,7 +4,7 @@
 defmodule Cratis.Chronicle.Contracts.MixProject do
   use Mix.Project
 
-  @version System.get_env("CHRONICLE_VERSION") || "0.1.0"
+  @version __DIR__ |> Path.join("VERSION") |> File.read!() |> String.trim()
   @source_url "https://github.com/Cratis/Chronicle"
 
   def project do
@@ -14,7 +14,8 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      description: "Generated Elixir gRPC contracts for Cratis Chronicle - the open-source event-sourcing database",
+      description:
+        "Generated Elixir gRPC contracts for Cratis Chronicle - the open-source event-sourcing database",
       package: package(),
       source_url: @source_url,
       homepage_url: @source_url
@@ -49,7 +50,7 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
       maintainers: ["Cratis"],
       # priv/protos/chronicle.desc only - the descriptor set a client hands the kernel on connect. The proto
       # files beside it are build inputs, not something a consumer needs.
-      files: ~w(lib mix.exs README.md .formatter.exs priv/protos/chronicle.desc)
+      files: ~w(lib mix.exs VERSION README.md .formatter.exs priv/protos/chronicle.desc)
     ]
   end
 end
