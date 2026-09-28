@@ -11,7 +11,7 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
     [
       app: :cratis_chronicle_contracts,
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       description:
@@ -30,7 +30,7 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
 
   defp deps do
     [
-      {:grpc, "~> 0.11"},
+      {:grpc, "~> 1.0"},
       {:mint, "~> 1.7"},
       {:protobuf, "~> 0.17.0"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
