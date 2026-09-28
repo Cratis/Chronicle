@@ -20,7 +20,7 @@ yarn add @cratis/chronicle.contracts
 
 ## Usage
 
-This package contains only the generated contracts: a `*Definition` for every Chronicle gRPC service and a TypeScript type for every message, produced by [ts-proto](https://github.com/stephenh/ts-proto) for [nice-grpc](https://github.com/deeplay-io/nice-grpc). It has no connection string parsing, authentication, or retry handling.
+This package contains only the generated contracts: a `*Definition` for every Chronicle gRPC service and a TypeScript type for every message, produced by [ts-proto](https://github.com/stephenh/ts-proto) for [nice-grpc](https://github.com/deeplay-io/nice-grpc). It has no connection string parsing, authentication, or retry handling. Both ES module imports and CommonJS `require()` use the matching runtime and TypeScript declarations.
 
 **Building an application?** Use the idiomatic TypeScript client, [`@cratis/chronicle`](https://www.npmjs.com/package/@cratis/chronicle), which is built on these contracts. Reach for this package only when you are building a client or tool of your own.
 
