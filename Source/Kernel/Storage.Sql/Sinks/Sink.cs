@@ -54,8 +54,7 @@ public class Sink : ISink
     readonly ReadModelIdentifier _readModelIdentifier;
     readonly string _tableName;
     readonly IReadOnlyList<ProjectedColumn> _columns;
-
-    volatile bool _isReplaying;
+    readonly ReplayingTables _replayingTables;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class.
@@ -65,13 +64,16 @@ public class Sink : ISink
     /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
     /// <param name="database">The <see cref="IDatabase"/> for accessing SQL storage.</param>
     /// <param name="expandoObjectConverter">The schema-aware <see cref="IExpandoObjectConverter"/>.</param>
+    /// <param name="replayingTables">The <see cref="ReplayingTables"/> shared by every sink, telling which tables a replay is rebuilding.</param>
     public Sink(
         Concepts.EventStoreName eventStoreName,
         Concepts.EventStoreNamespaceName @namespace,
         ReadModelDefinition readModel,
         IDatabase database,
-        IExpandoObjectConverter expandoObjectConverter)
+        IExpandoObjectConverter expandoObjectConverter,
+        ReplayingTables replayingTables)
     {
+        _replayingTables = replayingTables;
         _eventStoreName = eventStoreName;
         _namespace = @namespace;
         _database = database;
@@ -88,9 +90,12 @@ public class Sink : ISink
     /// <summary>
     /// Gets the table name the sink is currently writing to. Resolves to <c language="csharp">replay-{tableName}</c>
     /// while a replay is in progress, and to the primary table name otherwise. EndReplay swaps the
-    /// two so the running system observes the rebuilt state atomically.
+    /// two so the running system observes the rebuilt state atomically. Whether a replay is in progress is
+    /// shared by every sink for the table, whichever of them began or ends it.
     /// </summary>
-    string ActiveTableName => _isReplaying ? ReplayTableNameFor(_tableName) : _tableName;
+    string ActiveTableName => IsReplaying ? ReplayTableNameFor(_tableName) : _tableName;
+
+    bool IsReplaying => _replayingTables.IsReplaying(_eventStoreName, _namespace, _tableName);
 
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
@@ -239,7 +244,7 @@ public class Sink : ISink
         // the swap in EndReplay. PrepareInitialRun routes through ActiveTableName, which now
         // resolves to the replay name.
         await NamePrimaryKeyAfterPrimaryTable();
-        _isReplaying = true;
+        _replayingTables.Begin(_eventStoreName, _namespace, _tableName);
         await PrepareInitialRun();
         await BeginBulk();
     }
@@ -249,7 +254,7 @@ public class Sink : ISink
     {
         // Re-enter replay mode after an interruption without wiping the replay table — it
         // already contains the work the previous run produced before it was paused.
-        _isReplaying = true;
+        _replayingTables.Begin(_eventStoreName, _namespace, _tableName);
         await BeginBulk();
     }
 
@@ -263,7 +268,7 @@ public class Sink : ISink
         }
         finally
         {
-            _isReplaying = false;
+            _replayingTables.End(_eventStoreName, _namespace, _tableName);
         }
 
         return failedPartitions;

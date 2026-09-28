@@ -79,7 +79,8 @@ public class and_a_dictionary_shaped_property_is_set : Specification
             _namespace,
             CreateReadModelDefinition(),
             _database,
-            new ExpandoObjectConverter(new TypeFormats()));
+            new ExpandoObjectConverter(new TypeFormats()),
+            new ReplayingTables());
     }
 
     async Task Because()

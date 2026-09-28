@@ -74,7 +74,8 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
             _namespace,
             CreateReadModelDefinition(),
             _database,
-            new ExpandoObjectConverter(new TypeFormats()));
+            new ExpandoObjectConverter(new TypeFormats()),
+            new ReplayingTables());
 
         var role = CreateRole("Administrator");
         var rolesProperty = new PropertyPath("roles");

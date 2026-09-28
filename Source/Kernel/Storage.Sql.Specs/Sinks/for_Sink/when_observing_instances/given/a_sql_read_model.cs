@@ -82,7 +82,8 @@ public abstract class a_sql_read_model : Specification
                 new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema },
                 []),
             _database,
-            new ExpandoObjectConverter(new TypeFormats()));
+            new ExpandoObjectConverter(new TypeFormats()),
+            new ReplayingTables());
     }
 
     protected async Task Write(Guid id, string name)

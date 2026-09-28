@@ -57,7 +57,7 @@ public class and_a_keyed_from_shares_the_join_event : Specification
                 [ReadModelGeneration.First] = _schema
             },
             []);
-        _sink = new SqlSink("test", "test", readModel, database, new ExpandoObjectConverter(new TypeFormats()));
+        _sink = new SqlSink("test", "test", readModel, database, new ExpandoObjectConverter(new TypeFormats()), new ReplayingTables());
     }
 
     async Task Because()

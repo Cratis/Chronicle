@@ -61,7 +61,8 @@ public class PostgreSqlSinkHarness : ISinkHarness
             "test-namespace",
             definition,
             database,
-            new ExpandoObjectConverter(new TypeFormats()));
+            new ExpandoObjectConverter(new TypeFormats()),
+            new ReplayingTables());
     }
 
     /// <inheritdoc/>
