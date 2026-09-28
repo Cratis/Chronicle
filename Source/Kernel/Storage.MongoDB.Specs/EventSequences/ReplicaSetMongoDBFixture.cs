@@ -3,6 +3,8 @@
 
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using MongoDB.Bson;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 
@@ -13,6 +15,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
 {
     const int MongoDBPort = 27017;
+    static readonly TimeSpan _primaryReadinessTimeout = TimeSpan.FromSeconds(45);
 
     IContainer? _container;
 
@@ -30,11 +33,66 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
             .WithCommand("/bin/sh", "-c", "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; tail -f /dev/null")
             .WithPortBinding(MongoDBPort, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilInternalTcpPortIsAvailable(MongoDBPort)
-                .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"))
+                .UntilInternalTcpPortIsAvailable(MongoDBPort))
             .Build();
 
-        await _container.StartMongoDBWithDiagnostics();
+        try
+        {
+            await _container.StartMongoDBWithDiagnostics();
+            await WaitForPrimary();
+        }
+        catch
+        {
+            await _container.DisposeAsync();
+            _container = null;
+            throw;
+        }
+    }
+
+    internal static bool IsReady(BsonDocument hello) =>
+        hello.TryGetValue("setName", out var setName) && setName.IsString && setName.AsString == "rs0" &&
+        hello.TryGetValue("isWritablePrimary", out var primary) && primary.IsBoolean && primary.AsBoolean;
+
+    async Task WaitForPrimary()
+    {
+        // Probe the mapped host address used by the specs, not only mongosh inside the container.
+        var settings = MongoClientSettings.FromConnectionString(ConnectionString);
+        settings.ServerSelectionTimeout = TimeSpan.FromSeconds(2);
+        settings.ConnectTimeout = TimeSpan.FromSeconds(2);
+        var client = new MongoClient(settings);
+        using var timeout = new CancellationTokenSource(_primaryReadinessTimeout);
+        BsonDocument? lastHello = null;
+        MongoException? lastError = null;
+
+        try
+        {
+            while (true)
+            {
+                try
+                {
+                    lastHello = await client.GetDatabase("admin").RunCommandAsync<BsonDocument>(
+                        new BsonDocument("hello", 1), cancellationToken: timeout.Token);
+                    if (IsReady(lastHello))
+                    {
+                        return;
+                    }
+                }
+                catch (MongoException error)
+                {
+                    // Connecting and electing a primary can fail transiently during container startup.
+                    lastError = error;
+                }
+
+                // Infrastructure readiness backoff, bounded by the same cancellation deadline.
+                await Task.Delay(100, timeout.Token);
+            }
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+        {
+            throw new TimeoutException(
+                $"MongoDB replica set rs0 did not elect a usable PRIMARY at {ConnectionString} within {_primaryReadinessTimeout.TotalSeconds} seconds. " +
+                $"Last hello: {lastHello?.ToJson() ?? "<none>"}. Last MongoDB error: {lastError?.Message ?? "<none>"}.");
+        }
     }
 
     /// <inheritdoc/>
