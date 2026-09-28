@@ -30,8 +30,11 @@ try
 
     var current = WireContractReader.Read(DescriptorSetFor(options.Current, options.ImportPath));
     var all = await Baselines(nuget, options);
-    var afterFloor = options.Since is { } floor ? all.Where(_ => ReleaseVersion.IsAtOrAfter(_, floor)).ToArray() : all;
-    var excluded = all.Count - afterFloor.Count;
+    var throughMinor = options.ThroughMinor is { } minor
+        ? all.Where(version => ReleaseVersion.IsAtOrBeforeMinor(version, minor)).ToArray()
+        : all;
+    var afterFloor = options.Since is { } floor ? throughMinor.Where(_ => ReleaseVersion.IsAtOrAfter(_, floor)).ToArray() : throughMinor;
+    var excluded = throughMinor.Count - afterFloor.Count;
 
     // A withdrawn release is one whose published contract is not the one that major is meant to carry. Excluding it
     // by name keeps every other release of the major compared, which a floor cannot do for the newest one.
@@ -46,6 +49,11 @@ try
     var results = new List<BaselineResult>();
 
     await Console.Out.WriteLineAsync($"Current:  {options.Current}");
+
+    if (options.ThroughMinor is not null)
+    {
+        await Console.Out.WriteLineAsync($"Through minor: {options.ThroughMinor} ({all.Count - throughMinor.Count} later release(s) not compared against)");
+    }
 
     if (options.Since is not null)
     {
@@ -68,7 +76,7 @@ try
 
     // A floor or a withdrawal that excludes everything is not the same as a clean run, and a gate that reports them
     // the same way is a gate nobody can tell is switched off. Say it out loud, in the log and in the pull request.
-    if (baselines.Length == 0 && (options.Since is not null || options.Withdrawn.Count > 0))
+    if (baselines.Length == 0 && (options.ThroughMinor is not null || options.Since is not null || options.Withdrawn.Count > 0))
     {
         await Console.Out.WriteLineAsync("Every released baseline is excluded, so nothing was compared.");
         if (options.GitHub)
@@ -76,7 +84,7 @@ try
             await Console.Out.WriteLineAsync("::warning title=Wire compatibility not compared::Every released baseline is excluded by the declared floor or withdrawals, so this run checked nothing.");
         }
 
-        return 0;
+        return 2;
     }
 
     foreach (var version in baselines)

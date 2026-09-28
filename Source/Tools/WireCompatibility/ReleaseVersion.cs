@@ -45,6 +45,12 @@ public static class ReleaseVersion
         return 0;
     }
 
+    /// <summary>Determines whether a released version belongs to the target minor or an earlier one.</summary>
+    /// <param name="version">The released version.</param>
+    /// <param name="minor">The target minor.</param>
+    /// <returns>True when the version is not from a later minor.</returns>
+    public static bool IsAtOrBeforeMinor(string version, int minor) => Components(version)[1] <= minor;
+
     static int[] Components(string version) =>
         [.. version.Split('.').Select(part => int.TryParse(part, NumberStyles.None, CultureInfo.InvariantCulture, out var value) ? value : 0)];
 
