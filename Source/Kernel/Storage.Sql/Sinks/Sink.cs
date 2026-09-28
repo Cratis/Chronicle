@@ -238,6 +238,7 @@ public class Sink : ISink
         // untouched so reads from the running system keep observing the previous state until
         // the swap in EndReplay. PrepareInitialRun routes through ActiveTableName, which now
         // resolves to the replay name.
+        await NamePrimaryKeyAfterPrimaryTable();
         _isReplaying = true;
         await PrepareInitialRun();
         await BeginBulk();
@@ -327,6 +328,21 @@ public class Sink : ISink
         await ExecuteDdl(scope, BuildDropSql(scope, revertName));
         await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, _tableName, revertName));
         await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, replayName, _tableName));
+
+        // Renaming a table keeps its primary key name, so move each name along with its table; the
+        // next replay creates its shadow table with the replay table's primary key name again.
+        await PrimaryKeyConstraints.NameAfterTable(scope, revertName);
+        await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
+    }
+
+    /// <summary>
+    /// Frees the replay table's primary key name before the replay table is created. The primary table of a
+    /// database that swapped replays before primary keys followed their tables still holds that name.
+    /// </summary>
+    async Task NamePrimaryKeyAfterPrimaryTable()
+    {
+        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
     }
 
     static async Task ExecuteDdl(DbContextScope<ReadModelDbContext> scope, string sql)
