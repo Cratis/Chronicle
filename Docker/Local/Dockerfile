@@ -14,7 +14,7 @@ COPY Docker/local-entrypoint.sh ./entrypoint.sh
 COPY Docker/report-port-holder.sh ./report-port-holder.sh
 RUN chmod +x ./entrypoint.sh
 
-COPY /Source/Kernel/Server/out /app
+COPY /Source/Kernel/Server/out/integration-api /app
 
 # Restore the executable bit on the apphost — publish artifacts can arrive without it
 # (upload-artifact drops Unix permissions) and the entrypoint runs it directly (exit 126 otherwise).
