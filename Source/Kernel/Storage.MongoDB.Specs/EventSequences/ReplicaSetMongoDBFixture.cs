@@ -56,12 +56,35 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
     async Task WaitForPrimary()
     {
         // Probe the mapped host address used by the specs, not only mongosh inside the container.
-        var settings = MongoClientSettings.FromConnectionString(ConnectionString);
+        var client = CreateReadinessClient(ConnectionString);
+        try
+        {
+            await WaitForPrimary(cancellationToken => client.GetDatabase("admin").RunCommandAsync<BsonDocument>(
+                new BsonDocument("hello", 1), cancellationToken: cancellationToken));
+        }
+        finally
+        {
+            DisposeReadinessClient(client);
+        }
+    }
+
+    internal static MongoClient CreateReadinessClient(string connectionString)
+    {
+        var settings = MongoClientSettings.FromConnectionString(connectionString);
         settings.ServerSelectionTimeout = TimeSpan.FromSeconds(2);
         settings.ConnectTimeout = TimeSpan.FromSeconds(2);
-        var client = new MongoClient(settings);
-        await WaitForPrimary(cancellationToken => client.GetDatabase("admin").RunCommandAsync<BsonDocument>(
-            new BsonDocument("hello", 1), cancellationToken: cancellationToken));
+
+        // A unique cluster key keeps registry cleanup from disposing another client's shared cluster.
+        settings.ApplicationName = $"chronicle-primary-readiness-{Guid.NewGuid():N}";
+        return new MongoClient(settings);
+    }
+
+    internal static void DisposeReadinessClient(MongoClient client)
+    {
+        // In MongoDB.Driver 3.12, MongoClient.Dispose does not unregister the default cluster.
+        var cluster = client.Cluster;
+        client.Dispose();
+        ClusterRegistry.Instance.UnregisterAndDisposeCluster(cluster);
     }
 
     internal async Task WaitForPrimary(Func<CancellationToken, Task<BsonDocument>> probe)
