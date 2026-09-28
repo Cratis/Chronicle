@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,18 +12,47 @@ const temporaryDirectory = mkdtempSync(path.join(tmpdir(), 'chronicle-contracts-
 
 try
 {
-    const packed = JSON.parse(execFileSync('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', temporaryDirectory], {
-        cwd: packageDirectory,
-        encoding: 'utf8'
-    }));
-    const tarball = Array.isArray(packed) ? packed[0].filename : Object.values(packed)[0].filename;
+    if (!existsSync(path.join(packageDirectory, 'dist', 'esm', 'index.d.ts')))
+    {
+        throw new Error('Build the TypeScript package before checking packed consumers');
+    }
+
+    // npm 10 runs prepare when packing a directory even with --ignore-scripts. Pack a snapshot
+    // without that lifecycle hook so the check consumes the already-built dist, not a rebuild.
+    const stagedDirectory = path.join(temporaryDirectory, 'package');
+    cpSync(packageDirectory, stagedDirectory, {
+        recursive: true,
+        filter: source => source !== path.join(packageDirectory, 'node_modules') &&
+            !source.startsWith(path.join(packageDirectory, 'node_modules') + path.sep)
+    });
+    const manifestPath = path.join(stagedDirectory, 'package.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    delete manifest.scripts.prepare;
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+
+    const npmEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
+        !/^npm_|^yarn_|^INIT_CWD$/i.test(key)));
+    npmEnvironment.npm_config_ignore_scripts = 'true';
+    const packedDirectory = path.join(temporaryDirectory, 'packed');
+    mkdirSync(packedDirectory);
+    execFileSync('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', packedDirectory], {
+        cwd: stagedDirectory,
+        env: npmEnvironment,
+        stdio: ['ignore', 'ignore', 'inherit']
+    });
+    const tarballs = readdirSync(packedDirectory).filter(filename => filename.endsWith('.tgz'));
+    if (tarballs.length !== 1)
+    {
+        throw new Error(`Expected one packed TypeScript tarball, found ${tarballs.length}`);
+    }
+    const tarball = path.join(packedDirectory, tarballs[0]);
     const consumerDirectory = path.join(temporaryDirectory, 'consumer');
     mkdirSync(consumerDirectory);
     writeFileSync(path.join(consumerDirectory, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
     execFileSync('npm', [
         'install', '--ignore-scripts', '--no-audit', '--no-fund', '--no-package-lock', '--prefer-offline',
-        path.join(temporaryDirectory, tarball), '@types/node@^26.3.0'
-    ], { cwd: consumerDirectory, stdio: 'inherit' });
+        tarball, '@types/node@^26.3.0'
+    ], { cwd: consumerDirectory, env: npmEnvironment, stdio: 'inherit' });
 
     writeFileSync(path.join(consumerDirectory, 'consumer.ts'), `
 import { ConnectionServiceDefinition, chronicleDescriptorSet } from '@cratis/chronicle.contracts';
