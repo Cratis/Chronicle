@@ -78,6 +78,26 @@ void chronicleDescriptorSet;
             stdio: 'inherit'
         });
     }
+
+    writeFileSync(path.join(consumerDirectory, 'package.json'), JSON.stringify({ private: true, type: 'commonjs' }));
+    writeFileSync(path.join(consumerDirectory, 'consumer.cjs'), `
+const assert = require('node:assert/strict');
+const { ConnectionServiceDefinition, chronicleDescriptorSet } = require('@cratis/chronicle.contracts');
+assert.ok(ConnectionServiceDefinition);
+assert.ok(chronicleDescriptorSet);
+`);
+    console.log('Checking packed contracts with CommonJS require()');
+    execFileSync(process.execPath, ['consumer.cjs'], { cwd: consumerDirectory, stdio: 'inherit' });
+
+    writeFileSync(path.join(consumerDirectory, 'tsconfig.json'), JSON.stringify({
+        compilerOptions: { target: 'ES2022', module: 'Node16', moduleResolution: 'Node16', strict: true, skipLibCheck: false, noEmit: true, types: ['node'] },
+        files: ['consumer.ts']
+    }));
+    console.log('Checking packed CommonJS contracts with Node16 and skipLibCheck: false');
+    execFileSync(process.execPath, [path.join(packageDirectory, 'node_modules/typescript/bin/tsc'), '-p', 'tsconfig.json'], {
+        cwd: consumerDirectory,
+        stdio: 'inherit'
+    });
 }
 finally
 {
