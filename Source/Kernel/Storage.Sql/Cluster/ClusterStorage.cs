@@ -25,9 +25,9 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// </remarks>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> the job system resolves through.</param>
+/// <param name="jobsStorage">The <see cref="Orleans.Storage.IJobsStorage"/> the job system resolves through.</param>
 /// <param name="jsonSerializerOptions">The configured <see cref="JsonSerializerOptions"/> including all concept converters.</param>
-public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions) : IClusterStorage, IDisposable
+public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions) : IClusterStorage, IDisposable
 {
     readonly Subject<IEnumerable<EventStoreName>> _eventStoresSubject = new();
 
