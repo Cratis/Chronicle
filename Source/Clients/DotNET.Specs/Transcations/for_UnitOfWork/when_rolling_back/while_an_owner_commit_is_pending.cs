@@ -53,9 +53,9 @@ public class while_an_owner_commit_is_pending : given.a_unit_of_work
         _afterCommitRollbackError = await Record.ExceptionAsync(() => _unitOfWork.RollbackAsOwner(owner));
     }
 
-    [Fact] void should_refuse_owner_rollback_during_commit() => _ownerRollbackError.ShouldBeOfExactType<DecisionReadAfterCompletion>();
+    [Fact] void should_refuse_owner_rollback_during_commit() => _ownerRollbackError.ShouldBeOfExactType<UnitOfWorkIsCompleting>();
     [Fact] void should_refuse_owner_rollback_after_commit() => _afterCommitRollbackError.ShouldBeOfExactType<UnitOfWorkIsAlreadyCommitted>();
-    [Fact] void should_refuse_public_rollback_during_commit() => _publicRollbackError.ShouldBeOfExactType<DecisionReadAfterCompletion>();
+    [Fact] void should_refuse_public_rollback_during_commit() => _publicRollbackError.ShouldBeOfExactType<UnitOfWorkIsCompleting>();
     [Fact] void should_leave_in_flight_disposal_to_the_commit() => _disposeError.ShouldBeNull();
     [Fact] void should_remain_open_until_append_finishes() => _stillOpen.ShouldBeTrue();
     [Fact] void should_keep_events_until_append_finishes() => _eventsStillStaged.ShouldBeTrue();

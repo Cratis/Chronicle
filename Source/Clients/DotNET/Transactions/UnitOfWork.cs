@@ -308,6 +308,7 @@ public class UnitOfWork(
     public Task Commit() => CommitCore(false);
 
     /// <inheritdoc/>
+    /// <exception cref="ProtectedUnitOfWorkRequiresOwner">A claimed unit with enrolled decision reads must be rolled back by its owner.</exception>
     public Task Rollback() => RollbackCore(null, false);
 
     /// <summary>Rolls back using the capability obtained by the transaction owner.</summary>
@@ -327,6 +328,8 @@ public class UnitOfWork(
     }
 
     /// <inheritdoc/>
+    /// <remarks>Disposal during an in-flight commit is a no-op; the commit completes the unit.</remarks>
+    /// <exception cref="ProtectedUnitOfWorkRequiresOwner">A claimed, open unit with enrolled decision reads must be completed by its owner.</exception>
     public void Dispose()
     {
         lock (_decisionLock)
@@ -384,7 +387,7 @@ public class UnitOfWork(
             if (_completing)
             {
                 if (lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict) throw new UnitOfWorkIsCompleting(correlationId);
-                if (fromOwner || (_commitOwner is not null && _hasEnrolledDecisionReads)) throw new DecisionReadAfterCompletion();
+                if (fromOwner || (_commitOwner is not null && _hasEnrolledDecisionReads)) throw new UnitOfWorkIsCompleting(correlationId);
             }
             if (_commitOwner is not null && _hasEnrolledDecisionReads && !fromOwner) throw new ProtectedUnitOfWorkRequiresOwner();
             CompleteRollback();
