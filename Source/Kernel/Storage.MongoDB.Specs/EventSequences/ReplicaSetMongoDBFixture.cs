@@ -15,6 +15,13 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
 {
     const int MongoDBPort = 27017;
+    internal const string StartupCommand = "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & " +
+        "until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; " +
+        "mongosh --eval 'const result = rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]}); " +
+        "if (result.ok !== 1) { throw new Error(\"rs.initiate returned: \" + JSON.stringify(result)); }'; " +
+        "status=$?; if [ \"$status\" -ne 0 ]; then " +
+        "echo \"MongoDB fixture rs.initiate failed (mongosh exit $status); see mongosh output above and mongod container logs.\" >&2; " +
+        "exit \"$status\"; fi; tail -f /dev/null";
     static readonly TimeSpan _primaryReadinessTimeout = TimeSpan.FromSeconds(45);
 
     IContainer? _container;
@@ -30,7 +37,7 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
         var image = Environment.GetEnvironmentVariable("CHRONICLE_SPECS_MONGODB_IMAGE") ?? "mongo";
         _container = new ContainerBuilder(image)
             .WithMongoDBKernelCompatibility()
-            .WithCommand("/bin/sh", "-c", "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; tail -f /dev/null")
+            .WithCommand("/bin/sh", "-c", StartupCommand)
             .WithPortBinding(MongoDBPort, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilInternalTcpPortIsAvailable(MongoDBPort))
@@ -41,10 +48,31 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
             await _container.StartMongoDBWithDiagnostics();
             await WaitForPrimary();
         }
-        catch
+        catch (Exception startupError)
         {
+            // A TCP-ready mongod can still fail rs.initiate after Testcontainers reports the port ready.
+            // Capture its output before disposing the failed container so the cause survives the cleanup.
+            string? initiationFailureLogs = null;
+            try
+            {
+                var (stdout, stderr) = await _container.GetLogsAsync();
+                if (stderr.Contains("MongoDB fixture rs.initiate failed (mongosh exit", StringComparison.Ordinal))
+                {
+                    initiationFailureLogs = $"mongosh stderr and mongod logs:\n{stderr[^Math.Min(stderr.Length, 4096)..]}\n{stdout[^Math.Min(stdout.Length, 4096)..]}";
+                }
+            }
+            catch (Exception logsError)
+            {
+                // Preserve the original startup error if Docker cannot retrieve logs.
+                startupError.Data["MongoDB fixture log retrieval error"] = logsError.Message;
+            }
+
             await _container.DisposeAsync();
             _container = null;
+            if (initiationFailureLogs is not null)
+            {
+                throw new InvalidOperationException($"MongoDB fixture rs.initiate failed. {initiationFailureLogs}", startupError);
+            }
             throw;
         }
     }
