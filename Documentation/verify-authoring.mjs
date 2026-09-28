@@ -39,11 +39,14 @@ function isSharedPage(file) {
     return firstDirectory !== 'client-snippets' && firstDirectory !== 'clients';
 }
 
-async function loadClientFenceDetector() {
+async function loadPageDetectors() {
     try {
         // Resolve parser dependencies from the verification toolchain outside the published docs root.
-        const { createClientFenceDetector } = await import('../.github/scripts/docs-verification/client-fence-detector.mjs');
-        return createClientFenceDetector(clientFenceLanguages);
+        const { createClientFenceDetector, createChronicleSnippetReferenceDetector } = await import('../.github/scripts/docs-verification/client-fence-detector.mjs');
+        return {
+            directClientFenceLines: createClientFenceDetector(clientFenceLanguages),
+            snippetReferences: createChronicleSnippetReferenceDetector()
+        };
     } catch {
         console.error('Documentation verifier dependencies are missing. Run: npm ci --prefix .github/scripts/docs-verification');
         process.exit(2);
@@ -93,6 +96,27 @@ function selfTestClientFences(directClientFenceLines) {
         process.exit(1);
     }
     console.log(`Client fence self-test detected ${found} planted fences across ${clientFenceLanguages.size} languages and passed ${containerCases.length} container cases.`);
+}
+
+function unusedClientSnippets(snippetFiles, referencedIds) {
+    return snippetFiles.filter(file => {
+        const id = path.relative(path.join(documentationRoot, 'client-snippets'), file).split(path.sep).join('/').replace(/\.mdx?$/i, '');
+        return !id.startsWith('legacy/') && !referencedIds.has(id);
+    });
+}
+
+function selfTestSnippetReferences(snippetReferences) {
+    const referenced = snippetReferences('<ChronicleClientTabs snippet="example/referenced" variants="csharp" />\n```mdx\n<ChronicleClientTabs snippet="example/fenced" />\n```\n`<ChronicleClientTabs snippet="example/inline" />`', true);
+    // References on client-specific pages count too, even though those pages skip the shared fence audit.
+    for (const id of snippetReferences('<ChronicleClientTabs snippet="example/clients" />', true)) referenced.add(id);
+    const snippetFiles = ['example/referenced.md', 'example/clients.md', 'example/unused.mdx', 'example/fenced.md', 'example/inline.md', 'legacy/old.md']
+        .map(file => path.join(documentationRoot, 'client-snippets', file));
+    const unused = unusedClientSnippets(snippetFiles, referenced).map(file => path.basename(file));
+    if (referenced.size !== 2 || !referenced.has('example/referenced') || !referenced.has('example/clients') || unused.join(',') !== 'unused.mdx,fenced.md,inline.md') {
+        console.error(`Client snippet self-test failed: references ${[...referenced]}; unused ${unused}.`);
+        process.exit(1);
+    }
+    console.log(`Client snippet self-test detected ${unused.length} planted unused snippets and excluded two referenced and one legacy snippet.`);
 }
 
 function validateContent(file, content) {
@@ -276,27 +300,43 @@ if (process.argv.length > 3 || (process.argv[2] && process.argv[2] !== '--self-t
     console.error('Usage: node Documentation/verify-authoring.mjs [--self-test]');
     process.exit(2);
 }
+const { directClientFenceLines, snippetReferences } = await loadPageDetectors();
 if (process.argv[2] === '--self-test') {
-    selfTestClientFences(await loadClientFenceDetector());
+    selfTestClientFences(directClientFenceLines);
+    selfTestSnippetReferences(snippetReferences);
     process.exit(0);
 }
 
 const markdownFiles = await filesBelow(documentationRoot, name => /\.mdx?$/i.test(name));
 const sharedPages = markdownFiles.filter(isSharedPage);
+const snippetFiles = markdownFiles.filter(file => path.relative(documentationRoot, file).split(path.sep)[0] === 'client-snippets');
 if (sharedPages.length === 0) errors.push('No shared Chronicle pages found; client fence audit cannot run.');
-const directClientFenceLines = sharedPages.length > 0 ? await loadClientFenceDetector() : undefined;
+if (snippetFiles.every(file => path.relative(path.join(documentationRoot, 'client-snippets'), file).split(path.sep)[0] === 'legacy')) {
+    errors.push('No non-legacy Chronicle client snippets found; unused snippet audit cannot run.');
+}
+const referencedIds = new Set();
 const tocFiles = await filesBelow(documentationRoot, name => /^toc\.ya?ml$/i.test(name));
 for (const file of markdownFiles) {
     const content = await readFile(file, 'utf8');
     validateContent(file, content);
+    if (path.relative(documentationRoot, file).split(path.sep)[0] === 'client-snippets') continue;
+    const isMdx = path.extname(file).toLowerCase() === '.mdx';
+    try {
+        for (const id of snippetReferences(content, isMdx)) referencedIds.add(id);
+    } catch (error) {
+        errors.push(`${relative(file)}:${error.line ?? 1}: Could not parse page for client snippet references: ${error.reason ?? error.message}`);
+    }
     if (!isSharedPage(file)) continue;
     try {
-        for (const line of directClientFenceLines(content, path.extname(file).toLowerCase() === '.mdx')) {
+        for (const line of directClientFenceLines(content, isMdx)) {
             errors.push(`${relative(file)}:${line}: Direct client-language fence in a shared page; use <ChronicleClientTabs> in .mdx.`);
         }
     } catch (error) {
         errors.push(`${relative(file)}:${error.line ?? 1}: Could not parse shared page for client-language fences: ${error.reason ?? error.message}`);
     }
+}
+for (const file of unusedClientSnippets(snippetFiles, referencedIds)) {
+    errors.push(`${relative(file)}: Client snippet is not referenced by any ChronicleClientTabs snippet attribute on a page.`);
 }
 await validateLandingCollisions(markdownFiles);
 const references = await validateTocs(tocFiles);
@@ -310,4 +350,4 @@ if (errors.length > 0) {
 
 const markdownCount = markdownFiles.filter(file => path.extname(file).toLowerCase() === '.md').length;
 const mdxCount = markdownFiles.length - markdownCount;
-console.log(`Documentation authoring validation passed for ${markdownFiles.length} files (${markdownCount} .md, ${mdxCount} .mdx) and ${tocFiles.length} toc files; ${sharedPages.length} shared pages checked for client-language fences.`);
+console.log(`Documentation authoring validation passed for ${markdownFiles.length} files (${markdownCount} .md, ${mdxCount} .mdx) and ${tocFiles.length} toc files; ${sharedPages.length} shared pages checked for client-language fences; ${snippetFiles.length} client snippets checked for references (${referencedIds.size} IDs referenced, legacy/ excluded).`);

@@ -29,7 +29,9 @@ The subdomain resolver extracts the namespace from the request host (for example
 
 ## Custom resolvers
 
-You can configure a custom resolver either by type (DI) or using the `IChronicleBuilder` fluent API.
+You can configure a custom resolver either by type (DI) or using the `IChronicleBuilder` fluent API. Implement `IEventStoreNamespaceResolver` first:
+
+<ChronicleClientTabs snippet="namespaces/aspnetcore/custom-resolver" />
 
 ### Using the builder (recommended)
 
