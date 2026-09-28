@@ -1,0 +1,32 @@
+{
+  "gates": [
+    {
+      "id": "frontend-lint",
+      "changed": ["Source/Workbench/**/*.ts", "Source/Workbench/**/*.tsx"],
+      "excludeChanged": ["**/node_modules/**", "**/wwwroot/**", "**/dist/**", "**/obj/**", "**/bin/**", ".cratis/**"],
+      "workingDirectory": "Source/Workbench"
+    },
+    {
+      "id": "frontend-compile",
+      "description": "tsc -b .frontend/tsconfig.json — zero TypeScript errors",
+      "changed": ["Source/Workbench/**/*.ts", "Source/Workbench/**/*.tsx"],
+      "excludeChanged": ["**/node_modules/**", "**/wwwroot/**", "**/dist/**", "**/obj/**", "**/bin/**", ".cratis/**"],
+      "workingDirectory": "Source/Workbench",
+      "command": ["yarn", "tsc", "-b", ".frontend/tsconfig.json"]
+    },
+    {
+      "id": "frontend-compile-specs",
+      "description": "tsc -p .frontend/tsconfig.specs.json — zero TypeScript errors in specs",
+      "changed": ["Source/Workbench/**/*.ts", "Source/Workbench/**/*.tsx"],
+      "excludeChanged": ["**/node_modules/**", "**/wwwroot/**", "**/dist/**", "**/obj/**", "**/bin/**", ".cratis/**"],
+      "workingDirectory": "Source/Workbench",
+      "command": ["yarn", "tsc", "-p", ".frontend/tsconfig.specs.json"]
+    },
+    {
+      "id": "frontend-specs",
+      "changed": ["Source/Workbench/**/*.ts", "Source/Workbench/**/*.tsx"],
+      "excludeChanged": ["**/node_modules/**", "**/wwwroot/**", "**/dist/**", "**/obj/**", "**/bin/**", ".cratis/**"],
+      "workingDirectory": "Source/Workbench"
+    }
+  ]
+}
