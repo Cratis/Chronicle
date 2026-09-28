@@ -109,14 +109,16 @@ function selfTestSnippetReferences(snippetReferences) {
     const referenced = snippetReferences('<ChronicleClientTabs snippet="example/referenced" variants="csharp" />\n```mdx\n<ChronicleClientTabs snippet="example/fenced" />\n```\n`<ChronicleClientTabs snippet="example/inline" />`', true);
     // References on client-specific pages count too, even though those pages skip the shared fence audit.
     for (const id of snippetReferences('<ChronicleClientTabs snippet="example/clients" />', true)) referenced.add(id);
-    const snippetFiles = ['example/referenced.md', 'example/clients.md', 'example/unused.mdx', 'example/fenced.md', 'example/inline.md', 'legacy/old.md']
+    // A tab restricted to other clients renders no C# tab, so it does not use the C# snippet.
+    for (const id of snippetReferences('<ChronicleClientTabs snippet="example/other-clients" variants="kotlin,java" />\n\n<ChronicleClientTabs snippet="example/mixed" variants="kotlin, csharp" />', true)) referenced.add(id);
+    const snippetFiles = ['example/referenced.md', 'example/clients.md', 'example/mixed.md', 'example/other-clients.md', 'example/unused.mdx', 'example/fenced.md', 'example/inline.md', 'legacy/old.md']
         .map(file => path.join(documentationRoot, 'client-snippets', file));
     const unused = unusedClientSnippets(snippetFiles, referenced).map(file => path.basename(file));
-    if (referenced.size !== 2 || !referenced.has('example/referenced') || !referenced.has('example/clients') || unused.join(',') !== 'unused.mdx,fenced.md,inline.md') {
+    if (referenced.size !== 3 || !referenced.has('example/referenced') || !referenced.has('example/clients') || !referenced.has('example/mixed') || unused.join(',') !== 'other-clients.md,unused.mdx,fenced.md,inline.md') {
         console.error(`Client snippet self-test failed: references ${[...referenced]}; unused ${unused}.`);
         process.exit(1);
     }
-    console.log(`Client snippet self-test detected ${unused.length} planted unused snippets and excluded two referenced and one legacy snippet.`);
+    console.log(`Client snippet self-test detected ${unused.length} planted unused snippets and excluded three referenced and one legacy snippet.`);
 }
 
 function validateContent(file, content) {

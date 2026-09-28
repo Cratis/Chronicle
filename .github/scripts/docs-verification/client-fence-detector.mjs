@@ -37,8 +37,13 @@ export function createChronicleSnippetReferenceDetector() {
         const references = new Set();
         visit(parsePage(content, isMdx), 'mdxJsxFlowElement', node => {
             if (node.name !== 'ChronicleClientTabs') return;
-            const snippet = node.attributes.find(attribute => attribute.type === 'mdxJsxAttribute' && attribute.name === 'snippet');
-            if (typeof snippet?.value === 'string') references.add(snippet.value);
+            const attribute = name => node.attributes.find(candidate => candidate.type === 'mdxJsxAttribute' && candidate.name === name);
+            const snippet = attribute('snippet');
+            const variants = attribute('variants');
+            // A variants list that leaves out csharp renders no C# tab, the same as the site's expansion.
+            const includesCSharp = typeof variants?.value !== 'string'
+                || variants.value.split(',').map(key => key.trim()).includes('csharp');
+            if (typeof snippet?.value === 'string' && includesCSharp) references.add(snippet.value);
         });
         return references;
     };
