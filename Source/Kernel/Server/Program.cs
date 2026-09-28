@@ -76,29 +76,14 @@ if (chronicleOptions.Features.Api)
     builder.Services.AddChronicleWorkbenchApi();
 }
 
-// The dedicated health listener can still use the top-level TLS certificate even when the
-// main listener has explicitly opted into cleartext h2c. Load it independently in that case.
-var certificate = CertificateLoader.LoadCertificate(chronicleOptions);
-if (!chronicleOptions.Tls.Enabled && chronicleOptions.DedicatedHealthPort is not null && chronicleOptions.Health.Tls)
-{
-    certificate = CertificateLoader.LoadHealthCertificate(chronicleOptions);
-}
-if (certificate is not null && chronicleOptions.Tls.Enabled)
-{
-    logger.TlsCertificateLoaded();
-}
-else if (certificate is null && chronicleOptions.Tls.Enabled)
-{
 #if DEVELOPMENT
-    // The certificate must live for the lifetime of the process; Kestrel uses it for every TLS handshake.
-#pragma warning disable CA2000 // Dispose objects before losing scope
-    certificate = DevelopmentCertificate.Create();
-#pragma warning restore CA2000
-    logger.DevelopmentCertificateGenerated();
+const bool developmentBuild = true;
 #else
-    logger.TlsCertificateMissingProduction();
+const bool developmentBuild = false;
 #endif
-}
+
+// Kestrel keeps the selected certificate alive for every TLS handshake until process shutdown.
+var certificate = KernelCertificateSelection.Select(chronicleOptions, logger, developmentBuild);
 
 var listeners = new List<(int Port, HttpProtocols Protocols, X509Certificate2? Certificate)>();
 KernelListeners.Configure(chronicleOptions, certificate, logger, (port, protocols, listenerCertificate) =>
