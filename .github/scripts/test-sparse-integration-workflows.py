@@ -23,6 +23,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         cls.build = workflow("dotnet-build.yml")
         cls.hot_core = workflow("hot-core-gate.yml")
         cls.requested = workflow("requested-integration.yml")
+        cls.integration = workflow("integration.yml")
 
     def test_ordinary_checks_never_run_for_any_label_event(self):
         for ordinary in (self.build, self.hot_core):
@@ -55,19 +56,52 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 self.assertIn("github.event.label.name == 'run-integration'", job["if"])
                 self.assertEqual(f"{job_id}-${{{{ github.event.label.name }}}}", job["name"])
 
-    def test_requested_run_reuses_build_and_enforces_both_matrices(self):
-        build = self.requested["jobs"]["requested-integration"]
+    def test_hot_core_detection_precedes_one_requested_matrix(self):
+        jobs = self.requested["jobs"]
+        build = jobs["requested-integration"]
+        self.assertEqual(["requested-detect-hot-core"], build["needs"])
         self.assertEqual("./.github/workflows/dotnet-build.yml", build["uses"])
         self.assertEqual("true", build["with"]["integration_requested"])
-        self.assertEqual("./.github/workflows/integration.yml",
-                         self.requested["jobs"]["requested-hot-core-matrix"]["uses"])
-        self.assertEqual("true", self.requested["jobs"]["requested-hot-core-matrix"]["with"]["all-providers"])
-        self.assertIn("requested-hot-core-matrix", self.requested["jobs"]["hot-core-gate-requested"]["needs"])
+        self.assertEqual("${{ needs.requested-detect-hot-core.outputs.touched == 'true' }}",
+                         build["with"]["all_providers"])
+        self.assertFalse(any(job.get("uses") == "./.github/workflows/integration.yml"
+                             for job in jobs.values()))
+        self.assertEqual(1, sum(job.get("uses") == "./.github/workflows/integration.yml"
+                                for job in self.build["jobs"].values()))
+        self.assertEqual({"requested-integration", "requested-detect-hot-core"},
+                         set(jobs["hot-core-gate-requested"]["needs"]))
         for job in ("dotnet-build-development", "integration", "integration-api", "mongodb"):
             self.assertIn("inputs.integration_requested", self.build["jobs"][job]["if"])
         for name in ("Build development Docker image", "Push development Docker image"):
             step = next(step for step in self.build["jobs"]["dotnet-build"]["steps"] if step.get("name") == name)
             self.assertIn("inputs.integration_requested", step["if"])
+
+    def test_hot_core_gate_receives_the_selected_provider_set(self):
+        self.assertIn("all_providers", self.build["on"]["workflow_call"]["inputs"])
+        self.assertEqual("${{ github.event_name != 'pull_request' || inputs.all_providers }}",
+                         self.build["jobs"]["integration"]["with"]["all-providers"])
+        self.assertEqual("${{ jobs.integration.outputs.all-providers }}",
+                         self.build["on"]["workflow_call"]["outputs"]["all_providers"]["value"])
+        self.assertEqual("${{ jobs.discover.outputs.all-providers }}",
+                         self.integration["on"]["workflow_call"]["outputs"]["all-providers"]["value"])
+        gate = self.requested["jobs"]["hot-core-gate-requested"]["steps"][0]
+        self.assertEqual("${{ needs.requested-integration.outputs.all_providers }}",
+                         gate["env"]["ALL_PROVIDERS"])
+        self.assertIn('if [ "$ALL_PROVIDERS" != "true" ]', gate["run"])
+
+    def test_called_workflow_can_push_the_image_and_forwards_secrets_to_shards(self):
+        build = self.requested["jobs"]["requested-integration"]
+        self.assertEqual("write", build["permissions"]["packages"])
+        self.assertEqual("inherit", build["secrets"])
+        self.assertEqual("inherit", self.build["jobs"]["integration"]["secrets"])
+        self.assertEqual("read", self.build["jobs"]["integration"]["permissions"]["packages"])
+        self.assertIn("github.event.pull_request.number", self.requested["concurrency"]["group"])
+        self.assertEqual("${{ github.workflow }}-${{ github.ref }}", self.build["concurrency"]["group"])
+
+    def test_hot_core_summary_spec_runs_in_ci(self):
+        step = next(step for step in self.hot_core["jobs"]["detect"]["steps"]
+                    if step.get("name") == "Assert the hot-core contract is intact")
+        self.assertIn("python3 .github/scripts/test-detect-hot-core-changes.py", step["run"])
 
     def test_coverage_cannot_be_cached_if_any_integration_dependency_failed_or_was_skipped(self):
         coverage = self.build["jobs"]["coverage-merge-and-cache"]

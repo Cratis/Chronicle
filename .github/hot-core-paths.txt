@@ -16,8 +16,8 @@
 # a sibling path, and they concentrate in the areas below. Twice the repair was a rollback that
 # deliberately reinstated a known bug because the fix could not be made without breaking a sibling
 # (`b3e03dbb8`, `d1c168c7e`). The out-of-process integration matrix is the only oracle that has
-# reliably caught this class. The nightly runs every backend; a labeled pull request runs the full
-# hot-core matrix in addition to the requested PR integration backend set.
+# reliably caught this class. The nightly runs every backend; a labeled hot-core pull request
+# selects all backends for its one requested integration matrix.
 #
 # FORMAT: one pattern per line, under an `# area:` heading that names the area it belongs to; the
 # heading is what the gate prints back to the author. `**` matches any character including `/`, `*`

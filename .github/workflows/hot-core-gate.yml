@@ -44,7 +44,9 @@ jobs:
       # file - a rename - disarms the gate without failing anything, and a pattern with no owner
       # disarms the review half the same way.
       - name: Assert the hot-core contract is intact
-        run: python3 .github/scripts/detect-hot-core-changes.py --verify
+        run: |
+          python3 .github/scripts/test-detect-hot-core-changes.py
+          python3 .github/scripts/detect-hot-core-changes.py --verify
 
       # Prints every matched path and, on ordinary pushes, how to request integration.
       - name: Detect hot-core changes

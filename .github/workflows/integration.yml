@@ -2,6 +2,10 @@ name: Integration Specs
 
 on:
   workflow_call:
+    outputs:
+      all-providers:
+        description: "Whether discovery selected all storage providers"
+        value: ${{ jobs.discover.outputs.all-providers }}
     inputs:
       build-output-artifact:
         description: "Name of the DEVELOPMENT-symbol build output artifact"
@@ -23,6 +27,7 @@ jobs:
     timeout-minutes: 120
     outputs:
       client-matrix: ${{ steps.client.outputs.matrix }}
+      all-providers: ${{ steps.client.outputs.all-providers }}
       kernel-matrix: ${{ steps.kernel.outputs.matrix }}
       clustering-matrix: ${{ steps.clustering.outputs.matrix }}
 
@@ -46,6 +51,7 @@ jobs:
         id: client
         run: |
           echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py ${ALL_PROVIDERS:+--all-providers})" >> "$GITHUB_OUTPUT"
+          echo "all-providers=${{ inputs.all-providers }}" >> "$GITHUB_OUTPUT"
         env:
           ALL_PROVIDERS: ${{ inputs.all-providers && 'true' || '' }}
 

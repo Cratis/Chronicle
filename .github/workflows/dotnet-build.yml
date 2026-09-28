@@ -1,7 +1,9 @@
 name: .NET Build & Integration
 
 concurrency:
-  # A requested run has a different github.workflow name from this ordinary PR gate.
+  # A reusable call inherits the caller's github.workflow and github.ref. Its caller
+  # must use a different group key (for example, PR number and label as well), or
+  # cancel-in-progress can cancel the caller while it waits for this workflow.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -19,6 +21,15 @@ on:
         type: boolean
         required: false
         default: false
+      all_providers:
+        description: "Run every storage backend for a hot-core pull request"
+        type: boolean
+        required: false
+        default: false
+    outputs:
+      all_providers:
+        description: "Whether the integration matrix used all storage providers"
+        value: ${{ jobs.integration.outputs.all-providers }}
   workflow_dispatch:
   # Nightly full-coverage run; ordinary pull-request events run only the build and specs.
   schedule:
@@ -307,8 +318,8 @@ jobs:
       # the Docker image still comes from dotnet-build.
       build-output-artifact: build-output-development
       chronicle-image: ${{ needs.dotnet-build.outputs.chronicle-image }}
-      # Every storage backend nightly and on dispatch; labeled PRs use the PR backend set.
-      all-providers: ${{ github.event_name != 'pull_request' }}
+      # Every storage backend nightly and on dispatch; labeled hot-core PRs also use all providers.
+      all-providers: ${{ github.event_name != 'pull_request' || inputs.all_providers }}
 
   integration-api:
     if: github.event_name != 'pull_request' || inputs.integration_requested
