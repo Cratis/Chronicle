@@ -62,7 +62,13 @@ env:
   # 19.x baseline this entry is filtered out and no 18.x release is compared at all. It is kept as the record of why
   # 18.4.0 was withdrawn, and becomes load-bearing again only if a 18.x line is ever compared here. Do not read it as
   # currently excluding anything.
-  WIRE_WITHDRAWN_BASELINES: "18.4.0"
+  #
+  # release/19.4 only: this branch releases hotfixes on the 19.4 line after 19.6 and later have shipped. Every
+  # release newer than 19.4 is excluded here - they are not baselines this line was ever meant to serve, and a 19.4
+  # kernel lacks what they added by construction. Without this the gate fails every 19.4 hotfix, including one with
+  # no contract change at all (the #4296 hotfix changes none against 19.4.8). The gate on main cannot bound its
+  # baselines by the version being released; that is the gap to close upstream, not here.
+  WIRE_WITHDRAWN_BASELINES: "18.4.0,19.6.1,19.7.0,19.8.0,19.9.0,19.10.0,19.11.0,19.12.0,19.13.0,19.14.0"
 
 jobs:
   wire-compatibility:
