@@ -28,7 +28,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 
 | Variable | Description |
 | --- | --- |
-| Cratis__Chronicle__Port | The single Chronicle port — gRPC (HTTP/2) and HTTP/1.1 |
+| Cratis__Chronicle__Port | The Chronicle port — HTTPS with HTTP/2 and HTTP/1.1 by default; HTTP/2-only h2c when TLS is disabled |
 | Cratis__Chronicle__HealthCheckEndpoint | Health check endpoint path |
 | Cratis__Chronicle__Health__Port | Dedicated HTTP/1.1 port for the health endpoint |
 | Cratis__Chronicle__Health__Tls | Whether the dedicated health port uses TLS (default `true`) |
@@ -60,6 +60,9 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Clustering__SiloPort | Orleans silo port (default 11111) |
 | Cratis__Chronicle__Clustering__GatewayPort | Orleans gateway port (default 30000) |
 | Cratis__Chronicle__Clustering__AdvertisedIP | IP address this node advertises to the cluster |
+| Cratis__Chronicle__Tls__Enabled | Use TLS on the Chronicle port (default `true`); `false` requires a private h2c backend behind an HTTPS proxy |
+| Cratis__Chronicle__ForwardedHeaders__KnownProxies__0 | Trusted immediate proxy IP (index upward for more than one); see [Trusted reverse proxies](tls.md#trusted-reverse-proxies) |
+| Cratis__Chronicle__ForwardedHeaders__KnownNetworks__0 | Trusted immediate proxy CIDR (index upward for more than one) |
 | Cratis__Chronicle__Tls__CertificatePath | TLS certificate path (PFX) |
 | Cratis__Chronicle__Tls__CertificatePassword | TLS certificate password |
 | Cratis__Chronicle__EncryptionCertificate__CertificatePath | Encryption certificate path (PFX) — OAuth keys, webhook credentials, Data Protection keys |

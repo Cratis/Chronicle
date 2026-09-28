@@ -13,7 +13,7 @@ If your configuration contains `identityProvider.certificate`:
 2. Check that clients reach `/connect/token` over HTTPS and see the expected top-level certificate on the Chronicle listener.
 3. Remove the entire `identityProvider.certificate` section and any `Cratis__Chronicle__IdentityProvider__Certificate__*` environment variables.
 
-`tls.enabled=false` is **not** a replacement for the identity provider certificate: authenticated h2c requires an external HTTPS `authentication.authority`, which issues tokens at its own endpoint. Chronicle no longer serves `/connect/token` in that topology. Migrating to an external authority also requires changing clients' token configuration; see [Authentication](authentication.md).
+`tls.enabled=false` is **not** a replacement for the identity provider certificate: authenticated h2c requires an external HTTPS `authentication.authority`, which issues tokens at its own endpoint. Chronicle no longer serves `/connect/token` in that topology. Only callers that obtain and supply bearer tokens themselves, or Workbench browser sessions using cookie login, can authenticate this way today. The .NET SDK's built-in ClientCredentials mode cannot obtain tokens from an external authority; there is no token-endpoint setting to reconfigure. See [Authentication](authentication.md).
 
 For example, replace this ignored setting:
 

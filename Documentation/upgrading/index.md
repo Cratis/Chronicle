@@ -54,6 +54,23 @@ your build reports. The .NET client's [code analysis rules](../code-analysis/ind
 gain new diagnostics in any release, and they reached consuming builds for the first time in
 19.4.8.
 
+## Reverse proxies after the forwarded-header security change
+
+Chronicle now trusts `X-Forwarded-For` and `X-Forwarded-Proto` only from loopback or configured
+proxy addresses. Previous builds accepted those headers from any peer. **Before upgrading a
+kernel behind a non-loopback ingress or reverse proxy**, set
+`forwardedHeaders.knownProxies` to the immediate proxy's IP address or
+`forwardedHeaders.knownNetworks` to its restricted source CIDR range. This applies to existing
+TLS deployments as well as h2c backends. Without the setting, Chronicle ignores the forwarded
+scheme and client IP; HTTPS-sensitive middleware such as Workbench antiforgery may reject
+requests. The proxy must overwrite incoming forwarded headers rather than pass through values
+supplied by clients. See [Trusted reverse proxies](../hosting/configuration/tls.md#trusted-reverse-proxies)
+for configuration examples and environment-variable names.
+
+The documented Docker Compose deployment connects directly to Chronicle, so it needs no proxy
+setting. Aspire Composition runs YARP in a container; on Linux, configure the container or
+bridge-gateway source IP or a restricted subnet rather than assuming it connects from loopback.
+
 ## Upgrading across several majors
 
 Take them one at a time and read each guide. Chronicle's wire compatibility is verified

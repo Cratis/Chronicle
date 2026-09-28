@@ -26,7 +26,9 @@ The legacy `identityProvider.certificate` option is ignored; see [Identity Provi
 
 ## Authentication behind an HTTPS reverse proxy
 
-With `tls.enabled=false`, the Chronicle backend listens using cleartext HTTP/2 only. Authentication in this topology requires an explicit HTTPS **external** `authentication.authority`; startup fails if it is missing or not HTTPS. The internal OpenIddict authority cannot safely derive a public issuer from a cleartext backend, so Chronicle does **not** serve `/connect/token` in h2c mode. Clients must obtain tokens from the external authority's HTTPS endpoint. OpenIddict never waives its HTTPS requirement based on certificate settings.
+With `tls.enabled=false`, the Chronicle backend listens using cleartext HTTP/2 only. Authentication in this topology requires an explicit HTTPS **external** `authentication.authority`; startup fails if it is missing or not HTTPS. The internal OpenIddict authority cannot safely derive a public issuer from a cleartext backend, so Chronicle does **not** serve `/connect/token` in h2c mode. OpenIddict never waives its HTTPS requirement based on certificate settings.
+
+Authenticated h2c currently works for callers that obtain a bearer token from the external authority themselves and attach it to HTTP or gRPC requests, and for Workbench browser sessions using Chronicle's cookie login. The .NET SDK's built-in ClientCredentials mode cannot use an external authority: it always requests a token from Chronicle's `/connect/token`, which is absent in this topology. There is no SDK token-endpoint setting to change this. Do not use that mode for an authenticated h2c backend until SDK support is added.
 
 The proxy must forward all Chronicle-bound traffic using h2c and overwrite any client-supplied `X-Forwarded-For` and `X-Forwarded-Proto` headers with the actual client IP and public HTTPS scheme. Configure [trusted reverse-proxy addresses or networks](tls.md#trusted-reverse-proxies) so only that proxy can change the scheme seen by HTTPS-sensitive middleware (including antiforgery) and the effective client IP. Restrict direct connections to the backend. Do not expose the h2c port publicly.
 
