@@ -19,4 +19,5 @@ public class when_criteria_is_empty : Specification
     [Fact] void should_not_narrow_on_correlation() => EventSequenceQueryCriteria.Empty.HasCorrelationId.ShouldBeFalse();
     [Fact] void should_not_narrow_on_event_types() => EventSequenceQueryCriteria.Empty.HasEventTypes.ShouldBeFalse();
     [Fact] void should_not_narrow_on_tags() => EventSequenceQueryCriteria.Empty.HasTags.ShouldBeFalse();
+    [Fact] void should_not_narrow_on_named_tags() => EventSequenceQueryCriteria.Empty.HasNamedTags.ShouldBeFalse();
 }

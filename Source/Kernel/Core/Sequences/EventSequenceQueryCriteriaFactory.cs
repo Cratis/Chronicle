@@ -32,6 +32,36 @@ public static class EventSequenceQueryCriteriaFactory
             OccurredTo: narrowing.OccurredTo);
 
     /// <summary>
+    /// Create criteria with required named tag narrowing. Unlike the legacy query, an empty or invalid
+    /// named criterion must not silently turn into an unfiltered read.
+    /// </summary>
+    /// <param name="narrowing">The existing query dimensions.</param>
+    /// <param name="namedTags">One or more named tag criteria for gRPC callers.</param>
+    /// <returns>The combined criteria.</returns>
+    /// <exception cref="InvalidNamedTagCriterion">No valid named tag criteria were supplied.</exception>
+    public static EventSequenceQueryCriteria CreateWithNamedTags(
+        EventSequenceQueryNarrowing narrowing,
+        IEnumerable<NamedTagQueryCriterion>? namedTags)
+    {
+        if (namedTags is null)
+        {
+            throw new InvalidNamedTagCriterion();
+        }
+
+        var snapshot = namedTags.ToArray();
+        if (snapshot.Length == 0 || snapshot.Any(tag => tag is null || string.IsNullOrWhiteSpace(tag.Name) ||
+            (tag.Values is null ? !tag.AnyValue : tag.AnyValue || !tag.Values.Any())))
+        {
+            throw new InvalidNamedTagCriterion();
+        }
+
+        return Create(narrowing) with
+        {
+            NamedTags = snapshot.Select(tag => new NamedTagCriterion((TagName)tag.Name, tag.Values)).ToArray()
+        };
+    }
+
+    /// <summary>
     /// Splits a comma separated list of event type identifiers into <see cref="Concepts.Events.EventType"/>.
     /// </summary>
     /// <param name="value">The comma separated event type identifiers, or null/blank for none.</param>

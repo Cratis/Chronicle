@@ -16,9 +16,9 @@ internal class AppendManyForEventSourcesValidator : CommandValidator<AppendManyF
     /// </summary>
     public AppendManyForEventSourcesValidator()
     {
-        RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
-        RuleFor(_ => _.Namespace).NotEmpty().WithMessage("Namespace name is required.");
-        RuleFor(_ => _.EventSequenceId).NotEmpty().WithMessage("Event sequence identifier is required.");
+        RuleFor(_ => _.EventStore).RequiredEventStore();
+        RuleFor(_ => _.Namespace).RequiredNamespace();
+        RuleFor(_ => _.EventSequenceId).RequiredEventSequence();
 
         RuleFor(_ => _.Events)
             .Must((command, events) => events is not null && (events.Any() || command.ConcurrencyScopes?.Any(_ => !string.IsNullOrWhiteSpace(_.EventSourceId) && _.Scope is { } scope && (scope.ExpectsNoMatchingEvent || scope.SequenceNumber < Concepts.Events.EventSequenceNumber.BeforeFirst.Value)) == true))
@@ -28,10 +28,10 @@ internal class AppendManyForEventSourcesValidator : CommandValidator<AppendManyF
         // canonical append defaults before validating constraints or persisting the batch.
         RuleForEach(_ => _.Events).ChildRules(@event =>
         {
-            @event.RuleFor(_ => _.EventSourceId).NotEmpty().WithMessage("Event source identifier is required.");
-            @event.RuleFor(_ => _.EventType).NotNull().WithMessage("Event type is required.");
-            @event.RuleFor(_ => _.EventType.Id).NotEmpty().When(_ => _.EventType is not null).WithMessage("Event type identifier is required.");
-            @event.RuleFor(_ => _.Content).NotNull().WithMessage("Event content is required.");
+            @event.RuleFor(_ => _.EventSourceId).RequiredEventSource();
+            @event.RuleFor(_ => _.EventType).RequiredEventType();
+            @event.RuleFor(_ => _.EventType.Id).RequiredEventTypeId().When(_ => _.EventType is not null);
+            @event.RuleFor(_ => _.Content).RequiredContent();
         });
     }
 }

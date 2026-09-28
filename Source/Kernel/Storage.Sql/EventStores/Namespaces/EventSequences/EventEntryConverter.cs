@@ -491,12 +491,14 @@ public static class EventEntryConverter
     /// <param name="eventStore">The <see cref="EventStoreName"/> the event belongs to.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the event belongs to.</param>
     /// <param name="identityStorage">The <see cref="IIdentityStorage"/> for resolving the caused by chain.</param>
+    /// <param name="namedTags">The named tags hydrated for this event.</param>
     /// <returns>The converted <see cref="AppendedEvent"/>.</returns>
     public static async Task<AppendedEvent> ToAppendedEvent(
         EventEntry entry,
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
-        IIdentityStorage identityStorage)
+        IIdentityStorage identityStorage,
+        IReadOnlyCollection<NamedTag>? namedTags = null)
     {
         var eventType = GetEventType(entry);
         var content = GetContentForGeneration(entry, eventType.Generation);
@@ -518,7 +520,7 @@ public static class EventEntryConverter
             await identityStorage.GetFor(causedBy),
             GetTags(entry),
             GetHashForGeneration(entry, eventType.Generation),
-            Subject: GetSubject(entry));
+            Subject: GetSubject(entry)) { NamedTags = namedTags ?? [] };
 
         return new AppendedEvent(eventContext, content) { GenerationalContent = GetAllGenerationalContent(entry) };
     }

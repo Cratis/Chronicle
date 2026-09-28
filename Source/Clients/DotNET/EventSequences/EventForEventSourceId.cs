@@ -45,4 +45,29 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     /// event type and any tags supplied at append time.
     /// </summary>
     public IEnumerable<string> Tags { get; init; } = [];
+
+    /// <summary>
+    /// Gets or inits the structured named tags for this event.
+    /// </summary>
+    /// <exception cref="InvalidNamedTag">The collection contains a null named tag.</exception>
+    public IEnumerable<NamedTag> NamedTags
+    {
+        get;
+        init
+        {
+            if (value is null)
+            {
+                field = [];
+                return;
+            }
+
+            var snapshot = value.ToArray();
+            if (snapshot.Any(tag => tag is null))
+            {
+                throw new InvalidNamedTag();
+            }
+
+            field = snapshot.Length == 0 ? Array.Empty<NamedTag>() : Array.AsReadOnly(snapshot);
+        }
+    } = [];
 }

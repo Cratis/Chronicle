@@ -26,7 +26,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
             .WithEnvironment("POSTGRES_PASSWORD", "postgres")
             .WithEnvironment("POSTGRES_DB", "chronicle")
             .WithPortBinding(Port, assignRandomHostPort: true)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("pg_isready", "-U", "postgres", "-d", "chronicle"))
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "chronicle"))
             .Build();
         await _container.StartAsync();
     }

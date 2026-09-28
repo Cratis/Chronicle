@@ -22,8 +22,9 @@ public class when_enrolling_a_batch_with_legacy_implementation : Specification
     [Fact] void should_fail_loudly_instead_of_losing_the_batch() => _error.ShouldBeOfExactType<UnitOfWorkBatchEnrollmentNotSupported>();
     [Fact] void should_default_to_no_enrolled_decision_reads() => _unitOfWork.HasEnrolledDecisionReads.ShouldBeFalse();
 
-    sealed class LegacyUnitOfWork : IUnitOfWork
+    public sealed class LegacyUnitOfWork : IUnitOfWork
     {
+        public int AddEventCalls { get; private set; }
         public bool IsCompleted => false;
         public CorrelationId CorrelationId => CorrelationId.NotSet;
         public bool IsSuccess => true;
@@ -41,6 +42,7 @@ public class when_enrolling_a_batch_with_legacy_implementation : Specification
             DateTimeOffset? occurred = default,
             Subject? subject = default)
         {
+            AddEventCalls++;
         }
 
         public IEnumerable<object> GetEvents() => [];
