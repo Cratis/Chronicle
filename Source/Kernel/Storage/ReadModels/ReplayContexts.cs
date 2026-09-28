@@ -42,6 +42,12 @@ public class ReplayContexts(IReplayContextsStorage storage) : IReplayContexts
     }
 
     /// <inheritdoc/>
-    public Task Evict(ReadModelIdentifier readModel) =>
-        storage.Remove(readModel);
+    public Task Evict(ReadModelIdentifier readModel)
+    {
+        // The cache is consulted before storage, so a context left in it outlives the replay it belongs to.
+        // The next replay's end would then find that stale context - with the previous replay's revert
+        // container name, which already exists - and fail the swap (#4296).
+        _contexts.TryRemove(readModel, out _);
+        return storage.Remove(readModel);
+    }
 }
