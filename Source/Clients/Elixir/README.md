@@ -8,13 +8,17 @@ top of later.
 
 ## Installation
 
+Replace `MAJOR.MINOR.PATCH` with a published contracts release compatible with your Chronicle kernel:
+
 ```elixir
 def deps do
   [
-    {:cratis_chronicle_contracts, "~> 0.1.0"}
+    {:cratis_chronicle_contracts, "~> MAJOR.MINOR.PATCH"}
   ]
 end
 ```
+
+Releases containing the bundled `VERSION` file report their release version to Mix, so Mix can enforce the requirement.
 
 ## What Is In The Package
 
@@ -58,5 +62,5 @@ Function names follow the rpc names in the `.proto` files (`AllEventStores` beco
 ## Publishing
 
 The repository contains a dedicated GitHub Actions workflow for publishing this
-package to Hex. The publish flow regenerates the Elixir sources from the current
-proto files before running tests and `mix hex.publish --yes`.
+package to Hex. The publish flow writes the release version to `VERSION`, regenerates
+Elixir sources from the current proto files, and tests the package before publishing it.

@@ -238,9 +238,7 @@ public partial class PropertyPath
             return innerInstance.ContainsKey(LastSegment.Value);
         }
 
-        var inner = target.EnsurePath(this, arrayIndexers);
-        var propertyInfo = GetPropertyInfoFor(target.GetType());
-        return propertyInfo.GetValue(inner) != null;
+        return GetValue(target, arrayIndexers) != null;
     }
 
     /// <summary>
@@ -272,9 +270,27 @@ public partial class PropertyPath
             return innerInstance.TryGetValue(LastSegment.Value, out var value) ? value : null;
         }
 
-        var inner = target.EnsurePath(this, arrayIndexers);
-        var propertyInfo = GetPropertyInfoFor(target.GetType());
-        return propertyInfo.GetValue(inner);
+        // Reading a path must not create missing intermediate objects: an optional identity
+        // can refer back to its own type, making construction recurse indefinitely.
+        if (_segments.Any(segment => segment is ArrayProperty))
+        {
+            var inner = target.EnsurePath(this, arrayIndexers);
+            return GetPropertyInfoFor(target.GetType()).GetValue(inner);
+        }
+
+        var current = (object?)target;
+        foreach (var segment in _segments)
+        {
+            if (current is null)
+            {
+                return null;
+            }
+
+            var property = new PropertyPath(segment.Value).GetPropertyInfoFor(current.GetType());
+            current = property.GetValue(current);
+        }
+
+        return current;
     }
 
     /// <summary>

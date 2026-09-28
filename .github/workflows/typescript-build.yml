@@ -73,3 +73,7 @@ jobs:
       - name: Build TypeScript package
         working-directory: ./Source/Clients/TypeScript
         run: yarn build
+
+      - name: Check packed TypeScript consumers
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn check:consumers
