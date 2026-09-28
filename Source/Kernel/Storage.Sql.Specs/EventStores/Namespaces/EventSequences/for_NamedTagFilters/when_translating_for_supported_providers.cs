@@ -41,4 +41,16 @@ public class when_translating_for_supported_providers : Specification
             }
         }
     }
+
+    [Fact] void should_parameterize_the_sequence_and_all_tag_components()
+    {
+        foreach (var query in _queries)
+        {
+            query.ShouldContain("@SequenceId");
+            query.ShouldContain("@NameHash");
+            query.ShouldContain("@Name");
+            query.ShouldContain("@ValueHash");
+            query.ShouldContain("@Value");
+        }
+    }
 }

@@ -53,15 +53,17 @@ public static class NamedTagFilters
     static MethodCallExpression Match(DbSet<NamedTagEntry> tags, ParameterExpression eventParameter, string sequenceId, byte[] name, byte[] nameHash, byte[]? value = null, byte[]? valueHash = null)
     {
         var tag = Expression.Parameter(typeof(NamedTagEntry), "tag");
+        var parameters = new { SequenceId = sequenceId, Name = name, NameHash = nameHash, Value = value, ValueHash = valueHash };
+        var captured = Expression.Constant(parameters);
         Expression match = Expression.AndAlso(
-            Expression.Equal(Expression.Property(tag, nameof(NamedTagEntry.EventSequenceId)), Expression.Constant(sequenceId)),
+            Expression.Equal(Expression.Property(tag, nameof(NamedTagEntry.EventSequenceId)), Expression.Property(captured, nameof(parameters.SequenceId))),
             Expression.Equal(Expression.Property(tag, nameof(NamedTagEntry.SequenceNumber)), Expression.Property(eventParameter, nameof(EventEntry.SequenceNumber))));
-        match = Expression.AndAlso(match, Expression.Equal(Expression.Property(tag, nameof(NamedTagEntry.NameHash)), Expression.Constant(nameHash)));
-        match = Expression.AndAlso(match, Expression.Equal(Expression.Property(tag, nameof(NamedTagEntry.Name)), Expression.Constant(name)));
+        match = Expression.AndAlso(match, Expression.Equal(Expression.Property(tag, nameof(NamedTagEntry.NameHash)), Expression.Property(captured, nameof(parameters.NameHash))));
+        match = Expression.AndAlso(match, Expression.Equal(Expression.Property(tag, nameof(NamedTagEntry.Name)), Expression.Property(captured, nameof(parameters.Name))));
         if (value is not null)
         {
-            match = Expression.AndAlso(match, Expression.Equal(Expression.Property(tag, nameof(NamedTagEntry.ValueHash)), Expression.Constant(valueHash)));
-            match = Expression.AndAlso(match, Expression.Equal(Expression.Property(tag, nameof(NamedTagEntry.Value)), Expression.Constant(value)));
+            match = Expression.AndAlso(match, Expression.Equal(Expression.Property(tag, nameof(NamedTagEntry.ValueHash)), Expression.Property(captured, nameof(parameters.ValueHash))));
+            match = Expression.AndAlso(match, Expression.Equal(Expression.Property(tag, nameof(NamedTagEntry.Value)), Expression.Property(captured, nameof(parameters.Value))));
         }
 
         var predicate = Expression.Lambda<Func<NamedTagEntry, bool>>(match, tag);
