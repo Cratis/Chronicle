@@ -1,5 +1,5 @@
 {
-  "SourceRevision": "ba66ac2617868e78888cc01d7de662958d9070d8",
+  "SourceRevision": "2d9a5c5136e1d997335e6db602fdb6a2ad8dabd0",
   "Files": [
     {
       "Source": "agents/backend-developer.md",
@@ -129,12 +129,12 @@
     {
       "Source": "harnesses/pi/extensions/cratis-hooks/index.ts",
       "Destination": "harnesses/pi/extensions/cratis-hooks/index.ts",
-      "Hash": "4A1E3495B56836E5A307640A4F4E8D1FF36817CDCF8135D42D7F345ACFAD042D"
+      "Hash": "43DB6E75745A226A044066DAD424F32232B141618C69AC1317E3468A6C6ACF67"
     },
     {
       "Source": "harnesses/pi/extensions/cratis-hooks/quality-gate.ts",
       "Destination": "harnesses/pi/extensions/cratis-hooks/quality-gate.ts",
-      "Hash": "934EA9B121BA2FB6D43E0073CE32F4794708F481DD91DF416E5966DD88766FF4"
+      "Hash": "79C4B784C56D07E56B577B549603D4F2681262A9A1F8EC8BBCA69D37E32AB76F"
     },
     {
       "Source": "harnesses/pi/extensions/cratis-mcp/ConnectionFailure.ts",
@@ -204,7 +204,7 @@
     {
       "Source": "hooks/README.md",
       "Destination": "hooks/README.md",
-      "Hash": "9CBC1E7755297423BD49E32882B69166175B2C8C23164F4D9C73DC4F98BD1105"
+      "Hash": "7E6D15FCB27210070424FF0C3C29D8EC86810CC7A3E6A26695D9F4C9BAF43069"
     },
     {
       "Source": "hooks/agent-stop.md",
