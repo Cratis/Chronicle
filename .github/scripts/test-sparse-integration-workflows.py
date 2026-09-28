@@ -98,6 +98,29 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertIn("github.event.pull_request.number", self.requested["concurrency"]["group"])
         self.assertEqual("${{ github.workflow }}-${{ github.ref }}", self.build["concurrency"]["group"])
 
+    def test_ordinary_pr_checks_the_dockerfile_without_pushing(self):
+        steps = self.build["jobs"]["dotnet-build"]["steps"]
+        smoke = next(step for step in steps if step.get("name") == "Verify local Docker image without push")
+        self.assertEqual("github.event_name == 'pull_request' && !inputs.integration_requested", smoke["if"])
+        self.assertIn("Source/Kernel/Server/bin/Release/net10.0/.", smoke["run"])
+        self.assertIn("docker build", smoke["run"])
+        self.assertIn("Docker/Local/Dockerfile", smoke["run"])
+        self.assertNotIn("docker push", smoke["run"])
+        self.assertLess(steps.index(smoke), next(index for index, step in enumerate(steps)
+                                                if step.get("name") == "Pack Release build output"))
+
+    def test_fork_request_is_skipped_with_a_notice_not_a_build_failure(self):
+        jobs = self.requested["jobs"]
+        for job in ("requested-integration", "requested-detect-hot-core"):
+            self.assertIn("github.event.pull_request.head.repo.full_name == github.repository", jobs[job]["if"])
+        gate = jobs["hot-core-gate-requested"]["steps"][0]
+        self.assertEqual("${{ github.event.pull_request.head.repo.full_name != github.repository }}",
+                         gate["env"]["FORK"])
+        self.assertLess(gate["run"].index('if [ "$FORK" = "true" ]'),
+                        gate["run"].index('if [ "$DETECT" != "success" ]'))
+        self.assertIn("::notice title=Integration unavailable for fork PR", gate["run"])
+        self.assertNotIn("pull_request_target", self.requested["on"])
+
     def test_hot_core_summary_spec_runs_in_ci(self):
         step = next(step for step in self.hot_core["jobs"]["detect"]["steps"]
                     if step.get("name") == "Assert the hot-core contract is intact")

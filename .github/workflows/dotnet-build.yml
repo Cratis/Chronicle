@@ -159,8 +159,19 @@ jobs:
           done
           dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
-      # Only integration runs need an image to share with their shards. Dependabot's read-only token
-      # cannot push it; its labeled runs retain API/MongoDB coverage but skip the reusable matrix.
+      # Ordinary PRs can check the local Dockerfile against the Release binaries built above.
+      # No DEVELOPMENT-symbol build, registry login or image push is needed for this smoke check.
+      - name: Verify local Docker image without push
+        if: github.event_name == 'pull_request' && !inputs.integration_requested
+        run: |
+          set -euo pipefail
+          mkdir -p Source/Kernel/Server/out
+          cp -r Source/Kernel/Server/bin/Release/net10.0/. Source/Kernel/Server/out/
+          docker build -t "chronicle-dockerfile-check:${{ github.sha }}" -f Docker/Local/Dockerfile .
+
+      # Integration runs need an image to share with their shards. The existing push guard
+      # checks the event actor (the person applying a label), not the PR author. A read-only
+      # token can still prevent pushing even when the actor is not Dependabot.
       - name: Build development Docker image
         if: github.event_name != 'pull_request' || inputs.integration_requested
         run: |

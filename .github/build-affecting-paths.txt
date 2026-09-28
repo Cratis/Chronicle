@@ -28,10 +28,10 @@ Integration/**
 # and fails on the next unrelated pull request instead - which is exactly what happened in 51590103c.
 Benchmarks/**
 
-# On nightly, manual, or requested integration runs the build workflow runs
-# `docker build -f Docker/Local/Dockerfile .`; out-of-process jobs consume the image.
-# A Docker exec-bit fix once could not cut a release because the publish trigger did not list
-# this (fd48b6471).
+# On ordinary PRs the build workflow checks Docker/Local/Dockerfile against Release binaries
+# with `docker build` but does not push. Nightly, manual, and requested integration runs build
+# and push the image consumed by out-of-process jobs. A Docker exec-bit fix once could not
+# cut a release because the publish trigger did not list this (fd48b6471).
 Docker/**
 
 # Central package management decides what every project in the repository compiles against, so a version

@@ -22,7 +22,7 @@ jobs:
   requested-integration:
     name: requested-integration-${{ github.event.label.name }}
     needs: [requested-detect-hot-core]
-    if: github.event.label.name == 'run-integration'
+    if: github.event.label.name == 'run-integration' && github.event.pull_request.head.repo.full_name == github.repository
     # The called build pushes the image consumed by its shards. Pass package write permission
     # and inherit secrets into the called workflow (which forwards them to integration.yml).
     permissions:
@@ -36,7 +36,7 @@ jobs:
 
   requested-detect-hot-core:
     name: requested-detect-hot-core-${{ github.event.label.name }}
-    if: github.event.label.name == 'run-integration'
+    if: github.event.label.name == 'run-integration' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
@@ -71,7 +71,14 @@ jobs:
           TOUCHED: ${{ needs.requested-detect-hot-core.outputs.touched }}
           INTEGRATION: ${{ needs.requested-integration.result }}
           ALL_PROVIDERS: ${{ needs.requested-integration.outputs.all_providers }}
+          FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
         run: |
+          if [ "$FORK" = "true" ]; then
+            echo "::notice title=Integration unavailable for fork PR::The fork's token cannot push the integration image. Ask a maintainer to run workflow_dispatch on a trusted branch containing these changes."
+            echo "Integration was not run for this fork PR. Ask a maintainer to use workflow_dispatch on a trusted branch containing the changes." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
           if [ "$DETECT" != "success" ]; then
             echo "::error::Hot-core detection did not complete ($DETECT). Failing closed."
             exit 1
