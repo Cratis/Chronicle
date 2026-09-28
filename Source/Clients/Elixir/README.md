@@ -8,15 +8,17 @@ top of later.
 
 ## Installation
 
+Replace `MAJOR.MINOR.PATCH` with a published contracts release compatible with your Chronicle kernel:
+
 ```elixir
 def deps do
   [
-    {:cratis_chronicle_contracts, "~> 19.7.0"}
+    {:cratis_chronicle_contracts, "~> MAJOR.MINOR.PATCH"}
   ]
 end
 ```
 
-Use a contracts version compatible with your Chronicle kernel. The published package reports its release version from its bundled `VERSION` file, so Mix can enforce the requirement.
+Releases containing the bundled `VERSION` file report their release version to Mix, so Mix can enforce the requirement.
 
 ## What Is In The Package
 
