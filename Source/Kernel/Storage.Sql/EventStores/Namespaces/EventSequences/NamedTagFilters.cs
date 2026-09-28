@@ -38,10 +38,9 @@ public static class NamedTagFilters
             }
             else
             {
-                foreach (var value in values)
+                foreach (var valueBytes in values.Select(Encoding.UTF8.GetBytes))
                 {
-                    var bytes = Encoding.UTF8.GetBytes(value);
-                    combined = Combine(combined, Match(tags, eventParameter, sequenceId, name, nameHash, bytes, SHA256.HashData(bytes)));
+                    combined = Combine(combined, Match(tags, eventParameter, sequenceId, name, nameHash, valueBytes, SHA256.HashData(valueBytes)));
                 }
             }
         }
