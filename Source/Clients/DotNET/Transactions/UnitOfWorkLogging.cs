@@ -7,6 +7,6 @@ namespace Cratis.Chronicle.Transactions;
 
 internal static partial class UnitOfWorkLogging
 {
-    [LoggerMessage(LogLevel.Error, "Events were staged after unit of work '{CorrelationId}' began completing and will not be appended by this unit of work.")]
-    internal static partial void EventsStagedAfterCompletion(this ILogger<UnitOfWork> logger, CorrelationId correlationId);
+    [LoggerMessage(LogLevel.Error, "Late event staging was attempted after unit of work '{CorrelationId}' began completing; these events will not be appended by this unit of work.")]
+    internal static partial void LateStagingAttemptedAfterCompletion(this ILogger<UnitOfWork> logger, CorrelationId correlationId);
 }

@@ -465,11 +465,11 @@ public class UnitOfWork(
 
         if (_logger is not null)
         {
-            _logger.EventsStagedAfterCompletion(correlationId);
+            _logger.LateStagingAttemptedAfterCompletion(correlationId);
         }
         else
         {
-            Trace.TraceError("Events were staged after unit of work '{0}' began completing and will not be appended by this unit of work.", correlationId);
+            Trace.TraceError("Late event staging was attempted after unit of work '{0}' began completing; these events will not be appended by this unit of work.", correlationId);
         }
         if (_decisionScopes.Count != 0)
         {

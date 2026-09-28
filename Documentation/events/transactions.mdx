@@ -47,9 +47,11 @@ Stage all events before committing or rolling back. Once commit begins (even whi
 
 Opt in to `UnitOfWorkLifecyclePolicy.Strict` through `ChronicleOptions.UnitOfWorkLifecyclePolicy` (also inherited by `ChronicleClientOptions` and `ChronicleAspNetCoreOptions`). In strict mode, both enrollment methods throw `UnitOfWorkIsCompleted` before inspecting or changing their input or the staged events. This applies to units created by the client's `UnitOfWorkManager`, including those used by ASP.NET Core middleware. For units constructed directly, pass the policy to the `UnitOfWork` constructor; custom `IUnitOfWork` implementations are unaffected. Strict will become the default in the next major release.
 
+While a commit is in flight, disposing the unit does nothing in either mode: it does not roll back, discard staged events, or call the completion callback early. The callback runs once when the pending commit finishes. This differs from the former Compatibility behavior; it prevents disposal from replacing an in-flight commit's failure. Explicit `Rollback()` during a pending commit still clears staged events in Compatibility mode, but cannot cancel events already submitted to Chronicle. In Strict mode, `Rollback()` instead throws `UnitOfWorkIsCompleting` without changing staged events.
+
 ## Roll Back
 
-Rollback discards the events staged in the unit of work. Nothing is sent to Chronicle for those staged events.
+Rollback before commit begins discards the events staged in the unit of work. Nothing is sent to Chronicle for those staged events.
 
 ## Related Topics
 

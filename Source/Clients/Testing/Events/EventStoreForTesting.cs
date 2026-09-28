@@ -263,16 +263,19 @@ public class EventStoreForTesting : IEventStore
         _observers = new Lazy<IObservers>(() => new ObserversImpl(this));
         _jobs = new Lazy<IJobs>(() => new JobsImpl(this));
 
-        // DefaultServiceProvider creates concrete types but cannot resolve unregistered interfaces.
+        // Production EventStore reads ChronicleOptions (also configured by the ASP.NET Core host).
+        // Worker hosts configure ChronicleClientOptions instead. IOptions<T> can resolve an
+        // unconfigured default, so falling back must consider the policy, not just nullability.
+        // DefaultServiceProvider cannot resolve unregistered interfaces.
         var configuredOptions = options ?? (_serviceProvider is DefaultServiceProvider ? null :
-            _serviceProvider.GetService<IOptions<ChronicleClientOptions>>()?.Value ??
             _serviceProvider.GetService<IOptions<ChronicleOptions>>()?.Value);
+        var lifecyclePolicy = configuredOptions?.UnitOfWorkLifecyclePolicy ?? UnitOfWorkLifecyclePolicy.Compatibility;
+        if (options is null && lifecyclePolicy == UnitOfWorkLifecyclePolicy.Compatibility && _serviceProvider is not DefaultServiceProvider)
+        {
+            lifecyclePolicy = _serviceProvider.GetService<IOptions<ChronicleClientOptions>>()?.Value.UnitOfWorkLifecyclePolicy ?? lifecyclePolicy;
+        }
         var logger = _serviceProvider is DefaultServiceProvider ? null : _serviceProvider.GetService<ILogger<UnitOfWork>>();
-        _unitOfWorkManager = new Lazy<IUnitOfWorkManager>(() => new UnitOfWorkManager(
-            this,
-            null,
-            configuredOptions?.UnitOfWorkLifecyclePolicy ?? UnitOfWorkLifecyclePolicy.Compatibility,
-            logger));
+        _unitOfWorkManager = new Lazy<IUnitOfWorkManager>(() => new UnitOfWorkManager(this, null, lifecyclePolicy, logger));
         _patterns = new Lazy<IPatterns>(() => new Patterns.Patterns(this));
         _seeding = new Lazy<IEventSeeding>(() => new EventSeeding(
             Name,
