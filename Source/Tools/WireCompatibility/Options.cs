@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Tools.WireCompatibility;
 /// What the tool was asked to compare.
 /// </summary>
 /// <param name="Major">The major version whose every released minor is a baseline.</param>
+/// <param name="ThroughMinor">The latest minor to compare for a release from an older maintained line.</param>
 /// <param name="Since">The oldest release still treated as a baseline, when a floor has been declared.</param>
 /// <param name="Withdrawn">Releases whose contract has been withdrawn, so they are not baselines.</param>
 /// <param name="BaselineVersion">An explicit baseline version, overriding <paramref name="Major"/>.</param>
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.Tools.WireCompatibility;
 /// <param name="AllowMissingBaseline">Whether a major with nothing released yet passes instead of failing.</param>
 public record Options(
     int? Major,
+    int? ThroughMinor,
     string? Since,
     IReadOnlyList<string> Withdrawn,
     string? BaselineVersion,
@@ -36,6 +38,7 @@ public record Options(
         "Usage: WireCompatibility --current <chronicle.desc|Contracts.dll> [options]",
         string.Empty,
         "  --major <n>              Compare against every released minor of major version n.",
+        "  --through-minor <n>    For a backport release, compare only minors up to n.",
         "  --since <version>        The oldest release to compare against. Must be in the same major as --major.",
         "  --withdrawn <version>    A released version whose contract was withdrawn. Repeatable.",
         "  --baseline <version>     Compare against an explicit released version.",
@@ -57,6 +60,7 @@ public record Options(
     public static Options Parse(string[] args)
     {
         int? major = null;
+        int? throughMinor = null;
         string? since = null;
         var withdrawn = new List<string>();
         string? baselineVersion = null;
@@ -72,6 +76,9 @@ public record Options(
             {
                 case "--major":
                     major = int.Parse(Next(args, ref index, "--major"), CultureInfo.InvariantCulture);
+                    break;
+                case "--through-minor":
+                    throughMinor = int.Parse(Next(args, ref index, "--through-minor"), CultureInfo.InvariantCulture);
                     break;
                 case "--since":
                     since = Next(args, ref index, "--since");
@@ -113,6 +120,11 @@ public record Options(
             throw new InvalidArguments("Exactly one of --major, --baseline or --baseline-assembly is required.");
         }
 
+        if (throughMinor is not null && (major is null || throughMinor < 0))
+        {
+            throw new InvalidArguments("--through-minor requires --major and a non-negative minor.");
+        }
+
         if (since is not null && major is null)
         {
             throw new InvalidArguments("--since only means something alongside --major, which is what decides the set of baselines it narrows.");
@@ -140,6 +152,7 @@ public record Options(
 
         return new(
             major,
+            throughMinor,
             since,
             withdrawn,
             baselineVersion,

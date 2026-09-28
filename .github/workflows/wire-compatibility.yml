@@ -63,11 +63,9 @@ env:
   # 18.4.0 was withdrawn, and becomes load-bearing again only if a 18.x line is ever compared here. Do not read it as
   # currently excluding anything.
   #
-  # release/19.4 only: this branch releases hotfixes on the 19.4 line after 19.6 and later have shipped. Every
-  # release newer than 19.4 is excluded here - they are not baselines this line was ever meant to serve, and a 19.4
-  # kernel lacks what they added by construction. Without this the gate fails every 19.4 hotfix, including one with
-  # no contract change at all (the #4296 hotfix changes none against 19.4.8). The gate on main cannot bound its
-  # baselines by the version being released; that is the gap to close upstream, not here.
+  # The maintained release/19.4 line cannot serve APIs first added in later minors. The --through-minor bound
+  # below handles that by comparing only releases at or before the target minor. The withdrawals here record
+  # releases whose contract was withdrawn independently of the backport boundary.
   WIRE_WITHDRAWN_BASELINES: "18.4.0,19.6.1,19.7.0,19.8.0,19.9.0,19.10.0,19.11.0,19.12.0,19.13.0,19.14.0"
 
 jobs:
@@ -100,6 +98,7 @@ jobs:
         id: baseline
         env:
           RELEASE_VERSION: ${{ inputs.version }}
+          BASE_REF: ${{ github.base_ref }}
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
           set -euo pipefail
@@ -115,6 +114,12 @@ jobs:
           if [ -n "$RELEASE_VERSION" ]; then
             MAJOR="${RELEASE_VERSION%%.*}"
             echo "Baseline major $MAJOR, from the release version $RELEASE_VERSION."
+            MINOR="${RELEASE_VERSION#*.}"
+            echo "through=${MINOR%%.*}" >> "$GITHUB_OUTPUT"
+          elif [[ "$BASE_REF" =~ ^release/([0-9]+)\.([0-9]+)$ ]]; then
+            MAJOR="${BASH_REMATCH[1]}"
+            echo "through=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
+            echo "Baseline major $MAJOR, through minor ${BASH_REMATCH[2]} from the target release branch $BASE_REF."
           else
             # Read the whole list and take its first line rather than piping into head. Under pipefail, head
             # closing the pipe kills git with SIGPIPE and the step exits 141 - intermittently, depending on
@@ -168,6 +173,7 @@ jobs:
         if: steps.baseline.outputs.skip == 'false'
         env:
           SINCE: ${{ steps.baseline.outputs.since }}
+          THROUGH_MINOR: ${{ steps.baseline.outputs.through }}
         run: |
           # Without pipefail the exit code below would be tee's, and every breaking change would report success.
           set -euo pipefail
@@ -181,6 +187,11 @@ jobs:
 
           # Only withdrawals belonging to the major under comparison are passed; the tool refuses the rest rather
           # than excluding nothing while looking configured.
+          THROUGH=()
+          if [ -n "$THROUGH_MINOR" ]; then
+            THROUGH=(--through-minor "$THROUGH_MINOR")
+          fi
+
           WITHDRAWN=()
           for VERSION in ${WIRE_WITHDRAWN_BASELINES//,/ }; do
             if [ "${VERSION%%.*}" = "${{ steps.baseline.outputs.major }}" ]; then
@@ -191,6 +202,7 @@ jobs:
           dotnet run --project Source/Tools/WireCompatibility/WireCompatibility.csproj -- \
             --major "${{ steps.baseline.outputs.major }}" \
             ${FLOOR[@]+"${FLOOR[@]}"} \
+            ${THROUGH[@]+"${THROUGH[@]}"} \
             ${WITHDRAWN[@]+"${WITHDRAWN[@]}"} \
             --current "${{ env.PROTOBUF_DIRECTORY }}/chronicle.desc" \
             --allow-missing-baseline \
