@@ -7,6 +7,7 @@ using System.Dynamic;
 using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
 using Orleans.Serialization.Cloning;
+using Orleans.Serialization.Codecs;
 using Orleans.Serialization.Serializers;
 using Orleans.Serialization.WireProtocol;
 
@@ -56,30 +57,92 @@ public class ExpandoObjectSerializer(ICodecProvider codecProvider) : IGeneralize
     /// <inheritdoc/>
     public object ReadValue<TInput>(ref Reader<TInput> reader, Field field)
     {
-        var dictionaryCodec = codecProvider.GetCodec<Dictionary<string, object?>>();
-        var dictionary = dictionaryCodec.ReadValue(ref reader, field)!;
-
-        var result = new ExpandoObject();
-        var resultDict = (IDictionary<string, object?>)result;
-        foreach (var kvp in dictionary)
+        if (field.WireType == WireType.Reference)
         {
-            resultDict[kvp.Key] = kvp.Value;
+            return ReferenceCodec.ReadReference<ExpandoObject, TInput>(ref reader, field)!;
         }
 
+        // Written before this codec wrote its own header: the whole object went out marked as a dictionary, so
+        // it arrives as one. Read it the way it was written, rather than failing on a message still in flight
+        // from a silo that has not been upgraded yet. A header written by this codec carries either no type (it
+        // was the type expected) or this one.
+        if (field.FieldType is { } writtenAs && writtenAs != typeof(ExpandoObject))
+        {
+            return ToExpandoObject(codecProvider.GetCodec<Dictionary<string, object?>>().ReadValue(ref reader, field)!);
+        }
+
+        field.EnsureWireTypeTagDelimited();
+        var placeholderReferenceId = ReferenceCodec.CreateRecordPlaceholder(reader.Session);
+        string[] keys = [];
+        object?[] values = [];
+        var fieldId = 0u;
+
+        while (true)
+        {
+            var header = reader.ReadFieldHeader();
+            if (header.IsEndBaseOrEndObject)
+            {
+                break;
+            }
+
+            fieldId += header.FieldIdDelta;
+            switch (fieldId)
+            {
+                case 0:
+                    keys = codecProvider.GetCodec<string[]>().ReadValue(ref reader, header) ?? [];
+                    break;
+                case 1:
+                    values = codecProvider.GetCodec<object?[]>().ReadValue(ref reader, header) ?? [];
+                    break;
+                default:
+                    reader.ConsumeUnknownField(header);
+                    break;
+            }
+        }
+
+        var result = new ExpandoObject();
+        var resultAsDictionary = (IDictionary<string, object?>)result;
+        for (var index = 0; index < keys.Length; index++)
+        {
+            resultAsDictionary[keys[index]] = index < values.Length ? values[index] : null;
+        }
+
+        ReferenceCodec.RecordObject(reader.Session, result, placeholderReferenceId);
         return result;
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The object is written under its own type rather than handed to the dictionary codec. Handed over, it went
+    /// out marked as a dictionary, so every <see cref="ExpandoObject"/> nested inside it - a child in a collection,
+    /// a nested object - came back on the receiving silo as a <see cref="Dictionary{TKey, TValue}"/>, and
+    /// code that looks a child up by its properties could no longer find them. Its values are written as objects,
+    /// so a nested one comes back through this codec too.
+    /// </remarks>
     public void WriteField<TBufferWriter>(ref Writer<TBufferWriter> writer, uint fieldIdDelta, [AllowNull] Type expectedType, [AllowNull] object? value)
         where TBufferWriter : IBufferWriter<byte>
     {
-        if (value is not ExpandoObject expandoObject)
+        if (ReferenceCodec.TryWriteReferenceField(ref writer, fieldIdDelta, expectedType, value))
         {
             return;
         }
 
-        var dictionary = new Dictionary<string, object?>(expandoObject);
-        var dictionaryCodec = codecProvider.GetCodec<Dictionary<string, object?>>();
-        dictionaryCodec.WriteField(ref writer, fieldIdDelta, expectedType, dictionary);
+        var expandoObject = (IDictionary<string, object?>)value;
+        writer.WriteFieldHeader(fieldIdDelta, expectedType, typeof(ExpandoObject), WireType.TagDelimited);
+        codecProvider.GetCodec<string[]>().WriteField(ref writer, 0, typeof(string[]), expandoObject.Keys.ToArray());
+        codecProvider.GetCodec<object?[]>().WriteField(ref writer, 1, typeof(object?[]), expandoObject.Values.ToArray());
+        writer.WriteEndObject();
+    }
+
+    static ExpandoObject ToExpandoObject(Dictionary<string, object?> dictionary)
+    {
+        var result = new ExpandoObject();
+        var resultAsDictionary = (IDictionary<string, object?>)result;
+        foreach (var (key, value) in dictionary)
+        {
+            resultAsDictionary[key] = value;
+        }
+
+        return result;
     }
 }
