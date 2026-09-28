@@ -9,8 +9,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
-using Testcontainers.PostgreSql;
 using SqlSink = Cratis.Chronicle.Storage.Sql.Sinks.Sink;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
@@ -19,21 +17,30 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// Runs the shared <see cref="ISink"/> contract against the SQL sink on PostgreSQL, where constraint names are
 /// unique across a schema rather than per table as they are on SQLite.
 /// </summary>
+/// <remarks>
+/// The fixture is a property rather than a constructor argument because the contract creates the harness
+/// itself; a case needing the container overrides that and hands one over. Every harness gets a database of
+/// its own in the fixture's container, dropped again when the harness is disposed.
+/// </remarks>
 public class PostgreSqlSinkHarness : ISinkHarness
 {
-    /// <summary>
-    /// One container for the whole run; every harness gets its own database in it.
-    /// </summary>
-    static readonly Lazy<Task<PostgreSqlContainer>> _container = new(StartContainer);
-
     IReadOnlyList<ProjectedColumn> _columns = [];
-    string _connectionString = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the <see cref="PostgreSqlFixture"/> supplying the container.
+    /// </summary>
+    public PostgreSqlFixture? Fixture { get; set; }
+
+    /// <summary>
+    /// Gets the connection string for the database the sink writes to.
+    /// </summary>
+    public string ConnectionString { get; private set; } = string.Empty;
 
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
         _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration());
-        _connectionString = CreateDatabase().GetAwaiter().GetResult();
+        ConnectionString = Fixture!.CreateDatabase().GetAwaiter().GetResult();
 
         var database = Substitute.For<IDatabase>();
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
@@ -48,44 +55,15 @@ public class PostgreSqlSinkHarness : ISinkHarness
             new ExpandoObjectConverter(new TypeFormats()));
     }
 
-    /// <inheritdoc/>
-    public void Dispose() => GC.SuppressFinalize(this);
-
-    static async Task<PostgreSqlContainer> StartContainer()
-    {
-        var container = new PostgreSqlBuilder("postgres:16-alpine")
-            .WithPassword("postgres")
-            .Build();
-        await container.StartAsync();
-        return container;
-    }
-
-    static async Task<string> CreateDatabase()
-    {
-        var container = await _container.Value;
-        var databaseName = $"sink_{Guid.NewGuid():N}";
-        await using (var connection = new NpgsqlConnection(container.GetConnectionString()))
-        {
-            await connection.OpenAsync();
-            await using var command = connection.CreateCommand();
-#pragma warning disable CA2100 // The database name is a generated identifier.
-            command.CommandText = $"CREATE DATABASE \"{databaseName}\"";
-#pragma warning restore CA2100
-            await command.ExecuteNonQueryAsync();
-        }
-
-        return new NpgsqlConnectionStringBuilder(container.GetConnectionString()) { Database = databaseName }.ToString();
-    }
-
-    bool TableExists(ReadModelDbContext context, string tableName) =>
-        context.Database.SqlQuery<int>($"SELECT count(*)::int AS \"Value\" FROM pg_tables WHERE schemaname = current_schema() AND tablename = {tableName}")
-            .AsEnumerable()
-            .Single() > 0;
-
-    ReadModelDbContext CreateContext(string containerName)
+    /// <summary>
+    /// Creates a context for a container in the sink's database, creating its table when it is not there.
+    /// </summary>
+    /// <param name="containerName">The name of the container.</param>
+    /// <returns>A <see cref="ReadModelDbContext"/> for the container.</returns>
+    public ReadModelDbContext CreateContext(string containerName)
     {
         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
-            .UseNpgsql(_connectionString)
+            .UseNpgsql(ConnectionString)
             .AddConceptAsSupport()
             .Options;
 
@@ -99,5 +77,24 @@ public class PostgreSqlSinkHarness : ISinkHarness
         }
 
         return context;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (Fixture is not null && ConnectionString.Length > 0)
+        {
+            Fixture.DropDatabase(ConnectionString).GetAwaiter().GetResult();
+        }
+
+        GC.SuppressFinalize(this);
+    }
+
+    static bool TableExists(ReadModelDbContext context, string tableName)
+    {
+        var storedName = PrimaryKeyNames.TableIdentifier(Arc.EntityFrameworkCore.DatabaseType.PostgreSql, tableName);
+        return context.Database.SqlQuery<int>($"SELECT count(*)::int AS \"Value\" FROM pg_tables WHERE schemaname = current_schema() AND tablename = {storedName}")
+            .AsEnumerable()
+            .Single() > 0;
     }
 }
