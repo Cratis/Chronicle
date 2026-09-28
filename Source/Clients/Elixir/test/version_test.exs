@@ -11,4 +11,11 @@ defmodule Cratis.Chronicle.Contracts.VersionTest do
     assert project[:version] == version
     assert "VERSION" in project[:package][:files]
   end
+
+  test "the published contracts require grpc 1.x and Elixir 1.15 or later" do
+    project = Mix.Project.config()
+
+    assert project[:elixir] == "~> 1.15"
+    assert {:grpc, "~> 1.0"} in project[:deps]
+  end
 end
