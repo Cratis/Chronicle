@@ -62,12 +62,28 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
             return null!;
         }
 
-        if (input is DateTimeOffset timestamp && schemaProperty.Type == JsonObjectType.String)
+        if (input is DateTimeOffset timestamp && schemaProperty.Type.HasFlag(JsonObjectType.String))
         {
             var timestampTargetType = schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats);
             if (timestampTargetType == typeof(DateTime))
             {
                 return timestamp.UtcDateTime;
+            }
+
+            if (timestampTargetType == typeof(DateTimeOffset))
+            {
+                return timestamp;
+            }
+
+            // Date and time parts follow the same UTC instant as DateTime, not the source offset's local clock.
+            if (timestampTargetType == typeof(DateOnly))
+            {
+                return DateOnly.FromDateTime(timestamp.UtcDateTime);
+            }
+
+            if (timestampTargetType == typeof(TimeOnly))
+            {
+                return TimeOnly.FromDateTime(timestamp.UtcDateTime);
             }
 
             if (timestampTargetType == typeof(string))
