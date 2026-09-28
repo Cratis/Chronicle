@@ -22,7 +22,8 @@ public class ChronicleOptions
     public static readonly string SectionPath = ConfigurationPath.Combine(SectionPaths);
 
     /// <summary>
-    /// Port to listen on for all Chronicle traffic — gRPC (HTTP/2) and the Workbench, API and OAuth flows (HTTP/1.1).
+    /// Port to listen on for all Chronicle traffic — gRPC and the Workbench, API and OAuth flows.
+    /// Uses HTTPS with HTTP/1.1 and HTTP/2 by default, or HTTP/2-only cleartext when TLS is explicitly disabled.
     /// </summary>
     public int Port { get; init; } = 35000;
 

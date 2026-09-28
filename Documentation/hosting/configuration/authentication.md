@@ -2,7 +2,7 @@
 
 Authentication is enabled by default. When `authority` is not configured, Chronicle uses its built-in OpenIdDict OAuth authority. When `authority` is set to an external OAuth provider URL, Chronicle will use that instead of the internal authority.
 
-Identity provider certificate configuration is documented on [Identity Provider Certificate](identity-provider-certificate.md).
+The legacy `identityProvider.certificate` option is ignored; see [Identity Provider Certificate](identity-provider-certificate.md) for migration.
 
 ## Example configuration
 
@@ -23,6 +23,10 @@ Identity provider certificate configuration is documented on [Identity Provider 
 | audience | string | "chronicle" | Required audience for external-authority access tokens |
 | requireHttpsMetadata | bool | true | Require HTTPS when retrieving external-authority metadata |
 | defaultAdminUsername | string | "admin" | Default admin username created on first startup when `adminUser` is not configured |
+
+## Authentication behind an HTTPS reverse proxy
+
+With `tls.enabled=false`, the Chronicle backend listens using cleartext HTTP/2 only. Authentication in this topology requires an explicit HTTPS **external** `authentication.authority`; startup fails if it is missing or not HTTPS. The internal OpenIddict authority cannot safely derive a public issuer from a cleartext backend. OpenIddict never waives its HTTPS requirement based on certificate settings. The proxy must forward `X-Forwarded-Proto: https` for the public HTTPS request and forward *all* upstream traffic using h2c, including OAuth and browser-facing endpoints. Restrict direct connections to the backend so untrusted callers cannot send forged forwarded headers. Do not expose the h2c port publicly. See [Server TLS](tls.md).
 
 ## Turning authentication off
 

@@ -5,7 +5,7 @@ description: "Migrate away from the ignored identityProvider.certificate setting
 
 ## Migrate to the server TLS certificate
 
-`identityProvider.certificate` is accepted for compatibility but **ignored**. Chronicle emits a startup warning if the setting is present, even if its `enabled` property is false. It does not choose a separate certificate for the internal OAuth authority. The top-level [TLS configuration](tls.md) serves `/connect/token` and every other endpoint on the Chronicle listener. TLS certificate selection happens before HTTP path routing, so a different certificate cannot be selected for `/connect/token` on the same listener.
+`identityProvider.certificate` is accepted for compatibility but **ignored**. Chronicle emits a startup warning if the setting is present, even if its `enabled` property is false. It does not choose a separate certificate for the internal OAuth authority. With TLS enabled, the top-level [TLS configuration](tls.md) serves `/connect/token` and every other endpoint on the Chronicle listener. With `tls.enabled=false`, the HTTPS-terminating reverse proxy presents its certificate instead. TLS certificate selection happens before HTTP path routing, so a different certificate cannot be selected for `/connect/token` on the same listener.
 
 If your configuration contains `identityProvider.certificate`:
 

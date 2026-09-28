@@ -34,7 +34,7 @@ That matters because the production path needs all three of these before it will
 | Setting | Environment variable | Why it is required |
 | --- | --- | --- |
 | Storage connection | `Cratis__Chronicle__Storage__ConnectionDetails` | Defaults to an empty string — there is no built-in fallback to connect to. Pair it with `Cratis__Chronicle__Storage__Type` when the backend is not MongoDB, which is what an unset type resolves to |
-| TLS certificate | `Cratis__Chronicle__Tls__CertificatePath` (and `__CertificatePassword`) | Port 35000 multiplexes gRPC and HTTP/1.1 over one TLS port. Without a certificate the server throws "No TLS certificate is configured" at startup |
+| TLS certificate | `Cratis__Chronicle__Tls__CertificatePath` (and `__CertificatePassword`) | Required by default for port 35000 to multiplex gRPC and HTTP/1.1. Without it the server throws "No TLS certificate is configured" at startup. Explicit `Tls__Enabled=false` instead requires a private h2c backend behind an HTTPS proxy |
 | Encryption certificate | `Cratis__Chronicle__EncryptionCertificate__CertificatePath` (and `__CertificatePassword`) | Protects the internal OAuth authority's signing and encryption keys. Without a certificate the server throws "An encryption certificate is required in production" at startup — unless the internal authority is not in play, see below |
 
 The encryption certificate is required because the **internal OAuth authority** needs it. It is therefore not required when that authority is out of the picture: turning the `oAuthAuthority` feature off, or pointing `Cratis__Chronicle__Authentication__Authority` at an external authority (which disables the internal one automatically), removes the requirement. See [Features](configuration/features.md). The value-encryption subsystem is separate — it still throws `EncryptionCertificateNotConfigured` on first use if you encrypt values without a certificate configured.
@@ -59,7 +59,7 @@ Chronicle exposes the following ports:
 | 30000 | Orleans Gateway   | Client connections to Orleans cluster    |
 | 35000 | Main Service      | gRPC (HTTP/2) plus REST API, Workbench, OAuth, and health checks (HTTP/1.1), multiplexed over one TLS port |
 
-> **Note**: Port 35000 serves both HTTP/2 (gRPC) and HTTP/1.1 over TLS, so it **requires** a certificate. In production you must supply one via `Tls:CertificatePath` (and `Tls:CertificatePassword` if the certificate is protected). See [TLS Configuration](configuration/tls.md).
+> **Note**: By default port 35000 serves HTTP/2 (gRPC) and HTTP/1.1 over TLS and requires a certificate in production. Alternatively set `Tls:Enabled=false` explicitly for a **private** HTTP/2-only h2c backend behind an HTTPS-terminating reverse proxy. The proxy must forward all traffic using h2c, and clients and browsers must use the public HTTPS endpoint. With authentication enabled, configure an external HTTPS `Authentication:Authority` and forward the public HTTPS scheme. See [TLS Configuration](configuration/tls.md).
 
 ## Docker Deployment
 
@@ -164,7 +164,7 @@ Chronicle exposes a health check endpoint at `/health` by default.
 > [!IMPORTANT]
 > **Probe Chronicle from outside the container.** The production image is built on `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`, which ships no shell and no `curl` or `wget`. A Docker `HEALTHCHECK` — or a Compose `healthcheck:` — runs *inside* the container, so any command you give it fails immediately and the container is reported unhealthy no matter how healthy Chronicle is.
 
-Use your orchestrator's own HTTP probe instead. The main port always requires TLS, and probers that validate certificates reject a self-signed one, so publish the health endpoint on a dedicated plaintext port:
+Use your orchestrator's own HTTP probe instead. The default TLS main port may use a self-signed certificate that some probers reject; a private h2c main port requires an HTTP/2-capable prober. Publish a dedicated plaintext HTTP/1.1 health port when either presents a problem:
 
 ```bash
 Cratis__Chronicle__Health__Port=8080

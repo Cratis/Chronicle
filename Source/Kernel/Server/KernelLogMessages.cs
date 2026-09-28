@@ -7,9 +7,6 @@ namespace Cratis.Chronicle.Server;
 
 internal static partial class KernelLogMessages
 {
-    [LoggerMessage(LogLevel.Warning, "identityProvider.certificate is configured but ignored. The top-level tls certificate serves /connect/token and every other endpoint; migrate to tls and remove identityProvider.certificate")]
-    internal static partial void IdentityProviderCertificateIgnored(this ILogger<Kernel> logger);
-
     [LoggerMessage(LogLevel.Information, "Starting Cratis Chronicle Server - Version {Version}")]
     internal static partial void ServerStarting(this ILogger<Kernel> logger, string version);
 
