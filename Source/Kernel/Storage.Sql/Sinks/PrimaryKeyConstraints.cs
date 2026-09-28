@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
 /// <summary>
-/// Keeps the primary key constraint of a read model table named after the table, <c language="csharp">PK_{table}</c>.
+/// Keeps the primary key constraint of a read model table named after the table, as <see cref="PrimaryKeyNames"/> names it.
 /// </summary>
 /// <remarks>
 /// A replay builds a shadow table and renames it into place. Renaming a table does not rename its primary key,
@@ -22,12 +21,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 internal static class PrimaryKeyConstraints
 {
     /// <summary>
-    /// PostgreSQL silently truncates identifiers to this many bytes (NAMEDATALEN - 1).
-    /// </summary>
-    const int PostgreSqlMaxIdentifierBytes = 63;
-
-    /// <summary>
-    /// Renames the primary key of a table to <c language="csharp">PK_{table}</c>, first moving that name off any
+    /// Renames the primary key of a table to the name <see cref="PrimaryKeyNames"/> gives it, first moving that name off any
     /// other table still holding it from an earlier swap.
     /// </summary>
     /// <param name="scope">A scope whose connection reaches the database the table lives in.</param>
@@ -43,46 +37,28 @@ internal static class PrimaryKeyConstraints
         }
 
         var current = await PrimaryKeyOf(database, databaseType, table);
-        var expected = NameFor(databaseType, table);
+        var expected = PrimaryKeyNames.For(databaseType, table);
         if (current is null || current == expected)
         {
             return;
         }
 
         var holder = await TableHolding(database, databaseType, expected);
-        if (holder is not null && holder != Identifier(databaseType, table))
+        if (holder is not null && holder != PrimaryKeyNames.TableIdentifier(databaseType, table))
         {
             var holderCurrent = await PrimaryKeyOf(database, databaseType, holder);
             if (holderCurrent == expected)
             {
-                await Rename(scope, databaseType, holder, expected, NameFor(databaseType, holder));
+                await Rename(scope, databaseType, holder, expected, PrimaryKeyNames.For(databaseType, holder));
             }
         }
 
         await Rename(scope, databaseType, table, current, expected);
     }
 
-    static string NameFor(DatabaseType databaseType, string table) => Identifier(databaseType, $"PK_{table}");
-
-    static string Identifier(DatabaseType databaseType, string name)
-    {
-        if (databaseType != DatabaseType.PostgreSql || Encoding.UTF8.GetByteCount(name) <= PostgreSqlMaxIdentifierBytes)
-        {
-            return name;
-        }
-
-        var length = name.Length;
-        while (Encoding.UTF8.GetByteCount(name.AsSpan(0, length)) > PostgreSqlMaxIdentifierBytes)
-        {
-            length--;
-        }
-
-        return name[..length];
-    }
-
     static async Task<string?> PrimaryKeyOf(DatabaseFacade database, DatabaseType databaseType, string table)
     {
-        var name = Identifier(databaseType, table);
+        var name = PrimaryKeyNames.TableIdentifier(databaseType, table);
         var query = databaseType == DatabaseType.PostgreSql
             ? database.SqlQuery<string>($"SELECT k.conname AS \"Value\" FROM pg_constraint k JOIN pg_class c ON c.oid = k.conrelid JOIN pg_namespace n ON n.oid = c.relnamespace WHERE k.contype = 'p' AND c.relname = {name} AND n.nspname = current_schema()")
             : database.SqlQuery<string>($"SELECT name AS [Value] FROM sys.key_constraints WHERE type = 'PK' AND parent_object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({name}))");
