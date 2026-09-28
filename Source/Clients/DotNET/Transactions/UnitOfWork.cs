@@ -309,12 +309,18 @@ public class UnitOfWork(
 
     /// <inheritdoc/>
     /// <exception cref="ProtectedUnitOfWorkRequiresOwner">A claimed unit with enrolled decision reads must be rolled back by its owner.</exception>
+    /// <exception cref="UnitOfWorkIsCompleting">A commit is in progress under the strict policy, or a claimed unit with enrolled decision reads is committing under the compatibility policy.</exception>
+    /// <exception cref="UnitOfWorkIsAlreadyCommitted">The unit has already been committed.</exception>
+    /// <exception cref="UnitOfWorkIsAlreadyRolledBack">The unit has already been rolled back.</exception>
     public Task Rollback() => RollbackCore(null, false);
 
     /// <summary>Rolls back using the capability obtained by the transaction owner.</summary>
     /// <param name="owner">The claimed owner capability.</param>
     /// <returns>The rollback task.</returns>
-    /// <exception cref="ProtectedUnitOfWorkRequiresOwner">A different owner attempted to complete the unit.</exception>
+    /// <exception cref="ProtectedUnitOfWorkRequiresOwner">The capability does not match the claimed owner, or no owner has been claimed.</exception>
+    /// <exception cref="UnitOfWorkIsCompleting">A commit is in progress, regardless of lifecycle policy.</exception>
+    /// <exception cref="UnitOfWorkIsAlreadyCommitted">The unit has already been committed.</exception>
+    /// <exception cref="UnitOfWorkIsAlreadyRolledBack">The unit has already been rolled back.</exception>
     public Task RollbackAsOwner(DecisionReadCommitOwner owner) => RollbackCore(owner, true);
 
     /// <inheritdoc/>
