@@ -61,7 +61,8 @@ jobs:
   hot-core-gate-requested:
     name: hot-core-gate-requested-${{ github.event.label.name }}
     needs: [requested-integration, requested-detect-hot-core]
-    if: always() && github.event.label.name == 'run-integration'
+    # !cancelled(): a run superseded by re-adding the label skips the gate instead of reporting a spurious failure.
+    if: ${{ !cancelled() && github.event.label.name == 'run-integration' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -76,7 +77,8 @@ jobs:
           if [ "$FORK" = "true" ]; then
             echo "::notice title=Integration unavailable for fork PR::The fork's token cannot push the integration image. Ask a maintainer to run workflow_dispatch on a trusted branch containing these changes."
             echo "Integration was not run for this fork PR. Ask a maintainer to use workflow_dispatch on a trusted branch containing the changes." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
+            # Fail closed: a fork PR must not satisfy the requested gate without running integration.
+            exit 1
           fi
 
           if [ "$DETECT" != "success" ]; then
