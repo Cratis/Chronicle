@@ -41,7 +41,9 @@ export function createChronicleSnippetReferenceDetector() {
             const snippet = attribute('snippet');
             const variants = attribute('variants');
             // A variants list that leaves out csharp renders no C# tab, the same as the site's expansion.
+            // An empty value renders every client too, as the site treats it like an omitted attribute.
             const includesCSharp = typeof variants?.value !== 'string'
+                || variants.value === ''
                 || variants.value.split(',').map(key => key.trim()).includes('csharp');
             if (typeof snippet?.value === 'string' && includesCSharp) references.add(snippet.value);
         });
