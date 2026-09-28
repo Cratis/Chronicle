@@ -45,6 +45,7 @@ using Cratis.Serialization;
 using Cratis.Traces;
 using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using EventStoreSubscriptionsImpl = Cratis.Chronicle.EventStoreSubscriptions.EventStoreSubscriptions;
 using ExternalServicesImpl = Cratis.Chronicle.ExternalServices.ExternalServices;
@@ -111,8 +112,19 @@ public class EventStoreForTesting : IEventStore
     /// </summary>
     /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving reactor, reducer, and seeder instances.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> to use for artifact discovery.</param>
-#pragma warning disable CA2000 // Dispose objects before losing scope
     public EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider)
+        : this(serviceProvider, clientArtifactsProvider, null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a test event store with optional Chronicle client settings.
+    /// </summary>
+    /// <param name="serviceProvider">Optional service provider for resolving artifacts, options, and logging.</param>
+    /// <param name="clientArtifactsProvider">Artifacts to discover.</param>
+    /// <param name="options">Optional settings for the unit-of-work lifecycle policy.</param>
+#pragma warning disable CA2000 // Dispose objects before losing scope
+    public EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options)
     {
         _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
         _jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
@@ -250,7 +262,17 @@ public class EventStoreForTesting : IEventStore
         _failedPartitions = new Lazy<IFailedPartitions>(() => new FailedPartitionsImpl(this));
         _observers = new Lazy<IObservers>(() => new ObserversImpl(this));
         _jobs = new Lazy<IJobs>(() => new JobsImpl(this));
-        _unitOfWorkManager = new Lazy<IUnitOfWorkManager>(() => new UnitOfWorkManager(this));
+
+        // DefaultServiceProvider creates concrete types but cannot resolve unregistered interfaces.
+        var configuredOptions = options ?? (_serviceProvider is DefaultServiceProvider ? null :
+            _serviceProvider.GetService<IOptions<ChronicleClientOptions>>()?.Value ??
+            _serviceProvider.GetService<IOptions<ChronicleOptions>>()?.Value);
+        var logger = _serviceProvider is DefaultServiceProvider ? null : _serviceProvider.GetService<ILogger<UnitOfWork>>();
+        _unitOfWorkManager = new Lazy<IUnitOfWorkManager>(() => new UnitOfWorkManager(
+            this,
+            null,
+            configuredOptions?.UnitOfWorkLifecyclePolicy ?? UnitOfWorkLifecyclePolicy.Compatibility,
+            logger));
         _patterns = new Lazy<IPatterns>(() => new Patterns.Patterns(this));
         _seeding = new Lazy<IEventSeeding>(() => new EventSeeding(
             Name,

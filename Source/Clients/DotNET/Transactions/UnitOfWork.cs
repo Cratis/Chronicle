@@ -295,12 +295,8 @@ public class UnitOfWork(
         lock (_decisionLock)
         {
             ThrowIfUnitOfWorkIsCompleted();
-            if (_completing) throw new DecisionReadAfterCompletion();
-            _isRolledBack = true;
-            _stagedEvents.Clear();
-            _currentLegacyEvents = null;
-            _concurrencyScopes.Clear();
-            _appendManyResult = AppendManyResult.Success(CorrelationId.NotSet, []);
+            if (_completing && lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict) throw new UnitOfWorkIsCompleting(correlationId);
+            CompleteRollback();
         }
 
         _onCompleted(this);
@@ -320,11 +316,14 @@ public class UnitOfWork(
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (IsCompleted)
+        lock (_decisionLock)
         {
-            return;
+            if (_completing || IsCompleted) return;
+
+            using var span = _activitySource.Rollback(correlationId.ToString());
+            CompleteRollback();
         }
-        Rollback().GetAwaiter().GetResult();
+        _onCompleted(this);
     }
 
     static bool ConcurrencyScopesAreSemanticallyEqual(ConcurrencyScope first, ConcurrencyScope second)
@@ -422,6 +421,15 @@ public class UnitOfWork(
             }
             _onCompleted(this);
         }
+    }
+
+    void CompleteRollback()
+    {
+        _isRolledBack = true;
+        _stagedEvents.Clear();
+        _currentLegacyEvents = null;
+        _concurrencyScopes.Clear();
+        _appendManyResult = AppendManyResult.Success(CorrelationId.NotSet, []);
     }
 
     void ThrowIfStagingAfterCompletion()
