@@ -22,4 +22,21 @@ public class when_evaluating_readiness : Specification
     [Fact]
     void should_reject_a_different_replica_set() =>
         ReplicaSetMongoDBFixture.IsReady(new BsonDocument { { "setName", "other" }, { "isWritablePrimary", true } }).ShouldBeFalse();
+    [Fact]
+    async Task should_retry_a_server_selection_timeout_before_accepting_the_primary()
+    {
+        var attempts = 0;
+        var fixture = new ReplicaSetMongoDBFixture();
+
+        Task<BsonDocument> Probe(CancellationToken _)
+        {
+            attempts++;
+            return attempts == 1
+                ? Task.FromException<BsonDocument>(new TimeoutException("Server selection timed out"))
+                : Task.FromResult(new BsonDocument { { "setName", "rs0" }, { "isWritablePrimary", true } });
+        }
+
+        await fixture.WaitForPrimary(Probe).WaitAsync(TimeSpan.FromSeconds(3));
+        attempts.ShouldEqual(2);
+    }
 }

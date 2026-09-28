@@ -60,9 +60,15 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
         settings.ServerSelectionTimeout = TimeSpan.FromSeconds(2);
         settings.ConnectTimeout = TimeSpan.FromSeconds(2);
         var client = new MongoClient(settings);
+        await WaitForPrimary(cancellationToken => client.GetDatabase("admin").RunCommandAsync<BsonDocument>(
+            new BsonDocument("hello", 1), cancellationToken: cancellationToken));
+    }
+
+    internal async Task WaitForPrimary(Func<CancellationToken, Task<BsonDocument>> probe)
+    {
         using var timeout = new CancellationTokenSource(_primaryReadinessTimeout);
         BsonDocument? lastHello = null;
-        MongoException? lastError = null;
+        Exception? lastError = null;
 
         try
         {
@@ -70,14 +76,13 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
             {
                 try
                 {
-                    lastHello = await client.GetDatabase("admin").RunCommandAsync<BsonDocument>(
-                        new BsonDocument("hello", 1), cancellationToken: timeout.Token);
+                    lastHello = await probe(timeout.Token);
                     if (IsReady(lastHello))
                     {
                         return;
                     }
                 }
-                catch (MongoException error)
+                catch (Exception error) when (error is MongoException or TimeoutException)
                 {
                     // Connecting and electing a primary can fail transiently during container startup.
                     lastError = error;
