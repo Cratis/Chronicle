@@ -32,4 +32,7 @@ internal static partial class ProjectionLogging
 
     [LoggerMessage(LogLevel.Information, "Rehydrating projections and pipelines")]
     internal static partial void Rehydrate(this ILogger<Projection> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Projecting for '{Identifier}' in namespace '{Namespace}' failed - discarding its projection engine so the next projection starts from a fresh one")]
+    internal static partial void DiscardingFailedProjectionEngine(this ILogger<Projection> logger, ProjectionId identifier, EventStoreNamespaceName @namespace, Exception exception);
 }
