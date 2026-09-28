@@ -9,8 +9,9 @@ namespace Cratis.Chronicle.Configuration;
 public class IdentityProviderOptions
 {
     /// <summary>
-    /// Gets or inits the optional certificate configuration used by the internal identity provider.
-    /// When not set, Chronicle falls back to the top-level <see cref="ChronicleOptions.Tls"/> configuration.
+    /// Gets or inits the legacy identity provider certificate configuration.
+    /// This setting is accepted for compatibility but ignored. The top-level <see cref="ChronicleOptions.Tls"/>
+    /// configuration serves all endpoints, including the internal identity provider.
     /// </summary>
     public Tls? Certificate { get; init; }
 }

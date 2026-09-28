@@ -20,4 +20,5 @@ public class without_event_type_tails : Specification
 
     [Fact] void should_preserve_an_empty_tail_collection() => _result.EventTypeTails.ShouldBeEmpty();
     [Fact] void should_preserve_the_legacy_sequence_number() => _result.TailEventSequenceNumber.ShouldEqual(13ul);
+    [Fact] void should_treat_an_absent_first_number_as_not_supplied() => _result.HasFirstEventSequenceNumber.ShouldBeFalse();
 }

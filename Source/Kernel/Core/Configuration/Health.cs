@@ -8,8 +8,8 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 /// <remarks>
 /// The main Chronicle port multiplexes gRPC (HTTP/2) and HTTP/1.1 traffic over a single
-/// TLS port and therefore always requires a certificate. The health endpoint is HTTP/1.1
-/// only, so it can be published on its own dedicated port where TLS is optional. This is
+/// TLS port by default, or HTTP/2-only cleartext when TLS is explicitly disabled.
+/// The dedicated health port is HTTP/1.1 only and has independent TLS configuration. This is
 /// useful for orchestrator and load-balancer probes that cannot validate the server's
 /// certificate — for example a Kubernetes cluster where the main port serves a self-signed
 /// certificate. When <see cref="Port"/> is not set, the health endpoint is served on the
@@ -33,8 +33,8 @@ public class Health
     /// <remarks>
     /// Only applies when <see cref="Port"/> is set. Set to false to serve the health endpoint
     /// in cleartext on the dedicated port for probes that cannot validate the server's
-    /// certificate. The main <see cref="ChronicleOptions.Port"/> always uses TLS regardless of
-    /// this setting.
+    /// certificate. The main <see cref="ChronicleOptions.Port"/> uses its own
+    /// <see cref="ChronicleOptions.Tls"/> configuration, independently of this setting.
     /// </remarks>
     public bool Tls { get; init; } = true;
 

@@ -14,7 +14,7 @@ These properties live at the root of `chronicle.json`.
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| port | number | 35000 | The single Chronicle port — gRPC (HTTP/2) and Workbench/API/OAuth/health (HTTP/1.1) over TLS |
+| port | number | 35000 | By default, gRPC (HTTP/2) and Workbench/API/OAuth/health (HTTP/1.1) over TLS; HTTP/2-only h2c when `tls.enabled=false` |
 | bindTimeout | time span | 00:00:30 | How long to retry a port bind that fails with EADDRINUSE |
 | healthCheckEndpoint | string | /health | Health check endpoint path |
 

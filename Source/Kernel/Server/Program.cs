@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
@@ -15,7 +16,6 @@ using Cratis.Chronicle.Storage.Security;
 using Cratis.Chronicle.Workbench;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets;
@@ -63,6 +63,8 @@ var env = Environment.GetEnvironmentVariables();
 
 ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+KernelStartupDiagnostics.ReportIdentityProviderCertificate(chronicleOptions, logger);
+ForwardedHeadersTrust.Configure(builder.Services, chronicleOptions);
 var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
@@ -75,33 +77,18 @@ if (chronicleOptions.Features.Api)
     builder.Services.AddChronicleWorkbenchApi();
 }
 
-// The Chronicle port multiplexes gRPC (HTTP/2) and the Workbench, API and OAuth flows (HTTP/1.1)
-// on a single port. Kestrel can only serve both protocols on one port over TLS, where ALPN
-// negotiates the protocol per connection — cleartext HTTP/2 (h2c) cannot share a port with HTTP/1.1.
-// A configured certificate is therefore required; in development one is generated automatically.
-var certificate = CertificateLoader.LoadCertificate(chronicleOptions);
-if (certificate is not null)
-{
-    logger.TlsCertificateLoaded();
-}
-else
-{
 #if DEVELOPMENT
-    // The certificate must live for the lifetime of the process; Kestrel uses it for every TLS handshake.
-#pragma warning disable CA2000 // Dispose objects before losing scope
-    certificate = DevelopmentCertificate.Create();
-#pragma warning restore CA2000
-    logger.DevelopmentCertificateGenerated();
+const bool developmentBuild = true;
 #else
-    logger.TlsCertificateMissingProduction();
-    throw new InvalidOperationException(
-        "No TLS certificate is configured. The Chronicle port serves gRPC (HTTP/2) and the Workbench, " +
-        "API and OAuth flows (HTTP/1.1) on a single TLS port, which requires a certificate. " +
-        "Provide one through Tls:CertificatePath (and Tls:CertificatePassword) in configuration. " +
-        "When TLS is terminated upstream by an ingress/reverse proxy, re-encrypt the connection to Chronicle.");
+const bool developmentBuild = false;
 #endif
-}
 
+// Kestrel keeps the selected certificate alive for every TLS handshake until process shutdown.
+var certificate = KernelCertificateSelection.Select(chronicleOptions, logger, developmentBuild);
+
+var listeners = new List<(int Port, HttpProtocols Protocols, X509Certificate2? Certificate)>();
+KernelListeners.Configure(chronicleOptions, certificate, logger, (port, protocols, listenerCertificate) =>
+    listeners.Add((port, protocols, listenerCertificate)));
 logger.ServerListening(chronicleOptions.Port);
 
 builder.Services.AddOptions<SocketTransportOptions>().Configure<IHostApplicationLifetime>((options, lifetime) =>
@@ -109,28 +96,14 @@ builder.Services.AddOptions<SocketTransportOptions>().Configure<IHostApplication
 
 builder.WebHost.UseKestrel(options =>
 {
-    // A single TLS port for both gRPC (HTTP/2) and the Workbench, API and OAuth flows (HTTP/1.1),
-    // multiplexed per connection through ALPN.
-    options.ListenAnyIP(chronicleOptions.Port, listenOptions =>
+    foreach (var listener in listeners)
     {
-        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
-        listenOptions.UseHttps(certificate);
-    });
-
-    // Optionally expose the health endpoint on a dedicated port. The health endpoint is HTTP/1.1
-    // only, so it can live on its own single-protocol port where TLS is optional — unlike the
-    // main port, which must stay TLS to multiplex HTTP/1.1 and HTTP/2 through ALPN. Disabling TLS
-    // here lets orchestrator and load-balancer probes that cannot validate a (self-signed)
-    // certificate reach the endpoint in cleartext.
-    if (chronicleOptions.DedicatedHealthPort is { } healthPort)
-    {
-        logger.HealthEndpointListening(healthPort, chronicleOptions.Health.Tls);
-        options.ListenAnyIP(healthPort, listenOptions =>
+        options.ListenAnyIP(listener.Port, listenOptions =>
         {
-            listenOptions.Protocols = HttpProtocols.Http1;
-            if (chronicleOptions.Health.Tls)
+            listenOptions.Protocols = listener.Protocols;
+            if (listener.Certificate is not null)
             {
-                listenOptions.UseHttps(certificate);
+                listenOptions.UseHttps(listener.Certificate);
             }
         });
     }
@@ -338,20 +311,10 @@ app.Use(async (context, next) =>
     await next(context);
 });
 
-// The kernel is never directly internet-facing - it always sits behind some reverse proxy (YARP in
-// this repo's Composition, an ingress/load balancer in production). Without this, a proxied request
-// that arrives over HTTPS at the proxy but HTTP between the proxy and the kernel (or vice versa)
-// makes the kernel see the wrong scheme, so CookieSecurePolicy.SameAsRequest marks auth cookies
-// Secure when the browser's own connection to the proxy was plain HTTP - a mismatch Chrome quietly
-// tolerates for localhost but Safari correctly rejects, silently breaking sign-in. Clearing the known
-// proxies/networks trusts the immediate proxy unconditionally, matching this always-proxied model.
-var forwardedHeadersOptions = new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-};
-forwardedHeadersOptions.KnownIPNetworks.Clear();
-forwardedHeadersOptions.KnownProxies.Clear();
-app.UseForwardedHeaders(forwardedHeadersOptions);
+// Accept the public scheme and client IP only from loopback or explicitly trusted reverse proxies.
+// ASPNETCORE_FORWARDEDHEADERS_ENABLED inserts its own middleware first; use Chronicle's policy
+// there and avoid inserting a second one that could consume another forwarded hop.
+ForwardedHeadersTrust.Use(app, builder.Configuration);
 
 app.UseRouting();
 

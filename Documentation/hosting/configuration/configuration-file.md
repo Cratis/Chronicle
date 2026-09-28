@@ -48,13 +48,6 @@ Chronicle Server loads configuration from a `chronicle.json` file in the applica
     "encryptionCertificate": {
         "certificatePath": "/certs/encryption-cert.pfx",
         "certificatePassword": "your-password"
-    },
-    "identityProvider": {
-        "certificate": {
-            "enabled": true,
-            "certificatePath": "/path/to/identity-provider.pfx",
-            "certificatePassword": "your-password"
-        }
     }
 }
 ```
@@ -76,6 +69,6 @@ Environment variables can override any of these values. See [Configuration Prece
 | readModels | Replay retention settings for replay-generated read model versions |
 | events | Event queue configuration |
 | authentication | Authentication, default admin username, and initial admin user bootstrap |
-| tls | TLS certificate for the main Chronicle port — required in production |
+| tls | TLS certificate for the main Chronicle port by default; explicit `tls.enabled=false` requires a private h2c backend behind an HTTPS proxy |
 | encryptionCertificate | Certificate protecting OAuth keys, webhook credentials, and Data Protection keys — required in production |
-| identityProvider | Optional internal identity provider certificate settings |
+| identityProvider | Legacy certificate settings, accepted but ignored; see [migration guidance](identity-provider-certificate.md) |
