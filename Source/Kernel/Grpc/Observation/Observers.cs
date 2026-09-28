@@ -26,6 +26,7 @@ namespace Cratis.Chronicle.Services.Observation;
 internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IObserverRemover observerRemover) : IObservers
 {
     const int ObserverCompletionPollingDelayMs = 50;
+    const ulong MaximumObserverCompletionRange = 10_000;
 
     /// <inheritdoc/>
     public async Task<RetryPartitionResponse> RetryPartition(RetryPartition command, CallContext context = default)
@@ -113,10 +114,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
 
                 var lastMatchingEvent = (EventSequenceNumber?)target;
 
-                // Sequence zero can be a real first append. Its range is still known when the tail
-                // is zero, even though older clients also use zero for an omitted first number.
-                var hasBoundedAppend = request.FirstEventSequenceNumber > 0 || request.TailEventSequenceNumber == EventSequenceNumber.First.Value;
-                if (subscription is { IsSubscribed: true, Filters: { } filters } && HasEffectiveFilters(filters) && hasBoundedAppend)
+                if (subscription is { IsSubscribed: true, Filters: { } filters } && HasEffectiveFilters(filters) && HasBoundedAppendRange(request, target))
                 {
                     if (lastMatchingEvents.TryGetValue(observer.Id, out var cached) &&
                         cached.IncludesHandledEvents == hasFailedPartitions &&
@@ -323,6 +321,19 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         filters.Tags.Any() ||
         (filters.EventSourceType is { } eventSourceType && eventSourceType != EventSourceType.Unspecified) ||
         filters.EventStreamType is { IsAll: false };
+
+    /// <summary>
+    /// Check whether the appended range is small and unambiguous enough to inspect. Tail zero is
+    /// safe without a presence bit because the range can contain only the first event.
+    /// </summary>
+    /// <param name="request">The append wait request.</param>
+    /// <param name="target">The last relevant event for this observer.</param>
+    /// <returns>True when it is safe to inspect the appended range.</returns>
+    static bool HasBoundedAppendRange(WaitForObserverCompletionRequest request, EventSequenceNumber target) =>
+        (request.HasFirstEventSequenceNumber || request.FirstEventSequenceNumber > 0 || request.TailEventSequenceNumber == EventSequenceNumber.First.Value) &&
+        request.FirstEventSequenceNumber <= request.TailEventSequenceNumber &&
+        request.FirstEventSequenceNumber <= target.Value &&
+        request.TailEventSequenceNumber - request.FirstEventSequenceNumber < MaximumObserverCompletionRange;
 
     async Task<EventSequenceNumber?> GetLastMatchingEvent(
         WaitForObserverCompletionRequest request,
