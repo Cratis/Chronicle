@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Traces;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Transactions;
 
@@ -13,12 +14,26 @@ namespace Cratis.Chronicle.Transactions;
 /// </summary>
 /// <param name="eventStore">The <see cref="IEventStore"/> to use for the <see cref="IUnitOfWork"/>.</param>
 /// <param name="activitySource">Optional <see cref="IActivitySource{T}"/> for tracing. Defaults to a source named <see cref="ClientActivity.SourceName"/> when not provided.</param>
+/// <param name="lifecyclePolicy">The policy for staging after completion begins.</param>
+/// <param name="logger">Optional logger for late staging diagnostics.</param>
 public class UnitOfWorkManager(
     IEventStore eventStore,
-    IActivitySource<UnitOfWork>? activitySource = null) : IUnitOfWorkManager
+    IActivitySource<UnitOfWork>? activitySource,
+    UnitOfWorkLifecyclePolicy lifecyclePolicy,
+    ILogger<UnitOfWork>? logger = null) : IUnitOfWorkManager
 {
     static readonly AsyncLocal<IUnitOfWork> _current = new();
     readonly ConcurrentDictionary<CorrelationId, IUnitOfWork> _unitsOfWork = new();
+
+    /// <summary>
+    /// Initializes a manager with compatibility staging behavior.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="activitySource">Optional activity source.</param>
+    public UnitOfWorkManager(IEventStore eventStore, IActivitySource<UnitOfWork>? activitySource = null)
+        : this(eventStore, activitySource, UnitOfWorkLifecyclePolicy.Compatibility)
+    {
+    }
 
     /// <inheritdoc/>
     public IUnitOfWork Current => _current.Value ?? throw new NoUnitOfWorkHasBeenStarted();
@@ -37,7 +52,9 @@ public class UnitOfWorkManager(
             correlationId,
             UnitOfWorkCompleted,
             eventStore,
-            activitySource);
+            activitySource,
+            lifecyclePolicy,
+            logger);
         _current.Value = unitOfWork;
         _unitsOfWork[correlationId] = unitOfWork;
         return unitOfWork;

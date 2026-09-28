@@ -131,7 +131,9 @@ public class EventStore : IEventStore
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation, namingPolicy);
         UnitOfWorkManager = new UnitOfWorkManager(
             this,
-            serviceProvider.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName));
+            serviceProvider.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName),
+            options.Value.UnitOfWorkLifecyclePolicy,
+            loggerFactory.CreateLogger<UnitOfWork>());
         _correlationIdAccessor = correlationIdAccessor;
 
         EventSerializer = new EventSerializer(
