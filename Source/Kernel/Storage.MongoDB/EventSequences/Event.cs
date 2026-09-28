@@ -41,4 +41,10 @@ public record Event(
     IDictionary<string, BsonDocument> Content,
     IDictionary<string, string> ContentHashes,
     IEnumerable<EventRevision> Revisions,
-    Subject? Subject = null);
+    Subject? Subject = null)
+{
+    /// <summary>
+    /// Gets the structured named tags. Missing in historic documents.
+    /// </summary>
+    public IEnumerable<NamedTagDocument> NamedTags { get; init; } = [];
+}

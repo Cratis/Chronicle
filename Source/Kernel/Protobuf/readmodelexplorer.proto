@@ -34,6 +34,7 @@ message EventContext {
    string Hash = 12;
    EventObservationState ObservationState = 13;
    string Subject = 14;
+   repeated NamedTag NamedTags = 15;
 }
 enum EventObservationState {
    None = 0;
@@ -50,6 +51,10 @@ message Identity {
    string Name = 2;
    string UserName = 3;
    Identity OnBehalfOf = 4;
+}
+message NamedTag {
+   string Name = 1;
+   string Value = 2;
 }
 message QueryResult_IEnumerable_ReadModelSnapshotResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000

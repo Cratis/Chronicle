@@ -77,7 +77,7 @@ public interface IUnitOfWork : IDisposable
     /// <param name="events">The events to add, in commit order.</param>
     /// <param name="concurrencyScopes">The concurrency scopes to validate with the batch.</param>
     /// <remarks>
-    /// Both inputs are materialized before this method returns. Consecutive calls to <see cref="AddEvent"/> retain
+    /// Both inputs are materialized before this method returns. Consecutive single-event enrollments retain
     /// their legacy source-grouped order. Each call to this method forms a globally ordered segment between those
     /// legacy segments, and commit flattens every segment into one append operation. A concurrency-scope key can be
     /// an independent label when its scope does not narrow by event-source ID. For event-target labels, a missing or
@@ -105,6 +105,44 @@ public interface IUnitOfWork : IDisposable
     /// <summary>Gets decision conflicts without exposing sequence numbers.</summary>
     /// <returns>Decision conflicts, if any.</returns>
     IEnumerable<DecisionConflict> GetDecisionConflicts() => [];
+
+    /// <summary>
+    /// Add an event with structured named tags.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="event">The event.</param>
+    /// <param name="namedTags">Structured named tags.</param>
+    /// <param name="causation">The causation.</param>
+    /// <param name="eventStreamType">Optional stream type.</param>
+    /// <param name="eventStreamId">Optional stream id.</param>
+    /// <param name="eventSourceType">Optional source type.</param>
+    /// <param name="concurrencyScope">Optional concurrency scope.</param>
+    /// <param name="tags">Optional plain tags.</param>
+    /// <param name="occurred">Optional occurred time.</param>
+    /// <param name="subject">Optional subject.</param>
+    /// <exception cref="UnitOfWorkNamedTagsNotSupported">The implementation cannot carry nonempty named tags.</exception>
+    void AddEventWithNamedTags(
+        EventSequenceId eventSequenceId,
+        EventSourceId eventSourceId,
+        object @event,
+        IEnumerable<NamedTag> namedTags,
+        Causation causation,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
+    {
+        if (namedTags.Any())
+        {
+            throw new UnitOfWorkNamedTagsNotSupported(GetType());
+        }
+
+        AddEvent(eventSequenceId, eventSourceId, @event, causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
+    }
 
     /// <summary>
     /// Get the events that have occurred in the <see cref="IUnitOfWork"/>.

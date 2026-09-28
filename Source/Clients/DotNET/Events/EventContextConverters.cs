@@ -33,7 +33,8 @@ internal static class EventContextConverters
         Tags = context.Tags.Select(_ => _.Value).ToArray(),
         Hash = context.Hash,
         ObservationState = context.ObservationState.ToContract(),
-        Subject = context.Subject?.Value ?? string.Empty
+        Subject = context.Subject?.Value ?? string.Empty,
+        NamedTags = context.NamedTags.Select(_ => new Contracts.Events.NamedTag { Name = _.Name.Value, Value = _.Value }).ToList()
     };
 
     /// <summary>
@@ -57,7 +58,10 @@ internal static class EventContextConverters
         context.Tags.Select(_ => (Tag)_).ToArray(),
         context.Hash,
         context.ObservationState.ToClient(),
-        Subject: ResolveSubject(context.Subject, context.EventSourceId));
+        Subject: ResolveSubject(context.Subject, context.EventSourceId))
+    {
+        NamedTags = (context.NamedTags ?? []).Select(tag => new NamedTag(tag.Name, tag.Value)).ToArray()
+    };
 
     /// <summary>
     /// Convert to Chronicle version of <see cref="EventContext"/>.
@@ -86,7 +90,10 @@ internal static class EventContextConverters
         context.Tags.Select(_ => (Tag)_).ToArray(),
         context.Hash ?? EventHash.NotSet,
         context.ObservationState.ToClient(),
-        Subject: ResolveSubject(context.Subject, context.EventSourceId));
+        Subject: ResolveSubject(context.Subject, context.EventSourceId))
+    {
+        NamedTags = (context.NamedTags ?? []).Select(tag => tag.ToClient()).ToArray()
+    };
 
     /// <summary>
     /// Resolves the <see cref="Subject"/> a server sent, falling back to the event source id when the server did not carry one.

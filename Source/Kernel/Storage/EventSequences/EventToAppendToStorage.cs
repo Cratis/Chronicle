@@ -42,6 +42,11 @@ public record EventToAppendToStorage(
     Subject? Subject = null)
 {
     /// <summary>
+    /// Gets the structured named tags to persist with this event.
+    /// </summary>
+    public IReadOnlyCollection<NamedTag> NamedTags { get; init; } = [];
+
+    /// <summary>
     /// Gets the content for every generation of the event type.
     /// </summary>
     public IDictionary<EventTypeGeneration, ExpandoObject> GenerationalContent { get; init; } =
