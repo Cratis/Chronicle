@@ -30,14 +30,17 @@ try
     delete manifest.scripts.prepare;
     writeFileSync(manifestPath, JSON.stringify(manifest));
 
-    const npmEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
+    // Only the pack step runs without the npm and Yarn variables the calling script inherited, so nothing
+    // from the outer lifecycle can re-enable scripts. The consumer install keeps the caller's npm configuration
+    // (registry, cache, user config).
+    const packEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
         !/^npm_|^yarn_|^INIT_CWD$/i.test(key)));
-    npmEnvironment.npm_config_ignore_scripts = 'true';
+    packEnvironment.npm_config_ignore_scripts = 'true';
     const packedDirectory = path.join(temporaryDirectory, 'packed');
     mkdirSync(packedDirectory);
     execFileSync('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', packedDirectory], {
         cwd: stagedDirectory,
-        env: npmEnvironment,
+        env: packEnvironment,
         stdio: ['ignore', 'ignore', 'inherit']
     });
     const tarballs = readdirSync(packedDirectory).filter(filename => filename.endsWith('.tgz'));
@@ -52,7 +55,7 @@ try
     execFileSync('npm', [
         'install', '--ignore-scripts', '--no-audit', '--no-fund', '--no-package-lock', '--prefer-offline',
         tarball, '@types/node@^26.3.0'
-    ], { cwd: consumerDirectory, env: npmEnvironment, stdio: 'inherit' });
+    ], { cwd: consumerDirectory, stdio: 'inherit' });
 
     writeFileSync(path.join(consumerDirectory, 'consumer.ts'), `
 import { ConnectionServiceDefinition, chronicleDescriptorSet } from '@cratis/chronicle.contracts';
