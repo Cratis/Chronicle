@@ -54,6 +54,32 @@ your build reports. The .NET client's [code analysis rules](../code-analysis/ind
 gain new diagnostics in any release, and they reached consuming builds for the first time in
 19.4.8.
 
+## Reverse proxies after the forwarded-header security change
+
+Chronicle now trusts `X-Forwarded-For` and `X-Forwarded-Proto` only from loopback or configured
+proxy addresses. Previous builds accepted those headers from any peer. What you need to change
+depends on the listener:
+
+- **TLS main listener behind a non-loopback proxy:** the kernel still sees HTTPS, so HTTPS checks
+  continue to pass. Without a trusted-proxy setting, `RemoteIpAddress` becomes the proxy's IP;
+  this affects client-IP logs and telemetry only. Set `forwardedHeaders.knownProxies` to the
+  immediate proxy IP or `forwardedHeaders.knownNetworks` to its restricted source CIDR if you
+  need the original client IP.
+- **h2c main listener, or a non-exclusive cleartext health port behind an HTTPS proxy:** configure
+  trust for the immediate proxy before upgrading. Otherwise forwarded HTTPS is ignored and
+  Workbench cookie mutations can fail antiforgery validation because the request looks like HTTP.
+
+The proxy must overwrite incoming forwarded headers rather than pass through values supplied by
+clients. Trust `X-Forwarded-Proto` only from a proxy whose public side is HTTPS. See
+[Trusted reverse proxies](../hosting/configuration/tls.md#trusted-reverse-proxies) for the
+configuration and environment-variable names.
+
+The documented Docker Compose deployment connects directly to Chronicle, so it needs no proxy
+setting. Aspire Composition runs YARP in a container and exposes **HTTP** at `localhost:9876`.
+Do not trust its forwarded `http` scheme while it fronts Chronicle's TLS listener: that would
+make Workbench cookie mutations fail antiforgery validation. Its container source IP matters
+only if you later put an HTTPS endpoint in front of YARP.
+
 ## Upgrading across several majors
 
 Take them one at a time and read each guide. Chronicle's wire compatibility is verified

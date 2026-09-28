@@ -128,22 +128,10 @@ public static class OpenIddictServiceCollectionExtensions
                 }
 #endif
 
-                // When no certificate is explicitly configured, development serves the token endpoint
-                // with an auto-generated self-signed certificate. Relax OpenIddict's transport-security
-                // requirement in that case so a proxy/forwarded-header setup that reports http still works.
-                var hasExplicitCertificate = chronicleOptions.Tls.Enabled && !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
-
-                if (!hasExplicitCertificate)
-                {
-                    options.UseAspNetCore()
-                           .EnableTokenEndpointPassthrough()
-                           .DisableTransportSecurityRequirement();
-                }
-                else
-                {
-                    options.UseAspNetCore()
-                           .EnableTokenEndpointPassthrough();
-                }
+                // Never relax transport security based on certificate configuration. Even behind a
+                // proxy, the token endpoint must observe the public HTTPS scheme through forwarded headers.
+                options.UseAspNetCore()
+                       .EnableTokenEndpointPassthrough();
 
                 if (!string.IsNullOrWhiteSpace(chronicleOptions.Authentication.Authority))
                 {
