@@ -10,6 +10,16 @@ When you provide no runtime arguments, the suite defaults to:
 - mode: `outofprocess`
 - database: `mongodb`
 
+## When CI runs integration
+
+Pull-request pushes affecting the [build paths](https://github.com/Cratis/Chronicle/blob/main/.github/build-affecting-paths.txt) run the Release build, specs, and a local Docker image build from Release binaries without pushing it, **not** the Docker integration suites. Run the relevant integration namespace locally before requesting CI integration. The [hot-core gate](https://github.com/Cratis/Chronicle/blob/main/.github/hot-core-paths.txt) reports which hot-core paths a PR touches; its ordinary PR check does not run the matrix.
+
+Apply the `run-integration` label to a pull request to start the separate Requested Integration workflow, even for a documentation-only PR. It builds the commit and runs specs, API and MongoDB integration, and one client integration matrix: MongoDB and SQLite normally, every backend when the PR touches the hot core. The separately named requested hot-core gate requires that full matrix to pass. Remove and re-add the label to request another run after changes; pushing new commits does not rerun integration automatically. Other labels do not start integration or replace the ordinary PR check results.
+
+The existing nightly schedule on `main` and manual `workflow_dispatch` run the full client backend matrix. Main-branch pushes do not run integration; nightly coverage handles main. A fork PR cannot push the integration image with its read-only token; labeling it fails the requested gate with an "unavailable" notice instead of running integration, so a fork PR can never satisfy that gate. Ask a maintainer to dispatch the workflow on a trusted branch containing those changes.
+
+For a labeled event, the image-push guard checks `github.actor`—the account that applied the label, not the PR author. A maintainer-labeled Dependabot PR therefore attempts the image push; if GitHub supplies a read-only token, the requested run fails rather than silently skipping the client matrix.
+
 ## Prerequisites
 
 - Docker running locally

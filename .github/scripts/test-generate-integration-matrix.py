@@ -4,9 +4,9 @@
 
 """Specs for generate-integration-matrix.py.
 
-The matrix generator decides what every pull request and every nightly run
+The matrix generator decides what every requested pull-request and nightly run
 actually verifies, so a silent change in what it selects is a silent change in
-coverage. These specs pin the selection rules -- what a pull request covers,
+coverage. These specs pin the selection rules -- what a labeled pull request covers,
 what --all-providers covers, that an explicit --databases set is honored, and
 that an unknown backend fails loudly rather than quietly yielding nothing.
 
