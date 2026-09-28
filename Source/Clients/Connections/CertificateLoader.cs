@@ -38,9 +38,9 @@ public static class CertificateLoader
     /// <returns>A <see cref="RemoteCertificateValidationCallback"/> that validates the server certificate.</returns>
     /// <remarks>
     /// The default is secure: a certificate that fails validation is rejected. It is accepted only when the
-    /// certificate is valid, when <paramref name="skipTlsValidation"/> is set, or when it matches
-    /// <paramref name="pinnedCertificateHash"/>. Skipping validation accepts any certificate — including
-    /// self-signed ones — so only use it for a trusted server on a trusted network.
+    /// certificate is valid, when <paramref name="skipTlsValidation"/> is set, or when only the chain fails
+    /// validation and the certificate matches <paramref name="pinnedCertificateHash"/>.
+    /// Skipping validation accepts any certificate — including self-signed ones — so only use it for a trusted server on a trusted network.
     /// </remarks>
     public static RemoteCertificateValidationCallback CreateServerCertificateValidationCallback(bool skipTlsValidation, string? pinnedCertificateHash) =>
         (sender, certificate, chain, sslPolicyErrors) =>
@@ -55,7 +55,8 @@ public static class CertificateLoader
                 return true;
             }
 
-            if (pinnedCertificateHash is not null && certificate is not null)
+            if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors &&
+                pinnedCertificateHash is not null && certificate is not null)
             {
                 return certificate.GetCertHashString() == pinnedCertificateHash;
             }

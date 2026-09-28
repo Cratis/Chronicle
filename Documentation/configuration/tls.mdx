@@ -54,7 +54,7 @@ To go the other way and skip explicitly:
 - **Development**: the server serves TLS with an auto-generated self-signed certificate and the client skips validation by default, so a development client connects out of the box — no certificate setup is needed on either side.
 - **Production**: give the server a real certificate and set `skipTlsValidation=false` so the client validates it with the standard TLS rules.
 
-With validation enabled, the standard TLS rules apply: valid certificates are accepted without extra configuration, and a certificate that fails validation — including a self-signed one — is rejected unless you configure a matching client certificate.
+With validation enabled, the standard TLS rules apply: valid certificates are accepted without extra configuration. If the server presents the same certificate configured for the client, a matching certificate pin can allow an untrusted chain, including a self-signed certificate. The server certificate must still match the host name; a pin does not override a name mismatch or a missing certificate.
 
 ## Troubleshooting
 
