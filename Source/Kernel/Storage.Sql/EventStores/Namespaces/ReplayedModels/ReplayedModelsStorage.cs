@@ -22,7 +22,25 @@ public class ReplayedModelsStorage(EventStoreName eventStore, EventStoreNamespac
         await using var scope = await database.Namespace(eventStore, @namespace);
 
         var entry = ReplayedModelsConverters.ToReplayedModelOccurrence(occurrence);
-        scope.DbContext.ReplayedModels.Add(entry);
+
+        // Recording the same replay again - a retried grain state write - updates the row it already has.
+        // Matched in memory because not every provider translates DateTimeOffset comparisons.
+        var existing = (await scope.DbContext.ReplayedModels
+            .Where(_ => _.ObserverId == entry.ObserverId)
+            .ToListAsync())
+            .FirstOrDefault(_ => _.Started == entry.Started);
+        if (existing is null)
+        {
+            scope.DbContext.ReplayedModels.Add(entry);
+        }
+        else
+        {
+            existing.ReadModelIdentifier = entry.ReadModelIdentifier;
+            existing.Generation = entry.Generation;
+            existing.ReadModelName = entry.ReadModelName;
+            existing.RevertModelName = entry.RevertModelName;
+        }
+
         await scope.DbContext.SaveChangesAsync();
     }
 
@@ -50,9 +68,11 @@ public class ReplayedModelsStorage(EventStoreName eventStore, EventStoreNamespac
             .ToListAsync();
 
         // An observer has one row per replay; remove only the replay this occurrence describes.
-        // Matched in memory because not every provider translates DateTimeOffset comparisons.
+        // Matched in memory because not every provider translates DateTimeOffset comparisons, and at the
+        // precision the row was stored with, since the occurrence may come from memory rather than storage.
+        var started = ReplayedModelsConverters.ToStoredPrecision(occurrence.Occurred);
         var replayedModels = candidates
-            .Where(_ => _.Started == occurrence.Occurred && _.RevertModelName == occurrence.RevertContainerName.Value)
+            .Where(_ => ReplayedModelsConverters.ToStoredPrecision(_.Started) == started && _.RevertModelName == occurrence.RevertContainerName.Value)
             .ToArray();
         if (replayedModels.Length == 0)
         {

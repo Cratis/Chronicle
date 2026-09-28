@@ -4,9 +4,9 @@
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
 
-namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayedModels.for_ReplayedModelsStorage;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayedModels.for_ReplayedModelsStorage.when_removing_a_replay;
 
-public class when_removing_a_replay : given.a_migrated_namespace_database
+public class and_the_observer_replayed_it_again_later : given.a_migrated_namespace_database
 {
     static readonly DateTimeOffset _firstStarted = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     static readonly DateTimeOffset _secondStarted = new(2026, 1, 2, 12, 0, 0, TimeSpan.Zero);
