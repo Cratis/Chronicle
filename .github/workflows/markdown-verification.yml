@@ -13,7 +13,9 @@ on:
       - ".github/workflows/markdown-verification.yml"
       - ".github/scripts/assert-upgrade-guides-complete.py"
       - ".github/scripts/test-assert-upgrade-guides-complete.py"
+      - ".github/scripts/docs-verification/**"
       - ".markdownlint.json"
+      - ".markdownlint-cli2.jsonc"
       - "Documentation/**"
 
 permissions:
@@ -46,8 +48,13 @@ jobs:
         with:
           node-version: 23.x
 
-      - name: Validate Starlight authoring
-        run: node ./Documentation/verify-authoring.mjs
+      - name: Install documentation authoring dependencies
+        run: npm ci --prefix .github/scripts/docs-verification
+
+      - name: Validate Starlight authoring and shared client fences
+        run: |
+          node ./Documentation/verify-authoring.mjs --self-test
+          node ./Documentation/verify-authoring.mjs
 
       # The checker only ever runs here, so this is the only place its own behavior is exercised -
       # including that it refuses to pass when it could not determine the released majors.

@@ -8,6 +8,8 @@
   href: eventual-consistency.mdx
 - name: Registration lifecycle
   href: registration-lifecycle.md
+- name: Register a read model explicitly
+  href: explicit-registration.mdx
 - name: Appended event metadata filters
   href: filtering.mdx
 - name: Immediate projections

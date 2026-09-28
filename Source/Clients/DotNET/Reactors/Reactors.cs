@@ -48,6 +48,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IChronicleServicesAccessor _servicesAccessor;
+    readonly List<(ReactorId Id, Action<IReactorBuilder> Define)> _pendingDefinitions = [];
     IReadOnlyDictionary<ReactorId, ReactorRegistration> _handlers = FrozenDictionary<ReactorId, ReactorRegistration>.Empty;
 
     bool _registered;
@@ -123,7 +124,10 @@ public class Reactors : IReactors, IReactorPartitionRecovery
         {
             var reactorTypes = _clientArtifactsProvider.Reactors.ToArray();
             var runtimeRegistrations = _handlers.Values.Where(_ => _.Handle is not null).ToArray();
-            var ids = runtimeRegistrations.Select(_ => _.Handler.Id).Concat(reactorTypes.Select(_ => _.GetReactorId()));
+            var pendingDefinitions = _pendingDefinitions.Select(_ => Define(_.Id, _.Define)).ToArray();
+            var ids = runtimeRegistrations.Select(_ => _.Handler.Id)
+                .Concat(pendingDefinitions.Select(_ => _.Id))
+                .Concat(reactorTypes.Select(_ => _.GetReactorId()));
             var duplicate = ids.GroupBy(_ => _).FirstOrDefault(_ => _.Count() > 1);
             if (duplicate is not null)
             {
@@ -139,8 +143,14 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             var registrations = reactorTypes.Select(CreateRegistrationFor).ToArray();
             DisconnectHandlers();
             _registered = false;
-            _handlers = registrations.Concat(runtimeRegistrations.Select(RecreateRegistration))
+            _handlers = registrations
+                .Concat(runtimeRegistrations.Select(RecreateRegistration))
+                .Concat(pendingDefinitions.Select(CreateRegistrationFor))
                 .ToFrozenDictionary(_ => _.Handler.Id);
+
+            // From here on they are runtime registrations like any other, carried across later discoveries and
+            // reconnects by the registrations themselves.
+            _pendingDefinitions.Clear();
         }
 
         return Task.CompletedTask;
@@ -207,6 +217,30 @@ public class Reactors : IReactors, IReactorPartitionRecovery
                 handle);
             AddRegistration(registration);
             return Task.FromResult<IReactorHandler>(handler);
+        }
+    }
+
+    /// <inheritdoc/>
+    public IReactorDefinition Define(ReactorId id, Action<IReactorBuilder> define)
+    {
+        ArgumentNullException.ThrowIfNull(define);
+        var builder = new ReactorBuilder(_eventTypes);
+        define(builder);
+        return builder.Build(id);
+    }
+
+    /// <inheritdoc/>
+    public Task<IReactorHandler> Register(ReactorId id, Action<IReactorBuilder> define) => Register(Define(id, define));
+
+    /// <inheritdoc/>
+    public Task<IReactorHandler> Register(IReactorDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        lock (_registerLock)
+        {
+            var registration = CreateRegistrationFor(definition);
+            AddRegistration(registration);
+            return Task.FromResult<IReactorHandler>(registration.Handler);
         }
     }
 
@@ -316,6 +350,23 @@ public class Reactors : IReactors, IReactorPartitionRecovery
         return Guid.TryParse(response.JobId, out var value) ? new JobId(value) : JobId.NotSet;
     }
 
+    /// <summary>
+    /// Add a fluent reactor definition that is built and registered by the next <see cref="Discover"/>.
+    /// </summary>
+    /// <param name="id">The stable reactor identifier.</param>
+    /// <param name="define">Declares the reactor on an <see cref="IReactorBuilder"/>.</param>
+    /// <remarks>
+    /// This is how a reactor registered while the client is being configured reaches the event store: at that point
+    /// the event types it refers to are not known yet, so defining it is left to discovery, which knows them.
+    /// </remarks>
+    internal void Add(ReactorId id, Action<IReactorBuilder> define)
+    {
+        lock (_registerLock)
+        {
+            _pendingDefinitions.Add((id, define));
+        }
+    }
+
     static void ThrowIfUnknownReactorId(IReactorHandler? handler, ReactorId reactorId)
     {
         if (handler is null)
@@ -341,6 +392,55 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             reactorType.GetEventSourceType(),
             reactorType.GetEventStreamType(),
             null);
+    }
+
+    ReactorRegistration CreateRegistrationFor(IReactorDefinition definition)
+    {
+#pragma warning disable CA2000 // Ownership of the handler transfers to the registration.
+        var handler = CreateHandler(definition.Id, typeof(object), definition.EventSequenceId, [.. definition.EventTypes]);
+#pragma warning restore CA2000
+        return new(
+            handler,
+            definition.IsReplayable,
+            [],
+            [],
+            EventSourceType.Unspecified,
+            EventStreamType.All,
+            CreateDispatcherFor(definition));
+    }
+
+    /// <summary>
+    /// Create the callback that turns a delivered event into the object a fluent definition's handlers receive.
+    /// </summary>
+    /// <param name="definition">The <see cref="IReactorDefinition"/> to dispatch to.</param>
+    /// <returns>The callback.</returns>
+    /// <remarks>
+    /// The event is deserialized in the generation the definition subscribed to, as it is for a discovered reactor, so
+    /// a handler always receives the CLR type it was declared for even when the event was appended in another
+    /// generation.
+    /// </remarks>
+    Func<ReactorEvent, CancellationToken, Task> CreateDispatcherFor(IReactorDefinition definition)
+    {
+        var generations = definition.EventTypes
+            .DistinctBy(_ => _.Id)
+            .ToDictionary(_ => _.Id, _ => _.Generation);
+
+        return async (delivered, _) =>
+        {
+            var context = delivered.Context;
+            var content = delivered.Content;
+            var generation = generations.TryGetValue(context.EventType.Id, out var subscribed) ? subscribed : context.EventType.Generation;
+            if (generation != context.EventType.Generation &&
+                delivered.GenerationalContent.TryGetValue((int)generation.Value, out var generationalContent))
+            {
+                content = JsonNode.Parse(generationalContent)!.AsObject();
+                context = context with { EventType = context.EventType with { Generation = generation } };
+            }
+
+            var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id, context.EventType.Generation);
+            var @event = await _eventSerializer.Deserialize(eventType, content);
+            await definition.Handle(@event, context);
+        };
     }
 
     ReactorHandler CreateHandler(ReactorId id, Type reactorType, EventSequenceId sequenceId, IEnumerable<EventType> eventTypes)

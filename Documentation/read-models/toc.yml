@@ -3,7 +3,7 @@
 - name: Consistency Models
   href: consistency.md
 - name: Decision-Consistent Reads
-  href: decision-reads.md
+  href: decision-reads.mdx
 - name: Empty Child Collections
   href: empty-child-collections.mdx
 - name: Getting a Single Instance

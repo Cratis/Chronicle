@@ -8,13 +8,15 @@ import { fileURLToPath } from 'node:url';
 const documentationRoot = path.dirname(fileURLToPath(import.meta.url));
 const validAsideVariants = new Set(['note', 'tip', 'caution', 'danger']);
 const orphanDirectoryExclusions = new Set(['_includes', 'client-snippets']);
+// Keep these names and aliases in step with Documentation/web/variant-docs.yml's Chronicle ratchetLanguages.
+const clientFenceLanguages = new Set(['csharp', 'cs', 'c#', 'java', 'kotlin', 'kt', 'kts', 'elixir', 'ex', 'exs', 'typescript', 'ts', 'tsx']);
 const errors = [];
 
 async function filesBelow(directory, predicate) {
     const files = [];
     for (const entry of await readdir(directory, { withFileTypes: true })) {
         const entryPath = path.join(directory, entry.name);
-        if (entry.isDirectory()) {
+        if (entry.isDirectory() && entry.name !== 'node_modules') {
             files.push(...await filesBelow(entryPath, predicate));
         } else if (predicate(entry.name)) {
             files.push(entryPath);
@@ -30,6 +32,67 @@ function relative(file) {
 
 function withoutInlineCode(line) {
     return line.replace(/(`+)(.*?)\1/g, '');
+}
+
+function isSharedPage(file) {
+    const firstDirectory = path.relative(documentationRoot, file).split(path.sep)[0];
+    return firstDirectory !== 'client-snippets' && firstDirectory !== 'clients';
+}
+
+async function loadClientFenceDetector() {
+    try {
+        // Resolve parser dependencies from the verification toolchain outside the published docs root.
+        const { createClientFenceDetector } = await import('../.github/scripts/docs-verification/client-fence-detector.mjs');
+        return createClientFenceDetector(clientFenceLanguages);
+    } catch {
+        console.error('Documentation verifier dependencies are missing. Run: npm ci --prefix .github/scripts/docs-verification');
+        process.exit(2);
+    }
+}
+
+function selfTestClientFences(directClientFenceLines) {
+    const planted = [...clientFenceLanguages].map(language => `\`\`\`${language}\nexample\n\`\`\``).join('\n\n');
+    const found = directClientFenceLines(planted).length;
+    const nested = directClientFenceLines('````md\n```csharp\nexample\n````\n').length;
+    const infoStringIsNotACloser = directClientFenceLines('```md\n```tsx\n``` \n```java\nexample\n```');
+    const tildeInfoStringIsNotACloser = directClientFenceLines('~~~md\n~~~c#\n~~~ \n~~~kt\nexample\n~~~');
+    const containerCases = [
+        ['blockquote', '> ```csharp\n> example\n> ```', '1'],
+        ['nested blockquote', '> > ~~~java\n> > example\n> > ~~~', '1'],
+        ['bullet list', '- ```kotlin\n  example\n  ```', '1'],
+        ['ordered list', '1. ```elixir\n   example\n   ```', '1'],
+        ['list continuation', '- item\n\n  ```tsx\n  example\n  ```', '3'],
+        ['nested list', '- item\n  1. ```cs\n     example\n     ```', '2'],
+        ['nested-list outdent', '1. outer\n   1. inner\n    ```csharp\n    example\n    ```', '3'],
+        ['nested blockquote outdent', '> > inner\n> ```csharp\n> example\n> ```', '2'],
+        ['tab list marker', '-\t```csharp\n\texample\n\t```', '1'],
+        ['YAML frontmatter', '---\ntitle: "ConceptAs<T>"\n---\n```cs\nexample\n```', '4', true],
+        ['quote and list', '> - ```typescript\n>   example\n>   ```', '1'],
+        ['nested fence in quote', '> ````md\n> ```csharp\n> ````', ''],
+        ['info-string closer in quote', '> ```md\n> ```tsx\n> ``` \n> ```java\n> example\n> ```', '4'],
+        ['info-string closer in list', '- ~~~md\n  ~~~kt\n  ~~~ \n  ~~~c#\n  example\n  ~~~', '4'],
+        ['indented code block', '    ```csharp\n    example\n    ```', ''],
+        ['indented list content', '-     ```csharp\n      example', ''],
+        ['sibling list item', '- ```text\n- ```java\n  example\n  ```', '2'],
+        ['lazy nested-list continuation', '- outer\n  - inner\nlazy continuation\n\n    ```csharp\n    example\n    ```', '5'],
+        ['lazy continuation then sibling', '- outer\n  - inner\nlazy continuation\n\n- sibling\n    ```csharp\n    example\n    ```', '6'],
+        ['indented fence in MDX', '    ```csharp\n    example\n    ```', '1', true],
+        ['indented fence inside MDX Aside', '<Aside>\n    ```ts\n    example\n    ```\n</Aside>', '2', true],
+        ['tab-indented fence inside MDX Aside', '<Aside>\n\t```csharp\n\texample\n\t```\n</Aside>', '2', true],
+        ['indented fence inside MDX TabItem', '<TabItem>\n    ~~~java\n    example\n    ~~~\n</TabItem>', '2', true],
+        ['indented fence inside Markdown Aside', '<Aside>\n    ```ts\n    example\n    ```\n</Aside>', '', false],
+        ['indented fence inside Markdown TabItem', '<TabItem>\n    ~~~java\n    example\n    ~~~\n</TabItem>', '', false],
+        ['lazy continuation with MDX indentation', '- outer\n  - inner\nlazy continuation\n\n        ```csharp\n        example\n        ```', '5', true]
+    ];
+    const failedCase = containerCases.find(([, input, expected, isMdx]) => directClientFenceLines(input, isMdx).join(',') !== expected);
+    const excluded = ['client-snippets/example.md', 'clients/dotnet/example.md']
+        .every(file => !isSharedPage(path.join(documentationRoot, file)));
+    if (found !== clientFenceLanguages.size || nested !== 0 || failedCase ||
+        infoStringIsNotACloser.join(',') !== '4' || tildeInfoStringIsNotACloser.join(',') !== '4' || !excluded) {
+        console.error(`Client fence self-test failed: detected ${found} of ${clientFenceLanguages.size} planted fences; nested: ${nested}; info-string closer: ${infoStringIsNotACloser}; tilde closer: ${tildeInfoStringIsNotACloser}; container case: ${failedCase?.[0] ?? 'none'}; excluded paths: ${excluded}.`);
+        process.exit(1);
+    }
+    console.log(`Client fence self-test detected ${found} planted fences across ${clientFenceLanguages.size} languages and passed ${containerCases.length} container cases.`);
 }
 
 function validateContent(file, content) {
@@ -209,10 +272,31 @@ function validateOrphans(files, references) {
     }
 }
 
+if (process.argv.length > 3 || (process.argv[2] && process.argv[2] !== '--self-test')) {
+    console.error('Usage: node Documentation/verify-authoring.mjs [--self-test]');
+    process.exit(2);
+}
+if (process.argv[2] === '--self-test') {
+    selfTestClientFences(await loadClientFenceDetector());
+    process.exit(0);
+}
+
 const markdownFiles = await filesBelow(documentationRoot, name => /\.mdx?$/i.test(name));
+const sharedPages = markdownFiles.filter(isSharedPage);
+if (sharedPages.length === 0) errors.push('No shared Chronicle pages found; client fence audit cannot run.');
+const directClientFenceLines = sharedPages.length > 0 ? await loadClientFenceDetector() : undefined;
 const tocFiles = await filesBelow(documentationRoot, name => /^toc\.ya?ml$/i.test(name));
 for (const file of markdownFiles) {
-    validateContent(file, await readFile(file, 'utf8'));
+    const content = await readFile(file, 'utf8');
+    validateContent(file, content);
+    if (!isSharedPage(file)) continue;
+    try {
+        for (const line of directClientFenceLines(content, path.extname(file).toLowerCase() === '.mdx')) {
+            errors.push(`${relative(file)}:${line}: Direct client-language fence in a shared page; use <ChronicleClientTabs> in .mdx.`);
+        }
+    } catch (error) {
+        errors.push(`${relative(file)}:${error.line ?? 1}: Could not parse shared page for client-language fences: ${error.reason ?? error.message}`);
+    }
 }
 await validateLandingCollisions(markdownFiles);
 const references = await validateTocs(tocFiles);
@@ -226,4 +310,4 @@ if (errors.length > 0) {
 
 const markdownCount = markdownFiles.filter(file => path.extname(file).toLowerCase() === '.md').length;
 const mdxCount = markdownFiles.length - markdownCount;
-console.log(`Documentation authoring validation passed for ${markdownFiles.length} files (${markdownCount} .md, ${mdxCount} .mdx) and ${tocFiles.length} toc files.`);
+console.log(`Documentation authoring validation passed for ${markdownFiles.length} files (${markdownCount} .md, ${mdxCount} .mdx) and ${tocFiles.length} toc files; ${sharedPages.length} shared pages checked for client-language fences.`);

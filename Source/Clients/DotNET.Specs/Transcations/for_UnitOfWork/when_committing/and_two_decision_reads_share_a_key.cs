@@ -29,6 +29,7 @@ public class and_two_decision_reads_share_a_key : given.a_unit_of_work
     }
 
     [Fact] void should_validate_without_appending_events() => _eventsAppended.ShouldBeEmpty();
+    [Fact] void should_keep_the_enrollment_visible_after_commit() => ((IUnitOfWork)_unitOfWork).HasEnrolledDecisionReads.ShouldBeTrue();
     [Fact] void should_use_the_earliest_boundary() => _concurrencyScopesAppended[_key].SequenceNumber.ShouldEqual((EventSequenceNumber)7);
     [Fact] void should_guard_both_event_types() => _concurrencyScopesAppended[_key].EventTypes.ShouldContain(_created);
     [Fact] void should_guard_removal_too() => _concurrencyScopesAppended[_key].EventTypes.ShouldContain(_removed);

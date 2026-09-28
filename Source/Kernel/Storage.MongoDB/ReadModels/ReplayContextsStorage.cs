@@ -17,10 +17,21 @@ public class ReplayContextsStorage(IEventStoreNamespaceDatabase database) : IRep
     readonly IMongoCollection<ReplayContext> _collection = database.GetCollection<ReplayContext>(WellKnownCollectionNames.ReplayContexts);
 
     /// <inheritdoc/>
-    public Task Save(Chronicle.Storage.ReadModels.ReplayContext context)
+    public async Task Save(Chronicle.Storage.ReadModels.ReplayContext context)
     {
         var storageContext = context.ToMongoDB();
-        return _collection.ReplaceOneAsync(_ => _.ReadModel == storageContext.ReadModel, storageContext, new ReplaceOptions { IsUpsert = true });
+        var options = new ReplaceOptions { IsUpsert = true };
+        try
+        {
+            await _collection.ReplaceOneAsync(_ => _.ReadModel == storageContext.ReadModel, storageContext, options);
+        }
+        catch (MongoWriteException exception) when (exception.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            // Every silo establishes the context when a replay begins, so two upserts of the same document
+            // can race: both find nothing to replace and both insert, and the second fails on the key. The
+            // document exists now, so the retry replaces it rather than inserting (#4296).
+            await _collection.ReplaceOneAsync(_ => _.ReadModel == storageContext.ReadModel, storageContext, options);
+        }
     }
 
     /// <inheritdoc/>

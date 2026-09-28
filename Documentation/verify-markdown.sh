@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Markdown Verification Script
-# This script runs the same Markdown linting and authoring validation that runs in CI.
+# This script runs the same Markdown linting and authoring validation that runs in CI,
+# including installing verifier dependencies and running the authoring self-test.
 
 set -e
 
@@ -51,6 +52,11 @@ printf '%s\n' \
     "Step 2: Validating Starlight authoring..." \
     "==========================================" \
     ""
+
+echo "Installing documentation verifier dependencies..."
+npm ci --prefix .github/scripts/docs-verification --no-audit --no-fund
+
+node "$SCRIPT_DIR/verify-authoring.mjs" --self-test
 
 if node "$SCRIPT_DIR/verify-authoring.mjs"; then
     AUTHORING_EXIT_CODE=0

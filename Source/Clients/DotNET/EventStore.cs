@@ -166,7 +166,7 @@ public class EventStore : IEventStore
 
         Jobs = new Jobs.Jobs(this);
 
-        Reactors = new Reactors.Reactors(
+        var reactors = new Reactors.Reactors(
             this,
             EventTypes,
             clientArtifactsProvider,
@@ -182,6 +182,7 @@ public class EventStore : IEventStore
             new ReactorMethodArgumentsResolver(),
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
+        Reactors = reactors;
 
         var reducerObservers = new ReducerObservers();
 
@@ -210,6 +211,19 @@ public class EventStore : IEventStore
 
         _projections = projections;
         Projections = projections;
+
+        // Registrations made with the client while it was being configured belong to every event store it creates.
+        // They are built by discovery, which is when the event types they refer to become known.
+        foreach (var projection in options.Value.ExplicitArtifacts.Projections)
+        {
+            projections.Add(projection);
+        }
+
+        foreach (var (reactorId, define) in options.Value.ExplicitArtifacts.Reactors)
+        {
+            reactors.Add(reactorId, define);
+        }
+
         Webhooks = new Webhooks.Webhooks(EventTypes, this, loggerFactory.CreateLogger<Webhooks.Webhooks>());
         ExternalServices = new ExternalServices.ExternalServices(this, loggerFactory.CreateLogger<ExternalServices.ExternalServices>());
         Subscriptions = new EventStoreSubscriptions.EventStoreSubscriptions(EventTypes, this, loggerFactory.CreateLogger<EventStoreSubscriptions.EventStoreSubscriptions>());

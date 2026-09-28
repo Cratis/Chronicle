@@ -48,7 +48,7 @@ flowchart TB
 | [Console](./console) | `new ChronicleClient(...)`, `GetEventStore(...)`, append events yourself | Nothing hidden. You see the client and event store directly. | You are learning, debugging a small reproduction, or writing a script. |
 | [Worker Service](./worker) | `Host.CreateApplicationBuilder`, `AddCratisChronicle(...)`, a `BackgroundService` | DI registration and artifact discovery for reactors, reducers, and projections. | You process events, run background workflows, or keep derived state updated. |
 | [ASP.NET Core](./aspnetcore) | `WebApplication.CreateBuilder`, `AddCratisChronicle(...)`, `UseCratisChronicle()` | DI registration, artifact discovery, and request-pipeline integration. | You expose HTTP endpoints, controllers, or minimal APIs that append events. |
-| [Arc + Chronicle](/arc/backend/chronicle/) | Arc commands and queries; Chronicle-backed command return values and projections | Arc's command/query pipeline plus Chronicle event appending, identity, tenancy, and read-model integration. | You want a typed full-stack CQRS app with generated TypeScript proxies. |
+| [Arc + Chronicle](/arc/backend/csharp/chronicle/) | Arc commands and queries; Chronicle-backed command return values and projections | Arc's command/query pipeline plus Chronicle event appending, identity, tenancy, and read-model integration. | You want a typed full-stack CQRS app with generated TypeScript proxies. |
 
 <Aside type="note" title="Arc is not a host model">
 Arc is an **application layer**, not a fourth host. It sits on top of the host you choose — in practice
@@ -367,7 +367,7 @@ The kernel is running and listening on `chronicle://localhost:35000`. Now connec
 | Learning Chronicle from scratch | [Get started](/chronicle/get-started/), then [Console](./console) | [Tutorial](/chronicle/tutorial/) |
 | Adding events to an existing web API | [Run Chronicle locally](#run-chronicle-locally), then [ASP.NET Core](./aspnetcore) | [Production hosting](/chronicle/hosting/production/) |
 | Building background event processors | [Worker Service](./worker) | [Reactors](/chronicle/reactors/) and [Reducers](/chronicle/reducers/) |
-| Building a full-stack Cratis app | [Arc + Chronicle](/arc/backend/chronicle/) | [Build a full-stack feature](/build-a-full-app/) |
+| Building a full-stack Cratis app | [Arc + Chronicle](/arc/backend/csharp/chronicle/) | [Build a full-stack feature](/build-a-full-app/) |
 | Preparing a team environment | [Docker Compose](/chronicle/hosting/docker-compose/) or [Aspire](#let-aspire-wire-it-up) | [Production hosting](/chronicle/hosting/production/) and [Data Protection Key Encryption](/chronicle/hosting/encryption-certificate/) |
 
 If you are unsure, use this rule: learn in a console app, ship user-facing endpoints in ASP.NET Core or

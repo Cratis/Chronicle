@@ -1,0 +1,46 @@
+---
+title: Register a read model explicitly
+description: Register a read model and its projection through the client instead of relying on discovery, before or after the client connects.
+---
+
+Chronicle usually finds read models and projections for you: it discovers `IProjectionFor<T>` classes and read models carrying model-bound attributes in your assemblies. Some hosts cannot rely on that. A library may own its read models without being scanned, or a framework may generate a projection for a type it learns about at runtime. For those cases you can register the read model and its projection explicitly.
+
+An explicitly registered read model is an ordinary read model. `GetInstanceById`, `GetInstances`, `Watch`, snapshots and passive projections all work the same way they do for a discovered one. The projection uses the same identifiers, registration path and reconnect handling. Only the way the client learns about it differs.
+
+## Register a projection defined in code
+
+Define the projection with the same builder an `IProjectionFor<T>` class receives:
+
+<ChronicleClientTabs snippet="projections/explicit-registration/declarative" />
+
+By default the projection is identified by the read model's full type name, the same identity a model-bound projection for that read model would have. Pass an identifier when the projection's identity has to survive renaming the read model. Keep it stable: Chronicle tracks the projection's position under that identifier.
+
+## Register a passive projection
+
+A projection defined with `Passive()` is not materialized. Chronicle registers its read model without a sink, so each read computes the instance from its events on demand:
+
+<ChronicleClientTabs snippet="projections/explicit-registration/passive" />
+
+## Register a model-bound read model
+
+A read model whose projection is declared by [model-bound attributes](model-bound/) but is not in a scanned assembly can be registered by type:
+
+<ChronicleClientTabs snippet="projections/explicit-registration/model-bound" />
+
+`ReadModels.Register<T>()` recognizes a read model that no projection or reducer maintains yet, but that carries model-bound attributes, and registers its projection. `Projections.Register<T>()` does the same thing without the read model detour. A read model that discovery already found is not registered twice.
+
+## Register while configuring the client
+
+Registrations made on an event store are sent to Chronicle immediately when the client is connected. Anything registered before the connection is established, or re-established, is included in the next registration pass instead.
+
+To declare registrations before the client exists, from hosting or dependency injection setup, add them to the client options. Every event store the client creates builds them when it discovers its artifacts. It includes them in its normal registration pass and registers them again after every reconnect:
+
+<ChronicleClientTabs snippet="projections/explicit-registration/at-startup" />
+
+Registrations on the options are built during discovery, which is on by default (`AutoDiscoverAndRegister`). A projection that cannot be built is reported through the event store's registration outcome, like a discovered one.
+
+## Rules
+
+- A read model is maintained by one projection. Registering a second projection with a different identifier for the same read model is rejected. Registering the same identifier again replaces the definition.
+- An explicit projection cannot claim a read model that a discovered projection already maintains.
+- [Variants](declarative/variants) are wired together with their siblings during discovery, so a variant read model cannot be registered on its own.

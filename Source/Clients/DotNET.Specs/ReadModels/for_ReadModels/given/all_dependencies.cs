@@ -37,7 +37,7 @@ public class all_dependencies : Specification
         _eventStore.Namespace.Returns((EventStoreNamespaceName)"test-namespace");
 
         _namingPolicy = new DefaultNamingPolicy();
-        _projections = Substitute.For<IProjections>();
+        _projections = Substitute.For<IProjections, IKnowPassiveProjections>();
         _reducers = Substitute.For<IReducers>();
         _eventTypes = Substitute.For<IEventTypes>();
         _additionalReadModels = [];

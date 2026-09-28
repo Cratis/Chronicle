@@ -20,6 +20,7 @@ public class when_enrolling_a_batch_with_legacy_implementation : Specification
     void Because() => _error = Catch.Exception(() => _unitOfWork.AddEvents(EventSequenceId.Log, [], []));
 
     [Fact] void should_fail_loudly_instead_of_losing_the_batch() => _error.ShouldBeOfExactType<UnitOfWorkBatchEnrollmentNotSupported>();
+    [Fact] void should_default_to_no_enrolled_decision_reads() => _unitOfWork.HasEnrolledDecisionReads.ShouldBeFalse();
 
     sealed class LegacyUnitOfWork : IUnitOfWork
     {

@@ -7,9 +7,9 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Orleans.StateMachines;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.States.for_Observing.given;
