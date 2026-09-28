@@ -20,4 +20,14 @@ public record ObserverFilters(
     /// Gets a default <see cref="ObserverFilters"/> that applies no filtering.
     /// </summary>
     public static readonly ObserverFilters None = new([]);
+
+    /// <summary>
+    /// Check whether an appended event passes all observer filters.
+    /// </summary>
+    /// <param name="appendedEvent">The event to check.</param>
+    /// <returns>True when the event passes the filters.</returns>
+    public bool Matches(AppendedEvent appendedEvent) =>
+        (EventSourceType is null || EventSourceType == Events.EventSourceType.Unspecified || appendedEvent.Context.EventSourceType == EventSourceType) &&
+        (EventStreamType is not { IsAll: false } || appendedEvent.Context.EventStreamType == EventStreamType) &&
+        (!Tags.Any() || Tags.Any(tag => appendedEvent.Context.Tags.Any(eventTag => eventTag.Value == tag)));
 }

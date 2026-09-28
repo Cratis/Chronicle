@@ -7,7 +7,7 @@ using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Observation.for_AppendResultWaitForCompletionExtensions.when_waiting_for_completion;
 
-public class and_a_mixed_batch_is_appended : given.an_append_result_for_completion
+public class and_a_mixed_batch_starts_at_zero : given.an_append_result_for_completion
 {
     Contracts.Observation.WaitForObserverCompletionRequest _request = null!;
     AppendManyResult _batch;
@@ -21,9 +21,9 @@ public class and_a_mixed_batch_is_appended : given.an_append_result_for_completi
             EventStore = "event-store",
             EventStoreNamespace = "event-store-namespace",
             EventSequenceId = EventSequenceId.Log,
-            SequenceNumbers = [40UL, 41UL, 42UL],
+            SequenceNumbers = [0UL, 1UL],
             EventTypes = [a, b],
-            AppendedEventTypes = [a, b, a],
+            AppendedEventTypes = [a, b],
             Observers = _observers
         };
         _observers.WaitForCompletion(Arg.Do<Contracts.Observation.WaitForObserverCompletionRequest>(request => _request = request), Arg.Any<CallContext>())
@@ -32,7 +32,6 @@ public class and_a_mixed_batch_is_appended : given.an_append_result_for_completi
 
     async Task Because() => _result = await _batch.WaitForCompletion();
 
-    [Fact] void should_send_the_first_number_of_the_batch() => _request.FirstEventSequenceNumber.ShouldEqual(40UL);
-    [Fact] void should_send_the_last_number_for_each_type() => _request.EventTypeTails.Single(_ => _.EventType.Id == "a-recorded").SequenceNumber.ShouldEqual(42UL);
-    [Fact] void should_send_the_other_type_number() => _request.EventTypeTails.Single(_ => _.EventType.Id == "b-recorded").SequenceNumber.ShouldEqual(41UL);
+    [Fact] void should_send_the_first_sequence_number_even_when_zero() => _request.FirstEventSequenceNumber.ShouldEqual(0UL);
+    [Fact] void should_mark_the_first_number_as_supplied() => _request.HasFirstEventSequenceNumber.ShouldBeTrue();
 }

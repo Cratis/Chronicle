@@ -66,6 +66,10 @@ public static class AppendResultWaitForCompletionExtensions
                     Namespace = appendResult.EventStoreNamespace,
                     EventSequenceId = appendResult.EventSequenceId,
                     TailEventSequenceNumber = appendResult.TailSequenceNumber,
+                    FirstEventSequenceNumber = appendResult is AppendManyResult appendedBatch && appendedBatch.SequenceNumbers.Any()
+                        ? appendedBatch.SequenceNumbers.Min(number => number.Value)
+                        : appendResult.TailSequenceNumber,
+                    HasFirstEventSequenceNumber = true,
                     EventTypeTails = eventTypeTails.GroupBy(_ => _.EventType.Id, StringComparer.Ordinal)
                         .Select(_ => _.MaxBy(tail => tail.SequenceNumber)!).ToArray(),
                     TimeoutMilliseconds = isInfinite ? 0 : Math.Max(1, (long)timeout.Value.TotalMilliseconds)

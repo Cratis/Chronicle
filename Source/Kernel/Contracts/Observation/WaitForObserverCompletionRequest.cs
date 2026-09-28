@@ -44,4 +44,18 @@ public class WaitForObserverCompletionRequest
     /// </summary>
     [ProtoMember(6)]
     public long TimeoutMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the first appended sequence number. Zero can be the first event or an absent value from an older client;
+    /// use <see cref="HasFirstEventSequenceNumber"/> to distinguish them.
+    /// </summary>
+    [ProtoMember(7)]
+    public ulong FirstEventSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the first appended sequence number was supplied, including when it is zero.
+    /// Older clients do not send this field and retain the legacy fallback.
+    /// </summary>
+    [ProtoMember(8)]
+    public bool HasFirstEventSequenceNumber { get; set; }
 }

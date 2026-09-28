@@ -6,7 +6,7 @@ using ProtoBuf;
 
 namespace Cratis.Chronicle.Server.Contracts.for_WaitForObserverCompletionRequest.when_round_tripping_through_protobuf;
 
-public class without_event_type_tails : Specification
+public class with_a_first_number_at_zero : Specification
 {
     WaitForObserverCompletionRequest _result;
 
@@ -15,10 +15,11 @@ public class without_event_type_tails : Specification
         EventStore = "store",
         Namespace = "namespace",
         EventSequenceId = "sequence",
-        TailEventSequenceNumber = 13,
+        FirstEventSequenceNumber = 0UL,
+        HasFirstEventSequenceNumber = true,
+        TailEventSequenceNumber = 1UL
     });
 
-    [Fact] void should_preserve_an_empty_tail_collection() => _result.EventTypeTails.ShouldBeEmpty();
-    [Fact] void should_preserve_the_legacy_sequence_number() => _result.TailEventSequenceNumber.ShouldEqual(13ul);
-    [Fact] void should_treat_an_absent_first_number_as_not_supplied() => _result.HasFirstEventSequenceNumber.ShouldBeFalse();
+    [Fact] void should_preserve_the_presence_of_zero() => _result.HasFirstEventSequenceNumber.ShouldBeTrue();
+    [Fact] void should_preserve_the_first_number() => _result.FirstEventSequenceNumber.ShouldEqual(0UL);
 }

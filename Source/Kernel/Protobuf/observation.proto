@@ -184,6 +184,8 @@ message WaitForObserverCompletionRequest {
    uint64 TailEventSequenceNumber = 4;
    repeated AppendedEventTypeTail EventTypeTails = 5;
    int64 TimeoutMilliseconds = 6;
+   uint64 FirstEventSequenceNumber = 7;
+   bool HasFirstEventSequenceNumber = 8;
 }
 message WaitForObserverCompletionResponse {
    bool IsSuccess = 1;

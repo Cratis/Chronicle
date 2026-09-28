@@ -467,15 +467,21 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        GetRange(start, end, eventSourceId, eventTypes, tags, null, null, cancellationToken);
+
+    /// <inheritdoc/>
     public Task<IEventCursor> GetRange(
         EventSequenceNumber start,
         EventSequenceNumber end,
-        EventSourceId? eventSourceId = default,
-        IEnumerable<EventType>? eventTypes = default,
-        IEnumerable<Tag>? tags = default,
-        CancellationToken cancellationToken = default)
+        EventSourceId? eventSourceId,
+        IEnumerable<EventType>? eventTypes,
+        IEnumerable<Tag>? tags,
+        EventSourceType? eventSourceType,
+        EventStreamType? eventStreamType,
+        CancellationToken cancellationToken)
     {
-        var filtered = Filter(Events, eventSourceId, null, null, null, eventTypes, tags)
+        var filtered = Filter(Events, eventSourceId, eventSourceType, eventStreamType, null, eventTypes, tags)
             .Where(_ => _.Context.SequenceNumber >= start && _.Context.SequenceNumber <= end)
             .OrderBy(_ => _.Context.SequenceNumber)
             .ToList();

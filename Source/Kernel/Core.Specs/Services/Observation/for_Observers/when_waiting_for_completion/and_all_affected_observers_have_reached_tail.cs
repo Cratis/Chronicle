@@ -10,11 +10,12 @@ namespace Cratis.Chronicle.Services.Observation.for_Observers.when_waiting_for_c
 public class and_all_affected_observers_have_reached_tail : given.all_dependencies
 {
     WaitForObserverCompletionResponse _result;
+    IObserver _observer;
 
     void Establish()
     {
-        var observer = Substitute.For<IObserver>();
-        observer.IsSubscribed().Returns(true);
+        _observer = Substitute.For<IObserver>();
+        _observer.IsSubscribed().Returns(true);
 
         var observerDefinition = new ObserverDefinition(
             "observer-1",
@@ -37,7 +38,7 @@ public class and_all_affected_observers_have_reached_tail : given.all_dependenci
         _observerDefinitionsStorage.GetAll().Returns([observerDefinition]);
         _observerStateStorage.GetAll().Returns([observerState]);
         _failedPartitionsStorage.GetFor(Arg.Any<IEnumerable<Concepts.Observation.ObserverId>>()).Returns(new Concepts.Observation.FailedPartitions());
-        _grainFactory.GetGrain<IObserver>(Arg.Any<string>()).Returns(observer);
+        _grainFactory.GetGrain<IObserver>(Arg.Any<string>()).Returns(_observer);
     }
 
     async Task Because() => _result = await _observers.WaitForCompletion(new WaitForObserverCompletionRequest
@@ -50,4 +51,5 @@ public class and_all_affected_observers_have_reached_tail : given.all_dependenci
 
     [Fact] void should_be_successful() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_not_have_failed_partitions() => _result.FailedPartitions.ShouldBeEmpty();
+    [Fact] void should_not_read_the_subscription_when_caught_up() => _observer.DidNotReceive().GetSubscription();
 }
