@@ -133,6 +133,40 @@ public interface IEventSequence : IGrainWithStringKey
         Subject? subject = null);
 
     /// <summary>
+    /// Appends an event carrying structured named tags.
+    /// </summary>
+    /// <param name="eventSourceType">The event source type.</param>
+    /// <param name="eventSourceId">The event source id.</param>
+    /// <param name="eventStreamType">The stream type.</param>
+    /// <param name="eventStreamId">The stream id.</param>
+    /// <param name="eventType">The event type.</param>
+    /// <param name="content">The event content.</param>
+    /// <param name="correlationId">The correlation id.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The identity.</param>
+    /// <param name="tags">The legacy tags.</param>
+    /// <param name="concurrencyScope">The concurrency scope.</param>
+    /// <param name="occurred">The occurrence time.</param>
+    /// <param name="subject">The subject.</param>
+    /// <param name="namedTags">The named tags.</param>
+    /// <returns>The append result.</returns>
+    Task<AppendResult> Append(
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        JsonObject content,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        Identity causedBy,
+        IEnumerable<Tag> tags,
+        ConcurrencyScope concurrencyScope,
+        DateTimeOffset? occurred,
+        Subject? subject,
+        IReadOnlyCollection<NamedTag> namedTags);
+
+    /// <summary>
     /// Append a single event to the event store.
     /// </summary>
     /// <param name="events">Collection of <see cref="EventToAppend">events</see> to append.</param>

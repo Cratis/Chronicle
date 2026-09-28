@@ -31,6 +31,11 @@ public record EventToAppend(
     Subject? Subject = null)
 {
     /// <summary>
+    /// Gets the structured named tags for this event.
+    /// </summary>
+    public IReadOnlyCollection<NamedTag> NamedTags { get; init; } = [];
+
+    /// <summary>
     /// Gets or inits the optional event-specific causation chain. When absent, the batch chain is used.
     /// </summary>
     public IEnumerable<Causation>? Causation { get; init; }

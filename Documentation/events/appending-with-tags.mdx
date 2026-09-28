@@ -1,6 +1,8 @@
 # Appending with Tags
 
-Chronicle lets you associate tags with appended events. Tags are stored as event metadata and can be used for categorization, filtering, and concurrency scoping.
+Chronicle lets you associate tags with appended events. Tags are stored as event metadata and can be used for categorization and filtering. There are two kinds: plain tags, which are simple strings, and named tags, which pair a name with a value.
+
+The tags you add don't take part in concurrency control. A [concurrency scope](./concurrency.mdx) narrows by the built-in metadata tags below and by event type.
 
 ## Built-in metadata tags
 
@@ -26,3 +28,34 @@ Custom tags are simple strings that you provide when appending. They are merged 
 `AppendMany` applies the provided tags to each event in the batch.
 
 <ChronicleClientTabs snippet="events/appending-with-tags/append-many" />
+
+## Named tags
+
+A named tag pairs a name with an exact value, for example `checkout-session` = `c-81f2`. Use one when you want to find events by a runtime identifier later. [Tagging](../concepts/tagging.mdx#named-tags) explains the matching rules and how to query by named tag.
+
+### Append with named tags
+
+Use `AppendWithNamedTags` for a tagged append; the existing `Append` call remains unchanged.
+
+<ChronicleClientTabs snippet="events/appending-with-tags/append-named-tags" />
+
+Named tags are stored separately from plain tags. You can pass both on the same append, and neither affects the other.
+
+### AppendMany with named tags
+
+Use `AppendManyWithNamedTags` when supplying call-level named tags.
+
+Each event in a batch can carry its own named tags, and the append call can add named tags that apply to every event. Chronicle merges the two for each event:
+
+- An exact duplicate of a name and value pair is kept once.
+- The same name with a different value stays as a separate tag.
+
+<ChronicleClientTabs snippet="events/appending-with-tags/append-many-named-tags" />
+
+Transactional appends through a unit of work accept named tags the same way.
+
+:::caution[Upgrade the Chronicle server first]
+An older Chronicle server rejects named-tag appends instead of dropping the tags; the .NET client surfaces an `RpcException` with status code `Unimplemented`. MongoDB, SQL, and in-memory storage support named tags on an upgraded server. SQL reserves the table name `__cratis_named_tags` in each event-store namespace database; a conflicting table with that name causes every event-sequence operation in that namespace to fail with `NamedTagsTableCollision` on first access (migration is lazy), until the table is renamed.
+:::
+
+Named tags are plaintext and are not encrypted by the compliance features. Don't put secrets or personal data in them.

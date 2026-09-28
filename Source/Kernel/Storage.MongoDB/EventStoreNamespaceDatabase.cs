@@ -186,6 +186,12 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         yield return new(
             Builders<Event>.IndexKeys.Ascending(x => x.Tags),
             new CreateIndexOptions { Name = "tags" });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Combine(
+                Builders<Event>.IndexKeys.Ascending("NamedTags.Name"),
+                Builders<Event>.IndexKeys.Ascending("NamedTags.Value")),
+            new CreateIndexOptions { Name = "namedTags_name_value" });
     }
 
     string GetCollectionNameFor(EventSequenceId eventSequenceId) => eventSequenceId.Value;

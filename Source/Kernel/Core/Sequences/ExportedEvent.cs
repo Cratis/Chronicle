@@ -23,6 +23,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Occurred">When the event occurred.</param>
 /// <param name="Tags">The tags the event carries.</param>
 /// <param name="Content">The event's content, as the JSON it is stored as.</param>
+/// <param name="NamedTags">The structured named tags carried by the event. Optional for older exports.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record ExportedEvent(
@@ -34,8 +35,14 @@ public record ExportedEvent(
     string CorrelationId,
     DateTimeOffset Occurred,
     IEnumerable<string> Tags,
-    string Content)
+    string Content,
+    IEnumerable<NamedTag> NamedTags = null!)
 {
+    /// <summary>
+    /// Gets the structured named tags carried by the event. Empty for older exports without named tags.
+    /// </summary>
+    public IEnumerable<NamedTag> NamedTags { get; init; } = NamedTags ?? [];
+
     /// <summary>
     /// Get every event matching a set of criteria, for exporting them.
     /// </summary>
@@ -110,6 +117,7 @@ public record ExportedEvent(
             @event.Context.CorrelationId.ToString(),
             @event.Context.Occurred,
             @event.Context.Tags,
-            @event.Content)).ToArray();
+            @event.Content,
+            @event.Context.NamedTags)).ToArray();
     }
 }

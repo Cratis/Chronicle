@@ -38,6 +38,7 @@ internal static class EventContextConverters
         Causation = context.Causation.Select(ToContract).ToList(),
         CausedBy = context.CausedBy.ToContract(),
         Tags = context.Tags.Select(_ => _.Value),
+        NamedTags = context.NamedTags.Select(tag => new Contracts.Events.NamedTag { Name = tag.Name.Value, Value = tag.Value }).ToList(),
         Hash = context.Hash,
         ObservationState = context.ObservationState.ToContract()
     };

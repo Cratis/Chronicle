@@ -24,24 +24,40 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for
 /// </summary>
 public class an_event_sequence_storage : Specification, IDisposable
 {
-    protected static readonly string _tableName = "event-sequence";
+    protected string _tableName = EventSequenceId.Log.Value;
     protected static readonly EventStoreName _eventStore = "test-store";
     protected static readonly EventStoreNamespaceName _namespace = "test-namespace";
-    protected static readonly EventSequenceId _eventSequenceId = EventSequenceId.Log;
+    protected EventSequenceId _eventSequenceId = EventSequenceId.Log;
+    string? _provider;
     protected static readonly EventType _eventType = new("some-event-type", EventTypeGeneration.First);
     protected SqliteConnection _connection;
+    protected string _connectionString;
+    protected IEventSequenceMigrator _migrator;
     protected IDatabase _database;
     protected IIdentityStorage _identityStorage;
     protected EventSequenceStorage _storage;
 
     void Establish()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
+        _provider = Environment.GetEnvironmentVariable("CHRONICLE_SQL_SPECS_PROVIDER");
+        _connectionString = Environment.GetEnvironmentVariable("CHRONICLE_SQL_SPECS_CONNECTION_STRING") ?? $"DataSource=storage_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
+        if (_provider is null)
+        {
+            _connection = new SqliteConnection(_connectionString);
+            _connection.Open();
+        }
+        else
+        {
+            _tableName = $"events_{Guid.NewGuid():N}";
+            _eventSequenceId = new EventSequenceId(_tableName);
+        }
+        _migrator = new EventSequenceMigrator(
+            new TableMigrator<EventSequenceDbContext>(Substitute.For<ILogger<TableMigrator<EventSequenceDbContext>>>()),
+            Substitute.For<ILogger<EventSequenceMigrator>>());
 
         using (var schemaContext = CreateContext())
         {
-            schemaContext.Database.EnsureCreated();
+            schemaContext.EnsureTableExists().GetAwaiter().GetResult();
         }
 
         _database = Substitute.For<IDatabase>();
@@ -62,12 +78,15 @@ public class an_event_sequence_storage : Specification, IDisposable
 
     protected EventSequenceDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<EventSequenceDbContext>()
-            .UseSqlite(_connection)
-            .AddConceptAsSupport()
-            .Options;
-
-        return new EventSequenceDbContext(options, _tableName, Substitute.For<IEventSequenceMigrator>());
+        var builder = new DbContextOptionsBuilder<EventSequenceDbContext>();
+        switch (_provider)
+        {
+            case "PostgreSQL": builder.UseNpgsql(_connectionString); break;
+            case "SQLServer": builder.UseSqlServer(_connectionString); break;
+            default: builder.UseSqlite(_connectionString); break;
+        }
+        builder.AddConceptAsSupport();
+        return new EventSequenceDbContext(builder.Options, _tableName, _migrator);
     }
 
     protected void SeedEvent(EventSequenceNumber sequenceNumber)
@@ -130,7 +149,7 @@ public class an_event_sequence_storage : Specification, IDisposable
 
     public void Dispose()
     {
-        _connection.Dispose();
+        _connection?.Dispose();
         GC.SuppressFinalize(this);
     }
 }
