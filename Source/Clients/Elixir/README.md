@@ -20,6 +20,28 @@ end
 
 Releases containing the bundled `VERSION` file report their release version to Mix, so Mix can enforce the requirement.
 
+## Migrating to grpc 1.x
+
+This contracts release requires Elixir 1.18 or later (its grpc 1.x dependencies need it), `grpc ~> 1.0` and `mint ~> 1.11`.
+The generated Chronicle protobuf messages and stubs do not change, but your
+application may need to update how it uses grpc:
+
+- `GRPC.Stub.connect/2` still defaults to the Gun adapter. In grpc 1.x, `:gun`
+  is optional: pass `adapter: GRPC.Client.Adapters.Mint` when connecting, or
+  add `{:gun, "~> 2.4"}` to your application's dependencies if you use Gun.
+- Remove `{GRPC.Client.Supervisor, []}` from your supervision tree. grpc 1.x
+  starts its own client supervisor.
+- If your application serves gRPC requests, move its server dependency to
+  `grpc_server`; server modules are no longer included in `grpc`.
+
+The `cratis_chronicle` Elixir client still requires `grpc ~> 0.11`, so Mix
+resolves an older compatible contracts release for that client until the
+client has its own grpc 1.x release. Do not force this contracts release into
+an application using the older client.
+
+See the [grpc 1.x changelog](https://github.com/elixir-grpc/grpc/blob/v1.0.5/grpc/CHANGELOG.md#v100-2026-06-15)
+for the upstream migration details.
+
 ## What Is In The Package
 
 - `lib/generated` contains the generated protobuf message modules and `*.Stub`
