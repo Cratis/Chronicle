@@ -1,6 +1,6 @@
 # Health Endpoint
 
-By default Chronicle serves its health check on the main port (35000) — the same port that carries gRPC, the Workbench, the REST API and OAuth. That single port always uses TLS, because Kestrel can only multiplex HTTP/2 (gRPC) and HTTP/1.1 on one port when ALPN negotiates the protocol per connection, and ALPN requires TLS. In development that TLS certificate is self-signed and generated automatically.
+By default Chronicle serves its health check on the main port (35000) — the same port that carries gRPC, the Workbench, the REST API and OAuth. The main port uses TLS by default, multiplexing HTTP/2 and HTTP/1.1 via ALPN. In development that TLS certificate is self-signed and generated automatically. If `tls.enabled=false`, the main port instead serves cleartext HTTP/2 only; probes on it must support HTTP/2.
 
 That is exactly where orchestrator and load-balancer probes run into trouble. A health probe that has to speak TLS — and sometimes validate the certificate — against a port that may be serving a self-signed certificate is awkward at best and broken at worst. The dedicated health port removes that friction: it publishes the health endpoint on its own HTTP/1.1 port where you can turn TLS off.
 
@@ -38,9 +38,9 @@ The endpoint path is the shared `healthCheckEndpoint` (default `/health`), so wi
 
 ## Behavior
 
-- **`health.port` not set** — the health endpoint is served on the main port (35000) over TLS, alongside all other traffic. This is the default.
+- **`health.port` not set** — the health endpoint is served on the main port (35000), using HTTPS by default or h2c when `tls.enabled=false`, alongside all other traffic.
 - **`health.port` set** — the health endpoint is additionally served on that dedicated HTTP/1.1 port. gRPC is never exposed on it, because gRPC needs HTTP/2 and the dedicated port serves HTTP/1.1 only.
-- **`health.tls` false** — the dedicated port serves the health endpoint in cleartext. The main port still requires TLS regardless of this setting; disabling TLS here only affects the dedicated health port.
+- **`health.tls` false** — the dedicated port serves HTTP/1.1 in cleartext. It does not change the main port's `tls.enabled` setting. When `health.tls` remains true, the dedicated port requires a certificate from top-level `tls`, even if the main port has TLS disabled; without it, startup fails.
 - **`health.exclusive` true** — the dedicated port answers only the health endpoint; every other path returns 404 on that port. Off by default, so enabling it never changes an existing deployment silently.
 - **`health.port` equal to the main port** — treated as not set, since a second listener cannot bind the port the main listener already owns.
 
@@ -96,7 +96,7 @@ readinessProbe:
     scheme: HTTP
 ```
 
-gRPC clients keep using the TLS main port — gRPC is never served on the plaintext port — while the probes target the dedicated port.
+gRPC clients keep using the main port — gRPC is never served on the dedicated HTTP/1.1 port — while the probes target the dedicated port.
 
 ## Related pages
 

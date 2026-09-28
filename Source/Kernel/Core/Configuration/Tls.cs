@@ -10,7 +10,9 @@ public class Tls
 {
     /// <summary>
     /// Gets or inits whether TLS is enabled. Defaults to true.
-    /// Can be set to false when TLS is terminated upstream by an ingress/reverse proxy.
+    /// Set to false only behind an HTTPS-terminating reverse proxy that forwards all Chronicle
+    /// traffic using cleartext HTTP/2 (h2c). With authentication enabled, an external HTTPS
+    /// authority must also be configured; Chronicle's internal token endpoint is unavailable.
     /// </summary>
     public bool Enabled { get; init; } = true;
 

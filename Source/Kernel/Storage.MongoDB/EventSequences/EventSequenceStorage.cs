@@ -903,13 +903,19 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Concepts.Events.Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        GetRange(start, end, eventSourceId, eventTypes, tags, null, null, cancellationToken);
+
+    /// <inheritdoc/>
     public async Task<IEventCursor> GetRange(
         EventSequenceNumber start,
         EventSequenceNumber end,
-        EventSourceId? eventSourceId = default,
-        IEnumerable<EventType>? eventTypes = default,
-        IEnumerable<Concepts.Events.Tag>? tags = default,
-        CancellationToken cancellationToken = default)
+        EventSourceId? eventSourceId,
+        IEnumerable<EventType>? eventTypes,
+        IEnumerable<Concepts.Events.Tag>? tags,
+        EventSourceType? eventSourceType,
+        EventStreamType? eventStreamType,
+        CancellationToken cancellationToken)
     {
         logger.GettingRange(eventSequenceId, start, end);
         var collection = _collection;
@@ -922,6 +928,16 @@ public class EventSequenceStorage(
         if (eventSourceId?.IsSpecified == true)
         {
             filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
+        }
+
+        if (eventSourceType?.IsDefaultOrUnspecified == false)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceType, eventSourceType));
+        }
+
+        if (eventStreamType?.IsAll == false)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventStreamType, eventStreamType));
         }
 
         if (eventTypes?.Any() == true)

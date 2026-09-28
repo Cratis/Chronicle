@@ -47,7 +47,7 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 - [TLS](tls.md) - Configure the TLS certificate for the Chronicle port.
 - [Data Protection Key Encryption](../encryption-certificate.md) - Configure the encryption certificate, required in production.
 - [Health Endpoint](health-endpoint.md) - Expose the health endpoint on a dedicated port with optional TLS.
-- [Identity Provider Certificate](identity-provider-certificate.md) - Configure internal OAuth authority certificates.
+- [Identity Provider Certificate](identity-provider-certificate.md) - Migrate away from the ignored legacy certificate setting.
 - [Client Bootstrap](client-bootstrap.md) - Register client applications on startup with hashed secrets.
 - [Environment Variables](environment-variables.md) - Configure with `Cratis__Chronicle__` settings.
 - [Open Telemetry](open-telemetry.md) - Export metrics, traces, and logs via OTLP.

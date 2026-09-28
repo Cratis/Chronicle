@@ -22,16 +22,19 @@ public static class CertificateLoader
     /// <exception cref="System.Security.Cryptography.CryptographicException">Thrown when the configured file is not a PKCS#12 file or the configured password is wrong.</exception>
     public static X509Certificate2? LoadCertificate(Configuration.ChronicleOptions options)
     {
-        return LoadFromTls(options.Tls);
+        return options.Tls.Enabled ? LoadFromTls(options.Tls) : null;
     }
+
+    /// <summary>
+    /// Loads the top-level TLS certificate for a dedicated HTTPS health listener, independently
+    /// of whether the main Chronicle listener uses TLS.
+    /// </summary>
+    /// <param name="options">The Chronicle options.</param>
+    /// <returns>The loaded certificate, or null when unavailable.</returns>
+    internal static X509Certificate2? LoadHealthCertificate(Configuration.ChronicleOptions options) => LoadFromTls(options.Tls);
 
     static X509Certificate2? LoadFromTls(Configuration.Tls tls)
     {
-        if (!tls.Enabled)
-        {
-            return null;
-        }
-
         if (!string.IsNullOrEmpty(tls.CertificatePath) && File.Exists(tls.CertificatePath))
         {
             // The certificate is always read as PKCS#12, with or without a password. The TLS listener needs the

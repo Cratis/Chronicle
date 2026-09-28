@@ -1,36 +1,24 @@
 ---
 title: "Identity Provider Certificate Configuration"
-description: "The identityProvider.certificate setting, and why Chronicle does not apply it as of 19.6."
+description: "Migrate away from the ignored identityProvider.certificate setting."
 ---
 
-:::caution[Not applied as of Chronicle 19.6]
-The kernel accepts the `identityProvider.certificate` settings described below, but does not use them: the identity provider endpoints are served on port 35000 with the top-level [TLS certificate](tls.md), like everything else. Configure the TLS certificate; a dedicated identity provider certificate currently has no effect.
-:::
+## Migrate to the server TLS certificate
 
-When Chronicle uses the internal OAuth authority (`authentication.authority` is not set), you can configure a dedicated certificate for identity provider endpoints.
+`identityProvider.certificate` is accepted for compatibility but **ignored**. Chronicle emits a startup warning if the setting is present, even if its `enabled` property is false. The internal OAuth authority serves `/connect/token` using the top-level [TLS certificate](tls.md), not a separate certificate. TLS certificate selection happens before HTTP path routing, so a different certificate cannot be selected for that path on the same listener.
 
-This certificate configuration is separate from the top-level TLS certificate and uses its own configuration path:
+If your configuration contains `identityProvider.certificate`:
 
-- `identityProvider.certificate`
+1. Keep `tls.enabled=true` and configure the certificate that serves `/connect/token` under top-level `tls.certificatePath` and `tls.certificatePassword`. If an HTTPS reverse proxy fronts Chronicle, keep TLS on the backend for the internal authority.
+2. Check that clients reach `/connect/token` over HTTPS and see the expected top-level certificate on the Chronicle listener.
+3. Remove the entire `identityProvider.certificate` section and any `Cratis__Chronicle__IdentityProvider__Certificate__*` environment variables.
 
-## Fallback behavior
+`tls.enabled=false` is **not** a replacement for the identity provider certificate: authenticated h2c requires an external HTTPS `authentication.authority`, which issues tokens at its own endpoint. Chronicle no longer serves `/connect/token` in that topology. Only callers that obtain and supply bearer tokens themselves, or Workbench browser sessions using cookie login, can authenticate this way today. The .NET SDK's built-in ClientCredentials mode cannot obtain tokens from an external authority; there is no token-endpoint setting to reconfigure. See [Authentication](authentication.md).
 
-Identity provider certificate resolution follows this order:
-
-1. If `identityProvider.certificate` is set, use it.
-2. If `identityProvider.certificate` is not set, fall back to top-level `tls`.
-
-This preserves backward compatibility with existing configurations that only use `tls`.
-
-## Configuration
-
-### Dedicated identity provider certificate
+For example, replace this ignored setting:
 
 ```json
 {
-  "authentication": {
-    "authority": null
-  },
   "identityProvider": {
     "certificate": {
       "enabled": true,
@@ -41,7 +29,7 @@ This preserves backward compatibility with existing configurations that only use
 }
 ```
 
-### Reuse top-level TLS certificate (fallback)
+with the certificate for the shared listener:
 
 ```json
 {
@@ -49,32 +37,8 @@ This preserves backward compatibility with existing configurations that only use
     "enabled": true,
     "certificatePath": "/certs/server.pfx",
     "certificatePassword": "your-password"
-  },
-  "authentication": {
-    "authority": null
   }
 }
 ```
 
-In this configuration, `identityProvider.certificate` is not set, so Chronicle uses `tls` for identity provider endpoint scheme decisions.
-
-## Environment variables
-
-```bash
-Cratis__Chronicle__IdentityProvider__Certificate__Enabled=true
-Cratis__Chronicle__IdentityProvider__Certificate__CertificatePath=/certs/identity-provider.pfx
-Cratis__Chronicle__IdentityProvider__Certificate__CertificatePassword=your-password
-```
-
-## Properties
-
-| Property | Type | Default | Description |
-| --- | --- | --- | --- |
-| identityProvider.certificate.enabled | boolean | true | Whether TLS is enabled for identity provider endpoints |
-| identityProvider.certificate.certificatePath | string | null | Path to the identity provider certificate file (PFX format) |
-| identityProvider.certificate.certificatePassword | string | null | Password for the identity provider certificate file |
-
-## Related topics
-
-- [Authentication](authentication.md)
-- [TLS](tls.md)
+The internal OAuth token **signing and encryption** certificates are separate from the listener's TLS certificate. See [Data Protection Key Encryption](../encryption-certificate.md) for their configuration. An external authority uses its own endpoint and certificate; see [Authentication](authentication.md).

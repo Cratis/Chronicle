@@ -26,6 +26,7 @@ namespace Cratis.Chronicle.Services.Observation;
 internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IObserverRemover observerRemover) : IObservers
 {
     const int ObserverCompletionPollingDelayMs = 50;
+    const ulong MaximumObserverCompletionRange = 10_000;
 
     /// <inheritdoc/>
     public async Task<RetryPartitionResponse> RetryPartition(RetryPartition command, CallContext context = default)
@@ -51,7 +52,12 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         var eventTypeTails = request.EventTypeTails
             .GroupBy(_ => _.EventType.Id, StringComparer.Ordinal)
             .ToDictionary(_ => _.Key, _ => _.Max(tail => tail.SequenceNumber), StringComparer.Ordinal);
+
         var stopwatch = Stopwatch.StartNew();
+
+        // Recheck the subscription on every poll, but retain a matching event for unchanged filters
+        // and event types. An unsubscribed observer or an unknown match cannot be cached.
+        var lastMatchingEvents = new Dictionary<string, CachedMatchingEvent>();
         while (true)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
@@ -82,18 +88,83 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 .FailedPartitions
                 .GetFor(observerIds);
             var failedObserverIds = failedPartitions.Partitions.Select(_ => _.ObserverId.Value).ToHashSet(StringComparer.Ordinal);
-            var outstanding = observers.Where(_ =>
-                !failedObserverIds.Contains(_.Id) &&
-                (!((EventSequenceNumber)_.LastHandledEventSequenceNumber).IsActualValue ||
-                 _.LastHandledEventSequenceNumber < (eventTypeTails.Count == 0 || !_.EventTypes.Any()
-                     ? request.TailEventSequenceNumber
-                     : _.EventTypes.Where(type => eventTypeTails.ContainsKey(type.Id)).Max(type => eventTypeTails[type.Id])))).Select(_ => _.Id).ToArray();
-            if (outstanding.Length == 0)
+            var undecidedObservers = observers.Where(_ => NeedsSubscription(_, eventTypeTails, request.TailEventSequenceNumber, failedObserverIds)).ToArray();
+            var subscriptions = await Task.WhenAll(undecidedObservers.Select(observer =>
+                grainFactory.GetGrain<Cratis.Chronicle.Observation.IObserver>(
+                    new Concepts.Observation.ObserverKey(observer.Id, request.EventStore, request.Namespace, request.EventSequenceId)).GetSubscription()));
+            var matchingObserverIds = new HashSet<string>(StringComparer.Ordinal);
+            var outstanding = new List<string>();
+            for (var index = 0; index < undecidedObservers.Length; index++)
+            {
+                var observer = undecidedObservers[index];
+                var subscription = subscriptions[index];
+                var subscribedEventTypes = subscription is { IsSubscribed: true }
+                    ? subscription.EventTypes.Select(_ => _.Id.Value).ToArray()
+                    : observer.EventTypes.Select(_ => _.Id).ToArray();
+                if (eventTypeTails.Count > 0 && subscribedEventTypes.Length > 0 && !subscribedEventTypes.Any(eventTypeTails.ContainsKey))
+                {
+                    continue;
+                }
+
+                var target = (EventSequenceNumber)(eventTypeTails.Count == 0 || subscribedEventTypes.Length == 0
+                    ? request.TailEventSequenceNumber
+                    : subscribedEventTypes.Where(eventTypeTails.ContainsKey).Max(_ => eventTypeTails[_]));
+                var lastHandled = (EventSequenceNumber)observer.LastHandledEventSequenceNumber;
+                var hasFailedPartitions = failedObserverIds.Contains(observer.Id);
+                if (!hasFailedPartitions && lastHandled.IsActualValue && lastHandled >= target)
+                {
+                    continue;
+                }
+
+                var lastMatchingEvent = (EventSequenceNumber?)target;
+
+                if (subscription is { IsSubscribed: true, Filters: { } filters } && HasEffectiveFilters(filters) && HasBoundedAppendRange(request, target))
+                {
+                    if (lastMatchingEvents.TryGetValue(observer.Id, out var cached) &&
+                        cached.IncludesHandledEvents == hasFailedPartitions &&
+                        cached.LastMatchingEvent <= target &&
+                        cached.Filters.EventSourceType == filters.EventSourceType &&
+                        cached.Filters.EventStreamType == filters.EventStreamType &&
+                        cached.Filters.Tags.SequenceEqual(filters.Tags) &&
+                        cached.SubscriptionEventTypes.SequenceEqual(subscription.EventTypes) &&
+                        cached.ObserverEventTypeIds.SequenceEqual(observer.EventTypes.Select(_ => _.Id)))
+                    {
+                        lastMatchingEvent = cached.LastMatchingEvent;
+                    }
+                    else
+                    {
+                        lastMatchingEvent = await GetLastMatchingEvent(request, subscription, lastHandled, target, filters, hasFailedPartitions, context.CancellationToken);
+                        if (lastMatchingEvent is not null)
+                        {
+                            lastMatchingEvents[observer.Id] = new(
+                                filters with { Tags = filters.Tags.ToArray() },
+                                subscription.EventTypes.ToArray(),
+                                observer.EventTypes.Select(_ => _.Id).ToArray(),
+                                hasFailedPartitions,
+                                lastMatchingEvent);
+                        }
+                    }
+                }
+
+                if (lastMatchingEvent is null)
+                {
+                    continue;
+                }
+
+                matchingObserverIds.Add(observer.Id);
+                if (!hasFailedPartitions && (!lastHandled.IsActualValue || lastHandled < lastMatchingEvent))
+                {
+                    outstanding.Add(observer.Id);
+                }
+            }
+
+            var relevantFailures = failedPartitions.Partitions.Where(_ => matchingObserverIds.Contains(_.ObserverId.Value)).ToArray();
+            if (outstanding.Count == 0)
             {
                 return new WaitForObserverCompletionResponse
                 {
-                    IsSuccess = !failedPartitions.Partitions.Any(),
-                    FailedPartitions = failedPartitions.Partitions.ToContract().ToArray()
+                    IsSuccess = relevantFailures.Length == 0,
+                    FailedPartitions = relevantFailures.ToContract().ToArray()
                 };
             }
 
@@ -102,8 +173,8 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 return new WaitForObserverCompletionResponse
                 {
                     TimedOut = true,
-                    FailedPartitions = failedPartitions.Partitions.ToContract().ToArray(),
-                    OutstandingObservers = outstanding
+                    FailedPartitions = relevantFailures.ToContract().ToArray(),
+                    OutstandingObservers = outstanding.ToArray()
                 };
             }
 
@@ -249,4 +320,105 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
 
         return observers.ToContract();
     }
+
+    static bool NeedsSubscription(
+        ObserverInformation observer,
+        Dictionary<string, ulong> eventTypeTails,
+        ulong tailEventSequenceNumber,
+        HashSet<string> failedObserverIds)
+    {
+        if (failedObserverIds.Contains(observer.Id))
+        {
+            return true;
+        }
+
+        var lastHandled = (EventSequenceNumber)observer.LastHandledEventSequenceNumber;
+        if (!lastHandled.IsActualValue)
+        {
+            return true;
+        }
+
+        var rawTarget = eventTypeTails.Count == 0 || !observer.EventTypes.Any()
+            ? tailEventSequenceNumber
+            : observer.EventTypes.Where(type => eventTypeTails.ContainsKey(type.Id)).Max(type => eventTypeTails[type.Id]);
+        return lastHandled < (EventSequenceNumber)rawTarget;
+    }
+
+    static bool HasEffectiveFilters(Concepts.Observation.ObserverFilters filters) =>
+        filters.Tags.Any() ||
+        (filters.EventSourceType is { } eventSourceType && eventSourceType != EventSourceType.Unspecified) ||
+        filters.EventStreamType is { IsAll: false };
+
+    /// <summary>
+    /// Check whether the appended range is small and unambiguous enough to inspect. Tail zero is
+    /// safe without a presence bit because the range can contain only the first event.
+    /// </summary>
+    /// <param name="request">The append wait request.</param>
+    /// <param name="target">The last relevant event for this observer.</param>
+    /// <returns>True when it is safe to inspect the appended range.</returns>
+    static bool HasBoundedAppendRange(WaitForObserverCompletionRequest request, EventSequenceNumber target) =>
+        (request.HasFirstEventSequenceNumber || request.FirstEventSequenceNumber > 0 || request.TailEventSequenceNumber == EventSequenceNumber.First.Value) &&
+        request.FirstEventSequenceNumber <= request.TailEventSequenceNumber &&
+        request.FirstEventSequenceNumber <= target.Value &&
+        request.TailEventSequenceNumber - request.FirstEventSequenceNumber < MaximumObserverCompletionRange;
+
+    async Task<EventSequenceNumber?> GetLastMatchingEvent(
+        WaitForObserverCompletionRequest request,
+        Cratis.Chronicle.Observation.ObserverSubscription subscription,
+        EventSequenceNumber lastHandled,
+        EventSequenceNumber target,
+        Concepts.Observation.ObserverFilters filters,
+        bool includeHandledEvents,
+        CancellationToken cancellationToken)
+    {
+        // The caller only scans a known appended range. A failed observer must check the entire
+        // append even if its last-handled position has already reached the tail.
+        var start = (EventSequenceNumber)request.FirstEventSequenceNumber;
+        if (!includeHandledEvents && lastHandled.IsActualValue && lastHandled.Next() > start)
+        {
+            start = lastHandled.Next();
+        }
+
+        if (start > target)
+        {
+            return null;
+        }
+
+        var eventTypes = subscription.EventTypes.Any() ? subscription.EventTypes.ToArray() : null;
+        var tags = filters.Tags.Any() ? filters.Tags.Select(_ => (Tag)_).ToArray() : null;
+        var eventSequence = storage.GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace)
+            .GetEventSequence(request.EventSequenceId);
+        using var cursor = await eventSequence.GetRange(
+            start,
+            target,
+            eventSourceId: null,
+            eventTypes: eventTypes,
+            tags: tags,
+            eventSourceType: filters.EventSourceType,
+            eventStreamType: filters.EventStreamType,
+            cancellationToken: cancellationToken);
+        EventSequenceNumber? lastMatch = null;
+        while (await cursor.MoveNext())
+        {
+            foreach (var @event in cursor.Current)
+            {
+                if (eventTypes?.Any(type => type.Id == @event.Context.EventType.Id) != false &&
+                    filters.Matches(@event) &&
+                    (lastMatch is null || @event.Context.SequenceNumber > lastMatch))
+                {
+                    lastMatch = @event.Context.SequenceNumber;
+                }
+            }
+        }
+
+        return lastMatch;
+    }
+
+    sealed record CachedMatchingEvent(
+        Concepts.Observation.ObserverFilters Filters,
+        Concepts.Events.EventType[] SubscriptionEventTypes,
+        string[] ObserverEventTypeIds,
+        bool IncludesHandledEvents,
+        EventSequenceNumber LastMatchingEvent);
 }
