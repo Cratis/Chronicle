@@ -19,6 +19,9 @@ public record AnotherEvent(int Amount);
 [FromEvent<SomeEvent>]
 public record TypeWithFromEventAttribute([Key] Guid Id, string Name);
 
+[FromEvent<SomeEvent>]
+public readonly record struct StructWithFromEventAttribute([Key] Guid Id, string Name);
+
 [EventSequence("custom-sequence")]
 public record TypeWithEventSequenceAttribute([Key] Guid Id, string Name);
 

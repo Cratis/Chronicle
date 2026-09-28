@@ -24,7 +24,7 @@ public static class ModelBoundProjectionsExtensions
     {
         // Event-sequence attributes also select where reactors and reducers observe events. They are not
         // evidence that those types (or an event type) are read models with a projection to register.
-        if (!type.IsClass || typeof(IReactor).IsAssignableFrom(type) ||
+        if (typeof(IReactor).IsAssignableFrom(type) ||
             typeof(IReducer).IsAssignableFrom(type) || typeof(IReadModelReactor).IsAssignableFrom(type) ||
             type.IsDefined(typeof(EventTypeAttribute)) || type.IsDefined(typeof(EventTypeGenerationForAttribute)))
         {
