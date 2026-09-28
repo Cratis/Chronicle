@@ -52,39 +52,78 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
         {
             // Capture bounded diagnostics for every startup failure before disposing the container.
             // A TCP-ready mongod can still fail rs.initiate after Testcontainers reports the port ready.
-            var initiationFailed = false;
+            string? stdout = null;
+            string? stderr = null;
+            string? logRetrievalError = null;
+            string? disposalError = null;
             try
             {
                 using var logsTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                var (stdout, stderr) = await _container.GetLogsAsync(ct: logsTimeout.Token);
-                initiationFailed = stderr.Contains("MongoDB fixture rs.initiate failed (mongosh exit", StringComparison.Ordinal);
-                startupError.Data["MongoDB fixture stderr"] = stderr[^Math.Min(stderr.Length, 4096)..];
-                startupError.Data["MongoDB fixture stdout"] = stdout[^Math.Min(stdout.Length, 4096)..];
+                (stdout, stderr) = await _container.GetLogsAsync(ct: logsTimeout.Token);
+                startupError.Data["MongoDB fixture stderr"] = Tail(stderr);
+                startupError.Data["MongoDB fixture stdout"] = Tail(stdout);
             }
             catch (Exception logsError)
             {
                 // Preserve the original startup error if Docker cannot retrieve logs.
-                startupError.Data["MongoDB fixture log retrieval error"] = logsError.Message;
+                logRetrievalError = logsError.Message;
+                startupError.Data["MongoDB fixture log retrieval error"] = logRetrievalError;
             }
 
             try
             {
                 await _container.DisposeAsync();
             }
-            catch (Exception disposalError)
+            catch (Exception error)
             {
-                startupError.Data["MongoDB fixture disposal error"] = disposalError.Message;
+                disposalError = error.Message;
+                startupError.Data["MongoDB fixture disposal error"] = disposalError;
             }
             _container = null;
-            if (initiationFailed)
+            var diagnosticError = WithStartupDiagnostics(startupError, stdout, stderr, logRetrievalError, disposalError);
+            if (ReferenceEquals(diagnosticError, startupError))
             {
-                throw new InvalidOperationException(
-                    $"MongoDB fixture rs.initiate failed. mongosh stderr and mongod logs:\n{startupError.Data["MongoDB fixture stderr"]}\n{startupError.Data["MongoDB fixture stdout"]}",
-                    startupError);
+                throw;
             }
-            throw;
+            throw diagnosticError;
         }
     }
+
+    internal static Exception WithStartupDiagnostics(
+        Exception startupError,
+        string? stdout,
+        string? stderr,
+        string? logRetrievalError = null,
+        string? disposalError = null)
+    {
+        var diagnostics = new List<string>();
+        if (!string.IsNullOrEmpty(stderr))
+        {
+            diagnostics.Add($"MongoDB fixture stderr:\n{Tail(stderr)}");
+        }
+        if (!string.IsNullOrEmpty(stdout))
+        {
+            diagnostics.Add($"MongoDB fixture stdout:\n{Tail(stdout)}");
+        }
+        if (!string.IsNullOrEmpty(logRetrievalError))
+        {
+            diagnostics.Add($"MongoDB fixture log retrieval error: {logRetrievalError}");
+        }
+        if (!string.IsNullOrEmpty(disposalError))
+        {
+            diagnostics.Add($"MongoDB fixture disposal error: {disposalError}");
+        }
+        if (diagnostics.Count == 0)
+        {
+            return startupError;
+        }
+
+        var initiationFailed = stderr?.Contains("MongoDB fixture rs.initiate failed (mongosh exit", StringComparison.Ordinal) == true;
+        var prefix = initiationFailed ? "MongoDB fixture rs.initiate failed" : "MongoDB fixture startup failed";
+        return new InvalidOperationException($"{prefix}: {startupError.Message}\n{string.Join('\n', diagnostics)}", startupError);
+    }
+
+    static string Tail(string value) => value[^Math.Min(value.Length, 4096)..];
 
     internal static bool IsReady(BsonDocument hello) =>
         hello.TryGetValue("setName", out var setName) && setName.IsString && setName.AsString == "rs0" &&
