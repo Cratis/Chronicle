@@ -29,7 +29,7 @@ A private method is still a valid handler when nothing else handles that event t
 
 <ChronicleClientTabs snippet="reactors/event-processing/supported-signatures" />
 
-`TResult` can be an event type or `IEnumerable<TEvent>`. See [Returning Side Effects](side-effects) for the full list of supported return types and metadata resolution.
+`TResult` can be an event type or a sequence of known events: `IEnumerable<TEvent>`, `TEvent[]`, `List<TEvent>`, or `IReadOnlyList<TEvent>`. See [Returning Side Effects](side-effects) for the full list of supported return types and metadata resolution.
 
 This overload table is specific to C#'s method-overload-based dispatch. Kotlin, Elixir, and TypeScript each use one canonical handler shape instead of a family of overloads — see [Getting started with reactors](getting-started) for what that shape looks like in each client. None of them auto-append a handler's return value the way C# does (see [Returning side effects](side-effects)).
 
