@@ -7,8 +7,10 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SqlSink = Cratis.Chronicle.Storage.Sql.Sinks.Sink;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
@@ -20,10 +22,17 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// <remarks>
 /// The fixture is a property rather than a constructor argument because the contract creates the harness
 /// itself; a case needing the container overrides that and hands one over. Every harness gets a database of
-/// its own in the fixture's container, dropped again when the harness is disposed.
+/// its own in the fixture's container, dropped again when the harness is disposed. Tables are created through
+/// the real <see cref="ReadModelMigrator"/>, as in production. Container names must keep their replay, backup
+/// and shadow table names within PostgreSQL's 63 bytes (48 bytes or less); longer ones fail in the migrator
+/// (issue #4340).
 /// </remarks>
 public class PostgreSqlSinkHarness : ISinkHarness
 {
+    readonly ReadModelMigrator _migrator = new(
+        new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
+        Substitute.For<ILogger<ReadModelMigrator>>());
+
     IReadOnlyList<ProjectedColumn> _columns = [];
 
     /// <summary>
@@ -45,7 +54,7 @@ public class PostgreSqlSinkHarness : ISinkHarness
         var database = Substitute.For<IDatabase>();
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
-            .Returns(callInfo => Task.FromResult(new DbContextScope<ReadModelDbContext>(CreateContext(callInfo.ArgAt<string>(2)), () => { })));
+            .Returns(callInfo => OpenTable(callInfo.ArgAt<string>(2)));
 
         return new SqlSink(
             "test-event-store",
@@ -53,30 +62,6 @@ public class PostgreSqlSinkHarness : ISinkHarness
             definition,
             database,
             new ExpandoObjectConverter(new TypeFormats()));
-    }
-
-    /// <summary>
-    /// Creates a context for a container in the sink's database, creating its table when it is not there.
-    /// </summary>
-    /// <param name="containerName">The name of the container.</param>
-    /// <returns>A <see cref="ReadModelDbContext"/> for the container.</returns>
-    public ReadModelDbContext CreateContext(string containerName)
-    {
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>()
-            .UseNpgsql(ConnectionString)
-            .AddConceptAsSupport()
-            .Options;
-
-        var context = new ReadModelDbContext(options, containerName, _columns, Substitute.For<IReadModelMigrator>());
-
-        // As in the SQLite harness: the real database creates a container's table through the migrator on first
-        // use, which the substitute does not, and ending a replay renames tables out from under any memo.
-        if (!TableExists(context, containerName))
-        {
-            context.Database.ExecuteSqlRaw(context.Database.GenerateCreateScript());
-        }
-
-        return context;
     }
 
     /// <inheritdoc/>
@@ -90,11 +75,22 @@ public class PostgreSqlSinkHarness : ISinkHarness
         GC.SuppressFinalize(this);
     }
 
-    static bool TableExists(ReadModelDbContext context, string tableName)
+    /// <summary>
+    /// Opens a container in the sink's database, migrating its table as the real database does on every use.
+    /// </summary>
+    /// <param name="containerName">The name of the container.</param>
+    /// <returns>A <see cref="DbContextScope{TDbContext}"/> for the container.</returns>
+    async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName)
     {
-        var storedName = PrimaryKeyNames.TableIdentifier(Arc.EntityFrameworkCore.DatabaseType.PostgreSql, tableName);
-        return context.Database.SqlQuery<int>($"SELECT count(*)::int AS \"Value\" FROM pg_tables WHERE schemaname = current_schema() AND tablename = {storedName}")
-            .AsEnumerable()
-            .Single() > 0;
+        var options = new DbContextOptionsBuilder<ReadModelDbContext>()
+            .UseNpgsql(ConnectionString)
+            .AddConceptAsSupport()
+            .Options;
+
+#pragma warning disable CA2000 // Disposed by the sink through the returned scope.
+        var context = new ReadModelDbContext(options, containerName, _columns, _migrator);
+#pragma warning restore CA2000
+        await context.EnsureTableExists();
+        return new DbContextScope<ReadModelDbContext>(context, () => { });
     }
 }

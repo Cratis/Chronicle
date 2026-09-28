@@ -22,6 +22,11 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_ending_a_replay.given
 /// A read model accumulating a count in a PostgreSQL database of its own, where primary key names are unique
 /// across the schema and identifiers longer than 63 bytes are truncated.
 /// </summary>
+/// <remarks>
+/// The container name must be 48 bytes or less, so that its <c language="csharp">replay-</c> shadow table and
+/// <c language="csharp">-yyyyMMddHHmmss</c> backups fit PostgreSQL's limit. Longer names fail through the real
+/// migrator (issue #4340); their primary key naming is specified on <see cref="PrimaryKeyNames"/> alone.
+/// </remarks>
 /// <param name="fixture">The <see cref="PostgreSqlFixture"/> supplying the container.</param>
 public abstract class a_postgresql_read_model(PostgreSqlFixture fixture) : Specification
 {
