@@ -5,13 +5,15 @@ description: "Migrate away from the ignored identityProvider.certificate setting
 
 ## Migrate to the server TLS certificate
 
-`identityProvider.certificate` is accepted for compatibility but **ignored**. Chronicle emits a startup warning if the setting is present, even if its `enabled` property is false. It does not choose a separate certificate for the internal OAuth authority. With TLS enabled, the top-level [TLS configuration](tls.md) serves `/connect/token` and every other endpoint on the Chronicle listener. With `tls.enabled=false`, the HTTPS-terminating reverse proxy presents its certificate instead. TLS certificate selection happens before HTTP path routing, so a different certificate cannot be selected for `/connect/token` on the same listener.
+`identityProvider.certificate` is accepted for compatibility but **ignored**. Chronicle emits a startup warning if the setting is present, even if its `enabled` property is false. The internal OAuth authority serves `/connect/token` using the top-level [TLS certificate](tls.md), not a separate certificate. TLS certificate selection happens before HTTP path routing, so a different certificate cannot be selected for that path on the same listener.
 
 If your configuration contains `identityProvider.certificate`:
 
-1. Configure the certificate that should serve `/connect/token` under top-level `tls.certificatePath` and `tls.certificatePassword`, or configure TLS termination at an HTTPS reverse proxy and set `tls.enabled` to `false` for the private backend connection.
-2. Check that clients reach `/connect/token` over HTTPS and see the expected certificate from the kernel or reverse proxy.
+1. Keep `tls.enabled=true` and configure the certificate that serves `/connect/token` under top-level `tls.certificatePath` and `tls.certificatePassword`. If an HTTPS reverse proxy fronts Chronicle, keep TLS on the backend for the internal authority.
+2. Check that clients reach `/connect/token` over HTTPS and see the expected top-level certificate on the Chronicle listener.
 3. Remove the entire `identityProvider.certificate` section and any `Cratis__Chronicle__IdentityProvider__Certificate__*` environment variables.
+
+`tls.enabled=false` is **not** a replacement for the identity provider certificate: authenticated h2c requires an external HTTPS `authentication.authority`, which issues tokens at its own endpoint. Chronicle no longer serves `/connect/token` in that topology. Migrating to an external authority also requires changing clients' token configuration; see [Authentication](authentication.md).
 
 For example, replace this ignored setting:
 
