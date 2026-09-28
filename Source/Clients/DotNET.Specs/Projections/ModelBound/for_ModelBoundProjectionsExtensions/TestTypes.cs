@@ -32,11 +32,18 @@ public class ReactorWithEventLog : IReactor;
 public class ReactorWithEventSequence : IReactor;
 
 [EventLog]
+public class ReadModelReactorWithEventLog : IReadModelReactor;
+
+[EventLog]
 public class ReducerWithEventLog : IReducerFor<TypeWithEventSequenceAttribute>;
 
 [EventType("a1196681-f28b-4403-8ff7-e47878216acf")]
 [EventSequence("custom-sequence")]
 public record EventWithEventSequence;
+
+[EventTypeGenerationFor<EventWithEventSequence>(1)]
+[EventSequence("custom-sequence")]
+public record GenerationWithEventSequence;
 
 [Passive]
 public record TypeWithPassiveAttribute([Key] Guid Id, string Name);
