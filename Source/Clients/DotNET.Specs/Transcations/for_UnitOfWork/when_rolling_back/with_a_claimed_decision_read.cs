@@ -13,6 +13,7 @@ public class with_a_claimed_decision_read : given.a_unit_of_work
     DecisionReadCommitOwner _owner;
     Exception _rollbackError;
     Exception _wrongOwnerError;
+    Exception _nullOwnerError;
     Exception _disposeError;
     bool _eventsStillStaged;
     bool _stillOpen;
@@ -34,6 +35,7 @@ public class with_a_claimed_decision_read : given.a_unit_of_work
         _rollbackError = await Record.ExceptionAsync(sdkUnit.Rollback);
         using var other = new UnitOfWork(CorrelationId.New(), _ => { }, _eventStore);
         _wrongOwnerError = await Record.ExceptionAsync(() => _unitOfWork.RollbackAsOwner(other.ClaimDecisionReadCommitOwnership()));
+        _nullOwnerError = await Record.ExceptionAsync(() => _unitOfWork.RollbackAsOwner(null!));
         _disposeError = Record.Exception(_unitOfWork.Dispose);
         _eventsStillStaged = _unitOfWork.GetEvents().Any();
         _stillOpen = !_unitOfWork.IsCompleted;
@@ -43,6 +45,7 @@ public class with_a_claimed_decision_read : given.a_unit_of_work
 
     [Fact] void should_refuse_direct_sdk_rollback() => _rollbackError.ShouldBeOfExactType<ProtectedUnitOfWorkRequiresOwner>();
     [Fact] void should_refuse_another_owner() => _wrongOwnerError.ShouldBeOfExactType<ProtectedUnitOfWorkRequiresOwner>();
+    [Fact] void should_refuse_a_null_owner() => _nullOwnerError.ShouldBeOfExactType<ProtectedUnitOfWorkRequiresOwner>();
     [Fact] void should_refuse_disposal() => _disposeError.ShouldBeOfExactType<ProtectedUnitOfWorkRequiresOwner>();
     [Fact] void should_retain_staged_events_on_refusal() => _eventsStillStaged.ShouldBeTrue();
     [Fact] void should_leave_the_unit_open_on_refusal() => _stillOpen.ShouldBeTrue();

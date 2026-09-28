@@ -37,7 +37,7 @@ public class UnitOfWork(
     /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client unit of work traces.
     /// </summary>
     internal static readonly IActivitySource<UnitOfWork> DefaultActivitySource =
-        new ActivitySource<UnitOfWork>(new System.Diagnostics.ActivitySource(ClientActivity.SourceName));
+        new ActivitySource<UnitOfWork>(new ActivitySource(ClientActivity.SourceName));
 
     readonly IActivitySource<UnitOfWork> _activitySource = activitySource ?? DefaultActivitySource;
     readonly ILogger<UnitOfWork>? _logger = logger;
