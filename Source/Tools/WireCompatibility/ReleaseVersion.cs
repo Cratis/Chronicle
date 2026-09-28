@@ -6,11 +6,12 @@ using System.Globalization;
 namespace Cratis.Chronicle.Tools.WireCompatibility;
 
 /// <summary>
-/// Orders released versions so a floor can say which of them still count as baselines.
+/// Orders released versions so a floor and a ceiling can say which of them still count as baselines.
 /// </summary>
 /// <remarks>
 /// Only stable releases reach this - the version list is already filtered to those - so there is no pre-release
-/// ordering to get right, and comparing the three numeric components is the whole of it.
+/// ordering to get right, and comparing the three numeric components is the whole of it. The one exception is the
+/// ceiling, which names the release being cut and can itself be a pre-release.
 /// </remarks>
 public static class ReleaseVersion
 {
@@ -21,6 +22,28 @@ public static class ReleaseVersion
     /// <param name="floor">The floor.</param>
     /// <returns>True when the version is at or after the floor.</returns>
     public static bool IsAtOrAfter(string version, string floor) => Compare(version, floor) >= 0;
+
+    /// <summary>
+    /// Determines whether a released version is at or before a ceiling.
+    /// </summary>
+    /// <param name="version">The released version.</param>
+    /// <param name="ceiling">The ceiling: the release being cut, which may carry a pre-release suffix.</param>
+    /// <returns>True when the version is at or before the ceiling.</returns>
+    public static bool IsAtOrBefore(string version, string ceiling) => Compare(version, WithoutPreRelease(ceiling)) <= 0;
+
+    /// <summary>
+    /// A pre-release suffix reads as a zero component to <see cref="Compare"/> - 19.4.9-hotfix.1 would order
+    /// before 19.4.8 - so a ceiling is reduced to its numeric core first. Baselines are always stable, and the
+    /// stable release sharing the ceiling's core cannot already be published while that pre-release is being cut,
+    /// so including it costs nothing and keeps a hotfix from being compared against nothing at all.
+    /// </summary>
+    /// <param name="version">The version to strip the suffix from.</param>
+    /// <returns>The version without any pre-release suffix.</returns>
+    public static string WithoutPreRelease(string version)
+    {
+        var suffix = version.IndexOf('-');
+        return suffix < 0 ? version : version[..suffix];
+    }
 
     /// <summary>
     /// Compares two released versions.
