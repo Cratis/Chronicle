@@ -132,11 +132,6 @@ public static class EventHandlerMethods
             return [];
         }
 
-        if (type.IsArray)
-        {
-            return type.GetElementType() is { } elementType ? [elementType] : [];
-        }
-
         var interfaces = type.IsInterface ? new[] { type }.Concat(type.GetInterfaces()) : type.GetInterfaces();
         return interfaces
             .Where(candidate => candidate.IsGenericType && candidate.GetGenericTypeDefinition() == typeof(IEnumerable<>))
