@@ -563,6 +563,8 @@
     {
       "id": "cratis/content",
       "availableTargets": [
+        "cratis-content-length",
+        "cratis-developer-marketing",
         "cratis-release-notes",
         "cratis-social-feed-post",
         "cratis-technical-examples",
