@@ -59,6 +59,31 @@ public record EventContext(
         CorrelationId.NotSet);
 
     /// <summary>
+    /// Gets the structured named tags associated with the event.
+    /// </summary>
+    /// <exception cref="InvalidNamedTag">The supplied collection contains a null named tag.</exception>
+    public IEnumerable<NamedTag> NamedTags
+    {
+        get;
+        init
+        {
+            if (value is null)
+            {
+                field = [];
+                return;
+            }
+
+            var snapshot = value.ToArray();
+            if (snapshot.Any(tag => tag is null))
+            {
+                throw new InvalidNamedTag();
+            }
+
+            field = snapshot.Length == 0 ? Array.Empty<NamedTag>() : Array.AsReadOnly(snapshot);
+        }
+    } = [];
+
+    /// <summary>
     /// Gets a value indicating whether the subject is the event source id (no explicit <see cref="Subject"/> was set, or <see cref="Subject"/> equals <see cref="EventSourceId"/>).
     /// </summary>
     public bool SubjectIsEventSourceId => !Subject.IsSet || Subject.Value == EventSourceId.Value;

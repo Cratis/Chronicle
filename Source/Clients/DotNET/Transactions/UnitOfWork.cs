@@ -87,6 +87,22 @@ public class UnitOfWork(
         ConcurrencyScope? concurrencyScope = default,
         IEnumerable<string>? tags = default,
         DateTimeOffset? occurred = default,
+        Subject? subject = default) =>
+        AddEventWithNamedTags(eventSequenceId, eventSourceId, @event, [], causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
+
+    /// <inheritdoc/>
+    public void AddEventWithNamedTags(
+        EventSequenceId eventSequenceId,
+        EventSourceId eventSourceId,
+        object @event,
+        IEnumerable<NamedTag> namedTags,
+        Causation causation,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
         lock (_decisionLock)
@@ -127,6 +143,7 @@ public class UnitOfWork(
                 EventStreamId = eventStreamId ?? EventStreamId.Default,
                 EventSourceType = eventSourceType ?? EventSourceType.Default,
                 Tags = tags ?? [],
+                NamedTags = NamedTagConverters.Merge([], namedTags),
                 Occurred = occurred,
                 Subject = subject
             });
@@ -169,7 +186,10 @@ public class UnitOfWork(
             _concurrencyScopes = materializedConcurrencyScopes;
             _hasOrderedBatch = true;
             _currentLegacyEvents = null;
-            _stagedEvents.Add(new OrderedStagedEvents(batch.Events));
+            _stagedEvents.Add(new OrderedStagedEvents(batch.Events.Select(_ => _ with
+            {
+                NamedTags = NamedTagConverters.Merge(_.NamedTags, [])
+            }).ToArray()));
             foreach (var (scopeLabel, concurrencyScope) in batch.ConcurrencyScopes)
             {
                 EnrollStrictConcurrencyScope(scopeLabel, concurrencyScope);
@@ -351,7 +371,9 @@ public class UnitOfWork(
                 AppendManyResult result;
                 try
                 {
-                    result = await _eventSequence.AppendMany(events, concurrencyScopes: scopes);
+                    result = events.Any(_ => _.NamedTags.Any())
+                        ? await _eventSequence.AppendManyWithNamedTags(events, [], concurrencyScopes: scopes)
+                        : await _eventSequence.AppendMany(events, concurrencyScopes: scopes);
                 }
                 catch (CommandFailed exception) when (
                     protectedCommit && events.Length == 0 &&

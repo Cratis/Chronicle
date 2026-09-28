@@ -134,8 +134,31 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
         inner.Append(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedByChain, tags, occurred, content, contentHashes, subject);
 
     /// <inheritdoc/>
+    public Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
+        EventSequenceNumber sequenceNumber,
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain,
+        IEnumerable<Tag> tags,
+        DateTimeOffset occurred,
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes,
+        Subject? subject,
+        IReadOnlyCollection<NamedTag> namedTags) =>
+        inner.Append(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedByChain, tags, occurred, content, contentHashes, subject, namedTags);
+
+    /// <inheritdoc/>
     public Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events) =>
         inner.AppendMany(events);
+
+    /// <inheritdoc/>
+    public Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendManyWithNamedTags(IEnumerable<EventToAppendToStorage> events) =>
+        inner.AppendManyWithNamedTags(events);
 
     /// <inheritdoc/>
     public Task Revise(EventSequenceNumber sequenceNumber, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content, EventHash hash) =>

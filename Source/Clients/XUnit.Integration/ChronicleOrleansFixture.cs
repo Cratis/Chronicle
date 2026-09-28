@@ -166,6 +166,11 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         // 4. Re-discover artifacts from the current test fixture. Discover() creates new
         //    handler objects with fresh CancellationTokens (but does not register them yet).
         var eventStore = Services.GetRequiredService<IEventStore>();
+
+        // 4c. A read model a previous test registered explicitly belongs to that test. Left in place it would be part
+        //     of every later registration pass - and one whose event types the next test does not declare cannot be
+        //     built, which stops the client from claiming its full set and so stops retirement working.
+        (eventStore.Projections as Projections.Projections)?.ForgetRuntimeRegistrations();
         await eventStore.DiscoverAll();
 
         // 5. Reconnect — registers with ConnectedClients, re-creates keep-alive stream,

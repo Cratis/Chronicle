@@ -3,21 +3,21 @@
 
 # The hot core - the areas where a fix breaks a sibling path.
 #
-# THE RULE: a pull request touching any path listed here runs the full out-of-process integration
-# matrix and must have it green, and needs a review from the owner in `.github/CODEOWNERS`.
+# THE RULE: a pull request touching any path listed here gets a hot-core notice and needs a
+# review from the owner in `.github/CODEOWNERS`. Applying `run-integration` starts the separate
+# requested-integration workflow, whose hot-core gate requires the full matrix to pass.
 #
 # This file is a committed contract, not documentation. `.github/scripts/detect-hot-core-changes.py`
-# reads it on every pull request and decides whether `.github/workflows/hot-core-gate.yml` runs the
-# matrix or no-ops green, and the same script asserts that every pattern here is also owned in
+# reads it on every ordinary PR run and on requested integration runs, reporting whether the hot
+# core was touched. The same script asserts that every pattern here is also owned in
 # `.github/CODEOWNERS` - so the two can never drift apart in silence.
 #
 # WHY THESE AREAS AND NOT OTHERS: twenty of the last seventy-three regressions were fixes that broke
 # a sibling path, and they concentrate in the areas below. Twice the repair was a rollback that
 # deliberately reinstated a known bug because the fix could not be made without breaking a sibling
 # (`b3e03dbb8`, `d1c168c7e`). The out-of-process integration matrix is the only oracle that has
-# reliably caught this class, and on a pull request it otherwise runs the default storage backend
-# only - so the three non-default backends, where the sibling breakage usually surfaces, are exactly
-# what a hot-core change is currently allowed to merge without.
+# reliably caught this class. The nightly runs every backend; a labeled hot-core pull request
+# selects all backends for its one requested integration matrix.
 #
 # FORMAT: one pattern per line, under an `# area:` heading that names the area it belongs to; the
 # heading is what the gate prints back to the author. `**` matches any character including `/`, `*`
@@ -60,12 +60,11 @@ Source/Kernel/Core/EventSequences/*AppendedEventsQueue*
 Source/Kernel/Core/Compliance/**
 
 # area: MongoDB sink
-# The default backend's sink and its changeset-to-update translation. Every pull request already
-# exercises this one; it is listed because a change here is the classic way a MongoDB-shaped
-# assumption merges green and breaks SQLite, PostgreSQL and MSSQL on the nightly.
+# The default backend's sink and its changeset-to-update translation. A change here is the classic
+# way a MongoDB-shaped assumption passes one backend and breaks the others on the nightly.
 Source/Kernel/Storage.MongoDB/Sinks/**
 
 # area: SQL sink
-# The sink shared by SQLite, PostgreSQL and MSSQL - the three backends a pull request does not run
-# today, which is precisely why a change here needs the full matrix.
+# The sink shared by SQLite, PostgreSQL and MSSQL. A change here needs the full matrix when
+# integration is requested.
 Source/Kernel/Storage.Sql/Sinks/**

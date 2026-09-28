@@ -6,10 +6,10 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
+using Cratis.Orleans.StateMachines;
 using Microsoft.Extensions.Logging;
 using IEventSequence = Cratis.Chronicle.EventSequences.IEventSequence;
 

@@ -12,6 +12,7 @@ using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
@@ -120,6 +121,16 @@ public class ReadModels(
     /// <inheritdoc/>
     public async Task Register<TReadModel>()
     {
+        // A read model nothing in this client knows yet, carrying model-bound attributes, is a request to register it
+        // explicitly - its projection is registered along with it, which in turn registers the read model below.
+        if (!projections.HasFor<TReadModel>() &&
+            !reducers.HasFor<TReadModel>() &&
+            typeof(TReadModel).HasModelBoundProjectionAttributes())
+        {
+            await projections.Register<TReadModel>();
+            return;
+        }
+
         var observerType = ReadModelObserverType.Projection;
         var observerIdentifier = string.Empty;
 
@@ -449,7 +460,9 @@ public class ReadModels(
     /// projection when resolving the instance by key instead of reading an empty sink and returning null.
     /// </remarks>
     SinkTypeId GetSinkTypeIdFor(Type readModelType) =>
-        readModelType.IsPassive() ? SinkTypeId.None : _defaultSinkTypeId;
+        readModelType.IsPassive() || (projections is IKnowPassiveProjections passiveProjections && passiveProjections.IsPassive(readModelType))
+            ? SinkTypeId.None
+            : _defaultSinkTypeId;
 
     List<IndexDefinition> GetIndexesForType(Type type, string prefix)
     {

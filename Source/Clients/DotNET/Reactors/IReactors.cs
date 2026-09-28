@@ -44,6 +44,50 @@ public interface IReactors
     Task<IReactorHandler> Register(ReactorId id, Action<IReactorDefinitionBuilder> configure, Func<ReactorEvent, CancellationToken, Task> handle);
 
     /// <summary>
+    /// Define a reactor fluently, without registering it.
+    /// </summary>
+    /// <param name="id">The stable reactor identifier.</param>
+    /// <param name="define">Declares the reactor's handlers, event sequence and replay policy on an <see cref="IReactorBuilder"/>.</param>
+    /// <returns>The <see cref="IReactorDefinition"/>, which can be inspected and then registered with <see cref="Register(IReactorDefinition)"/>.</returns>
+    /// <remarks>
+    /// Event types are resolved against the event types this client knows at the time of the call, which is also what
+    /// an all-events subscription is expanded to.
+    /// </remarks>
+    /// <exception cref="NoEventTypesForReactor">Thrown when the definition subscribes to no event types.</exception>
+    /// <exception cref="Events.TypeIsNotAnEventType">Thrown when a typed handler names a type that is not a known event type.</exception>
+    IReactorDefinition Define(ReactorId id, Action<IReactorBuilder> define);
+
+    /// <summary>
+    /// Define and register a reactor fluently, with typed and catch-all handlers.
+    /// </summary>
+    /// <param name="id">The stable reactor identifier.</param>
+    /// <param name="define">Declares the reactor's handlers, event sequence and replay policy on an <see cref="IReactorBuilder"/>.</param>
+    /// <returns>The registered handler, which can be inspected for state and failed partitions.</returns>
+    /// <remarks>
+    /// This is <see cref="Define"/> followed by <see cref="Register(IReactorDefinition)"/>.
+    /// </remarks>
+    /// <exception cref="NoEventTypesForReactor">Thrown when the definition subscribes to no event types.</exception>
+    /// <exception cref="Events.TypeIsNotAnEventType">Thrown when a typed handler names a type that is not a known event type.</exception>
+    /// <exception cref="ReactorAlreadyRegistered">Thrown when the identifier already belongs to a reactor in this client.</exception>
+    Task<IReactorHandler> Register(ReactorId id, Action<IReactorBuilder> define);
+
+    /// <summary>
+    /// Register a reactor from a fluent definition.
+    /// </summary>
+    /// <param name="definition">The <see cref="IReactorDefinition"/> to register.</param>
+    /// <returns>The registered handler, which can be inspected for state and failed partitions.</returns>
+    /// <remarks>
+    /// The reactor is an ordinary Chronicle reactor: it has an observer of its own, subscribed to exactly the
+    /// definition's <see cref="IReactorDefinition.EventTypes"/>, and it has state, failed partitions and replay like a
+    /// discovered reactor has. Each delivered event is deserialized to its CLR type and passed to
+    /// <see cref="IReactorDefinition.Handle"/>. The registration is sent to Chronicle immediately, and is sent again
+    /// whenever the connection is re-established. Delegate handlers report <see cref="IReactorHandler.ReactorType"/> as
+    /// <see cref="object"/>.
+    /// </remarks>
+    /// <exception cref="ReactorAlreadyRegistered">Thrown when the identifier already belongs to a reactor in this client.</exception>
+    Task<IReactorHandler> Register(IReactorDefinition definition);
+
+    /// <summary>
     /// Unregisters a reactor in this client, disconnecting its observation stream. An unknown identifier is ignored.
     /// </summary>
     /// <param name="id">The reactor identifier to unregister.</param>

@@ -90,6 +90,18 @@ public class ChronicleOptions(
     public bool AutoDiscoverAndRegister { get; set; } = autoDiscoverAndRegister;
 
     /// <summary>
+    /// Gets the <see cref="Registrations.ExplicitArtifacts"/> - read models, projections and reactors registered with the
+    /// client explicitly rather than found by discovery, for every event store the client creates.
+    /// </summary>
+    /// <remarks>
+    /// Register here while configuring the client - before it connects - so that every event store includes the
+    /// registrations in its normal registration pass and in every re-registration after a reconnect. An event store
+    /// that already exists is registered with directly, through its <see cref="IEventStore.Projections"/>,
+    /// <see cref="IEventStore.ReadModels"/> and <see cref="IEventStore.Reactors"/>.
+    /// </remarks>
+    public ExplicitArtifacts ExplicitArtifacts { get; } = new();
+
+    /// <summary>
     /// Gets the timeout when connecting in seconds.
     /// </summary>
     public int ConnectTimeout { get; set; } = connectTimeout;

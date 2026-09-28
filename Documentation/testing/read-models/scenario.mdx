@@ -3,17 +3,17 @@ uid: Chronicle.Testing.ReadModels.Scenario
 ---
 # ReadModelScenario
 
-`ReadModelScenario<TReadModel>` is a lightweight, in-process test utility that lets you verify the output of read model projections and reducers without a running Chronicle server or database.
+A read model scenario lets you check projection or reducer output without a running Chronicle server or database. The examples below use client tabs when a workflow is available; the .NET-only options and behavior are identified in the prose.
 
-It auto-detects how `TReadModel` is backed — by a reducer, a fluent projection, or a model-bound projection — and routes events through the appropriate engine.
+In .NET, `ReadModelScenario<TReadModel>` auto-detects how the read model is backed — by a reducer, a fluent projection, or a model-bound projection — and routes events through the appropriate engine.
 
-In a [Cratis Specification](/testing-with-cratis/), the event history is the **given**, `Because()` feeds that history through the scenario, and the read model properties are the **then**.
+In a .NET [Cratis Specification](/testing-with-cratis/), the event history is the **given**, `Because()` feeds that history through the scenario, and the read model properties are the **then**.
 
 ## Why use ReadModelScenario
 
-Integration tests against a live database are accurate but slow and fragile. `ReadModelScenario<TReadModel>` runs the same projection and reducer logic entirely in-process using null-stub storage, so your test suite stays fast without sacrificing correctness.
+Integration tests against a live database are useful for proving storage and network behavior, but cost more to run. An in-process scenario tests the supported projection or reducer logic without that infrastructure; it does not replace a kernel-backed integration test.
 
-## Installation
+## .NET installation
 
 `ReadModelScenario<TReadModel>` is in the `Cratis.Chronicle.Testing` NuGet package:
 
@@ -26,12 +26,12 @@ dotnet add package Cratis.Chronicle.Testing
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/basic" />
 
-`Given` is a fluent builder: call `ForEventSource(id)` to specify the event source, then `Events(...)` to feed events through the read model's projection or reducer in order. The result is stored in `Instance`.
+Pass events to the read-model logic, then assert on the result. In .NET, the scenario takes `Given.ForEventSource(id).Events(...)` and exposes `Instance`; in TypeScript, `given.forEventSource(id).events(...)` and an awaited `instance`. Kotlin folds events through `scenario.fold(...)`. The Java example has no scenario: it calls the reducer directly and asserts on what it returns.
 
 ## Event input serialization
 
-For projection-backed read models, seeded events pass through the `IEventSerializer` supplied by the
-scenario's `Defaults`, then through Chronicle's schema-aware JSON conversion. Projections therefore consume
+In the .NET scenario, seeded events for projection-backed read models pass through the `IEventSerializer` supplied by
+`Defaults`, then through Chronicle's schema-aware JSON conversion. Projections therefore consume
 the event's serialized representation, including serializer-owned property names, rather than a reflection
 walk of the CLR object. This also avoids reflecting over the parent links inside a nonempty `JsonObject`
 event property. Serialized content is re-read as case-sensitive JSON data before conversion, so a serializer's
@@ -45,19 +45,19 @@ state may contain nonempty `JsonObject` values. Reducers receive the initial sta
 
 ## Optional initial state
 
-Pass an initial state to the constructor when the read model starts from a non-default baseline:
+In .NET, pass an initial state to the constructor when the read model starts from a non-default baseline:
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/initial-state" />
 
 ## Injecting dependencies
 
-Pass an `IServiceProvider` to the constructor to supply mocks and stubs that the reducer or projection depends on:
+In .NET, pass an `IServiceProvider` to the constructor to supply mocks and stubs that the reducer or projection depends on:
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/injecting-dependencies" />
 
 ## Pre-seeding read model instances
 
-Use `Given.ForEventSourceId(id).ReadModel(instance)` to register a pre-built read model instance for
+In .NET, use `Given.ForEventSourceId(id).ReadModel(instance)` to register a pre-built read model instance for
 production code under test that calls `IReadModels.GetInstanceById`. This lets you test a service that
 fetches a read model by ID without replaying events through a full projection:
 
@@ -70,21 +70,20 @@ instances the scenario itself materialized means `Instances` or `InstanceForEven
 
 ## Per-run projections and artifacts
 
-Supply a `Defaults` built from your own `IClientArtifactsProvider` when artifacts are generated
-for a single spec run. Its event types, serializers, and projection discovery also apply to
-seeding; the next scenario can use a different provider without inheriting this one's artifacts.
-Register an `IProjectionFor<TReadModel>` type in the provider to use normal discovery, or
-configure a projection directly on this scenario:
+When a test generates artifacts for one run, give that scenario its own artifact catalog. The next
+scenario can then select a different projection without inheriting the first run's artifacts:
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/per-run-projection" />
 
-`WithProjection` takes precedence over discovered projections and reducers for that scenario only.
-It does not add a projection to the shared artifact registry. Create another scenario for another
-projection of the same read model, even in the same test assembly.
+In .NET, supply `Defaults` built from an `IClientArtifactsProvider` to control event types,
+serializers, and discovery during seeding. `WithProjection` can define a projection for one
+scenario and takes precedence over discovered projections and reducers; it does not register
+the projection process-wide. TypeScript selects the projection from the catalog passed to the
+scenario instead.
 
 ## Auto-detection
 
-`ReadModelScenario<TReadModel>` looks up a handler in the client artifacts registry — the same reflection-based
+In .NET, `ReadModelScenario<TReadModel>` looks up a handler in the client artifacts registry — the same reflection-based
 discovery Chronicle itself uses, over the project-referenced and package-referenced assemblies, resolved once per
 process — in this order:
 
@@ -94,7 +93,7 @@ process — in this order:
 
 If none are found, `NoReadModelHandlerFound` is thrown.
 
-## Define a projection for one run
+## Define a projection for one run (.NET)
 
 When a spec generates artifacts at runtime or needs a different mapping for the same read model, pass
 `new Defaults(artifactsProvider)` to `new ReadModelScenario<MyReadModel>(null, defaults)` and call
@@ -105,7 +104,7 @@ contract or process-wide projection registration is needed. The scenario's event
 
 ## Asking what Chronicle registered
 
-That registry is not private to the scenario. `scenario.ClientArtifactsProvider` hands out the very
+In .NET, that registry is not private to the scenario. `scenario.ClientArtifactsProvider` hands out the very
 `IClientArtifactsProvider` the scenario resolved its handler from, so a spec can ask what Chronicle registered
 instead of re-deriving it by reflecting over its own assemblies:
 
@@ -128,7 +127,7 @@ same instance.
 
 ## Strict event subscription
 
-By default the scenario mirrors the production projection engine, which filters an event source's stream down to the types the projection subscribes to — so seeding an unrelated audit or marker event is silently ignored. When you would rather be told, `WithStrictEventSubscription()` turns that silent skip into an `UnsubscribedEventSeeded` naming the offending event type:
+In .NET, the scenario mirrors the production projection engine by default, which filters an event source's stream down to the types the projection subscribes to — so seeding an unrelated audit or marker event is silently ignored. When you would rather be told, `WithStrictEventSubscription()` turns that silent skip into an `UnsubscribedEventSeeded` naming the offending event type:
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/strict-event-subscription" />
 
@@ -148,7 +147,7 @@ This applies to projection-backed read models. A reducer only invokes the handle
 
 ## Child collections
 
-`[ChildrenFrom<TEvent>]` child collections are materialized the same way they are at runtime, so a spec can assert the child rows directly on `Instance`. The child `key` may be any value the runtime accepts:
+In .NET, `[ChildrenFrom<TEvent>]` child collections are materialized the same way they are at runtime, so a spec can assert the child rows directly on `Instance`. The child `key` may be any value the runtime accepts:
 
 - `string`, `int`/`long`, `bool`, `enum`, `Guid`
 - the temporal primitives `DateOnly`, `TimeOnly`, `DateTime`, `DateTimeOffset`
@@ -160,7 +159,7 @@ Both same-event-source children (parent and child events share one event source)
 
 ## Multiple instances (joins and cross-stream)
 
-`Instance` returns a single threaded result, which is ambiguous when events span more than one event source — for example a `[Join]`, whose join-source event materializes a second instance. For those specs, assert against a specific instance with `InstanceForEventSourceId`, which resolves the intended instance from the sink even when another source's event was seeded first:
+In .NET, `Instance` returns a single threaded result, which is ambiguous when events span more than one event source — for example a `[Join]`, whose join-source event materializes a second instance. For those specs, assert against a specific instance with `InstanceForEventSourceId`, which resolves the intended instance from the sink even when another source's event was seeded first:
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/multiple-instances" />
 
@@ -173,7 +172,7 @@ If more than one instance materializes and you read `Instance`, it throws `Multi
 
 ## What the harness stands in for
 
-Running in-process is what makes this tier fast enough to use on every build, and the price is that some of what a deployed Chronicle does is stood in for. None of it is a defect — but a spec whose subject lives in a substituted layer passes just as confidently as one whose subject does not, so it is worth knowing which is which before you rely on a green.
+The .NET scenario runs in-process, making this tier fast enough to use on every build; the price is that some of what a deployed Chronicle does is stood in for. None of it is a defect — but a spec whose subject lives in a substituted layer passes just as confidently as one whose subject does not, so it is worth knowing which is which before you rely on a green.
 
 These are substituted for every scenario, whatever your read model looks like:
 
@@ -190,7 +189,7 @@ Four more are substituted only for certain shapes — and because the harness ca
 
 ## Asking what a scenario substituted
 
-`Substitutions` reports the substituted layers your read model's own shape reaches. It is derived from the read model and its projection alone, so you can read it before seeding anything:
+In .NET, `Substitutions` reports the substituted layers your read model's own shape reaches. It is derived from the read model and its projection alone, so you can read it before seeding anything:
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/substitutions" />
 
@@ -209,7 +208,7 @@ To make that binding rather than advisory, opt in to strict fidelity. A read mod
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/strict-fidelity" />
 
-## Notes
+## .NET notes
 
 - `Instance` is `null` until `Given` is called, or if no events were processed.
 - Each `Given.ForEventSource(id).Events(...)` call applies events to the specified event source. Call it multiple times to simulate events from different event sources.

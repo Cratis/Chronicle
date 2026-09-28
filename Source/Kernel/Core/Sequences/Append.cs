@@ -69,7 +69,21 @@ public record Append(
     public Task<AppendResult> Handle(
         IGrainFactory grainFactory,
         RequestCausation causation,
-        ICurrentPrincipalAccessor principalAccessor)
+        ICurrentPrincipalAccessor principalAccessor) => HandleWithNamedTags(grainFactory, causation, principalAccessor, []);
+
+    /// <summary>
+    /// Handles an append with validated named tags.
+    /// </summary>
+    /// <param name="grainFactory">The grain factory.</param>
+    /// <param name="causation">The request causation.</param>
+    /// <param name="principalAccessor">The current principal.</param>
+    /// <param name="namedTags">The structured named tags.</param>
+    /// <returns>The append result.</returns>
+    internal Task<AppendResult> HandleWithNamedTags(
+        IGrainFactory grainFactory,
+        RequestCausation causation,
+        ICurrentPrincipalAccessor principalAccessor,
+        IReadOnlyCollection<Concepts.Events.NamedTag> namedTags)
     {
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         var route = AppendRoute.Resolve(EventSourceType?.Value, EventStreamType?.Value, EventStreamId?.Value);
@@ -83,6 +97,11 @@ public record Append(
         var scope = ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None;
         var subject = string.IsNullOrWhiteSpace(Subject) ? null : new Subject(Subject);
 
-        return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject);
+        if (namedTags.Count == 0)
+        {
+            return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject);
+        }
+
+        return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject, namedTags);
     }
 }

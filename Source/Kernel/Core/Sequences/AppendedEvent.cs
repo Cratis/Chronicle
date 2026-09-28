@@ -10,7 +10,6 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -74,9 +73,6 @@ public record AppendedEvent(
         DateTimeOffset? occurredFrom = default,
         DateTimeOffset? occurredTo = default)
     {
-        var queryContext = queryContextManager.Current;
-        var paging = queryContext.Paging;
-        var (sortBy, descending) = EventSequenceQuerySortByParser.From(queryContext.Sorting);
         var criteria = EventSequenceQueryCriteriaFactory.Create(new(
             eventSourceId?.Value,
             eventSourceType,
@@ -87,22 +83,60 @@ public record AppendedEvent(
             occurredFrom,
             occurredTo));
 
-        var (events, totalCount) = await EventSequenceQuerying.QueryPage(
-            storage,
-            eventCompliance,
-            eventStore,
-            @namespace,
-            eventSequenceId,
-            criteria,
-            paging.IsPaged ? paging.Page * paging.Size : 0,
-            paging.IsPaged ? paging.Size : int.MaxValue,
-            new EventSequenceQuerySort(sortBy, descending));
+        return await EventSequenceQuerying.QueryEvents(storage, eventCompliance, jsonSerializerOptions, queryContextManager, eventStore, @namespace, eventSequenceId, criteria);
+    }
 
-        // Paging is over the events matching the criteria, not over the whole sequence - the tail
-        // sequence number would overcount as soon as any filter is set.
-        queryContext.TotalItems = (int)totalCount;
+    /// <summary>
+    /// Queries a page of events using required structured named tag criteria, alongside the legacy dimensions.
+    /// </summary>
+    /// <param name="storage">The event storage.</param>
+    /// <param name="eventCompliance">The compliance release service.</param>
+    /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
+    /// <param name="queryContextManager">The paging and sorting context.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="namedTags">Structured named tag criteria for gRPC callers; any criterion may match.</param>
+    /// <param name="eventSourceId">Optional event source identifier.</param>
+    /// <param name="eventSourceType">Optional event source type.</param>
+    /// <param name="eventStreamType">Optional event stream type.</param>
+    /// <param name="correlationId">Optional correlation identifier.</param>
+    /// <param name="eventTypeIds">Optional comma separated event type identifiers.</param>
+    /// <param name="tags">Optional comma separated legacy tags.</param>
+    /// <param name="occurredFrom">Optional inclusive occurred bound.</param>
+    /// <param name="occurredTo">Optional exclusive occurred bound.</param>
+    /// <returns>A page of matching appended events.</returns>
+    public static Task<IEnumerable<AppendedEvent>> QueryEventsWithNamedTags(
+        IStorage storage,
+        IEventCompliance eventCompliance,
+        JsonSerializerOptions jsonSerializerOptions,
+        IQueryContextManager queryContextManager,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EventSequenceId eventSequenceId,
+        IEnumerable<NamedTagQueryCriterion>? namedTags = default,
+        EventSourceId? eventSourceId = default,
+        string? eventSourceType = default,
+        string? eventStreamType = default,
+        string? correlationId = default,
+        string? eventTypeIds = default,
+        string? tags = default,
+        DateTimeOffset? occurredFrom = default,
+        DateTimeOffset? occurredTo = default)
+    {
+        var criteria = EventSequenceQueryCriteriaFactory.CreateWithNamedTags(
+            new(
+                eventSourceId?.Value,
+                eventSourceType,
+                eventStreamType,
+                correlationId,
+                eventTypeIds,
+                tags,
+                occurredFrom,
+                occurredTo),
+            namedTags);
 
-        return events.ToApi(jsonSerializerOptions);
+        return EventSequenceQuerying.QueryEvents(storage, eventCompliance, jsonSerializerOptions, queryContextManager, eventStore, @namespace, eventSequenceId, criteria);
     }
 
     /// <summary>

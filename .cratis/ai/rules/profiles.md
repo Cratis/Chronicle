@@ -116,7 +116,7 @@ JVM language conventions are `kotlin.md` and `java.md`.
 | Profile ID | Description |
 |---|---|
 | `cratis/documentation` | Reader-centered product docs, technical examples, release notes, and voice review |
-| `cratis/content` | Release notes, social feed posts, and voice review |
+| `cratis/content` | Release notes, social feed posts, voice review, content length, and developer marketing and distribution |
 | `cratis/review` | Code review, performance, security |
 | `cratis/studio` | Studio MCP safety guidance |
 | `cratis/cli` | CLI operations |

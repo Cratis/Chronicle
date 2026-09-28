@@ -78,11 +78,73 @@ public interface IEventSequenceStorage
         Subject? subject = null);
 
     /// <summary>
+    /// Appends a single event with structured named tags. Providers without support reject nonempty tags before writing.
+    /// </summary>
+    /// <param name="sequenceNumber">The sequence number.</param>
+    /// <param name="eventSourceType">The event source type.</param>
+    /// <param name="eventSourceId">The event source id.</param>
+    /// <param name="eventStreamType">The event stream type.</param>
+    /// <param name="eventStreamId">The event stream id.</param>
+    /// <param name="eventType">The event type.</param>
+    /// <param name="correlationId">The correlation id.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedByChain">The identity chain.</param>
+    /// <param name="tags">The legacy tags.</param>
+    /// <param name="occurred">The occurrence time.</param>
+    /// <param name="content">The content by generation.</param>
+    /// <param name="contentHashes">The hashes by generation.</param>
+    /// <param name="subject">The subject.</param>
+    /// <param name="namedTags">The named tags.</param>
+    /// <returns>The append result.</returns>
+    /// <exception cref="NamedTagsNotSupported">Named tags cannot be persisted by this provider.</exception>
+    Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
+        EventSequenceNumber sequenceNumber,
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain,
+        IEnumerable<Tag> tags,
+        DateTimeOffset occurred,
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes,
+        Subject? subject,
+        IReadOnlyCollection<NamedTag> namedTags)
+    {
+        if (namedTags.Count > 0)
+        {
+            throw new NamedTagsNotSupported();
+        }
+
+        return Append(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedByChain, tags, occurred, content, contentHashes, subject);
+    }
+
+    /// <summary>
     /// Append multiple events to the event store transactional.
     /// </summary>
     /// <param name="events">Collection of events to append.</param>
     /// <returns>Result with appended events or duplicate sequence number error.</returns>
     Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events);
+
+    /// <summary>
+    /// Appends a batch with per-event named tags. An unsupported provider must reject named tags before writing any event.
+    /// </summary>
+    /// <param name="events">The events to append.</param>
+    /// <returns>The append result.</returns>
+    /// <exception cref="NamedTagsNotSupported">The provider cannot persist named tags.</exception>
+    Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendManyWithNamedTags(IEnumerable<EventToAppendToStorage> events)
+    {
+        var batch = events.ToArray();
+        if (batch.Any(@event => @event.NamedTags.Count > 0))
+        {
+            throw new NamedTagsNotSupported();
+        }
+
+        return AppendMany(batch);
+    }
 
     /// <summary>
     /// Revise a single event in the event store.

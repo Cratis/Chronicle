@@ -172,6 +172,48 @@ public interface IProjections
     Task Register();
 
     /// <summary>
+    /// Register a projection for a read model explicitly, defining it through the same builder an
+    /// <see cref="IProjectionFor{TReadModel}"/> uses, without the read model or the projection having to be discovered.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of read model the projection maintains.</typeparam>
+    /// <param name="define">Callback that defines the projection on the <see cref="IProjectionBuilderFor{TReadModel}"/>.</param>
+    /// <param name="id">Optional <see cref="ProjectionId"/>. Defaults to the full name of <typeparamref name="TReadModel"/>, which is also what a model-bound projection for it would be identified by.</param>
+    /// <returns>The <see cref="IProjectionHandler"/> for the registered projection.</returns>
+    /// <remarks>
+    /// <para>
+    /// The result is an ordinary projection and read model: <see cref="ReadModels.IReadModels"/> reads it, watches it and
+    /// resolves it by key exactly as it does a discovered one, and a projection defined with
+    /// <see cref="IProjectionBuilderFor{TReadModel}.Passive"/> is computed on demand rather than materialized.
+    /// </para>
+    /// <para>
+    /// The definition is built immediately, so a mistake in it surfaces here. When the client is connected the read model
+    /// and projection are sent to Chronicle before this returns. Either way the registration becomes part of every
+    /// later discovery and registration pass, including the one that runs when the connection is re-established.
+    /// Registering the same projection identifier for the same read model again replaces its definition.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ReadModelAlreadyHasProjection">Thrown when another projection already maintains <typeparamref name="TReadModel"/>.</exception>
+    /// <exception cref="VariantReadModelsCannotBeRegisteredExplicitly">Thrown when the definition declares <typeparamref name="TReadModel"/> a variant.</exception>
+    Task<IProjectionHandler> Register<TReadModel>(Action<IProjectionBuilderFor<TReadModel>> define, ProjectionId? id = null);
+
+    /// <summary>
+    /// Register the model-bound projection declared by the attributes on a read model explicitly, for a read model that
+    /// is not among the discovered artifacts.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of read model carrying the model-bound projection attributes.</typeparam>
+    /// <returns>The <see cref="IProjectionHandler"/> for the projection.</returns>
+    /// <remarks>
+    /// A read model that discovery already found is not registered twice - its existing handler is returned. The
+    /// projection is identified by the full name of <typeparamref name="TReadModel"/>, as a discovered one is, and it is
+    /// sent to Chronicle and included in later registration passes the same way
+    /// <see cref="Register{TReadModel}(Action{IProjectionBuilderFor{TReadModel}}, ProjectionId?)"/> describes.
+    /// </remarks>
+    /// <exception cref="ReadModelIsNotModelBound">Thrown when <typeparamref name="TReadModel"/> has no model-bound projection attributes.</exception>
+    /// <exception cref="ReadModelAlreadyHasProjection">Thrown when a different projection already maintains <typeparamref name="TReadModel"/>.</exception>
+    /// <exception cref="VariantReadModelsCannotBeRegisteredExplicitly">Thrown when <typeparamref name="TReadModel"/> is a variant.</exception>
+    Task<IProjectionHandler> Register<TReadModel>();
+
+    /// <summary>
     /// Query a projection declaration against the event log without registering it.
     /// </summary>
     /// <remarks>

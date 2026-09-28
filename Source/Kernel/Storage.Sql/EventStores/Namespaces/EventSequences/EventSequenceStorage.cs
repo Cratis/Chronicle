@@ -113,7 +113,26 @@ public class EventSequenceStorage(
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
         IDictionary<EventTypeGeneration, EventHash> contentHashes,
-        Subject? subject = null)
+        Subject? subject = null) =>
+        await Append(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedByChain, tags, occurred, content, contentHashes, subject, []);
+
+    /// <inheritdoc/>
+    public async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
+        EventSequenceNumber sequenceNumber,
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain,
+        IEnumerable<Tag> tags,
+        DateTimeOffset occurred,
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes,
+        Subject? subject,
+        IReadOnlyCollection<NamedTag> namedTags)
     {
         try
         {
@@ -158,6 +177,7 @@ public class EventSequenceStorage(
                 subject?.IsSet == true ? subject : null);
 
             scope.DbContext.Events.Add(eventEntry);
+            scope.DbContext.NamedTags.AddRange(namedTags.Select((tag, position) => NamedTagEntry.From(eventSequenceId.Value, sequenceNumber.Value, position, tag)));
             await scope.DbContext.SaveChangesAsync();
 
             var returnContent = content.TryGetValue(eventType.Generation, out var value) ? value : content.Values.FirstOrDefault() ?? new ExpandoObject();
@@ -180,7 +200,7 @@ public class EventSequenceStorage(
                 await identityStorage.GetFor(causedByChain),
                 tags,
                 eventHash,
-                Subject: resolvedSubject);
+                Subject: resolvedSubject) { NamedTags = namedTags };
 
             var generationalContent = EventEntryConverter.BuildGenerationalContent(content);
             return new AppendedEvent(eventContext, returnContent) { GenerationalContent = generationalContent };
@@ -231,7 +251,11 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events)
+    public Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events) =>
+        AppendManyWithNamedTags(events);
+
+    /// <inheritdoc/>
+    public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendManyWithNamedTags(IEnumerable<EventToAppendToStorage> events)
     {
         var eventsArray = events.ToArray();
         if (eventsArray.Length == 0)
@@ -278,6 +302,7 @@ public class EventSequenceStorage(
                     eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
 
                 scope.DbContext.Events.Add(eventEntry);
+                scope.DbContext.NamedTags.AddRange(eventToAppend.NamedTags.Select((tag, position) => NamedTagEntry.From(eventSequenceId.Value, eventToAppend.SequenceNumber.Value, position, tag)));
 
                 var resolvedSubject = eventToAppend.Subject?.IsSet == true
                     ? eventToAppend.Subject
@@ -298,7 +323,7 @@ public class EventSequenceStorage(
                     await identityStorage.GetFor(eventToAppend.CausedByChain),
                     eventToAppend.Tags,
                     appendedHash,
-                    Subject: resolvedSubject);
+                    Subject: resolvedSubject) { NamedTags = eventToAppend.NamedTags };
 
                 appendedEvents.Add(new AppendedEvent(eventContext, eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
                 {
@@ -333,7 +358,7 @@ public class EventSequenceStorage(
         // already triggered its own rewind, producing duplicate EventRedacted notifications.
         if (eventEntry.Type == GlobalEventTypes.Redaction)
         {
-            return await BuildAppendedEventFromRedactionEntry(eventEntry);
+            return await BuildAppendedEventFromRedactionEntry(eventEntry, scope);
         }
 
         // Capture the original event type BEFORE we overwrite it. The kernel uses the
@@ -379,7 +404,10 @@ public class EventSequenceStorage(
             await identityStorage.GetFor(eventCausedBy),
             [],
             EventHash.NotSet,
-            Subject: EventEntryConverter.GetSubject(eventEntry));
+            Subject: EventEntryConverter.GetSubject(eventEntry))
+        {
+            NamedTags = NamedTagEntries.At(await NamedTagEntries.LoadFor(scope.DbContext, eventSequenceId.Value, [eventEntry.SequenceNumber]), eventEntry.SequenceNumber)
+        };
 
         return new AppendedEvent(eventMetadata, content);
     }
@@ -615,7 +643,7 @@ public class EventSequenceStorage(
                 return Option<AppendedEvent>.None();
             }
 
-            var appendedEvent = await EventEntryConverter.ToAppendedEvent(eventEntry, eventStore, @namespace, identityStorage);
+            var appendedEvent = await ToAppendedEvent(eventEntry, scope);
             return (Option<AppendedEvent>)appendedEvent;
         }
         catch (Exception ex)
@@ -634,7 +662,7 @@ public class EventSequenceStorage(
             .FirstOrDefaultAsync(e => e.SequenceNumber == seqNumAt)
             ?? throw new InvalidOperationException($"Event with sequence number {sequenceNumber} not found in event sequence {eventSequenceId}");
 
-        return await EventEntryConverter.ToAppendedEvent(eventEntry, eventStore, @namespace, identityStorage);
+        return await ToAppendedEvent(eventEntry, scope);
     }
 
     /// <inheritdoc/>
@@ -656,7 +684,7 @@ public class EventSequenceStorage(
             return Option<AppendedEvent>.None();
         }
 
-        return await EventEntryConverter.ToAppendedEvent(eventEntry, eventStore, @namespace, identityStorage);
+        return await ToAppendedEvent(eventEntry, scope);
     }
 
     /// <inheritdoc/>
@@ -797,7 +825,7 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        return await ApplyCriteria(scope.DbContext.Events.AsQueryable(), criteria).CountAsync();
+        return await ApplyCriteria(scope.DbContext, eventSequenceId.Value, criteria).CountAsync();
     }
 
     /// <inheritdoc/>
@@ -811,7 +839,7 @@ public class EventSequenceStorage(
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
         var order = sort ?? EventSequenceQuerySort.Default;
-        var query = ApplyCriteria(scope.DbContext.Events.AsQueryable(), criteria);
+        var query = ApplyCriteria(scope.DbContext, eventSequenceId.Value, criteria);
         var ordered = order.By switch
         {
             EventSequenceQuerySortBy.Occurred => order.Descending ? query.OrderByDescending(e => e.Occurred) : query.OrderBy(e => e.Occurred),
@@ -824,10 +852,11 @@ public class EventSequenceStorage(
 
         // The page is bounded and its order is already decided here, so materialize it rather than
         // handing it to EventCursor - that cursor re-sorts ascending as it batches.
+        var namedTags = await NamedTagEntries.LoadFor(scope.DbContext, eventSequenceId.Value, entries.Select(entry => entry.SequenceNumber), cancellationToken);
         var events = new List<AppendedEvent>(entries.Count);
         foreach (var entry in entries)
         {
-            events.Add(await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage));
+            events.Add(await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber)));
         }
 
         return new MaterializedEventCursor(events);
@@ -840,7 +869,7 @@ public class EventSequenceStorage(
 
         // Date truncation differs per provider (and SQLite has no native equivalent at all), so read
         // the matching timestamps and bucket them with the shared helper every backend uses.
-        var occurrences = await ApplyCriteria(scope.DbContext.Events.AsQueryable(), criteria)
+        var occurrences = await ApplyCriteria(scope.DbContext, eventSequenceId.Value, criteria)
             .Select(e => e.Occurred)
             .ToListAsync();
 
@@ -856,11 +885,14 @@ public class EventSequenceStorage(
     /// <summary>
     /// Narrow a query to the events matching a set of criteria.
     /// </summary>
-    /// <param name="query">The <see cref="IQueryable{T}"/> of <see cref="EventEntry"/> to narrow.</param>
+    /// <param name="context">The event sequence table context.</param>
+    /// <param name="sequenceId">The current event sequence table name.</param>
     /// <param name="criteria">The <see cref="EventSequenceQueryCriteria"/> to apply.</param>
     /// <returns>The narrowed query - unchanged when the criteria narrows nothing.</returns>
-    static IQueryable<EventEntry> ApplyCriteria(IQueryable<EventEntry> query, EventSequenceQueryCriteria criteria)
+    static IQueryable<EventEntry> ApplyCriteria(EventSequenceDbContext context, string sequenceId, EventSequenceQueryCriteria criteria)
     {
+        var query = NamedTagFilters.Apply(context.Events, context.NamedTags, sequenceId, criteria.NamedTags);
+
         if (criteria.HasEventSourceId)
         {
             var eventSourceId = criteria.EventSourceId!.Value;
@@ -957,7 +989,13 @@ public class EventSequenceStorage(
             : EventSequenceNumber.First;
     }
 
-    async Task<AppendedEvent> BuildAppendedEventFromRedactionEntry(EventEntry redactionEntry)
+    async Task<AppendedEvent> ToAppendedEvent(EventEntry entry, DbContextScope<EventSequenceDbContext> scope)
+    {
+        var namedTags = await NamedTagEntries.LoadFor(scope.DbContext, eventSequenceId.Value, [entry.SequenceNumber]);
+        return await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber));
+    }
+
+    async Task<AppendedEvent> BuildAppendedEventFromRedactionEntry(EventEntry redactionEntry, DbContextScope<EventSequenceDbContext> scope)
     {
         var redactionEventType = EventEntryConverter.GetEventType(redactionEntry);
         var content = EventEntryConverter.GetContentForGeneration(redactionEntry, redactionEventType.Generation);
@@ -979,7 +1017,10 @@ public class EventSequenceStorage(
             await identityStorage.GetFor(eventCausedBy),
             [],
             EventEntryConverter.GetHashForGeneration(redactionEntry, redactionEventType.Generation),
-            Subject: EventEntryConverter.GetSubject(redactionEntry));
+            Subject: EventEntryConverter.GetSubject(redactionEntry))
+        {
+            NamedTags = NamedTagEntries.At(await NamedTagEntries.LoadFor(scope.DbContext, eventSequenceId.Value, [redactionEntry.SequenceNumber]), redactionEntry.SequenceNumber)
+        };
 
         return new AppendedEvent(eventMetadata, content);
     }
