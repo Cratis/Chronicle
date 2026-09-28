@@ -109,6 +109,11 @@ public class ChronicleOptions
     public ReadModels ReadModels { get; init; } = new ReadModels();
 
     /// <summary>
+    /// Gets or inits the trusted reverse proxies used for forwarded headers.
+    /// </summary>
+    public ForwardedHeaders ForwardedHeaders { get; init; } = new ForwardedHeaders();
+
+    /// <summary>
     /// Gets the authentication configuration.
     /// </summary>
     public Authentication Authentication { get; init; } = new Authentication();
