@@ -17,6 +17,7 @@ public class and_an_event_stream_type_filter_excludes_the_event : given.an_obser
         EventStore = "event-store",
         Namespace = "event-store-namespace",
         EventSequenceId = Concepts.EventSequences.EventSequenceId.Log,
+        FirstEventSequenceNumber = 53UL,
         TailEventSequenceNumber = 53UL,
         EventTypeTails = [new AppendedEventTypeTail { EventType = new Contracts.Events.EventType { Id = "a-recorded", Generation = 1 }, SequenceNumber = 53UL }],
         TimeoutMilliseconds = 1

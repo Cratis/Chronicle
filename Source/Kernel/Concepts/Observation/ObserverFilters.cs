@@ -27,7 +27,7 @@ public record ObserverFilters(
     /// <param name="appendedEvent">The event to check.</param>
     /// <returns>True when the event passes the filters.</returns>
     public bool Matches(AppendedEvent appendedEvent) =>
-        (EventSourceType is not { IsDefaultOrUnspecified: false } || appendedEvent.Context.EventSourceType == EventSourceType) &&
+        (EventSourceType is null || EventSourceType == Events.EventSourceType.Unspecified || appendedEvent.Context.EventSourceType == EventSourceType) &&
         (EventStreamType is not { IsAll: false } || appendedEvent.Context.EventStreamType == EventStreamType) &&
         (!Tags.Any() || Tags.Any(tag => appendedEvent.Context.Tags.Any(eventTag => eventTag.Value == tag)));
 }
