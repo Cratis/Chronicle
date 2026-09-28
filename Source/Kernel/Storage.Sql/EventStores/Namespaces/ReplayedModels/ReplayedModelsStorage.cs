@@ -43,14 +43,23 @@ public class ReplayedModelsStorage(EventStoreName eventStore, EventStoreNamespac
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
 
-        var replayedModel = await scope.DbContext.ReplayedModels
-            .FirstOrDefaultAsync(_ => _.ObserverId == occurrence.ObserverId);
-        if (replayedModel is null)
+        var observerId = occurrence.ObserverId.Value;
+        var readModel = occurrence.Type.Identifier.Value;
+        var candidates = await scope.DbContext.ReplayedModels
+            .Where(_ => _.ObserverId == observerId && _.ReadModelIdentifier == readModel)
+            .ToListAsync();
+
+        // An observer has one row per replay; remove only the replay this occurrence describes.
+        // Matched in memory because not every provider translates DateTimeOffset comparisons.
+        var replayedModels = candidates
+            .Where(_ => _.Started == occurrence.Occurred && _.RevertModelName == occurrence.RevertContainerName.Value)
+            .ToArray();
+        if (replayedModels.Length == 0)
         {
             return;
         }
 
-        scope.DbContext.ReplayedModels.Remove(replayedModel);
+        scope.DbContext.ReplayedModels.RemoveRange(replayedModels);
         await scope.DbContext.SaveChangesAsync();
     }
 }

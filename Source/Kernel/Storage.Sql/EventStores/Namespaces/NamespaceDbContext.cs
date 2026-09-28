@@ -98,6 +98,11 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             {
                 entity.ToTable(WellKnownTableNames.BehaviorPatterns);
                 entity.HasKey(e => new { e.GroupingKey, e.FacetSetHash });
+            })
+            .Entity<ReplayedModels.ReplayedModelOccurrence>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.ReplayedReadModels);
+                entity.HasKey(e => new { e.ObserverId, e.Started });
             });
 
         // Match the column mappings to the provider-native JSON type the migrations create

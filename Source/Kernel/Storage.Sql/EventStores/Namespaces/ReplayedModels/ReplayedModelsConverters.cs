@@ -21,6 +21,7 @@ public static class ReplayedModelsConverters
         {
             ObserverId = occurrence.ObserverId.Value,
             ReadModelIdentifier = occurrence.Type.Identifier.Value,
+            Generation = occurrence.Type.Generation.Value,
             ReadModelName = occurrence.ContainerName.Value,
             RevertModelName = occurrence.RevertContainerName.Value,
             Started = occurrence.Occurred
@@ -35,7 +36,7 @@ public static class ReplayedModelsConverters
         new(
             new(occurrence.ObserverId),
             occurrence.Started,
-            new ReadModelType(new ReadModelIdentifier(occurrence.ReadModelIdentifier), ReadModelGeneration.First),
+            new ReadModelType(new ReadModelIdentifier(occurrence.ReadModelIdentifier), new ReadModelGeneration(occurrence.Generation)),
             new(occurrence.ReadModelName),
             new(occurrence.RevertModelName));
 }
