@@ -6,6 +6,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Sinks;
+using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle;
 
@@ -83,6 +84,13 @@ public class ChronicleOptions(
     /// Gets the <see cref="ConcurrencyOptions"/> to use for concurrency management.
     /// </summary>
     public ConcurrencyOptions ConcurrencyOptions { get; set; } = concurrencyOptions ?? new ConcurrencyOptions();
+
+    /// <summary>
+    /// Gets or sets how units of work handle event staging after completion begins.
+    /// Defaults to <see cref="UnitOfWorkLifecyclePolicy.Compatibility"/> for this major version.
+    /// Strict will become the default in the next major version.
+    /// </summary>
+    public UnitOfWorkLifecyclePolicy UnitOfWorkLifecyclePolicy { get; set; } = UnitOfWorkLifecyclePolicy.Compatibility;
 
     /// <summary>
     /// Gets a value indicating whether to automatically discover and register artifacts.

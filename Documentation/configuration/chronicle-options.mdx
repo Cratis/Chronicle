@@ -61,6 +61,17 @@ In `appsettings.json`: `"EnableEventTypeGenerationValidation": true`.
 
 See [Generation Validation](../migrations/validation) for the full ruleset.
 
+### UnitOfWorkLifecyclePolicy
+
+Controls event staging once a unit of work begins completing.
+
+| | |
+|---|---|
+| Type | `UnitOfWorkLifecyclePolicy` (`Compatibility` or `Strict`) |
+| Default | `Compatibility` |
+
+In `appsettings.json`: `"UnitOfWorkLifecyclePolicy": "Strict"` under `Cratis:Chronicle`. Strict rejects late staging; Compatibility keeps legacy enrollment behavior and reports late attempts. Strict will become the default in the next major release. See [Staging after completion begins](../events/transactions#staging-after-completion-begins) for commit, rollback, and disposal behavior.
+
 ### ConnectionString
 
 The gRPC endpoint for Chronicle Server.
