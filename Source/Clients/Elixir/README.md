@@ -22,7 +22,7 @@ Releases containing the bundled `VERSION` file report their release version to M
 
 ## Migrating to grpc 1.x
 
-This contracts release requires Elixir 1.15 or later and `grpc ~> 1.0`.
+This contracts release requires Elixir 1.18 or later (its grpc 1.x dependencies need it), `grpc ~> 1.0` and `mint ~> 1.11`.
 The generated Chronicle protobuf messages and stubs do not change, but your
 application may need to update how it uses grpc:
 
