@@ -4,4 +4,4 @@
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>Thrown when an application attempts to complete a protected unit of work without its owner.</summary>
-public class ProtectedUnitOfWorkRequiresOwner() : Exception("Only the owner can commit a protected unit of work.");
+public class ProtectedUnitOfWorkRequiresOwner() : Exception("Only the owner can complete a protected unit of work (commit or roll back).");

@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Transactions;
 
 /// <summary>
-/// The exception that is thrown when a strict unit of work is rolled back while its commit is in progress.
+/// The exception that is thrown when a unit of work refuses rollback while its commit is in progress.
 /// </summary>
 /// <param name="correlationId">The correlation identifier of the unit of work being committed.</param>
 public class UnitOfWorkIsCompleting(CorrelationId correlationId)

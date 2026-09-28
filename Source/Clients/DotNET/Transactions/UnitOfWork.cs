@@ -37,7 +37,7 @@ public class UnitOfWork(
     /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client unit of work traces.
     /// </summary>
     internal static readonly IActivitySource<UnitOfWork> DefaultActivitySource =
-        new ActivitySource<UnitOfWork>(new System.Diagnostics.ActivitySource(ClientActivity.SourceName));
+        new ActivitySource<UnitOfWork>(new ActivitySource(ClientActivity.SourceName));
 
     readonly IActivitySource<UnitOfWork> _activitySource = activitySource ?? DefaultActivitySource;
     readonly ILogger<UnitOfWork>? _logger = logger;
@@ -308,20 +308,20 @@ public class UnitOfWork(
     public Task Commit() => CommitCore(false);
 
     /// <inheritdoc/>
-    public Task Rollback()
-    {
-        using var span = _activitySource.Rollback(correlationId.ToString());
+    /// <exception cref="ProtectedUnitOfWorkRequiresOwner">A claimed unit with enrolled decision reads must be rolled back by its owner.</exception>
+    /// <exception cref="UnitOfWorkIsCompleting">A commit is in progress under the strict policy, or a claimed unit with enrolled decision reads is committing under the compatibility policy.</exception>
+    /// <exception cref="UnitOfWorkIsAlreadyCommitted">The unit has already been committed.</exception>
+    /// <exception cref="UnitOfWorkIsAlreadyRolledBack">The unit has already been rolled back.</exception>
+    public Task Rollback() => RollbackCore(null, false);
 
-        lock (_decisionLock)
-        {
-            ThrowIfUnitOfWorkIsCompleted();
-            if (_completing && lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict) throw new UnitOfWorkIsCompleting(correlationId);
-            CompleteRollback();
-        }
-
-        _onCompleted(this);
-        return Task.CompletedTask;
-    }
+    /// <summary>Rolls back using the capability obtained by the transaction owner.</summary>
+    /// <param name="owner">The claimed owner capability.</param>
+    /// <returns>The rollback task.</returns>
+    /// <exception cref="ProtectedUnitOfWorkRequiresOwner">The capability does not match the claimed owner, or no owner has been claimed.</exception>
+    /// <exception cref="UnitOfWorkIsCompleting">A commit is in progress, regardless of lifecycle policy.</exception>
+    /// <exception cref="UnitOfWorkIsAlreadyCommitted">The unit has already been committed.</exception>
+    /// <exception cref="UnitOfWorkIsAlreadyRolledBack">The unit has already been rolled back.</exception>
+    public Task RollbackAsOwner(DecisionReadCommitOwner owner) => RollbackCore(owner, true);
 
     /// <inheritdoc/>
     public void OnCompleted(Action<IUnitOfWork> callback) => _onCompleted = callback;
@@ -334,11 +334,14 @@ public class UnitOfWork(
     }
 
     /// <inheritdoc/>
+    /// <remarks>Disposal during an in-flight commit is a no-op; the commit completes the unit.</remarks>
+    /// <exception cref="ProtectedUnitOfWorkRequiresOwner">A claimed, open unit with enrolled decision reads must be completed by its owner.</exception>
     public void Dispose()
     {
         lock (_decisionLock)
         {
             if (_completing || IsCompleted) return;
+            if (_commitOwner is not null && _hasEnrolledDecisionReads) throw new ProtectedUnitOfWorkRequiresOwner();
 
             using var span = _activitySource.Rollback(correlationId.ToString());
             CompleteRollback();
@@ -377,6 +380,27 @@ public class UnitOfWork(
         {
             throw new ConcurrencyScopeLabelMustBeSpecified();
         }
+    }
+
+    Task RollbackCore(DecisionReadCommitOwner? owner, bool fromOwner)
+    {
+        using var span = _activitySource.Rollback(correlationId.ToString());
+
+        lock (_decisionLock)
+        {
+            if (fromOwner && (_commitOwner is null || !ReferenceEquals(owner, _commitOwner))) throw new ProtectedUnitOfWorkRequiresOwner();
+            ThrowIfUnitOfWorkIsCompleted();
+            if (_completing)
+            {
+                if (lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict) throw new UnitOfWorkIsCompleting(correlationId);
+                if (fromOwner || (_commitOwner is not null && _hasEnrolledDecisionReads)) throw new UnitOfWorkIsCompleting(correlationId);
+            }
+            if (_commitOwner is not null && _hasEnrolledDecisionReads && !fromOwner) throw new ProtectedUnitOfWorkRequiresOwner();
+            CompleteRollback();
+        }
+
+        _onCompleted(this);
+        return Task.CompletedTask;
     }
 
     async Task CommitCore(bool fromOwner)

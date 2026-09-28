@@ -75,7 +75,29 @@ public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddle
         {
             if (!unitOfWork.IsCompleted)
             {
-                unitOfWork.Dispose();
+                if (owner is not null)
+                {
+                    try
+                    {
+                        await ((UnitOfWork)unitOfWork).RollbackAsOwner(owner);
+                    }
+                    catch (UnitOfWorkIsCompleting)
+                    {
+                        // An early commit is still in flight. No rollback occurred; preserve the action's exception.
+                    }
+                    catch (UnitOfWorkIsAlreadyCommitted)
+                    {
+                        // The early commit finished between the completion check and the rollback attempt.
+                    }
+                    catch (UnitOfWorkIsAlreadyRolledBack)
+                    {
+                        // Public rollback or disposal completed the plain unit after the completion check.
+                    }
+                }
+                else
+                {
+                    unitOfWork.Dispose();
+                }
             }
             throw;
         }
