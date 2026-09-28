@@ -16,9 +16,9 @@
 # Ownership here requests review; it does not require it. "Require review from Code Owners" is a
 # branch-protection setting and is deliberately NOT enabled, so a pull request touching these paths
 # auto-requests @Cratis/core and can still merge without their approval. What does block is the
-# `hot-core-gate` check, which reports touched paths on ordinary PR pushes and enforces the
-# full out-of-process matrix when `run-integration` is applied. Enabling code-owner review later
-# needs no change to this file.
+# `hot-core-gate` check reports touched paths on ordinary PR pushes; the separately named
+# `hot-core-gate-requested` check enforces the full matrix on a `run-integration` label event.
+# Enabling code-owner review later needs no change to this file.
 
 # area: Observer handling
 /Source/Kernel/Core/Observation/ @Cratis/core
@@ -46,4 +46,5 @@
 /.github/CODEOWNERS @Cratis/core
 /.github/hot-core-paths.txt @Cratis/core
 /.github/workflows/hot-core-gate.yml @Cratis/core
+/.github/workflows/requested-integration.yml @Cratis/core
 /.github/scripts/detect-hot-core-changes.py @Cratis/core

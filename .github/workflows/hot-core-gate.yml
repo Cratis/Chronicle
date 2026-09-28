@@ -1,21 +1,20 @@
 # Copyright (c) Cratis. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-# Detect hot-core changes on every PR push; request the full out-of-process matrix by applying
-# `run-integration`. Ordinary PR pushes report the affected paths and how to request the run.
-# This workflow has no paths filter so detection and its summary cover documentation-only PRs too.
+# Detect hot-core changes on every PR push; ordinary PR checks report affected paths and how
+# to request the matrix. Labeled runs use requested-integration.yml, with distinct check names.
+# This workflow has no paths filter so detection covers documentation-only PRs too.
 
 name: Hot Core Gate
 
 concurrency:
-  # A different label event cannot cancel an in-flight requested integration run.
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.action || github.event_name }}-${{ github.event.label.name || 'none' }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
   workflow_dispatch:
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened]
     branches:
       - "**"
 
@@ -28,7 +27,6 @@ env:
 
 jobs:
   detect:
-    if: github.event.action != 'labeled' || github.event.label.name == 'run-integration'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
@@ -54,7 +52,7 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.sha }}
-          RUN_INTEGRATION: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'run-integration' }}
+          RUN_INTEGRATION: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           if [ -z "$BASE_SHA" ]; then
             echo "Manual run - there is no pull request to diff, so the full matrix runs unconditionally."
@@ -64,10 +62,10 @@ jobs:
 
           python3 .github/scripts/detect-hot-core-changes.py --base "$BASE_SHA" --head "$HEAD_SHA"
 
-  # Builds what the matrix consumes, only for requested hot-core integration or dispatch.
+  # Manual dispatch retains its original full hot-core matrix; ordinary pushes do not build it.
   build:
     needs: [detect]
-    if: needs.detect.outputs.touched == 'true' && (github.event_name == 'workflow_dispatch' || github.event.label.name == 'run-integration')
+    if: needs.detect.outputs.touched == 'true' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -154,10 +152,10 @@ jobs:
         id: export
         run: echo "image=${{ env.HOT_CORE_IMAGE }}" >> "$GITHUB_OUTPUT"
 
-  # Labeled hot-core runs enforce the full matrix; ordinary pushes do not start it.
+  # Requested PR runs have their own matrix in requested-integration.yml.
   full-out-of-process-matrix:
     needs: [detect, build]
-    if: needs.detect.outputs.touched == 'true' && (github.event_name == 'workflow_dispatch' || github.event.label.name == 'run-integration')
+    if: needs.detect.outputs.touched == 'true' && github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: read
@@ -168,11 +166,10 @@ jobs:
       chronicle-image: ${{ needs.build.outputs.chronicle-image }}
       all-providers: true
 
-  # Keep this job name stable. `always()` reports the result even when integration was skipped,
-  # but irrelevant labels do not start a runner (or mask a detection failure).
+  # Keep this ordinary PR check name stable; label events never create a newer skipped check.
   hot-core-gate:
     needs: [detect, build, full-out-of-process-matrix]
-    if: always() && (github.event.action != 'labeled' || github.event.label.name == 'run-integration')
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -183,7 +180,7 @@ jobs:
           TOUCHED: ${{ needs.detect.outputs.touched }}
           BUILD: ${{ needs.build.result }}
           MATRIX: ${{ needs.full-out-of-process-matrix.result }}
-          RUN_INTEGRATION: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'run-integration' }}
+          RUN_INTEGRATION: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           if [ "$DETECT" != "success" ]; then
             echo "::error::Hot-core detection did not complete ($DETECT), so whether this pull request reaches the hot core is unknown. Failing closed."

@@ -4,12 +4,12 @@
 # The hot core - the areas where a fix breaks a sibling path.
 #
 # THE RULE: a pull request touching any path listed here gets a hot-core notice and needs a
-# review from the owner in `.github/CODEOWNERS`. Applying `run-integration` runs the full
-# out-of-process matrix, which the hot-core gate then requires to pass.
+# review from the owner in `.github/CODEOWNERS`. Applying `run-integration` starts the separate
+# requested-integration workflow, whose hot-core gate requires the full matrix to pass.
 #
 # This file is a committed contract, not documentation. `.github/scripts/detect-hot-core-changes.py`
-# reads it on every pull request and reports whether the hot core was touched. The workflow runs
-# the matrix on request, and the same script asserts that every pattern here is also owned in
+# reads it on every ordinary PR run and on requested integration runs, reporting whether the hot
+# core was touched. The same script asserts that every pattern here is also owned in
 # `.github/CODEOWNERS` - so the two can never drift apart in silence.
 #
 # WHY THESE AREAS AND NOT OTHERS: twenty of the last seventy-three regressions were fixes that broke

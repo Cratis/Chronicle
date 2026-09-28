@@ -1,0 +1,105 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+# Label events must not create newer skipped checks with the names of the ordinary PR build or
+# hot-core gate. Even inside this workflow, the label is part of each check name: a later semver
+# label cannot mask a failed requested integration run with a skipped check on the same SHA.
+name: Requested Integration
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event.label.name || 'none' }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    types: [labeled]
+    branches:
+      - "**"
+
+jobs:
+  requested-integration:
+    name: requested-integration-${{ github.event.label.name }}
+    if: github.event.label.name == 'run-integration'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/dotnet-build.yml
+    secrets: inherit
+    with:
+      integration_requested: true
+
+  requested-detect-hot-core:
+    name: requested-detect-hot-core-${{ github.event.label.name }}
+    if: github.event.label.name == 'run-integration'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      touched: ${{ steps.detect.outputs.touched }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Assert the hot-core contract is intact
+        run: python3 .github/scripts/detect-hot-core-changes.py --verify
+
+      - name: Detect hot-core changes
+        id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+          RUN_INTEGRATION: "true"
+        run: python3 .github/scripts/detect-hot-core-changes.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
+  requested-hot-core-matrix:
+    name: requested-hot-core-matrix-${{ github.event.label.name }}
+    needs: [requested-integration, requested-detect-hot-core]
+    if: github.event.label.name == 'run-integration' && needs.requested-detect-hot-core.outputs.touched == 'true' && github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/integration.yml
+    secrets: inherit
+    with:
+      # The requested .NET build publishes this image and the DEVELOPMENT-symbol artifact
+      # in this same workflow run; no second hot-core build or image push is needed.
+      build-output-artifact: build-output-development
+      chronicle-image: ghcr.io/cratis/chronicle:${{ github.sha }}
+      all-providers: true
+
+  hot-core-gate-requested:
+    name: hot-core-gate-requested-${{ github.event.label.name }}
+    needs: [requested-integration, requested-detect-hot-core, requested-hot-core-matrix]
+    if: always() && github.event.label.name == 'run-integration'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Decide
+        env:
+          DETECT: ${{ needs.requested-detect-hot-core.result }}
+          TOUCHED: ${{ needs.requested-detect-hot-core.outputs.touched }}
+          INTEGRATION: ${{ needs.requested-integration.result }}
+          MATRIX: ${{ needs.requested-hot-core-matrix.result }}
+        run: |
+          if [ "$DETECT" != "success" ]; then
+            echo "::error::Hot-core detection did not complete ($DETECT). Failing closed."
+            exit 1
+          fi
+
+          if [ "$INTEGRATION" != "success" ]; then
+            echo "::error::Requested integration did not pass ($INTEGRATION)."
+            exit 1
+          fi
+
+          if [ "$TOUCHED" != "true" ]; then
+            echo "No hot-core path is touched; the requested PR integration suites passed."
+            exit 0
+          fi
+
+          if [ "$MATRIX" != "success" ]; then
+            echo "::error::This PR changes the hot core, and the full out-of-process matrix did not pass ($MATRIX). See the detection summary; Dependabot PRs need to be reopened as ordinary PRs to push the image."
+            exit 1
+          fi
+
+          echo "This PR changes the hot core, and the full out-of-process matrix passed."
