@@ -38,13 +38,26 @@ public class Projections(
     INamingPolicy namingPolicy,
     IClientArtifactsActivator artifactsActivator,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<Projections> logger) : IProjections
+    ILogger<Projections> logger) : IProjections, IKnowPassiveProjections
 {
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+#if NET8_0
+    readonly object _explicitLock = new();
+#else
+    readonly Lock _explicitLock = new();
+#endif
+    readonly Dictionary<Type, IExplicitProjection> _explicitProjections = [];
+    readonly HashSet<Type> _registeredAtRuntime = [];
     Dictionary<Type, IProjectionHandler> _handlersByType = new();
     Dictionary<Type, IProjectionHandler> _handlersByModelType = new();
     Dictionary<Type, IProjectionHandler> _modelBoundHandlers = new();
     Dictionary<Type, ProjectionDefinition> _definitionsByType = new();
+    Dictionary<Type, IProjectionHandler> _discoveredHandlersByModelType = new();
+    Dictionary<Type, ExplicitProjectionRegistration> _explicitRegistrations = new();
+    Dictionary<Type, Exception> _explicitFailures = new();
+    IImmutableList<ProjectionDefinition> _discoveredDefinitions = ImmutableList<ProjectionDefinition>.Empty;
+    IImmutableList<ArtifactRegistration> _discoveredArtifactRegistrations = ImmutableList<ArtifactRegistration>.Empty;
+    IEnumerable<IProjectionHandler> _explicitHandlers = [];
     bool _discovered;
 
     /// <summary>Raised after definitions are registered successfully.</summary>
@@ -76,7 +89,7 @@ public class Projections(
     public bool HasFor(Type readModelType) => _handlersByModelType.ContainsKey(readModelType);
 
     /// <inheritdoc/>
-    public IEnumerable<IProjectionHandler> GetAllHandlers() => _handlersByType.Values.Concat(_modelBoundHandlers.Values);
+    public IEnumerable<IProjectionHandler> GetAllHandlers() => _handlersByType.Values.Concat(_modelBoundHandlers.Values).Concat(_explicitHandlers);
 
     /// <inheritdoc/>
     public IProjectionHandler GetHandlerFor<TProjection>()
@@ -190,13 +203,13 @@ public class Projections(
         // addressable only if it has a type of its own - and a model-bound one does not. Both are still registered and
         // both still write to the read model, which is the part worth knowing about; say so rather than resolving it
         // silently by declaration order.
-        _handlersByModelType = new Dictionary<Type, IProjectionHandler>();
+        var discoveredHandlersByModelType = new Dictionary<Type, IProjectionHandler>();
         var claimedBy = new Dictionary<Type, string>();
 
         foreach (var kvp in _handlersByType)
         {
             var readModelType = kvp.Key.GetReadModelType();
-            if (_handlersByModelType.TryAdd(readModelType, kvp.Value))
+            if (discoveredHandlersByModelType.TryAdd(readModelType, kvp.Value))
             {
                 claimedBy[readModelType] = kvp.Key.FullName ?? kvp.Key.Name;
             }
@@ -208,29 +221,48 @@ public class Projections(
 
         foreach (var kvp in _modelBoundHandlers)
         {
-            if (!_handlersByModelType.TryAdd(kvp.Key, kvp.Value))
+            if (!discoveredHandlersByModelType.TryAdd(kvp.Key, kvp.Value))
             {
                 logger.MoreThanOneProjectionForReadModel(kvp.Key, $"the model-bound projection on {kvp.Key.Name}", claimedBy[kvp.Key]);
             }
         }
 
-        Definitions =
-            ((IEnumerable<ProjectionDefinition>)[
-                .. _definitionsByType.Values.Select(_ => _).ToList(),
-                .. modelBoundDefinitions.Values
-            ]).ToImmutableList();
+        lock (_explicitLock)
+        {
+            _discoveredHandlersByModelType = discoveredHandlersByModelType;
 
-        ArtifactRegistrations =
-            ((IEnumerable<ArtifactRegistration>)[
-                .. _definitionsByType.Keys.Select(type => new ArtifactRegistration(type, null)),
-                .. modelBoundDefinitions.Keys.Select(type => new ArtifactRegistration(type, null)),
-                .. failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)),
-                .. modelBoundProjections.Failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value))
-            ]).ToImmutableList();
+            _discoveredDefinitions =
+                ((IEnumerable<ProjectionDefinition>)[
+                    .. _definitionsByType.Values.Select(_ => _).ToList(),
+                    .. modelBoundDefinitions.Values
+                ]).ToImmutableList();
+
+            _discoveredArtifactRegistrations =
+                ((IEnumerable<ArtifactRegistration>)[
+                    .. _definitionsByType.Keys.Select(type => new ArtifactRegistration(type, null)),
+                    .. modelBoundDefinitions.Keys.Select(type => new ArtifactRegistration(type, null)),
+                    .. failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)),
+                    .. modelBoundProjections.Failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value))
+                ]).ToImmutableList();
+
+            BuildAllExplicitProjections();
+            Compose();
+        }
 
         _discovered = true;
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc/>
+    public Task<IProjectionHandler> Register<TReadModel>(Action<IProjectionBuilderFor<TReadModel>> define, ProjectionId? id = null)
+    {
+        ArgumentNullException.ThrowIfNull(define);
+        return RegisterExplicit<TReadModel>(new DeclarativeExplicitProjection<TReadModel>(define, id ?? new ProjectionId(typeof(TReadModel).FullName!)));
+    }
+
+    /// <inheritdoc/>
+    public Task<IProjectionHandler> Register<TReadModel>() =>
+        RegisterExplicit<TReadModel>(new ModelBoundExplicitProjection(typeof(TReadModel)));
 
     /// <inheritdoc/>
     public async Task Register()
@@ -270,6 +302,51 @@ public class Projections(
         return new ProjectionQueryResult([.. queryResult.ReadModelEntries]);
     }
 
+    /// <inheritdoc/>
+    bool IKnowPassiveProjections.IsPassive(Type readModelType) =>
+        _handlersByModelType.TryGetValue(readModelType, out var handler) &&
+        Definitions.Any(definition => definition.Identifier == handler.Id.Value && !definition.IsActive);
+
+    /// <summary>
+    /// Add an explicit projection that is built by the next <see cref="Discover"/> rather than immediately.
+    /// </summary>
+    /// <param name="projection">The <see cref="IExplicitProjection"/> to add.</param>
+    /// <remarks>
+    /// This is how a registration made while the client is being configured reaches the event store: at that point the
+    /// event types the definition refers to are not known yet, so building it is left to discovery, which knows them.
+    /// </remarks>
+    internal void Add(IExplicitProjection projection)
+    {
+        lock (_explicitLock)
+        {
+            _explicitProjections[projection.ReadModelType] = projection;
+        }
+    }
+
+    /// <summary>
+    /// Forget the projections registered explicitly on this event store after it was created, keeping the ones it
+    /// received from the client's options.
+    /// </summary>
+    /// <remarks>
+    /// This takes them out of what this client declares, so the next registration of the full set retires them in
+    /// Chronicle like any other projection the client stops declaring. It exists for hosts that reuse one event store
+    /// across isolated runs, such as a specification fixture resetting between specifications.
+    /// </remarks>
+    internal void ForgetRuntimeRegistrations()
+    {
+        lock (_explicitLock)
+        {
+            foreach (var readModelType in _registeredAtRuntime)
+            {
+                _explicitProjections.Remove(readModelType);
+            }
+
+            _registeredAtRuntime.Clear();
+            BuildAllExplicitProjections();
+            Compose();
+        }
+    }
+
     /// <summary>
     /// Resolve the <see cref="IProjectionHandler"/> for a type that is either a projection type or a read model type.
     /// </summary>
@@ -282,6 +359,127 @@ public class Projections(
     /// </remarks>
     IProjectionHandler GetHandlerForProjectionOrReadModelType(Type type) =>
         _handlersByType.TryGetValue(type, out var handler) ? handler : _handlersByModelType[type];
+
+    async Task<IProjectionHandler> RegisterExplicit<TReadModel>(IExplicitProjection projection)
+    {
+        ExplicitProjectionRegistration registration;
+        lock (_explicitLock)
+        {
+            var readModelType = projection.ReadModelType;
+            if (_discoveredHandlersByModelType.TryGetValue(readModelType, out var discovered))
+            {
+                // Asking for a discovered model-bound read model to be registered is asking for what is already there.
+                if (projection.IsModelBound && discovered.Id == projection.Id)
+                {
+                    return discovered;
+                }
+
+                throw new ReadModelAlreadyHasProjection(readModelType, discovered.Id, projection.Id);
+            }
+
+            if (_explicitRegistrations.TryGetValue(readModelType, out var existing) && existing.Handler.Id != projection.Id)
+            {
+                throw new ReadModelAlreadyHasProjection(readModelType, existing.Handler.Id, projection.Id);
+            }
+
+            // Built here rather than deferred so that a mistake in the definition reaches the caller who made it.
+            registration = Build(projection);
+            _explicitProjections[readModelType] = projection;
+            _registeredAtRuntime.Add(readModelType);
+            _explicitRegistrations = new(_explicitRegistrations) { [readModelType] = registration };
+            _explicitFailures = _explicitFailures.Where(_ => _.Key != readModelType).ToDictionary(_ => _.Key, _ => _.Value);
+            Compose();
+        }
+
+        // Before the connection is up there is nothing to send to - the registration pass that runs once it is up
+        // includes this projection, because it is now part of the definitions that pass sends.
+        if (eventStore.Connection.Lifecycle.IsConnected)
+        {
+            // Read models are registered before the projections that maintain them, as the full registration pass does.
+            await eventStore.ReadModels.Register<TReadModel>();
+            await _servicesAccessor.Services.Projections.Register(new()
+            {
+                EventStore = eventStore.Name,
+                Owner = ProjectionOwner.Client,
+                Projections = [registration.Definition],
+                FullSet = false
+            });
+            Registered?.Invoke();
+        }
+
+        return registration.Handler;
+    }
+
+    /// <summary>
+    /// Build every explicit projection anew, recording the ones that cannot be built rather than failing discovery.
+    /// </summary>
+    /// <remarks>
+    /// Must be called while holding the explicit lock. An explicit projection maintaining a read model that discovery
+    /// found is dropped when it is the very same model-bound projection, and reported as a failure otherwise.
+    /// </remarks>
+    void BuildAllExplicitProjections()
+    {
+        var registrations = new Dictionary<Type, ExplicitProjectionRegistration>();
+        var failures = new Dictionary<Type, Exception>();
+        foreach (var (readModelType, projection) in _explicitProjections)
+        {
+            if (_discoveredHandlersByModelType.TryGetValue(readModelType, out var discovered))
+            {
+                if (!(projection.IsModelBound && discovered.Id == projection.Id))
+                {
+                    failures[readModelType] = new ReadModelAlreadyHasProjection(readModelType, discovered.Id, projection.Id);
+                    logger.FailedToCreateExplicitProjectionDefinition(readModelType, failures[readModelType]);
+                }
+
+                continue;
+            }
+
+            try
+            {
+                registrations[readModelType] = Build(projection);
+            }
+#pragma warning disable CA1031 // One unbuildable read model must not be able to take the rest of the read side with it.
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                logger.FailedToCreateExplicitProjectionDefinition(readModelType, ex);
+                failures[readModelType] = ex;
+            }
+        }
+
+        _explicitRegistrations = registrations;
+        _explicitFailures = failures;
+    }
+
+    ExplicitProjectionRegistration Build(IExplicitProjection projection)
+    {
+        var definition = projection.Build(new(namingPolicy, eventTypes, jsonSerializerOptions, eventStore.Name?.Value));
+        var handler = new ProjectionHandler(eventStore, definition.Identifier, projection.ReadModelType, definition.ReadModel, definition.EventSequenceId);
+        return new(definition, handler);
+    }
+
+    /// <summary>
+    /// Compose what discovery found with what was registered explicitly into the state everything else reads.
+    /// </summary>
+    /// <remarks>
+    /// Must be called while holding the explicit lock. Every published collection is replaced rather than mutated, so a
+    /// reader never sees one half-way through being composed.
+    /// </remarks>
+    void Compose()
+    {
+        var handlersByModelType = new Dictionary<Type, IProjectionHandler>(_discoveredHandlersByModelType);
+        foreach (var (readModelType, registration) in _explicitRegistrations)
+        {
+            handlersByModelType[readModelType] = registration.Handler;
+        }
+
+        _explicitHandlers = [.. _explicitRegistrations.Values.Select(_ => _.Handler)];
+        _handlersByModelType = handlersByModelType;
+        Definitions = _discoveredDefinitions.AddRange(_explicitRegistrations.Values.Select(_ => _.Definition));
+        ArtifactRegistrations = _discoveredArtifactRegistrations
+            .AddRange(_explicitRegistrations.Keys.Select(type => new ArtifactRegistration(type, null)))
+            .AddRange(_explicitFailures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)));
+    }
 
     /// <summary>
     /// Builds a definition for every declared fluent projection, isolating the ones that cannot be built.
@@ -332,6 +530,8 @@ public class Projections(
 
         return (result, failures);
     }
+
+    sealed record ExplicitProjectionRegistration(ProjectionDefinition Definition, IProjectionHandler Handler);
 
     static class ProjectionDefinitionCreator<TReadModel>
         where TReadModel : class
