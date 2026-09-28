@@ -45,13 +45,18 @@ they describe what a hook should do for tools that have no wiring yet.
 > it shows which gate is running, Escape cancels it, and it stops after
 > `CRATIS_HOOKS_GATE_TIMEOUT_SECONDS` (default 300 seconds, capped at 600), including planning and working-tree checks.
 > A timeout or a cancellation is reported as an error that says nothing was verified, never as a pass.
-> An inherited dry-run setting cannot produce a verified result, and a passing gate only verifies a
-> working tree that stayed unchanged throughout the run. Pi does **not** invoke or request this tool
+> An inherited dry-run setting cannot produce a verified result, and a passing gate checks that the
+> working tree stayed unchanged in the content it can observe during the run. Pi does **not** invoke or request this tool
 > at the end of each prompt: an edit or a read-only turn is not task completion. Run affected-project
 > checks while iterating, and run the full CI-equivalent gates before claiming completion or
 > pushing/opening a PR (Tier 1/2 where required). The explicit tool selects gates from **all** current
 > working-tree changes, not just the last turn, and does not replace the repository's full CI matrix.
 > The gate never runs in the background, where it would race the agent's next edits.
+
+Tracked-file stability follows Git-visible contents, not byte-exact disk contents: lossy clean/EOL
+conversion and Git's assume-unchanged or skip-worktree settings can hide raw disk changes. If you
+use those settings, independently verify raw file contents or remove the hiding settings before
+relying on this check.
 
 ## What is enforced
 
