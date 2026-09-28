@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Orleans.StateMachines;
 
 namespace Cratis.Chronicle.Observation.States;
 
