@@ -5,11 +5,11 @@ using Cratis.Chronicle.Storage.MongoDB.EventSequences.for_ReplicaSetMongoDBFixtu
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.for_ReplicaSetMongoDBFixture.when_running_startup_command;
 
-public class and_rs_initiate_fails : Specification
+public class and_rs_initiate_writes_its_error : Specification
 {
-    int _exitCode;
+    string _stderr;
 
-    async Task Because() => (_exitCode, _) = await a_failed_initiation_command.Run();
+    async Task Because() => (_, _stderr) = await a_failed_initiation_command.Run();
 
-    [Fact] void should_exit_with_the_mongosh_status() => _exitCode.ShouldEqual(23);
+    [Fact] void should_retain_the_mongosh_output() => _stderr.ShouldContain("simulated initiation error");
 }

@@ -50,16 +50,16 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
         }
         catch (Exception startupError)
         {
+            // Capture bounded diagnostics for every startup failure before disposing the container.
             // A TCP-ready mongod can still fail rs.initiate after Testcontainers reports the port ready.
-            // Capture its output before disposing the failed container so the cause survives the cleanup.
-            string? initiationFailureLogs = null;
+            var initiationFailed = false;
             try
             {
-                var (stdout, stderr) = await _container.GetLogsAsync();
-                if (stderr.Contains("MongoDB fixture rs.initiate failed (mongosh exit", StringComparison.Ordinal))
-                {
-                    initiationFailureLogs = $"mongosh stderr and mongod logs:\n{stderr[^Math.Min(stderr.Length, 4096)..]}\n{stdout[^Math.Min(stdout.Length, 4096)..]}";
-                }
+                using var logsTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                var (stdout, stderr) = await _container.GetLogsAsync(ct: logsTimeout.Token);
+                initiationFailed = stderr.Contains("MongoDB fixture rs.initiate failed (mongosh exit", StringComparison.Ordinal);
+                startupError.Data["MongoDB fixture stderr"] = stderr[^Math.Min(stderr.Length, 4096)..];
+                startupError.Data["MongoDB fixture stdout"] = stdout[^Math.Min(stdout.Length, 4096)..];
             }
             catch (Exception logsError)
             {
@@ -67,11 +67,20 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
                 startupError.Data["MongoDB fixture log retrieval error"] = logsError.Message;
             }
 
-            await _container.DisposeAsync();
-            _container = null;
-            if (initiationFailureLogs is not null)
+            try
             {
-                throw new InvalidOperationException($"MongoDB fixture rs.initiate failed. {initiationFailureLogs}", startupError);
+                await _container.DisposeAsync();
+            }
+            catch (Exception disposalError)
+            {
+                startupError.Data["MongoDB fixture disposal error"] = disposalError.Message;
+            }
+            _container = null;
+            if (initiationFailed)
+            {
+                throw new InvalidOperationException(
+                    $"MongoDB fixture rs.initiate failed. mongosh stderr and mongod logs:\n{startupError.Data["MongoDB fixture stderr"]}\n{startupError.Data["MongoDB fixture stdout"]}",
+                    startupError);
             }
             throw;
         }
@@ -117,6 +126,8 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
 
     internal async Task WaitForPrimary(Func<CancellationToken, Task<BsonDocument>> probe)
     {
+        // Testcontainers 4.15.0 caches IContainer.State at its last readiness inspection; it cannot
+        // detect a subsequent exit here. Retain the 45-second deadline rather than polling Docker.
         using var timeout = new CancellationTokenSource(_primaryReadinessTimeout);
         BsonDocument? lastHello = null;
         Exception? lastError = null;
