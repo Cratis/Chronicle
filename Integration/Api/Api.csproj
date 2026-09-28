@@ -37,8 +37,14 @@
     </PropertyGroup>
 
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
-        <!-- Give the local image its own publish output so concurrent builds cannot wipe Client's image files. -->
-        <MSBuild Projects="$(MSBuildThisFileDirectory)../LocalKernelPublish.proj" Targets="PublishKernel" Properties="KernelPublishRid=$(_DockerPublishRid);KernelPublishName=integration-api" />
+        <!-- Publishes through Integration/LocalKernelPublish.proj rather than a local Exec. Integration/Client
+             needs the identical publish, and a solution build runs both projects in parallel; two independent
+             `dotnet publish` invocations wiped and wrote the same Server/out directory at the same time, and
+             each nested build of Contracts re-ran the proto generator - which deletes Source/Kernel/Protobuf
+             before writing it - so the two generator runs tore each other's output down. Calling the shared
+             target with the same global properties makes MSBuild's build-result cache run the publish once per
+             build, whichever project reaches it first; the other caller reuses that result instead of racing it. -->
+        <MSBuild Projects="$(MSBuildThisFileDirectory)../LocalKernelPublish.proj" Targets="PublishKernel" Properties="KernelPublishRid=$(_DockerPublishRid)" />
         <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../"/>
     </Target>
 

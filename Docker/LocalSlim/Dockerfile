@@ -28,7 +28,7 @@ WORKDIR /app
 COPY Docker/local-slim-entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
-COPY /Source/Kernel/Server/out/integration-client /app
+COPY /Source/Kernel/Server/out /app
 
 # Restore the executable bit on the apphost — publish artifacts can arrive without it
 # (upload-artifact drops Unix permissions) and the entrypoint runs it directly (exit 126 otherwise).

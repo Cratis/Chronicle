@@ -36,8 +36,13 @@
     </PropertyGroup>
 
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
-        <!-- Give the slim image its own publish output so concurrent builds cannot wipe Api's image files. -->
-        <MSBuild Projects="$(MSBuildThisFileDirectory)../LocalKernelPublish.proj" Targets="PublishKernel" Properties="KernelPublishRid=$(_DockerPublishRid);KernelPublishName=integration-client" />
+        <!-- Publishes through Integration/LocalKernelPublish.proj rather than a local Exec - see
+             Integration/Api/Api.csproj's BuildDocker target for why: this project and Api both publish the
+             same Server/out directory, a solution build runs them in parallel, and two independent
+             `dotnet publish` invocations raced each other's proto generation and wipe of Server/out. Calling
+             the shared target with the same global properties makes MSBuild's build-result cache run the
+             publish once per build; whichever project reaches it first pays for it, the other reuses the result. -->
+        <MSBuild Projects="$(MSBuildThisFileDirectory)../LocalKernelPublish.proj" Targets="PublishKernel" Properties="KernelPublishRid=$(_DockerPublishRid)" />
         <!--
         The integration tests use the slim image: kernel only, no embedded database.
         Every backing store runs in its own container so the local layout matches
