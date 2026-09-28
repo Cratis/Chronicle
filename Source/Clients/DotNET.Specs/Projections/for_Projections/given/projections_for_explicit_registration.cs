@@ -74,5 +74,8 @@ public class projections_for_explicit_registration : all_dependencies
     [FromEvent<CustomerRegistered>]
     public record RegisteredCustomer(string Name);
 
+    [FromEvent<CustomerRegistered>]
+    public readonly record struct RegisteredCustomerStruct(string Name);
+
     public record NotModelBound(string Name);
 }

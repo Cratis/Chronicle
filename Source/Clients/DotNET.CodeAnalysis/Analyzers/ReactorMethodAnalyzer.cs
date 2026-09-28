@@ -27,11 +27,11 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
     static readonly DiagnosticDescriptor ReturnTypeRule = new(
         id: DiagnosticIds.ReactorMethodReturnTypeMustBeSupported,
         title: "Reactor method has an unsupported return type",
-        messageFormat: "Reactor method '{0}' has unsupported return type '{1}'. Return void, Task, an event type, EventForEventSourceId, EventsWithConcurrencyScopes, IEnumerable of events, or a Task-wrapped side effect.",
+        messageFormat: "Reactor method '{0}' has unsupported return type '{1}'. Return void, Task, an event type, EventForEventSourceId, EventsWithConcurrencyScopes, an array or IEnumerable<T> sequence of events, or a Task-wrapped side effect.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "Chronicle discovers reactor methods only when their return type is void, Task, an event type, EventForEventSourceId, EventsWithConcurrencyScopes, an IEnumerable of events or targeted events, or a Task-wrapped side effect. Other synchronous return types are skipped at runtime.");
+        description: "Chronicle discovers reactor methods returning void, Task, a registered event type, EventForEventSourceId, EventsWithConcurrencyScopes, or a one-dimensional array or IEnumerable<T> implementation of events, targeted events, or objects. Other synchronous return types may be claimed by a registered side-effect handler; the analyzer cannot verify those claims statically.");
 
     static readonly DiagnosticDescriptor EventTypeRule = new(
         id: DiagnosticIds.ReactorEventParameterMustHaveAttribute,
@@ -211,16 +211,24 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
             return true;
         }
 
-        if (returnType is INamedTypeSymbol named &&
-            named.IsGenericType &&
-            named.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T)
+        if (returnType is IArrayTypeSymbol array)
         {
-            var element = named.TypeArguments[0];
-            return element.SpecialType == SpecialType.System_Object ||
-                   WellKnownTypes.HasEventTypeAttribute(element) ||
-                   (eventForEventSourceId != null && SymbolEqualityComparer.Default.Equals(element, eventForEventSourceId));
+            return array.IsSZArray && IsSupportedSequenceElement(array.ElementType, eventForEventSourceId);
         }
 
-        return false;
+        if (returnType.SpecialType == SpecialType.System_String)
+        {
+            return false;
+        }
+
+        return returnType is INamedTypeSymbol named &&
+               named.AllInterfaces.Concat([named]).Any(candidate =>
+                   candidate.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T &&
+                   IsSupportedSequenceElement(candidate.TypeArguments[0], eventForEventSourceId));
     }
+
+    static bool IsSupportedSequenceElement(ITypeSymbol element, INamedTypeSymbol? eventForEventSourceId) =>
+        element.SpecialType == SpecialType.System_Object ||
+        WellKnownTypes.HasEventTypeAttribute(element) ||
+        (eventForEventSourceId != null && SymbolEqualityComparer.Default.Equals(element, eventForEventSourceId));
 }
