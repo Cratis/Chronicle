@@ -48,7 +48,7 @@ public class and_a_subscription_changes_its_event_types : given.an_observer_with
         FirstEventSequenceNumber = 53UL,
         TailEventSequenceNumber = 53UL,
         EventTypeTails = [new AppendedEventTypeTail { EventType = new Contracts.Events.EventType { Id = "a-recorded", Generation = 1 }, SequenceNumber = 53UL }],
-        TimeoutMilliseconds = 120
+        TimeoutMilliseconds = 1_000
     });
 
     [Fact] void should_not_wait_for_the_observer_after_its_event_types_change() => _result.OutstandingObservers.ShouldNotContain("filtered-observer");

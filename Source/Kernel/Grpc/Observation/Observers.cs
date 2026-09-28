@@ -88,12 +88,16 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 .FailedPartitions
                 .GetFor(observerIds);
             var failedObserverIds = failedPartitions.Partitions.Select(_ => _.ObserverId.Value).ToHashSet(StringComparer.Ordinal);
+            var undecidedObservers = observers.Where(_ => NeedsSubscription(_, eventTypeTails, request.TailEventSequenceNumber, failedObserverIds)).ToArray();
+            var subscriptions = await Task.WhenAll(undecidedObservers.Select(observer =>
+                grainFactory.GetGrain<Cratis.Chronicle.Observation.IObserver>(
+                    new Concepts.Observation.ObserverKey(observer.Id, request.EventStore, request.Namespace, request.EventSequenceId)).GetSubscription()));
             var matchingObserverIds = new HashSet<string>(StringComparer.Ordinal);
             var outstanding = new List<string>();
-            foreach (var observer in observers)
+            for (var index = 0; index < undecidedObservers.Length; index++)
             {
-                var observerKey = new Concepts.Observation.ObserverKey(observer.Id, request.EventStore, request.Namespace, request.EventSequenceId);
-                var subscription = await grainFactory.GetGrain<Cratis.Chronicle.Observation.IObserver>(observerKey).GetSubscription();
+                var observer = undecidedObservers[index];
+                var subscription = subscriptions[index];
                 var subscribedEventTypes = subscription is { IsSubscribed: true }
                     ? subscription.EventTypes.Select(_ => _.Id.Value).ToArray()
                     : observer.EventTypes.Select(_ => _.Id).ToArray();
@@ -315,6 +319,29 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             select (definition, state);
 
         return observers.ToContract();
+    }
+
+    static bool NeedsSubscription(
+        ObserverInformation observer,
+        Dictionary<string, ulong> eventTypeTails,
+        ulong tailEventSequenceNumber,
+        HashSet<string> failedObserverIds)
+    {
+        if (failedObserverIds.Contains(observer.Id))
+        {
+            return true;
+        }
+
+        var lastHandled = (EventSequenceNumber)observer.LastHandledEventSequenceNumber;
+        if (!lastHandled.IsActualValue)
+        {
+            return true;
+        }
+
+        var rawTarget = eventTypeTails.Count == 0 || !observer.EventTypes.Any()
+            ? tailEventSequenceNumber
+            : observer.EventTypes.Where(type => eventTypeTails.ContainsKey(type.Id)).Max(type => eventTypeTails[type.Id]);
+        return lastHandled < (EventSequenceNumber)rawTarget;
     }
 
     static bool HasEffectiveFilters(Concepts.Observation.ObserverFilters filters) =>
