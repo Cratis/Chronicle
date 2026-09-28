@@ -1,25 +1,31 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.ComponentModel.DataAnnotations;
-
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayedModels;
 
 /// <summary>
 /// Represents a replayed model occurrence in the database.
 /// </summary>
+/// <remarks>
+/// An observer replays a read model any number of times, so an occurrence is identified by the
+/// observer together with when the replay started. The key is configured in <see cref="NamespaceDbContext"/>.
+/// </remarks>
 public class ReplayedModelOccurrence
 {
     /// <summary>
     /// Gets or sets the observer identifier.
     /// </summary>
-    [Key]
     public string ObserverId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the read model identifier.
     /// </summary>
     public string ReadModelIdentifier { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the read model generation that was replayed.
+    /// </summary>
+    public uint Generation { get; set; }
 
     /// <summary>
     /// Gets or sets the read model name.

@@ -3,6 +3,7 @@
 
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
@@ -18,6 +19,33 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     /// Gets the connection string for the container.
     /// </summary>
     public string ConnectionString => $"Host=localhost;Port={_container.GetMappedPublicPort(Port)};Database=chronicle;Username=postgres;Password=postgres";
+
+    /// <summary>
+    /// Creates a database of its own in the container, for a specification that must not share state.
+    /// </summary>
+    /// <returns>The connection string for the new database.</returns>
+    public async Task<string> CreateDatabase()
+    {
+        var name = $"spec_{Guid.NewGuid():N}";
+        await Execute($"CREATE DATABASE \"{name}\"");
+        return new NpgsqlConnectionStringBuilder(ConnectionString) { Database = name }.ToString();
+    }
+
+    /// <summary>
+    /// Drops a database created by <see cref="CreateDatabase"/>, closing any connection still open to it.
+    /// </summary>
+    /// <param name="connectionString">The connection string <see cref="CreateDatabase"/> returned.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task DropDatabase(string connectionString)
+    {
+        await using (var connection = new NpgsqlConnection(connectionString))
+        {
+            NpgsqlConnection.ClearPool(connection);
+        }
+
+        var name = new NpgsqlConnectionStringBuilder(connectionString).Database;
+        await Execute($"DROP DATABASE IF EXISTS \"{name}\" WITH (FORCE)");
+    }
 
     /// <inheritdoc/>
     public async Task InitializeAsync()
@@ -38,5 +66,12 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         {
             await _container.DisposeAsync();
         }
+    }
+
+    async Task Execute(string sql)
+    {
+        await using var dataSource = NpgsqlDataSource.Create(ConnectionString);
+        await using var command = dataSource.CreateCommand(sql);
+        await command.ExecuteNonQueryAsync();
     }
 }

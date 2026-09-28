@@ -21,9 +21,10 @@ public static class ReplayedModelsConverters
         {
             ObserverId = occurrence.ObserverId.Value,
             ReadModelIdentifier = occurrence.Type.Identifier.Value,
+            Generation = occurrence.Type.Generation.Value,
             ReadModelName = occurrence.ContainerName.Value,
             RevertModelName = occurrence.RevertContainerName.Value,
-            Started = occurrence.Occurred
+            Started = ToStoredPrecision(occurrence.Occurred)
         };
 
     /// <summary>
@@ -35,7 +36,19 @@ public static class ReplayedModelsConverters
         new(
             new(occurrence.ObserverId),
             occurrence.Started,
-            new ReadModelType(new ReadModelIdentifier(occurrence.ReadModelIdentifier), ReadModelGeneration.First),
+            new ReadModelType(new ReadModelIdentifier(occurrence.ReadModelIdentifier), new ReadModelGeneration(occurrence.Generation)),
             new(occurrence.ReadModelName),
             new(occurrence.RevertModelName));
+
+    /// <summary>
+    /// Truncates a replay start to whole microseconds, the finest precision every SQL provider stores.
+    /// </summary>
+    /// <param name="started">When the replay started.</param>
+    /// <returns>The start as it is stored.</returns>
+    /// <remarks>
+    /// PostgreSQL keeps microseconds while <see cref="DateTimeOffset"/> has 100 nanosecond ticks, so a start held
+    /// in memory would otherwise never equal the one read back, and the start is part of the row's key.
+    /// </remarks>
+    internal static DateTimeOffset ToStoredPrecision(DateTimeOffset started) =>
+        started.AddTicks(-(started.Ticks % TimeSpan.TicksPerMicrosecond));
 }

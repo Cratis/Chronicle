@@ -42,7 +42,7 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
                 return Task.CompletedTask;
             });
 
-        return builder.Build();
+        return WithReservedKernelPorts(builder).Build();
     }
 
     /// <summary>

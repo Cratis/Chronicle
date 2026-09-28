@@ -90,7 +90,8 @@ public class and_child_already_exists : Specification
             _namespace,
             CreateReadModelDefinition(),
             _database,
-            new ExpandoObjectConverter(new TypeFormats()));
+            new ExpandoObjectConverter(new TypeFormats()),
+            new ReplayingTables());
 
         // 1) FeatureCreated — root projection sets Name + initial-state for Slices.
         await ApplyFeatureCreated();

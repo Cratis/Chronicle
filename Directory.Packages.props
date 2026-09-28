@@ -107,6 +107,7 @@
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.1.1" />
     <PackageVersion Include="EphemeralMongo" Version="3.2.0" />
     <PackageVersion Include="Testcontainers" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.15.0" />
     <!--
         Testcontainers 4.13.0 brings in SSH.NET 2025.1.0, which GHSA-q939-rpr3-3284 covers. 2026.0.0 is the
         patched release, so every project referencing Testcontainers also references SSH.NET directly to pull

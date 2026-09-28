@@ -83,15 +83,17 @@ scenario instead.
 
 ## Auto-detection
 
-In .NET, `ReadModelScenario<TReadModel>` looks up a handler in the client artifacts registry — the same reflection-based
-discovery Chronicle itself uses, over the project-referenced and package-referenced assemblies, resolved once per
-process — in this order:
+In .NET, `ReadModelScenario<TReadModel>` looks up a handler in the client artifacts registry. By default, Chronicle's
+reflection-based discovery resolves that registry once per process from project-referenced and package-referenced
+assemblies. Supplying `Defaults` uses its `IClientArtifactsProvider` instead, so each run can discover a different
+set of handlers. Without an inline projection, handlers are selected in this order:
 
 1. **Reducer** — a class implementing `IReducerFor<TReadModel>`.
 2. **Fluent projection** — a class implementing `IProjectionFor<TReadModel>`.
 3. **Model-bound projection** — `TReadModel` itself carries `[FromEvent<T>]` or `[Key]` attributes.
 
-If none are found, `NoReadModelHandlerFound` is thrown.
+`WithProjection` takes precedence over all three, including a discovered reducer. If none are found and no
+inline projection was supplied, `NoReadModelHandlerFound` is thrown.
 
 ## Define a projection for one run (.NET)
 

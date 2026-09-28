@@ -60,7 +60,7 @@ public class RecordingSink : ISink
     public Task BeginBulk() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task EndBulk() => Task.CompletedTask;
+    public Task<IEnumerable<FailedPartition>> EndBulk() => Task.FromResult<IEnumerable<FailedPartition>>([]);
 
     /// <inheritdoc/>
     public Task BeginReplay(ReplayContext context) => Task.CompletedTask;
@@ -69,7 +69,7 @@ public class RecordingSink : ISink
     public Task ResumeReplay(ReplayContext context) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task EndReplay(ReplayContext context) => Task.CompletedTask;
+    public Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context) => Task.FromResult<IEnumerable<FailedPartition>>([]);
 
     /// <inheritdoc/>
     public Task Remove(ReadModelContainerName containerName) => Task.CompletedTask;

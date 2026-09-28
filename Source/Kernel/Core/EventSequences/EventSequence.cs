@@ -428,7 +428,7 @@ public class EventSequence(
             sequenceNumber,
             eventType,
             correlationId,
-            causation,
+            CausationForStorage(causation),
             await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
             DateTimeOffset.UtcNow,
             contentAsExpandoObject,
@@ -455,7 +455,7 @@ public class EventSequence(
             sequenceNumber,
             reason,
             correlationId,
-            causation,
+            CausationForStorage(causation),
             await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
             DateTimeOffset.UtcNow);
 
@@ -495,7 +495,7 @@ public class EventSequence(
             reason,
             eventTypes,
             correlationId,
-            causation,
+            CausationForStorage(causation),
             await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
             DateTimeOffset.UtcNow);
         await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
@@ -569,7 +569,7 @@ public class EventSequence(
                 eventToAppend.eventStreamId,
                 eventToAppend.EventType,
                 correlationId,
-                eventToAppend.Causation ?? causation,
+                CausationForStorage(eventToAppend.Causation ?? causation),
                 causedByChain,
                 eventToAppend.Tags,
                 eventToAppend.Occurred ?? DateTimeOffset.UtcNow,
@@ -638,6 +638,11 @@ public class EventSequence(
         return AppendManyResult.Success(correlationId, appendedEventsList.Select(@event => @event.Context.SequenceNumber));
     }
 
+    IEnumerable<Causation> CausationForStorage(IEnumerable<Causation> causation) =>
+        options.Value.Events.CausationPropertyRetention == CausationPropertyRetention.Omit
+            ? causation.Select(entry => entry with { Properties = new Dictionary<string, string>() }).ToArray()
+            : causation;
+
     async Task<AppendResult> AppendValidAndCompliantEvent(
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -696,7 +701,7 @@ public class EventSequence(
                         eventStreamId,
                         eventType,
                         correlationId,
-                        causation,
+                        CausationForStorage(causation),
                         identity,
                         tags,
                         eventOccurred,
@@ -711,7 +716,7 @@ public class EventSequence(
                         eventStreamId,
                         eventType,
                         correlationId,
-                        causation,
+                        CausationForStorage(causation),
                         identity,
                         tags,
                         eventOccurred,

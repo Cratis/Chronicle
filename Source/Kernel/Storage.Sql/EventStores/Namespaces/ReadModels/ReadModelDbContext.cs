@@ -127,7 +127,7 @@ public class ReadModelDbContext(
 
             if (keyColumn is not null)
             {
-                entity.HasKey(keyColumn.Name);
+                entity.HasKey(keyColumn.Name).HasName(PrimaryKeyNames.For(databaseType, tableName));
             }
         });
     }

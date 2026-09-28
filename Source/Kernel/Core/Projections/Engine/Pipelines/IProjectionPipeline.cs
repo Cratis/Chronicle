@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 
@@ -29,8 +30,8 @@ public interface IProjectionPipeline
     /// Notifies about the end of a replay.
     /// </summary>
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
-    /// <returns>Awaitable task.</returns>
-    Task EndReplay(ReplayContext context);
+    /// <returns>The partitions whose writes failed during the final flush.</returns>
+    Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context);
 
     /// <summary>
     /// Begin bulk operation mode.
@@ -41,8 +42,8 @@ public interface IProjectionPipeline
     /// <summary>
     /// End bulk operation mode.
     /// </summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task EndBulk();
+    /// <returns>The partitions whose writes failed during the final flush.</returns>
+    Task<IEnumerable<FailedPartition>> EndBulk();
 
     /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.

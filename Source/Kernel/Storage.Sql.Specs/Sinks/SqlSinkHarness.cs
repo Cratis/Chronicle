@@ -22,12 +22,18 @@ public class SqlSinkHarness : ISinkHarness
 {
     readonly SqliteConnection _connection = new("DataSource=:memory:");
     IReadOnlyList<ProjectedColumn> _columns = [];
+    readonly ReplayingTables _replayingTables = new();
+    ReadModelDefinition? _definition;
 
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
+        _definition = definition;
         _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration());
-        _connection.Open();
+        if (_connection.State != System.Data.ConnectionState.Open)
+        {
+            _connection.Open();
+        }
 
         // Honors the container the sink asks for rather than always handing back the main one: a replay
         // writes to its own container and the sink swaps that in when the replay ends, so a harness that
@@ -42,8 +48,19 @@ public class SqlSinkHarness : ISinkHarness
             "test-namespace",
             definition,
             database,
-            new ExpandoObjectConverter(new TypeFormats()));
+            new ExpandoObjectConverter(new TypeFormats()),
+            _replayingTables);
     }
+
+    /// <summary>
+    /// Creates another sink for the read model the last sink was created for, over the same database.
+    /// </summary>
+    /// <returns>A separate <see cref="ISink"/> instance writing to the same tables.</returns>
+    /// <remarks>
+    /// The kernel does not hand every caller the same sink instance: the projection pipeline, the replay handler
+    /// and the read model store each ask for one, and a pipeline built earlier keeps the sink it was built with.
+    /// </remarks>
+    public ISink CreateSinkForTheSameReadModel() => CreateSink(_definition!);
 
     /// <inheritdoc/>
     public void Dispose() => _connection.Dispose();

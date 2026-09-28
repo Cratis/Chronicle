@@ -24,6 +24,7 @@
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
         <PackageReference Include="OneOf" />
+        <PackageReference Include="Testcontainers.PostgreSql" />
     </ItemGroup>
 
     <!-- When building on macOS the publish must target linux-arm64 so the Docker image gets a

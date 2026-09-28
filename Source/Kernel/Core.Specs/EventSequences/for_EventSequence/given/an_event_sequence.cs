@@ -66,6 +66,7 @@ public class an_event_sequence : Specification
     protected List<IConstraintDefinition> _registeredConstraints;
 
     protected virtual int StatePersistenceInterval => 1000;
+    protected virtual CausationPropertyRetention CausationPropertyRetention => CausationPropertyRetention.Retain;
 
     /// <summary>
     /// Gets the interval the constraints-version check is throttled to. Zero — the default for specs — checks on
@@ -186,7 +187,8 @@ public class an_event_sequence : Specification
             Events = new Configuration.Events
             {
                 StatePersistenceInterval = StatePersistenceInterval,
-                ConstraintsVersionCheckInterval = ConstraintsVersionCheckInterval
+                ConstraintsVersionCheckInterval = ConstraintsVersionCheckInterval,
+                CausationPropertyRetention = CausationPropertyRetention
             }
         }));
         _silo.AddService(NullLogger<EventSequence>.Instance);

@@ -54,8 +54,7 @@ public class Sink : ISink
     readonly ReadModelIdentifier _readModelIdentifier;
     readonly string _tableName;
     readonly IReadOnlyList<ProjectedColumn> _columns;
-
-    volatile bool _isReplaying;
+    readonly ReplayingTables _replayingTables;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class.
@@ -65,13 +64,16 @@ public class Sink : ISink
     /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
     /// <param name="database">The <see cref="IDatabase"/> for accessing SQL storage.</param>
     /// <param name="expandoObjectConverter">The schema-aware <see cref="IExpandoObjectConverter"/>.</param>
+    /// <param name="replayingTables">The <see cref="ReplayingTables"/> shared by every sink, telling which tables a replay is rebuilding.</param>
     public Sink(
         Concepts.EventStoreName eventStoreName,
         Concepts.EventStoreNamespaceName @namespace,
         ReadModelDefinition readModel,
         IDatabase database,
-        IExpandoObjectConverter expandoObjectConverter)
+        IExpandoObjectConverter expandoObjectConverter,
+        ReplayingTables replayingTables)
     {
+        _replayingTables = replayingTables;
         _eventStoreName = eventStoreName;
         _namespace = @namespace;
         _database = database;
@@ -86,11 +88,22 @@ public class Sink : ISink
     public SinkTypeId TypeId => WellKnownSinkTypes.SQL;
 
     /// <summary>
-    /// Gets the table name the sink is currently writing to. Resolves to <c language="csharp">replay-{tableName}</c>
-    /// while a replay is in progress, and to the primary table name otherwise. EndReplay swaps the
-    /// two so the running system observes the rebuilt state atomically.
+    /// Gets the table name the projection pipeline currently reads and writes through the sink. Resolves to
+    /// <c language="csharp">replay-{tableName}</c> while a replay is in progress, and to the primary table name
+    /// otherwise. EndReplay swaps the two so the running system observes the rebuilt state atomically. Whether a
+    /// replay is in progress is shared by every sink for the table, whichever of them began or ends it.
     /// </summary>
-    string ActiveTableName => _isReplaying ? ReplayTableNameFor(_tableName) : _tableName;
+    /// <remarks>
+    /// Only the pipeline's own read-modify-write cycle follows the replay: <see cref="ApplyChanges(Key, IChangeset{AppendedEvent, ExpandoObject}, EventSequenceNumber, SinkWriteMode)"/>,
+    /// the <see cref="FindOrDefault"/> that loads the state a change applies to, and the root key lookup of
+    /// <see cref="TryFindRootKeyByChildValue"/>. <see cref="FindOrDefault"/> is also how a query reads one instance
+    /// by key, and the sink cannot tell that read from the pipeline's, so it follows the replay for both. Reading
+    /// instances for queries goes to the primary table through <see cref="QueriedTableNameFor"/>, so readers keep
+    /// seeing the previous state until the replay is promoted.
+    /// </remarks>
+    string ActiveTableName => IsReplaying ? ReplayTableNameFor(_tableName) : _tableName;
+
+    bool IsReplaying => _replayingTables.IsReplaying(_eventStoreName, _namespace, _tableName);
 
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
@@ -229,7 +242,7 @@ public class Sink : ISink
     public Task BeginBulk() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task EndBulk() => Task.CompletedTask;
+    public Task<IEnumerable<FailedPartition>> EndBulk() => Task.FromResult<IEnumerable<FailedPartition>>([]);
 
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
@@ -238,7 +251,8 @@ public class Sink : ISink
         // untouched so reads from the running system keep observing the previous state until
         // the swap in EndReplay. PrepareInitialRun routes through ActiveTableName, which now
         // resolves to the replay name.
-        _isReplaying = true;
+        await NamePrimaryKeyAfterPrimaryTable();
+        _replayingTables.Begin(_eventStoreName, _namespace, _tableName);
         await PrepareInitialRun();
         await BeginBulk();
     }
@@ -248,22 +262,24 @@ public class Sink : ISink
     {
         // Re-enter replay mode after an interruption without wiping the replay table — it
         // already contains the work the previous run produced before it was paused.
-        _isReplaying = true;
+        _replayingTables.Begin(_eventStoreName, _namespace, _tableName);
         await BeginBulk();
     }
 
     /// <inheritdoc/>
-    public async Task EndReplay(ReplayContext context)
+    public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
-        await EndBulk();
+        var failedPartitions = await EndBulk();
         try
         {
             await PerformRenameSwap(context);
         }
         finally
         {
-            _isReplaying = false;
+            _replayingTables.End(_eventStoreName, _namespace, _tableName);
         }
+
+        return failedPartitions;
     }
 
     /// <inheritdoc/>
@@ -325,6 +341,21 @@ public class Sink : ISink
         await ExecuteDdl(scope, BuildDropSql(scope, revertName));
         await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, _tableName, revertName));
         await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, replayName, _tableName));
+
+        // Renaming a table keeps its primary key name, so move each name along with its table; the
+        // next replay creates its shadow table with the replay table's primary key name again.
+        await PrimaryKeyConstraints.NameAfterTable(scope, revertName);
+        await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
+    }
+
+    /// <summary>
+    /// Frees the replay table's primary key name before the replay table is created. The primary table of a
+    /// database that swapped replays before primary keys followed their tables still holds that name.
+    /// </summary>
+    async Task NamePrimaryKeyAfterPrimaryTable()
+    {
+        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
     }
 
     static async Task ExecuteDdl(DbContextScope<ReadModelDbContext> scope, string sql)
@@ -418,10 +449,7 @@ public class Sink : ISink
     /// <inheritdoc/>
     public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
     {
-        // An explicit occurrence reads that specific table (e.g. the revert backup). Otherwise
-        // default to ActiveTableName so that during replay, queries observe the in-progress
-        // shadow table — matching MongoDB's Collection routing.
-        var containerName = occurrence?.Value ?? ActiveTableName;
+        var containerName = QueriedTableNameFor(occurrence);
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
         var totalCount = await scope.DbContext.Entries.CountAsync();
         var entries = await OrderByKey(scope.DbContext.Entries.AsNoTracking()).Skip(skip).Take(take).ToListAsync();
@@ -431,12 +459,13 @@ public class Sink : ISink
     /// <inheritdoc/>
     public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
     {
-        var containerName = occurrence?.Value ?? ActiveTableName;
-
         // Watch notifies projection changes, but misses reducer writes, removals, and the replay
         // rename swap. Poll stored state like other SQL live queries to observe all of these changes.
+        // The table is resolved on every poll rather than once for the subscription, so a subscription
+        // never stays bound to a table a replay promotion has renamed away.
         async Task<IEnumerable<ObservedPage>> ReadPage()
         {
+            var containerName = QueriedTableNameFor(occurrence);
             await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
             var totalCount = await scope.DbContext.Entries.CountAsync();
             var entries = await OrderByKey(scope.DbContext.Entries.AsNoTracking()).Skip(skip).Take(take).ToArrayAsync();
@@ -446,8 +475,21 @@ public class Sink : ISink
         return LiveQuery.Observe(ReadPage, _database.LiveQueryPollingInterval, ObservedPageComparer.Instance)
             .Select(pages => pages.Single().Entries.Select(MaterializeExpando).ToArray().AsEnumerable())
             .Catch<IEnumerable<ExpandoObject>, Exception>(error =>
-                Observable.Throw<IEnumerable<ExpandoObject>>(new FailedToObserveReadModelInstances(TypeId, _readModelIdentifier, containerName, error)));
+                Observable.Throw<IEnumerable<ExpandoObject>>(new FailedToObserveReadModelInstances(TypeId, _readModelIdentifier, QueriedTableNameFor(occurrence), error)));
     }
+
+    /// <summary>
+    /// Resolves the table instances are read from for a query.
+    /// </summary>
+    /// <param name="occurrence">The explicitly requested <see cref="ReadModelContainerName"/>, if any.</param>
+    /// <returns>The name of the table to read.</returns>
+    /// <remarks>
+    /// An explicit occurrence reads that specific table, such as the revert backup. Otherwise the primary table
+    /// is read even while a replay is in progress: the replay rebuilds its own table and the primary one keeps
+    /// the previous state until EndReplay promotes the rebuilt table, so queries never see a read model that is
+    /// empty or only partly rebuilt.
+    /// </remarks>
+    string QueriedTableNameFor(ReadModelContainerName? occurrence) => occurrence?.Value ?? _tableName;
 
     IQueryable<DynamicReadModelEntity> OrderByKey(IQueryable<DynamicReadModelEntity> entries)
     {

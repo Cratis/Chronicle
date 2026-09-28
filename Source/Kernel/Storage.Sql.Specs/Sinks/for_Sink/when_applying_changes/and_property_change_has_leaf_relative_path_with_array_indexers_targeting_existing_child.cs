@@ -82,7 +82,8 @@ public class and_property_change_has_leaf_relative_path_with_array_indexers_targ
             _namespace,
             CreateReadModelDefinition(),
             _database,
-            new ExpandoObjectConverter(new TypeFormats()));
+            new ExpandoObjectConverter(new TypeFormats()),
+            new ReplayingTables());
 
         // First event: adds "TheKey" child with intValue=10.
         await ApplyChildAdded("TheKey", 10);

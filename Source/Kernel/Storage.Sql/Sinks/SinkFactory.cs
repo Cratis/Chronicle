@@ -33,6 +33,7 @@ public class SinkFactory(IServiceProvider serviceProvider, IExpandoObjectConvert
     public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel)
     {
         var database = serviceProvider.GetRequiredService<IDatabase>();
-        return new Sink(eventStore, @namespace, readModel, database, expandoObjectConverter);
+        var replayingTables = serviceProvider.GetRequiredService<ReplayingTables>();
+        return new Sink(eventStore, @namespace, readModel, database, expandoObjectConverter, replayingTables);
     }
 }

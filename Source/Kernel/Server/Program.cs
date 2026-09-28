@@ -18,6 +18,7 @@ using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
@@ -89,6 +90,9 @@ var listeners = new List<(int Port, HttpProtocols Protocols, X509Certificate2? C
 KernelListeners.Configure(chronicleOptions, certificate, logger, (port, protocols, listenerCertificate) =>
     listeners.Add((port, protocols, listenerCertificate)));
 logger.ServerListening(chronicleOptions.Port);
+
+builder.Services.AddOptions<SocketTransportOptions>().Configure<IHostApplicationLifetime>((options, lifetime) =>
+    options.CreateBoundListenSocket = endpoint => ResilientListenSocket.Bind(endpoint, chronicleOptions.BindTimeout, logger, lifetime.ApplicationStopping));
 
 builder.WebHost.UseKestrel(options =>
 {

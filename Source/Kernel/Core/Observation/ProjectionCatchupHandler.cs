@@ -14,29 +14,46 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 /// <param name="projections"><see cref="IProjectionsManager"/> for managing projections.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for managing projection pipelines.</param>
+/// <param name="grainFactory">The grain factory used to record failed partitions.</param>
 /// <param name="logger">The logger.</param>
 public class ProjectionCatchupHandler(
     IProjectionsManager projections,
     IProjectionPipelineManager projectionPipelineManager,
+    IGrainFactory grainFactory,
     ILogger<ProjectionCatchupHandler> logger) : ICanHandleCatchupForObserver
 {
     /// <inheritdoc/>
     public Task<Result<ICanHandleCatchupForObserver.Error>> BeginCatchupFor(ObserverDetails observerDetails) =>
-        DoWork(observerDetails, pipeline => pipeline.BeginBulk());
+        DoWork(observerDetails, async pipeline =>
+        {
+            await pipeline.BeginBulk();
+            return Result<ICanHandleCatchupForObserver.Error>.Success();
+        });
 
     /// <inheritdoc/>
     public Task<Result<ICanHandleCatchupForObserver.Error>> ResumeCatchupFor(ObserverDetails observerDetails) =>
-        DoWork(observerDetails, pipeline => pipeline.BeginBulk());
+        DoWork(observerDetails, async pipeline =>
+        {
+            await pipeline.BeginBulk();
+            return Result<ICanHandleCatchupForObserver.Error>.Success();
+        });
 
     /// <inheritdoc/>
     public Task<Result<ICanHandleCatchupForObserver.Error>> EndCatchupFor(ObserverDetails observerDetails) =>
-        DoWork(observerDetails, pipeline => pipeline.EndBulk());
+        DoWork(observerDetails, async pipeline =>
+        {
+            var failedPartitions = (await pipeline.EndBulk()).ToArray();
+            await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
+            return failedPartitions.Length > 0
+                ? ICanHandleCatchupForObserver.Error.Unknown
+                : Result<ICanHandleCatchupForObserver.Error>.Success();
+        });
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
 
     async Task<Result<ICanHandleCatchupForObserver.Error>> DoWork(
         ObserverDetails observerDetails,
-        Func<IProjectionPipeline, Task> doWork)
+        Func<IProjectionPipeline, Task<Result<ICanHandleCatchupForObserver.Error>>> doWork)
     {
         try
         {
@@ -51,8 +68,7 @@ public class ProjectionCatchupHandler(
             }
 
             var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
-            await doWork(pipeline);
-            return Result<ICanHandleCatchupForObserver.Error>.Success();
+            return await doWork(pipeline);
         }
         catch (Exception ex)
         {

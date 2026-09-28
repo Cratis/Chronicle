@@ -8,6 +8,7 @@ using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 using MongoDB.Driver;
+using Testcontainers.PostgreSql;
 
 namespace Cratis.Chronicle.Integration;
 
@@ -320,7 +321,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 new XUnit.Integration.HttpsHealthWait(35000),
                 s => s.WithRetries(300).WithInterval(TimeSpan.FromSeconds(1)));
 
-        var kernelContainer = builder.WithWaitStrategy(waitStrategy).Build();
+        var kernelContainer = WithReservedKernelPorts(builder).WithWaitStrategy(waitStrategy).Build();
         _outOfProcessKernelContainer = kernelContainer;
         return kernelContainer;
     }
@@ -404,15 +405,12 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             return envConnectionString;
         }
 
-        _databaseContainer = new ContainerBuilder("postgres:16")
-            .WithImage("postgres:16")
+        // The module waits for TCP pg_isready, which the temporary init server cannot satisfy.
+        _databaseContainer = new PostgreSqlBuilder("postgres:16")
             .WithHostname(PostgreSqlHostName)
-            .WithPortBinding(5432, assignRandomHostPort: true)
             .WithNetwork(network)
-            .WithEnvironment("POSTGRES_PASSWORD", PostgreSqlPassword)
-            .WithEnvironment("POSTGRES_DB", _outOfProcessSqlDatabaseName)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
+            .WithPassword(PostgreSqlPassword)
+            .WithDatabase(_outOfProcessSqlDatabaseName)
             .Build();
 
         _databaseContainer.StartAsync().GetAwaiter().GetResult();
@@ -428,14 +426,17 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             return envConnectionString;
         }
 
-        var builder = new ContainerBuilder("mcr.microsoft.com/mssql/server:2025-latest")
-            .WithImage("mcr.microsoft.com/mssql/server:2025-latest")
+        // The 2025-latest image crashed during startup in CI. Pin the stable 2022 CU20 image.
+        const string image = "mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04";
+        var builder = new ContainerBuilder(image)
+            .WithImage(image)
             .WithHostname(MsSqlHostName)
             .WithPortBinding(1433, assignRandomHostPort: true)
             .WithNetwork(network)
             .WithEnvironment("ACCEPT_EULA", "Y")
             .WithEnvironment("MSSQL_SA_PASSWORD", MsSqlPassword)
             .WithEnvironment("MSSQL_PID", "Developer")
+            .WithCreateParameterModifier(parameters => parameters.HostConfig.Memory = 3L * 1024 * 1024 * 1024)
 
             // Wait for MSSQL to accept actual queries, not just TCP connections. SQL Server
             // takes 20-60 seconds to fully initialize after the port opens; only checking the
@@ -460,8 +461,18 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         }
 
         _databaseContainer = builder.Build();
-
-        _databaseContainer.StartAsync().GetAwaiter().GetResult();
+        try
+        {
+            _databaseContainer.StartAsync().GetAwaiter().GetResult();
+        }
+        catch (ContainerNotRunningException) when (_databaseContainer.State == TestcontainersStates.Exited)
+        {
+            // Only a process that exited during startup warrants another attempt. Build a new
+            // container so Testcontainers does not reuse the failed instance or its host port.
+            _databaseContainer.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            _databaseContainer = builder.Build();
+            _databaseContainer.StartAsync().GetAwaiter().GetResult();
+        }
 
         return $"Server={MsSqlHostName},1433;Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
     }

@@ -80,8 +80,8 @@ public interface ISink
     /// <summary>
     /// End bulk operation mode.
     /// </summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task EndBulk();
+    /// <returns>The partitions whose writes failed during the final flush.</returns>
+    Task<IEnumerable<FailedPartition>> EndBulk();
 
     /// <summary>
     /// Enter replay state.
@@ -101,8 +101,8 @@ public interface ISink
     /// End replay state.
     /// </summary>
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task EndReplay(ReplayContext context);
+    /// <returns>The partitions whose writes failed during the final flush.</returns>
+    Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context);
 
     /// <summary>
     /// Remove a read model occurrence container from the sink.

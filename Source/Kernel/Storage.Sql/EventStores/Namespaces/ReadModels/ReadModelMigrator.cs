@@ -153,7 +153,7 @@ public class ReadModelMigrator(
         {
             createTable.PrimaryKey = new AddPrimaryKeyOperation
             {
-                Name = $"PK_{tableName}",
+                Name = PrimaryKeyNames.For(databaseType, tableName),
                 Table = tableName,
                 Columns = [key.Name]
             };

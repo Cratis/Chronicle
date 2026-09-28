@@ -151,7 +151,7 @@ public class EventStoreForTesting : IEventStore
 
             // The registry needs Connection during construction; schema lookups happen after discovery below.
             eventTypesStorage: new InMemoryEventTypesStorage(() => _eventTypes!, JsonSchemaGenerator));
-        Connection = new ChronicleConnectionForTesting(topLevelGrainFactory, topLevelStorage, _compliance, _jsonSerializerOptions);
+        Connection = new ChronicleConnectionForTesting(topLevelGrainFactory, topLevelStorage, _compliance, _jsonSerializerOptions, () => _eventTypes!);
 
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, _serviceProvider);
 

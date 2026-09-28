@@ -35,6 +35,7 @@ public static class SqlChronicleBuilderExtensions
         builder.SiloBuilder.AddStartupTask<ClusterDbContextMigrator>(ServiceLifecycleStage.First);
 
         builder.Services.AddSingleton<IDatabase, Database>();
+        builder.Services.AddSingleton<ReplayingTables>();
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
         builder.Services.AddSingleton<EncryptionKeyStorage>();
         builder.Services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
