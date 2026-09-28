@@ -47,4 +47,43 @@ internal static class ForwardedHeadersTrust
 
         return options;
     }
+
+    /// <summary>
+    /// Applies the same trusted proxy policy to ASP.NET Core's automatically inserted middleware
+    /// and to the middleware Chronicle inserts when automatic forwarding is disabled.
+    /// </summary>
+    /// <param name="services">The kernel services.</param>
+    /// <param name="configuration">The Chronicle options.</param>
+    internal static void Configure(IServiceCollection services, ChronicleOptions configuration)
+    {
+        var trust = Create(configuration);
+        services.PostConfigure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = trust.ForwardedHeaders;
+            options.KnownProxies.Clear();
+            foreach (var proxy in trust.KnownProxies)
+            {
+                options.KnownProxies.Add(proxy);
+            }
+
+            options.KnownIPNetworks.Clear();
+            foreach (var network in trust.KnownIPNetworks)
+            {
+                options.KnownIPNetworks.Add(network);
+            }
+        });
+    }
+
+    /// <summary>
+    /// Installs Chronicle's forwarded-headers middleware only when ASP.NET Core has not installed its own.
+    /// </summary>
+    /// <param name="app">The kernel application.</param>
+    /// <param name="configuration">The host configuration containing the framework's forwarding flag.</param>
+    internal static void Use(WebApplication app, IConfiguration configuration)
+    {
+        if (!string.Equals(configuration["ForwardedHeaders_Enabled"], "true", StringComparison.OrdinalIgnoreCase))
+        {
+            app.UseForwardedHeaders();
+        }
+    }
 }

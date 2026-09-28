@@ -63,6 +63,7 @@ var env = Environment.GetEnvironmentVariables();
 ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
 KernelStartupDiagnostics.ReportIdentityProviderCertificate(chronicleOptions, logger);
+ForwardedHeadersTrust.Configure(builder.Services, chronicleOptions);
 var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
@@ -322,9 +323,9 @@ app.Use(async (context, next) =>
 });
 
 // Accept the public scheme and client IP only from loopback or explicitly trusted reverse proxies.
-// The immediate proxy must replace incoming X-Forwarded-* headers before forwarding requests.
-// A network peer must never be able to forge HTTPS for the token endpoint or the client IP.
-app.UseForwardedHeaders(ForwardedHeadersTrust.Create(chronicleOptions));
+// ASPNETCORE_FORWARDEDHEADERS_ENABLED inserts its own middleware first; use Chronicle's policy
+// there and avoid inserting a second one that could consume another forwarded hop.
+ForwardedHeadersTrust.Use(app, builder.Configuration);
 
 app.UseRouting();
 
