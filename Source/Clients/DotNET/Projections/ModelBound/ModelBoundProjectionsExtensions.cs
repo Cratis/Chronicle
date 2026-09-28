@@ -2,8 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Reducers;
 
 namespace Cratis.Chronicle.Projections.ModelBound;
 
@@ -19,6 +22,15 @@ public static class ModelBoundProjectionsExtensions
     /// <returns>True if the type has model-bound projection attributes; otherwise, false.</returns>
     public static bool HasModelBoundProjectionAttributes(this Type type)
     {
+        // Event-sequence attributes also select where reactors and reducers observe events. They are not
+        // evidence that those types (or an event type) are read models with a projection to register.
+        if (!type.IsClass || typeof(IReactor).IsAssignableFrom(type) ||
+            typeof(IReducer).IsAssignableFrom(type) || typeof(IReadModelReactor).IsAssignableFrom(type) ||
+            type.IsDefined(typeof(EventTypeAttribute)) || type.IsDefined(typeof(EventTypeGenerationForAttribute)))
+        {
+            return false;
+        }
+
         try
         {
             if (type.GetCustomAttributes().Any(IsModelBoundProjectionAttribute))

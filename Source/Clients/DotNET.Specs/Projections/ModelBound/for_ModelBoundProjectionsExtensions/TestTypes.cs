@@ -1,9 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Reducers;
 
 #pragma warning disable SA1649 // File name should match first type name
 #pragma warning disable SA1402 // File may only contain a single type
@@ -18,6 +21,19 @@ public record TypeWithFromEventAttribute([Key] Guid Id, string Name);
 
 [EventSequence("custom-sequence")]
 public record TypeWithEventSequenceAttribute([Key] Guid Id, string Name);
+
+[EventLog]
+public class ReactorWithEventLog : IReactor;
+
+[EventSequence("custom-sequence")]
+public class ReactorWithEventSequence : IReactor;
+
+[EventLog]
+public class ReducerWithEventLog : IReducerFor<TypeWithEventSequenceAttribute>;
+
+[EventType("a1196681-f28b-4403-8ff7-e47878216acf")]
+[EventSequence("custom-sequence")]
+public record EventWithEventSequence;
 
 [Passive]
 public record TypeWithPassiveAttribute([Key] Guid Id, string Name);
