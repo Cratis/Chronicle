@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_ending_a_replay;
 [Collection(PostgreSqlCollection.Name)]
 public class and_an_earlier_release_left_the_primary_keys_with_the_swapped_tables_on_postgresql(PostgreSqlFixture fixture) : given.a_postgresql_read_model(fixture)
 {
-    const string Container = "test_read_models";
+    const string Container = "read_models_with_a_name_of_forty_eight_character";
     const string LegacyBackup = $"{Container}-20250101120000";
     const string Backup = $"{Container}-20260101120000";
 
@@ -43,8 +43,9 @@ public class and_an_earlier_release_left_the_primary_keys_with_the_swapped_table
         _backupPrimaryKey = await PrimaryKeyOf(Backup);
     }
 
+    [Fact] void should_have_a_container_name_of_48_characters() => Container.Length.ShouldEqual(48);
     [Fact] void should_hold_what_the_replay_produced() => _count.ShouldEqual(1);
-    [Fact] void should_name_the_primary_key_after_the_table() => _primaryKey.ShouldEqual($"PK_{Container}");
-    [Fact] void should_name_the_earlier_backups_primary_key_after_its_table() => _legacyBackupPrimaryKey.ShouldEqual($"PK_{LegacyBackup}");
-    [Fact] void should_name_the_new_backups_primary_key_after_its_table() => _backupPrimaryKey.ShouldEqual($"PK_{Backup}");
+    [Fact] void should_name_the_primary_key_after_the_table() => _primaryKey.ShouldEqual(ExpectedPrimaryKeyOf(Container));
+    [Fact] void should_move_the_earlier_backups_primary_key_to_its_hashed_name() => _legacyBackupPrimaryKey.ShouldEqual(ExpectedPrimaryKeyOf(LegacyBackup));
+    [Fact] void should_name_the_new_backups_primary_key_after_its_table() => _backupPrimaryKey.ShouldEqual(ExpectedPrimaryKeyOf(Backup));
 }
