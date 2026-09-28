@@ -6,8 +6,9 @@ using Cratis.Chronicle.Tools.WireCompatibility;
 using Google.Protobuf.Reflection;
 
 // Everything released within a major has to keep serving every release before it. This compares the wire contract
-// at HEAD against each released minor of the major, so a break is caught before it ships rather than by whoever
-// upgrades their server without upgrading every client - and so the report says which releases it breaks.
+// at HEAD against each released minor of the major up to the release being cut, so a break is caught before it
+// ships rather than by whoever upgrades their server without upgrading every client - and so the report says which
+// releases it breaks.
 Options options;
 
 try
@@ -42,7 +43,15 @@ try
         return 2;
     }
 
-    var baselines = afterFloor.Where(_ => !options.Withdrawn.Contains(_)).ToArray();
+    var afterWithdrawals = afterFloor.Where(_ => !options.Withdrawn.Contains(_)).ToArray();
+
+    // A release owes the major's wire contract to the releases that came before it, not after. A hotfix cut from a
+    // maintenance branch predates everything the mainline has shipped since and never had those contracts, so
+    // comparing against them reports each one as removed - which is how every release and pull request on such a
+    // branch came to fail this gate. The ceiling is the release being cut, so on the mainline, where the release is
+    // the newest, it excludes nothing and this changes nothing.
+    var baselines = options.UpTo is { } ceiling ? afterWithdrawals.Where(_ => ReleaseVersion.IsAtOrBefore(_, ceiling)).ToArray() : afterWithdrawals;
+    var later = afterWithdrawals.Length - baselines.Length;
     var results = new List<BaselineResult>();
 
     await Console.Out.WriteLineAsync($"Current:  {options.Current}");
@@ -57,6 +66,11 @@ try
         await Console.Out.WriteLineAsync($"Withdrawn: {string.Join(", ", options.Withdrawn)} (not compared against)");
     }
 
+    if (options.UpTo is not null)
+    {
+        await Console.Out.WriteLineAsync($"Up to:    {options.UpTo} ({later} later release(s) not compared against)");
+    }
+
     await Console.Out.WriteLineAsync();
 
     // Narrowing the gate is a decision, not a detail: a run that compared fewer releases than the major has must
@@ -66,9 +80,15 @@ try
         await Console.Out.WriteLineAsync($"::notice title=Wire compatibility narrowed::{string.Join(", ", options.Withdrawn)} withdrawn, so this run did not compare against it.");
     }
 
-    // A floor or a withdrawal that excludes everything is not the same as a clean run, and a gate that reports them
-    // the same way is a gate nobody can tell is switched off. Say it out loud, in the log and in the pull request.
-    if (baselines.Length == 0 && (options.Since is not null || options.Withdrawn.Count > 0))
+    if (options.GitHub && later > 0)
+    {
+        await Console.Out.WriteLineAsync($"::notice title=Wire compatibility narrowed::{later} release(s) newer than {options.UpTo} were not compared against, because a release serves what was published before it.");
+    }
+
+    // A floor, a ceiling or a withdrawal that excludes everything is not the same as a clean run, and a gate that
+    // reports them the same way is a gate nobody can tell is switched off. Say it out loud, in the log and in the
+    // pull request.
+    if (baselines.Length == 0 && (options.Since is not null || options.UpTo is not null || options.Withdrawn.Count > 0))
     {
         await Console.Out.WriteLineAsync("Every released baseline is excluded, so nothing was compared.");
         if (options.GitHub)
