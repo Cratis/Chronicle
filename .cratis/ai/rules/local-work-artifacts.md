@@ -22,10 +22,13 @@ dumps, and similar coordination files. These are **work records, not documentati
 - Knowledge that must outlive the session (real documentation, ADRs, operator
   guides) is written deliberately into the repository's documentation structure
   through normal review — not left behind as a work record.
-- **A worktree is a work record too.** Remove the worktree you created for a task
-  once its branch is merged to the default branch — pushed is not merged. Do it from
-  the parent checkout, after `git status --ignored` in the worktree, because a nested
-  `.ai-work/`, `.env` files and local databases are ignored and are deleted with it.
+- **A worktree is a work record too.** Create it outside the repository tree, for
+  example in a sibling `../.worktrees/` directory. A nested worktree inherits the
+  parent's `.globalconfig` alongside its own, causing .NET's `MultipleGlobalAnalyzerKeys`
+  errors or silently changing analyzer severities. Remove the worktree you created for
+  a task once its branch is merged to the default branch — pushed is not merged. Do it
+  from the parent checkout, after `git status --ignored` in the worktree, because a
+  nested `.ai-work/`, `.env` files and local databases are ignored and are deleted with it.
   If the branch must outlive the task unmerged, leave the worktree and say so in the
   handoff. Never `--force` a removal; a refusal means look, not push harder.
 - **A decision log is not a work record.** A decision — a durable choice with a

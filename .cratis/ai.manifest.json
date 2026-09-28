@@ -1,5 +1,5 @@
 {
-  "SourceRevision": "2d9a5c5136e1d997335e6db602fdb6a2ad8dabd0",
+  "SourceRevision": "2038ba23f4006767101a0940dffd6022e9a3a28c",
   "Files": [
     {
       "Source": "agents/backend-developer.md",
@@ -519,7 +519,7 @@
     {
       "Source": "rules/local-work-artifacts.md",
       "Destination": "rules/local-work-artifacts.md",
-      "Hash": "0E36CBCFC5741C857DB6F911ED7C7C0E405D0402472A71E660D0E8A2C523A776"
+      "Hash": "D25ADA6381510D49BC0642FADDEF4039E81685480115C137085CA17B828DDDED"
     },
     {
       "Source": "rules/new-repository-intake.md",
@@ -1219,7 +1219,7 @@
     {
       "Source": "skills/cratis-writing-voice-and-cadence/SKILL.md",
       "Destination": "skills/cratis-writing-voice-and-cadence/SKILL.md",
-      "Hash": "C95D5B48CC8895FC70EFAE01C11878A099B3C6BAC2B0C5D524E748EB3EBEDB07"
+      "Hash": "660C77FD36C5E048E8B59D0AB6A4073E6DCBDFD625251C5366589A4FFDB72F54"
     },
     {
       "Source": "skills/cratis-writing-voice-and-cadence/references/ai-tells.md",
