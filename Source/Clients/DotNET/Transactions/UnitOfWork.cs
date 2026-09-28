@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.Commands;
@@ -11,6 +12,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Traces;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Transactions;
 
@@ -21,11 +23,15 @@ namespace Cratis.Chronicle.Transactions;
 /// <param name="onCompleted">The action to call when the <see cref="IUnitOfWork"/> is completed.</param>
 /// <param name="eventStore">The <see cref="IEventStore"/> to use for the <see cref="IUnitOfWork"/>.</param>
 /// <param name="activitySource">Optional <see cref="IActivitySource{T}"/> for tracing. Defaults to a source named <see cref="ClientActivity.SourceName"/> when not provided.</param>
+/// <param name="lifecyclePolicy">The policy for staging events once completion begins.</param>
+/// <param name="logger">Optional logger for late staging diagnostics.</param>
 public class UnitOfWork(
     CorrelationId correlationId,
     Action<IUnitOfWork> onCompleted,
     IEventStore eventStore,
-    IActivitySource<UnitOfWork>? activitySource = null) : IUnitOfWork
+    IActivitySource<UnitOfWork>? activitySource,
+    UnitOfWorkLifecyclePolicy lifecyclePolicy,
+    ILogger<UnitOfWork>? logger = null) : IUnitOfWork
 {
     /// <summary>
     /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client unit of work traces.
@@ -34,6 +40,7 @@ public class UnitOfWork(
         new ActivitySource<UnitOfWork>(new System.Diagnostics.ActivitySource(ClientActivity.SourceName));
 
     readonly IActivitySource<UnitOfWork> _activitySource = activitySource ?? DefaultActivitySource;
+    readonly ILogger<UnitOfWork>? _logger = logger;
     readonly List<StagedEvents> _stagedEvents = [];
     readonly HashSet<EventSequenceId> _legacyEventSequenceIds = [];
     readonly object _decisionLock = new();
@@ -53,6 +60,31 @@ public class UnitOfWork(
     EventSequenceId? _eventSequenceId;
     LegacyStagedEvents? _currentLegacyEvents;
     DecisionReadCommitOwner? _commitOwner;
+
+    /// <summary>
+    /// Initializes a unit of work with compatibility staging behavior.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="onCompleted">Called on completion.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="activitySource">Optional activity source for tracing.</param>
+    public UnitOfWork(CorrelationId correlationId, Action<IUnitOfWork> onCompleted, IEventStore eventStore, IActivitySource<UnitOfWork>? activitySource = null)
+        : this(correlationId, onCompleted, eventStore, activitySource, UnitOfWorkLifecyclePolicy.Compatibility)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a unit of work with the given lifecycle policy.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="onCompleted">Called on completion.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="lifecyclePolicy">The lifecycle policy.</param>
+    /// <param name="logger">Optional logger for late staging diagnostics.</param>
+    public UnitOfWork(CorrelationId correlationId, Action<IUnitOfWork> onCompleted, IEventStore eventStore, UnitOfWorkLifecyclePolicy lifecyclePolicy, ILogger<UnitOfWork>? logger = null)
+        : this(correlationId, onCompleted, eventStore, null, lifecyclePolicy, logger)
+    {
+    }
 
     /// <inheritdoc/>
     public bool IsCompleted => _isCommitted || _isRolledBack;
@@ -87,11 +119,27 @@ public class UnitOfWork(
         ConcurrencyScope? concurrencyScope = default,
         IEnumerable<string>? tags = default,
         DateTimeOffset? occurred = default,
+        Subject? subject = default) =>
+        AddEventWithNamedTags(eventSequenceId, eventSourceId, @event, [], causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
+
+    /// <inheritdoc/>
+    public void AddEventWithNamedTags(
+        EventSequenceId eventSequenceId,
+        EventSourceId eventSourceId,
+        object @event,
+        IEnumerable<NamedTag> namedTags,
+        Causation causation,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
         lock (_decisionLock)
         {
-            ThrowIfProtectedUnitOfWorkIsCompleting();
+            ThrowIfStagingAfterCompletion();
             var scope = concurrencyScope ?? ConcurrencyScope.NotSet;
             if (_decisionScopes.Count != 0)
             {
@@ -127,6 +175,7 @@ public class UnitOfWork(
                 EventStreamId = eventStreamId ?? EventStreamId.Default,
                 EventSourceType = eventSourceType ?? EventSourceType.Default,
                 Tags = tags ?? [],
+                NamedTags = NamedTagConverters.Merge([], namedTags),
                 Occurred = occurred,
                 Subject = subject
             });
@@ -149,7 +198,7 @@ public class UnitOfWork(
     {
         lock (_decisionLock)
         {
-            ThrowIfProtectedUnitOfWorkIsCompleting();
+            ThrowIfStagingAfterCompletion();
             var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
             foreach (var (label, scope) in batch.ConcurrencyScopes)
             {
@@ -169,7 +218,10 @@ public class UnitOfWork(
             _concurrencyScopes = materializedConcurrencyScopes;
             _hasOrderedBatch = true;
             _currentLegacyEvents = null;
-            _stagedEvents.Add(new OrderedStagedEvents(batch.Events));
+            _stagedEvents.Add(new OrderedStagedEvents(batch.Events.Select(_ => _ with
+            {
+                NamedTags = NamedTagConverters.Merge(_.NamedTags, [])
+            }).ToArray()));
             foreach (var (scopeLabel, concurrencyScope) in batch.ConcurrencyScopes)
             {
                 EnrollStrictConcurrencyScope(scopeLabel, concurrencyScope);
@@ -260,12 +312,12 @@ public class UnitOfWork(
     {
         using var span = _activitySource.Rollback(correlationId.ToString());
 
-        ThrowIfUnitOfWorkIsCompleted();
-        _isRolledBack = true;
-        _stagedEvents.Clear();
-        _currentLegacyEvents = null;
-        _concurrencyScopes.Clear();
-        _appendManyResult = AppendManyResult.Success(CorrelationId.NotSet, []);
+        lock (_decisionLock)
+        {
+            ThrowIfUnitOfWorkIsCompleted();
+            if (_completing && lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict) throw new UnitOfWorkIsCompleting(correlationId);
+            CompleteRollback();
+        }
 
         _onCompleted(this);
         return Task.CompletedTask;
@@ -284,11 +336,14 @@ public class UnitOfWork(
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (IsCompleted)
+        lock (_decisionLock)
         {
-            return;
+            if (_completing || IsCompleted) return;
+
+            using var span = _activitySource.Rollback(correlationId.ToString());
+            CompleteRollback();
         }
-        Rollback().GetAwaiter().GetResult();
+        _onCompleted(this);
     }
 
     static bool ConcurrencyScopesAreSemanticallyEqual(ConcurrencyScope first, ConcurrencyScope second)
@@ -329,6 +384,8 @@ public class UnitOfWork(
         using var span = _activitySource.Commit(correlationId.ToString());
 
         Dictionary<EventSourceId, ConcurrencyScope> scopes;
+        EventForEventSourceId[] events;
+        IEventSequence? eventSequence;
         bool protectedCommit;
         lock (_decisionLock)
         {
@@ -338,20 +395,24 @@ public class UnitOfWork(
             if (protectedCommit && (!fromOwner || _commitOwner is null)) throw new ProtectedUnitOfWorkRequiresOwner();
             _completing = true;
 
-            // Keep legacy scope resolution and append bytes unchanged for units without decisions.
-            scopes = !protectedCommit ? _concurrencyScopes :
+            // Capture the commit batch under the same lock as enrollment. Compatibility calls can
+            // still stage after this point, but they must never enter the in-flight append.
+            eventSequence = _eventSequence;
+            events = eventSequence is null ? [] : GetEventsToCommit();
+            scopes = !protectedCommit ? _concurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value) :
                 _concurrencyScopes.Concat(_decisionScopes).ToDictionary(_ => _.Key, _ => _.Value);
         }
 
         try
         {
-            if (_eventSequence is not null)
+            if (eventSequence is not null)
             {
-                var events = GetEventsToCommit();
                 AppendManyResult result;
                 try
                 {
-                    result = await _eventSequence.AppendMany(events, concurrencyScopes: scopes);
+                    result = events.Any(_ => _.NamedTags.Any())
+                        ? await eventSequence.AppendManyWithNamedTags(events, [], concurrencyScopes: scopes)
+                        : await eventSequence.AppendMany(events, concurrencyScopes: scopes);
                 }
                 catch (CommandFailed exception) when (
                     protectedCommit && events.Length == 0 &&
@@ -376,14 +437,41 @@ public class UnitOfWork(
             // Completion must run even when the append throws (RpcException, unknown event type,
             // serialization error) - otherwise the unit leaks in the manager's dictionary and the
             // AsyncLocal Current keeps pointing at a completed unit. The exception still propagates.
-            _isCommitted = true;
+            lock (_decisionLock)
+            {
+                _isCommitted = true;
+            }
             _onCompleted(this);
         }
     }
 
-    void ThrowIfProtectedUnitOfWorkIsCompleting()
+    void CompleteRollback()
     {
-        if (_decisionScopes.Count != 0 && (_completing || IsCompleted))
+        _isRolledBack = true;
+        _stagedEvents.Clear();
+        _currentLegacyEvents = null;
+        _concurrencyScopes.Clear();
+        _appendManyResult = AppendManyResult.Success(CorrelationId.NotSet, []);
+    }
+
+    void ThrowIfStagingAfterCompletion()
+    {
+        if (!_completing && !IsCompleted) return;
+
+        if (lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict)
+        {
+            throw new UnitOfWorkIsCompleted(correlationId);
+        }
+
+        if (_logger is not null)
+        {
+            _logger.LateStagingAttemptedAfterCompletion(correlationId);
+        }
+        else
+        {
+            Trace.TraceError("Late event staging was attempted after unit of work '{0}' began completing; these events will not be appended by this unit of work.", correlationId);
+        }
+        if (_decisionScopes.Count != 0)
         {
             throw new ProtectedUnitOfWorkEventsAfterCompletion();
         }

@@ -17,10 +17,10 @@
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
-    <!-- 7.19.6 is the minimum the Cratis.Orleans 1.12.2 below declares; NU1605 is suppressed, so a lower pin would silently downgrade it. -->
+    <!-- 7.19.6 is the minimum Cratis.Orleans 1.12.2 declares; NU1605 is suppressed, so a lower pin would silently downgrade it. -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.19.6" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.19.4" />
-    <!-- Keep Cratis.Arc and Cratis.Arc.Core on the same version; mixing Arc with an older Arc.Core fails to load types at runtime. -->
+    <!-- 22.30.0 is the Arc version required by Cratis.Orleans.Storage.MongoDB and .Sql 1.12.2; mixing it with an older Arc.Core fails to load types at runtime. -->
     <PackageVersion Include="Cratis.Arc" Version="22.30.0" />
     <PackageVersion Include="Cratis.Arc.Core" Version="22.30.0" />
     <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.30.0" />

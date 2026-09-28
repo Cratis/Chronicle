@@ -45,4 +45,9 @@ public record EventContext(
     /// shape stay exactly as they were.
     /// </remarks>
     public string Subject { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the structured named tags associated with this event.
+    /// </summary>
+    public IEnumerable<NamedTag> NamedTags { get; init; } = [];
 }

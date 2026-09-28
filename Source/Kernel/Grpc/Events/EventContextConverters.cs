@@ -34,7 +34,8 @@ internal static class EventContextConverters
         Tags = context.Tags.Select(_ => _.Value),
         Hash = context.Hash,
         ObservationState = context.ObservationState.ToContract(),
-        Subject = context.Subject?.Value ?? string.Empty
+        Subject = context.Subject?.Value ?? string.Empty,
+        NamedTags = context.NamedTags.Select(tag => new Contracts.Events.NamedTag { Name = tag.Name.Value, Value = tag.Value }).ToList()
     };
 
     /// <summary>
@@ -58,7 +59,10 @@ internal static class EventContextConverters
         context.Tags.Select(_ => new Tag(_)).ToArray(),
         context.Hash,
         context.ObservationState.ToChronicle(),
-        context.ResolveSubject());
+        context.ResolveSubject())
+    {
+        NamedTags = (context.NamedTags ?? []).Select(tag => new Concepts.Events.NamedTag(new TagName(tag.Name), tag.Value)).ToArray()
+    };
 
     /// <summary>
     /// Resolves the <see cref="Subject"/> from a contract context, falling back to the event source id when the

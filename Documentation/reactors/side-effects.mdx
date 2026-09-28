@@ -23,7 +23,7 @@ The handlers are marked [`[OnceOnly]`](once-only) because a returned event is a 
 
 ## Multiple Side Effects
 
-Return `IEnumerable<TEvent>` to append several events in one handler call:
+In C#, return a sequence of known events — `IEnumerable<TEvent>`, `TEvent[]`, `List<TEvent>`, or `IReadOnlyList<TEvent>` — to append several events in one handler call:
 
 <ChronicleClientTabs snippet="reactors/side-effects/multiple" />
 
@@ -41,7 +41,7 @@ When it happens you want to record activity on the *member* — a different even
 
 `MemberActivityRecorded` is appended to `@event.MemberId`, **not** to the book that triggered the reactor — so it shows up on the member's stream, ready for a member-activity projection to pick up.
 
-A single reservation usually ripples to more than one entity: the member gains activity, and the book loses stock. Return `IEnumerable<EventForEventSourceId>` to fan out to several event source ids in one go — they are appended together as a single transaction:
+A single reservation usually ripples to more than one entity: the member gains activity, and the book loses stock. In C#, return `IEnumerable<EventForEventSourceId>`, `EventForEventSourceId[]`, `List<EventForEventSourceId>`, or `IReadOnlyList<EventForEventSourceId>` to fan out to several event source ids in one go — they are appended together as a single transaction:
 
 <ChronicleClientTabs snippet="reactors/side-effects/fan-out" />
 
@@ -51,7 +51,7 @@ Each `EventForEventSourceId` is self-describing: alongside the source id it carr
 
 > **Two modes**: a **bare event** uses the reactor's resolved metadata — its `[EventStreamType]`/`[EventSourceType]` attributes and `ICanProvide*` interfaces. An **`EventForEventSourceId`** is the *explicit* mode: it is self-describing and uses only the values on it, so the reactor's metadata does **not** apply (an unset field takes the append default such as `EventStreamType.All`, and an omitted `Subject` is resolved from the event). Reach for a bare event when you want "use my reactor's config", and an `EventForEventSourceId` when you want "I'll specify exactly where and how".
 
-You can also **mix** the two in a single `IEnumerable<object>` return — each bare event uses the reactor's resolved metadata and the triggering event source id, while each `EventForEventSourceId` keeps its own. They are appended together as one transaction:
+In C#, you can also **mix** the two in a single `IEnumerable<object>`, `object[]`, `List<object>`, or `IReadOnlyList<object>` return — each bare event uses the reactor's resolved metadata and the triggering event source id, while each `EventForEventSourceId` keeps its own. They are appended together as one transaction:
 
 <ChronicleClientTabs snippet="reactors/side-effects/mixed" />
 
@@ -116,6 +116,8 @@ Chronicle registers its built-in handlers and reactor metadata providers when yo
 To return your custom side effect synchronously, implement `CanHandleReturnType(Type)` on the handler to claim its declared type. Existing handlers default to `false` and can still handle asynchronous `Task<T>` results. A handler can also claim a declared `IEnumerable<T>` return type; it must process the collection at invocation time. Returning a type that no handler claims synchronously is rejected during registration.
 
 ## Supported Return Types
+
+In C#, the `IEnumerable<T>` entries below also accept `T[]`, `List<T>`, and other types implementing `IEnumerable<T>` (such as `IReadOnlyList<T>`), including when wrapped in `Task<TSequence>`. Multidimensional arrays are not supported.
 
 | Return type | Handler invoked |
 |---|---|

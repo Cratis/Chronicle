@@ -3,8 +3,11 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
@@ -17,13 +20,89 @@ public class EventSequenceMigrator(
     ITableMigrator<EventSequenceDbContext> tableMigrator,
     ILogger<EventSequenceMigrator> logger) : IEventSequenceMigrator
 {
+    /// <summary>The reserved companion table shared by all sequences in a namespace database.</summary>
+    public const string NamedTagsTable = "__cratis_named_tags";
+
     /// <inheritdoc/>
-    public Task EnsureTableMigrated(string tableName, EventSequenceDbContext context) =>
-        tableMigrator.EnsureTableMigrated(tableName, context, CreateTable, UpgradeTable);
+    public async Task EnsureTableMigrated(string tableName, EventSequenceDbContext context)
+    {
+        if (string.Equals(tableName, NamedTagsTable, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new NamedTagsTableCollision();
+        }
+
+        await tableMigrator.EnsureTableMigrated(
+            tableName,
+            context,
+            async (db, name) =>
+            {
+                await EnsureNamedTagsTable(db);
+                await CreateTable(db, name);
+            },
+            async (db, name) =>
+            {
+                await EnsureNamedTagsTable(db);
+                await UpgradeTable(db, name);
+            });
+    }
 
     /// <inheritdoc/>
     public void ClearMigrationCache(string connectionStringPrefix) =>
         tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
+
+    static bool IsTableAlreadyExists(Exception exception) => exception switch
+    {
+        PostgresException postgres => postgres.SqlState == PostgresErrorCodes.DuplicateTable,
+        SqlException sql => sql.Number == 2714,
+        SqliteException sqlite => sqlite.SqliteErrorCode == 1 && sqlite.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase),
+        _ => false
+    };
+
+    Task EnsureNamedTagsTable(EventSequenceDbContext context) =>
+        tableMigrator.EnsureTableMigrated(NamedTagsTable, context, CreateNamedTagsTable, ValidateNamedTagsTable);
+
+    async Task CreateNamedTagsTable(EventSequenceDbContext context, string tableName)
+    {
+        var migration = new MigrationBuilder(context.Database.ProviderName);
+        migration.CreateTable(
+            name: tableName,
+            columns: table => new
+            {
+                EventSequenceId = table.StringColumn(migration, maxLength: 200, nullable: false),
+                SequenceNumber = table.Column<ulong>(nullable: false),
+                Position = table.Column<int>(nullable: false),
+                Name = table.Column<byte[]>(nullable: false),
+                Value = table.Column<byte[]>(nullable: false),
+                NameHash = table.Column<byte[]>(maxLength: 32, nullable: false),
+                ValueHash = table.Column<byte[]>(maxLength: 32, nullable: false),
+                CratisNamedTagsVersion = table.Column<int>(nullable: false, defaultValue: 1)
+            },
+            constraints: table => table.PrimaryKey("PK_cratis_named_tags", x => new { x.EventSequenceId, x.SequenceNumber, x.Position }));
+        migration.CreateIndex("IX_cratis_tags_name", tableName, ["EventSequenceId", "NameHash", "SequenceNumber"]);
+        migration.CreateIndex("IX_cratis_tags_value", tableName, ["EventSequenceId", "NameHash", "ValueHash", "SequenceNumber"]);
+        migration.CreateIndex("IX_cratis_tags_event", tableName, ["EventSequenceId", "SequenceNumber"]);
+        try
+        {
+            await tableMigrator.ExecuteMigrationOperations(context, migration);
+        }
+        catch (Exception exception) when (IsTableAlreadyExists(exception))
+        {
+            // Another silo won the first-touch race. Only adopt the table if it is ours.
+            await ValidateNamedTagsTable(context, tableName);
+        }
+    }
+
+    async Task ValidateNamedTagsTable(EventSequenceDbContext context, string tableName)
+    {
+        // A table with this name predating Chronicle's migration must not be adopted or modified.
+        foreach (var column in new[] { "CratisNamedTagsVersion", "EventSequenceId", "SequenceNumber", "Position", "Name", "Value", "NameHash", "ValueHash" })
+        {
+            if (!await tableMigrator.ColumnExists(context, tableName, column))
+            {
+                throw new NamedTagsTableCollision();
+            }
+        }
+    }
 
     async Task CreateTable(EventSequenceDbContext context, string tableName)
     {

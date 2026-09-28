@@ -60,7 +60,6 @@ public record SequenceHistogramBucket(DateTimeOffset From, DateTimeOffset To, lo
         DateTimeOffset? occurredFrom = default,
         DateTimeOffset? occurredTo = default)
     {
-        var histogramResolution = ParseResolution(resolution);
         var criteria = EventSequenceQueryCriteriaFactory.Create(new(
             eventSourceId,
             eventSourceType,
@@ -71,12 +70,56 @@ public record SequenceHistogramBucket(DateTimeOffset From, DateTimeOffset To, lo
             occurredFrom,
             occurredTo));
 
-        var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
-        var buckets = await eventSequence.GetHistogram(histogramResolution, criteria);
+        return await EventSequenceQuerying.Histogram(storage, eventStore, @namespace, eventSequenceId, ParseResolution(resolution), criteria);
+    }
 
-        return buckets
-            .Select(_ => new SequenceHistogramBucket(_.Occurred, EndOf(_.Occurred, histogramResolution), _.Count))
-            .ToArray();
+    /// <summary>
+    /// Gets histogram buckets narrowed by required structured named tag criteria.
+    /// </summary>
+    /// <param name="storage">The event storage.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="namedTags">Structured named tag criteria for gRPC callers.</param>
+    /// <param name="resolution">Optional bucket resolution.</param>
+    /// <param name="eventSourceId">Optional event source identifier.</param>
+    /// <param name="eventSourceType">Optional event source type.</param>
+    /// <param name="eventStreamType">Optional event stream type.</param>
+    /// <param name="correlationId">Optional correlation identifier.</param>
+    /// <param name="eventTypeIds">Optional comma separated event type identifiers.</param>
+    /// <param name="tags">Optional comma separated legacy tags.</param>
+    /// <param name="occurredFrom">Optional inclusive occurred bound.</param>
+    /// <param name="occurredTo">Optional exclusive occurred bound.</param>
+    /// <returns>The buckets containing matching events.</returns>
+    public static Task<IEnumerable<SequenceHistogramBucket>> SequenceHistogramWithNamedTags(
+        IStorage storage,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EventSequenceId eventSequenceId,
+        IEnumerable<NamedTagQueryCriterion>? namedTags = default,
+        string? resolution = default,
+        string? eventSourceId = default,
+        string? eventSourceType = default,
+        string? eventStreamType = default,
+        string? correlationId = default,
+        string? eventTypeIds = default,
+        string? tags = default,
+        DateTimeOffset? occurredFrom = default,
+        DateTimeOffset? occurredTo = default)
+    {
+        var criteria = EventSequenceQueryCriteriaFactory.CreateWithNamedTags(
+            new(
+                eventSourceId,
+                eventSourceType,
+                eventStreamType,
+                correlationId,
+                eventTypeIds,
+                tags,
+                occurredFrom,
+                occurredTo),
+            namedTags);
+
+        return EventSequenceQuerying.Histogram(storage, eventStore, @namespace, eventSequenceId, ParseResolution(resolution), criteria);
     }
 
     /// <summary>

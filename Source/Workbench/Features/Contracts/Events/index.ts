@@ -9,3 +9,4 @@ export * from './EventTypeMigrationOperation';
 export * from './EventTypeOwner';
 export * from './EventTypeRegistration';
 export * from './EventTypeSource';
+export * from './NamedTag';

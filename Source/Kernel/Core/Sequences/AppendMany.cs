@@ -54,12 +54,26 @@ public record AppendMany(
     public Task<AppendManyResult> Handle(
         IGrainFactory grainFactory,
         RequestCausation causation,
-        ICurrentPrincipalAccessor principalAccessor)
+        ICurrentPrincipalAccessor principalAccessor) => HandleWithNamedTags(grainFactory, causation, principalAccessor, null);
+
+    /// <summary>
+    /// Handles the batch with per-event named tags.
+    /// </summary>
+    /// <param name="grainFactory">The grain factory.</param>
+    /// <param name="causation">The request causation.</param>
+    /// <param name="principalAccessor">The current principal.</param>
+    /// <param name="namedTagsPerEvent">Named tags, one collection per event.</param>
+    /// <returns>The append result.</returns>
+    internal Task<AppendManyResult> HandleWithNamedTags(
+        IGrainFactory grainFactory,
+        RequestCausation causation,
+        ICurrentPrincipalAccessor principalAccessor,
+        IReadOnlyList<IReadOnlyCollection<Concepts.Events.NamedTag>>? namedTagsPerEvent)
     {
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         var tags = (Tags ?? []).Select(tag => (Tag)tag).ToArray();
         var route = AppendRoute.Resolve(null, null, null);
-        var events = Events.Select(@event => new EventSequences.EventToAppend(
+        var events = Events.Select((@event, index) => new EventSequences.EventToAppend(
             route.SourceType,
             EventSourceId,
             route.StreamType,
@@ -68,7 +82,10 @@ public record AppendMany(
             tags,
             JsonNode.Parse(@event.Content)!.AsObject(),
             Occurred,
-            Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject)));
+            Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject))
+        {
+            NamedTags = namedTagsPerEvent is null ? [] : namedTagsPerEvent[index]
+        });
 
         var concurrencyScopes = new Concepts.EventSequences.Concurrency.ConcurrencyScopes(
             new Dictionary<EventSourceId, Concepts.EventSequences.Concurrency.ConcurrencyScope>
