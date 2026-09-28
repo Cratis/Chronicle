@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Integration.for_ReadModels.when_getting_instance_for_
 /// A child event arriving again for a child the instance already holds is an update of that child. It must
 /// neither fail the read for that instance nor break the projection for every other instance read after it.
 /// </summary>
+/// <param name="context">The <see cref="context"/> the specification runs in.</param>
 [Collection(ChronicleCollection.Name)]
 public class and_a_child_is_added_again_for_the_same_identity(context context) : Given<context>(context)
 {
