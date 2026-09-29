@@ -19,6 +19,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -62,8 +63,10 @@ public class ProjectionFactory(
     public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         var eventSequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(definition.EventSequenceId);
+        var eventTypesStorage = storage.GetEventStore(eventStore).EventTypes;
         return CreateProjectionFrom(
             eventSequenceStorage,
+            eventTypesStorage,
             definition,
             readModelDefinition,
             readModelDefinition.GetSchemaForLatestGeneration(),
@@ -372,6 +375,7 @@ public class ProjectionFactory(
 
     async Task<IProjection> CreateProjectionFrom(
         IEventSequenceStorage eventSequenceStorage,
+        IEventTypesStorage eventTypesStorage,
         ProjectionDefinition projectionDefinition,
         ReadModelDefinition rootReadModel,
         JsonSchema currentReadModelSchema,
@@ -384,6 +388,7 @@ public class ProjectionFactory(
         // Phase 1: Create the projection structure with all parent-child relationships
         var (projection, childProjections, actualIdentifiedByProperty) = await CreateProjectionStructure(
             eventSequenceStorage,
+            eventTypesStorage,
             projectionDefinition.Identifier,
             projectionDefinition,
             rootReadModel,
@@ -396,7 +401,7 @@ public class ProjectionFactory(
         ResolveEventsRecursively(projection, childProjections, projectionDefinition, actualIdentifiedByProperty, isChild);
 
         // Phase 3: Setup subscriptions for all projections (root and children)
-        SetupSubscriptionsRecursively(projection, childProjections, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, currentReadModelSchema, rootReadModel, isChild, eventSequenceStorage, eventTypeSchemas);
+        SetupSubscriptionsRecursively(projection, childProjections, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, currentReadModelSchema, rootReadModel, isChild, eventSequenceStorage, eventTypesStorage, eventTypeSchemas);
 
         return projection;
     }
@@ -411,6 +416,7 @@ public class ProjectionFactory(
         ReadModelDefinition rootReadModel,
         bool isChild,
         IEventSequenceStorage eventSequenceStorage,
+        IEventTypesStorage eventTypesStorage,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         // First setup subscriptions for all children (depth-first)
@@ -435,12 +441,13 @@ public class ProjectionFactory(
                     rootReadModel,
                     true,
                     eventSequenceStorage,
+                    eventTypesStorage,
                     eventTypeSchemas);
             }
         }
 
         // Then setup subscriptions for the current projection
-        SetupFromEventPropertyAndJoins(projection, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, currentReadModelSchema, rootReadModel, isChild, eventSequenceStorage, eventTypeSchemas);
+        SetupFromEventPropertyAndJoins(projection, projectionDefinition, childrenAccessorProperty, actualIdentifiedByProperty, currentReadModelSchema, rootReadModel, isChild, eventSequenceStorage, eventTypesStorage, eventTypeSchemas);
     }
 
     void SetupNestedSubscriptions(
@@ -450,6 +457,7 @@ public class ProjectionFactory(
         JsonSchema currentReadModelSchema,
         IEnumerable<EventTypeSchema> eventTypeSchemas,
         IEventSequenceStorage eventSequenceStorage,
+        IEventTypesStorage eventTypesStorage,
         PropertyPath actualIdentifiedByProperty)
     {
         var nested = projectionDefinition.Nested;
@@ -503,6 +511,7 @@ public class ProjectionFactory(
                     SetupJoinsForFromDefinition(
                         fromObservable,
                         eventSequenceStorage,
+                        eventTypesStorage,
                         nestedDefinition,
                         nestedPropertyPath,
                         actualIdentifiedByProperty,
@@ -544,12 +553,13 @@ public class ProjectionFactory(
             }
 
             // Recursively set up nested objects within this nested object
-            SetupNestedSubscriptions(projection, nestedDefinition, nestedPropertyPath, nestedSchema, eventTypeSchemas, eventSequenceStorage, actualIdentifiedByProperty);
+            SetupNestedSubscriptions(projection, nestedDefinition, nestedPropertyPath, nestedSchema, eventTypeSchemas, eventSequenceStorage, eventTypesStorage, actualIdentifiedByProperty);
         }
     }
 
     async Task<(Projection Projection, IProjection[] ChildProjections, PropertyPath ActualIdentifiedByProperty)> CreateProjectionStructure(
         IEventSequenceStorage eventSequenceStorage,
+        IEventTypesStorage eventTypesStorage,
         ProjectionId projectionId,
         ProjectionDefinition projectionDefinition,
         ReadModelDefinition rootReadModel,
@@ -568,6 +578,7 @@ public class ProjectionFactory(
             var childrenProperty = GetChildCollectionProperty(projectionId, rootReadModel, currentReadModelSchema, kvp.Key);
             return await CreateProjectionStructure(
                 eventSequenceStorage,
+                eventTypesStorage,
                 projectionId,
                 kvp.Value,
                 rootReadModel,
@@ -644,6 +655,7 @@ public class ProjectionFactory(
         ReadModelDefinition rootReadModel,
         bool isChild,
         IEventSequenceStorage eventSequenceStorage,
+        IEventTypesStorage eventTypesStorage,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         if (projectionDefinition.FromEventProperty is not null)
@@ -683,6 +695,7 @@ public class ProjectionFactory(
             SetupJoinsForFromDefinition(
                 fromObservable,
                 eventSequenceStorage,
+                eventTypesStorage,
                 projectionDefinition,
                 childrenAccessorProperty,
                 actualIdentifiedByProperty,
@@ -733,7 +746,7 @@ public class ProjectionFactory(
             projection,
             logger);
 
-        SetupNestedSubscriptions(projection, projectionDefinition, childrenAccessorProperty, currentReadModelSchema, eventTypeSchemas, eventSequenceStorage, actualIdentifiedByProperty);
+        SetupNestedSubscriptions(projection, projectionDefinition, childrenAccessorProperty, currentReadModelSchema, eventTypeSchemas, eventSequenceStorage, eventTypesStorage, actualIdentifiedByProperty);
 
         if (projectionDefinition.FromDerivatives is not null)
         {
@@ -754,6 +767,7 @@ public class ProjectionFactory(
                     SetupJoinsForFromDefinition(
                         fromObservable,
                         eventSequenceStorage,
+                        eventTypesStorage,
                         projectionDefinition,
                         childrenAccessorProperty,
                         actualIdentifiedByProperty,
@@ -855,6 +869,7 @@ public class ProjectionFactory(
     void SetupJoinsForFromDefinition(
         IObservable<ProjectionEventContext> fromObservable,
         IEventSequenceStorage eventSequenceStorage,
+        IEventTypesStorage eventTypesStorage,
         ProjectionDefinition projectionDefinition,
         PropertyPath childrenAccessorProperty,
         PropertyPath actualIdentifiedByProperty,
@@ -897,7 +912,7 @@ public class ProjectionFactory(
             var joinEventSchema = eventTypeSchemas.SchemaFor(joinEventType)?.Schema;
             var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, joinEventSchema, autoMap, noAutoMapProperties);
             var joinPropertyMappers = mergedJoinProperties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
-            var resolvedJoin = fromObservable.ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On, logger, eventCompliance, joinEventSchema);
+            var resolvedJoin = fromObservable.ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On, logger, eventCompliance, joinEventSchema, eventTypesStorage);
             if (isNested)
             {
                 projection.Subscriptions.Add(resolvedJoin.ProjectNested(joinPropertyMappers).Subscribe());

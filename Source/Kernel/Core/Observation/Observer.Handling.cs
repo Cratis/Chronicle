@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
@@ -339,28 +340,8 @@ public partial class Observer
     async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
     {
         var eventsToDecrypt = events as AppendedEvent[] ?? events.ToArray();
-        await EnsureEventTypeSchemasFor(eventsToDecrypt);
+        await storage.GetEventStore(_observerKey.EventStore).EventTypes.EnsureSchemasFor(_eventTypeSchemas, eventsToDecrypt);
         return await eventCompliance.Release(eventsToDecrypt, _eventTypeSchemas);
-    }
-
-    async Task EnsureEventTypeSchemasFor(IEnumerable<AppendedEvent> events)
-    {
-        var missingEventTypes = events
-            .Select(_ => _.Context.EventType)
-            .Distinct()
-            .Where(_ => !_eventTypeSchemas.ContainsKey(_))
-            .ToArray();
-
-        if (missingEventTypes.Length == 0)
-        {
-            return;
-        }
-
-        var schemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(missingEventTypes);
-        foreach (var schema in schemas)
-        {
-            _eventTypeSchemas[schema.Type] = schema;
-        }
     }
 
     bool ShouldHandleEvent(Key partition)

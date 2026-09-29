@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -11,6 +12,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Reflection;
 using Microsoft.Extensions.Logging;
 
@@ -84,6 +86,7 @@ public static class ProjectionEventContextExtensions
     /// <param name="logger">The logger.</param>
     /// <param name="eventCompliance">Optional handler for releasing a stored join event's compliance and security fields before projecting it.</param>
     /// <param name="joinEventSchema">Optional schema for the stored join event.</param>
+    /// <param name="eventTypesStorage">Optional <see cref="IEventTypesStorage"/> to resolve the schema of the generation a stored join event was stored at, when it differs from <paramref name="joinEventSchema"/>.</param>
     /// <returns>A new observable for the ResolveJoin operation.</returns>
     public static IObservable<ProjectionEventContext> ResolveJoin(
         this IObservable<ProjectionEventContext> observable,
@@ -92,8 +95,11 @@ public static class ProjectionEventContextExtensions
         PropertyPath onModelProperty,
         ILogger logger,
         IEventCompliance? eventCompliance = null,
-        JsonSchema? joinEventSchema = null)
+        JsonSchema? joinEventSchema = null,
+        IEventTypesStorage? eventTypesStorage = null)
     {
+        var schemasByStoredEventType = new ConcurrentDictionary<EventType, JsonSchema?>();
+
         // Note: TryGetLastEventBefore is awaited synchronously here because this runs inside the
         // synchronous Rx Subject pipeline. HandleEvent.Perform commits the changeset immediately
         // after projection.OnNext() returns, so the join resolution must complete synchronously.
@@ -125,12 +131,22 @@ public static class ProjectionEventContextExtensions
                         {
                             if (!maybeLastEvent.HasValue) return;
                             var lastEvent = (AppendedEvent)maybeLastEvent;
+
+                            // The stored join event is released with the schema of the generation it was stored at, which
+                            // is not necessarily the one the projection was built with. Resolved once per generation.
+                            var storedEventSchema = eventTypesStorage is null
+                                ? joinEventSchema
+                                : schemasByStoredEventType.GetOrAdd(
+                                    lastEvent.Context.EventType,
+                                    static (storedEventType, resolution) => Task.Run(() => resolution.EventTypes.GetStoredSchemaFor(storedEventType)).GetAwaiter().GetResult() ?? resolution.Fallback,
+                                    (EventTypes: eventTypesStorage, Fallback: joinEventSchema));
+
                             if (eventCompliance is not null &&
-                                joinEventSchema?.HasSchemaMetadata() == true &&
+                                storedEventSchema?.HasSchemaMetadata() == true &&
                                 lastEvent.Context.Subject?.IsSet == true)
                             {
 #pragma warning disable CA2007
-                                lastEvent = Task.Run(() => eventCompliance.Release(lastEvent, joinEventSchema)).GetAwaiter().GetResult();
+                                lastEvent = Task.Run(() => eventCompliance.Release(lastEvent, storedEventSchema)).GetAwaiter().GetResult();
 #pragma warning restore CA2007
                             }
 

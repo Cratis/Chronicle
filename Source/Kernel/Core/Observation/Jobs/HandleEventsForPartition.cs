@@ -11,6 +11,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
@@ -49,6 +50,7 @@ public class HandleEventsForPartition(
     EventSourceId _eventSourceId = EventSourceId.Unspecified;
     IObserverSubscriber? _subscriber;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
+    IEventTypesStorage? _eventTypes;
     bool _isCollapsingProjection;
 
     IHandleEventsForPartition _selfGrainReference = null!;
@@ -172,7 +174,8 @@ public class HandleEventsForPartition(
                 .Where(et => et.Id != GlobalEventTypes.Redaction)
                 .Select(et => et.Id)
                 .ToHashSet();
-            _eventTypeSchemas = (await storage.GetEventStore(currentState.ObserverKey.EventStore).EventTypes.GetFor(eventTypesToRead))
+            _eventTypes = storage.GetEventStore(currentState.ObserverKey.EventStore).EventTypes;
+            _eventTypeSchemas = (await _eventTypes.GetFor(eventTypesToRead))
                 .ToDictionary(_ => _.Type);
 
             using var events = await eventSequenceStorage.GetRange(
@@ -400,8 +403,18 @@ public class HandleEventsForPartition(
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
 
-    Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events) =>
-        eventCompliance.Release(events, _eventTypeSchemas);
+    async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
+    {
+        // The schemas read up front are those of the generations the observer subscribes to, while the events carry the
+        // generation they were stored at - the schema of that generation is what says what to decrypt.
+        var eventsToDecrypt = events as AppendedEvent[] ?? events.ToArray();
+        if (_eventTypes is not null)
+        {
+            await _eventTypes.EnsureSchemasFor(_eventTypeSchemas, eventsToDecrypt);
+        }
+
+        return await eventCompliance.Release(eventsToDecrypt, _eventTypeSchemas);
+    }
 
     /// <summary>
     /// Resolve the event types to read when the observer's subscription itself carries none - an observer
