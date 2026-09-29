@@ -147,8 +147,12 @@ public class InMemorySink(
             // event source id. Never create a phantom row for a join-only event. In particular,
             // the root all-event mapper is inside the Joined change, not a keyed From change.
             var updatedKeys = new List<object>();
+            bool wrotePrimary;
             lock (_collectionLock)
             {
+                // Decided together with the write: reading the flag after the lock is released could see a replay
+                // that began in between and drop the announcement of a write that did reach the primary collection.
+                wrotePrimary = !_isReplaying;
                 foreach (var (rowKey, row) in Collection.ToArray())
                 {
                     var matching = rootJoins.Where(joined =>
@@ -179,7 +183,7 @@ public class InMemorySink(
 
             foreach (var updatedKey in updatedKeys)
             {
-                NotifyChanged(updatedKey);
+                NotifyChanged(updatedKey, wrotePrimary);
             }
 
             if (rootJoins.All(joined => !joined.HasKeyedFrom))
@@ -192,13 +196,15 @@ public class InMemorySink(
 
         if (changeset.HasBeenRemoved())
         {
+            bool removedFromPrimary;
             lock (_collectionLock)
             {
                 Collection.Remove(keyValue);
                 LastHandledEventSequenceNumbers.Remove(keyValue);
+                removedFromPrimary = !_isReplaying;
             }
 
-            NotifyChanged(keyValue);
+            NotifyChanged(keyValue, removedFromPrimary);
             return Task.FromResult<IEnumerable<FailedPartition>>([]);
         }
 
@@ -231,6 +237,7 @@ public class InMemorySink(
         var directChanges = changeset.Changes.Where(change => change is not Joined joined || !rootJoins.Contains(joined));
         var result = ApplyActualChanges(key, directChanges, state);
         ((dynamic)result).id = key.Value;
+        bool wroteToPrimary;
         lock (_collectionLock)
         {
             if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark &&
@@ -251,10 +258,12 @@ public class InMemorySink(
                         ? Math.Max(current, eventSequenceNumber.Value)
                         : eventSequenceNumber.Value;
             }
+
+            wroteToPrimary = !_isReplaying;
         }
 
         // Notify observers of the change
-        NotifyChanged(keyValue);
+        NotifyChanged(keyValue, wroteToPrimary);
 
         return Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
@@ -284,7 +293,11 @@ public class InMemorySink(
     public Task ResumeReplay(ReplayContext context)
     {
         // Resuming continues an interrupted replay, so what it has already written is kept.
-        _isReplaying = true;
+        lock (_collectionLock)
+        {
+            _isReplaying = true;
+        }
+
         return Task.CompletedTask;
     }
 
@@ -428,13 +441,14 @@ public class InMemorySink(
     /// Tell observers that the collection they read has changed.
     /// </summary>
     /// <param name="key">The key of the changed read model.</param>
+    /// <param name="wrotePrimary">Whether the write went to the primary collection, decided in the same lock as the write.</param>
     /// <remarks>
     /// A write made while a replay is in progress goes to the replay's own collection, which observers do not read,
     /// so it is not announced; the replay announces its result once it ends and promotes it.
     /// </remarks>
-    void NotifyChanged(object key)
+    void NotifyChanged(object key, bool wrotePrimary)
     {
-        if (!_isReplaying)
+        if (wrotePrimary)
         {
             _changeSubject.OnNext(key);
         }
