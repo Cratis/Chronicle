@@ -349,13 +349,14 @@ public class InMemorySink(
     /// <inheritdoc/>
     public Task Remove(ReadModelContainerName containerName)
     {
+        var clearedPrimary = containerName == readModel.ContainerName;
         lock (_collectionLock)
         {
             // The persistent sinks drop the container they are handed, so which one is named decides what
             // goes. Ignoring the name and always clearing the replay state meant removing the container the
             // read model lives in left it readable, and removing a revert container could wipe a replay in
             // flight - the opposite of what was asked for in both cases.
-            if (containerName == readModel.ContainerName)
+            if (clearedPrimary)
             {
                 _collection.Clear();
                 _lastHandledEventSequenceNumbers.Clear();
@@ -367,16 +368,31 @@ public class InMemorySink(
             }
         }
 
+        // Observers read the primary collection, which has only now been emptied.
+        if (clearedPrimary)
+        {
+            _changeSubject.OnNext(readModel.ContainerName);
+        }
+
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public Task PrepareInitialRun()
     {
+        bool clearedPrimary;
         lock (_collectionLock)
         {
+            // Inside a replay this clears the rewind collection, which no observer reads.
+            clearedPrimary = !_isReplaying;
             Collection.Clear();
             LastHandledEventSequenceNumbers.Clear();
+        }
+
+        // Observers read the primary collection, which has only now been emptied.
+        if (clearedPrimary)
+        {
+            _changeSubject.OnNext(readModel.ContainerName);
         }
 
         return Task.CompletedTask;
