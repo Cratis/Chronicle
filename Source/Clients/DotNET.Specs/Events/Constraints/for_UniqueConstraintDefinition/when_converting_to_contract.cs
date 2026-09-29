@@ -46,5 +46,6 @@ public class when_converting_to_contract : Specification
     [Fact] void should_have_first_event_second_property() => _definitionContract.EventDefinitions[0].Properties.ToArray()[1].ShouldEqual(_definition.EventsWithProperties.First().Properties.ToArray()[1]);
     [Fact] void should_have_second_event_type() => _definitionContract.EventDefinitions[1].EventTypeId.ShouldEqual(_secondEventType.Id.Value);
     [Fact] void should_have_second_event_first_property() => _definitionContract.EventDefinitions[1].Properties.ToArray()[0].ShouldEqual(_definition.EventsWithProperties.Last().Properties.ToArray()[0]);
+    [Fact] void should_not_ignore_casing() => _definitionContract.IgnoreCasing.ShouldBeFalse();
     [Fact] void should_have_second_event_second_property() => _definitionContract.EventDefinitions[1].Properties.ToArray()[1].ShouldEqual(_definition.EventsWithProperties.Last().Properties.ToArray()[1]);
 }
