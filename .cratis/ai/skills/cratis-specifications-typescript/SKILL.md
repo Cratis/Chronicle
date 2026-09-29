@@ -2,9 +2,8 @@
 name: cratis-specifications-typescript
 description: Write TypeScript specifications in the Cratis BDD style using the given() helper, reusable context classes, Sinon stubbing, and the Chai .should fluent interface. Use when adding or restructuring TypeScript specifications, building a given/ context class, or laying out a for_/when_ specification folder. Do not use for C# specifications, and do not use it to decide what the code under specification should do.
 license: MIT
-cratis-hint-paths:
-  - "**/for_*/**/*.ts"
-  - "**/for_*/**/*.tsx"
+metadata:
+  cratis-hint-paths: "**/for_*/**/*.ts **/for_*/**/*.tsx"
 ---
 <!-- cratis-ai-managed: skills/cratis-specifications-typescript/SKILL.md -->
 
