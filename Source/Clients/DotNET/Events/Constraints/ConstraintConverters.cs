@@ -57,7 +57,8 @@ internal static class ConstraintConverters
             {
                 EventTypeId = _.EventTypeId,
                 Properties = _.Properties,
-            }).ToList()
+            }).ToList(),
+            IgnoreCasing = definition.IgnoreCasing
         }),
         Scope = definition.Scope?.ToContract()
     };

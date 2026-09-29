@@ -48,7 +48,7 @@ public class a_recording_compliance_service : for_ReadModels.given.all_dependenc
     {
         var schema = new JsonSchema();
         schema.ExtensionData[ComplianceJsonSchemaExtensions.ComplianceKey] = new List<ComplianceSchemaMetadata> { new("PII", "{}") };
-        _schemaGenerator.Generate(Arg.Any<Type>()).Returns(schema);
+        _schemaGenerator.GenerateForReadModel(Arg.Any<Type>()).Returns(schema);
 
         _requests = [];
         _compliance = Substitute.For<ICompliance>();

@@ -83,7 +83,7 @@ public class a_read_model_releaser : Specification
         _eventStore.Namespace.Returns((EventStoreNamespaceName)"test-namespace");
 
         _schemaGenerator = Substitute.For<IJsonSchemaGenerator>();
-        _schemaGenerator.Generate(Arg.Any<Type>()).Returns(new JsonSchema());
+        _schemaGenerator.GenerateForReadModel(Arg.Any<Type>()).Returns(new JsonSchema());
 
         _compliance = Substitute.For<ICompliance>();
         _services = Substitute.For<IServices>();
@@ -109,7 +109,7 @@ public class a_read_model_releaser : Specification
     /// </summary>
     /// <typeparam name="TReadModel">Type of read model to generate the schema for.</typeparam>
     protected void GivenSchemaFor<TReadModel>() =>
-        _schemaGenerator.Generate(typeof(TReadModel)).Returns(_realGenerator.Generate(typeof(TReadModel)));
+        _schemaGenerator.GenerateForReadModel(typeof(TReadModel)).Returns(_realGenerator.GenerateForReadModel(typeof(TReadModel)));
 
     /// <summary>
     /// Stubs the kernel's release RPC to echo the payload back unchanged, capturing the request it was called with.

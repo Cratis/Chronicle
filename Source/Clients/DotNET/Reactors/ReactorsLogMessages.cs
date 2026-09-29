@@ -21,6 +21,9 @@ internal static partial class ReactorsLogMessages
     [LoggerMessage(LogLevel.Warning, "An error occurred while handling event of type {EventTypeId} was for Reactor {ReactorId}")]
     internal static partial void ErrorWhileHandlingEvent(this ILogger<Reactors> logger, Exception ex, EventTypeId eventTypeId, ReactorId reactorId);
 
+    [LoggerMessage(LogLevel.Debug, "Handling event of type {EventTypeId} for Reactor {ReactorId} stopped because the reactor is shutting down")]
+    internal static partial void HandlingEventInterruptedByShutdown(this ILogger<Reactors> logger, Exception ex, EventTypeId eventTypeId, ReactorId reactorId);
+
     [LoggerMessage(LogLevel.Warning, "Reactor {ReactorId} side-effect append failed while handling event of type {EventTypeId}, targeting event source id(s) {TargetEventSourceIds}: {Details}")]
     internal static partial void ReactorSideEffectAppendFailed(this ILogger<Reactors> logger, EventTypeId eventTypeId, ReactorId reactorId, string targetEventSourceIds, string details);
 
@@ -32,6 +35,9 @@ internal static partial class ReactorsLogMessages
 
     [LoggerMessage(LogLevel.Error, "Failed to register Reactor '{Id}' — the reactive observation stream errored out")]
     internal static partial void RegisteringReactorFailed(this ILogger<Reactors> logger, ReactorId id, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Reactor observation stream for '{Id}' lost its connection to the kernel (stopping or unreachable) — reconnecting")]
+    internal static partial void ReactorStreamLostConnection(this ILogger<Reactors> logger, ReactorId id, Exception exception);
 
     [LoggerMessage(LogLevel.Information, "Reconnecting Reactor '{Id}' after stream failure")]
     internal static partial void ReconnectingReactor(this ILogger<Reactors> logger, ReactorId id);

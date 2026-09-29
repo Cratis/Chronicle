@@ -384,7 +384,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         return SubstitutedLayers.DetectFor(
             typeof(TReadModel),
             isReduced ? null : ProjectionDefinition(),
-            _jsonSchemaGenerator.Generate(typeof(TReadModel)),
+            _jsonSchemaGenerator.GenerateForReadModel(typeof(TReadModel)),
             isReduced ? ReducerReadModelProcessor.AppliesCompliance : ProjectionReadModelProcessor.AppliesCompliance);
     }
 

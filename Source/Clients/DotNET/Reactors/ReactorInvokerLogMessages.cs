@@ -9,4 +9,7 @@ internal static partial class ReactorInvokerLogMessages
 {
     [LoggerMessage(LogLevel.Error, "Reactor of type '{ReactorId}' failed for event with type '{EventType}'")]
     internal static partial void ReactorFailed(this ILogger<ReactorInvoker> logger, ReactorId ReactorId, string eventType, Exception exception);
+
+    [LoggerMessage(LogLevel.Debug, "Reactor of type '{ReactorId}' stopped handling event with type '{EventType}' because the reactor is shutting down")]
+    internal static partial void ReactorInterruptedByShutdown(this ILogger<ReactorInvoker> logger, ReactorId ReactorId, string eventType, Exception exception);
 }

@@ -42,6 +42,7 @@ public class and_they_were_registered_on_the_options : Specification
 
         var schemaGenerator = Substitute.For<IJsonSchemaGenerator>();
         schemaGenerator.Generate(Arg.Any<Type>()).Returns(new JsonSchema());
+        schemaGenerator.GenerateForReadModel(Arg.Any<Type>()).Returns(new JsonSchema());
 
         var servicesForClient = new ServiceCollection();
         servicesForClient.AddKeyedSingleton<IActivitySource<EventSequence>>(ClientActivity.SourceName, (_, _) => Substitute.For<IActivitySource<EventSequence>>());

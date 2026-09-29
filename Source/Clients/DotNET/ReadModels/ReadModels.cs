@@ -103,7 +103,7 @@ public class ReadModels(
                     ConfigurationId = Guid.Empty,
                     TypeId = GetSinkTypeIdFor(readModel.ReadModelType)
                 },
-                Schema = schemaGenerator.Generate(readModel.ReadModelType).ToJson(),
+                Schema = schemaGenerator.GenerateForReadModel(readModel.ReadModelType).ToJson(),
                 Indexes = GetIndexesForType(readModel.ReadModelType, string.Empty),
                 ObserverType = observerType,
                 ObserverIdentifier = observerIdentifier
@@ -169,7 +169,7 @@ public class ReadModels(
                     ConfigurationId = Guid.Empty,
                     TypeId = GetSinkTypeIdFor(typeof(TReadModel))
                 },
-                Schema = schemaGenerator.Generate(typeof(TReadModel)).ToJson(),
+                Schema = schemaGenerator.GenerateForReadModel(typeof(TReadModel)).ToJson(),
                 Indexes = GetIndexesForType(typeof(TReadModel), string.Empty),
                 ObserverType = observerType,
                 ObserverIdentifier = observerIdentifier
