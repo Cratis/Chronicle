@@ -75,7 +75,7 @@ public class and_missing_parents_receive_leaf_updates(context ctx) : IClassFixtu
             var expando = new ExpandoObjectConverter(formats);
             var collections = new SinkCollections(readModel, database);
             var converter = new MongoDBConverter(expando, formats, readModel, NullLogger<MongoDBConverter>.Instance);
-            _sink = new Sink(readModel, converter, collections, new ChangesetConverter(readModel, converter, collections, expando), expando);
+            _sink = new Sink(readModel, converter, collections, new ChangesetConverter(readModel, converter, collections, expando), expando, Substitute.For<IReadModelChangeStreams>());
             _collection = collections.GetCollection();
 
             await _collection.InsertOneAsync(new BsonDocument { { "_id", "legacy" }, { "outer", new BsonDocument { { "info", BsonNull.Value } } } });

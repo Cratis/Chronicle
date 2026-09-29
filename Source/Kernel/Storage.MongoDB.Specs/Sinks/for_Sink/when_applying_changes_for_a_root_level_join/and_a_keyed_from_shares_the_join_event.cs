@@ -51,7 +51,7 @@ public class and_a_keyed_from_shares_the_join_event : Specification
             .Returns(new MongoDBProperty("count", []));
         mongoConverter.ToBsonValue(Arg.Any<object?>(), Arg.Any<PropertyPath>()).Returns(new BsonInt64(1));
         var converter = new ChangesetConverter(readModel, mongoConverter, collections, expandoConverter);
-        _sink = new Sink(readModel, mongoConverter, collections, converter, expandoConverter);
+        _sink = new Sink(readModel, mongoConverter, collections, converter, expandoConverter, Substitute.For<IReadModelChangeStreams>());
 
         var change = new PropertiesChanged<ExpandoObject>(new ExpandoObject(),
             [new PropertyDifference(new PropertyPath("count"), 0L, 1L)]);

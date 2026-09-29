@@ -48,7 +48,9 @@ public class MongoSinkHarness : ISinkHarness
         var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, definition, NullLogger<MongoDBConverter>.Instance);
         var changesetConverter = new ChangesetConverter(definition, mongoDBConverter, collections, expandoObjectConverter);
 
-        return new Sink(definition, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
+        var changeStreams = new ReadModelChangeStreams(NullLogger<ReadModelChangeStreams>.Instance);
+
+        return new Sink(definition, mongoDBConverter, collections, changesetConverter, expandoObjectConverter, changeStreams);
     }
 
     /// <inheritdoc/>

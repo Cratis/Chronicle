@@ -101,7 +101,7 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
         var collections = new SinkCollections(readModel, database);
         var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
         var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
-        _mongoSink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
+        _mongoSink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter, Substitute.For<IReadModelChangeStreams>());
 
         _compliance = CreateCompliance();
         _inMemoryPipeline = new ReducerPipeline(readModel, _inMemorySink, _objectComparer, _compliance, "test-store", "test-namespace");

@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using System.Dynamic;
-using System.Reactive.Linq;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -32,12 +31,14 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="collections">Provider for <see cref="ISinkCollections"/> to use.</param>
 /// <param name="changesetConverter">Provider for <see cref="IChangesetConverter"/> for converting changesets.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+/// <param name="changeStreams"><see cref="IReadModelChangeStreams"/> for observing the collections of the read model.</param>
 public class Sink(
     ReadModelDefinition readModel,
     IMongoDBConverter converter,
     ISinkCollections collections,
     IChangesetConverter changesetConverter,
-    IExpandoObjectConverter expandoObjectConverter) : ISink
+    IExpandoObjectConverter expandoObjectConverter,
+    IReadModelChangeStreams changeStreams) : ISink
 {
     const int MaxBulkOperations = 1000;
 
@@ -477,11 +478,10 @@ public class Sink(
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Changes are observed through a MongoDB change stream, so a write made by any silo is seen, not only one
-    /// made through this sink instance. The stream watches the database, narrowed to the observed collection,
-    /// rather than the collection itself: a replay promotion renames collections, which would invalidate and end
-    /// a collection-level stream, whereas the database-level one reports the rename and carries on. Every batch
-    /// of changes re-reads the page once, so a burst of writes costs one query rather than one per write.
+    /// Changes are observed through a MongoDB change stream shared by every observer of the collection (see
+    /// <see cref="IReadModelChangeStreams"/>), so a write made by any silo is seen, not only one made through this
+    /// sink instance. Every batch of changes re-reads the page once, so a burst of writes costs one query rather
+    /// than one per write.
     /// <para>
     /// Without an explicit occurrence the primary collection is observed, even while a replay is in progress:
     /// the replay rebuilds its own collection, and the primary one keeps the previous state until the replay
@@ -492,50 +492,11 @@ public class Sink(
     {
         string containerName = occurrence ?? readModel.ContainerName;
         var collection = collections.GetCollection(containerName);
-        var changes = ChangesTo(containerName);
-
-        return Observable.Create<IEnumerable<ExpandoObject>>(async (observer, cancellationToken) =>
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                // The stream is opened before the page is read, so a write landing between the two is not lost.
-                // A stream ends only when the server invalidates it; the page is then read again on reopening,
-                // covering anything that happened while no stream was open.
-                using var cursor = await collection.Database.WatchAsync(changes, cancellationToken: cancellationToken);
-                observer.OnNext(await ReadPage(collection, skip, take, cancellationToken));
-
-                while (await cursor.MoveNextAsync(cancellationToken))
-                {
-                    if (cursor.Current.Any())
-                    {
-                        observer.OnNext(await ReadPage(collection, skip, take, cancellationToken));
-                    }
-                }
-            }
-        });
+        return changeStreams.Observe(
+            collection.Database,
+            containerName,
+            cancellationToken => ReadPage(collection, skip, take, cancellationToken));
     }
-
-    /// <summary>
-    /// Builds the change stream pipeline reporting every change to the named collection.
-    /// </summary>
-    /// <param name="containerName">The name of the collection to report changes to.</param>
-    /// <returns>The <see cref="PipelineDefinition{TInput, TOutput}"/> for a database-level change stream.</returns>
-    /// <remarks>
-    /// A change inside the collection names it in the namespace field of the change; a rename names the source
-    /// there and the target in its destination field, so a replay promotion renaming a rebuilt collection into place is reported as well.
-    /// Only the resume token is kept of each change: the page is read again anyway, so shipping the changed
-    /// documents across would be wasted.
-    /// </remarks>
-    static PipelineDefinition<ChangeStreamDocument<BsonDocument>, BsonDocument> ChangesTo(string containerName) =>
-        new BsonDocumentStagePipelineDefinition<ChangeStreamDocument<BsonDocument>, BsonDocument>(
-        [
-            new BsonDocument("$match", new BsonDocument("$or", new BsonArray
-            {
-                new BsonDocument("ns.coll", containerName),
-                new BsonDocument("to.coll", containerName)
-            })),
-            new BsonDocument("$project", new BsonDocument("_id", 1))
-        ]);
 
     async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
     {

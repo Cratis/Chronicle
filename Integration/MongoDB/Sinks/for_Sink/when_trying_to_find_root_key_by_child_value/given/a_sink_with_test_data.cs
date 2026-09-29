@@ -98,7 +98,8 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Integrat
             mongoDBConverter,
             collections,
             changesetConverter,
-            expandoObjectConverter);
+            expandoObjectConverter,
+            Substitute.For<IReadModelChangeStreams>());
     }
 
     protected void InsertDocument(Guid id, BsonDocument document)
