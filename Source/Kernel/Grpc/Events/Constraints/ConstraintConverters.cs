@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Services.Events.Constraints;
 
@@ -19,6 +20,7 @@ internal static class ConstraintConverters
     public static IConstraintDefinition ToChronicle(this Contracts.Events.Constraints.Constraint constraint)
     {
         var scope = constraint.Scope?.ToChronicle();
+        var eventSequences = constraint.ToEventSequences();
 
         return constraint.Type switch
         {
@@ -28,14 +30,20 @@ internal static class ConstraintConverters
                     constraint.Definition.Value0!.EventDefinitions.Select(e => e.ToChronicle()),
                     constraint.ToRemovedWith(),
                     constraint.Definition.Value0!.IgnoreCasing,
-                    scope),
+                    scope)
+                {
+                    EventSequences = eventSequences
+                },
 
             Contracts.Events.Constraints.ConstraintType.UniqueEventType =>
                 new UniqueEventTypeConstraintDefinition(
                     constraint.Name,
                     constraint.Definition.Value1!.EventTypeIds.Select(_ => (EventTypeId)_).ToArray(),
                     constraint.ToRemovedWith(),
-                    scope),
+                    scope)
+                {
+                    EventSequences = eventSequences
+                },
 
             _ => null!
         };
@@ -72,4 +80,20 @@ internal static class ConstraintConverters
     /// </remarks>
     static EventTypeId[] ToRemovedWith(this Contracts.Events.Constraints.Constraint constraint) =>
         constraint.RemovedWith?.Select(_ => (EventTypeId)_).ToArray() ?? [];
+
+    /// <summary>
+    /// Convert the event sequences a contract <see cref="Contracts.Events.Constraints.Constraint"/> applies to.
+    /// </summary>
+    /// <param name="constraint"><see cref="Contracts.Events.Constraints.Constraint"/> to read from.</param>
+    /// <returns>The <see cref="EventSequenceId"/> values of the event sequences the constraint applies to, empty for all.</returns>
+    /// <remarks>
+    /// A client that predates the field sends nothing, which arrives as an empty collection and keeps the constraint
+    /// applying to every event sequence.
+    /// </remarks>
+    static EventSequenceId[] ToEventSequences(this Contracts.Events.Constraints.Constraint constraint) =>
+        constraint.EventSequences?
+            .Where(_ => !string.IsNullOrWhiteSpace(_))
+            .Distinct()
+            .Select(_ => (EventSequenceId)_)
+            .ToArray() ?? [];
 }

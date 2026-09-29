@@ -26,5 +26,10 @@ public enum ConstraintChangeType
     /// <summary>
     /// The indexed properties changed.
     /// </summary>
-    IndexedPropertiesChanged = 3
+    IndexedPropertiesChanged = 3,
+
+    /// <summary>
+    /// The constraint now applies to event sequences it did not apply to before.
+    /// </summary>
+    EventSequencesChanged = 4
 }

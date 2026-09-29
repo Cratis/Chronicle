@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Serialization;
+using Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Concepts.Events.Constraints;
 
@@ -38,6 +39,7 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerab
 {
     readonly IEnumerable<EventTypeId>? _eventTypeIds = EventTypeIds;
     readonly IEnumerable<EventTypeId>? _removedWith = RemovedWith;
+    readonly IEnumerable<EventSequenceId>? _eventSequences;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UniqueEventTypeConstraintDefinition"/> class from a single removal event.
@@ -97,6 +99,24 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerab
         init => _removedWith = value;
     }
 
+    /// <summary>
+    /// Gets the <see cref="EventSequenceId"/> values of the event sequences the constraint applies to.
+    /// </summary>
+    /// <remarks>
+    /// Empty means every event sequence, which is the default. The constraint is not validated for an event sequence
+    /// it does not apply to. It is an init-only member rather than a constructor parameter so that assemblies compiled
+    /// against the existing constructors keep linking, and normalized on the way out for the same reason as
+    /// <see cref="EventTypeIds"/>.
+    /// </remarks>
+    public IEnumerable<EventSequenceId> EventSequences
+    {
+        get => _eventSequences ?? [];
+        init => _eventSequences = value;
+    }
+
+    /// <inheritdoc/>
+    public bool AppliesTo(EventSequenceId eventSequenceId) => EventSequences.Covers(eventSequenceId);
+
     /// <inheritdoc/>
     public bool Equals(IConstraintDefinition? other) => Equals(other as UniqueEventTypeConstraintDefinition);
 
@@ -121,7 +141,8 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerab
         Name == other.Name &&
         Scope == other.Scope &&
         EventTypeIds.SequenceEqual(other.EventTypeIds) &&
-        RemovedWith.SequenceEqual(other.RemovedWith);
+        RemovedWith.SequenceEqual(other.RemovedWith) &&
+        EventSequences.CoversSameAs(other.EventSequences);
 
     /// <inheritdoc/>
     public override int GetHashCode()
@@ -139,6 +160,7 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerab
             hashCode.Add(removalEventTypeId);
         }
 
+        hashCode.AddEventSequences(EventSequences);
         return hashCode.ToHashCode();
     }
 

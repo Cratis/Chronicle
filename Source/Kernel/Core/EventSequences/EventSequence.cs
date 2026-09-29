@@ -1082,7 +1082,7 @@ public class EventSequence(
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
         _knownConstraints = current;
         _constraintsVersion = version;
-        await StartReindexJob(ConstraintDefinitionComparison.GetReindexChanges(previous, current));
+        await StartReindexJob(ConstraintDefinitionComparison.GetReindexChanges(previous, current, _eventSequenceId));
     }
 
     /// <summary>

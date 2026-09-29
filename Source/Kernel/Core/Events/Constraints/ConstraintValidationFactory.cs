@@ -24,12 +24,20 @@ public class ConstraintValidationFactory(IStorage storage) : IConstraintValidati
         var uniqueEventTypeConstraintsStorage = namespaceStorage.GetUniqueEventTypesConstraints(eventSequenceKey.EventSequenceId);
         var closedStreamsStorage = namespaceStorage.GetClosedStreamsConstraints(eventSequenceKey.EventSequenceId);
         var definitions = await eventStore.Constraints.GetDefinitions();
-        var validators = definitions.Select<IConstraintDefinition, IConstraintValidator>(_ => _ switch
-        {
-            UniqueConstraintDefinition unique => new UniqueConstraintValidator(unique, uniqueConstraintsStorage),
-            UniqueEventTypeConstraintDefinition uniqueEventType => new UniqueEventTypeConstraintValidator(uniqueEventType, uniqueEventTypeConstraintsStorage),
-            _ => throw new UnknownConstraintType(_.GetType())
-        }).Append(new ClosedStreamConstraintValidator(closedStreamsStorage)).ToArray();
+
+        // A constraint that does not apply to this event sequence gets no validator at all, which skips both its
+        // validation and the index update that follows a successful append - so the sequence never claims a value
+        // it could only release through removal events appended to that same sequence.
+        var validators = definitions
+            .Where(_ => _.AppliesTo(eventSequenceKey.EventSequenceId))
+            .Select<IConstraintDefinition, IConstraintValidator>(_ => _ switch
+            {
+                UniqueConstraintDefinition unique => new UniqueConstraintValidator(unique, uniqueConstraintsStorage),
+                UniqueEventTypeConstraintDefinition uniqueEventType => new UniqueEventTypeConstraintValidator(uniqueEventType, uniqueEventTypeConstraintsStorage),
+                _ => throw new UnknownConstraintType(_.GetType())
+            })
+            .Append(new ClosedStreamConstraintValidator(closedStreamsStorage))
+            .ToArray();
 
         return new ConstraintValidation(validators);
     }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintDefinitionComparison.when_getting_reindex_changes;
 
@@ -14,7 +15,7 @@ public class and_a_unique_constraint_is_added : Specification
         "new-unique",
         [new UniqueConstraintEventDefinition("some-event", ["Some"])]);
 
-    void Because() => _reindexChanges = ConstraintDefinitionComparison.GetReindexChanges([], [_added]);
+    void Because() => _reindexChanges = ConstraintDefinitionComparison.GetReindexChanges([], [_added], EventSequenceId.Log);
 
     [Fact] void should_derive_a_single_reindex_change() => _reindexChanges.Count.ShouldEqual(1);
     [Fact] void should_require_reindex_for_the_added_constraint() => _reindexChanges.First().RequiresReindex.ShouldBeTrue();

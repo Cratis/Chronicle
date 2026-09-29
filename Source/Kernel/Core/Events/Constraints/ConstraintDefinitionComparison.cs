@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -47,18 +48,27 @@ public static class ConstraintDefinitionComparison
     }
 
     /// <summary>
-    /// Derive the changes for the unique constraints that were added or changed and therefore need their index rebuilt.
+    /// Derive the changes for the unique constraints that were added or changed and therefore need their index rebuilt
+    /// for a specific event sequence.
     /// </summary>
     /// <param name="previous">The previously observed definitions.</param>
     /// <param name="current">The current definitions.</param>
-    /// <returns>The <see cref="ConstraintDefinitionChange"/> for every unique constraint requiring a reindex.</returns>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> whose index would be rebuilt.</param>
+    /// <returns>The <see cref="ConstraintDefinitionChange"/> for every unique constraint requiring a reindex of the event sequence.</returns>
+    /// <remarks>
+    /// A constraint is only indexed for the event sequences it applies to, so one that does not apply to
+    /// <paramref name="eventSequenceId"/> never needs its index rebuilt there. One that applies now but did not before
+    /// always does: its index for this sequence was never maintained, or has been stale since it last stopped applying.
+    /// A change to the event sequences alone does not require a reindex of a sequence covered both before and after.
+    /// </remarks>
     public static IReadOnlyCollection<ConstraintDefinitionChange> GetReindexChanges(
         IReadOnlyCollection<IConstraintDefinition> previous,
-        IReadOnlyCollection<IConstraintDefinition> current)
+        IReadOnlyCollection<IConstraintDefinition> current,
+        EventSequenceId eventSequenceId)
     {
         var previousUniqueByName = previous.OfType<UniqueConstraintDefinition>().ToDictionary(_ => _.Name);
         var changes = new List<ConstraintDefinitionChange>();
-        foreach (var unique in current.OfType<UniqueConstraintDefinition>())
+        foreach (var unique in current.OfType<UniqueConstraintDefinition>().Where(_ => _.AppliesTo(eventSequenceId)))
         {
             if (!previousUniqueByName.TryGetValue(unique.Name, out var existing))
             {
@@ -66,7 +76,13 @@ public static class ConstraintDefinitionComparison
                 continue;
             }
 
-            var change = unique.CompareWith(existing);
+            if (!existing.AppliesTo(eventSequenceId))
+            {
+                changes.Add(new ConstraintDefinitionChange(unique.Name, true, [ConstraintChangeType.EventSequencesChanged]));
+                continue;
+            }
+
+            var change = unique.CompareWith(existing with { EventSequences = unique.EventSequences });
             if (change.RequiresReindex)
             {
                 changes.Add(new ConstraintDefinitionChange(unique.Name, true, change.ChangeTypes));
