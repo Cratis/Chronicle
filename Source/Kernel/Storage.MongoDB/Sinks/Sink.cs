@@ -489,36 +489,67 @@ public class Sink(
     /// ends and promotes the rebuilt collection - which the stream sees as a rename and answers with a fresh page.
     /// </para>
     /// <para>
-    /// The promotion renames the primary collection aside before renaming the rebuilt one into its place, so a read
-    /// started inside that window - by a subscriber joining, or a stream reopening - can find no collection at all.
-    /// That is not an empty read model, so an empty page is only emitted once the collection is known to exist; the
-    /// rename into place is what triggers the read that follows. As a consequence, dropping the collection emits no
-    /// page either.
+    /// A replay promotion renames the primary collection aside and then renames the rebuilt one into its place, so a
+    /// read that runs inside that window would find no collection and report an empty read model. Observing the primary
+    /// collection therefore looks at the collections before and after an empty read:
+    /// no page is emitted when the promoting collection exists before the read - the read is skipped - or when it exists
+    /// after an empty read, or when the primary collection is not the one that was there before the read (it was renamed
+    /// or replaced in between). The rename into place is what triggers the read that follows. A collection that has
+    /// never been created, has been dropped or is genuinely empty is an empty read model, and emits the empty page. The
+    /// checks are one listCollections command before every read and one more after every empty page. Observing an
+    /// explicit occurrence never holds a page back.
     /// </para>
     /// </remarks>
     public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
     {
         string containerName = occurrence ?? readModel.ContainerName;
         var collection = collections.GetCollection(containerName);
+        var isPrimary = occurrence is null;
         return changeStreams
             .Observe(
                 collection.Database,
                 containerName,
-                cancellationToken => ReadObservedPage(collection, containerName, skip, take, cancellationToken))
+                cancellationToken => ReadObservedPage(collection, containerName, isPrimary, skip, take, cancellationToken))
             .Where(page => page is not null)
             .Select(page => page!);
     }
 
-    async Task<IEnumerable<ExpandoObject>?> ReadObservedPage(IMongoCollection<BsonDocument> collection, string containerName, int skip, int take, CancellationToken cancellationToken)
+    async Task<IEnumerable<ExpandoObject>?> ReadObservedPage(IMongoCollection<BsonDocument> collection, string containerName, bool isPrimary, int skip, int take, CancellationToken cancellationToken)
     {
+        if (!isPrimary)
+        {
+            return await ReadPage(collection, skip, take, cancellationToken);
+        }
+
+        var before = await GetCollectionState(collection.Database, containerName, cancellationToken);
+        if (before.IsPromoting)
+        {
+            return null;
+        }
+
         var page = await ReadPage(collection, skip, take, cancellationToken);
-        return page.Any() || await CollectionExists(collection.Database, containerName, cancellationToken) ? page : null;
+        if (page.Any())
+        {
+            return page;
+        }
+
+        var after = await GetCollectionState(collection.Database, containerName, cancellationToken);
+        return after.IsPromoting || after.PrimaryExists != before.PrimaryExists || after.PrimaryId != before.PrimaryId ? null : page;
     }
 
-    static async Task<bool> CollectionExists(IMongoDatabase database, string containerName, CancellationToken cancellationToken)
+    async Task<CollectionState> GetCollectionState(IMongoDatabase database, string containerName, CancellationToken cancellationToken)
     {
-        using var names = await database.ListCollectionNamesAsync(new ListCollectionNamesOptions { Filter = new BsonDocument("name", containerName) }, cancellationToken);
-        return await names.AnyAsync(cancellationToken);
+        var promotingName = collections.PromotingCollectionName;
+        var options = new ListCollectionsOptions
+        {
+            Filter = new BsonDocument("name", new BsonDocument("$in", new BsonArray { containerName, promotingName }))
+        };
+        using var cursor = await database.ListCollectionsAsync(options, cancellationToken);
+        var listed = await cursor.ToListAsync(cancellationToken);
+        var primary = listed.FirstOrDefault(collection => collection["name"] == containerName);
+        var isPromoting = listed.Exists(collection => collection["name"] == promotingName);
+        var primaryId = primary?.GetValue("info", new BsonDocument()).AsBsonDocument.GetValue("uuid", BsonNull.Value);
+        return new CollectionState(isPromoting, primary is not null, primaryId);
     }
 
     async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
@@ -779,4 +810,6 @@ public class Sink(
     }
 
     IMongoCollection<BsonDocument> Collection => collections.GetCollection();
+
+    sealed record CollectionState(bool IsPromoting, bool PrimaryExists, BsonValue? PrimaryId);
 }

@@ -115,6 +115,7 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Integrat
 
     class TestCollections(IMongoDatabase database, string collectionName) : ISinkCollections
     {
+        public string PromotingCollectionName => $"replay-{collectionName}-promoting";
         public IMongoCollection<BsonDocument> GetCollection() => database.GetCollection<BsonDocument>(collectionName);
         public IMongoCollection<BsonDocument> GetCollection(string collectionName) => database.GetCollection<BsonDocument>(collectionName);
         public Task BeginReplay(Storage.ReadModels.ReplayContext context) => Task.CompletedTask;

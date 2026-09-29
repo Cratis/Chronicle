@@ -4,12 +4,11 @@
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_observing_instances;
 
 /// <summary>
-/// A collection that exists without documents really is empty, so the empty page is emitted.
+/// MongoDB creates a collection on its first write, so a read model nothing has been written to has no collection
+/// at all. That is an empty read model, and the initial empty page is emitted.
 /// </summary>
-public class and_the_collection_exists_but_is_empty : given.a_sink_observing_a_container
+public class and_the_collection_was_never_created : given.a_sink_observing_a_container
 {
-    void Establish() => _primaryId = Guid.NewGuid();
-
     async Task Because()
     {
         using var subscription = _sink.ObserveInstances().Subscribe(_pages.Add);
