@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sinks.for_ISink.when_paging_instances.given;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_observing_instances;
@@ -16,8 +17,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_observing_instanc
 /// <param name="fixture">The <see cref="ReplicaSetMongoDBFixture"/> supplying the replica set the change stream needs.</param>
 /// <remarks>
 /// The first emission is awaited before the replay begins, so the subscription is known to be established. The
-/// promotion may be reported as several changes, some of them seeing the collection between its two renames, so
-/// emissions are matched against the replayed state rather than counted.
+/// promotion renames the primary collection aside before renaming the rebuilt one into its place; a page read in
+/// between finds no collection at all, so everything emitted before the replayed state has to still be the first
+/// page - an empty page there would make a client see every instance removed and added again.
 /// </remarks>
 [Collection(ReplicaSetMongoDBCollection.Name)]
 public class and_a_replay_is_promoted_after_subscribing(ReplicaSetMongoDBFixture fixture) : a_populated_sink<MongoSinkHarness>
@@ -26,8 +28,10 @@ public class and_a_replay_is_promoted_after_subscribing(ReplicaSetMongoDBFixture
 
     readonly TaskCompletionSource<string[]> _initial = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource<string[]> _replayed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly List<string[]> _beforeReplayed = [];
     string[] _initialNames;
     string[] _replayedNames;
+    IEnumerable<FailedPartition> _failedPartitions;
 
     protected override MongoSinkHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
 
@@ -43,13 +47,20 @@ public class and_a_replay_is_promoted_after_subscribing(ReplicaSetMongoDBFixture
             DateTimeOffset.UtcNow);
         await _sink.BeginReplay(context);
         await Write("a", "replayed");
-        await _sink.EndReplay(context);
+        _failedPartitions = await _sink.EndReplay(context);
+        if (_failedPartitions.Any())
+        {
+            // Nothing was promoted, so the replayed state will never be emitted - the facts report why.
+            return;
+        }
 
         _replayedNames = await _replayed.Task.WaitAsync(_deadline);
     }
 
     [Fact] void should_emit_the_first_page() => _initialNames.ShouldEqual(["a", "b", "c", "d", "e"]);
+    [Fact] void should_end_the_replay_without_failed_partitions() => _failedPartitions.ShouldBeEmpty();
     [Fact] void should_emit_the_state_the_replay_produced_after_the_promotion() => _replayedNames.ShouldEqual(["replayed"]);
+    [Fact] void should_emit_nothing_but_the_first_page_before_the_replayed_state() => _beforeReplayed.Where(names => !names.SequenceEqual(_initialNames)).ShouldBeEmpty();
 
     void Received(IEnumerable<ExpandoObject> instances)
     {
@@ -61,6 +72,10 @@ public class and_a_replay_is_promoted_after_subscribing(ReplicaSetMongoDBFixture
         else if (names.SequenceEqual(["replayed"]))
         {
             _replayed.TrySetResult(names);
+        }
+        else if (!_replayed.Task.IsCompleted)
+        {
+            _beforeReplayed.Add(names);
         }
     }
 

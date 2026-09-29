@@ -82,20 +82,35 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
     /// <param name="containerName">The name of the collection to report changes to.</param>
     /// <returns>The <see cref="PipelineDefinition{TInput, TOutput}"/> for a database-level change stream.</returns>
     /// <remarks>
-    /// A change inside the collection names it in the namespace field of the change; a rename names the source
-    /// there and the target in its destination field, so a replay promotion renaming a rebuilt collection into place
-    /// is reported as well. Only the resume token is kept of each change: every observer reads its page again anyway,
-    /// so shipping the changed documents across would be wasted.
+    /// <para>
+    /// A change inside the collection - including dropping it - names it in the namespace field of the change. A
+    /// rename names its source there and its target in the destination field, and only a rename INTO the collection
+    /// is reported: a replay promotion first renames the collection aside and then renames the rebuilt one into its
+    /// place, and answering the first rename would read the collection while it does not exist, handing every
+    /// observer an empty page between the old state and the replayed one.
+    /// </para>
+    /// <para>
+    /// Only the resume token and the operation type are kept of each change: every observer reads its page again
+    /// anyway, so shipping the changed documents across would be wasted.
+    /// </para>
     /// </remarks>
     internal static PipelineDefinition<ChangeStreamDocument<BsonDocument>, BsonDocument> ChangesTo(string containerName) =>
         new BsonDocumentStagePipelineDefinition<ChangeStreamDocument<BsonDocument>, BsonDocument>(
         [
             new BsonDocument("$match", new BsonDocument("$or", new BsonArray
             {
-                new BsonDocument("ns.coll", containerName),
-                new BsonDocument("to.coll", containerName)
+                new BsonDocument
+                {
+                    { "operationType", new BsonDocument("$ne", "rename") },
+                    { "ns.coll", containerName }
+                },
+                new BsonDocument
+                {
+                    { "operationType", "rename" },
+                    { "to.coll", containerName }
+                }
             })),
-            new BsonDocument("$project", new BsonDocument("_id", 1))
+            new BsonDocument("$project", new BsonDocument { { "_id", 1 }, { "operationType", 1 } })
         ]);
 
     static bool IsTransient(Exception exception) => exception is MongoException or TimeoutException;
