@@ -7,20 +7,20 @@ using Cratis.Specifications;
 using Xunit;
 
 [EventType]
-public record TestingIndexAuthorRegistered(string Name);
+public record AuthorRegistered(string Name);
 
-[FromEvent<TestingIndexAuthorRegistered>]
-public record TestingIndexAuthor([Key] Guid Id, string Name);
+[FromEvent<AuthorRegistered>]
+public record Author([Key] Guid Id, string Name);
 
 public class when_projecting_a_registered_author : Specification
 {
     readonly EventSourceId _authorId = EventSourceId.New();
-    readonly ReadModelScenario<TestingIndexAuthor> _scenario = new();
+    readonly ReadModelScenario<Author> _scenario = new();
 
     Task Because() =>
         _scenario.Given
             .ForEventSource(_authorId)
-            .Events(new TestingIndexAuthorRegistered("Jane Austen"));
+            .Events(new AuthorRegistered("Jane Austen"));
 
     [Fact] void should_set_the_author_name() =>
         _scenario.Instance!.Name.ShouldEqual("Jane Austen");
