@@ -61,8 +61,15 @@ public class a_shared_change_stream : Specification
         _changeStreams = new(NullLogger<ReadModelChangeStreams>.Instance, new an_immediate_time_provider());
     }
 
-    protected IObservable<int> Observe() =>
-        _changeStreams.Observe(_database, ContainerName, _ => _read(Interlocked.Increment(ref _reads)));
+    protected IObservable<int> Observe() => Observe(readNumber => _read(readNumber));
+
+    /// <summary>
+    /// Observe the container with a read of its own, given the running number of the read across all observers.
+    /// </summary>
+    /// <param name="read">The read to perform.</param>
+    /// <returns>The observable.</returns>
+    protected IObservable<int> Observe(Func<int, Task<int>> read) =>
+        _changeStreams.Observe(_database, ContainerName, _ => read(Interlocked.Increment(ref _reads)));
 
     protected a_controllable_cursor Cursor(int index)
     {
