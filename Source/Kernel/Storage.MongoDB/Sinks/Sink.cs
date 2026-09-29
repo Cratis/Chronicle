@@ -468,7 +468,8 @@ public class Sink(
     /// <inheritdoc/>
     public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
     {
-        var collection = occurrence is not null ? collections.GetCollection(occurrence) : Collection;
+        // Resolved exactly like ObserveInstances, so the count and the page of an observed response come from the same collection.
+        var collection = collections.GetCollection(occurrence ?? readModel.ContainerName);
         var totalCount = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
         var instances = await ReadPage(collection, skip, take);
         return new ReadModelInstances(instances, totalCount);
