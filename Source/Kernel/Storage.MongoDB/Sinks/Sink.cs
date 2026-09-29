@@ -471,7 +471,7 @@ public class Sink(
         // Resolved exactly like ObserveInstances, so the count and the page of an observed response come from the same collection.
         var collection = collections.GetCollection(occurrence ?? readModel.ContainerName);
         var totalCount = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
-        var instances = await ReadPage(collection, skip, take);
+        var instances = await ReadPage(collection, skip, take, CancellationToken.None);
         return new ReadModelInstances(instances, totalCount);
     }
 
@@ -502,13 +502,13 @@ public class Sink(
                 // A stream ends only when the server invalidates it; the page is then read again on reopening,
                 // covering anything that happened while no stream was open.
                 using var cursor = await collection.Database.WatchAsync(changes, cancellationToken: cancellationToken);
-                observer.OnNext(await ReadPage(collection, skip, take));
+                observer.OnNext(await ReadPage(collection, skip, take, cancellationToken));
 
                 while (await cursor.MoveNextAsync(cancellationToken))
                 {
                     if (cursor.Current.Any())
                     {
-                        observer.OnNext(await ReadPage(collection, skip, take));
+                        observer.OnNext(await ReadPage(collection, skip, take, cancellationToken));
                     }
                 }
             }
@@ -537,14 +537,14 @@ public class Sink(
             new BsonDocument("$project", new BsonDocument("_id", 1))
         ]);
 
-    async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take)
+    async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
     {
         var documents = await collection
             .Find(FilterDefinition<BsonDocument>.Empty)
             .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
             .Skip(skip)
             .Limit(take)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var schema = readModel.GetSchemaForLatestGeneration();
         return documents.Select(document => expandoObjectConverter.ToExpandoObject(document, schema)).ToArray();
