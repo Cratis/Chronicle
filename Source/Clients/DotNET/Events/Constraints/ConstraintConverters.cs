@@ -38,7 +38,8 @@ internal static class ConstraintConverters
         {
             EventTypeIds = definition.EventTypeIds.Select(_ => _.Value).ToList()
         }),
-        Scope = definition.Scope?.ToContract()
+        Scope = definition.Scope?.ToContract(),
+        EventSequences = [.. definition.EventSequences.Select(_ => _.Value).Distinct()]
     };
 
     /// <summary>
@@ -60,7 +61,8 @@ internal static class ConstraintConverters
             }).ToList(),
             IgnoreCasing = definition.IgnoreCasing
         }),
-        Scope = definition.Scope?.ToContract()
+        Scope = definition.Scope?.ToContract(),
+        EventSequences = [.. definition.EventSequences.Select(_ => _.Value).Distinct()]
     };
 
     /// <summary>

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Events.Constraints;
@@ -18,6 +19,7 @@ public class ConstraintBuilder(
     Type? owner = default) : IConstraintBuilder
 {
     readonly List<IConstraintDefinition> _constraints = [];
+    readonly List<EventSequenceId> _eventSequences = [];
     bool _perEventSourceType;
     bool _perEventStreamType;
     bool _perEventStreamId;
@@ -42,6 +44,16 @@ public class ConstraintBuilder(
         _perEventStreamId = true;
         return this;
     }
+
+    /// <inheritdoc/>
+    public IConstraintBuilder ForEventSequences(params EventSequenceId[] eventSequenceIds)
+    {
+        _eventSequences.AddRange(eventSequenceIds.Where(_ => !_eventSequences.Contains(_)).Distinct());
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IConstraintBuilder ForEventLog() => ForEventSequences(EventSequenceId.Log);
 
     /// <inheritdoc/>
     public IConstraintBuilder Unique(Action<IUniqueConstraintBuilder> callback)
@@ -101,7 +113,7 @@ public class ConstraintBuilder(
         var constraints = MergeUniqueEventTypeConstraintsSharingName(_constraints);
         ThrowIfDuplicateConstraintNames(constraints);
 
-        return constraints.ToImmutableList();
+        return constraints.Select(ApplyEventSequences).ToImmutableList();
     }
 
     /// <summary>
@@ -141,7 +153,8 @@ public class ConstraintBuilder(
             merged[existingIndex] = existing with
             {
                 EventTypeIds = existing.EventTypeIds.Concat(uniqueEventType.EventTypeIds).Distinct().ToArray(),
-                RemovedWith = existing.RemovedWith.Concat(uniqueEventType.RemovedWith).Distinct().ToArray()
+                RemovedWith = existing.RemovedWith.Concat(uniqueEventType.RemovedWith).Distinct().ToArray(),
+                EventSequences = existing.EventSequences.Concat(uniqueEventType.EventSequences).Distinct().ToArray()
             };
         }
 
@@ -173,6 +186,31 @@ public class ConstraintBuilder(
             _perEventSourceType ? (EventSourceType)"_scoped_" : null,
             _perEventStreamType ? (EventStreamType)"_scoped_" : null,
             _perEventStreamId ? (EventStreamId)"_scoped_" : null);
+    }
+
+    /// <summary>
+    /// Apply the event sequences declared on the builder to a definition.
+    /// </summary>
+    /// <param name="definition">The definition to apply to.</param>
+    /// <returns>The definition with the event sequences applied.</returns>
+    /// <remarks>
+    /// Applied when building rather than when each constraint is declared, so the declaration holds for every
+    /// constraint on the builder regardless of where in the chain it was written. The builder's declaration is
+    /// added to any the definition already carries, such as those read from a <see cref="UniqueAttribute"/>.
+    /// </remarks>
+    IConstraintDefinition ApplyEventSequences(IConstraintDefinition definition)
+    {
+        if (_eventSequences.Count == 0)
+        {
+            return definition;
+        }
+
+        return definition switch
+        {
+            UniqueConstraintDefinition unique => unique with { EventSequences = [.. unique.EventSequences.Concat(_eventSequences).Distinct()] },
+            UniqueEventTypeConstraintDefinition uniqueEventType => uniqueEventType with { EventSequences = [.. uniqueEventType.EventSequences.Concat(_eventSequences).Distinct()] },
+            _ => definition
+        };
     }
 
     IConstraintDefinition ApplyScope(IConstraintDefinition definition)

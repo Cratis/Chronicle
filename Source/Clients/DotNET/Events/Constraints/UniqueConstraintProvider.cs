@@ -44,6 +44,10 @@ public class UniqueConstraintProvider(
                 .ToArray();
 
             var builder = new ConstraintBuilder(eventTypes, namingPolicy);
+
+            // Several properties can share one constraint name, so the event sequences each of them declares are
+            // combined. None declared anywhere leaves the constraint applying to every event sequence.
+            builder.ForEventSequences([.. constraint.SelectMany(_ => _.Property.GetConstraintEventSequences())]);
             builder.Unique(unique =>
             {
                 unique.WithName(constraint.Key);

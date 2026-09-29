@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.EventSequences;
+
 namespace Cratis.Chronicle.Events.Constraints;
 
 /// <summary>
@@ -49,4 +51,13 @@ public record UniqueConstraintDefinition(
         : this(name, messageCallback, eventsWithProperties, removedWith is null ? [] : [removedWith], ignoreCasing, scope)
     {
     }
+
+    /// <summary>
+    /// Gets the <see cref="EventSequenceId"/> values of the event sequences the constraint applies to.
+    /// </summary>
+    /// <remarks>
+    /// Empty means every event sequence, which is the default. The constraint is not validated - and claims nothing -
+    /// for an event sequence it does not apply to.
+    /// </remarks>
+    public IEnumerable<EventSequenceId> EventSequences { get; init; } = [];
 }

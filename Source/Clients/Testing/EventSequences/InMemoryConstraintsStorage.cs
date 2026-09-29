@@ -50,7 +50,10 @@ internal sealed class InMemoryConstraintsStorage(ClientConstraints.ICanProvideCo
                 (KernelConstraints::ConstraintName)unique.Name.Value,
                 eventsWithProperties,
                 ToKernelEventTypeIds(unique.RemovedWith),
-                unique.IgnoreCasing);
+                unique.IgnoreCasing)
+            {
+                EventSequences = ToKernelEventSequenceIds(unique.EventSequences)
+            };
         }
 
         if (client is ClientConstraints.UniqueEventTypeConstraintDefinition uniqueType)
@@ -58,7 +61,10 @@ internal sealed class InMemoryConstraintsStorage(ClientConstraints.ICanProvideCo
             return new KernelConstraints::UniqueEventTypeConstraintDefinition(
                 (KernelConstraints::ConstraintName)uniqueType.Name.Value,
                 ToKernelEventTypeIds(uniqueType.EventTypeIds),
-                ToKernelEventTypeIds(uniqueType.RemovedWith));
+                ToKernelEventTypeIds(uniqueType.RemovedWith))
+            {
+                EventSequences = ToKernelEventSequenceIds(uniqueType.EventSequences)
+            };
         }
 
         return null;
@@ -66,4 +72,7 @@ internal sealed class InMemoryConstraintsStorage(ClientConstraints.ICanProvideCo
 
     static KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId[] ToKernelEventTypeIds(IEnumerable<global::Cratis.Chronicle.Events.EventTypeId> eventTypeIds) =>
         [.. eventTypeIds.Select(_ => (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId)_.Value)];
+
+    static KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId[] ToKernelEventSequenceIds(IEnumerable<global::Cratis.Chronicle.EventSequences.EventSequenceId> eventSequenceIds) =>
+        [.. eventSequenceIds.Select(_ => (KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)_.Value)];
 }

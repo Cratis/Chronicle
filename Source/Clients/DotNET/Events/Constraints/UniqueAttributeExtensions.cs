@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -23,6 +24,18 @@ public static class UniqueAttributeExtensions
     /// <param name="member">Type to get for that has <see cref="UniqueAttribute"/>.</param>
     /// <returns>Message for constraint, if defined, default if not.</returns>
     public static ConstraintViolationMessage GetConstraintMessage(this MemberInfo member) => member.GetCustomAttribute<UniqueAttribute>()?.Message ?? ConstraintViolationMessage.NotDefined;
+
+    /// <summary>
+    /// Get the event sequences declared by the <see cref="UniqueAttribute"/> on a member.
+    /// </summary>
+    /// <param name="member">Member to get for that has <see cref="UniqueAttribute"/>.</param>
+    /// <returns>The <see cref="EventSequenceId"/> values declared, empty for every event sequence.</returns>
+    public static IEnumerable<EventSequenceId> GetConstraintEventSequences(this MemberInfo member) =>
+        member.GetCustomAttribute<UniqueAttribute>()?.EventSequences
+            .Where(_ => !string.IsNullOrWhiteSpace(_))
+            .Distinct()
+            .Select(_ => (EventSequenceId)_)
+            .ToArray() ?? [];
 
     /// <summary>
     /// Get all <see cref="RemoveConstraintAttribute"/> instances applied to an event type.
