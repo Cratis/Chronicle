@@ -126,7 +126,19 @@ public class ReactorInvoker(
         }
         catch (Exception ex)
         {
-            logger.ReactorFailed(reactorId, eventTypeName, ex);
+            switch (ex.ClassifyHandlerError())
+            {
+                case KernelConnectionErrorKind.Cancelled:
+                    logger.ReactorCancelledByKernelConnection(reactorId, eventTypeName, ex);
+                    break;
+                case KernelConnectionErrorKind.ConnectionLost:
+                    logger.ReactorInterruptedByLostKernelConnection(reactorId, eventTypeName, ex);
+                    break;
+                default:
+                    logger.ReactorFailed(reactorId, eventTypeName, ex);
+                    break;
+            }
+
             return ReactorInvocationResult.FromException(ex);
         }
         finally

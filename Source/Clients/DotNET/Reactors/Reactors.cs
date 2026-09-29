@@ -16,7 +16,6 @@ using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Traces;
-using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -580,10 +579,19 @@ public class Reactors : IReactors, IReactorPartitionRecovery
                 _ => { },
                 ex =>
                 {
-                    if (IsExpectedCancellation(ex, cancellationToken))
+                    var errorKind = cancellationToken.IsCancellationRequested ? KernelConnectionErrorKind.Cancelled : ex.ClassifyStreamError();
+                    if (errorKind == KernelConnectionErrorKind.Cancelled)
                     {
                         _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
                         messages.Dispose();
+                        return;
+                    }
+
+                    if (errorKind == KernelConnectionErrorKind.ConnectionLost)
+                    {
+                        _logger.ReactorStreamLostConnection(handler.Id, ex);
+                        messages.Dispose();
+                        ScheduleReconnect();
                         return;
                     }
 
@@ -598,31 +606,6 @@ public class Reactors : IReactors, IReactorPartitionRecovery
                     messages.Dispose();
                     ScheduleReconnect();
                 });
-    }
-
-    bool IsExpectedCancellation(Exception exception, CancellationToken cancellationToken)
-    {
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return true;
-        }
-
-        if (exception is OperationCanceledException)
-        {
-            return true;
-        }
-
-        if (exception is RpcException rpcException && rpcException.StatusCode == StatusCode.Cancelled)
-        {
-            return true;
-        }
-
-        if (exception.InnerException is not null)
-        {
-            return IsExpectedCancellation(exception.InnerException, cancellationToken);
-        }
-
-        return false;
     }
 
     async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, ReactorRegistration registration, EventsToObserve events, CancellationToken cancellationToken)
@@ -770,7 +753,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
 
             if (invocationResult.ExceptionResult.TryGetException(out var ex))
             {
-                _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
+                LogErrorWhileHandlingEvent(ex, eventTypeId);
             }
             else
             {
@@ -781,9 +764,25 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             }
         }
 
+        void LogErrorWhileHandlingEvent(Exception ex, EventTypeId eventTypeId)
+        {
+            switch (ex.ClassifyHandlerError())
+            {
+                case KernelConnectionErrorKind.Cancelled:
+                    _logger.HandlingEventCancelledByKernelConnection(ex, eventTypeId, handler.Id);
+                    break;
+                case KernelConnectionErrorKind.ConnectionLost:
+                    _logger.HandlingEventInterruptedByLostKernelConnection(ex, eventTypeId, handler.Id);
+                    break;
+                default:
+                    _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
+                    break;
+            }
+        }
+
         void FailedToHandleEventWithException(Exception ex, EventTypeId eventTypeId)
         {
-            _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
+            LogErrorWhileHandlingEvent(ex, eventTypeId);
             exceptionMessages = ex.GetAllMessages();
             exceptionStackTrace = ex.StackTrace ?? string.Empty;
             state = ObservationState.Failed;
