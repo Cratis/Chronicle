@@ -91,6 +91,12 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
     /// observer an empty page between the old state and the replayed one.
     /// </para>
     /// <para>
+    /// A read that is started for another reason inside that window - a subscriber joining an open stream, or a
+    /// stream reopening after a failure - can still find the collection missing. Filtering the stream cannot help
+    /// there, so the read itself must not report a missing collection as a page; the rename into the collection is
+    /// reported and triggers the read that follows.
+    /// </para>
+    /// <para>
     /// Only the resume token and the operation type are kept of each change: every observer reads its page again
     /// anyway, so shipping the changed documents across would be wasted.
     /// </para>

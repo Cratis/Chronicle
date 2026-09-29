@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Dynamic;
+using System.Reactive.Linq;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -487,15 +488,37 @@ public class Sink(
     /// the replay rebuilds its own collection, and the primary one keeps the previous state until the replay
     /// ends and promotes the rebuilt collection - which the stream sees as a rename and answers with a fresh page.
     /// </para>
+    /// <para>
+    /// The promotion renames the primary collection aside before renaming the rebuilt one into its place, so a read
+    /// started inside that window - by a subscriber joining, or a stream reopening - can find no collection at all.
+    /// That is not an empty read model, so an empty page is only emitted once the collection is known to exist; the
+    /// rename into place is what triggers the read that follows. As a consequence, dropping the collection emits no
+    /// page either.
+    /// </para>
     /// </remarks>
     public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
     {
         string containerName = occurrence ?? readModel.ContainerName;
         var collection = collections.GetCollection(containerName);
-        return changeStreams.Observe(
-            collection.Database,
-            containerName,
-            cancellationToken => ReadPage(collection, skip, take, cancellationToken));
+        return changeStreams
+            .Observe(
+                collection.Database,
+                containerName,
+                cancellationToken => ReadObservedPage(collection, containerName, skip, take, cancellationToken))
+            .Where(page => page is not null)
+            .Select(page => page!);
+    }
+
+    async Task<IEnumerable<ExpandoObject>?> ReadObservedPage(IMongoCollection<BsonDocument> collection, string containerName, int skip, int take, CancellationToken cancellationToken)
+    {
+        var page = await ReadPage(collection, skip, take, cancellationToken);
+        return page.Any() || await CollectionExists(collection.Database, containerName, cancellationToken) ? page : null;
+    }
+
+    static async Task<bool> CollectionExists(IMongoDatabase database, string containerName, CancellationToken cancellationToken)
+    {
+        using var names = await database.ListCollectionNamesAsync(new ListCollectionNamesOptions { Filter = new BsonDocument("name", containerName) }, cancellationToken);
+        return await names.AnyAsync(cancellationToken);
     }
 
     async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
