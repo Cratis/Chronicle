@@ -27,8 +27,10 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     static FieldInfo? _paramDefaultValueField;
 
     readonly ConcurrentDictionary<Type, JsonSchema> _schemasByType = new();
+    readonly ConcurrentDictionary<Type, JsonSchema> _readModelSchemasByType = new();
     readonly JsonSerializerOptions _serializerOptions;
     readonly JsonSchemaExporterOptions _exporterOptions;
+    readonly JsonSchemaExporterOptions _readModelExporterOptions;
     readonly IComplianceMetadataResolver _metadataResolver;
     readonly ISecurityMetadataResolver _securityMetadataResolver;
     readonly IDerivedTypes _derivedTypes;
@@ -81,7 +83,13 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         _exporterOptions = new JsonSchemaExporterOptions
         {
             TreatNullObliviousAsNonNullable = true,
-            TransformSchemaNode = TransformNode
+            TransformSchemaNode = (context, schema) => TransformNode(context, schema, restorePropertiesWithDefaultValues: false)
+        };
+
+        _readModelExporterOptions = new JsonSchemaExporterOptions
+        {
+            TreatNullObliviousAsNonNullable = true,
+            TransformSchemaNode = (context, schema) => TransformNode(context, schema, restorePropertiesWithDefaultValues: true)
         };
     }
 
@@ -111,6 +119,32 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             static (typeToGenerate, generator) =>
             {
                 var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._exporterOptions);
+                return new JsonSchema(node.AsObject());
+            },
+            this);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Differs from <see cref="Generate"/> in one way: a converter-backed property - a concept, for instance - whose
+    /// constructor parameter has a default value (<c language="csharp">OwnerSubject? Owner = null</c>) gets the same schema
+    /// it would get without the default, instead of the untyped <c language="csharp">{"default": null}</c> System.Text.Json
+    /// produces for it. Without a type the property is dropped when the read model is read, and without compliance
+    /// metadata a <c language="csharp">[PII]</c> value is stored in the clear.
+    /// <para>
+    /// Event types keep the <see cref="Generate"/> shape on purpose. The kernel compares a registered event type's
+    /// schema with the stored one and refuses a change within a generation, so giving such a property a type would stop
+    /// an existing event type from registering.
+    /// </para>
+    /// <para>
+    /// Cached the same way, and for the same reasons, as <see cref="Generate"/>.
+    /// </para>
+    /// </remarks>
+    public JsonSchema GenerateForReadModel(Type type) =>
+        _readModelSchemasByType.GetOrAdd(
+            type,
+            static (typeToGenerate, generator) =>
+            {
+                var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._readModelExporterOptions);
                 return new JsonSchema(node.AsObject());
             },
             this);
@@ -268,7 +302,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
-    JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema)
+    JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema, bool restorePropertiesWithDefaultValues)
     {
         var type = context.TypeInfo.Type;
         var formatType = Nullable.GetUnderlyingType(type) ?? type;
@@ -388,7 +422,10 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         // serializer, so declaration generation needs the title to recover the key type from the Id schema.
         if (context.TypeInfo.Kind == JsonTypeInfoKind.Object)
         {
-            RestorePropertySchemasReplacedByDefaultValues(context.TypeInfo, schemaObj);
+            if (restorePropertiesWithDefaultValues)
+            {
+                RestorePropertySchemasReplacedByDefaultValues(context.TypeInfo, schemaObj);
+            }
 
             if (context.PropertyInfo is null || schemaObj["properties"] is JsonObject)
             {

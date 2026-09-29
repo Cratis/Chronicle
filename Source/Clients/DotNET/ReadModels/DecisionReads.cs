@@ -246,7 +246,7 @@ public sealed class DecisionReads : IDecisionReads
         var types = definition.From.Keys.Concat(definition.RemovedWith.Keys).DistinctBy(_ => _.Id).ToArray();
         if (types.Length == 0) return Refuse(DecisionReadRefusalReason.NoEventTypes);
         if (types.Any(_ => _.Id.Contains(','))) return Refuse(DecisionReadRefusalReason.UnsupportedEventTypeId);
-        var schema = _schemas.Generate(type);
+        var schema = _schemas.GenerateForReadModel(type);
         if (!schema.HasKeyProperty()) return Refuse(DecisionReadRefusalReason.KeyConversion);
         var key = schema.GetKeyProperty();
         var format = key.ActualTypeSchema.Format;

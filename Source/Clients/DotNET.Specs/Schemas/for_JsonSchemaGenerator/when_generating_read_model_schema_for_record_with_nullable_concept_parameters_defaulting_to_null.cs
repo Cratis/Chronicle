@@ -7,7 +7,7 @@ using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator;
 
-public class when_generating_schema_for_record_with_nullable_concept_parameters_defaulting_to_null : given.a_json_schema_generator_with_pii_support
+public class when_generating_read_model_schema_for_record_with_nullable_concept_parameters_defaulting_to_null : given.a_json_schema_generator_with_pii_support
 {
     [PII]
     record OwnerSubject(string Value) : ConceptAs<string>(Value)
@@ -28,7 +28,7 @@ public class when_generating_schema_for_record_with_nullable_concept_parameters_
 
     void Because()
     {
-        _result = _generator.Generate(typeof(OrganizationSetupProgress));
+        _result = _generator.GenerateForReadModel(typeof(OrganizationSetupProgress));
         _ownerSubject = _result.ActualProperties["ownerSubject"];
         _ownerSubjectWithoutDefault = _result.ActualProperties["ownerSubjectWithoutDefault"];
         _lastHandled = _result.ActualProperties["lastHandled"];
