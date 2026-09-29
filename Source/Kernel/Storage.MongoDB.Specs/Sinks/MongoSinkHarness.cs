@@ -22,6 +22,11 @@ public class MongoSinkHarness : ISinkHarness
     string? _databaseName;
 
     /// <summary>
+    /// Gets the <see cref="IMongoDatabase"/> the sink was created in, for a case that needs to reach past the sink.
+    /// </summary>
+    public IMongoDatabase Database { get; private set; } = default!;
+
+    /// <summary>
     /// Gets or sets the <see cref="MongoDBFixture"/> supplying the container.
     /// </summary>
     public MongoDBFixture? Fixture { get; set; }
@@ -41,6 +46,7 @@ public class MongoSinkHarness : ISinkHarness
         _databaseName = $"chronicle_sink_contract_{Guid.NewGuid():N}";
         _client = new MongoClient(ConnectionString ?? Fixture!.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
+        Database = database;
 
         var typeFormats = new TypeFormats();
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
