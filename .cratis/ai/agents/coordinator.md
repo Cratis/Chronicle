@@ -129,7 +129,7 @@ For implementation, the applicable changed-lane gates must pass. Mark unrelated 
 - [ ] `Documentation/verify-markdown.sh` passes when documentation is added or changed
 - [ ] `code-reviewer` finds no blocking issues
 - [ ] `security-reviewer` finds no vulnerabilities
-- [ ] PR description follows the pull request template
+- [ ] PR description follows the pull request template and the release-note contract in `pull-requests.md`; test and review notes are in a PR comment
 
 ---
 

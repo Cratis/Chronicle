@@ -5,19 +5,81 @@ applyTo: "**/*"
 
 # How to Do Pull Requests
 
-PR descriptions serve two purposes: they help reviewers understand the change *now*, and they become the release notes that users read *later*. Write them with both audiences in mind.
+## The description is the release note
 
-**The description is the release note — it is published verbatim.** Write it as the note you want the person upgrading to read, in the repository template's sections. A generic development write-up (`## Summary`, `## Verification`, `## Testing`, a list of the files you touched, a description of how you arrived at the change) is not a release note, and shipping one makes the release history unreadable. The same applies wherever a release is produced by hand: release-notes text typed into a manual workflow run, or written straight into a published release, carries exactly the same shape and the same audience as a PR description. There is no path to a release whose notes are allowed to describe the work instead of the change.
+**The PR description is published verbatim as the GitHub release. In repositories released by `cratis/release-action`, it also closes every issue written as `(#n)`; elsewhere, follow the repository's own release and issue-closing process.** Write the note the person upgrading should read, not a development write-up. The same contract applies to release notes typed into a manual workflow run or written straight into a release. Where it is installed, the `verify-release-notes` check enforces it on every PR into the default branch that carries exactly one of `major`/`minor`/`patch` (it re-runs when the label is added); it skips `no-release` and unlabelled PRs, which should still be written this way because any of them may become releasable. `release-action` does not run for a `no-release` PR, so `(#n)` closes nothing there. Editing the description re-runs the check. HTML comments are not shown on the release page and the check ignores them for headings, keywords and placeholders, but a `(#n)` inside a comment still closes the issue (`release-action` skips only fenced and inline code) and the check fails it, so never put an issue reference in a comment. The template's own comment can stay: its `(#123)` examples are inline code.
 
-## Description
+### Allowed shape
 
-- Follow the repository's pull request template (`.github/pull_request_template.md`).
-- Focus on the **Added**, **Changed**, **Fixed**, **Removed**, **Security**, and **Deprecated** sections. Remove sections that are empty — don't leave blank headings.
-- Each bullet should be short, self-contained, and release-note ready.
-- **Write for users of the framework, not for internal developers.** Only include changes that have an impact on anyone using what we build — new APIs, changed behavior, fixed bugs, removed features. Do not list internal implementation details like storage changes, converter updates, gRPC contract internals, or spec additions. If a change is purely internal plumbing, it does not belong in the PR description. For a user-visible fix, a brief root cause and what now prevents a regression, stated as observable behavior rather than a list of specs, are user-facing and may be included: they tell the upgrader whether to trust the fix. Credit an external contributor by name or handle, unless they asked not to be named.
-- Add the associated issue reference at the end of a bullet when there is a real GitHub issue for the change (e.g. `(#351)`). Keep it a bare reference — **no closing keywords** (`Closes #351`, `Fixes #351`) anywhere in the body, because the published release notes are the PR description verbatim. If there is no associated issue, omit the reference entirely. Never use a placeholder like `(#issue)` or leave the example number `(#123)` literally, and never invent a random issue number. **Always verify the issue number read-only using the repository source — never guess or invent a number.** Comment on or close an issue when the user's request includes that effect; otherwise prepare a bounded post-merge disposition without performing it.
-- Include a summary only if there is a cohesive theme across the changes. If you find yourself restating individual bullets in slightly different words, the summary adds no value — remove it.
-- Never include Copilot prompt content in the PR description. Remove any "Original prompt" / coding agent transcript blocks before publishing.
+- Follow the repository's pull request template (`.github/pull_request_template.md`) within this contract.
+- An optional summary, first, only when one cohesive theme spans the bullets: **either** a `## Summary` section (short, user-facing prose) **or** one unheaded lead paragraph (1–3 sentences), never both. `Summary` is a level-2 heading; `# Summary` is the wrong level. No bullets before the first section.
+- Then only these `##` sections, each at most once, in this order after any `## Summary`: `## Added`, `## Changed`, `## Fixed`, `## Removed`, `## Security`, `## Deprecated`. Keep only the sections that have bullets: a section holding only prose, a code example or `None.` fails the check, so delete it. `###` sub-headings inside a section are fine unless they use a forbidden name; inside a section even `### Added` is only a sub-heading, and a section itself is always level 2.
+- A `major`/`minor`/`patch` PR needs at least one bullet under an allowed section.
+- Bullets are short, self-contained and user-facing: what a consumer compiles against, runs or observes. A user-visible fix may add one sentence of root cause or regression guard, stated as observable behavior. Credit an external contributor by name or handle, unless they asked not to be named.
+- Breaking changes and upgrade actions are bullets in `## Changed` or `## Removed` that state the action. A longer migration story goes in the docs, linked by absolute URL.
+- Do not list internal plumbing (storage, converters, gRPC internals, specs, file lists, refactor narration).
+
+### Issue references
+
+| Write | Meaning |
+| --- | --- |
+| `(#351)` at the **end of the bullet that delivers it** | Delivered: in a repository released by `cratis/release-action`, it closes it at release |
+| `(part of #351)` or prose `see #351` | Related, partial or follow-up: never closes |
+| `Cratis/Repo#351` | Other repository: never closed |
+| one `(#351)` per issue, never `(#351, #352)` | `(#351, #352)` closes nothing: write `(#351) (#352)` |
+
+- Nothing but more issue references (also `(part of #n)`, `(see #n)` and `(Cratis/Repo#n)`), closing emphasis, `<br>` and sentence punctuation (a `:` may introduce nested bullets) may follow the delivering `(#n)`. Write one `(#n)` per issue: release-action only matches `(#n)`, so `(#56, #57)` closes nothing; write `(#56) (#57)`.
+- Never use a linking or closing keyword before a number, anywhere: `Close`, `Closes`, `Closed`, `Fix`, `Fixes`, `Fixed`, `Resolve`, `Resolves`, `Resolved`, `Refs`, `Ref`, `References`, also as `Keyword: #n`, with `owner/repo#n`, followed by an issue URL, and wrapped in bold, italics or a link (`**Closes** #n`, `Closes [#n](url)`, `[Closes #n](url)`, and `[Closes](url)` where the link starts a clause). A `Refs #93` line closes nothing and is not a delivery marker: write `(#93)` at the end of the delivering bullet, or `(part of #93)` if it must stay open.
+- Comment on or close an issue when the user's request includes that effect; otherwise prepare a bounded post-merge disposition without performing it. In repositories released by `cratis/release-action`, a delivered `(#n)` is closed by release-action at release, so do not close it by hand; for a `no-release` PR release-action does not run, so any disposition follows this same rule. Elsewhere, follow the repository's own release and issue-closing process.
+- Use a bare `(#n)` only for an issue this PR fully delivers. No issue means no reference. Never use a placeholder such as `(#issue)` or the template's `(#123)`, and verify every number exists in the right repository; never guess.
+
+### Forbidden anywhere outside code
+
+- **Headings** (any level, also written as HTML `<h2>`, `<b>`, `<i>` or a possibly multi-line `<summary>`, or as an `*italic*` line; a heading line is checked like any other, so a keyword, relative link or `(#n)` in one fails too) other than a first `## Summary`, such as Overview, Description, What, Why, How, Context, Changes, What changed, Test plan, Testing, Tests, Verification, Verified, Validation, Quality, Review, Notes, Notes for reviewers, Limitations, Known follow-up, Acceptance, Details, and any `#`/`##` heading not in the allowed list.
+- **Review, verification, testing and provenance notes**: `Review:`, `Reviewed:`, a stand-alone `Reviewed by` line, `Verification:`, `Tested:`, `Testing:`, `Validation:` lines that stand alone or report a result (`Tests: 400 passed`, `Review: approved`); same-provider, cross-provider, Opus-only or Anthropic-only review remarks; the review workflow having passed, returned or run; CI or gate results (`CI green`, `all tests passed`); and a line stating which agent or model wrote the description (`Generated with Claude Code`, `Co-Authored-By:`). A bullet that describes a product change and only mentions review, validation, tests or an AI model (`- Validation: rules now apply to commands (#3)`, `- Reviewed by status is now shown on the dashboard (#4)`) is fine: inside a bullet, a summary or the lead paragraph the check reads a note only when it ends the clause (`- Cross-provider review pending`).
+- **Internal state** that is not a consumer change (for example "npm publication remains disabled").
+- **Relative links** (`](Documentation/x.md)`, `](./x)`, `](Source/...)`): they 404 on the release page. Use `https://github.com/Cratis/<Repo>/blob/main/<path>`, a `#anchor` or `mailto:`.
+- **Placeholders and transcripts**: template text, empty sections, Copilot "Original prompt" blocks, agent transcripts.
+
+Reviewer-facing information (test plan, verification, review provenance, notes for reviewers) goes in a **PR comment**, never the description.
+
+### Bad to good
+
+Bad (Cratis/Arc.TypeScript v0.48.0 as first published, bullets abridged):
+
+```markdown
+Arc can now construct Chronicle reactors and reducers through its own dependency injection, one scope per delivered batch, as an opt-in preview. npm publication remains disabled.
+
+## Added
+
+- Preview option `withChronicle({ ..., activateArtifactsInScopes: true })` ... (#93)
+
+See [Activate reactors and reducers in Arc scopes](Documentation/chronicle/reactors/scoped-activation.md).
+
+Review: Opus-only (same-provider) review.
+
+Refs #93
+```
+
+Good (as corrected):
+
+```markdown
+Arc can now construct Chronicle reactors and reducers through its own dependency injection, one scope per delivered batch, as an opt-in preview.
+
+## Added
+
+- Preview option `withChronicle({ ..., activateArtifactsInScopes: true })` ... See [Activate reactors and reducers in Arc scopes](https://github.com/Cratis/Arc.TypeScript/blob/main/Documentation/chronicle/reactors/scoped-activation.md). (part of #93)
+```
+
+"npm publication remains disabled" is internal status, the link was relative (it 404s on the release page), the review line is provenance for reviewers, and `Refs #93` is a keyword line. #93 was only partly delivered by this release, so its bullets say `(part of #93)`; `(#93)` would have closed it.
+
+### Before you create or edit a PR
+
+1. Read the body against the forbidden list and the issue table above; delete every hit and verify every issue number.
+2. Sections in order, none empty, at most one summary form; every bullet user-facing.
+3. Test plan, verification and review notes are in a PR comment.
+
+If `verify-release-notes` fails, fix it by editing the description, not by pushing code.
 
 ## Commits
 

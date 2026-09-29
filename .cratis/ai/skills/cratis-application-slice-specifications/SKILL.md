@@ -2,6 +2,9 @@
 name: cratis-application-slice-specifications
 description: Specify the backend behavior of an event-sourced Cratis application slice with the in-process scenario family — CommandScenario, EventScenario, ReadModelScenario and ReactorScenario — including what to cover for each slice type and where the specification files live. Use when adding or changing backend behavior in an application built on Cratis. Do not use for framework library specifications and do not use for frontend behavior.
 license: MIT
+cratis-hint-paths:
+  - "**/when_*/**/*.cs"
+  - "**/for_*/**/*.cs"
 ---
 <!-- cratis-ai-managed: skills/cratis-application-slice-specifications/SKILL.md -->
 

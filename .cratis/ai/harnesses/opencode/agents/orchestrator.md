@@ -151,7 +151,7 @@ For implementation, the applicable changed-lane gates must pass. Mark unrelated 
 - [ ] `code-reviewer` finds no blocking issues
 - [ ] `security-reviewer` finds no vulnerabilities
 - [ ] All documentation is complete and accurate (if required)
-- [ ] PR description follows the pull request template
+- [ ] PR description follows the pull request template and the release-note contract in `pull-requests.md`; test and review notes are in a PR comment
 
 ---
 
