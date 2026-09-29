@@ -179,7 +179,7 @@ public class InMemorySink(
 
             foreach (var updatedKey in updatedKeys)
             {
-                _changeSubject.OnNext(updatedKey);
+                NotifyChanged(updatedKey);
             }
 
             if (rootJoins.All(joined => !joined.HasKeyedFrom))
@@ -198,7 +198,7 @@ public class InMemorySink(
                 LastHandledEventSequenceNumbers.Remove(keyValue);
             }
 
-            _changeSubject.OnNext(keyValue);
+            NotifyChanged(keyValue);
             return Task.FromResult<IEnumerable<FailedPartition>>([]);
         }
 
@@ -254,7 +254,7 @@ public class InMemorySink(
         }
 
         // Notify observers of the change
-        _changeSubject.OnNext(keyValue);
+        NotifyChanged(keyValue);
 
         return Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
@@ -291,6 +291,7 @@ public class InMemorySink(
     /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
+        bool promoted;
         lock (_collectionLock)
         {
             // The replay wrote to the rewind collection, so ending it has to promote that collection -
@@ -301,7 +302,8 @@ public class InMemorySink(
             // promoting an empty collection would turn a transient race - the job observing no keys
             // before the event index caught up - into permanent data loss, which is why MongoDB guards
             // its rename the same way.
-            if (_rewindCollection.Count > 0)
+            promoted = _rewindCollection.Count > 0;
+            if (promoted)
             {
                 _collection.Clear();
                 _lastHandledEventSequenceNumbers.Clear();
@@ -320,6 +322,12 @@ public class InMemorySink(
             _rewindCollection.Clear();
             _rewindLastHandledEventSequenceNumbers.Clear();
             _isReplaying = false;
+        }
+
+        // Observers read the primary collection, which has only now taken on what the replay produced.
+        if (promoted)
+        {
+            _changeSubject.OnNext(readModel.ContainerName);
         }
 
         return Task.FromResult<IEnumerable<FailedPartition>>([]);
@@ -416,6 +424,22 @@ public class InMemorySink(
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// Tell observers that the collection they read has changed.
+    /// </summary>
+    /// <param name="key">The key of the changed read model.</param>
+    /// <remarks>
+    /// A write made while a replay is in progress goes to the replay's own collection, which observers do not read,
+    /// so it is not announced; the replay announces its result once it ends and promotes it.
+    /// </remarks>
+    void NotifyChanged(object key)
+    {
+        if (!_isReplaying)
+        {
+            _changeSubject.OnNext(key);
+        }
+    }
+
     (IReadOnlyList<ExpandoObject> Instances, int TotalCount) SnapshotInstances(int skip, int take)
     {
         static string KeyOrderValue(object key)
@@ -430,9 +454,11 @@ public class InMemorySink(
             return $"{key.GetType().FullName}:{value}";
         }
 
+        // Always the primary collection, even while a replay is in progress: the replay rebuilds its own
+        // collection, and the primary one keeps the previous state until the replay ends and promotes it.
         lock (_collectionLock)
         {
-            var collection = Collection;
+            var collection = _collection;
             var instances = collection.OrderBy(entry => KeyOrderValue(entry.Key), StringComparer.Ordinal)
                 .Skip(skip).Take(take).Select(entry => entry.Value).ToArray();
             return (instances, collection.Count);
