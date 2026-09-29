@@ -1,5 +1,5 @@
 {
-  "SourceRevision": "e7dc6fea47fe743e620d015076855ea2087b0a4e",
+  "SourceRevision": "cc847418c99ad8ba62d6372cace683d8d4a47db9",
   "Files": [
     {
       "Source": "agents/backend-developer.md",
@@ -189,7 +189,7 @@
     {
       "Source": "harnesses/pi/extensions/cratis-path-guidance/SkillTrigger.ts",
       "Destination": "harnesses/pi/extensions/cratis-path-guidance/SkillTrigger.ts",
-      "Hash": "F5F1D27B86BBEA315E107633B64C217E070C6448671C40B9450C4FC72E2D13C1"
+      "Hash": "9DD331F5C989F8B150D56883D35236CE946082D149700E9C7D34FE2894EF41EA"
     },
     {
       "Source": "harnesses/pi/extensions/cratis-path-guidance/ToolName.ts",
@@ -199,7 +199,7 @@
     {
       "Source": "harnesses/pi/extensions/cratis-path-guidance/index.ts",
       "Destination": "harnesses/pi/extensions/cratis-path-guidance/index.ts",
-      "Hash": "0465709FABDC841B4C0B01ABEB652F29DD3ECDA3F9C6266A324B7148321ACFBB"
+      "Hash": "84E0FAD5F229BDE941DADC430F26937C60655D1742B79380631BBC8C04D0342B"
     },
     {
       "Source": "harnesses/pi/extensions/cratis-path-guidance/skillReads.ts",
@@ -209,7 +209,7 @@
     {
       "Source": "harnesses/pi/extensions/cratis-path-guidance/skills.ts",
       "Destination": "harnesses/pi/extensions/cratis-path-guidance/skills.ts",
-      "Hash": "3B436920AEA9BFE57ACF9B17361ED45F61D75447367B7BF5B1F561E0A74D7A67"
+      "Hash": "51EA0F9EB2EA2215C1244714BF17AC584299A1B425498668839583A9833F4013"
     },
     {
       "Source": "harnesses/pi/extensions/cratis-path-guidance/standDown.ts",
@@ -249,7 +249,7 @@
     {
       "Source": "harnesses/pi/extensions/shared/frontmatter.ts",
       "Destination": "harnesses/pi/extensions/shared/frontmatter.ts",
-      "Hash": "D1B96A98A8100A6CF8690F0140F5838C89D9EF990F1DD110CC05389EF203EBE8"
+      "Hash": "DF8063CC4EBA0F6D29181361AD0AB06A905DD9D308BBEC29C352292050296AE3"
     },
     {
       "Source": "harnesses/pi/extensions/shared/globs.ts",
@@ -264,7 +264,7 @@
     {
       "Source": "harnesses/pi/extensions/shared/skillFrontmatter.ts",
       "Destination": "harnesses/pi/extensions/shared/skillFrontmatter.ts",
-      "Hash": "31913D4368A0DA79E212CD896E12D712662D8F733141F155F88A69B04A5F90E8"
+      "Hash": "7DE5E9B9BEF0F3B64E23F016E87DE67232711FFD629D9FFA574A723AABCEAE60"
     },
     {
       "Source": "harnesses/pi/extensions/shared/skillSelection.ts",
@@ -704,7 +704,7 @@
     {
       "Source": "skills/cratis-application-react-specifications/SKILL.md",
       "Destination": "skills/cratis-application-react-specifications/SKILL.md",
-      "Hash": "98601657B9BF860ECA85896DD373824832B86E268C8553F3466DCDDED2B564C5"
+      "Hash": "506D463AA3AE19506BCEE57BF8F58CEDC3153C829E6B2FEEA9A69E65256946AB"
     },
     {
       "Source": "skills/cratis-application-slice-specifications/LICENSE",
@@ -714,7 +714,7 @@
     {
       "Source": "skills/cratis-application-slice-specifications/SKILL.md",
       "Destination": "skills/cratis-application-slice-specifications/SKILL.md",
-      "Hash": "ABC17EB59C55C0927DC199EB80EC6104EAD69D09C43F5191BEFF5C3781BB09C7"
+      "Hash": "119ACCE54D418383FF11CBEB643FDA36A64486A9D7ADBD4B16EE4DE9E72C908C"
     },
     {
       "Source": "skills/cratis-arc-authentication-authorization-and-identity/LICENSE",
@@ -1119,7 +1119,7 @@
     {
       "Source": "skills/cratis-documentation-writing/SKILL.md",
       "Destination": "skills/cratis-documentation-writing/SKILL.md",
-      "Hash": "665A62930F7251C724EC71788AB48091478FA9C0AC2F15CF5EC7E398D0CEB8B1"
+      "Hash": "E22BF1E4450C497D7A9B630ADA18B9932866A9E1577F904D909398032A1C4BE0"
     },
     {
       "Source": "skills/cratis-documentation-writing/references/cratis-site.md",
@@ -1174,7 +1174,7 @@
     {
       "Source": "skills/cratis-engineering-docs-authoring/SKILL.md",
       "Destination": "skills/cratis-engineering-docs-authoring/SKILL.md",
-      "Hash": "4E49F04C9695BACC082E9D3B2C1CB81826D80A0FD0CB2C5DD02B071C36E7EFE2"
+      "Hash": "BCF09E3312A713D53317975CD39BA44E4B4A2FD8659C8C2953BA3907D8AB7B4E"
     },
     {
       "Source": "skills/cratis-engineering-docs-authoring/references/site-format.md",
@@ -1254,7 +1254,7 @@
     {
       "Source": "skills/cratis-specifications-csharp/SKILL.md",
       "Destination": "skills/cratis-specifications-csharp/SKILL.md",
-      "Hash": "EEECA2CE51EE83A2D9A53FB247F18D72666A4AF317DB2A16D4B76DAC83F145F2"
+      "Hash": "8A630DCD85F9A63909D36F00A31924DE4E4E5F4271F27AFEFF4332A1CC5DF939"
     },
     {
       "Source": "skills/cratis-specifications-csharp/references/application-scenarios.md",
@@ -1279,7 +1279,7 @@
     {
       "Source": "skills/cratis-specifications-typescript/SKILL.md",
       "Destination": "skills/cratis-specifications-typescript/SKILL.md",
-      "Hash": "A8D99CDE8171BE5D5B4FB319189637F127E3F75CFE7FBA1B55825C6E7B97688A"
+      "Hash": "0CFF3CBA9FD0FA7B6CB347BCA99F912D375F1D7E34F61FA8C4B70EB6B59637E3"
     },
     {
       "Source": "skills/cratis-specifications-typescript/references/typescript-patterns.md",
@@ -1294,7 +1294,7 @@
     {
       "Source": "skills/cratis-technical-examples/SKILL.md",
       "Destination": "skills/cratis-technical-examples/SKILL.md",
-      "Hash": "D8E9720F9D9E867A9341B6A04D35AF6C90D587BBD14C971F674FEC1BAD392732"
+      "Hash": "CCBF45F5C7FBE89A18FBA1B7CF94F1EF287F31D35EE9D4802FED587667585A22"
     },
     {
       "Source": "skills/cratis-writing-voice-and-cadence/LICENSE",

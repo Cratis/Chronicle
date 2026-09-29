@@ -67,7 +67,7 @@ function expandedSkillNames(prompt: unknown): string[] {
  *
  * Path-scoped rules are attached to the tool result the first time a matching file is touched in the session,
  * exactly as they were when `cratis-rules` delivered them. On a successful `write` or `edit`, one advisory line
- * names every skill whose `cratis-hint-paths` frontmatter matches the file and where its `SKILL.md` is. A skill
+ * names every skill whose `metadata.cratis-hint-paths` frontmatter matches the file and where its `SKILL.md` is. A skill
  * is not hinted when it is already in context: read in the session, preloaded by pi-subagents
  * (`# Preloaded Skill: <name>` followed by its text in the system prompt), or expanded by `/skill:<name>`. Hints are advisory only:
  * nothing is blocked and the system prompt is never touched.

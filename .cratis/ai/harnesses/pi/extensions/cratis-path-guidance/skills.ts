@@ -5,9 +5,8 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { corpusRoot } from '../shared/corpusRoot.ts';
-import { frontmatter } from '../shared/frontmatter.ts';
 import { globToRegExp } from '../shared/globs.ts';
-import { skillTriggerKey } from '../shared/skillFrontmatter.ts';
+import { skillTriggerGlobs } from '../shared/skillFrontmatter.ts';
 import { selectedSkillNames } from '../shared/skillSelection.ts';
 import type { LoadedSkill } from './LoadedSkill.ts';
 import type { SkillMatch } from './SkillMatch.ts';
@@ -36,7 +35,7 @@ function repositorySkills(cwd: string): LoadedSkill[] {
 
 function triggerGlobs(filePath: string): string[] {
     try {
-        return frontmatter(readFileSync(filePath, 'utf8')).get(skillTriggerKey) ?? [];
+        return skillTriggerGlobs(readFileSync(filePath, 'utf8'));
     } catch {
         return [];
     }
@@ -49,7 +48,7 @@ function triggerGlobs(filePath: string): string[] {
  * it can be empty (a pi-subagents agent with `skills: false`, the usual setup for cheap workers), or non-empty
  * with only personal skills (an agent with `skills: true` whose `extensions:` allowlist leaves `@cratis/pi`, and
  * so its skill paths, out). The selected skills' `SKILL.md` can still be read by path, which is what the hint asks
- * for; a corpus skill the repository did not select is never added. Skills without a `cratis-hint-paths` trigger
+ * for; a corpus skill the repository did not select is never added. Skills without a `metadata.cratis-hint-paths` trigger
  * are left out.
  */
 export function skillTriggers(loaded: LoadedSkill[] | undefined, cwd: string): SkillTrigger[] {
