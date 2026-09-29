@@ -99,8 +99,10 @@ public class MaterializedReadModels(
             PageSize = paging.PageSize
         };
 
+        // Each page is released one after the other, so a slower earlier page can never overtake a later one and
+        // leave the subscriber holding a stale page.
         return chronicleServicesAccessor.Services.MaterializedReadModels.ObserveInstances(request)
-            .SelectMany(async response =>
+            .Select(response => Observable.FromAsync(() =>
             {
                 var instances = response.Instances
                     .Select(json => JsonSerializer.Deserialize<TReadModel>(json, jsonSerializerOptions)!)
@@ -108,8 +110,9 @@ public class MaterializedReadModels(
                     .Take(paging.LocalTake);
 
                 // Release (decrypt) the instances before returning
-                return await ReleaseInstances(instances);
-            });
+                return ReleaseInstances(instances);
+            }))
+            .Concat();
     }
 
     /// <summary>
