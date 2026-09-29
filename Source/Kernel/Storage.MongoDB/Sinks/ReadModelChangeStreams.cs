@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Reactive.Linq;
 using System.Threading.Channels;
 using Cratis.DependencyInjection;
@@ -143,7 +144,7 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
             {
                 stream = new ContainerChangeStream(key, database, logger, _timeProvider);
                 _streams[key] = stream;
-                stream.Start();
+                _ = stream.Start();
             }
 
             stream.Add(subscriber);
@@ -169,9 +170,22 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
         }
     }
 
-    sealed record ContainerKey(IMongoClient Client, string DatabaseName, string ContainerName);
+    /// <summary>
+    /// Identifies an observed collection: the client and database it lives in, and its name.
+    /// </summary>
+    /// <param name="Client">The <see cref="IMongoClient"/> the collection is reached through.</param>
+    /// <param name="DatabaseName">The name of the database.</param>
+    /// <param name="ContainerName">The name of the collection.</param>
+    internal sealed record ContainerKey(IMongoClient Client, string DatabaseName, string ContainerName);
 
-    sealed class ContainerChangeStream(
+    /// <summary>
+    /// The one change stream shared by every observer of a collection.
+    /// </summary>
+    /// <param name="key">The <see cref="ContainerKey"/> of the observed collection.</param>
+    /// <param name="database">The <see cref="IMongoDatabase"/> to watch.</param>
+    /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
+    /// <param name="timeProvider">The <see cref="TimeProvider"/> the retry backoff waits on.</param>
+    internal sealed class ContainerChangeStream(
         ContainerKey key,
         IMongoDatabase database,
         ILogger<ReadModelChangeStreams> logger,
@@ -179,13 +193,21 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
     {
         readonly Lock _lock = new();
         readonly HashSet<ChannelWriter<bool>> _subscribers = [];
+
+        [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Released by Watch once it has returned, so it is never touched after it is gone")]
         readonly CancellationTokenSource _stopping = new();
         bool _isOpen;
         bool _isStopped;
         Exception? _failure;
 
+        /// <summary>
+        /// Gets the <see cref="ContainerKey"/> of the observed collection.
+        /// </summary>
         public ContainerKey Key => key;
 
+        /// <summary>
+        /// Gets whether the stream has given up.
+        /// </summary>
         public bool HasFailed
         {
             get
@@ -197,14 +219,22 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
             }
         }
 
-        public void Start()
+        /// <summary>
+        /// Start watching in the background.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> completing when the watch has ended.</returns>
+        public Task Start()
         {
             // The token is read here, not when the pool runs the delegate: a stream disposed straight away must not
             // have its source read after Watch has already ended and released it.
             var cancellationToken = _stopping.Token;
-            _ = Task.Run(() => Watch(cancellationToken));
+            return Task.Run(() => Watch(cancellationToken));
         }
 
+        /// <summary>
+        /// Add a subscriber to signal when the collection changes; a stream that has given up completes it with the failure.
+        /// </summary>
+        /// <param name="subscriber">The <see cref="ChannelWriter{T}"/> to signal.</param>
         public void Add(ChannelWriter<bool> subscriber)
         {
             lock (_lock)
@@ -226,6 +256,11 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
             }
         }
 
+        /// <summary>
+        /// Remove a subscriber.
+        /// </summary>
+        /// <param name="subscriber">The <see cref="ChannelWriter{T}"/> to remove.</param>
+        /// <returns>The number of subscribers left.</returns>
         public int Remove(ChannelWriter<bool> subscriber)
         {
             lock (_lock)
@@ -235,6 +270,7 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
             }
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             lock (_lock)
