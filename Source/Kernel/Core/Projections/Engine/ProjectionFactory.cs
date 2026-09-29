@@ -63,7 +63,9 @@ public class ProjectionFactory(
     public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         var eventSequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(definition.EventSequenceId);
-        var eventTypesStorage = storage.GetEventStore(eventStore).EventTypes;
+
+        // Only a join that releases a stored event needs the schema of the generation it was stored at.
+        var eventTypesStorage = eventCompliance is null ? null : storage.GetEventStore(eventStore).EventTypes;
         return CreateProjectionFrom(
             eventSequenceStorage,
             eventTypesStorage,
@@ -375,7 +377,7 @@ public class ProjectionFactory(
 
     async Task<IProjection> CreateProjectionFrom(
         IEventSequenceStorage eventSequenceStorage,
-        IEventTypesStorage eventTypesStorage,
+        IEventTypesStorage? eventTypesStorage,
         ProjectionDefinition projectionDefinition,
         ReadModelDefinition rootReadModel,
         JsonSchema currentReadModelSchema,
@@ -388,7 +390,6 @@ public class ProjectionFactory(
         // Phase 1: Create the projection structure with all parent-child relationships
         var (projection, childProjections, actualIdentifiedByProperty) = await CreateProjectionStructure(
             eventSequenceStorage,
-            eventTypesStorage,
             projectionDefinition.Identifier,
             projectionDefinition,
             rootReadModel,
@@ -416,7 +417,7 @@ public class ProjectionFactory(
         ReadModelDefinition rootReadModel,
         bool isChild,
         IEventSequenceStorage eventSequenceStorage,
-        IEventTypesStorage eventTypesStorage,
+        IEventTypesStorage? eventTypesStorage,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         // First setup subscriptions for all children (depth-first)
@@ -457,7 +458,7 @@ public class ProjectionFactory(
         JsonSchema currentReadModelSchema,
         IEnumerable<EventTypeSchema> eventTypeSchemas,
         IEventSequenceStorage eventSequenceStorage,
-        IEventTypesStorage eventTypesStorage,
+        IEventTypesStorage? eventTypesStorage,
         PropertyPath actualIdentifiedByProperty)
     {
         var nested = projectionDefinition.Nested;
@@ -559,7 +560,6 @@ public class ProjectionFactory(
 
     async Task<(Projection Projection, IProjection[] ChildProjections, PropertyPath ActualIdentifiedByProperty)> CreateProjectionStructure(
         IEventSequenceStorage eventSequenceStorage,
-        IEventTypesStorage eventTypesStorage,
         ProjectionId projectionId,
         ProjectionDefinition projectionDefinition,
         ReadModelDefinition rootReadModel,
@@ -578,7 +578,6 @@ public class ProjectionFactory(
             var childrenProperty = GetChildCollectionProperty(projectionId, rootReadModel, currentReadModelSchema, kvp.Key);
             return await CreateProjectionStructure(
                 eventSequenceStorage,
-                eventTypesStorage,
                 projectionId,
                 kvp.Value,
                 rootReadModel,
@@ -655,7 +654,7 @@ public class ProjectionFactory(
         ReadModelDefinition rootReadModel,
         bool isChild,
         IEventSequenceStorage eventSequenceStorage,
-        IEventTypesStorage eventTypesStorage,
+        IEventTypesStorage? eventTypesStorage,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         if (projectionDefinition.FromEventProperty is not null)
@@ -869,7 +868,7 @@ public class ProjectionFactory(
     void SetupJoinsForFromDefinition(
         IObservable<ProjectionEventContext> fromObservable,
         IEventSequenceStorage eventSequenceStorage,
-        IEventTypesStorage eventTypesStorage,
+        IEventTypesStorage? eventTypesStorage,
         ProjectionDefinition projectionDefinition,
         PropertyPath childrenAccessorProperty,
         PropertyPath actualIdentifiedByProperty,

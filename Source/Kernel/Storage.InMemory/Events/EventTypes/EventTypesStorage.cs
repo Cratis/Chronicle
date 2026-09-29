@@ -176,9 +176,15 @@ public class EventTypesStorage : IEventTypesStorage, IDisposable
 
     IEnumerable<EventTypeSchema> Latest() => [.. _definitions.Values.Select(LatestFor).OfType<EventTypeSchema>()];
 
-    // The exact generation asked for, so compliance metadata is read from the schema an event was stored with. A generation
-    // that was never registered falls back to the latest one but keeps the generation asked for - the persistent storages
-    // do the same - so the result stays keyed by the event type it was requested for.
+    /// <summary>
+    /// Get the schema of the exact generation asked for, so compliance metadata is read from the schema an event was stored with.
+    /// </summary>
+    /// <param name="eventType">The <see cref="EventType"/> to get the schema for.</param>
+    /// <returns>The schema, or null if the event type is not registered.</returns>
+    /// <remarks>
+    /// A generation that was never registered falls back to the latest one but keeps the generation asked for - the persistent
+    /// storages do the same - so the result stays keyed by the event type it was requested for.
+    /// </remarks>
     EventTypeSchema? SchemaFor(EventType eventType)
     {
         if (!_definitions.TryGetValue(eventType.Id, out var definition))

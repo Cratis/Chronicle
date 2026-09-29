@@ -62,7 +62,7 @@ public class a_join_of_a_stored_event_with_pii : Specification
             {
                 EventType = storedAt,
                 SequenceNumber = EventSequenceNumber.First,
-                Subject = (Subject)AdvisorId
+                Subject = (Cratis.Chronicle.Concepts.Events.Subject)AdvisorId
             },
             new ExpandoObject());
         _releasedEvent = _storedEvent with { Content = new { name = "released" }.AsExpandoObject() };
