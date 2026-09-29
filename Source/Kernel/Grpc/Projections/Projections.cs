@@ -422,7 +422,6 @@ internal sealed class Projections(
         IEnumerable<EventTypeSchema> eventTypeSchemas,
         string title)
     {
-        var eventTypeLookup = eventTypeSchemas.ToDictionary(_ => _.Type);
         var schema = new JsonSchema { Type = JsonObjectType.Object, Title = title };
 
         // Track seen property names to take only the first occurrence of each.
@@ -431,7 +430,8 @@ internal sealed class Projections(
 
         foreach (var eventType in eventTypes)
         {
-            if (!eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
+            var eventTypeSchema = Cratis.Chronicle.Projections.Engine.EventTypeSchemasExtensions.SchemaFor(eventTypeSchemas, eventType);
+            if (eventTypeSchema is null)
             {
                 continue;
             }
