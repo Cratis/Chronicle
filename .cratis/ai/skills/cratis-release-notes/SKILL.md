@@ -21,10 +21,10 @@ required to draft notes.
 Before writing, identify product, tag or candidate version, previous version,
 artifact/package names, supported platforms, and the audience. Inventory
 observable changes from the diff, specs, linked issues/PRs, and authoritative
-product source at that revision. A PR description may be published verbatim as
-release notes in a Cratis repository; follow its current template and confirm
-that behavior before drafting. Do not turn an unreleased draft into a claim
-about shipped behavior.
+product source at that revision. A PR description is published verbatim as
+release notes in a Cratis repository; follow its current template and the
+pull-request contract, and confirm that behavior before drafting. Do not turn
+an unreleased draft into a claim about shipped behavior.
 
 For each change, ask: who uses this path, what happened before, what happens
 now, is action required, and how would they notice? Check changed defaults,
@@ -43,15 +43,29 @@ one to add weight.
 
 ## Write for the right channel
 
-- **Exact-version release note (GitHub/PR):** start with changes requiring
-  action and affected workflows, then new capabilities and fixes. State impact
-  and the user's next action in plain language. Include an issue reference only
-  when verified, and follow the owning repository's closing-keyword policy.
-  Do not list internal refactors or specs that change nothing users observe.
-  For a user-visible fix, a sentence of root cause and of what now guards
-  against a regression, stated as observable behavior rather than a list of
-  specs, is user-facing: it tells the reader whether to trust the fix. Credit an external contributor by name or handle and say what
-  they did, unless they asked not to be named.
+- **Exact-version release note (GitHub/PR):** in a Cratis repository this is
+  the merged PR description, published verbatim, so it follows the contract in
+  [pull-requests.md](../../rules/pull-requests.md), which holds the full
+  rules. The ones most often broken: no development write-up (no Overview,
+  Verification or Test plan headings, no review or provenance notes; those go
+  in a PR comment); `(#n)` at the end of the bullet that delivers an issue and
+  `(part of #n)` for anything that stays open (in repositories released by
+  `cratis/release-action`, `(#n)` is what closes the issue), never `Closes`, `Fixes` or
+  `Refs` before a number (also in bold or a link), and no issue reference
+  inside an HTML comment, which still closes the issue; and absolute
+  `https://` links only. Sections are in
+  a fixed order (Added, Changed, Fixed, Removed, Security, Deprecated); within
+  a section, put changes requiring action first, then new capabilities and
+  fixes. State impact and the user's next action in plain language: state an
+  upgrade action in its `## Changed` or `## Removed` bullet (a first
+  `## Summary` section or an unheaded lead paragraph, not both, may mention it
+  too). Do not list internal
+  refactors or specs that change nothing users observe. For a
+  user-visible fix, a sentence of root cause and of what now guards against a
+  regression, stated as observable behavior rather than a list of specs, is
+  user-facing: it tells the reader whether to trust the fix. Credit an
+  external contributor by name or handle and say what they did, unless they
+  asked not to be named.
 - **Migration guide (durable product docs):** a compact *old behavior → new
   behavior → required action* table for each affected upgrade path, followed
   by source-verified before/after code or commands. Distinguish required
@@ -75,6 +89,23 @@ boundary that makes a change safe to adopt. One item can follow this shape:
 
 That is a checklist for facts, not a template to repeat word-for-word across
 items. Use descriptive headings, meaningful links, and natural sentence rhythm.
+
+## Repair an already-published release
+
+Only when asked to fix a release that violates the contract:
+
+1. Read the published body (`gh release view TAG --json body`) and the merged
+   PR. Keep the facts; remove headings, review and verification lines,
+   internal status and closing keywords, and turn relative links into
+   `https://` URLs. Do not invent changes, versions or issue numbers.
+2. Publish the corrected text with `gh release edit TAG --notes-file FILE`,
+   only when the request authorizes editing that release.
+3. In a repository released by `cratis/release-action`, editing a release
+   does not re-run release-action, so an issue that a `(#n)` would have
+   closed stays open. For each one, confirm the release
+   actually delivered it. Close it by hand with a comment naming the release
+   only when the request covers closing issues; otherwise list the issues as a
+   proposal. Leave an issue open when the release only partly delivered it.
 
 ## Verify before handing over
 

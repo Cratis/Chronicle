@@ -26,6 +26,16 @@ imports and JSX. Use one where it clearly teaches better than plain Markdown.
 - The site links each expanded tab to its exact snippet file in the owning
   repository. Don't add those links by hand.
 - Arc's authoring check rejects `ArcBackendTabs` nested inside `Steps`.
+  Tabs can't sit inside `Steps` anywhere, so write a backend procedure as
+  numbered H2 steps and keep `Steps` for shared, untabbed procedures such as
+  the React screen.
+- Site-owned MDX under `web/src/content/docs/` can use `<ArcBackendTabs>` and
+  `<ChronicleClientTabs>` without an import. The site expands them from the
+  same manifest and client-owned snippets as product pages, including in the
+  Copy Markdown mirror; check the mirror to confirm the macro expanded.
+- The variant-docs audit (`web/variant-docs.yml`) also covers site-owned
+  pages. Every site page is audited or explicitly excluded with a reason, and
+  direct single-language backend fences are ratcheted.
 - `TopicHero` declares `title` (required), `icon` and `eyebrow`. Don't copy
   props from a page that passes others; they are ignored.
 
@@ -40,6 +50,10 @@ preview, say so prominently on its index and getting-started page, for
 example in a `:::caution` aside, and state only the change and production
 limits the product source supports. Don't infer those limits from a
 site-wide label.
+
+Label a preview variant on the first screen of every page that shows it, not
+only on its own getting-started page. An unsupported-variant snippet is one
+sentence with its tracking issue; the surrounding prose doesn't repeat it.
 
 ## Cross-product compatibility
 

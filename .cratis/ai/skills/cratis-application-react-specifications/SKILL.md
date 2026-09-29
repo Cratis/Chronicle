@@ -2,6 +2,9 @@
 name: cratis-application-react-specifications
 description: Write specifications for the React and TypeScript surface of a Cratis application slice — view models, helpers, command orchestration, and narrow component behavior — using Vitest with Mocha-style describe/it, Sinon, and the Chai should interface. Use when adding or changing frontend behavior in an application that consumes Cratis. Do not use for backend scenarios or for specifications inside a Cratis framework package.
 license: MIT
+cratis-hint-paths:
+  - "**/for_*/**/*.ts"
+  - "**/for_*/**/*.tsx"
 ---
 <!-- cratis-ai-managed: skills/cratis-application-react-specifications/SKILL.md -->
 
