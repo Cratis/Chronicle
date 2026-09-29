@@ -5,6 +5,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
+using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Compliance.MongoDB;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.MongoDB;
@@ -77,6 +78,11 @@ public static class MongoDBChronicleBuilderExtensions
         builder.ConfigureServices(services =>
         {
             services.AddSingleton<IDatabase, Database>();
+
+            // One process-wide registry of the change streams read models are observed through, so every observer
+            // of a collection shares one stream. Registered here as well as by convention, so it does not depend on
+            // the host having run convention binding; convention binding leaves an already registered service alone.
+            services.TryAddSingleton<IReadModelChangeStreams, ReadModelChangeStreams>();
             services.AddSingleton<IMongoDBClientManager, MongoDBClientManager>();
             services.AddSingleton<EncryptionKeyStorage>();
             services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
