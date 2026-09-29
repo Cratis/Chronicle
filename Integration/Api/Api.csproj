@@ -33,7 +33,6 @@
         <_IsOSX>$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))</_IsOSX>
         <_DockerPublishRid Condition="'$(_IsOSX)' == 'True' And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'Arm64'">linux-arm64</_DockerPublishRid>
         <_DockerPublishRid Condition="'$(_IsOSX)' == 'True' And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'X64'">linux-amd64</_DockerPublishRid>
-        <_DockerRidArg Condition="'$(_DockerPublishRid)' != ''">-r $(_DockerPublishRid) --self-contained false</_DockerRidArg>
     </PropertyGroup>
 
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
