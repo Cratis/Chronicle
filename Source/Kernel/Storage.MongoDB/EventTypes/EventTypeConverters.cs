@@ -95,6 +95,32 @@ public static class EventTypeConverters
     }
 
     /// <summary>
+    /// Convert to <see cref="EventTypeSchema"/> for the highest generation stored for an <see cref="EventType"/>.
+    /// </summary>
+    /// <param name="schema"><see cref="EventType"/> to convert from.</param>
+    /// <returns>Converted <see cref="EventTypeSchema"/> carrying the latest generation.</returns>
+    public static EventTypeSchema ToKernelForLatestGeneration(this EventType schema) =>
+        schema.ToKernel(schema.GetLatestGeneration());
+
+    /// <summary>
+    /// Convert to one <see cref="EventTypeSchema"/> per generation stored for an <see cref="EventType"/>.
+    /// </summary>
+    /// <param name="schema"><see cref="EventType"/> to convert from.</param>
+    /// <returns>Converted <see cref="EventTypeSchema">schemas</see>, one per generation.</returns>
+    public static IEnumerable<EventTypeSchema> ToKernelForAllGenerations(this EventType schema) =>
+        schema.Schemas.Keys.Select(_ => schema.ToKernel(new EventTypeGeneration(uint.Parse(_))));
+
+    /// <summary>
+    /// Get the highest <see cref="EventTypeGeneration"/> stored for an <see cref="EventType"/>.
+    /// </summary>
+    /// <param name="schema"><see cref="EventType"/> to get for.</param>
+    /// <returns>The latest <see cref="EventTypeGeneration"/>, or the first generation if none are stored.</returns>
+    public static EventTypeGeneration GetLatestGeneration(this EventType schema) =>
+        schema.Schemas.Count == 0
+            ? EventTypeGeneration.First
+            : new EventTypeGeneration(schema.Schemas.Keys.Max(uint.Parse));
+
+    /// <summary>
     /// Convert to <see cref="EventTypeDefinition"/> from <see cref="EventType"/>.
     /// </summary>
     /// <param name="eventType"><see cref="EventType"/> to convert from.</param>

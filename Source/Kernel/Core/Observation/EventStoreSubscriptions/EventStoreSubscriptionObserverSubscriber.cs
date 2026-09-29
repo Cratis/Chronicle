@@ -78,6 +78,7 @@ public class EventStoreSubscriptionObserverSubscriber(
                     @event.Context.CausedBy,
                     [],
                     ConcurrencyScope.None,
+                    occurred: @event.Context.Occurred,
                     subject: @event.Context.Subject);
 
                 if (!appendResult.IsSuccess)

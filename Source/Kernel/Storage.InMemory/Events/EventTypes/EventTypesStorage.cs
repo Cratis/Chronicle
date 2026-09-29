@@ -98,7 +98,7 @@ public class EventTypesStorage : IEventTypesStorage, IDisposable
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<EventType> eventTypes) =>
-        Task.FromResult<IEnumerable<EventTypeSchema>>([.. eventTypes.Select(eventType => LatestFor(eventType.Id)).OfType<EventTypeSchema>()]);
+        Task.FromResult<IEnumerable<EventTypeSchema>>([.. eventTypes.Select(SchemaFor).OfType<EventTypeSchema>()]);
 
     /// <inheritdoc/>
     public Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = default) =>
@@ -175,6 +175,31 @@ public class EventTypesStorage : IEventTypesStorage, IDisposable
     }
 
     IEnumerable<EventTypeSchema> Latest() => [.. _definitions.Values.Select(LatestFor).OfType<EventTypeSchema>()];
+
+    /// <summary>
+    /// Get the schema of the exact generation asked for, so compliance metadata is read from the schema an event was stored with.
+    /// </summary>
+    /// <param name="eventType">The <see cref="EventType"/> to get the schema for.</param>
+    /// <returns>The schema, or null if the event type is not registered.</returns>
+    /// <remarks>
+    /// A generation that was never registered falls back to the latest one but keeps the generation asked for - the persistent
+    /// storages do the same - so the result stays keyed by the event type it was requested for.
+    /// </remarks>
+    EventTypeSchema? SchemaFor(EventType eventType)
+    {
+        if (!_definitions.TryGetValue(eventType.Id, out var definition))
+        {
+            return null;
+        }
+
+        if (Generation(definition, eventType.Generation) is { } generation)
+        {
+            return ToSchema(definition, generation);
+        }
+
+        var latest = LatestFor(definition);
+        return latest is null ? null : latest with { Type = latest.Type with { Generation = eventType.Generation } };
+    }
 
     EventTypeSchema? LatestFor(EventTypeId eventTypeId) =>
         _definitions.TryGetValue(eventTypeId, out var definition) ? LatestFor(definition) : null;

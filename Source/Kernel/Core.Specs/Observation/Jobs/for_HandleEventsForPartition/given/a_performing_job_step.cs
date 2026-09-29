@@ -29,6 +29,8 @@ public class a_performing_job_step : Specification
     protected IConfigurationForObserverProvider _configurationProvider;
     protected Observers _observersConfig;
     protected IEventCursor _eventCursor;
+    protected IEventTypesStorage _eventTypesStorage;
+    protected IEventCompliance _eventCompliance;
     protected HandleEventsForPartitionState _performState;
     protected static readonly EventSequenceNumber first_event_sequence_number = 42ul;
 
@@ -37,14 +39,14 @@ public class a_performing_job_step : Specification
         var eventStoreStorage = Substitute.For<Storage.IEventStoreStorage>();
         var namespaceStorage = Substitute.For<Storage.IEventStoreNamespaceStorage>();
         var eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
-        var eventTypesStorage = Substitute.For<IEventTypesStorage>();
+        _eventTypesStorage = Substitute.For<IEventTypesStorage>();
 
         _storage = Substitute.For<Storage.IStorage>();
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(namespaceStorage);
         namespaceStorage.GetEventSequence(Arg.Any<EventSequenceId>()).Returns(eventSequenceStorage);
-        eventStoreStorage.EventTypes.Returns(eventTypesStorage);
-        eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>())
+        eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
+        _eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>())
             .Returns(Task.FromResult<IEnumerable<EventTypeSchema>>([]));
 
         _eventCursor = Substitute.For<IEventCursor>();
@@ -81,11 +83,11 @@ public class a_performing_job_step : Specification
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_ => _observersConfig);
         _silo.AddService(_configurationProvider);
 
-        var eventCompliance = Substitute.For<IEventCompliance>();
-        eventCompliance
+        _eventCompliance = Substitute.For<IEventCompliance>();
+        _eventCompliance
             .Release(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>())
             .Returns(callInfo => Task.FromResult(callInfo.Arg<IEnumerable<AppendedEvent>>().ToArray()));
-        _silo.AddService(eventCompliance);
+        _silo.AddService(_eventCompliance);
 
         var logger = _silo.AddService(NullLogger<HandleEventsForPartition>.Instance);
         var loggerFactory = Substitute.For<ILoggerFactory>();

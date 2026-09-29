@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -23,7 +24,7 @@ public class ProjectionValidator(
     IEnumerable<EventTypeSchema> eventTypeSchemas)
 {
     readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _readModelLookup = readModelDefinitions.DistinctBy(_ => _.Identifier).ToDictionary(_ => _.Identifier);
-    readonly Dictionary<EventType, EventTypeSchema> _eventTypeLookup = eventTypeSchemas.DistinctBy(_ => _.Type).ToDictionary(_ => _.Type);
+    readonly ILookup<EventTypeId, EventTypeSchema> _eventTypeLookup = eventTypeSchemas.DistinctBy(_ => _.Type).ToLookup(_ => _.Type.Id);
 
     /// <summary>Support by block type and projection level. Unlisted types are rejected.</summary>
     internal static IReadOnlyDictionary<Type, IReadOnlySet<ProjectionLevel>> ProjectionBlockSupport { get; } =
@@ -218,11 +219,20 @@ public class ProjectionValidator(
         }
     }
 
+    bool TryGetEventTypeSchema(EventType eventType, [NotNullWhen(true)] out EventTypeSchema? schema)
+    {
+        // A declaration names an event type by identifier, optionally with a generation, and events carry the content
+        // of the highest generation they have - so the exact generation is used when named and stored, otherwise the
+        // highest generation stored for the identifier.
+        schema = _eventTypeLookup[eventType.Id].SchemaFor(eventType);
+        return schema is not null;
+    }
+
     void ValidateEventTypeExists(string eventName, SourceLocation location, CompilerErrors errors)
     {
         var eventType = EventType.Parse(eventName);
 
-        if (!_eventTypeLookup.ContainsKey(eventType))
+        if (!TryGetEventTypeSchema(eventType, out _))
         {
             errors.Add($"Event type '{eventType.Id}' not found", location.Line, location.Column);
         }
@@ -239,7 +249,7 @@ public class ProjectionValidator(
         {
             var eventType = EventType.Parse(eventSpec.Event);
 
-            if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
+            if (!TryGetEventTypeSchema(eventType, out var eventTypeSchema))
             {
                 errors.Add($"Event type '{eventType.Id}' not found", eventSpec.Location.Line, eventSpec.Location.Column);
                 continue;
@@ -255,7 +265,7 @@ public class ProjectionValidator(
         {
             var eventType = EventType.Parse(joinEvent.Event);
 
-            if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
+            if (!TryGetEventTypeSchema(eventType, out var eventTypeSchema))
             {
                 errors.Add($"Event type '{eventType.Id}' not found", joinEvent.Location.Line, joinEvent.Location.Column);
                 continue;
@@ -308,7 +318,7 @@ public class ProjectionValidator(
         {
             var eventType = EventType.Parse(eventSpec.Event);
 
-            if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
+            if (!TryGetEventTypeSchema(eventType, out var eventTypeSchema))
             {
                 errors.Add($"Event type '{eventType.Id}' not found", eventSpec.Location.Line, eventSpec.Location.Column);
                 continue;
@@ -590,7 +600,7 @@ public class ProjectionValidator(
     {
         var eventType = EventType.Parse(eventSpec.Event);
 
-        if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
+        if (!TryGetEventTypeSchema(eventType, out var eventTypeSchema))
         {
             errors.Add($"Event type '{eventType.Id}' not found", eventSpec.Location.Line, eventSpec.Location.Column);
             return;

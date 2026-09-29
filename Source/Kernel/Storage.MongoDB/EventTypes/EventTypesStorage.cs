@@ -90,14 +90,14 @@ public class EventTypesStorage(
     {
         using var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var schemas = await result.ToListAsync();
-        return schemas.Select(_ => _.ToKernel());
+        return schemas.ConvertAll(_ => _.ToKernelForLatestGeneration());
     }
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() =>
         new TransformingSubject<IEnumerable<EventType>, IEnumerable<EventTypeSchema>>(
             GetCollection().Observe(),
-            _ => _.Select(_ => _.ToKernel()));
+            _ => _.Select(_ => _.ToKernelForLatestGeneration()));
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(Concepts.Events.EventType eventType)
@@ -106,7 +106,7 @@ public class EventTypesStorage(
         var filter = GetFilterForSpecificEventType(eventType.Id);
         using var result = await collection.FindAsync(filter).ConfigureAwait(false);
         var schemas = await result.ToListAsync();
-        return schemas.Select(_ => _.ToKernel());
+        return schemas.SelectMany(_ => _.ToKernelForAllGenerations()).ToList();
     }
 
     /// <inheritdoc/>
