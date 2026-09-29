@@ -30,8 +30,11 @@ public static class EventTypesStorageExtensions
         IDictionary<EventType, EventTypeSchema> schemas,
         IEnumerable<AppendedEvent> events)
     {
+        // A redaction marker is not a registered event type and carries no compliance metadata, so it is never looked
+        // up - otherwise every batch holding one would query storage again for a schema that does not exist.
         var missing = events
             .Select(_ => _.Context.EventType)
+            .Where(_ => _.Id != GlobalEventTypes.Redaction)
             .Distinct()
             .Where(_ => !schemas.ContainsKey(_))
             .ToArray();
