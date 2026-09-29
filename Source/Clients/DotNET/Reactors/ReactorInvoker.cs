@@ -62,6 +62,15 @@ public class ReactorInvoker(
     readonly IReactorMethodArgumentsResolver _argumentsResolver = argumentsResolver ?? new ReactorMethodArgumentsResolver();
 
     /// <summary>
+    /// Gets the token that is cancelled when the reactor stops observing, typically because the client or host is shutting down.
+    /// </summary>
+    /// <remarks>
+    /// A handler whose call to the kernel is cancelled or disposed after this is cancelled was interrupted by the shutdown and
+    /// did not fail, so it is not logged as an error. The invocation still reports a failure, since the event was not handled.
+    /// </remarks>
+    internal CancellationToken StoppingToken { get; init; }
+
+    /// <summary>
     /// Gets all <see cref="EventType"/> for a specific reactor type.
     /// </summary>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event types.</param>
@@ -126,17 +135,13 @@ public class ReactorInvoker(
         }
         catch (Exception ex)
         {
-            switch (ex.ClassifyHandlerError())
+            if (ex.IsInterruptedByShutdown(StoppingToken))
             {
-                case KernelConnectionErrorKind.Cancelled:
-                    logger.ReactorCancelledByKernelConnection(reactorId, eventTypeName, ex);
-                    break;
-                case KernelConnectionErrorKind.ConnectionLost:
-                    logger.ReactorInterruptedByLostKernelConnection(reactorId, eventTypeName, ex);
-                    break;
-                default:
-                    logger.ReactorFailed(reactorId, eventTypeName, ex);
-                    break;
+                logger.ReactorInterruptedByShutdown(reactorId, eventTypeName, ex);
+            }
+            else
+            {
+                logger.ReactorFailed(reactorId, eventTypeName, ex);
             }
 
             return ReactorInvocationResult.FromException(ex);

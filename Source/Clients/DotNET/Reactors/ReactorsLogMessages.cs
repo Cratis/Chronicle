@@ -21,11 +21,8 @@ internal static partial class ReactorsLogMessages
     [LoggerMessage(LogLevel.Warning, "An error occurred while handling event of type {EventTypeId} was for Reactor {ReactorId}")]
     internal static partial void ErrorWhileHandlingEvent(this ILogger<Reactors> logger, Exception ex, EventTypeId eventTypeId, ReactorId reactorId);
 
-    [LoggerMessage(LogLevel.Debug, "Handling event of type {EventTypeId} for Reactor {ReactorId} stopped because its call to the kernel was cancelled or disposed")]
-    internal static partial void HandlingEventCancelledByKernelConnection(this ILogger<Reactors> logger, Exception ex, EventTypeId eventTypeId, ReactorId reactorId);
-
-    [LoggerMessage(LogLevel.Warning, "Handling event of type {EventTypeId} for Reactor {ReactorId} could not finish because the kernel is stopping or unreachable")]
-    internal static partial void HandlingEventInterruptedByLostKernelConnection(this ILogger<Reactors> logger, Exception ex, EventTypeId eventTypeId, ReactorId reactorId);
+    [LoggerMessage(LogLevel.Debug, "Handling event of type {EventTypeId} for Reactor {ReactorId} stopped because the reactor is shutting down")]
+    internal static partial void HandlingEventInterruptedByShutdown(this ILogger<Reactors> logger, Exception ex, EventTypeId eventTypeId, ReactorId reactorId);
 
     [LoggerMessage(LogLevel.Warning, "Reactor {ReactorId} side-effect append failed while handling event of type {EventTypeId}, targeting event source id(s) {TargetEventSourceIds}: {Details}")]
     internal static partial void ReactorSideEffectAppendFailed(this ILogger<Reactors> logger, EventTypeId eventTypeId, ReactorId reactorId, string targetEventSourceIds, string details);

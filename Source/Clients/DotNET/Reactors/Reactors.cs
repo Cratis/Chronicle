@@ -587,6 +587,8 @@ public class Reactors : IReactors, IReactorPartitionRecovery
                         return;
                     }
 
+                    // The kernel is stopping or unreachable. This stays a Warning however long it lasts: a kernel that
+                    // stays away is reported at Error by the connection watchdog on every failed reconnect attempt.
                     if (errorKind == KernelConnectionErrorKind.ConnectionLost)
                     {
                         _logger.ReactorStreamLostConnection(handler.Id, ex);
@@ -699,7 +701,10 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             _eventStore,
             _reactorContextValuesBuilder,
             _argumentsResolver,
-            serviceProviderScope.ServiceProvider);
+            serviceProviderScope.ServiceProvider)
+        {
+            StoppingToken = cancellationToken
+        };
 
         foreach (var @event in events.Events)
         {
@@ -766,17 +771,13 @@ public class Reactors : IReactors, IReactorPartitionRecovery
 
         void LogErrorWhileHandlingEvent(Exception ex, EventTypeId eventTypeId)
         {
-            switch (ex.ClassifyHandlerError())
+            if (ex.IsInterruptedByShutdown(cancellationToken))
             {
-                case KernelConnectionErrorKind.Cancelled:
-                    _logger.HandlingEventCancelledByKernelConnection(ex, eventTypeId, handler.Id);
-                    break;
-                case KernelConnectionErrorKind.ConnectionLost:
-                    _logger.HandlingEventInterruptedByLostKernelConnection(ex, eventTypeId, handler.Id);
-                    break;
-                default:
-                    _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
-                    break;
+                _logger.HandlingEventInterruptedByShutdown(ex, eventTypeId, handler.Id);
+            }
+            else
+            {
+                _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
             }
         }
 

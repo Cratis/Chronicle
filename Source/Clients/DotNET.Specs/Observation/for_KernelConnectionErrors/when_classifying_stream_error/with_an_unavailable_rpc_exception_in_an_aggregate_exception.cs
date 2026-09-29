@@ -3,13 +3,13 @@
 
 using Grpc.Core;
 
-namespace Cratis.Chronicle.Observation.for_KernelConnectionErrors.when_classifying_handler_error;
+namespace Cratis.Chronicle.Observation.for_KernelConnectionErrors.when_classifying_stream_error;
 
 public class with_an_unavailable_rpc_exception_in_an_aggregate_exception : Specification
 {
     KernelConnectionErrorKind _result;
 
-    void Because() => _result = new AggregateException(new RpcException(new Status(StatusCode.Unavailable, "Unavailable")), new RpcException(new Status(StatusCode.Cancelled, "gRPC call disposed"))).ClassifyHandlerError();
+    void Because() => _result = new AggregateException(new RpcException(new Status(StatusCode.Unavailable, "Unavailable")), new RpcException(new Status(StatusCode.Cancelled, "gRPC call disposed"))).ClassifyStreamError();
 
     [Fact] void should_be_connection_lost() => _result.ShouldEqual(KernelConnectionErrorKind.ConnectionLost);
 }
