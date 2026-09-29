@@ -117,6 +117,16 @@ public static class EventTypeConverters
     }
 
     /// <summary>
+    /// Convert to <see cref="EventTypeSchema"/> for the highest generation stored for an <see cref="EventType"/>.
+    /// </summary>
+    /// <param name="schema"><see cref="EventType"/> to convert from.</param>
+    /// <returns>Converted <see cref="EventTypeSchema"/> carrying the latest generation.</returns>
+    public static EventTypeSchema ToKernelForLatestGeneration(this EventType schema) =>
+        schema.Schemas.Count == 0
+            ? schema.ToKernel()
+            : schema.ToKernel(new EventTypeGeneration(schema.Schemas.Keys.Max()));
+
+    /// <summary>
     /// Convert to <see cref="EventTypeDefinition"/> from <see cref="EventType"/>.
     /// </summary>
     /// <param name="eventType"><see cref="EventType"/> to convert from.</param>
