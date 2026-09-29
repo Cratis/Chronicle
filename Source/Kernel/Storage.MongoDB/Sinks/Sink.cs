@@ -490,14 +490,21 @@ public class Sink(
     /// </para>
     /// <para>
     /// A replay promotion renames the primary collection aside and then renames the rebuilt one into its place, so a
-    /// read that runs inside that window would find no collection and report an empty read model. Observing the primary
+    /// read that runs inside that window would find no collection and report an empty read model. A promotion is in
+    /// progress only while the primary collection is absent and the promoting collection exists. Observing the primary
     /// collection therefore looks at the collections before and after an empty read:
-    /// no page is emitted when the promoting collection exists before the read - the read is skipped - or when it exists
-    /// after an empty read, or when the primary collection is not the one that was there before the read (it was renamed
-    /// or replaced in between). The rename into place is what triggers the read that follows. A collection that has
-    /// never been created, has been dropped or is genuinely empty is an empty read model, and emits the empty page. The
-    /// checks are one listCollections command before every read and one more after every empty page. Observing an
-    /// explicit occurrence never holds a page back.
+    /// no page is emitted when a promotion is in progress before the read - the read is skipped - or when one is in
+    /// progress after an empty read, or when the primary collection is not the one that was there before the read (it
+    /// was renamed or replaced in between). The rename into place is what triggers the read that follows. A collection
+    /// that has never been created, has been dropped or is genuinely empty is an empty read model, and emits the empty
+    /// page. The checks are one listCollections command before every read and one more after every empty page.
+    /// Observing an explicit occurrence never holds a page back.
+    /// </para>
+    /// <para>
+    /// The promoting collection alone does not mean a promotion is in progress: a silo that dies between claiming the
+    /// replay collection and renaming it into place, or a rename that fails, leaves it behind until the next replay
+    /// begins. Next to an existing primary collection it is ignored, and reads and emissions proceed normally. If such
+    /// a crash left the primary collection absent as well, the next write recreates it and observation resumes.
     /// </para>
     /// </remarks>
     public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
@@ -522,7 +529,7 @@ public class Sink(
         }
 
         var before = await GetCollectionState(collection.Database, containerName, cancellationToken);
-        if (before.IsPromoting)
+        if (before.IsPromotionInProgress)
         {
             return null;
         }
@@ -534,7 +541,7 @@ public class Sink(
         }
 
         var after = await GetCollectionState(collection.Database, containerName, cancellationToken);
-        return after.IsPromoting || after.PrimaryExists != before.PrimaryExists || after.PrimaryId != before.PrimaryId ? null : page;
+        return after.IsPromotionInProgress || after.PrimaryExists != before.PrimaryExists || after.PrimaryId != before.PrimaryId ? null : page;
     }
 
     async Task<CollectionState> GetCollectionState(IMongoDatabase database, string containerName, CancellationToken cancellationToken)
@@ -547,9 +554,9 @@ public class Sink(
         using var cursor = await database.ListCollectionsAsync(options, cancellationToken);
         var listed = await cursor.ToListAsync(cancellationToken);
         var primary = listed.FirstOrDefault(collection => collection["name"] == containerName);
-        var isPromoting = listed.Exists(collection => collection["name"] == promotingName);
+        var promotingExists = listed.Exists(collection => collection["name"] == promotingName);
         var primaryId = primary?.GetValue("info", new BsonDocument()).AsBsonDocument.GetValue("uuid", BsonNull.Value);
-        return new CollectionState(isPromoting, primary is not null, primaryId);
+        return new CollectionState(promotingExists, primary is not null, primaryId);
     }
 
     async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
@@ -811,5 +818,13 @@ public class Sink(
 
     IMongoCollection<BsonDocument> Collection => collections.GetCollection();
 
-    sealed record CollectionState(bool IsPromoting, bool PrimaryExists, BsonValue? PrimaryId);
+    sealed record CollectionState(bool PromotingExists, bool PrimaryExists, BsonValue? PrimaryId)
+    {
+        /// <summary>
+        /// Gets whether a promotion is in progress: only the window between renaming the primary aside and renaming the
+        /// rebuilt collection into place. A promoting collection next to an existing primary is a leftover of a
+        /// promotion that never finished.
+        /// </summary>
+        public bool IsPromotionInProgress => !PrimaryExists && PromotingExists;
+    }
 }

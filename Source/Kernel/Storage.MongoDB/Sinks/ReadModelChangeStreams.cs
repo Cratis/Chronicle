@@ -93,8 +93,9 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
     /// <para>
     /// A read that is started for another reason inside that window - a subscriber joining an open stream, or a
     /// stream reopening after a failure - can still find the collection missing. Filtering the stream cannot help
-    /// there, so the read itself must recognize a promotion in progress and emit nothing; the rename into the
-    /// collection is reported and triggers the read that follows.
+    /// there, so the read itself must recognize a promotion in progress (the primary collection absent while the
+    /// promoting one exists) and emit nothing; the rename into the collection is reported and triggers the read that
+    /// follows.
     /// </para>
     /// <para>
     /// Only the resume token and the operation type are kept of each change: every observer reads its page again

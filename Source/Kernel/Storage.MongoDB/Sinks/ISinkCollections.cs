@@ -17,7 +17,9 @@ public interface ISinkCollections
     /// Gets the name of the collection a rebuilt replay collection is renamed to while it is being promoted to the primary collection.
     /// </summary>
     /// <remarks>
-    /// The collection exists from the moment a promotion claims the replay collection until it has been renamed into place.
+    /// The collection exists from the moment a promotion claims the replay collection until it has been renamed into place,
+    /// and is left behind when the promotion is cut short. A promotion is therefore in progress only while the promoting
+    /// collection exists and the primary collection does not.
     /// </remarks>
     string PromotingCollectionName { get; }
 

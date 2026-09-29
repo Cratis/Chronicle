@@ -7,9 +7,9 @@ using MongoDB.Driver;
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_observing_instances;
 
 /// <summary>
-/// A read that runs while a replay promotion has the primary collection renamed aside sees the promoting collection.
-/// That is not an empty read model, so nothing is read or emitted; the read that follows the rename into place emits
-/// the page.
+/// A read that runs while a replay promotion has the primary collection renamed aside - the primary collection is absent
+/// and the promoting collection exists - is not an empty read model, so nothing is read or emitted; the read that
+/// follows the rename into place emits the page.
 /// </summary>
 public class and_a_promotion_is_in_progress : given.a_sink_observing_a_container
 {
