@@ -26,11 +26,20 @@ public class MongoSinkHarness : ISinkHarness
     /// </summary>
     public MongoDBFixture? Fixture { get; set; }
 
+    /// <summary>
+    /// Gets or sets the connection string to use instead of the <see cref="Fixture"/>.
+    /// </summary>
+    /// <remarks>
+    /// Observing instances needs a change stream, which only a replica set serves; a case observing instances
+    /// points the harness at a replica-set container through this.
+    /// </remarks>
+    public string? ConnectionString { get; set; }
+
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
         _databaseName = $"chronicle_sink_contract_{Guid.NewGuid():N}";
-        _client = new MongoClient(Fixture!.ConnectionString);
+        _client = new MongoClient(ConnectionString ?? Fixture!.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
 
         var typeFormats = new TypeFormats();

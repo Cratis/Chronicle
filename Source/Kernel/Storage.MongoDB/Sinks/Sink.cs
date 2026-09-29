@@ -470,6 +470,74 @@ public class Sink(
     {
         var collection = occurrence is not null ? collections.GetCollection(occurrence) : Collection;
         var totalCount = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
+        var instances = await ReadPage(collection, skip, take);
+        return new ReadModelInstances(instances, totalCount);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Changes are observed through a MongoDB change stream, so a write made by any silo is seen, not only one
+    /// made through this sink instance. The stream watches the database, narrowed to the observed collection,
+    /// rather than the collection itself: a replay promotion renames collections, which would invalidate and end
+    /// a collection-level stream, whereas the database-level one reports the rename and carries on. Every batch
+    /// of changes re-reads the page once, so a burst of writes costs one query rather than one per write.
+    /// <para>
+    /// Without an explicit occurrence the primary collection is observed, even while a replay is in progress:
+    /// the replay rebuilds its own collection, and the primary one keeps the previous state until the replay
+    /// ends and promotes the rebuilt collection - which the stream sees as a rename and answers with a fresh page.
+    /// </para>
+    /// </remarks>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    {
+        string containerName = occurrence ?? readModel.ContainerName;
+        var collection = collections.GetCollection(containerName);
+        var changes = ChangesTo(containerName);
+
+        return Observable.Create<IEnumerable<ExpandoObject>>(async (observer, cancellationToken) =>
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                // The stream is opened before the page is read, so a write landing between the two is not lost.
+                // A stream ends only when the server invalidates it; the page is then read again on reopening,
+                // covering anything that happened while no stream was open.
+                using var cursor = await collection.Database.WatchAsync(changes, cancellationToken: cancellationToken);
+                observer.OnNext(await ReadPage(collection, skip, take));
+
+                while (await cursor.MoveNextAsync(cancellationToken))
+                {
+                    if (cursor.Current.Any())
+                    {
+                        observer.OnNext(await ReadPage(collection, skip, take));
+                    }
+                }
+            }
+        });
+    }
+
+    /// <summary>
+    /// Builds the change stream pipeline reporting every change to the named collection.
+    /// </summary>
+    /// <param name="containerName">The name of the collection to report changes to.</param>
+    /// <returns>The <see cref="PipelineDefinition{TInput, TOutput}"/> for a database-level change stream.</returns>
+    /// <remarks>
+    /// A change inside the collection names it in the namespace field of the change; a rename names the source
+    /// there and the target in its destination field, so a replay promotion renaming a rebuilt collection into place is reported as well.
+    /// Only the resume token is kept of each change: the page is read again anyway, so shipping the changed
+    /// documents across would be wasted.
+    /// </remarks>
+    static PipelineDefinition<ChangeStreamDocument<BsonDocument>, BsonDocument> ChangesTo(string containerName) =>
+        new BsonDocumentStagePipelineDefinition<ChangeStreamDocument<BsonDocument>, BsonDocument>(
+        [
+            new BsonDocument("$match", new BsonDocument("$or", new BsonArray
+            {
+                new BsonDocument("ns.coll", containerName),
+                new BsonDocument("to.coll", containerName)
+            })),
+            new BsonDocument("$project", new BsonDocument("_id", 1))
+        ]);
+
+    async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take)
+    {
         var documents = await collection
             .Find(FilterDefinition<BsonDocument>.Empty)
             .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
@@ -477,40 +545,8 @@ public class Sink(
             .Limit(take)
             .ToListAsync();
 
-        var instances = documents.Select(doc => expandoObjectConverter.ToExpandoObject(doc, readModel.GetSchemaForLatestGeneration()));
-        return new ReadModelInstances(instances, totalCount);
-    }
-
-    /// <inheritdoc/>
-    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
-    {
-        var collection = occurrence is not null ? collections.GetCollection(occurrence) : Collection;
         var schema = readModel.GetSchemaForLatestGeneration();
-
-        // Return an observable that transforms MongoDB change stream events into instance collections
-        return Observable.Create<IEnumerable<ExpandoObject>>(async observer =>
-        {
-            // Get initial instances
-            var documents = await collection
-                .Find(FilterDefinition<BsonDocument>.Empty)
-                .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
-                .Skip(skip)
-                .Limit(take)
-                .ToListAsync();
-
-            observer.OnNext(documents.Select(doc => expandoObjectConverter.ToExpandoObject(doc, schema)));
-
-            // Subscribe to changes using Arc's Observe extension
-            return collection.Observe().Subscribe(
-                allDocuments =>
-                {
-                    // Re-query with skip/take when changes occur
-                    var updatedDocuments = allDocuments.OrderBy(doc => doc["_id"]).Skip(skip).Take(take);
-                    observer.OnNext(updatedDocuments.Select(doc => expandoObjectConverter.ToExpandoObject(doc, schema)));
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
+        return documents.Select(document => expandoObjectConverter.ToExpandoObject(document, schema)).ToArray();
     }
 
     static bool HasActualRootLevelJoin(IEnumerable<Change> changes) =>
