@@ -197,7 +197,13 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
             }
         }
 
-        public void Start() => _ = Task.Run(() => Watch(_stopping.Token));
+        public void Start()
+        {
+            // The token is read here, not when the pool runs the delegate: a stream disposed straight away must not
+            // have its source read after Watch has already ended and released it.
+            var cancellationToken = _stopping.Token;
+            _ = Task.Run(() => Watch(cancellationToken));
+        }
 
         public void Add(ChannelWriter<bool> subscriber)
         {
@@ -238,14 +244,31 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
                     return;
                 }
 
+                // Only cancels: the source is released by Watch once it has returned, so nothing touches it disposed.
                 _isStopped = true;
+                _stopping.Cancel();
             }
-
-            _stopping.Cancel();
-            _stopping.Dispose();
         }
 
         async Task Watch(CancellationToken cancellationToken)
+        {
+            try
+            {
+                await WatchUntilStopped(cancellationToken);
+            }
+            finally
+            {
+                // Watch has returned, so it is safe to release the source; marking the stream stopped under the same
+                // lock keeps a later Dispose from cancelling a source that is gone.
+                lock (_lock)
+                {
+                    _isStopped = true;
+                    _stopping.Dispose();
+                }
+            }
+        }
+
+        async Task WatchUntilStopped(CancellationToken cancellationToken)
         {
             var failures = 0;
             while (!cancellationToken.IsCancellationRequested)
@@ -270,8 +293,9 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
                     // The server ends a stream only by invalidating it; the loop opens a new one.
                     Closed();
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                catch (Exception) when (cancellationToken.IsCancellationRequested)
                 {
+                    // Anything that surfaces while the stream is being stopped is part of stopping it.
                     return;
                 }
                 catch (Exception exception) when (IsTransient(exception) && ++failures < MaxConsecutiveFailures)
