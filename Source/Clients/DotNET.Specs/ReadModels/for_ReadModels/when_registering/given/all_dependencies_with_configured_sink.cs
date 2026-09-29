@@ -47,7 +47,7 @@ public class all_dependencies_with_configured_sink : Specification
         _reducerObservers = Substitute.For<IReducerObservers>();
         _jsonSerializerOptions = new();
 
-        _schemaGenerator.Generate(Arg.Any<Type>()).Returns(new JsonSchema());
+        _schemaGenerator.GenerateForReadModel(Arg.Any<Type>()).Returns(new JsonSchema());
 
         _services = Substitute.For<IServices>();
 

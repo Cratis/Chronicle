@@ -129,7 +129,7 @@ internal static class ProjectionReadModelProcessor
         where TReadModel : class
     {
         var readModelType = typeof(TReadModel);
-        var schema = jsonSchemaGenerator.Generate(readModelType);
+        var schema = jsonSchemaGenerator.GenerateForReadModel(readModelType);
 
         var kernelReadModelDefinition = BuildKernelReadModelDefinition(readModelType, schema);
         var kernelProjectionDefinition = KernelGrpc::Cratis.Chronicle.Services.Projections.Definitions.ProjectionDefinitionConverters.ToChronicle(

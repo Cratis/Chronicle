@@ -38,7 +38,7 @@ internal class ReadModelReleaser(
             return instance;
         }
 
-        var schema = schemaGenerator.Generate(typeof(TReadModel));
+        var schema = schemaGenerator.GenerateForReadModel(typeof(TReadModel));
         if (!schema.HasSchemaMetadata())
         {
             return instance;
@@ -61,7 +61,7 @@ internal class ReadModelReleaser(
     /// </remarks>
     public async Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances)
     {
-        var schema = schemaGenerator.Generate(typeof(TReadModel));
+        var schema = schemaGenerator.GenerateForReadModel(typeof(TReadModel));
         if (!schema.HasSchemaMetadata())
         {
             return instances;

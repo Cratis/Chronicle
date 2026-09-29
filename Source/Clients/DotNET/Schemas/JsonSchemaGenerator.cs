@@ -27,8 +27,10 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     static FieldInfo? _paramDefaultValueField;
 
     readonly ConcurrentDictionary<Type, JsonSchema> _schemasByType = new();
+    readonly ConcurrentDictionary<Type, JsonSchema> _readModelSchemasByType = new();
     readonly JsonSerializerOptions _serializerOptions;
     readonly JsonSchemaExporterOptions _exporterOptions;
+    readonly JsonSchemaExporterOptions _readModelExporterOptions;
     readonly IComplianceMetadataResolver _metadataResolver;
     readonly ISecurityMetadataResolver _securityMetadataResolver;
     readonly IDerivedTypes _derivedTypes;
@@ -81,7 +83,13 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         _exporterOptions = new JsonSchemaExporterOptions
         {
             TreatNullObliviousAsNonNullable = true,
-            TransformSchemaNode = TransformNode
+            TransformSchemaNode = (context, schema) => TransformNode(context, schema, restorePropertiesWithDefaultValues: false)
+        };
+
+        _readModelExporterOptions = new JsonSchemaExporterOptions
+        {
+            TreatNullObliviousAsNonNullable = true,
+            TransformSchemaNode = (context, schema) => TransformNode(context, schema, restorePropertiesWithDefaultValues: true)
         };
     }
 
@@ -111,6 +119,32 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             static (typeToGenerate, generator) =>
             {
                 var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._exporterOptions);
+                return new JsonSchema(node.AsObject());
+            },
+            this);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Differs from <see cref="Generate"/> in one way: a converter-backed property - a concept, for instance - whose
+    /// constructor parameter has a default value (<c language="csharp">OwnerSubject? Owner = null</c>) gets the same schema
+    /// it would get without the default, instead of the untyped <c language="csharp">{"default": null}</c> System.Text.Json
+    /// produces for it. Without a type the property is dropped when the read model is read, and without compliance
+    /// metadata a <c language="csharp">[PII]</c> value is stored in the clear.
+    /// <para>
+    /// Event types keep the <see cref="Generate"/> shape on purpose. The kernel compares a registered event type's
+    /// schema with the stored one and refuses a change within a generation, so giving such a property a type would stop
+    /// an existing event type from registering.
+    /// </para>
+    /// <para>
+    /// Cached the same way, and for the same reasons, as <see cref="Generate"/>.
+    /// </para>
+    /// </remarks>
+    public JsonSchema GenerateForReadModel(Type type) =>
+        _readModelSchemasByType.GetOrAdd(
+            type,
+            static (typeToGenerate, generator) =>
+            {
+                var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._readModelExporterOptions);
                 return new JsonSchema(node.AsObject());
             },
             this);
@@ -236,10 +270,10 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             .OfType<JsonObject>()
             .Any(_ => _[nameof(ComplianceSchemaMetadata.metadataType)]?.GetValue<string>() == metadataType);
 
-    static bool IsAnnotatedNullable(JsonSchemaExporterContext context)
+    static bool IsAnnotatedNullable(ICustomAttributeProvider? attributeProvider)
     {
         var nullabilityCtx = new NullabilityInfoContext();
-        switch (context.PropertyInfo?.AttributeProvider)
+        switch (attributeProvider)
         {
             case ParameterInfo paramInfo:
                 var paramNullability = nullabilityCtx.Create(paramInfo);
@@ -254,8 +288,11 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
-    static bool PropertyIsNullable(Type type, JsonSchemaExporterContext context) =>
-        Nullable.GetUnderlyingType(type) is not null || IsAnnotatedNullable(context);
+    static bool PropertyIsNullable(Type type, ICustomAttributeProvider? attributeProvider) =>
+        Nullable.GetUnderlyingType(type) is not null || IsAnnotatedNullable(attributeProvider);
+
+    static bool HasOnlyDefaultValue(JsonObject propertySchema) =>
+        propertySchema.Count == 1 && propertySchema.ContainsKey("default");
 
     static void ThrowIfSelfReferencing(Type type, Type representedAs)
     {
@@ -265,67 +302,14 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
-    JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema)
+    JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema, bool restorePropertiesWithDefaultValues)
     {
         var type = context.TypeInfo.Type;
         var formatType = Nullable.GetUnderlyingType(type) ?? type;
 
-        // An explicit [JsonSchemaType] declaration states what a type's own JsonConverter actually produces.
-        // System.Text.Json's schema exporter cannot introspect a custom converter, so without this the schema
-        // describes the CLR shape while the wire carries something else entirely — and the value stops
-        // round-tripping through the sink. It is resolved before the concept branch so an explicit declaration
-        // always wins over an inferred representation, and after the Nullable<> unwrap so that a nullable
-        // value type is recognized as its adorned underlying type.
-        if (formatType.GetCustomAttribute<JsonSchemaTypeAttribute>() is { } jsonSchemaType)
+        if (RepresentConverterBackedType(type, context.PropertyInfo?.AttributeProvider) is { } represented)
         {
-            ThrowIfSelfReferencing(formatType, jsonSchemaType.Type);
-            return RepresentAs(jsonSchemaType.Type, type, context);
-        }
-
-        // Handle concept types - redirect to the underlying primitive type's schema
-        if (type.IsConcept())
-        {
-            return RepresentAs(type.GetConceptValueType(), type, context);
-        }
-
-        // Handle enumerables whose element type is a concept (e.g. IReadOnlyList<Requirement>).
-        // System.Text.Json's schema exporter cannot introspect the EnumerableConceptAsJsonConverter,
-        // so it emits a permissive boolean schema (`true`) for the property. A non-object schema is
-        // not a JsonObject, so it is excluded from the read model's flattened properties — which
-        // silently drops the property from the persisted document (it never reaches the storage sink).
-        // Emit a proper array schema whose items are the concept's underlying primitive schema, the
-        // same primitive mapping a scalar concept gets, so the value round-trips through the sink.
-        if (type != typeof(string) && type.IsEnumerable() && !type.IsDictionary())
-        {
-            var elementType = type.GetEnumerableElementType();
-            if (elementType?.IsConcept() == true)
-            {
-                var underlyingItemType = elementType.GetConceptValueType();
-                var itemSchema = context.TypeInfo.Options.GetJsonSchemaAsNode(underlyingItemType, _exporterOptions);
-
-                // The element concept's own schema metadata has to be carried onto the item schema. This
-                // branch bypasses the scalar-concept path above, so without it a [PII] or [Encrypted] concept
-                // loses its classification the moment it is put in a list — and a value that is encrypted as a
-                // scalar would be persisted in the clear as a list element.
-                if (itemSchema is JsonObject itemSchemaObject)
-                {
-                    if (_metadataResolver.HasMetadataFor(elementType))
-                    {
-                        AddComplianceMetadata(itemSchemaObject, _metadataResolver.GetMetadataFor(elementType));
-                    }
-
-                    if (_securityMetadataResolver.HasMetadataFor(elementType))
-                    {
-                        AddSecurityMetadata(itemSchemaObject, _securityMetadataResolver.GetMetadataFor(elementType));
-                    }
-                }
-
-                return new JsonObject
-                {
-                    ["type"] = "array",
-                    ["items"] = itemSchema
-                };
-            }
+            return represented;
         }
 
         if (schema is not JsonObject schemaObj) return schema;
@@ -381,7 +365,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             // GetDefaultValue() synthesize a type-default sentinel (e.g. 0001-01-01 for DateTimeOffset) for an
             // unset optional at read time. Appending '?' makes IsNullable() return true so the value
             // materializes as null/absent instead. Symmetric with the nullable-concept handling above.
-            if (PropertyIsNullable(type, context) && !format.EndsWith('?'))
+            if (PropertyIsNullable(type, context.PropertyInfo?.AttributeProvider) && !format.EndsWith('?'))
             {
                 format += "?";
             }
@@ -438,6 +422,11 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         // serializer, so declaration generation needs the title to recover the key type from the Id schema.
         if (context.TypeInfo.Kind == JsonTypeInfoKind.Object)
         {
+            if (restorePropertiesWithDefaultValues)
+            {
+                RestorePropertySchemasReplacedByDefaultValues(context.TypeInfo, schemaObj);
+            }
+
             if (context.PropertyInfo is null || schemaObj["properties"] is JsonObject)
             {
                 schemaObj["title"] = context.PropertyInfo is null ? type.Name : formatType.Name;
@@ -466,11 +455,110 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     }
 
     /// <summary>
+    /// Restores the schema of converter-backed properties whose constructor parameter has a default value.
+    /// </summary>
+    /// <param name="typeInfo">The <see cref="JsonTypeInfo"/> of the object whose properties to restore.</param>
+    /// <param name="schema">The object's schema node.</param>
+    /// <remarks>
+    /// System.Text.Json's schema exporter describes a property served by a custom converter - a concept, for instance -
+    /// with an empty schema that the node transform replaces. When the property's constructor parameter has a default value
+    /// (<c language="csharp">OwnerSubject? Owner = null</c>), the exporter's schema for it carries only the default and does not pass
+    /// through the node transform with the property's type. The property ends up as <c language="csharp">{"default": null}</c> - no type, no format and no compliance metadata - so the
+    /// value is dropped when the read model is read and a <c language="csharp">[PII]</c> value is stored in the clear. The object's own
+    /// transform still sees the property, so the schema is produced here the same way it would be without the default,
+    /// and the default is kept.
+    /// </remarks>
+    void RestorePropertySchemasReplacedByDefaultValues(JsonTypeInfo typeInfo, JsonObject schema)
+    {
+        if (schema["properties"] is not JsonObject properties) return;
+
+        foreach (var property in typeInfo.Properties.Where(_ => _.AssociatedParameter is { HasDefaultValue: true }))
+        {
+            if (properties[property.Name] is not JsonObject propertySchema || !HasOnlyDefaultValue(propertySchema)) continue;
+            if (RepresentConverterBackedType(property.PropertyType, property.AttributeProvider) is not JsonObject restored) continue;
+
+            restored["default"] = propertySchema["default"]?.DeepClone();
+            properties[property.Name] = restored;
+        }
+    }
+
+    /// <summary>
+    /// Produces the schema for a type whose own <see cref="System.Text.Json.Serialization.JsonConverter"/> decides what goes on the wire.
+    /// </summary>
+    /// <param name="type">The declared <see cref="Type"/>.</param>
+    /// <param name="attributeProvider">The property or parameter the type is declared on, if any.</param>
+    /// <returns>The schema node, or null when the type is not converter backed and its exported schema stands.</returns>
+    JsonNode? RepresentConverterBackedType(Type type, ICustomAttributeProvider? attributeProvider)
+    {
+        var formatType = Nullable.GetUnderlyingType(type) ?? type;
+
+        // An explicit [JsonSchemaType] declaration states what a type's own JsonConverter actually produces.
+        // System.Text.Json's schema exporter cannot introspect a custom converter, so without this the schema
+        // describes the CLR shape while the wire carries something else entirely — and the value stops
+        // round-tripping through the sink. It is resolved before the concept branch so an explicit declaration
+        // always wins over an inferred representation, and after the Nullable<> unwrap so that a nullable
+        // value type is recognized as its adorned underlying type.
+        if (formatType.GetCustomAttribute<JsonSchemaTypeAttribute>() is { } jsonSchemaType)
+        {
+            ThrowIfSelfReferencing(formatType, jsonSchemaType.Type);
+            return RepresentAs(jsonSchemaType.Type, type, attributeProvider);
+        }
+
+        // Handle concept types - redirect to the underlying primitive type's schema
+        if (type.IsConcept())
+        {
+            return RepresentAs(type.GetConceptValueType(), type, attributeProvider);
+        }
+
+        // Handle enumerables whose element type is a concept (e.g. IReadOnlyList<Requirement>).
+        // System.Text.Json's schema exporter cannot introspect the EnumerableConceptAsJsonConverter,
+        // so it emits a permissive boolean schema (`true`) for the property. A non-object schema is
+        // not a JsonObject, so it is excluded from the read model's flattened properties — which
+        // silently drops the property from the persisted document (it never reaches the storage sink).
+        // Emit a proper array schema whose items are the concept's underlying primitive schema, the
+        // same primitive mapping a scalar concept gets, so the value round-trips through the sink.
+        if (type != typeof(string) && type.IsEnumerable() && !type.IsDictionary())
+        {
+            var elementType = type.GetEnumerableElementType();
+            if (elementType?.IsConcept() == true)
+            {
+                var underlyingItemType = elementType.GetConceptValueType();
+                var itemSchema = _serializerOptions.GetJsonSchemaAsNode(underlyingItemType, _exporterOptions);
+
+                // The element concept's own schema metadata has to be carried onto the item schema. This
+                // branch bypasses the scalar-concept path above, so without it a [PII] or [Encrypted] concept
+                // loses its classification the moment it is put in a list — and a value that is encrypted as a
+                // scalar would be persisted in the clear as a list element.
+                if (itemSchema is JsonObject itemSchemaObject)
+                {
+                    if (_metadataResolver.HasMetadataFor(elementType))
+                    {
+                        AddComplianceMetadata(itemSchemaObject, _metadataResolver.GetMetadataFor(elementType));
+                    }
+
+                    if (_securityMetadataResolver.HasMetadataFor(elementType))
+                    {
+                        AddSecurityMetadata(itemSchemaObject, _securityMetadataResolver.GetMetadataFor(elementType));
+                    }
+                }
+
+                return new JsonObject
+                {
+                    ["type"] = "array",
+                    ["items"] = itemSchema
+                };
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Produces the schema of a different type in place of the declared type's own schema.
     /// </summary>
     /// <param name="representedAs">The <see cref="Type"/> whose schema describes what actually goes on the wire.</param>
     /// <param name="declaredType">The declared <see cref="Type"/> being represented.</param>
-    /// <param name="context">The <see cref="JsonSchemaExporterContext"/> of the node being transformed.</param>
+    /// <param name="attributeProvider">The property or parameter the type is declared on, if any.</param>
     /// <returns>The schema node for <paramref name="representedAs"/>, carrying the declared type's metadata.</returns>
     /// <remarks>
     /// The declared type's compliance metadata has to travel onto the substituted schema — the classification
@@ -484,9 +572,9 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// default (e.g. 0 for ulong).
     /// </para>
     /// </remarks>
-    JsonNode RepresentAs(Type representedAs, Type declaredType, JsonSchemaExporterContext context)
+    JsonNode RepresentAs(Type representedAs, Type declaredType, ICustomAttributeProvider? attributeProvider)
     {
-        var representedSchema = context.TypeInfo.Options.GetJsonSchemaAsNode(representedAs, _exporterOptions);
+        var representedSchema = _serializerOptions.GetJsonSchemaAsNode(representedAs, _exporterOptions);
         if (representedSchema is not JsonObject representedSchemaObject) return representedSchema;
 
         if (_metadataResolver.HasMetadataFor(declaredType))
@@ -499,7 +587,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             AddSecurityMetadata(representedSchemaObject, _securityMetadataResolver.GetMetadataFor(declaredType));
         }
 
-        if (PropertyIsNullable(declaredType, context) &&
+        if (PropertyIsNullable(declaredType, attributeProvider) &&
             representedSchemaObject.TryGetPropertyValue("format", out var format))
         {
             var formatValue = format!.GetValue<string>();

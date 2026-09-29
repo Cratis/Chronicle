@@ -22,6 +22,6 @@ public class and_the_read_model_has_no_compliance_metadata : given.a_read_model_
 
     async Task Because() => _result = await _releaser.Release(_instances);
 
-    [Fact] void should_generate_the_schema_once_for_the_whole_sequence() => _schemaGenerator.Received(1).Generate(typeof(Order));
+    [Fact] void should_generate_the_schema_once_for_the_whole_sequence() => _schemaGenerator.Received(1).GenerateForReadModel(typeof(Order));
     [Fact] void should_hand_back_the_very_same_sequence() => ReferenceEquals(_instances, _result).ShouldBeTrue();
 }
