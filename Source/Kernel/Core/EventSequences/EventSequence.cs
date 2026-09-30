@@ -138,8 +138,8 @@ public class EventSequence(
     {
         if (_appendsSinceStateWrite > 0)
         {
-            _appendsSinceStateWrite = 0;
             await WriteStateAsync();
+            _appendsSinceStateWrite = 0;
         }
 
         await base.OnDeactivateAsync(reason, cancellationToken);
@@ -1051,8 +1051,10 @@ public class EventSequence(
             return;
         }
 
-        _appendsSinceStateWrite = 0;
+        // Reset only once the write succeeded, so a failed write leaves the appends counted and deactivation still
+        // flushes them even when no further append arrives.
         await WriteStateAsync();
+        _appendsSinceStateWrite = 0;
         _stateWrittenSinceActivation = true;
     }
 
