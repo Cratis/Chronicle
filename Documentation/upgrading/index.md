@@ -7,8 +7,8 @@ Every major version of Chronicle has an upgrade guide, and every guide answers t
 question first: **does anything change for you?**
 
 Often the answer is no. Chronicle publishes the kernel, the .NET client and the contracts
-package from one repository at one version, so a breaking change to any of them raises the
-major for all three. A major can therefore be driven by something you never call, on a
+packages (.NET, npm, Maven, Hex and PyPI) from one repository at one version, so a
+breaking change to any of them raises the major for all three. A major can therefore be driven by something you never call, on a
 surface you never touch — and upgrading is then a version bump and a rebuild.
 
 The Kotlin/Java, TypeScript and Elixir clients are released from their own repositories
@@ -19,8 +19,10 @@ numbers, so a language client's version does not match the kernel's and a Chroni
 does not raise theirs. What ties a language client to a kernel is the wire contract, which
 the client checks when it connects — see
 [the wire-compatibility handshake](../building-a-client/clustering-and-connection-lifecycle.md#the-wire-compatibility-handshake).
+Each language client depends on a specific version of the contracts package, so a Chronicle
+major reaches a language client when that client moves to the new contracts version.
 Everything below about Chronicle versions applies to the kernel, the .NET client and the
-contracts package; to see what changed in a language client, read the release notes in its
+contracts packages; to see what changed in a language client, read the release notes in its
 own repository.
 
 That is worth saying out loud rather than leaving you to work it out from release notes.
