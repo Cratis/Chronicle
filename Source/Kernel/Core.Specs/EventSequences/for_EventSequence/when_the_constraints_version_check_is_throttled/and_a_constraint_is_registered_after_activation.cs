@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 
@@ -22,14 +23,14 @@ public class and_a_constraint_is_registered_after_activation : given.an_event_se
 
     void Establish()
     {
-        _constraintsGrain.ClearReceivedCalls();
+        _constraintValidationFactory.ClearReceivedCalls();
         _registeredConstraints.Add(new UniqueConstraintDefinition("some-constraint", []));
     }
 
     Task Because() => Append();
 
     [Fact] void should_pick_the_constraint_up_on_the_first_append() =>
-        _constraintsGrain.Received(1).GetDefinitions();
+        _constraintValidationFactory.Received(1).Create(Arg.Any<EventSequenceKey>());
 
     Task Append() => _eventSequence.Append(
         EventSourceType.Default,

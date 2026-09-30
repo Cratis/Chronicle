@@ -31,6 +31,9 @@ public class UniqueEventTypeConstraintsProvider(IClientArtifactsProvider clientA
                     constraintName,
                     et => eventType.GetConstraintMessage() ?? string.Empty,
                     [eventTypes.GetEventTypeFor(eventType).Id],
-                    removedWith);
+                    removedWith)
+                {
+                    EventSequences = eventType.GetConstraintEventSequences()
+                };
             }).ToImmutableList();
 }

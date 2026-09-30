@@ -214,6 +214,23 @@ public class an_event_sequence : Specification
         await _silo.CreateGrainAsync<EventSequence>(_eventSequenceKey.ToString());
 
     /// <summary>
+    /// Append a single event with no concurrency scope, tags or causation.
+    /// </summary>
+    /// <returns>The <see cref="AppendResult"/> of the append.</returns>
+    protected Task<AppendResult> AppendAnEvent() => _eventSequence.Append(
+        EventSourceType.Default,
+        _eventSourceId,
+        EventStreamType.All,
+        EventStreamId.Default,
+        _eventType,
+        new JsonObject(),
+        CorrelationId.New(),
+        [],
+        Identity.System,
+        [],
+        Concepts.EventSequences.Concurrency.ConcurrencyScope.None);
+
+    /// <summary>
     /// Build a single already validated and compliant event ready to be appended to storage, bypassing the
     /// schema/compliance/constraint pipeline so specs can exercise the batch append and sequence-number logic directly.
     /// </summary>

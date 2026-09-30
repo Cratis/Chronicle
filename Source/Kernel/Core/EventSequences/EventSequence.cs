@@ -31,7 +31,6 @@ using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -83,12 +82,12 @@ public class EventSequence(
     IMeterScope<EventSequence>? _metrics;
     IAppendedEventsQueues? _appendedEventsQueues;
     IConstraintValidation? _constraints;
-    IReadOnlyCollection<IConstraintDefinition> _knownConstraints = [];
     ConstraintsVersion _constraintsVersion = ConstraintsVersion.NotSet;
     TimeSpan _constraintsVersionCheckInterval;
     long _lastConstraintsVersionCheck;
     int _statePersistenceInterval = 1;
     int _appendsSinceStateWrite;
+    bool _stateWrittenSinceActivation;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
@@ -109,9 +108,11 @@ public class EventSequence(
 
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);
 
-        _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
-        _knownConstraints = await ConstraintsGrain.GetDefinitions();
+        // The version is read before the definitions, never after. The constraints grain only reports a new version
+        // once the definitions behind it are persisted, so definitions read afterwards are at least that new; read the
+        // other way round, a registration completing in between would leave stale validators behind a current version.
         _constraintsVersion = await ConstraintsGrain.GetVersion();
+        _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
 
         // Deliberately not stamped as a completed check. A sequence does not only activate to append - a read, or
         // an observer subscribing to it, activates it just as well, and it can then sit idle while a client
@@ -137,8 +138,8 @@ public class EventSequence(
     {
         if (_appendsSinceStateWrite > 0)
         {
-            _appendsSinceStateWrite = 0;
             await WriteStateAsync();
+            _appendsSinceStateWrite = 0;
         }
 
         await base.OnDeactivateAsync(reason, cancellationToken);
@@ -153,6 +154,20 @@ public class EventSequence(
 
     /// <inheritdoc/>
     public Task Rehydrate() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The version is read first, since definitions read after it are at least as new, but published only once the
+    /// validators are built. Should building them fail, the sequence keeps its previous version, so its next version
+    /// check sees the change again and retries rather than taking the stale validators for current.
+    /// </remarks>
+    public async Task RefreshConstraints()
+    {
+        var version = await ConstraintsGrain.GetVersion();
+        _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+        _constraintsVersion = version;
+        _lastConstraintsVersionCheck = Stopwatch.GetTimestamp();
+    }
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetNextSequenceNumber() => Task.FromResult(State.SequenceNumber);
@@ -1008,9 +1023,9 @@ public class EventSequence(
     }
 
     /// <summary>
-    /// Persists the event sequence state as a warm-start snapshot once at least
-    /// <see cref="Configuration.Events.StatePersistenceInterval"/> appends have accumulated since the last write,
-    /// rather than on every append.
+    /// Persists the event sequence state as a warm-start snapshot on the first append after activation, and from then
+    /// on once at least <see cref="Configuration.Events.StatePersistenceInterval"/> appends have accumulated since the
+    /// last write, rather than on every append.
     /// </summary>
     /// <param name="appendedCount">Number of events appended by the current operation.</param>
     /// <returns>Awaitable task.</returns>
@@ -1019,23 +1034,33 @@ public class EventSequence(
     /// <see cref="EventSequenceState.SequenceNumber"/> from the actual event tail — and the per-event-type tails via
     /// aggregation — on every activation, so a crash between these periodic writes loses no sequence-number
     /// correctness. The next append still gets the right number.
+    /// <para>
+    /// The persisted state is also what records that the sequence exists: the event sequences of a namespace, and
+    /// whether the namespace holds any data at all, are read from it - which is how the indexes a constraint change has
+    /// made stale are found. Waiting for the interval would leave a sequence that has events, but fewer than the
+    /// interval since it was activated, unlisted until it deactivates. So the first append after activation writes the
+    /// state regardless; it is one write per activation, and it also records a sequence whose state was never persisted
+    /// before. Should that write fail, the next append tries again.
+    /// </para>
     /// </remarks>
     async Task PersistStateAfterAppends(int appendedCount)
     {
         _appendsSinceStateWrite += appendedCount;
-        if (_appendsSinceStateWrite < _statePersistenceInterval)
+        if (_stateWrittenSinceActivation && _appendsSinceStateWrite < _statePersistenceInterval)
         {
             return;
         }
 
-        _appendsSinceStateWrite = 0;
+        // Reset only once the write succeeded, so a failed write leaves the appends counted and deactivation still
+        // flushes them even when no further append arrives.
         await WriteStateAsync();
+        _appendsSinceStateWrite = 0;
+        _stateWrittenSinceActivation = true;
     }
 
     async Task OnConstraintsChanged(ConstraintsChanged payload)
     {
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
-        await StartReindexJob(payload.Changes.Where(_ => _.RequiresReindex).ToArray());
     }
 
     Task OnConstraintsChangedError(Exception exception)
@@ -1045,7 +1070,7 @@ public class EventSequence(
 
     /// <summary>
     /// Re-reads the constraint validators when the constraints registered for the event store have changed since this
-    /// grain last observed them, starting a reindex job for any unique constraints whose index must be rebuilt.
+    /// grain last observed them.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
@@ -1053,7 +1078,14 @@ public class EventSequence(
     /// (they are keyed differently to the constraints grain and are not implicit channel subscribers), so constraint
     /// changes are picked up here instead by a <see cref="ConstraintsVersion"/> check. The version is a
     /// content-derived stamp, so it is stable across constraints-grain deactivation and consistent across silos —
-    /// the validators are only re-read, and a reindex only started, when the constraints genuinely changed.
+    /// the validators are only re-read when the constraints genuinely changed.
+    /// <para>
+    /// Rebuilding a stale index is not started from here. A grain only sees a change while it is active and still
+    /// holds the definitions it had before, so an inactive sequence would never be reindexed. The constraints grain
+    /// starts the rebuild for every event sequence when the definitions are registered, see <see cref="IConstraintIndexes"/>,
+    /// and calls <see cref="RefreshConstraints"/> on each sequence it reindexes first, so the throttle never leaves a
+    /// sequence appending unindexed values while its index is being rebuilt.
+    /// </para>
     /// <para>
     /// The check is throttled to <see cref="Configuration.Events.ConstraintsVersionCheckInterval"/> rather than run
     /// on every append. Reading the version is cheap inside the constraints grain, but reaching it is not: there is
@@ -1077,12 +1109,8 @@ public class EventSequence(
             return;
         }
 
-        var previous = _knownConstraints;
-        var current = await ConstraintsGrain.GetDefinitions();
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
-        _knownConstraints = current;
         _constraintsVersion = version;
-        await StartReindexJob(ConstraintDefinitionComparison.GetReindexChanges(previous, current));
     }
 
     /// <summary>
@@ -1115,17 +1143,6 @@ public class EventSequence(
 
         _lastConstraintsVersionCheck = now;
         return true;
-    }
-
-    async Task StartReindexJob(IReadOnlyCollection<ConstraintDefinitionChange> changesRequiringReindex)
-    {
-        if (changesRequiringReindex.Count == 0)
-        {
-            return;
-        }
-
-        var jobsManager = GrainFactory.GetJobsManager(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-        await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(_eventSequenceId, changesRequiringReindex));
     }
 
     async Task RewindPartitionForAffectedObservers(

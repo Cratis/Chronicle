@@ -8,6 +8,7 @@ message Constraint {
    repeated string RemovedWith = 3;
    OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition Definition = 4;
    ConstraintScope Scope = 5;
+   repeated string EventSequences = 6;
 }
 message ConstraintScope {
    string EventSourceType = 1;

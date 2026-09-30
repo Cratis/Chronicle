@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts.Events.Constraints;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -28,6 +29,34 @@ public interface IConstraintBuilder
     /// </summary>
     /// <returns>Builder for continuation.</returns>
     IConstraintBuilder PerEventStreamId();
+
+    /// <summary>
+    /// Apply the constraints only to specific event sequences.
+    /// </summary>
+    /// <param name="eventSequenceIds">The <see cref="EventSequenceId"/> values of the event sequences the constraints apply to.</param>
+    /// <returns>Builder for continuation.</returns>
+    /// <remarks>
+    /// By default a constraint applies to every event sequence its event types are appended to, and every sequence
+    /// keeps an index of its own. The kernel neither validates nor indexes a constraint for an event sequence it does
+    /// not apply to. That matters when the same event type is forwarded to another sequence, such as the outbox: the
+    /// forwarded copy would otherwise claim the value in the outbox's own index, which only removal events appended
+    /// to the outbox could release.
+    /// <para>
+    /// It applies to every constraint defined on this builder, wherever in the chain it is called, and calling it
+    /// again adds to the event sequences already declared.
+    /// </para>
+    /// </remarks>
+    IConstraintBuilder ForEventSequences(params EventSequenceId[] eventSequenceIds);
+
+    /// <summary>
+    /// Apply the constraints only to the event log.
+    /// </summary>
+    /// <returns>Builder for continuation.</returns>
+    /// <remarks>
+    /// Shorthand for <see cref="ForEventSequences"/> with <see cref="EventSequenceId.Log"/>. Uniqueness is usually a
+    /// rule of the event log, and other sequences such as the outbox carry facts that were already validated there.
+    /// </remarks>
+    IConstraintBuilder ForEventLog();
 
     /// <summary>
     /// Start building a unique constraint.

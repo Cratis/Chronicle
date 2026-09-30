@@ -14,8 +14,11 @@ public class and_the_state_persistence_interval_is_not_reached : given.appending
 {
     AppendManyResult _result;
 
-    void Establish()
+    async Task Establish()
     {
+        // The first append after activation always writes the state; the interval governs the appends after it.
+        await AppendAnEvent();
+
         _eventSequenceStorage.AppendMany(Arg.Any<IEnumerable<EventToAppendToStorage>>())
             .Returns(callInfo =>
             {

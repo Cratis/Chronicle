@@ -52,4 +52,14 @@ public class Constraint
     /// </summary>
     [ProtoMember(5)]
     public ConstraintScope? Scope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifiers of the event sequences the constraint applies to.
+    /// </summary>
+    /// <remarks>
+    /// Empty means every event sequence. That is the default, and it is what a client that predates the field sends:
+    /// an absent repeated field reads as empty, so an older client keeps the behavior it always had.
+    /// </remarks>
+    [ProtoMember(6)]
+    public IList<string> EventSequences { get; set; } = [];
 }

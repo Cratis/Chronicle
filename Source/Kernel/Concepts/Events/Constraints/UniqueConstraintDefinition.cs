@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Serialization;
+using Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Concepts.Events.Constraints;
 
@@ -28,6 +29,7 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<UniqueConstraintEventDefinition> EventDefinitions, IEnumerable<EventTypeId> RemovedWith = null!, bool IgnoreCasing = false, ConstraintScope? Scope = default) : IConstraintDefinition
 {
     readonly IEnumerable<EventTypeId>? _removedWith = RemovedWith;
+    readonly IEnumerable<EventSequenceId>? _eventSequences;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UniqueConstraintDefinition"/> class from a single removal event.
@@ -69,6 +71,30 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         init => _removedWith = value;
     }
 
+    /// <summary>
+    /// Gets the <see cref="EventSequenceId"/> values of the event sequences the constraint applies to.
+    /// </summary>
+    /// <remarks>
+    /// Empty means every event sequence, which is the default. The constraint is neither validated nor indexed for an
+    /// event sequence it does not apply to - uniqueness is typically a rule of the event log, and an outbox that
+    /// republishes already-validated facts must not keep an index of its own that only removal events appended to the
+    /// outbox could release.
+    /// <para>
+    /// It is an init-only member rather than a constructor parameter so that assemblies compiled against the existing
+    /// constructors keep linking. It is normalized on the way out for the same reason as <see cref="RemovedWith"/>: a
+    /// definition persisted before the member existed does not carry it, and a document deserializer does not run the
+    /// initializer.
+    /// </para>
+    /// </remarks>
+    public IEnumerable<EventSequenceId> EventSequences
+    {
+        get => _eventSequences ?? [];
+        init => _eventSequences = value;
+    }
+
+    /// <inheritdoc/>
+    public bool AppliesTo(EventSequenceId eventSequenceId) => EventSequences.Covers(eventSequenceId);
+
     /// <inheritdoc/>
     public bool Equals(IConstraintDefinition? other) => Equals(other as UniqueConstraintDefinition);
 
@@ -91,7 +117,8 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         IgnoreCasing == other.IgnoreCasing &&
         Scope == other.Scope &&
         EventDefinitions.SequenceEqual(other.EventDefinitions) &&
-        RemovedWith.SequenceEqual(other.RemovedWith);
+        RemovedWith.SequenceEqual(other.RemovedWith) &&
+        EventSequences.CoversSameAs(other.EventSequences);
 
     /// <inheritdoc/>
     public override int GetHashCode()
@@ -110,6 +137,7 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
             hashCode.Add(removalEventTypeId);
         }
 
+        hashCode.AddEventSequences(EventSequences);
         return hashCode.ToHashCode();
     }
 
@@ -153,6 +181,16 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         if (!RemovedWith.SequenceEqual(existingDefinition.RemovedWith) || IgnoreCasing != existingDefinition.IgnoreCasing || Scope != existingDefinition.Scope)
         {
             changes.Add(ConstraintChangeType.IndexedPropertiesChanged);
+        }
+
+        // Narrowing the event sequences needs no reindex: validation and indexing stop for a sequence the constraint
+        // no longer applies to, so its index is simply no longer read. Widening is reported as a change requiring one,
+        // because the index of a newly covered sequence was never maintained, or has been stale since the constraint
+        // last stopped applying to it. Only the newly covered sequences are reindexed - which ones those are is decided
+        // per sequence when the definitions are registered, not here.
+        if (EventSequences.CoversMoreThan(existingDefinition.EventSequences))
+        {
+            changes.Add(ConstraintChangeType.EventSequencesChanged);
         }
 
         return changes.Count == 0

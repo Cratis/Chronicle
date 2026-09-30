@@ -126,6 +126,10 @@ public class ReindexConstraintsStep(
                 .Select(_ => constraintsByName.GetValueOrDefault(_.Name))
                 .Where(_ => _ is not null)
                 .Cast<UniqueConstraintDefinition>()
+
+                // A constraint is only indexed for the event sequences it applies to, so a reindex must honor the
+                // same scope or it would rebuild an index that appends never maintain.
+                .Where(_ => _.AppliesTo(currentState.EventSequenceId))
                 .ToArray();
 
             if (changedDefinitions.Length == 0)

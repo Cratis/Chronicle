@@ -26,4 +26,20 @@ public sealed class UniqueAttribute(string? name = default, string? message = de
     /// Gets the message to use when the unique constraint is violated.
     /// </summary>
     public string? Message { get; } = message;
+
+    /// <summary>
+    /// Gets or sets the identifiers of the event sequences the constraint applies to.
+    /// </summary>
+    /// <remarks>
+    /// Empty means every event sequence, which is the default. The kernel neither validates nor indexes the constraint
+    /// for an event sequence it does not apply to - declare the event log alone when the same event type is also
+    /// forwarded to the outbox:
+    /// <c language="csharp">[Unique(EventSequences = [EventSequenceId.LogId])]</c>.
+    /// <para>
+    /// When several properties share a constraint name, the event sequences declared on each of them are combined. A
+    /// property that declares none applies the constraint to every event sequence, and that wins: the combined
+    /// constraint then applies to every event sequence.
+    /// </para>
+    /// </remarks>
+    public string[] EventSequences { get; set; } = [];
 }

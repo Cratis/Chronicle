@@ -37,9 +37,10 @@ public class Events
     /// <remarks>
     /// Event sequence state (the next sequence number and the per-event-type tails) is authoritative in the
     /// event tail and is rebuilt from it on activation, so it no longer needs to be written on every append.
-    /// It is instead flushed every this many appends and on deactivation, purely to let a subsequent activation
-    /// skip re-deriving the per-event-type tails. Correctness never depends on it: a crash between flushes loses
-    /// no sequence-number correctness. Defaults to 1000 appends.
+    /// It is instead flushed on the first append after activation, every this many appends after that and on
+    /// deactivation, to let a subsequent activation skip re-deriving the per-event-type tails. The first write is what
+    /// lists the sequence among its namespace's sequences. Sequence numbering never depends on it: a crash between
+    /// flushes loses no sequence-number correctness. Defaults to 1000 appends.
     /// </remarks>
     public int StatePersistenceInterval { get; init; } = 1000;
 

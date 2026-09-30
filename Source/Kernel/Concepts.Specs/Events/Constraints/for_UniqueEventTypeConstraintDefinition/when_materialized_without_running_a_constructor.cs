@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Concepts.Events.Constraints.for_UniqueEventTypeConstraintDefinition;
 
@@ -33,4 +34,6 @@ public class when_materialized_without_running_a_constructor : Specification
     [Fact] void should_answer_equality_rather_than_throw() => _equalityError.ShouldBeNull();
     [Fact] void should_answer_hashing_rather_than_throw() => _hashingError.ShouldBeNull();
     [Fact] void should_be_enumerable_rather_than_throw() => _enumerationError.ShouldBeNull();
+    [Fact] void should_declare_no_event_sequences() => _definition.EventSequences.ShouldBeEmpty();
+    [Fact] void should_apply_to_every_event_sequence() => _definition.AppliesTo(EventSequenceId.Outbox).ShouldBeTrue();
 }

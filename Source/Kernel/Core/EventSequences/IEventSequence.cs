@@ -27,6 +27,18 @@ public interface IEventSequence : IGrainWithStringKey
     Task Rehydrate();
 
     /// <summary>
+    /// Re-read the constraints registered for the event store and rebuild the validators from them.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Called before a reindex of this sequence starts, so that the sequence maintains the index of a newly covered
+    /// constraint for every append from this moment on - and every append before it is covered by the reindex, which
+    /// reads the sequence's events. It is deliberately not interleaved: an append in progress completes, including its
+    /// index update, before the validators are replaced.
+    /// </remarks>
+    Task RefreshConstraints();
+
+    /// <summary>
     /// Get the next sequence number.
     /// </summary>
     /// <returns>Next sequence number.</returns>
