@@ -65,7 +65,14 @@ The optional `details` parameter lets you record *why* the value is classified a
 | Polymorphic base type or dictionary | **No** | Chronicle cannot classify values inside either and fails rather than store them unprotected |
 | `EventSourceId` or `EventSourceId<T>` | **No** | Throws `PIINotSupportedOnEventSourceId` at runtime |
 
-This table describes what the C# client validates. No other client performs the same checks yet: Kotlin/Java, TypeScript, and Elixir don't verify that a `[PII]`-marked type actually extends the client's `ConceptAs<T>` equivalent, and none of them throws an equivalent of `PIINotSupportedOnEventSourceId` when you mark an event-source identifier type — the marker is silently accepted rather than rejected. Treat both restrictions as rules to follow across every client, not ones every client enforces for you today.
+This table describes what the C# client validates. The other clients do not perform every check:
+
+- Kotlin/Java, TypeScript, and Elixir don't verify that a `[PII]`-marked type actually extends the client's `ConceptAs<T>` equivalent.
+- Kotlin/Java throw `PiiNotSupportedOnEventSourceId` when `@Pii` is applied to a subclass of `EventSourceId`.
+- Elixir raises an `ArgumentError` at compile time when `pii/0,1` is declared on a concept with `event_source_id: true`.
+- TypeScript throws `PIINotSupportedOnEventSourceId` when `@pii()` is applied to a property named `eventSourceId`, but not when an event-source identifier type is marked.
+
+Treat both restrictions as rules to follow across every client, not ones every client enforces for you today.
 
 ## Applying to an event property
 

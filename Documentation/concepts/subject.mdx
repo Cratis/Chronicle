@@ -37,7 +37,7 @@ an implicit conversion from `EventSourceId`, so mixing the two is painless:
 
 <ChronicleClientTabs snippet="concepts/subject/explicit" />
 
-`Subject` also converts implicitly from `string` and `Guid`. Kotlin and Java pass a subject through `AppendOptions`. TypeScript doesn't currently expose a `subject` append option at all.
+`Subject` also converts implicitly from `string` and `Guid`. Kotlin, Java and TypeScript pass a subject through `AppendOptions`; TypeScript also accepts a `subject` on each entry it passes to `appendMany`.
 
 ## Implicit subject with `[Subject]`
 
@@ -47,7 +47,7 @@ explicit subject is provided:
 
 <ChronicleClientTabs snippet="concepts/subject/implicit-with-attribute" />
 
-An explicit `subject` argument always takes precedence over a `[Subject]` property. This declarative form is C#-only — Elixir, Kotlin, and Java pass the subject explicitly on every append (shown above), and TypeScript doesn't support a subject at all yet.
+An explicit `subject` argument always takes precedence over a `[Subject]` property. Resolving the subject from an event property on append is C#-only — Elixir, Kotlin, Java, and TypeScript pass the subject explicitly on every append (shown above). Kotlin and Java (`@Subject`), TypeScript (`@subject()`) and Elixir (`subject :field`) each have a read-model subject marker, which Chronicle uses when releasing a read model, not when appending an event.
 
 ## Reading the subject back
 
