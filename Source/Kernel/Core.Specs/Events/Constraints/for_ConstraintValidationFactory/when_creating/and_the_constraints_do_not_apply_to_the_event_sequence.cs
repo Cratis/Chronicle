@@ -23,5 +23,5 @@ public class and_the_constraints_do_not_apply_to_the_event_sequence : given.a_co
 
     async Task Because() => _result = await _factory.Create(KeyFor(EventSequenceId.Outbox));
 
-    [Fact] void should_not_validate_or_index_any_of_them() => DefinitionsValidatedBy(_result).ShouldBeEmpty();
+    [Fact] void should_create_no_validator_for_either() => DefinitionsValidatedBy(_result).ShouldBeEmpty();
 }

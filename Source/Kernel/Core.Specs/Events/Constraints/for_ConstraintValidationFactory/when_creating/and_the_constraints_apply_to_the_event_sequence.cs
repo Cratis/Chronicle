@@ -22,5 +22,5 @@ public class and_the_constraints_apply_to_the_event_sequence : given.a_constrain
 
     async Task Because() => _result = await _factory.Create(KeyFor(EventSequenceId.Log));
 
-    [Fact] void should_validate_and_index_both() => DefinitionsValidatedBy(_result).ShouldContainOnly([_scopedUnique, _scopedUniqueEventType]);
+    [Fact] void should_create_validators_for_both() => DefinitionsValidatedBy(_result).ShouldContainOnly([_scopedUnique, _scopedUniqueEventType]);
 }

@@ -21,5 +21,5 @@ public class and_the_constraints_declare_no_event_sequences : given.a_constraint
 
     async Task Because() => _result = await _factory.Create(KeyFor(EventSequenceId.Outbox));
 
-    [Fact] void should_validate_and_index_both() => DefinitionsValidatedBy(_result).ShouldContainOnly([_unique, _uniqueEventType]);
+    [Fact] void should_create_validators_for_both() => DefinitionsValidatedBy(_result).ShouldContainOnly([_unique, _uniqueEventType]);
 }

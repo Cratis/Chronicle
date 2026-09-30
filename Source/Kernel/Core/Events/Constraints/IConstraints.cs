@@ -22,8 +22,8 @@ public interface IConstraints : IGrainWithStringKey
     /// </summary>
     /// <returns>A snapshot of the registered <see cref="IConstraintDefinition"/> for the event store.</returns>
     /// <remarks>
-    /// Served from the grain's in-memory state so that callers (such as the event sequence) can resolve the current
-    /// definitions without querying storage. The snapshot is re-read from persisted state on activation.
+    /// Served from the grain's in-memory state so that callers can resolve the current definitions without querying
+    /// storage. The snapshot is re-read from persisted state on activation.
     /// </remarks>
     Task<IReadOnlyCollection<IConstraintDefinition>> GetDefinitions();
 
