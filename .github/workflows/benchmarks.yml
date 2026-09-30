@@ -76,9 +76,12 @@ jobs:
           path: Documentation/benchmarks/benchmark-data.json
 
       # The series used to reach the repository by way of a cache written on the pull request and restored at
-      # release time. With the run living here, commit it directly - the same shape coverage statistics use.
+      # release time. With the run living here, commit it directly - the same shape coverage statistics use
+      # (publish.yml pushes to the default branch with the same PAT_WORKFLOWS token). Only the nightly run
+      # publishes: it always runs on the default branch, whereas workflow_dispatch can target any ref and is
+      # for looking at numbers, not for writing them into the series.
       - name: Commit benchmark results
-        if: github.event_name == 'push'
+        if: github.event_name == 'schedule'
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
