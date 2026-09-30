@@ -28,6 +28,14 @@ When multiple event types share the same constraint `name`, Chronicle groups the
 
 Both events now participate in the same `UniqueEmail` constraint, so neither `UserRegistered` nor `UserEmailChanged` can introduce an email address that already exists.
 
+## Scoping to the event log
+
+By default a constraint applies to every event sequence its event type is appended to, and each sequence keeps its own index. When the event is a domain fact that is also forwarded to the outbox, the forwarded copy claims the value in the outbox's index, and only a removal event appended to the outbox can release it. Set `EventSequences` on `[Unique]` to apply the constraint only to the sequences you name. The kernel neither validates nor indexes it for any other sequence:
+
+<ChronicleClientTabs snippet="constraints/model-bound/unique/event-log-only" />
+
+When several properties share a constraint name, the event sequences declared on each are combined.
+
 ## Violation message
 
 The `message` parameter is optional. Chronicle produces a default violation message when one is not supplied. C# supports a custom violation message, and so do Kotlin and Java from `io.cratis:chronicle` 6.5.0: the client that registered the constraint puts its message on the violations its appends return, with `{detailKey}` placeholders filled in from the violation details. Elixir and TypeScript use Chronicle's default message:

@@ -38,6 +38,14 @@ A lifecycle often ends in more than one way — an invitation is over when it is
 
 <ChronicleClientTabs snippet="constraints/declarative/unique/releasing-several-events" />
 
+## Scoping to the event log
+
+By default a constraint applies to every event sequence its event types are appended to, and each sequence keeps its own index. When an event type is a domain fact that is also forwarded to the outbox, the forwarded copy claims the value in the outbox's index, and only a removal event appended to the outbox can release it. Call `.ForEventLog()` to apply the constraint to the event log alone, or `.ForEventSequences(...)` to name other sequences. The kernel neither validates nor indexes the constraint for a sequence it does not apply to:
+
+<ChronicleClientTabs snippet="constraints/declarative/unique/event-log-only" />
+
+The declaration covers every constraint defined on that builder, wherever in the chain it is called.
+
 ## Ignoring casing
 
 Call `.IgnoreCasing()` to make the uniqueness check case-insensitive:
