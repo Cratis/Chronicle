@@ -17,15 +17,21 @@ namespace Cratis.Chronicle.Events.Constraints;
 public class Constraints(IClusterClient clusterClient, IConstraintIndexes constraintIndexes) : Grain<ConstraintsState>, IConstraints
 {
     readonly IBroadcastChannelProvider _constraintsChangedChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ConstraintsChanged);
-    ConstraintsVersion? _version;
+    IReadOnlyCollection<IConstraintDefinition> _persisted = [];
+    ConstraintsVersion _version = ConstraintsVersion.NotSet;
 
     /// <inheritdoc/>
-    public Task<IReadOnlyCollection<IConstraintDefinition>> GetDefinitions() =>
-        Task.FromResult<IReadOnlyCollection<IConstraintDefinition>>(State.Constraints.ToArray());
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        SnapshotPersisted();
+        return base.OnActivateAsync(cancellationToken);
+    }
 
     /// <inheritdoc/>
-    public Task<ConstraintsVersion> GetVersion() =>
-        Task.FromResult(_version ??= ConstraintDefinitionComparison.ComputeVersion(State.Constraints));
+    public Task<IReadOnlyCollection<IConstraintDefinition>> GetDefinitions() => Task.FromResult(_persisted);
+
+    /// <inheritdoc/>
+    public Task<ConstraintsVersion> GetVersion() => Task.FromResult(_version);
 
     /// <inheritdoc/>
     /// <remarks>
@@ -66,9 +72,9 @@ public class Constraints(IClusterClient clusterClient, IConstraintIndexes constr
         if (hasChanges)
         {
             await WriteStateAsync();
-            _version = null;
+            SnapshotPersisted();
             await ConstraintsChanged(changes);
-            await constraintIndexes.RebuildStaleIndexes(ConstraintsKey.Parse(this.GetPrimaryKeyString()).EventStore, previous, State.Constraints.ToArray());
+            await constraintIndexes.RebuildStaleIndexes(ConstraintsKey.Parse(this.GetPrimaryKeyString()).EventStore, previous, _persisted);
         }
     }
 
@@ -102,5 +108,21 @@ public class Constraints(IClusterClient clusterClient, IConstraintIndexes constr
         var channelId = ChannelId.Create(WellKnownBroadcastChannelNames.ConstraintsChanged, this.GetPrimaryKeyString());
         var channelWriter = _constraintsChangedChannel.GetChannelWriter<ConstraintsChanged>(channelId);
         await channelWriter.Publish(new ConstraintsChanged(changes));
+    }
+
+    /// <summary>
+    /// Capture the definitions as they are persisted, together with their version.
+    /// </summary>
+    /// <remarks>
+    /// Reading the definitions and the version interleaves with a registration in progress, so an event sequence
+    /// appending meanwhile is never blocked behind it - and a registration that refreshes those sequences is never
+    /// blocked by them in turn. What they are served is therefore captured only once the definitions are persisted: a
+    /// reader must never see a version whose definitions storage does not hold yet, or it would cache stale validators
+    /// behind a current version.
+    /// </remarks>
+    void SnapshotPersisted()
+    {
+        _persisted = State.Constraints.ToArray();
+        _version = ConstraintDefinitionComparison.ComputeVersion(_persisted);
     }
 }

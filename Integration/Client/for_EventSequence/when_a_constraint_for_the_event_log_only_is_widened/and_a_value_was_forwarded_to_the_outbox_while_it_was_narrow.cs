@@ -16,7 +16,8 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_a_constraint_for_t
 /// outbox's index from the events already in it - otherwise the outbox would accept the same value from another
 /// event source, as if it had never been claimed. The rebuild is started when the widened definition is registered,
 /// not when the outbox next appends, so it has completed before that append is validated - and it does not depend on
-/// the outbox's grain being active at the time.
+/// the outbox's grain being active at the time. The outbox, active here, refreshes its constraints before the rebuild
+/// starts, so the specification waits for nothing but the rebuild.
 /// </summary>
 /// <param name="context">The <see cref="context"/> the specification runs against.</param>
 [Collection(ChronicleCollection.Name)]
@@ -38,10 +39,9 @@ public class and_a_value_was_forwarded_to_the_outbox_while_it_was_narrow(context
             await EventStore.EventLog.Append(Guid.NewGuid().ToString(), @event);
             FirstInOutbox = await outbox.Append(Guid.NewGuid().ToString(), @event);
 
+            // Registering refreshes the outbox's constraints and starts its reindex before it returns, so all that is
+            // left to wait for is the reindex completing.
             await RegisterForEveryEventSequence();
-
-            // The outbox is still active and re-reads its validators once its constraints version check is due.
-            await Task.Delay(TimeSpan.FromSeconds(2));
             await EventStore.Jobs.WaitForThereToBeNoJobs(TimeSpan.FromSeconds(30), Cratis.Chronicle.Jobs.JobStatus.CompletedSuccessfully);
 
             SecondInOutbox = await outbox.Append(Guid.NewGuid().ToString(), @event);

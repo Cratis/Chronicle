@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -24,7 +25,11 @@ public interface IConstraints : IGrainWithStringKey
     /// <remarks>
     /// Served from the grain's in-memory state so that callers can resolve the current definitions without querying
     /// storage. The snapshot is re-read from persisted state on activation.
+    /// <para>
+    /// Interleaved with a registration in progress, which serves the definitions as they were last persisted.
+    /// </para>
     /// </remarks>
+    [AlwaysInterleave]
     Task<IReadOnlyCollection<IConstraintDefinition>> GetDefinitions();
 
     /// <summary>
@@ -35,6 +40,12 @@ public interface IConstraints : IGrainWithStringKey
     /// A cheap, cluster-safe signal callers cache and compare on each append to detect that constraints have changed
     /// since they last read them. It is derived from the content of the definitions, so it is stable across grain
     /// deactivation and identical across silos for identical definitions.
+    /// <para>
+    /// Interleaved with a registration in progress, so an append checking it is never queued behind one - and a
+    /// registration refreshing an event sequence cannot deadlock with that sequence's append. A new version is only
+    /// served once the definitions behind it are persisted.
+    /// </para>
     /// </remarks>
+    [AlwaysInterleave]
     Task<ConstraintsVersion> GetVersion();
 }

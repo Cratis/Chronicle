@@ -14,8 +14,9 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintIndexes.given;
 
 /// <summary>
-/// An event store with one namespace holding the event log and the outbox. No event sequence grain is involved: the
-/// indexes are rebuilt from what the namespace holds, not from what any active grain knows.
+/// An event store with one namespace holding the event log and the outbox. Which sequences are reindexed is decided
+/// from what the namespace holds, not from what any active grain knows; a sequence's grain is only asked to refresh
+/// its constraints before its reindex starts.
 /// </summary>
 public class an_event_store_with_a_log_and_an_outbox : Specification
 {
@@ -29,12 +30,16 @@ public class an_event_store_with_a_log_and_an_outbox : Specification
     protected EventStoreName _eventStore;
     protected EventStoreNamespaceName _namespace;
     protected List<ReindexConstraintsRequest> _startedReindexes;
+    protected IEventSequence _log;
+    protected IEventSequence _outbox;
+    protected List<string> _calls;
 
     void Establish()
     {
         _eventStore = "some-event-store";
         _namespace = "some-namespace";
         _startedReindexes = [];
+        _calls = [];
 
         _grainFactory = Substitute.For<IGrainFactory>();
         _storage = Substitute.For<IStorage>();
@@ -56,10 +61,29 @@ public class an_event_store_with_a_log_and_an_outbox : Specification
 
         _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_eventStore, _namespace)).Returns(_jobsManager);
         _jobsManager
-            .Start<IReindexConstraints, ReindexConstraintsRequest>(Arg.Do<ReindexConstraintsRequest>(_startedReindexes.Add))
+            .Start<IReindexConstraints, ReindexConstraintsRequest>(Arg.Do<ReindexConstraintsRequest>(request =>
+            {
+                _startedReindexes.Add(request);
+                _calls.Add($"reindex {request.EventSequenceId}");
+            }))
             .Returns(Task.FromResult(Result<JobId, StartJobError>.Success(JobId.New())));
 
+        _log = EventSequenceFor(EventSequenceId.Log);
+        _outbox = EventSequenceFor(EventSequenceId.Outbox);
+
         _constraintIndexes = new ConstraintIndexes(_grainFactory, _storage, Substitute.For<ILogger<ConstraintIndexes>>());
+    }
+
+    IEventSequence EventSequenceFor(EventSequenceId eventSequenceId)
+    {
+        var eventSequence = Substitute.For<IEventSequence>();
+        eventSequence.RefreshConstraints().Returns(_ =>
+        {
+            _calls.Add($"refresh {eventSequenceId}");
+            return Task.CompletedTask;
+        });
+        _grainFactory.GetGrain<IEventSequence>((string)new EventSequenceKey(eventSequenceId, _eventStore, _namespace), Arg.Any<string?>()).Returns(eventSequence);
+        return eventSequence;
     }
 
     protected static UniqueConstraintDefinition UniqueEmail(params EventSequenceId[] eventSequences) =>

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage;
@@ -43,8 +44,17 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
             return;
         }
 
-        var namespaces = await grainFactory.GetGrain<INamespaces>(eventStore).GetAll();
-        await Task.WhenAll(namespaces.Select(@namespace => RebuildStaleIndexes(eventStore, @namespace, previous, current)));
+        // Nothing may escape to the registration: the definitions are already persisted, so a retried registration
+        // would see no change and never start the rebuild again.
+        try
+        {
+            var namespaces = await grainFactory.GetGrain<INamespaces>(eventStore).GetAll();
+            await Task.WhenAll(namespaces.Select(@namespace => RebuildStaleIndexes(eventStore, @namespace, previous, current)));
+        }
+        catch (Exception ex)
+        {
+            logger.FailedRebuildingStaleIndexesForEventStore(eventStore, ex);
+        }
     }
 
     async Task RebuildStaleIndexes(
@@ -70,6 +80,8 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
                     continue;
                 }
 
+                await RefreshConstraints(eventStore, @namespace, eventSequenceId);
+
                 logger.StartingReindex(eventStore, @namespace, eventSequenceId);
                 var result = await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(eventSequenceId, changes));
                 if (result.TryGetError(out var error))
@@ -81,6 +93,34 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
         catch (Exception ex)
         {
             logger.FailedRebuildingStaleIndexes(eventStore, @namespace, ex);
+        }
+    }
+
+    /// <summary>
+    /// Make the event sequence validate against the current definitions before its index is rebuilt.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the event sequence belongs to.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the event sequence belongs to.</param>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> of the event sequence.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// An active sequence only notices a changed version on an append after its throttled check, so without this an
+    /// append arriving meanwhile would still use validators that do not maintain the newly covered index - and if the
+    /// rebuild had already read past it, its value would never be indexed. Refreshing first splits every append into
+    /// one the sequence indexes itself (after the refresh) or one already in the log for the rebuild to read (before
+    /// it). One can be both, which is harmless: the index holds one entry per event source, and writing the same one
+    /// twice replaces it. Should the refresh fail, the rebuild is still started - the sequence refreshes on its own
+    /// within the throttle, and an index rebuilt with that window open is better than none.
+    /// </remarks>
+    async Task RefreshConstraints(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId)
+    {
+        try
+        {
+            await grainFactory.GetEventSequence(eventSequenceId, eventStore, @namespace).RefreshConstraints();
+        }
+        catch (Exception ex)
+        {
+            logger.FailedRefreshingConstraints(eventStore, @namespace, eventSequenceId, ex);
         }
     }
 }

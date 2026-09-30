@@ -18,6 +18,7 @@ public class when_inspecting_grain_call_interleaving : Specification
     bool _tailSequenceNumberIsInterleaved;
     bool _tailSequenceNumberForEventTypesIsInterleaved;
     bool _appendIsInterleaved;
+    bool _refreshingConstraintsIsInterleaved;
 
     void Because()
     {
@@ -25,12 +26,14 @@ public class when_inspecting_grain_call_interleaving : Specification
         _tailSequenceNumberIsInterleaved = AllOverloadsInterleaved(nameof(IEventSequence.GetTailSequenceNumber));
         _tailSequenceNumberForEventTypesIsInterleaved = AllOverloadsInterleaved(nameof(IEventSequence.GetTailSequenceNumberForEventTypes));
         _appendIsInterleaved = AnyOverloadInterleaved(nameof(IEventSequence.Append));
+        _refreshingConstraintsIsInterleaved = AnyOverloadInterleaved(nameof(IEventSequence.RefreshConstraints));
     }
 
     [Fact] void should_interleave_getting_the_next_sequence_number() => _nextSequenceNumberIsInterleaved.ShouldBeTrue();
     [Fact] void should_interleave_getting_the_tail_sequence_number() => _tailSequenceNumberIsInterleaved.ShouldBeTrue();
     [Fact] void should_interleave_getting_the_tail_sequence_number_for_event_types() => _tailSequenceNumberForEventTypesIsInterleaved.ShouldBeTrue();
     [Fact] void should_not_interleave_appending() => _appendIsInterleaved.ShouldBeFalse();
+    [Fact] void should_not_interleave_refreshing_constraints_with_an_append() => _refreshingConstraintsIsInterleaved.ShouldBeFalse();
 
     static MethodInfo[] OverloadsOf(string methodName)
     {

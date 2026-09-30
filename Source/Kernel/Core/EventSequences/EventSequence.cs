@@ -107,8 +107,11 @@ public class EventSequence(
 
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);
 
-        _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+        // The version is read before the definitions, never after. The constraints grain only reports a new version
+        // once the definitions behind it are persisted, so definitions read afterwards are at least that new; read the
+        // other way round, a registration completing in between would leave stale validators behind a current version.
         _constraintsVersion = await ConstraintsGrain.GetVersion();
+        _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
 
         // Deliberately not stamped as a completed check. A sequence does not only activate to append - a read, or
         // an observer subscribing to it, activates it just as well, and it can then sit idle while a client
@@ -150,6 +153,14 @@ public class EventSequence(
 
     /// <inheritdoc/>
     public Task Rehydrate() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public async Task RefreshConstraints()
+    {
+        _constraintsVersion = await ConstraintsGrain.GetVersion();
+        _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+        _lastConstraintsVersionCheck = Stopwatch.GetTimestamp();
+    }
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetNextSequenceNumber() => Task.FromResult(State.SequenceNumber);
@@ -1053,7 +1064,9 @@ public class EventSequence(
     /// <para>
     /// Rebuilding a stale index is not started from here. A grain only sees a change while it is active and still
     /// holds the definitions it had before, so an inactive sequence would never be reindexed. The constraints grain
-    /// starts the rebuild for every event sequence when the definitions are registered, see <see cref="IConstraintIndexes"/>.
+    /// starts the rebuild for every event sequence when the definitions are registered, see <see cref="IConstraintIndexes"/>,
+    /// and calls <see cref="RefreshConstraints"/> on each sequence it reindexes first, so the throttle never leaves a
+    /// sequence appending unindexed values while its index is being rebuilt.
     /// </para>
     /// <para>
     /// The check is throttled to <see cref="Configuration.Events.ConstraintsVersionCheckInterval"/> rather than run
