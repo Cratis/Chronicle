@@ -34,7 +34,9 @@ By default a constraint applies to every event sequence its event type is append
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/event-log-only" />
 
-When several properties share a constraint name, the event sequences declared on each are combined.
+When several properties share a constraint name, the event sequences declared on each are combined. A property that sets no `EventSequences` means every event sequence, and that wins: if any property sharing the name leaves it unset, the constraint applies to every event sequence.
+
+Changing the sequences takes effect when the client next registers its constraints. The kernel then rebuilds, in every namespace, the index of each sequence the constraint now applies to but did not before, from the events already in that sequence. A sequence the constraint no longer applies to stops validating it, and its index is no longer read until the constraint applies there again, when it is rebuilt.
 
 ## Violation message
 
