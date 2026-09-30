@@ -11,7 +11,8 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintIndexUpdater.w
 /// <summary>
 /// The validator answers Success when there is nothing to constrain, so the index must agree and claim
 /// nothing. It used to claim SHA-256("") - one key shared by every such event - so the second one
-/// collided in storage on an append the validator had already approved (#4122).
+/// collided in storage on an append the validator had already approved (#4122). The event source still
+/// releases whatever it claimed earlier, so the entry is removed rather than left behind (#4383).
 /// </summary>
 public class and_the_constrained_properties_have_no_value : Specification
 {
@@ -42,8 +43,5 @@ public class and_the_constrained_properties_have_no_value : Specification
         Arg.Any<UniqueConstraintValue>(),
         Arg.Any<string>());
 
-    [Fact] void should_not_remove_anything() => _storage.DidNotReceive().Remove(
-        Arg.Any<EventSourceId>(),
-        Arg.Any<ConstraintName>(),
-        Arg.Any<string>());
+    [Fact] void should_remove_the_previous_claim_of_the_event_source() => _storage.Received(1).Remove(_context.EventSourceId, _definition.Name, string.Empty);
 }
