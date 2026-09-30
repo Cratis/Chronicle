@@ -8,13 +8,15 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Cratis.Chronicle.Events.for_EventSerializer;
 
 /// <summary>
-/// Chronicle binds <see cref="EventSerializer"/> once per event-store scope before convention binding runs.
+/// Convention binding, as Cratis Arc runs it before the Chronicle client is added, registers the serializer first.
+/// Chronicle's registration must replace that binding, otherwise the serializer would be built for the root
+/// provider and consume the scoped <see cref="IEventTypes"/> registry.
 /// </summary>
 /// <remarks>
-/// The explicit registration must win over convention self-binding: one scope gets one serializer and a second
-/// scope gets another, so neither namespace's <see cref="IEventTypes"/> registry can be captured by the other.
+/// A singleton convention binding stands in for the earlier registration, whatever the lifetime the convention picks.
+/// Scope validation is on, so resolving a serializer that captured the scoped registry throws.
 /// </remarks>
-public class when_the_convention_registers_it : Specification
+public class when_convention_binding_ran_before_it_is_registered : Specification
 {
     IServiceProvider _provider;
     IEventSerializer _firstInTheScope;
@@ -30,8 +32,11 @@ public class when_the_convention_registers_it : Specification
         services.AddSingleton(_ => Substitute.For<IClientArtifactsActivator>());
         services.AddSingleton(_ => new JsonSerializerOptions());
         services.AddTypeDiscovery();
-        services.AddEventSerializer();
+        services.AddSingleton<EventSerializer>();
+        services.AddSingleton<IEventSerializer, EventSerializer>();
+        services.AddBindingsByConvention();
         services.AddSelfBindings();
+        services.AddEventSerializer();
 
         _serializerRegistrations = services
             .Where(descriptor => descriptor.ServiceType == typeof(EventSerializer) || descriptor.ServiceType == typeof(IEventSerializer))
@@ -52,8 +57,6 @@ public class when_the_convention_registers_it : Specification
         _inAnotherScope = anotherScope.ServiceProvider.GetRequiredService<IEventSerializer>();
     }
 
-    [Fact] void should_be_marked_as_scoped_for_convention_binding() => Attribute.IsDefined(typeof(EventSerializer), typeof(ScopedAttribute)).ShouldBeTrue();
-    [Fact] void should_not_be_marked_as_singleton() => Attribute.IsDefined(typeof(EventSerializer), typeof(SingletonAttribute)).ShouldBeFalse();
     [Fact] void should_register_only_the_explicit_scoped_services() => _serializerRegistrations.All(_ => _.Lifetime == ServiceLifetime.Scoped).ShouldBeTrue();
     [Fact] void should_register_the_concrete_and_contract_once_each() => _serializerRegistrations.Length.ShouldEqual(2);
     [Fact] void should_build_the_serializer_once_per_scope() => _secondInTheScope.ShouldEqual(_firstInTheScope);

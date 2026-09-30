@@ -451,19 +451,38 @@ public class Reducers : IReducers
                 {
                     messages.Dispose();
 
-                    if (!handler.CancellationToken.IsCancellationRequested)
+                    if (handler.CancellationToken.IsCancellationRequested)
                     {
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
-                                _logger.ReconnectingReducer(handler.Id);
-                                RegisterReducer(handler);
-                            }
-                            catch (OperationCanceledException) { }
-                        });
+                        _logger.ReducerStreamCancelled(handler.Id, ex);
+                        return;
                     }
+
+                    // Any other error reconnects, whatever its kind: only the reducer's own cancellation stops it.
+                    // A lost kernel connection stays a Warning however long it lasts: a kernel that stays away is
+                    // reported at Error by the connection watchdog on every failed reconnect attempt.
+                    switch (ex.ClassifyStreamError())
+                    {
+                        case KernelConnectionErrorKind.Cancelled:
+                            _logger.ReducerStreamCancelled(handler.Id, ex);
+                            break;
+                        case KernelConnectionErrorKind.ConnectionLost:
+                            _logger.ReducerStreamLostConnection(handler.Id, ex);
+                            break;
+                        default:
+                            _logger.ReducerStreamFailed(handler.Id, ex);
+                            break;
+                    }
+
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
+                            _logger.ReconnectingReducer(handler.Id);
+                            RegisterReducer(handler);
+                        }
+                        catch (OperationCanceledException) { }
+                    });
                 });
     }
 
