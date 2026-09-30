@@ -18,7 +18,7 @@ public class Constraints(IClusterClient clusterClient, IConstraintIndexes constr
 {
     readonly IBroadcastChannelProvider _constraintsChangedChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ConstraintsChanged);
     IReadOnlyCollection<IConstraintDefinition> _persisted = [];
-    ConstraintsVersion _version = ConstraintsVersion.NotSet;
+    ConstraintsVersion? _version;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -31,7 +31,8 @@ public class Constraints(IClusterClient clusterClient, IConstraintIndexes constr
     public Task<IReadOnlyCollection<IConstraintDefinition>> GetDefinitions() => Task.FromResult(_persisted);
 
     /// <inheritdoc/>
-    public Task<ConstraintsVersion> GetVersion() => Task.FromResult(_version);
+    public Task<ConstraintsVersion> GetVersion() =>
+        Task.FromResult(_version ??= ConstraintDefinitionComparison.ComputeVersion(_persisted));
 
     /// <inheritdoc/>
     /// <remarks>
@@ -111,7 +112,7 @@ public class Constraints(IClusterClient clusterClient, IConstraintIndexes constr
     }
 
     /// <summary>
-    /// Capture the definitions as they are persisted, together with their version.
+    /// Capture the definitions as they are persisted, and let their version be derived from them.
     /// </summary>
     /// <remarks>
     /// Reading the definitions and the version interleaves with a registration in progress, so an event sequence
@@ -123,6 +124,6 @@ public class Constraints(IClusterClient clusterClient, IConstraintIndexes constr
     void SnapshotPersisted()
     {
         _persisted = State.Constraints.ToArray();
-        _version = ConstraintDefinitionComparison.ComputeVersion(_persisted);
+        _version = null;
     }
 }
