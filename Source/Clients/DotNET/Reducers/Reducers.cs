@@ -449,24 +449,28 @@ public class Reducers : IReducers
                 _ => { },
                 ex =>
                 {
-                    var errorKind = handler.CancellationToken.IsCancellationRequested ? KernelConnectionErrorKind.Cancelled : ex.ClassifyStreamError();
                     messages.Dispose();
 
-                    if (errorKind == KernelConnectionErrorKind.Cancelled)
+                    if (handler.CancellationToken.IsCancellationRequested)
                     {
                         _logger.ReducerStreamCancelled(handler.Id, ex);
                         return;
                     }
 
-                    // The kernel is stopping or unreachable. This stays a Warning however long it lasts: a kernel that
-                    // stays away is reported at Error by the connection watchdog on every failed reconnect attempt.
-                    if (errorKind == KernelConnectionErrorKind.ConnectionLost)
+                    // Any other error reconnects, whatever its kind: only the reducer's own cancellation stops it.
+                    // A lost kernel connection stays a Warning however long it lasts: a kernel that stays away is
+                    // reported at Error by the connection watchdog on every failed reconnect attempt.
+                    switch (ex.ClassifyStreamError())
                     {
-                        _logger.ReducerStreamLostConnection(handler.Id, ex);
-                    }
-                    else
-                    {
-                        _logger.ReducerStreamFailed(handler.Id, ex);
+                        case KernelConnectionErrorKind.Cancelled:
+                            _logger.ReducerStreamCancelled(handler.Id, ex);
+                            break;
+                        case KernelConnectionErrorKind.ConnectionLost:
+                            _logger.ReducerStreamLostConnection(handler.Id, ex);
+                            break;
+                        default:
+                            _logger.ReducerStreamFailed(handler.Id, ex);
+                            break;
                     }
 
                     _ = Task.Run(async () =>
