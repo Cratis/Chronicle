@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints.when_registering;
@@ -38,4 +39,11 @@ public class and_existing_constraints_are_the_same : given.a_constraints_system
     [Fact] void should_only_have_two_constraints() => _stateStorage.State.Constraints.Count.ShouldEqual(2);
     [Fact] void should_not_write_state() => _storageStats.Writes.ShouldEqual(0);
     [Fact] void should_not_broadcast_constraints_changed() => _broadcastChannelWriter.DidNotReceive().Publish(Arg.Any<ConstraintsChanged>());
+
+    [Fact]
+    void should_not_rebuild_any_index() =>
+        _constraintIndexes.DidNotReceive().RebuildStaleIndexes(
+            Arg.Any<EventStoreName>(),
+            Arg.Any<IReadOnlyCollection<IConstraintDefinition>>(),
+            Arg.Any<IReadOnlyCollection<IConstraintDefinition>>());
 }

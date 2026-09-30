@@ -83,7 +83,6 @@ public class EventSequence(
     IMeterScope<EventSequence>? _metrics;
     IAppendedEventsQueues? _appendedEventsQueues;
     IConstraintValidation? _constraints;
-    IReadOnlyCollection<IConstraintDefinition> _knownConstraints = [];
     ConstraintsVersion _constraintsVersion = ConstraintsVersion.NotSet;
     TimeSpan _constraintsVersionCheckInterval;
     long _lastConstraintsVersionCheck;
@@ -110,7 +109,6 @@ public class EventSequence(
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);
 
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
-        _knownConstraints = await ConstraintsGrain.GetDefinitions();
         _constraintsVersion = await ConstraintsGrain.GetVersion();
 
         // Deliberately not stamped as a completed check. A sequence does not only activate to append - a read, or
@@ -1035,7 +1033,6 @@ public class EventSequence(
     async Task OnConstraintsChanged(ConstraintsChanged payload)
     {
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
-        await StartReindexJob(payload.Changes.Where(_ => _.RequiresReindex).ToArray());
     }
 
     Task OnConstraintsChangedError(Exception exception)
@@ -1045,7 +1042,7 @@ public class EventSequence(
 
     /// <summary>
     /// Re-reads the constraint validators when the constraints registered for the event store have changed since this
-    /// grain last observed them, starting a reindex job for any unique constraints whose index must be rebuilt.
+    /// grain last observed them.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
@@ -1053,7 +1050,12 @@ public class EventSequence(
     /// (they are keyed differently to the constraints grain and are not implicit channel subscribers), so constraint
     /// changes are picked up here instead by a <see cref="ConstraintsVersion"/> check. The version is a
     /// content-derived stamp, so it is stable across constraints-grain deactivation and consistent across silos —
-    /// the validators are only re-read, and a reindex only started, when the constraints genuinely changed.
+    /// the validators are only re-read when the constraints genuinely changed.
+    /// <para>
+    /// Rebuilding a stale index is not started from here. A grain only sees a change while it is active and still
+    /// holds the definitions it had before, so an inactive sequence would never be reindexed. The constraints grain
+    /// starts the rebuild for every event sequence when the definitions are registered, see <see cref="IConstraintIndexes"/>.
+    /// </para>
     /// <para>
     /// The check is throttled to <see cref="Configuration.Events.ConstraintsVersionCheckInterval"/> rather than run
     /// on every append. Reading the version is cheap inside the constraints grain, but reaching it is not: there is
@@ -1077,12 +1079,8 @@ public class EventSequence(
             return;
         }
 
-        var previous = _knownConstraints;
-        var current = await ConstraintsGrain.GetDefinitions();
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
-        _knownConstraints = current;
         _constraintsVersion = version;
-        await StartReindexJob(ConstraintDefinitionComparison.GetReindexChanges(previous, current, _eventSequenceId));
     }
 
     /// <summary>
@@ -1115,17 +1113,6 @@ public class EventSequence(
 
         _lastConstraintsVersionCheck = now;
         return true;
-    }
-
-    async Task StartReindexJob(IReadOnlyCollection<ConstraintDefinitionChange> changesRequiringReindex)
-    {
-        if (changesRequiringReindex.Count == 0)
-        {
-            return;
-        }
-
-        var jobsManager = GrainFactory.GetJobsManager(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-        await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(_eventSequenceId, changesRequiringReindex));
     }
 
     async Task RewindPartitionForAffectedObservers(

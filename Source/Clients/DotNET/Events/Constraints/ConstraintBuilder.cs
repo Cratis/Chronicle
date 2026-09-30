@@ -154,7 +154,7 @@ public class ConstraintBuilder(
             {
                 EventTypeIds = existing.EventTypeIds.Concat(uniqueEventType.EventTypeIds).Distinct().ToArray(),
                 RemovedWith = existing.RemovedWith.Concat(uniqueEventType.RemovedWith).Distinct().ToArray(),
-                EventSequences = existing.EventSequences.Concat(uniqueEventType.EventSequences).Distinct().ToArray()
+                EventSequences = ConstraintEventSequences.Combine([existing.EventSequences, uniqueEventType.EventSequences])
             };
         }
 
@@ -195,8 +195,9 @@ public class ConstraintBuilder(
     /// <returns>The definition with the event sequences applied.</returns>
     /// <remarks>
     /// Applied when building rather than when each constraint is declared, so the declaration holds for every
-    /// constraint on the builder regardless of where in the chain it was written. The builder's declaration is
-    /// added to any the definition already carries, such as those read from a <see cref="UniqueAttribute"/>.
+    /// constraint on the builder regardless of where in the chain it was written. A constraint defined on the builder
+    /// declares no event sequences of its own, so the builder's declaration is what it gets; should it ever carry a
+    /// declaration of its own, the two are unioned.
     /// </remarks>
     IConstraintDefinition ApplyEventSequences(IConstraintDefinition definition)
     {

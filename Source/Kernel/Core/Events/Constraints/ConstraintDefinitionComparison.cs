@@ -57,9 +57,11 @@ public static class ConstraintDefinitionComparison
     /// <returns>The <see cref="ConstraintDefinitionChange"/> for every unique constraint requiring a reindex of the event sequence.</returns>
     /// <remarks>
     /// A constraint is only indexed for the event sequences it applies to, so one that does not apply to
-    /// <paramref name="eventSequenceId"/> never needs its index rebuilt there. One that applies now but did not before
-    /// always does: its index for this sequence was never maintained, or has been stale since it last stopped applying.
-    /// A change to the event sequences alone does not require a reindex of a sequence covered both before and after.
+    /// <paramref name="eventSequenceId"/> now and did not before never needs its index rebuilt there. One that applies
+    /// now but did not before always does: its index for this sequence was never maintained, or has been stale since it
+    /// last stopped applying. A change to the event sequences alone does not require a reindex of a sequence covered
+    /// both before and after, and a sequence that is no longer covered needs nothing either - it stops validating and
+    /// indexing the constraint, so its index is no longer read, and a later widening rebuilds it from the sequence's events.
     /// </remarks>
     public static IReadOnlyCollection<ConstraintDefinitionChange> GetReindexChanges(
         IReadOnlyCollection<IConstraintDefinition> previous,

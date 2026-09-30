@@ -184,8 +184,10 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         }
 
         // Narrowing the event sequences needs no reindex: validation and indexing stop for a sequence the constraint
-        // no longer applies to, so its index is simply no longer read. Widening does - the index of a newly covered
-        // sequence was never maintained, or has been stale since the constraint last stopped applying to it.
+        // no longer applies to, so its index is simply no longer read. Widening is reported as a change requiring one,
+        // because the index of a newly covered sequence was never maintained, or has been stale since the constraint
+        // last stopped applying to it. Only the newly covered sequences are reindexed - which ones those are is decided
+        // per sequence when the definitions are registered, not here.
         if (EventSequences.CoversMoreThan(existingDefinition.EventSequences))
         {
             changes.Add(ConstraintChangeType.EventSequencesChanged);

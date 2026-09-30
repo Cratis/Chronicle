@@ -19,6 +19,7 @@ public class a_constraints_system : Specification
     protected IBroadcastChannelProvider _broadcastChannelProvider;
     protected IBroadcastChannelWriter<ConstraintsChanged> _broadcastChannelWriter;
     protected TestStorageStats _storageStats;
+    protected IConstraintIndexes _constraintIndexes;
 
     async Task Establish()
     {
@@ -29,6 +30,8 @@ public class a_constraints_system : Specification
         var clusterClient = Substitute.For<IClusterClient>();
         clusterClient.ServiceProvider.Returns(serviceProvider);
         _silo.AddService(clusterClient);
+        _constraintIndexes = Substitute.For<IConstraintIndexes>();
+        _silo.AddService(_constraintIndexes);
         serviceProvider.GetRequiredKeyedService(typeof(IBroadcastChannelProvider), WellKnownBroadcastChannelNames.ConstraintsChanged).Returns(_broadcastChannelProvider);
         _constraints = await _silo.CreateGrainAsync<Constraints>(key);
         _stateStorage = _silo.StorageManager.GetStorage<ConstraintsState>(typeof(Constraints).FullName);

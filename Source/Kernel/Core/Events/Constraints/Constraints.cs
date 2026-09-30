@@ -12,8 +12,9 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// Represents an implementation of <see cref="IConstraints"/>.
 /// </summary>
 /// <param name="clusterClient">The <see cref="IClusterClient"/> to use.</param>
+/// <param name="constraintIndexes">The <see cref="IConstraintIndexes"/> for rebuilding indexes a change has made stale.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Constraints)]
-public class Constraints(IClusterClient clusterClient) : Grain<ConstraintsState>, IConstraints
+public class Constraints(IClusterClient clusterClient, IConstraintIndexes constraintIndexes) : Grain<ConstraintsState>, IConstraints
 {
     readonly IBroadcastChannelProvider _constraintsChangedChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ConstraintsChanged);
     ConstraintsVersion? _version;
@@ -27,8 +28,14 @@ public class Constraints(IClusterClient clusterClient) : Grain<ConstraintsState>
         Task.FromResult(_version ??= ConstraintDefinitionComparison.ComputeVersion(State.Constraints));
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// When the registration changes anything, the indexes it has made stale are rebuilt for every event sequence in
+    /// every namespace of the event store, independently of which event sequence grains happen to be active. The
+    /// definitions are persisted first, because the reindex reads them from storage.
+    /// </remarks>
     public async Task Register(IEnumerable<IConstraintDefinition> definitions)
     {
+        var previous = State.Constraints.ToArray();
         var definitionsArray = definitions.ToArray();
         var existing = State.Constraints.Where(current => definitionsArray.Any(d => d.Name == current.Name)).ToArray();
         var newDefinitions = definitionsArray.Where(d => existing.All(current => d.Name != current.Name)).ToArray();
@@ -61,6 +68,7 @@ public class Constraints(IClusterClient clusterClient) : Grain<ConstraintsState>
             await WriteStateAsync();
             _version = null;
             await ConstraintsChanged(changes);
+            await constraintIndexes.RebuildStaleIndexes(ConstraintsKey.Parse(this.GetPrimaryKeyString()).EventStore, previous, State.Constraints.ToArray());
         }
     }
 

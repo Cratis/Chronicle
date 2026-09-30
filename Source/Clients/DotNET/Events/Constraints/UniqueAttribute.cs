@@ -36,7 +36,9 @@ public sealed class UniqueAttribute(string? name = default, string? message = de
     /// forwarded to the outbox:
     /// <c language="csharp">[Unique(EventSequences = [EventSequenceId.LogId])]</c>.
     /// <para>
-    /// When several properties share a constraint name, the event sequences declared on each of them are combined.
+    /// When several properties share a constraint name, the event sequences declared on each of them are combined. A
+    /// property that declares none applies the constraint to every event sequence, and that wins: the combined
+    /// constraint then applies to every event sequence.
     /// </para>
     /// </remarks>
     public string[] EventSequences { get; set; } = [];

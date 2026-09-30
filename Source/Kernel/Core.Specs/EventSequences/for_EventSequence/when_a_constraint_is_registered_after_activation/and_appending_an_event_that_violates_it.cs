@@ -55,6 +55,6 @@ public class and_appending_an_event_that_violates_it : given.an_event_sequence
         ConcurrencyScope.None);
 
     [Fact] void should_reject_the_append() => _result.HasConstraintViolations.ShouldBeTrue();
-    [Fact] void should_start_a_reindex_job() =>
-        _jobsManager.Received(1).Start<IReindexConstraints, ReindexConstraintsRequest>(Arg.Any<ReindexConstraintsRequest>());
+    [Fact] void should_leave_rebuilding_the_index_to_the_registration() =>
+        _jobsManager.DidNotReceive().Start<IReindexConstraints, ReindexConstraintsRequest>(Arg.Any<ReindexConstraintsRequest>());
 }
