@@ -34,7 +34,7 @@ For server-side TLS configuration, see [TLS Configuration (Server)](../hosting/c
 
 ## Certificate validation
 
-The client always connects over TLS, but by default it does **not** validate the server's certificate — any certificate, including a self-signed one, is accepted. That default is deliberate: Chronicle Server generates a self-signed certificate on every start when none is configured, and it is never written to disk or added to a trust store, so there is nothing a client could validate it against. Skipping validation is what lets a development server and client talk to each other with no certificate setup on either side.
+The client always connects over TLS, but by default it does **not** validate the server's certificate — any certificate, including a self-signed one, is accepted. That default is deliberate: the development images (`latest-development` and `latest-development-slim`) generate a self-signed certificate on every start when none is configured, and it is never written to disk or added to a trust store, so there is nothing a client could validate it against. Skipping validation is what lets a development server and client talk to each other with no certificate setup on either side. The production image generates no certificate: without `Tls:CertificatePath` it stops at startup with "No TLS certificate is configured" — see [Production deployment](../hosting/production.md) and [TLS Configuration (Server)](../hosting/configuration/tls.md).
 
 Once you run against a server whose certificate is verifiable, turn validation on with `skipTlsValidation=false` in the connection string:
 
