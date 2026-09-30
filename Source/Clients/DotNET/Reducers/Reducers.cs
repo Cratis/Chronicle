@@ -449,21 +449,36 @@ public class Reducers : IReducers
                 _ => { },
                 ex =>
                 {
+                    var errorKind = handler.CancellationToken.IsCancellationRequested ? KernelConnectionErrorKind.Cancelled : ex.ClassifyStreamError();
                     messages.Dispose();
 
-                    if (!handler.CancellationToken.IsCancellationRequested)
+                    if (errorKind == KernelConnectionErrorKind.Cancelled)
                     {
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
-                                _logger.ReconnectingReducer(handler.Id);
-                                RegisterReducer(handler);
-                            }
-                            catch (OperationCanceledException) { }
-                        });
+                        _logger.ReducerStreamCancelled(handler.Id, ex);
+                        return;
                     }
+
+                    // The kernel is stopping or unreachable. This stays a Warning however long it lasts: a kernel that
+                    // stays away is reported at Error by the connection watchdog on every failed reconnect attempt.
+                    if (errorKind == KernelConnectionErrorKind.ConnectionLost)
+                    {
+                        _logger.ReducerStreamLostConnection(handler.Id, ex);
+                    }
+                    else
+                    {
+                        _logger.ReducerStreamFailed(handler.Id, ex);
+                    }
+
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
+                            _logger.ReconnectingReducer(handler.Id);
+                            RegisterReducer(handler);
+                        }
+                        catch (OperationCanceledException) { }
+                    });
                 });
     }
 

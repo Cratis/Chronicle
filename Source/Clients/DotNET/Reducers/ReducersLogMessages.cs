@@ -28,6 +28,15 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Information, "Reconnecting Reducer '{ReducerId}' after stream failure")]
     internal static partial void ReconnectingReducer(this ILogger<Reducers> logger, ReducerId reducerId);
 
+    [LoggerMessage(LogLevel.Debug, "Reducer observation stream for '{ReducerId}' was cancelled")]
+    internal static partial void ReducerStreamCancelled(this ILogger<Reducers> logger, ReducerId reducerId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Reducer observation stream for '{ReducerId}' lost its connection to the kernel (stopping or unreachable) — reconnecting")]
+    internal static partial void ReducerStreamLostConnection(this ILogger<Reducers> logger, ReducerId reducerId, Exception exception);
+
+    [LoggerMessage(LogLevel.Error, "Reducer observation stream for '{ReducerId}' failed — reconnecting")]
+    internal static partial void ReducerStreamFailed(this ILogger<Reducers> logger, ReducerId reducerId, Exception exception);
+
     [LoggerMessage(LogLevel.Error, "Failed to activate Reducer '{ReducerId}' for replay notification '{ReplayState}'")]
     internal static partial void FailedActivatingReducerForReplayNotification(this ILogger<Reducers> logger, Exception ex, ReducerId reducerId, ReplayState replayState);
 }
