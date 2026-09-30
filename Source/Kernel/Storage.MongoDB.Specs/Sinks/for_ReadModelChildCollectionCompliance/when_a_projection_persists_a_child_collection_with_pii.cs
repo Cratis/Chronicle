@@ -105,7 +105,7 @@ public class when_a_projection_persists_a_child_collection_with_pii(when_a_proje
             var collections = new SinkCollections(readModel, database);
             var mongoDBConverter = new MongoDBConverter(sinkConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
             var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, sinkConverter);
-            var sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, sinkConverter);
+            var sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, sinkConverter, Substitute.For<IReadModelChangeStreams>());
 
             var projection = Substitute.For<IProjection>();
             projection.TargetReadModelSchema.Returns(schema);

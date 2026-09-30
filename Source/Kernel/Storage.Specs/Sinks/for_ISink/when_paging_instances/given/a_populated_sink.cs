@@ -24,7 +24,7 @@ public abstract class a_populated_sink<THarness> : Specification
         var schema = await JsonSchema.FromJsonAsync("""
             { "type": "object", "properties": { "id": { "type": "string" }, "name": { "type": "string" } } }
             """);
-        _harness = new THarness();
+        _harness = CreateHarness();
         _sink = _harness.CreateSink(new ReadModelDefinition(
             "test-read-model",
             "paged_read_models",
@@ -39,18 +39,41 @@ public abstract class a_populated_sink<THarness> : Specification
 
         foreach (var name in (string[])["d", "b", "a", "c", "e"])
         {
-            var state = new ExpandoObject();
-            var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
-            changeset.InitialState.Returns(state);
-            changeset.Changes.Returns((Change[])[
-                new PropertiesChanged<ExpandoObject>(state, [new PropertyDifference(new PropertyPath("name"), null, name)])
-            ]);
-            await _sink.ApplyChanges(new Key(name, ArrayIndexers.NoIndexers), changeset, EventSequenceNumber.First);
+            await Write(name, name);
         }
     }
 
     void Destroy() => _harness.Dispose();
 
-    protected static string[] Names(ReadModelInstances page) => page.Instances.Select(instance =>
+    /// <summary>
+    /// Creates the harness supplying the implementation under specification.
+    /// </summary>
+    /// <returns>The <typeparamref name="THarness"/> to run the contract through.</returns>
+    /// <remarks>
+    /// Overridable because a backend needing infrastructure receives it through the constructor - a
+    /// container fixture, say - and so cannot be built by the contract itself.
+    /// </remarks>
+    protected virtual THarness CreateHarness() => new();
+
+    /// <summary>
+    /// Sets the name of the instance with the given key, creating the instance when it does not exist.
+    /// </summary>
+    /// <param name="key">The key of the instance.</param>
+    /// <param name="name">The name to set.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    protected async Task Write(string key, string name)
+    {
+        var state = new ExpandoObject();
+        var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
+        changeset.InitialState.Returns(state);
+        changeset.Changes.Returns((Change[])[
+            new PropertiesChanged<ExpandoObject>(state, [new PropertyDifference(new PropertyPath("name"), null, name)])
+        ]);
+        await _sink.ApplyChanges(new Key(key, ArrayIndexers.NoIndexers), changeset, EventSequenceNumber.First);
+    }
+
+    protected static string[] Names(ReadModelInstances page) => Names(page.Instances);
+
+    protected static string[] Names(IEnumerable<ExpandoObject> instances) => instances.Select(instance =>
         (string)((IDictionary<string, object?>)instance)["name"]!).ToArray();
 }

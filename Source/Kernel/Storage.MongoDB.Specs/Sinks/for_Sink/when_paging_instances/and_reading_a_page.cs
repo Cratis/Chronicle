@@ -13,6 +13,7 @@ public class and_reading_a_page : a_sink_with_indexes
 
     void Establish()
     {
+        _collections.GetCollection(Arg.Any<string>()).Returns(_collection);
         _collection.CountDocumentsAsync(Arg.Any<FilterDefinition<BsonDocument>>(), Arg.Any<CountOptions>(), Arg.Any<CancellationToken>()).Returns(0L);
         _collection.FindAsync(
             Arg.Any<FilterDefinition<BsonDocument>>(),

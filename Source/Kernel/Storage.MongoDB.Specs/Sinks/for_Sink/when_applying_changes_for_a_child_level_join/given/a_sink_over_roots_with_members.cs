@@ -100,7 +100,7 @@ public abstract class a_sink_over_roots_with_members(MongoDBFixture fixture) : I
         var collections = new SinkCollections(readModel, _client.GetDatabase(_databaseName));
         var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
         var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
-        _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
+        _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter, Substitute.For<IReadModelChangeStreams>());
         _collection = collections.GetCollection();
 
         await InsertRoots();

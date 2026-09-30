@@ -41,7 +41,7 @@ public abstract class an_accumulating_read_model(MongoDBFixture fixture) : Speci
         var collections = new SinkCollections(readModel, database);
         var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
         var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
-        _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
+        _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter, Substitute.For<IReadModelChangeStreams>());
     }
 
     async Task Destroy()

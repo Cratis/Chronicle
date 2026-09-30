@@ -22,16 +22,31 @@ public class MongoSinkHarness : ISinkHarness
     string? _databaseName;
 
     /// <summary>
+    /// Gets the <see cref="IMongoDatabase"/> the sink was created in, for a case that needs to reach past the sink.
+    /// </summary>
+    public IMongoDatabase Database { get; private set; } = default!;
+
+    /// <summary>
     /// Gets or sets the <see cref="MongoDBFixture"/> supplying the container.
     /// </summary>
     public MongoDBFixture? Fixture { get; set; }
+
+    /// <summary>
+    /// Gets or sets the connection string to use instead of the <see cref="Fixture"/>.
+    /// </summary>
+    /// <remarks>
+    /// Observing instances needs a change stream, which only a replica set serves; a case observing instances
+    /// points the harness at a replica-set container through this.
+    /// </remarks>
+    public string? ConnectionString { get; set; }
 
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
         _databaseName = $"chronicle_sink_contract_{Guid.NewGuid():N}";
-        _client = new MongoClient(Fixture!.ConnectionString);
+        _client = new MongoClient(ConnectionString ?? Fixture!.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
+        Database = database;
 
         var typeFormats = new TypeFormats();
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
@@ -39,7 +54,9 @@ public class MongoSinkHarness : ISinkHarness
         var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, definition, NullLogger<MongoDBConverter>.Instance);
         var changesetConverter = new ChangesetConverter(definition, mongoDBConverter, collections, expandoObjectConverter);
 
-        return new Sink(definition, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
+        var changeStreams = new ReadModelChangeStreams(NullLogger<ReadModelChangeStreams>.Instance);
+
+        return new Sink(definition, mongoDBConverter, collections, changesetConverter, expandoObjectConverter, changeStreams);
     }
 
     /// <inheritdoc/>
