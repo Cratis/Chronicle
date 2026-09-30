@@ -14,7 +14,9 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_a_constraint_for_t
 /// While the constraint applies to the event log alone, the outbox neither validates nor indexes it, so a value
 /// forwarded to the outbox claims nothing there. Widening the constraint to every event sequence must rebuild the
 /// outbox's index from the events already in it - otherwise the outbox would accept the same value from another
-/// event source, as if it had never been claimed. The rebuild is started when the widened definition is registered.
+/// event source, as if it had never been claimed. The rebuild is started when the widened definition is registered,
+/// not when the outbox next appends, so it has completed before that append is validated - and it does not depend on
+/// the outbox's grain being active at the time.
 /// </summary>
 /// <param name="context">The <see cref="context"/> the specification runs against.</param>
 [Collection(ChronicleCollection.Name)]
