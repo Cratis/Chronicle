@@ -18,8 +18,12 @@ internal static class EventSerializerServiceCollectionExtensions
     /// <returns>The same <see cref="IServiceCollection"/> for continuation.</returns>
     internal static IServiceCollection AddEventSerializer(this IServiceCollection services)
     {
-        services.TryAddScoped<EventSerializer>();
-        services.TryAddScoped<IEventSerializer>(serviceProvider => serviceProvider.GetRequiredService<EventSerializer>());
+        // Authoritative: a registration made earlier, for example by convention binding, would otherwise win and
+        // leave the serializer consuming the scoped IEventTypes registry from a longer-lived lifetime.
+        services.RemoveAll<EventSerializer>();
+        services.RemoveAll<IEventSerializer>();
+        services.AddScoped<EventSerializer>();
+        services.AddScoped<IEventSerializer>(serviceProvider => serviceProvider.GetRequiredService<EventSerializer>());
 
         return services;
     }
