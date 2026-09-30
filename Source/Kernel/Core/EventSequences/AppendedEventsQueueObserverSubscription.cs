@@ -12,7 +12,9 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="ObserverKey"><see cref="ObserverKey"/> for the observer.</param>
 /// <param name="EventTypeIds">Collection of <see cref="EventTypeId"/> event types.</param>
 /// <param name="Filters">Optional <see cref="ObserverFilters"/> to apply when dispatching events.</param>
+/// <param name="AllEventTypes">Whether the observer receives every event, whatever its type - <paramref name="EventTypeIds"/> is ignored when it does.</param>
 public record AppendedEventsQueueObserverSubscription(
     ObserverKey ObserverKey,
     IEnumerable<EventTypeId> EventTypeIds,
-    ObserverFilters? Filters = null);
+    ObserverFilters? Filters = null,
+    bool AllEventTypes = false);

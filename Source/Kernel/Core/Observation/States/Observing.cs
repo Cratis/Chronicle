@@ -63,7 +63,12 @@ public class Observing(
 
         var key = new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId);
         var subscription = await Observer.GetSubscription();
-        _subscription = await appendedEventsQueues.Subscribe(key, definitionState.State.EventTypes, subscription.Filters);
+
+        // An observer subscribed to all events has no event types in its definition - it covers types that do not
+        // exist yet - so subscribing it by that empty list would deliver it nothing at all while it is observing.
+        _subscription = state.SubscribesToAllEvents
+            ? await appendedEventsQueues.SubscribeToAllEventTypes(key, subscription.Filters)
+            : await appendedEventsQueues.Subscribe(key, definitionState.State.EventTypes, subscription.Filters);
 
         // Only check for missed events when there is no active catch-up in progress and no failed partitions.
         // When partitions are being caught up, the catch-up job handles historical events

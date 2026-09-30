@@ -28,6 +28,15 @@ public interface IAppendedEventsQueue : IGrainWithIntegerCompoundKey
     Task Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null);
 
     /// <summary>
+    /// Subscribe an observer to every event appended to the queue, whatever its type - including event types that do
+    /// not exist yet.
+    /// </summary>
+    /// <param name="observerKey"><see cref="ObserverKey"/> for the subscriber to subscribe.</param>
+    /// <param name="filters">Optional <see cref="ObserverFilters"/> to apply when dispatching events.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SubscribeToAllEventTypes(ObserverKey observerKey, ObserverFilters? filters = null);
+
+    /// <summary>
     /// Unsubscribe an observer from the queue.
     /// </summary>
     /// <param name="observerKey"><see cref="ObserverKey"/> for the subscriber to unsubscribe.</param>
