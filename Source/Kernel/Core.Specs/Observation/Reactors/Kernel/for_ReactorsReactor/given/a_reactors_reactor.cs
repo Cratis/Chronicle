@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation.Reactors.Kernel.for_ReactorsReactor.given;
@@ -14,12 +15,14 @@ public class a_reactors_reactor : Specification
     protected IEventTypes _eventTypes;
     protected IStorage _storage;
     protected IEventStoreNamespaceStorage _namespaceStorage;
+    protected IKernelProjections _kernelProjections;
 
     void Establish()
     {
         _reactors = Substitute.For<IReactors>();
         _eventTypes = Substitute.For<IEventTypes>();
         _storage = Substitute.For<IStorage>();
+        _kernelProjections = Substitute.For<IKernelProjections>();
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _namespaceStorage.HasData().Returns(Task.FromResult(true));
 
@@ -27,6 +30,6 @@ public class a_reactors_reactor : Specification
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
 
-        _reactor = new ReactorsReactor(_reactors, _eventTypes, _storage);
+        _reactor = new ReactorsReactor(_reactors, _eventTypes, _storage, _kernelProjections);
     }
 }

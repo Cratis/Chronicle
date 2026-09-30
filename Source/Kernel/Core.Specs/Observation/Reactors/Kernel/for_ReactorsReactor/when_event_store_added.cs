@@ -35,4 +35,7 @@ public class when_event_store_added : given.a_reactors_reactor
 
     [Fact] void should_discover_and_register_reactors_for_the_event_store() =>
         _reactors.Received(1).DiscoverAndRegister(_eventStoreName, EventStoreNamespaceName.Default);
+
+    [Fact] void should_register_the_kernel_projections_for_the_event_store() =>
+        _kernelProjections.Received(1).DiscoverAndRegister(_eventStoreName);
 }
