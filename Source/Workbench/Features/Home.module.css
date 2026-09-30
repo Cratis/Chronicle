@@ -1,7 +1,82 @@
 /* Copyright (c) Cratis. All rights reserved.
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
+/* The page body centers its content, which would shrink the grid to a single card - so the landing page takes the
+   whole viewport itself. */
+.home {
+    position: fixed;
+    inset: 0;
+    box-sizing: border-box;
+    overflow: auto;
+    padding: 2rem 2.5rem;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.logo {
+    height: 2.5rem;
+    filter: brightness(0) invert(1);
+}
+
+.heading {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+}
+
+.title {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.subtitle {
+    color: var(--cratis-text-color-secondary);
+    font-size: 0.875rem;
+}
+
+.version {
+    color: var(--cratis-text-color-secondary);
+    font-size: 0.75rem;
+}
+
+/* Cards flow into as many columns as fit, and every card - including the add tile - has the same size. */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(26rem, 1fr));
+    grid-auto-rows: 9.5rem;
+    gap: 1.25rem;
+}
+
 .addCard {
-    border: 2px dashed var(--highlight-text-color);
-    font-size: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 2px dashed var(--cratis-surface-border);
+    border-radius: var(--cratis-border-radius, 0.5rem);
+    background: transparent;
+    color: var(--cratis-text-color-secondary);
+    font: inherit;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.addCard:hover {
+    border-color: var(--cratis-primary-color);
+    background: var(--cratis-surface-hover);
+    color: var(--cratis-text-color);
+}
+
+.addCard:focus-visible {
+    outline: none;
+    box-shadow: var(--cratis-focus-ring);
 }

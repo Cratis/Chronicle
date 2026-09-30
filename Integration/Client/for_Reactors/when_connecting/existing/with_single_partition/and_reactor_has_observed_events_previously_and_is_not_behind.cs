@@ -43,7 +43,10 @@ public class and_reactor_has_observed_events_previously_and_is_not_behind(contex
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
             await reactor.WaitTillSubscribed();
-            ReactorState = await reactor.GetState();
+
+            // Subscribed is not yet active: the observer routes first, and routing reads the tail from storage
+            // before it settles on observing. Reading the state straight away raced that read.
+            ReactorState = await reactor.WaitTillActiveAndGetState();
         }
     }
 

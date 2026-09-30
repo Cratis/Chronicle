@@ -31,6 +31,12 @@ public sealed class AppendedEventsQueueRouter(int queueCount)
     readonly HashSet<int> _seededQueues = [];
 
     /// <summary>
+    /// Observers subscribed to every event type have no set of types to fold into the union - a queue holding one of
+    /// them has to receive every batch, so they are tracked apart from the typed subscriptions.
+    /// </summary>
+    readonly Dictionary<int, HashSet<ObserverKey>> _allEventTypesByQueue = [];
+
+    /// <summary>
     /// Gets the deterministic queue index an observer is assigned to.
     /// </summary>
     /// <param name="observerKey"><see cref="ObserverKey"/> to resolve the queue for.</param>
@@ -58,12 +64,20 @@ public sealed class AppendedEventsQueueRouter(int queueCount)
     public void Seed(int queueIndex, IEnumerable<AppendedEventsQueueObserverSubscription> subscriptions)
     {
         var byObserver = new Dictionary<ObserverKey, IReadOnlySet<EventTypeId>>();
+        var allEventTypes = new HashSet<ObserverKey>();
         foreach (var subscription in subscriptions)
         {
+            if (subscription.AllEventTypes)
+            {
+                allEventTypes.Add(subscription.ObserverKey);
+                continue;
+            }
+
             byObserver[subscription.ObserverKey] = subscription.EventTypeIds.ToHashSet();
         }
 
         _subscriptionsByQueue[queueIndex] = byObserver;
+        _allEventTypesByQueue[queueIndex] = allEventTypes;
         _unionByQueue[queueIndex] = ComputeUnion(byObserver);
         _seededQueues.Add(queueIndex);
     }
@@ -78,6 +92,11 @@ public sealed class AppendedEventsQueueRouter(int queueCount)
     {
         var queueIndex = GetQueueIndexFor(observerKey);
         var eventTypes = eventTypeIds.ToHashSet();
+
+        if (_allEventTypesByQueue.TryGetValue(queueIndex, out var allEventTypes))
+        {
+            allEventTypes.Remove(observerKey);
+        }
 
         if (!_subscriptionsByQueue.TryGetValue(queueIndex, out var byObserver))
         {
@@ -98,12 +117,42 @@ public sealed class AppendedEventsQueueRouter(int queueCount)
     }
 
     /// <summary>
+    /// Records that an observer subscribed to every event type, including event types that do not exist yet.
+    /// </summary>
+    /// <param name="observerKey"><see cref="ObserverKey"/> of the subscribing observer.</param>
+    /// <returns>The queue index the observer was assigned to.</returns>
+    public int SubscribeToAllEventTypes(ObserverKey observerKey)
+    {
+        var queueIndex = GetQueueIndexFor(observerKey);
+
+        // A re-subscription replaces the previous one, so any typed subscription the observer held goes.
+        if (_subscriptionsByQueue.TryGetValue(queueIndex, out var byObserver) && byObserver.Remove(observerKey))
+        {
+            _unionByQueue[queueIndex] = ComputeUnion(byObserver);
+        }
+
+        if (!_allEventTypesByQueue.TryGetValue(queueIndex, out var allEventTypes))
+        {
+            allEventTypes = [];
+            _allEventTypesByQueue[queueIndex] = allEventTypes;
+        }
+
+        allEventTypes.Add(observerKey);
+        return queueIndex;
+    }
+
+    /// <summary>
     /// Removes an observer's subscription from a queue.
     /// </summary>
     /// <param name="queueIndex">Index of the queue the observer was subscribed to.</param>
     /// <param name="observerKey"><see cref="ObserverKey"/> of the unsubscribing observer.</param>
     public void Unsubscribe(int queueIndex, ObserverKey observerKey)
     {
+        if (_allEventTypesByQueue.TryGetValue(queueIndex, out var allEventTypes))
+        {
+            allEventTypes.Remove(observerKey);
+        }
+
         if (!_subscriptionsByQueue.TryGetValue(queueIndex, out var byObserver) || !byObserver.Remove(observerKey))
         {
             return;
@@ -123,6 +172,12 @@ public sealed class AppendedEventsQueueRouter(int queueCount)
         for (var queueIndex = 0; queueIndex < queueCount; queueIndex++)
         {
             if (!_seededQueues.Contains(queueIndex))
+            {
+                queues.Add(queueIndex);
+                continue;
+            }
+
+            if (_allEventTypesByQueue.TryGetValue(queueIndex, out var allEventTypes) && allEventTypes.Count > 0)
             {
                 queues.Add(queueIndex);
                 continue;

@@ -8,6 +8,7 @@ using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
+using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.EventStores;
@@ -27,8 +28,9 @@ public record EnsureEventStore(EventStoreName Name)
     /// <param name="storage">The <see cref="IStorage"/> to check and provision the event store in.</param>
     /// <param name="eventTypes">The <see cref="IEventTypes"/> to discover and register event types with.</param>
     /// <param name="reactors">The <see cref="IReactors"/> to discover and register kernel reactors with.</param>
+    /// <param name="kernelProjections">The <see cref="IKernelProjections"/> to register the kernel's own projections with.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task Handle(IGrainFactory grainFactory, IStorage storage, IEventTypes eventTypes, IReactors reactors)
+    public async Task Handle(IGrainFactory grainFactory, IStorage storage, IEventTypes eventTypes, IReactors reactors, IKernelProjections kernelProjections)
     {
         var exists = await storage.HasEventStore(Name);
         _ = storage.GetEventStore(Name);
@@ -50,5 +52,14 @@ public record EnsureEventStore(EventStoreName Name)
 
         var namespaces = grainFactory.GetGrain<INamespaces>(Name);
         await namespaces.EnsureDefault();
+
+        // The server registers the kernel's own projections - such as the event statistics - for the stores that
+        // exist when it starts. A store created after that has none of them until the next restart, so every read
+        // of them fails; registering here closes that gap. A store that already existed has them, and every client
+        // connecting ensures its store, so registering again then would only repeat the work on each connect.
+        if (!exists)
+        {
+            await kernelProjections.DiscoverAndRegister(Name);
+        }
     }
 }

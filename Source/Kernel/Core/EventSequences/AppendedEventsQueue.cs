@@ -178,6 +178,18 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task SubscribeToAllEventTypes(ObserverKey observerKey, ObserverFilters? filters = null)
+    {
+        lock (_subscriptionsLock)
+        {
+            _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
+            _subscriptions.Add(new(observerKey, [], filters, AllEventTypes: true));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task Unsubscribe(ObserverKey observerKey)
     {
         if (_isDisposed)
@@ -275,7 +287,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
     static bool MatchesSubscription(AppendedEventsQueueObserverSubscription subscription, AppendedEvent @event)
     {
-        if (!subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
+        if (!subscription.AllEventTypes && !subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
         {
             return false;
         }
@@ -285,7 +297,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             return false;
         }
 
-        if (@event.Context.EventType.Id == GlobalEventTypes.Redaction)
+        if (@event.Context.EventType.Id == GlobalEventTypes.Redaction && !subscription.AllEventTypes)
         {
             return IsRedactionForSubscribedEventType(@event, subscription.EventTypeIds);
         }

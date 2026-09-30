@@ -13,6 +13,9 @@ import {
 
 ChartJs.register(...registerables);
 
+// Chart.js' default text renders larger than the text around it on a dashboard.
+ChartJs.defaults.font.size = 11;
+
 /**
  * Props for {@link Chart}.
  */
@@ -39,16 +42,29 @@ export const Chart = ({ type, data, options, className }: ChartProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const chartRef = useRef<ChartJs | null>(null);
 
+    // The chart is only rebuilt when its type changes. A dashboard feeds it fresh data every few seconds, and
+    // rebuilding for each of those replays the entry animation and flickers - updating in place does neither.
     useEffect(() => {
         if (!canvasRef.current) return;
 
+        // Canvas text does not inherit from the page, so the chart is given the font its canvas would have had.
+        ChartJs.defaults.font.family = getComputedStyle(canvasRef.current).fontFamily;
         chartRef.current = new ChartJs(canvasRef.current, { type, data, options } as ChartConfiguration);
 
         return () => {
             chartRef.current?.destroy();
             chartRef.current = null;
         };
-    }, [type, data, options]);
+    }, [type]);
+
+    useEffect(() => {
+        const chart = chartRef.current;
+        if (!chart) return;
+
+        chart.data = data;
+        chart.options = options ?? {};
+        chart.update('none');
+    }, [data, options]);
 
     return <canvas ref={canvasRef} className={className} />;
 };

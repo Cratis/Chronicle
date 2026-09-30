@@ -52,6 +52,15 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
     }
 
     /// <inheritdoc/>
+    public async Task<AppendedEventsQueueSubscription> SubscribeToAllEventTypes(ObserverKey observerKey, ObserverFilters? filters = null)
+    {
+        var queueIndex = _router.SubscribeToAllEventTypes(observerKey);
+        var subscription = new AppendedEventsQueueSubscription(observerKey, queueIndex);
+        await _queues[queueIndex].SubscribeToAllEventTypes(observerKey, filters);
+        return subscription;
+    }
+
+    /// <inheritdoc/>
     public async Task Unsubscribe(AppendedEventsQueueSubscription subscription)
     {
         _router.Unsubscribe(subscription.Queue, subscription.ObserverKey);

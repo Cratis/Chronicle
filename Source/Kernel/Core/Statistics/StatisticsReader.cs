@@ -41,7 +41,7 @@ public class StatisticsReader(IReadModelsService readModels) : IStatisticsReader
         });
 
         return response.Instances
-            .Select(instance => JsonSerializer.Deserialize<EventTypeStatistics>(instance, _serializerOptions))
+            .Select(ToRow)
             .Where(row => row is not null)
             .Select(row => row!)
             .ToArray();
@@ -53,4 +53,54 @@ public class StatisticsReader(IReadModelsService readModels) : IStatisticsReader
         // The global half of the projection materializes against the event store rather than any one namespace,
         // which is what makes a store-wide total one read instead of a read per namespace.
         GetEventTypeStatistics(eventStore, EventStoreNamespaceName.NotSet);
+
+    /// <summary>
+    /// Read one statistics row from the JSON of a read model instance.
+    /// </summary>
+    /// <param name="instance">The instance as JSON.</param>
+    /// <returns>The row, or null if the instance is not one.</returns>
+    /// <remarks>
+    /// The event type and namespace make up the composite key of the row, and a sink keeps a key as the document
+    /// identifier rather than as properties of their own - so they are read from the identifier when the instance
+    /// does not carry them at the top level. Reading only the top level gave every row an empty event type and
+    /// namespace, which folded every event into a single type in a single namespace.
+    /// </remarks>
+    internal static EventTypeStatistics? ToRow(string instance)
+    {
+        var row = JsonSerializer.Deserialize<EventTypeStatistics>(instance, _serializerOptions);
+        if (row is null || (row.EventType.Length > 0 && row.Namespace.Length > 0))
+        {
+            return row;
+        }
+
+        using var document = JsonDocument.Parse(instance);
+        foreach (var property in document.RootElement.EnumerateObject())
+        {
+            if (property.Value.ValueKind != JsonValueKind.Object || !IsIdentifier(property.Name))
+            {
+                continue;
+            }
+
+            var key = property.Value.Deserialize<EventTypeStatistics>(_serializerOptions);
+            if (key is null)
+            {
+                continue;
+            }
+
+            if (row.EventType.Length == 0)
+            {
+                row.EventType = key.EventType;
+            }
+
+            if (row.Namespace.Length == 0)
+            {
+                row.Namespace = key.Namespace;
+            }
+        }
+
+        return row;
+    }
+
+    static bool IsIdentifier(string name) =>
+        name.Equals("_id", StringComparison.Ordinal) || name.Equals("id", StringComparison.OrdinalIgnoreCase);
 }

@@ -21,8 +21,9 @@ export const EventStoreKeyFigures = ({ eventStore }: IEventStoreKeyFigures) => {
     const [result] = StatisticsForEventStore.use({ eventStore });
 
     // A store that has never been appended to has no statistics rows, which is not a failure - it reads as zero
-    // across the board, which is exactly what it holds. Only an actually failed query says nothing.
-    if (!result.isSuccess) {
+    // across the board, which is exactly what it holds. Only an actually failed query says nothing. Until the
+    // query has answered, the result holds an empty placeholder rather than figures, so nothing is read from it.
+    if (result.isReady && !result.isSuccess) {
         return (
             <div className='workbench-event-store-key-figures workbench-event-store-key-figures--unavailable'>
                 {strings.home.keyFigures.unavailable}
@@ -30,10 +31,11 @@ export const EventStoreKeyFigures = ({ eventStore }: IEventStoreKeyFigures) => {
         );
     }
 
+    const data = result.isReady ? result.data : undefined;
     const figures = [
-        { icon: <ImDatabase aria-hidden='true' />, label: strings.home.keyFigures.events, value: result.data.totalEvents },
-        { icon: <ImPriceTags aria-hidden='true' />, label: strings.home.keyFigures.eventTypes, value: result.data.eventTypes },
-        { icon: <ImFolder aria-hidden='true' />, label: strings.home.keyFigures.namespaces, value: result.data.namespaces }
+        { icon: <ImDatabase aria-hidden='true' />, label: strings.home.keyFigures.events, value: data?.totalEvents },
+        { icon: <ImPriceTags aria-hidden='true' />, label: strings.home.keyFigures.eventTypes, value: data?.eventTypes },
+        { icon: <ImFolder aria-hidden='true' />, label: strings.home.keyFigures.namespaces, value: data?.namespaces }
     ];
 
     return (
@@ -54,7 +56,10 @@ export const EventStoreKeyFigures = ({ eventStore }: IEventStoreKeyFigures) => {
  * @param value The figure to format.
  * @returns The formatted figure.
  */
-const formatFigure = (value: number | bigint): string => {
+const formatFigure = (value: number | bigint | undefined): string => {
+    // Loading, or a field the server did not send - either way there is no figure to show yet.
+    if (value === undefined || value === null) return '–';
+
     // Event counts arrive as int64 and reach here as bigint, which Intl handles but arithmetic against a number
     // does not - so the thresholds are compared after a single widening rather than by mixing the two.
     const asNumber = typeof value === 'bigint' ? Number(value) : value;
