@@ -5,9 +5,11 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.ReadModels;
 using Cratis.DependencyInjection;
 using Cratis.Types;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Projections.Kernel;
 
@@ -16,6 +18,7 @@ namespace Cratis.Chronicle.Projections.Kernel;
 /// </summary>
 /// <param name="types">The <see cref="ITypes"/> to discover declarations with.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> to reach the managers with.</param>
+/// <param name="options">The <see cref="ChronicleOptions"/>, for the storage the kernel runs on.</param>
 /// <remarks>
 /// Kernel projections are discovered by type rather than registered over the wire, which is what lets them exist
 /// before any client connects. Registration is per event store and idempotent - every silo runs it on startup, and
@@ -24,7 +27,8 @@ namespace Cratis.Chronicle.Projections.Kernel;
 [Singleton]
 public class KernelProjections(
     ITypes types,
-    IGrainFactory grainFactory) : IKernelProjections
+    IGrainFactory grainFactory,
+    IOptions<ChronicleOptions> options) : IKernelProjections
 {
     readonly IEnumerable<Type> _declarations = KernelProjectionDeclarations.Discover(types.All).ToArray();
 
@@ -36,7 +40,7 @@ public class KernelProjections(
 
         foreach (var declaration in _declarations)
         {
-            var (readModel, projectionsForDeclaration) = KernelProjectionDeclarations.Lower(declaration);
+            var (readModel, projectionsForDeclaration) = KernelProjectionDeclarations.Lower(declaration, KernelProjectionSinks.ForStorage(options.Value.Storage.Type));
             readModels.Add(readModel);
             projections.AddRange(projectionsForDeclaration);
         }

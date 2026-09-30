@@ -42,6 +42,7 @@ public static class KernelProjectionDeclarations
     /// Lowers a declaration into the read model and projection definitions the engine understands.
     /// </summary>
     /// <param name="declaration">The declaring type.</param>
+    /// <param name="sinkType">The <see cref="SinkTypeId"/> the read model is written to; MongoDB when not given.</param>
     /// <returns>The read model definition and the projection definitions that write to it.</returns>
     /// <exception cref="KernelProjectionWithoutIdentifier">Thrown when the declaration carries no <see cref="KernelProjectionAttribute"/>.</exception>
     /// <remarks>
@@ -49,7 +50,7 @@ public static class KernelProjectionDeclarations
     /// model - the global half carries its own identifier suffix, and its sink is resolved at event store level
     /// rather than per namespace, so the two never write to the same place.
     /// </remarks>
-    public static (ReadModelDefinition ReadModel, IReadOnlyCollection<ProjectionDefinition> Projections) Lower(Type declaration)
+    public static (ReadModelDefinition ReadModel, IReadOnlyCollection<ProjectionDefinition> Projections) Lower(Type declaration, SinkTypeId? sinkType = null)
     {
         var readModelType = ReadModelTypeFor(declaration) ?? throw new KernelProjectionWithoutIdentifier(declaration);
         var attribute = declaration.GetCustomAttribute<KernelProjectionAttribute>() ?? throw new KernelProjectionWithoutIdentifier(declaration);
@@ -71,7 +72,7 @@ public static class KernelProjectionDeclarations
             .GetMethod(nameof(KernelProjectionBuilder<object>.Build))!
             .Invoke(builder, [])!;
 
-        return (ReadModelDefinitionFor(readModelType, readModelIdentifier, identifier), definitions);
+        return (ReadModelDefinitionFor(readModelType, readModelIdentifier, identifier, sinkType ?? WellKnownSinkTypes.MongoDB), definitions);
     }
 
     /// <summary>
@@ -80,12 +81,13 @@ public static class KernelProjectionDeclarations
     /// <param name="readModelType">The read model type.</param>
     /// <param name="identifier">The <see cref="ReadModelIdentifier"/>.</param>
     /// <param name="projection">The <see cref="ProjectionId"/> that writes it.</param>
+    /// <param name="sinkType">The <see cref="SinkTypeId"/> it is written to.</param>
     /// <returns>The <see cref="ReadModelDefinition"/>.</returns>
     /// <remarks>
     /// The schema is generated from the CLR type rather than authored, which is the point of declaring these in
     /// the kernel at all - the read model and the thing that describes it cannot drift apart.
     /// </remarks>
-    static ReadModelDefinition ReadModelDefinitionFor(Type readModelType, ReadModelIdentifier identifier, ProjectionId projection)
+    static ReadModelDefinition ReadModelDefinitionFor(Type readModelType, ReadModelIdentifier identifier, ProjectionId projection, SinkTypeId sinkType)
     {
         var schema = JsonSchema.FromType(readModelType);
         schema.Title = readModelType.Name;
@@ -98,7 +100,7 @@ public static class KernelProjectionDeclarations
             ReadModelSource.Code,
             ReadModelObserverType.Projection,
             projection.Value,
-            new SinkDefinition(SinkConfigurationId.None, WellKnownSinkTypes.MongoDB),
+            new SinkDefinition(SinkConfigurationId.None, sinkType),
             new Dictionary<ReadModelGeneration, JsonSchema> { { ReadModelGeneration.First, schema } },
             []);
     }
