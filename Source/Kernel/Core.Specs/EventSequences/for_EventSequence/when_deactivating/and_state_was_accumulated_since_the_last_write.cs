@@ -1,10 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
-using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Storage.EventSequences;
 using Orleans.TestKit;
 
@@ -14,18 +10,9 @@ public class and_state_was_accumulated_since_the_last_write : given.an_event_seq
 {
     async Task Establish()
     {
-        await _eventSequence.Append(
-            EventSourceType.Default,
-            _eventSourceId,
-            EventStreamType.All,
-            EventStreamId.Default,
-            _eventType,
-            new JsonObject(),
-            CorrelationId.New(),
-            [],
-            Identity.System,
-            [],
-            ConcurrencyScope.None);
+        // The first append after activation writes the state, so only the second is accumulated since the last write.
+        await AppendAnEvent();
+        await AppendAnEvent();
 
         _silo.StorageStats<EventSequence, EventSequenceState>().ResetCounts();
     }

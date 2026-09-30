@@ -87,6 +87,7 @@ public class EventSequence(
     long _lastConstraintsVersionCheck;
     int _statePersistenceInterval = 1;
     int _appendsSinceStateWrite;
+    bool _stateWrittenSinceActivation;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
@@ -1022,9 +1023,9 @@ public class EventSequence(
     }
 
     /// <summary>
-    /// Persists the event sequence state as a warm-start snapshot once at least
-    /// <see cref="Configuration.Events.StatePersistenceInterval"/> appends have accumulated since the last write,
-    /// rather than on every append.
+    /// Persists the event sequence state as a warm-start snapshot on the first append after activation, and from then
+    /// on once at least <see cref="Configuration.Events.StatePersistenceInterval"/> appends have accumulated since the
+    /// last write, rather than on every append.
     /// </summary>
     /// <param name="appendedCount">Number of events appended by the current operation.</param>
     /// <returns>Awaitable task.</returns>
@@ -1033,17 +1034,26 @@ public class EventSequence(
     /// <see cref="EventSequenceState.SequenceNumber"/> from the actual event tail — and the per-event-type tails via
     /// aggregation — on every activation, so a crash between these periodic writes loses no sequence-number
     /// correctness. The next append still gets the right number.
+    /// <para>
+    /// The persisted state is also what records that the sequence exists: the event sequences of a namespace, and
+    /// whether the namespace holds any data at all, are read from it - which is how the indexes a constraint change has
+    /// made stale are found. Waiting for the interval would leave a sequence that has events, but fewer than the
+    /// interval since it was activated, unlisted until it deactivates. So the first append after activation writes the
+    /// state regardless; it is one write per activation, and it also records a sequence whose state was never persisted
+    /// before. Should that write fail, the next append tries again.
+    /// </para>
     /// </remarks>
     async Task PersistStateAfterAppends(int appendedCount)
     {
         _appendsSinceStateWrite += appendedCount;
-        if (_appendsSinceStateWrite < _statePersistenceInterval)
+        if (_stateWrittenSinceActivation && _appendsSinceStateWrite < _statePersistenceInterval)
         {
             return;
         }
 
         _appendsSinceStateWrite = 0;
         await WriteStateAsync();
+        _stateWrittenSinceActivation = true;
     }
 
     async Task OnConstraintsChanged(ConstraintsChanged payload)
