@@ -32,12 +32,14 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="collections">Provider for <see cref="ISinkCollections"/> to use.</param>
 /// <param name="changesetConverter">Provider for <see cref="IChangesetConverter"/> for converting changesets.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+/// <param name="changeStreams"><see cref="IReadModelChangeStreams"/> for observing the collections of the read model.</param>
 public class Sink(
     ReadModelDefinition readModel,
     IMongoDBConverter converter,
     ISinkCollections collections,
     IChangesetConverter changesetConverter,
-    IExpandoObjectConverter expandoObjectConverter) : ISink
+    IExpandoObjectConverter expandoObjectConverter,
+    IReadModelChangeStreams changeStreams) : ISink
 {
     const int MaxBulkOperations = 1000;
 
@@ -468,49 +470,106 @@ public class Sink(
     /// <inheritdoc/>
     public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
     {
-        var collection = occurrence is not null ? collections.GetCollection(occurrence) : Collection;
+        // Resolved exactly like ObserveInstances, so the count and the page of an observed response come from the same collection.
+        var collection = collections.GetCollection(occurrence ?? readModel.ContainerName);
         var totalCount = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
+        var instances = await ReadPage(collection, skip, take, CancellationToken.None);
+        return new ReadModelInstances(instances, totalCount);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Changes are observed through a MongoDB change stream shared by every observer of the collection (see
+    /// <see cref="IReadModelChangeStreams"/>), so a write made by any silo is seen, not only one made through this
+    /// sink instance. Every batch of changes re-reads the page once, so a burst of writes costs one query rather
+    /// than one per write.
+    /// <para>
+    /// Without an explicit occurrence the primary collection is observed, even while a replay is in progress:
+    /// the replay rebuilds its own collection, and the primary one keeps the previous state until the replay
+    /// ends and promotes the rebuilt collection - which the stream sees as a rename and answers with a fresh page.
+    /// </para>
+    /// <para>
+    /// A replay promotion renames the primary collection aside and then renames the rebuilt one into its place, so a
+    /// read that runs inside that window would find no collection and report an empty read model. A promotion is in
+    /// progress only while the primary collection is absent and the promoting collection exists. Observing the primary
+    /// collection therefore looks at the collections before and after an empty read:
+    /// no page is emitted when a promotion is in progress before the read - the read is skipped - or when one is in
+    /// progress after an empty read, or when the primary collection is not the one that was there before the read (it
+    /// was renamed or replaced in between). The rename into place is what triggers the read that follows. A collection
+    /// that has never been created, has been dropped or is genuinely empty is an empty read model, and emits the empty
+    /// page. The checks are one listCollections command before every read and one more after every empty page.
+    /// Observing an explicit occurrence never holds a page back.
+    /// </para>
+    /// <para>
+    /// The promoting collection alone does not mean a promotion is in progress: a silo that dies between claiming the
+    /// replay collection and renaming it into place, or a rename that fails, leaves it behind until the next replay
+    /// begins. Next to an existing primary collection it is ignored, and reads and emissions proceed normally. If such
+    /// a crash left the primary collection absent as well, the next write recreates it and observation resumes.
+    /// </para>
+    /// </remarks>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    {
+        string containerName = occurrence ?? readModel.ContainerName;
+        var collection = collections.GetCollection(containerName);
+        var isPrimary = occurrence is null;
+        return changeStreams
+            .Observe(
+                collection.Database,
+                containerName,
+                cancellationToken => ReadObservedPage(collection, containerName, isPrimary, skip, take, cancellationToken))
+            .Where(page => page is not null)
+            .Select(page => page!);
+    }
+
+    async Task<IEnumerable<ExpandoObject>?> ReadObservedPage(IMongoCollection<BsonDocument> collection, string containerName, bool isPrimary, int skip, int take, CancellationToken cancellationToken)
+    {
+        if (!isPrimary)
+        {
+            return await ReadPage(collection, skip, take, cancellationToken);
+        }
+
+        var before = await GetCollectionState(collection.Database, containerName, cancellationToken);
+        if (before.IsPromotionInProgress)
+        {
+            return null;
+        }
+
+        var page = await ReadPage(collection, skip, take, cancellationToken);
+        if (page.Any())
+        {
+            return page;
+        }
+
+        var after = await GetCollectionState(collection.Database, containerName, cancellationToken);
+        return after.IsPromotionInProgress || after.PrimaryExists != before.PrimaryExists || after.PrimaryId != before.PrimaryId ? null : page;
+    }
+
+    async Task<CollectionState> GetCollectionState(IMongoDatabase database, string containerName, CancellationToken cancellationToken)
+    {
+        var promotingName = collections.PromotingCollectionName;
+        var options = new ListCollectionsOptions
+        {
+            Filter = new BsonDocument("name", new BsonDocument("$in", new BsonArray { containerName, promotingName }))
+        };
+        using var cursor = await database.ListCollectionsAsync(options, cancellationToken);
+        var listed = await cursor.ToListAsync(cancellationToken);
+        var primary = listed.FirstOrDefault(collection => collection["name"] == containerName);
+        var promotingExists = listed.Exists(collection => collection["name"] == promotingName);
+        var primaryId = primary?.GetValue("info", new BsonDocument()).AsBsonDocument.GetValue("uuid", BsonNull.Value);
+        return new CollectionState(promotingExists, primary is not null, primaryId);
+    }
+
+    async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
+    {
         var documents = await collection
             .Find(FilterDefinition<BsonDocument>.Empty)
             .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
             .Skip(skip)
             .Limit(take)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
-        var instances = documents.Select(doc => expandoObjectConverter.ToExpandoObject(doc, readModel.GetSchemaForLatestGeneration()));
-        return new ReadModelInstances(instances, totalCount);
-    }
-
-    /// <inheritdoc/>
-    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
-    {
-        var collection = occurrence is not null ? collections.GetCollection(occurrence) : Collection;
         var schema = readModel.GetSchemaForLatestGeneration();
-
-        // Return an observable that transforms MongoDB change stream events into instance collections
-        return Observable.Create<IEnumerable<ExpandoObject>>(async observer =>
-        {
-            // Get initial instances
-            var documents = await collection
-                .Find(FilterDefinition<BsonDocument>.Empty)
-                .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
-                .Skip(skip)
-                .Limit(take)
-                .ToListAsync();
-
-            observer.OnNext(documents.Select(doc => expandoObjectConverter.ToExpandoObject(doc, schema)));
-
-            // Subscribe to changes using Arc's Observe extension
-            return collection.Observe().Subscribe(
-                allDocuments =>
-                {
-                    // Re-query with skip/take when changes occur
-                    var updatedDocuments = allDocuments.OrderBy(doc => doc["_id"]).Skip(skip).Take(take);
-                    observer.OnNext(updatedDocuments.Select(doc => expandoObjectConverter.ToExpandoObject(doc, schema)));
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
+        return documents.Select(document => expandoObjectConverter.ToExpandoObject(document, schema)).ToArray();
     }
 
     static bool HasActualRootLevelJoin(IEnumerable<Change> changes) =>
@@ -758,4 +817,14 @@ public class Sink(
     }
 
     IMongoCollection<BsonDocument> Collection => collections.GetCollection();
+
+    sealed record CollectionState(bool PromotingExists, bool PrimaryExists, BsonValue? PrimaryId)
+    {
+        /// <summary>
+        /// Gets whether a promotion is in progress: only the window between renaming the primary aside and renaming the
+        /// rebuilt collection into place. A promoting collection next to an existing primary is a leftover of a
+        /// promotion that never finished.
+        /// </summary>
+        public bool IsPromotionInProgress => !PrimaryExists && PromotingExists;
+    }
 }

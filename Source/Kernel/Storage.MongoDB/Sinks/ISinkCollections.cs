@@ -14,6 +14,16 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 public interface ISinkCollections
 {
     /// <summary>
+    /// Gets the name of the collection a rebuilt replay collection is renamed to while it is being promoted to the primary collection.
+    /// </summary>
+    /// <remarks>
+    /// The collection exists from the moment a promotion claims the replay collection until it has been renamed into place,
+    /// and is left behind when the promotion is cut short. A promotion is therefore in progress only while the promoting
+    /// collection exists and the primary collection does not.
+    /// </remarks>
+    string PromotingCollectionName { get; }
+
+    /// <summary>
     /// Gets the <see cref="IMongoCollection{TDocument}"/> used by the <see cref="Sink"/>.
     /// </summary>
     /// <returns><see cref="IMongoCollection{T}"/> for the state.</returns>

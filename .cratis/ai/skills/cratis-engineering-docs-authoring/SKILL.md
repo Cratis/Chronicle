@@ -2,8 +2,8 @@
 name: cratis-engineering-docs-authoring
 description: Draft accurate Cratis product or engineering documentation once the reader's goal, owning source, and product evidence are known. Use for tutorials, how-to guides, explanations, and references; use the owning repository's navigation and visual QA workflows for placement and rendering.
 license: LICENSE
-cratis-hint-paths:
-  - "**/Documentation/**/*.{md,mdx}"
+metadata:
+  cratis-hint-paths: "**/Documentation/**/*.{md,mdx}"
 ---
 <!-- cratis-ai-managed: skills/cratis-engineering-docs-authoring/SKILL.md -->
 

@@ -12,4 +12,7 @@ internal static partial class ReadModelReactorsLogMessages
 
     [LoggerMessage(LogLevel.Error, "Failed dispatching read model change to reactor of type '{ReactorType}'")]
     internal static partial void FailedDispatchingReadModelChange(this ILogger<ReadModelReactors> logger, string reactorType, Exception exception);
+
+    [LoggerMessage(LogLevel.Error, "Observing materialized read model '{ReadModelType}' for reactor of type '{ReactorType}' failed; the reactor receives no further changes")]
+    internal static partial void FailedObservingMaterializedReadModel(this ILogger<ReadModelReactors> logger, string readModelType, string reactorType, Exception exception);
 }

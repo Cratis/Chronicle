@@ -57,7 +57,7 @@ public class an_ordered_bulk_write : Specification
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema> { { ReadModelGeneration.First, new JsonSchema() } },
             []);
-        _sink = new Sink(readModel, converter, collections, Substitute.For<IChangesetConverter>(), Substitute.For<IExpandoObjectConverter>());
+        _sink = new Sink(readModel, converter, collections, Substitute.For<IChangesetConverter>(), Substitute.For<IExpandoObjectConverter>(), Substitute.For<IReadModelChangeStreams>());
         _collection.BulkWriteAsync(Arg.Any<IEnumerable<WriteModel<BsonDocument>>>(), Arg.Any<BulkWriteOptions>(), Arg.Any<CancellationToken>())
             .Returns(info => SimulateWrite(info.ArgAt<IEnumerable<WriteModel<BsonDocument>>>(0)));
     }

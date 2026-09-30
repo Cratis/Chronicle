@@ -104,7 +104,7 @@ public abstract class a_child_collection_compliance_scenario(MongoDBFixture fixt
         Collections = new SinkCollections(ReadModel, database);
         var mongoDBConverter = new MongoDBConverter(sinkConverter, typeFormats, ReadModel, NullLogger<MongoDBConverter>.Instance);
         var changesetConverter = new ChangesetConverter(ReadModel, mongoDBConverter, Collections, sinkConverter);
-        Sink = new Sink(ReadModel, mongoDBConverter, Collections, changesetConverter, sinkConverter);
+        Sink = new Sink(ReadModel, mongoDBConverter, Collections, changesetConverter, sinkConverter, Substitute.For<IReadModelChangeStreams>());
     }
 
     async Task Destroy()

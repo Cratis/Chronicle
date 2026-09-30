@@ -79,9 +79,12 @@ internal sealed class MaterializedReadModels(
             var schema = definition.GetSchemaForLatestGeneration();
             return (sink, occurrence, skip, schema);
         })
+
+        // Each page is released and counted one after the other, so a slower earlier page can never
+        // overtake a later one and leave the subscriber holding a stale page.
         .SelectMany(state =>
             state.sink.ObserveInstances(state.occurrence, state.skip, request.PageSize)
-                .SelectMany(async instances =>
+                .Select(instances => Observable.FromAsync(async () =>
                 {
                     var releasedInstances = await complianceHelper.Release(
                         request.EventStore,
@@ -99,6 +102,7 @@ internal sealed class MaterializedReadModels(
                         Page = request.Page,
                         PageSize = request.PageSize
                     };
-                }));
+                }))
+                .Concat());
     }
 }

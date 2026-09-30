@@ -114,13 +114,17 @@ public class ReadModelReactors(
     IDisposable SubscribeMaterialized<TReadModel>(Type reactorType)
     {
         var differ = new MaterializedReadModelDiffer(jsonSerializerOptions);
-        return eventStore.ReadModels.Materialized.ObserveInstances<TReadModel>().Subscribe(window =>
-        {
-            foreach (var change in differ.Diff(window.Cast<object>()))
+        return eventStore.ReadModels.Materialized.ObserveInstances<TReadModel>().Subscribe(
+            window =>
             {
-                DispatchMaterialized(reactorType, typeof(TReadModel), change.Instance, change.ChangeType, change.ModelKey);
-            }
-        });
+                foreach (var change in differ.Diff(window.Cast<object>()))
+                {
+                    DispatchMaterialized(reactorType, typeof(TReadModel), change.Instance, change.ChangeType, change.ModelKey);
+                }
+            },
+
+            // Without a handler the failure would be rethrown on whichever thread delivered it.
+            error => logger.FailedObservingMaterializedReadModel(typeof(TReadModel).Name, reactorType.Name, error));
     }
 
     void DispatchMaterialized(Type reactorType, Type readModelType, object? readModel, ReadModelChangeType changeType, string modelKey) =>

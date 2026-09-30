@@ -45,7 +45,7 @@ public class and_child_added_has_child_identifier_change_in_same_changeset(conte
             var collections = new SinkCollections(readModel, _database);
             var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
             var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
-            _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
+            _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter, Substitute.For<IReadModelChangeStreams>());
 
             try
             {

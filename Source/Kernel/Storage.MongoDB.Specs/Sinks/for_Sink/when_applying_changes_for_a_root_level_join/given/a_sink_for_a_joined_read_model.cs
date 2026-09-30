@@ -80,7 +80,7 @@ public abstract class a_sink_for_a_joined_read_model<TReadModel>(MongoDBFixture 
         var collections = new SinkCollections(readModel, _client.GetDatabase(_databaseName));
         _mongoDBConverter = new MongoDBConverter(_expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
         var changesetConverter = new ChangesetConverter(readModel, _mongoDBConverter, collections, _expandoObjectConverter);
-        _sink = new Sink(readModel, _mongoDBConverter, collections, changesetConverter, _expandoObjectConverter);
+        _sink = new Sink(readModel, _mongoDBConverter, collections, changesetConverter, _expandoObjectConverter, Substitute.For<IReadModelChangeStreams>());
         _collection = collections.GetCollection();
 
         await InsertExistingRow();

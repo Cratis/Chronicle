@@ -24,8 +24,11 @@ public class SinkCollections(
     const int NamespaceExists = 48;
 
     bool _isReplaying;
+
+    /// <inheritdoc/>
+    public string PromotingCollectionName => $"replay-{readModel.ContainerName}-promoting";
+
     string ReplayCollectionName => $"replay-{readModel.ContainerName}";
-    string PromotingCollectionName => $"replay-{readModel.ContainerName}-promoting";
 
     /// <inheritdoc/>
     public async Task BeginReplay(Chronicle.Storage.ReadModels.ReplayContext context)

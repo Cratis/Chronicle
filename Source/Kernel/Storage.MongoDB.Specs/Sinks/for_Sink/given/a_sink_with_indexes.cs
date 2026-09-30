@@ -57,6 +57,7 @@ public class a_sink_with_indexes : Specification
             _converter,
             _collections,
             _changesetConverter,
-            _expandoObjectConverter);
+            _expandoObjectConverter,
+            Substitute.For<IReadModelChangeStreams>());
     }
 }

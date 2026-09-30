@@ -76,7 +76,7 @@ public class when_a_projection_persists_a_polymorphic_child(when_a_projection_pe
             var collections = new SinkCollections(readModel, database);
             var mongoDBConverter = new MongoDBConverter(sinkConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
             var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, sinkConverter);
-            var sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, sinkConverter);
+            var sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, sinkConverter, Substitute.For<IReadModelChangeStreams>());
 
             var key = new Key(Identifier, ArrayIndexers.NoIndexers);
 
