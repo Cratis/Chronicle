@@ -12,6 +12,10 @@ Configure the storage backend for Chronicle Server.
 | `Sqlite` | SQLite (embedded, file-based) |
 | `InMemory` | In-memory (ephemeral, non-durable) |
 
+> [!NOTE]
+> Only `MongoDB` storage supports a multi-node cluster. `PostgreSql`, `MsSql` and `Sqlite` register no cluster
+> membership provider, so run a single node on them. See [Clustering](clustering.md).
+
 ## MongoDB
 
 ```json

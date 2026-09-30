@@ -10,7 +10,7 @@ description: Prove a slice works — the right events appended, the right read m
 The `Cratis.Chronicle.Testing` package gives you two scenario types that wire up the **real client and kernel code paths** — constraint validation, serialization, the projection and reducer engines. Only the storage layer is in-memory, so there's no expensive infrastructure to spin up: the specs are lightweight to run, yet exercise the same engine code that runs in production.
 
 :::note[Client coverage]
-This in-process scenario testing library is C#-only — see [Testing](../testing/) for why.
+.NET, Kotlin/Java and TypeScript clients provide in-process scenarios in their testing packages (Elixir has none); the package below is the .NET one. See [Testing](../testing/) for what each client provides.
 :::
 
 ```bash

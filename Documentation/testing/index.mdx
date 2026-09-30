@@ -3,7 +3,7 @@ title: Testing
 description: Test event appends, read models, and reactor side effects in process without running infrastructure.
 ---
 
-Chronicle provides in-process scenarios for testing event appends and read models without a running kernel. The .NET testing library also covers reactor side effects and offers integration fixtures. `Cratis.Chronicle.XUnit.Integration` exercises the full client and kernel stack against MongoDB via Testcontainers when you need to prove storage, network, or full-stack behavior.
+Chronicle provides in-process scenarios for testing event appends and read models without a running kernel. The .NET and TypeScript testing libraries also cover reactor side effects, and .NET offers integration fixtures. `Cratis.Chronicle.XUnit.Integration` exercises the full client and kernel stack against MongoDB via Testcontainers when you need to prove storage, network, or full-stack behavior.
 
 :::note[Client coverage]
 The clients offer different in-process boundaries:
@@ -11,7 +11,7 @@ The clients offer different in-process boundaries:
 - **.NET:** `Cratis.Chronicle.Testing` provides `EventScenario`, `ReadModelScenario<T>` and `ReactorScenario<T>` for C# specs, alongside the separate integration fixtures described below.
 - **Kotlin:** `io.cratis:chronicle-testing` provides `EventScenario` for appends and `ReadModelScenario` for reducers, but not projection or reactor scenarios. See the [Kotlin testing guide](/chronicle/clients/kotlin/guides/testing/).
 - **Java:** `EventScenario` from `io.cratis.chronicle.testing` covers appends; the read-model examples call reducers directly.
-- **TypeScript:** `@cratis/chronicle/testing` exports `EventScenario` for appends and `ReadModelScenario` for reducers and supported projections. It does not provide a reactor scenario; some .NET-only workflows below have explicit unsupported tabs.
+- **TypeScript:** `@cratis/chronicle/testing` exports `EventScenario` for appends and `ReadModelScenario` for reducers and supported projections, and `ReactorScenario` for reactor side effects. Some .NET-only workflows below have explicit unsupported tabs.
 - **Elixir:** No Chronicle-specific in-process scenarios; use the client against a running event store to test a Chronicle-backed slice. Unsupported tabs mark unavailable workflows.
 
 Examples in this section use client tabs where the workflow is supported. Package instructions, named fixture APIs, and other .NET-only details are labeled as such.

@@ -225,7 +225,7 @@ Chronicle supports horizontal scaling through Orleans clustering:
 1. **Multiple Instances**: Deploy multiple Chronicle containers
 2. **Load Balancing**: Use a load balancer for API traffic (port 35000)
 3. **Orleans Clustering**: Ensure Orleans ports (11111, 30000) are accessible between instances
-4. **Shared Storage**: All instances must connect to the same MongoDB cluster
+4. **Shared Storage**: All instances must connect to the same MongoDB cluster. Only MongoDB storage supports more than one node; with PostgreSQL, SQL Server or SQLite, run a single instance (see [Clustering](configuration/clustering.md))
 
 > [!WARNING]
 > Every multi-node deployment **must** set the clustering type to `MongoDB`. The default is `Localhost`,

@@ -10,6 +10,13 @@ Clustering configuration controls how multiple Chronicle Server nodes form one O
 > with the `Cratis__Chronicle__Clustering__Type=MongoDB` environment variable (or `clustering.type` in
 > `chronicle.json`), and give every node the same `clusterId` and `serviceId`. The server logs a warning
 > when it detects localhost clustering against non-local storage, but it does not refuse to start.
+>
+> Running more than one node requires MongoDB storage. The `MongoDB` clustering type keeps membership in
+> the MongoDB storage backend, and it is the only backend that registers a cluster membership table. With
+> `PostgreSql`, `MsSql` or `Sqlite` storage Chronicle registers no membership provider, so there is no
+> supported way to run more than one node on those backends, and setting `clustering.type` to `MongoDB`
+> alongside one of them does not add one. `InMemory` storage is scoped to a single process. Run a single node
+> on SQL storage. The localhost-clustering warning is not logged for SQL storage.
 
 ## Use cases
 

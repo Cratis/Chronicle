@@ -6,11 +6,25 @@ description: What a Chronicle major version means for you, and where to find the
 Every major version of Chronicle has an upgrade guide, and every guide answers the same
 question first: **does anything change for you?**
 
-Often the answer is no. Chronicle publishes the kernel, the .NET client, the contracts
-package and the language clients from one repository at one version, so a breaking change
-anywhere raises the major everywhere. A major can therefore be driven by something you
-never call, on a surface you never touch — and upgrading is then a version bump and a
-rebuild.
+Often the answer is no. Chronicle publishes the kernel, the .NET client and the contracts
+packages (.NET, npm, Maven and Hex) from one repository at one version, so a breaking
+change to any of them raises the major for the kernel, the .NET client and every
+contracts package. A major can therefore be driven by something you never call, on a
+surface you never touch — and upgrading is then a version bump and a rebuild.
+
+The Kotlin/Java, TypeScript and Elixir clients are released from their own repositories
+([Chronicle.Kotlin](https://github.com/Cratis/Chronicle.Kotlin),
+[Chronicle.TypeScript](https://github.com/Cratis/Chronicle.TypeScript) and
+[Chronicle.Elixir](https://github.com/Cratis/Chronicle.Elixir)) with their own version
+numbers, so a language client's version does not match the kernel's and a Chronicle major
+does not raise theirs. What ties a language client to a kernel is the wire contract, which
+the client checks when it connects — see
+[the wire-compatibility handshake](../building-a-client/clustering-and-connection-lifecycle.md#the-wire-compatibility-handshake).
+Each language client depends on a specific version of the contracts package, so a Chronicle
+major reaches a language client when that client moves to the new contracts version.
+Everything below about Chronicle versions applies to the kernel, the .NET client and the
+contracts packages; to see what changed in a language client, read the release notes in its
+own repository.
 
 That is worth saying out loud rather than leaving you to work it out from release notes.
 A major version that silently changes nothing is far more common here than one that
@@ -47,7 +61,7 @@ published surface:
 
 The label on the pull request that cut the release records which of these applied. When a
 major was raised for a compile-time break on one client, users of the other clients are
-unaffected beyond taking the new package.
+unaffected beyond taking the new kernel.
 
 A minor or patch release does not change a published surface, but it can still change what
 your build reports. The .NET client's [code analysis rules](../code-analysis/index.md) can
