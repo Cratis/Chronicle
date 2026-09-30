@@ -9,8 +9,14 @@ namespace Cratis.Chronicle.Configuration;
 public class Observers
 {
     /// <summary>
-    /// Gets the maximum number of observer partitions that can be handled concurrently.
+    /// Gets the upper bound on how many job steps run in parallel.
     /// </summary>
+    /// <remarks>
+    /// Despite the name, this does not limit live event delivery: live delivery never processes partitions of one
+    /// observer concurrently. It only caps parallel job steps (replay and catch-up work), together with
+    /// <see cref="Jobs.MaxParallelSteps"/>: the effective limit is the smaller of
+    /// <see cref="Jobs.GetEffectiveMaxParallelSteps"/> and this value.
+    /// </remarks>
     public int MaxConcurrentPartitions { get; init; } = 32;
 
     /// <summary>

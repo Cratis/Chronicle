@@ -24,6 +24,8 @@ The maximum number of parallel job steps can be configured using the `MaxParalle
 | --- | --- | --- | --- |
 | MaxParallelSteps | number | Environment.ProcessorCount - 1 | Maximum number of parallel job steps (minimum 1) |
 
+The limit that applies is the smaller of `Jobs:MaxParallelSteps` and `Observers:MaxConcurrentPartitions` (default 32, see [Observers](observers.md)). With the defaults, `Jobs:MaxParallelSteps` only has an effect below 32, so raising it above 32 needs `Observers:MaxConcurrentPartitions` raised as well.
+
 Alternatively, you can use environment variables:
 
 ```bash

@@ -16,6 +16,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "quarantineOnFailedPartitionPercentage": 0.0,
     "definitionEvolution": "Automatic",
     "watchdogInterval": 60,
+    "maxConcurrentPartitions": 32,
     "fanOutStrategy": "round-robin"
   }
 }
@@ -33,6 +34,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | definitionEvolution | string | Automatic | Controls whether projection and reducer definition changes apply `Automatic`, `PartialOnly`, or `Manual` evolution. See [Definition evolution](#definition-evolution) |
 | replayOnDefinitionChange | boolean | false | Controls automatic replay for reactors and webhooks. Projection and reducer changes use `definitionEvolution` |
 | watchdogInterval | number | 60 | Interval in seconds between watchdog checks; the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
+| maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
 
 ## Definition evolution
