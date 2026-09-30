@@ -55,8 +55,11 @@ public record EnsureEventStore(EventStoreName Name)
 
         // The server registers the kernel's own projections - such as the event statistics - for the stores that
         // exist when it starts. A store created after that has none of them until the next restart, so every read
-        // of them fails; registering here closes that gap. Registration is idempotent, so an existing store does
-        // no work.
-        await kernelProjections.DiscoverAndRegister(Name);
+        // of them fails; registering here closes that gap. A store that already existed has them, and every client
+        // connecting ensures its store, so registering again then would only repeat the work on each connect.
+        if (!exists)
+        {
+            await kernelProjections.DiscoverAndRegister(Name);
+        }
     }
 }
