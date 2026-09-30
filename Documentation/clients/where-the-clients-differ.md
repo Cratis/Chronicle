@@ -8,7 +8,7 @@ description: Differences in appending, concurrency, PII, reactor delivery, and s
 
 One kernel contract does not make the client APIs interchangeable. This reference covers appending and concurrency, compliance, reactor delivery, and event seeding. It does not claim parity for other features.
 
-The comparisons below describe the client source inspected on September 23, 2026. Java uses Java-callable interfaces, blocking facades, and bridges that delegate to the Kotlin implementation. Source links identify the implementation behind each comparison. These are source-level comparisons, not cross-client runtime conformance results.
+The comparisons below describe the client source inspected on September 23, 2026. The TypeScript rows were checked again on September 30, 2026 against Chronicle.TypeScript v6.31.2. Java uses Java-callable interfaces, blocking facades, and bridges that delegate to the Kotlin implementation. Source links identify the implementation behind each comparison. These are source-level comparisons, not cross-client runtime conformance results.
 
 ## Appending and concurrency
 
@@ -29,9 +29,9 @@ Sources: [.NET strategy](https://github.com/Cratis/Chronicle/blob/main/Source/Cl
 
 ### Expecting no matching event
 
-.NET exposes `ConcurrencyScopeBuilder.ExpectingNoMatchingEvent`; the JVM builder exposes `withExpectsNoMatchingEvent()`, which its Java bridge documents as directly callable from Java. Both send the kernel's explicit no-matching-event condition.
+.NET exposes `ConcurrencyScopeBuilder.ExpectingNoMatchingEvent`; the JVM builder exposes `withExpectsNoMatchingEvent()`, which its Java bridge documents as directly callable from Java. Both send the kernel's explicit no-matching-event condition. The TypeScript client sends it too, when the scope's sequence number is `EventSequenceNumber.beforeFirst`.
 
-The TypeScript and Elixir client scope converters do not send that condition. An unset expected sequence number is **not** a substitute: it disables the sequence-number check rather than asserting that no event exists.
+The Elixir client scope converter does not send that condition. An unset expected sequence number is **not** a substitute: it disables the sequence-number check rather than asserting that no event exists.
 
 Sources: [.NET conversion](https://github.com/Cratis/Chronicle/blob/main/Source/Clients/DotNET/EventSequences/Concurrency/ConcurrencyScopeConverters.cs), [JVM builder](https://github.com/Cratis/Chronicle.Kotlin/blob/main/Source/src/main/kotlin/io/cratis/chronicle/eventSequences/concurrency/ConcurrencyScopeBuilder.kt), [kernel validation](https://github.com/Cratis/Chronicle/blob/main/Source/Kernel/Core/EventSequences/Concurrency/ConcurrencyValidator.cs), and the TypeScript and Elixir append implementations linked above.
 
@@ -79,7 +79,7 @@ Sources: [.NET PII API](https://github.com/Cratis/Chronicle/blob/main/Source/Cli
 | --- | --- |
 | .NET | Reactors are replayable unless the class has `[OnceOnly]`. Method-level `[OnceOnly]` skips that handler during replay; `[Replay]` selects a replay handler. |
 | Kotlin and Java | Kotlin registration and dispatch use `@OnceOnly` and `@Replay`; Java reactors go through the same JVM registration. |
-| TypeScript | Reactor registration sets `IsReplayable: false`; the kernel's replay guards do not start a replay for observers registered as non-replayable. |
+| TypeScript | Reactors are replayable unless the class has `@onceOnly()`: registration sets `IsReplayable: !isOnceOnly(reactorType)`. Method-level `@onceOnly()` skips that handler during replay; `@replay()` selects a replay handler. The kernel's replay guards do not start a replay for observers registered as non-replayable. |
 | Elixir | Reactor registration sets `IsReplayable: true`. There is no once-only marker. Per-event context has no replay flag, but optional replay-begin/end and partition-replay callbacks report lifecycle transitions. |
 
 These differences follow from registration and dispatch code, together with the kernel's replay guards. Do not treat an available lifecycle callback as proof that the client's registered reactors are replayable.
