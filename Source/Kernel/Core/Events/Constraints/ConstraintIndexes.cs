@@ -108,8 +108,10 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
     /// append arriving meanwhile would still use validators that do not maintain the newly covered index - and if the
     /// rebuild had already read past it, its value would never be indexed. Refreshing first splits every append into
     /// one the sequence indexes itself (after the refresh) or one already in the log for the rebuild to read (before
-    /// it). One can be both, which is harmless: the index holds one entry per event source, and writing the same one
-    /// twice replaces it. Should the refresh fail, the rebuild is still started - the sequence refreshes on its own
+    /// it). One can be both, and writing the same entry twice replaces it. What this does not settle is an event source
+    /// that appends again while the rebuild runs: the rebuild clears and rewrites each event source's entry from the
+    /// events it reads, so it can overwrite the entry the sequence wrote for a later event it has not read. Should the
+    /// refresh fail, the rebuild is still started - the sequence refreshes on its own
     /// within the throttle, and an index rebuilt with that window open is better than none.
     /// </remarks>
     async Task RefreshConstraints(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId)

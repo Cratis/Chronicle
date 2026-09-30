@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
 using Orleans.Core;
 using Orleans.TestKit;
@@ -32,6 +33,7 @@ public class a_constraints_system : Specification
         _silo.AddService(clusterClient);
         _constraintIndexes = Substitute.For<IConstraintIndexes>();
         _silo.AddService(_constraintIndexes);
+        _silo.AddService(Substitute.For<ILogger<Constraints>>());
         serviceProvider.GetRequiredKeyedService(typeof(IBroadcastChannelProvider), WellKnownBroadcastChannelNames.ConstraintsChanged).Returns(_broadcastChannelProvider);
         _constraints = await _silo.CreateGrainAsync<Constraints>(key);
         _stateStorage = _silo.StorageManager.GetStorage<ConstraintsState>(typeof(Constraints).FullName);

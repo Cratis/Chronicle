@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Collections;
+using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
 
@@ -13,8 +14,9 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// </summary>
 /// <param name="clusterClient">The <see cref="IClusterClient"/> to use.</param>
 /// <param name="constraintIndexes">The <see cref="IConstraintIndexes"/> for rebuilding indexes a change has made stale.</param>
+/// <param name="logger">The <see cref="ILogger"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Constraints)]
-public class Constraints(IClusterClient clusterClient, IConstraintIndexes constraintIndexes) : Grain<ConstraintsState>, IConstraints
+public class Constraints(IClusterClient clusterClient, IConstraintIndexes constraintIndexes, ILogger<Constraints> logger) : Grain<ConstraintsState>, IConstraints
 {
     readonly IBroadcastChannelProvider _constraintsChangedChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ConstraintsChanged);
     IReadOnlyCollection<IConstraintDefinition> _persisted = [];
@@ -72,10 +74,42 @@ public class Constraints(IClusterClient clusterClient, IConstraintIndexes constr
 
         if (hasChanges)
         {
-            await WriteStateAsync();
+            try
+            {
+                await WriteStateAsync();
+            }
+            catch
+            {
+                // Nothing was persisted, so neither is anything rebuilt - a reindex reads the definitions from
+                // storage. The in-memory definitions go back to the persisted ones, or a retried registration would
+                // find nothing changed and never persist or rebuild at all.
+                State.Constraints.Clear();
+                previous.ForEach(State.Constraints.Add);
+                throw;
+            }
+
             SnapshotPersisted();
-            await ConstraintsChanged(changes);
-            await constraintIndexes.RebuildStaleIndexes(ConstraintsKey.Parse(this.GetPrimaryKeyString()).EventStore, previous, _persisted);
+
+            // From here on the definitions are persisted, and a retried registration would find nothing changed. So
+            // nothing may prevent the rebuild from starting, and nothing may fail the registration.
+            var eventStore = ConstraintsKey.Parse(this.GetPrimaryKeyString()).EventStore;
+            try
+            {
+                await ConstraintsChanged(changes);
+            }
+            catch (Exception ex)
+            {
+                logger.FailedPublishingConstraintsChanged(eventStore, ex);
+            }
+
+            try
+            {
+                await constraintIndexes.RebuildStaleIndexes(eventStore, previous, _persisted);
+            }
+            catch (Exception ex)
+            {
+                logger.FailedStartingRebuildOfStaleIndexes(eventStore, ex);
+            }
         }
     }
 

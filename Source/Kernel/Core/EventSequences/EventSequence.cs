@@ -155,10 +155,16 @@ public class EventSequence(
     public Task Rehydrate() => Task.CompletedTask;
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The version is read first, since definitions read after it are at least as new, but published only once the
+    /// validators are built. Should building them fail, the sequence keeps its previous version, so its next version
+    /// check sees the change again and retries rather than taking the stale validators for current.
+    /// </remarks>
     public async Task RefreshConstraints()
     {
-        _constraintsVersion = await ConstraintsGrain.GetVersion();
+        var version = await ConstraintsGrain.GetVersion();
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+        _constraintsVersion = version;
         _lastConstraintsVersionCheck = Stopwatch.GetTimestamp();
     }
 

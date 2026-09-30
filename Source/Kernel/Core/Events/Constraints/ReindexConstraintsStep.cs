@@ -141,51 +141,27 @@ public class ReindexConstraintsStep(
             var validators = changedDefinitions.ToDictionary(_ => _.Name, _ => new UniqueConstraintValidator(_, uniqueConstraintsStorage));
             var schemaCache = new Dictionary<EventType, EventTypeSchema>();
 
-            // The sequence keeps appending while it is reindexed, and it maintains the index itself for those appends.
-            // Reading on until a pass finds nothing new means the reindex also reads every event appended while it
-            // ran, so its last write for an event source is never older than the sequence's own - a cursor alone may
-            // or may not return events appended after it was opened.
-            var next = EventSequenceNumber.First;
-            var readAny = true;
-            while (readAny)
+            using var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, cancellationToken: cancellationToken);
+            while (await cursor.MoveNext())
             {
-                readAny = false;
-                using var cursor = await eventSequenceStorage.GetFromSequenceNumber(next, cancellationToken: cancellationToken);
-                while (await cursor.MoveNext())
+                foreach (var @event in cursor.Current)
                 {
-                    foreach (var @event in cursor.Current)
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (!schemaCache.TryGetValue(@event.Context.EventType, out var eventSchema))
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        readAny = true;
-                        next = @event.Context.SequenceNumber.Next();
+                        eventSchema = await eventTypesStorage.GetFor(@event.Context.EventType.Id, @event.Context.EventType.Generation);
+                        schemaCache[@event.Context.EventType] = eventSchema;
+                    }
 
-                        if (!schemaCache.TryGetValue(@event.Context.EventType, out var eventSchema))
-                        {
-                            eventSchema = await eventTypesStorage.GetFor(@event.Context.EventType.Id, @event.Context.EventType.Generation);
-                            schemaCache[@event.Context.EventType] = eventSchema;
-                        }
+                    // Constraint hashes must be derived from the original plaintext, so release (decrypt) any
+                    // PII before establishing the validation context. The append-time index write already uses
+                    // plaintext; reindexing must match it or a rebuilt PII index would diverge from new appends.
+                    var content = await ReleaseContent(jobStepKey.Scope, jobStepKey.Namespace, @event, eventSchema);
 
-                        // Constraint hashes must be derived from the original plaintext, so release (decrypt) any
-                        // PII before establishing the validation context. The append-time index write already uses
-                        // plaintext; reindexing must match it or a rebuilt PII index would diverge from new appends.
-                        var content = await ReleaseContent(jobStepKey.Scope, jobStepKey.Namespace, @event, eventSchema);
-
-                        foreach (var definition in changedDefinitions)
-                        {
-                            try
-                            {
-                                await ReindexEvent(definition, @event, content, seenConstraintEntries[definition.Name], validators[definition.Name], uniqueConstraintsStorage);
-                            }
-                            catch (DuplicateUniqueConstraintValue)
-                            {
-                                // Another event source already holds the value in the index. The log itself holds
-                                // both claims - appended while this sequence did not validate the constraint, or
-                                // while its index was still being rebuilt - and history cannot be undone here.
-                                // Keeping the existing claim and reading on rebuilds everything else, where failing
-                                // would leave the whole index unbuilt.
-                                logger.SkippedDuplicateWhileReindexing(definition.Name, currentState.EventSequenceId, @event.Context.SequenceNumber);
-                            }
-                        }
+                    foreach (var definition in changedDefinitions)
+                    {
+                        await ReindexEvent(definition, @event, content, seenConstraintEntries[definition.Name], validators[definition.Name], uniqueConstraintsStorage);
                     }
                 }
             }
