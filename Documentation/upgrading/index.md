@@ -7,8 +7,9 @@ Every major version of Chronicle has an upgrade guide, and every guide answers t
 question first: **does anything change for you?**
 
 Often the answer is no. Chronicle publishes the kernel, the .NET client and the contracts
-packages (.NET, npm, Maven, Hex and PyPI) from one repository at one version, so a
-breaking change to any of them raises the major for all three. A major can therefore be driven by something you never call, on a
+packages (.NET, npm, Maven and Hex) from one repository at one version, so a breaking
+change to any of them raises the major for the kernel, the .NET client and every
+contracts package. A major can therefore be driven by something you never call, on a
 surface you never touch — and upgrading is then a version bump and a rebuild.
 
 The Kotlin/Java, TypeScript and Elixir clients are released from their own repositories
