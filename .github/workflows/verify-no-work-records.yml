@@ -2,8 +2,14 @@ name: Verify No Work Records
 
 on:
   pull_request:
+    paths: ["**.md", ".ai-work/**"]
   push:
     branches: ["main"]
+    paths: ["**.md", ".ai-work/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
