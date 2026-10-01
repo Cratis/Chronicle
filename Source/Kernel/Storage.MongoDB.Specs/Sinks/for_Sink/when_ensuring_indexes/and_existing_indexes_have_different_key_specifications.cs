@@ -10,6 +10,7 @@ public class and_existing_indexes_have_different_key_specifications : given.a_si
 {
     void Establish() => _indexCursor.Current.Returns(
     [
+        new BsonDocument { { "name", "_id_" }, { "key", new BsonDocument("_id", 1) } },
         new BsonDocument { { "name", "descending" }, { "key", new BsonDocument(_indexedProperty.Path, -1) } },
         new BsonDocument { { "name", "compound" }, { "key", new BsonDocument { { _indexedProperty.Path, 1 }, { "OtherProperty", 1 } } } },
         new BsonDocument { { "name", $"chronicle_idx_{_indexedProperty.Path}" }, { "key", new BsonDocument("OtherProperty", 1) } },
@@ -23,4 +24,6 @@ public class and_existing_indexes_have_different_key_specifications : given.a_si
             Arg.Is<CreateIndexModel<BsonDocument>>(model => model.Options.Name == $"chronicle_idx_{_indexedProperty.Path}"),
             Arg.Any<CreateOneIndexOptions>(),
             Arg.Any<CancellationToken>());
+    [Fact] void should_not_fetch_the_collection_collation() =>
+        _database.DidNotReceive().ListCollectionsAsync(Arg.Any<ListCollectionsOptions>(), Arg.Any<CancellationToken>());
 }

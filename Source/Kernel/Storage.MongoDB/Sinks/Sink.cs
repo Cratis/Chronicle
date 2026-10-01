@@ -518,17 +518,20 @@ public class Sink(
         var collection = Collection;
         using var cursor = await collection.Indexes.ListAsync();
         var existingIndexes = await cursor.ToListAsync();
-        var collation = existingIndexes.Count > 0 && readModel.Indexes.Count > 0
-            ? await GetCollectionCollation(collection)
-            : BsonNull.Value;
+        BsonValue? collation = null;
 
         foreach (var indexDefinition in readModel.Indexes)
         {
             var indexName = $"chronicle_idx_{indexDefinition.PropertyPath.Path.Replace('.', '_')}";
 
-            if (existingIndexes.Exists(index => IsEquivalentIndex(index, indexDefinition.PropertyPath.Path, collation)))
+            var candidates = existingIndexes.FindAll(index => HasMatchingKeyAndOptions(index, indexDefinition.PropertyPath.Path));
+            if (candidates.Count > 0)
             {
-                continue;
+                collation ??= await GetCollectionCollation(collection);
+                if (candidates.Exists(index => index.GetValue("collation", BsonNull.Value).Equals(collation)))
+                {
+                    continue;
+                }
             }
 
             var indexModel = new CreateIndexModel<BsonDocument>(
@@ -670,15 +673,14 @@ public class Sink(
             static (_, current, incoming) => Math.Max(current, incoming),
             eventSequenceNumber);
 
-    static bool IsEquivalentIndex(BsonDocument index, string propertyPath, BsonValue collation) =>
+    static bool HasMatchingKeyAndOptions(BsonDocument index, string propertyPath) =>
         index.GetValue("key", BsonNull.Value).Equals(new BsonDocument(propertyPath, 1)) &&
         index.GetValue("unique", false) == false &&
         index.GetValue("prepareUnique", false) == false &&
         index.GetValue("sparse", false) == false &&
         index.GetValue("hidden", false) == false &&
         !index.Contains("partialFilterExpression") &&
-        !index.Contains("expireAfterSeconds") &&
-        index.GetValue("collation", BsonNull.Value).Equals(collation);
+        !index.Contains("expireAfterSeconds");
 
     async Task<BsonValue> GetCollectionCollation(IMongoCollection<BsonDocument> collection)
     {
