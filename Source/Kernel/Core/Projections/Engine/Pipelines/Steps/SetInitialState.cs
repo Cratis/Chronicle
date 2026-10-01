@@ -53,7 +53,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
         var needsInitialState = false;
         if (initialState is null)
         {
-            if (context.ChildrenAffected || context.IsJoin)
+            if (!context.CreatesInstance)
             {
                 initialState = new ExpandoObject();
                 ((IDictionary<string, object?>)initialState)[WellKnownProperties.ReadModelInstanceInitialized] = false;
