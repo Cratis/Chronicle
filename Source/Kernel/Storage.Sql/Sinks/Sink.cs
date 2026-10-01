@@ -366,7 +366,9 @@ public class Sink : ISink
     {
         await using var command = scope.DbContext.Database.GetDbConnection().CreateCommand();
         command.Transaction = scope.DbContext.Database.CurrentTransaction?.GetDbTransaction();
+#pragma warning disable CA2100 // sql is always a literal query or built from delimited identifiers via ISqlGenerationHelper; any caller-supplied value travels through the @name parameter below, never through sql itself.
         command.CommandText = sql;
+#pragma warning restore CA2100
         if (table is not null)
         {
             var parameter = command.CreateParameter();
