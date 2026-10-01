@@ -16,6 +16,12 @@ This projection:
 
 > **Note:** AutoMap is enabled by default at the top level. You don't need to call `.AutoMap()` explicitly unless you want to ensure it's enabled in contexts where it might be disabled. Read more about [auto mapping](./auto-map)
 
+## Base event types in the .NET client
+
+`From<TEvent>()` also accepts a base event type or an interface. It registers every known event type assignable to `TEvent`, including the base type itself when it is an event type. The same property mappings, key, and parent key apply to each event type, whether the registration is at the root, in a children collection, or in a nested object.
+
+If multiple `From` calls target the same concrete event type, the last call replaces its mapping. This does not subscribe to unrelated event types; use [FromAll](./from-all.mdx) for that behavior.
+
 ## Read model definition
 
 The read model is a simple record or class representing the projected data:

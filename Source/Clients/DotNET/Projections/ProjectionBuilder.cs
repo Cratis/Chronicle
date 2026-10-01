@@ -90,6 +90,8 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         builderCallback?.Invoke(builder);
         var fromDefinition = builder.Build();
 
+        // Keep grouped registrations available to derived builders. The built-in builders use From for
+        // every concrete event type, since children and nested definitions have no derivative collection.
         if (eventTypesInProjection.Length > 1)
         {
             _fromDerivativesDefinitions.Add(new FromDerivativesDefinition
@@ -98,9 +100,13 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
                 From = fromDefinition
             });
         }
-        else
+
+        foreach (var eventType in eventTypesInProjection)
         {
-            _fromDefinitions[eventTypesInProjection[0].ToContract()] = fromDefinition;
+            // Contract event types use reference equality. Reuse an existing key so overlapping From
+            // registrations replace the mapping rather than sending duplicate event types to the kernel.
+            var key = _fromDefinitions.Keys.FirstOrDefault(_ => _.ToClient() == eventType) ?? eventType.ToContract();
+            _fromDefinitions[key] = fromDefinition;
         }
 
         CollectEventStore(type);
