@@ -28,13 +28,21 @@ dotnet add package Cratis.Chronicle
 dotnet add package MongoDB.Driver
 ```
 
+Those are the .NET packages. In a TypeScript project, install the client, its `@cratis/fundamentals` peer dependency and `reflect-metadata`. The client needs Node.js 22.19 or later:
+
+```shell
+npm install @cratis/chronicle @cratis/fundamentals reflect-metadata
+```
+
+The [TypeScript client guide](/chronicle/clients/typescript/getting-started/) covers the rest of the project setup.
+
 ## Connect the client
 
 Everything in Chronicle is reached through a `ChronicleClient`. From a client you ask for the **event store** you want to work with — here, one named `Quickstart`. Because there's no DI container to do it for you, you create the client yourself:
 
 <ChronicleClientTabs snippet="get-started/console/connect" />
 
-Each client has a built-in development connection for the local kernel, which carries the kernel's well-known development credentials: `ChronicleConnectionString.Development` in C#, `ChronicleOptions.development()` in Kotlin and TypeScript, and `Chronicle.Connections.ConnectionString.development()` in Elixir. Spell it out as shown. The .NET client also uses these credentials when you call `new ChronicleClient()` with no arguments, but not every client fills them in for a connection string without credentials. To connect to another kernel, pass your own `chronicle://…` connection string.
+Each client has a built-in development connection for the local kernel, which carries the kernel's well-known development credentials: `ChronicleConnectionString.Development` in C#, `ChronicleOptions.development()` in Kotlin and TypeScript, and `Chronicle.Connections.ConnectionString.development()` in Elixir. Spell it out as shown. The .NET client also uses these credentials when you call `new ChronicleClient()` with no arguments. Given a `chronicle://` connection string without credentials, the .NET, Kotlin, Java and TypeScript clients fall back to them too, but the Elixir client does not and connects without authentication, so use `Chronicle.Connections.ConnectionString.development()` there. To connect to another kernel, pass your own `chronicle://…` connection string.
 
 That single `eventStore` is your handle to everything that follows:
 
