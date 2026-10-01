@@ -211,7 +211,8 @@ public partial class Observer(
         SiloAddress siloAddress,
         object? subscriberArgs = null,
         bool isReplayable = true,
-        ObserverFilters? filters = null)
+        ObserverFilters? filters = null,
+        bool automatic = false)
         where TObserverSubscriber : IObserverSubscriber
     {
         var owner = GetOwner<TObserverSubscriber>();
@@ -229,7 +230,10 @@ public partial class Observer(
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
 
-        await LeaveQuarantineForSubscription();
+        if (!automatic)
+        {
+            await LeaveQuarantineForSubscription();
+        }
 
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
@@ -295,11 +299,20 @@ public partial class Observer(
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
 
-        if (await TransitionToReplayIfNeeded())
+        if (automatic && State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
+
+        if (await TransitionToReplayIfNeeded(automatic))
         {
             return;
         }
         await ResumeJobs();
+        if (automatic && State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
 
         // Recovering failed partitions starts one job per partition through the jobs manager. An observer
         // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends

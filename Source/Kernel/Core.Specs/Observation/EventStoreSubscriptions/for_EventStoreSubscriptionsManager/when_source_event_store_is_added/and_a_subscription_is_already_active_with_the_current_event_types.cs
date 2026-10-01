@@ -56,5 +56,7 @@ public class and_a_subscription_is_already_active_with_the_current_event_types :
             Arg.Any<IEnumerable<EventType>>(),
             Arg.Any<SiloAddress>(),
             Arg.Any<object?>(),
-            Arg.Any<bool>());
+            Arg.Any<bool>(),
+            Arg.Any<ObserverFilters?>(),
+            true);
 }

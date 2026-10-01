@@ -21,6 +21,7 @@ public class and_another_namespace_needs_refresh_while_one_is_quarantined : give
 
     async Task Because() => await _manager.ReceiveReminder(ReminderName, default);
 
-    [Fact] void should_not_refresh_the_quarantined_namespace() => ShouldNotSubscribe(_observer);
+    [Fact] void should_refresh_the_quarantined_namespace_without_revival() => ShouldSubscribe(_observer);
+    [Fact] void should_not_explicitly_subscribe() => ShouldNotSubscribe(_observer);
     [Fact] void should_subscribe_the_other_namespace() => ShouldSubscribe(_otherObserver);
 }

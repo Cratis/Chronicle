@@ -10,6 +10,7 @@ public class and_quarantine_was_cleared : given.a_manager_with_a_quarantined_sub
         await _manager.ReceiveReminder(ReminderName, default);
         _observer.ClearReceivedCalls();
         _observer.IsObserverQuarantined().Returns(false);
+        _observer.IsSubscribed().Returns(false);
     }
 
     async Task Because() => await _manager.ReceiveReminder(ReminderName, default);
