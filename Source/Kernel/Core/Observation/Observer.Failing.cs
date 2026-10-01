@@ -30,6 +30,7 @@ public partial class Observer
         logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         var partitionWasAlreadyFailed = Failures.IsFailed(partition);
         var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
+        var partitionWasQuarantined = failure.IsQuarantined;
         if (!partitionWasAlreadyFailed)
         {
             State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
@@ -40,7 +41,10 @@ public partial class Observer
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             await failures.WriteStateAsync();
-            await ReportAlertState();
+            if (!partitionWasAlreadyFailed)
+            {
+                await ReportAlertState();
+            }
             return;
         }
 
@@ -53,7 +57,8 @@ public partial class Observer
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             await failures.WriteStateAsync();
-            await ReportAlertState();
+
+            // QuarantinedObserver.OnEnter already reported the new observer quarantine and its failures.
             return;
         }
 
@@ -75,7 +80,11 @@ public partial class Observer
             await WriteStateAsync();
         }
 
-        await ReportAlertState();
+        // Only episode changes need an immediate snapshot. The watchdog and tracker timer cover RaiseAfter.
+        if (!partitionWasAlreadyFailed || (!partitionWasQuarantined && failure.IsQuarantined))
+        {
+            await ReportAlertState();
+        }
     }
 
     /// <inheritdoc/>
