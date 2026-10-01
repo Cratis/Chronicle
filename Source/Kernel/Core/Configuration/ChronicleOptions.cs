@@ -86,6 +86,11 @@ public class ChronicleOptions
     public Observers Observers { get; init; } = new Observers();
 
     /// <summary>
+    /// Gets the alerts configuration.
+    /// </summary>
+    public Alerts Alerts { get; init; } = new Alerts();
+
+    /// <summary>
     /// Gets the connected clients configuration.
     /// </summary>
     public Clients ConnectedClients { get; init; } = new Clients();
