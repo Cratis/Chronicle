@@ -70,19 +70,20 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
 
             SetKeyForInitialState(projection, initialState, context.Key);
         }
-        else if (context.CreatesInstance && !HasBeenInitialized(initialState))
+        else if (!HasBeenInitialized(initialState))
         {
+            // A sink that stores the flag reports a root only children have touched as explicitly not initialized, and it
+            // stays that way until an event the root handles arrives. A sink that does not store the flag reports nothing
+            // about it, so every existing instance is initialized by the next event, as it always was.
+            var storedAsNotInitialized = IsStoredAsNotInitialized(initialState);
+            if (storedAsNotInitialized && !context.CreatesInstance)
+            {
+                context.Changeset.InitialState = initialState;
+                return context with { NeedsInitialState = false };
+            }
+
             var initialStateAsDictionary = (IDictionary<string, object?>)initialState;
             var initialModelStateAsDictionary = (IDictionary<string, object?>)projection.InitialModelState;
-
-            // Children collections are owned by the events that add and remove their children, so they are not recorded
-            // from the initial state - only the properties of the instance itself are.
-            var childrenRoots = projection.GetChildrenPropertyPaths()
-                .Where(_ => !_.IsRoot)
-                .Select(_ => _.Segments.First().Value)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            var keyPropertyName = GetKeyPropertyName(projection);
 
             // TODO: Ideally we should do this recursively, as properties can be joined deep in the hierarchy and we want to
             // initialize all properties that are not set. This is a simple implementation that only works for the first level.
@@ -95,14 +96,24 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
                 initialStateAsDictionary[property.Key] = property.Value;
             }
 
-            // The sink only stores what the changeset records, so the filled in values have to be recorded as changes.
-            var recorded = missing
-                .Where(kvp => !childrenRoots.Contains(kvp.Key) && !string.Equals(kvp.Key, keyPropertyName, StringComparison.OrdinalIgnoreCase))
-                .Select(_ => new PropertyDifference(new PropertyPath(_.Key), null, _.Value))
-                .ToArray();
-            if (recorded.Length > 0)
+            // The sink only stores what the changeset records, so the values filled in for a placeholder have to be
+            // recorded as changes. Children collections are owned by the events that add and remove their children,
+            // and the key is set by the sink, so neither is recorded from the initial state.
+            if (storedAsNotInitialized)
             {
-                context.Changeset.Add(new PropertiesChanged<ExpandoObject>(context.Changeset.CurrentState, recorded));
+                var childrenRoots = projection.GetChildrenPropertyPaths()
+                    .Where(_ => !_.IsRoot)
+                    .Select(_ => _.Segments.First().Value)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var keyPropertyName = GetKeyPropertyName(projection);
+                var recorded = missing
+                    .Where(kvp => !childrenRoots.Contains(kvp.Key) && !string.Equals(kvp.Key, keyPropertyName, StringComparison.OrdinalIgnoreCase))
+                    .Select(_ => new PropertyDifference(new PropertyPath(_.Key), null, _.Value))
+                    .ToArray();
+                if (recorded.Length > 0)
+                {
+                    context.Changeset.Add(new PropertiesChanged<ExpandoObject>(context.Changeset.CurrentState, recorded));
+                }
             }
 
             context.Changeset.SetInitialized(true);
@@ -115,6 +126,9 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
 
     bool HasBeenInitialized(ExpandoObject initialState) =>
         ((IDictionary<string, object?>)initialState).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) && initialized is bool initializedBool && initializedBool;
+
+    bool IsStoredAsNotInitialized(ExpandoObject initialState) =>
+        ((IDictionary<string, object?>)initialState).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) && initialized is false;
 
     void SetKeyForInitialState(IProjection projection, ExpandoObject initialState, Key key)
     {
