@@ -20,7 +20,7 @@ public class and_quarantined_preparation_has_no_remaining_gap : given.a_quaranti
 
     async Task Because()
     {
-        await _observer.Subscribe<ObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
+        await _observer.Subscribe<IObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
         await _observer.Handle("partition", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(EventType.Unknown, 42UL)]);
     }
 

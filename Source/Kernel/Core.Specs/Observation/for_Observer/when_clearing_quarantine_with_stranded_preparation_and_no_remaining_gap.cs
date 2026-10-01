@@ -12,6 +12,7 @@ public class when_clearing_quarantine_with_stranded_preparation_and_no_remaining
 {
     async Task Establish()
     {
+        _observer.SetSubscription(subscription with { SubscriberType = typeof(IObserverSubscriber) });
         await _observer.CatchUp();
         _subscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
             .Returns(ObserverSubscriberResult.Ok(42UL));
