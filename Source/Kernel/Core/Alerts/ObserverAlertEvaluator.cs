@@ -167,6 +167,11 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
                 : (null, due);
         }
 
+        if (!IsPartitionCondition(incident.Condition))
+        {
+            return (null, null);
+        }
+
         if (IsExhausted(snapshot, partition) && exhausted.Enabled && incident.Condition != exhausted.Kind)
         {
             return (new AlertEscalated(incident.Id, exhausted.Kind, exhausted.Severity, target, EvidenceFor(partition)), null);
