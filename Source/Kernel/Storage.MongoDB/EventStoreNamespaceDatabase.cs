@@ -44,10 +44,10 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         IOptions<MongoDBStorageOptions>? storageOptions = null)
     {
         var databaseName = DatabaseNames.ForEventStoreNamespace(eventStore, @namespace, storageOptions?.Value.DatabaseNamePrefix ?? string.Empty);
-        var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server)
-        {
-            DatabaseName = databaseName
-        };
+        var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server);
+        // Preserve the URI path's implicit authentication database before selecting Chronicle's database.
+        urlBuilder.AuthenticationSource ??= urlBuilder.DatabaseName;
+        urlBuilder.DatabaseName = databaseName;
         if (mongoDBOptions.Value.DirectConnection == true)
         {
             urlBuilder.DirectConnection = true;

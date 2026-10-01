@@ -83,10 +83,10 @@ public class Database : IDatabase
 
         // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
         var databaseName = DatabaseNames.ForReadModels(eventStore, @namespace, _storageOptions.Value.DatabaseNamePrefix);
-        var urlBuilder = new MongoUrlBuilder(_mongoDBOptions.Value.Server)
-        {
-            DatabaseName = databaseName
-        };
+        var urlBuilder = new MongoUrlBuilder(_mongoDBOptions.Value.Server);
+        // Preserve the URI path's implicit authentication database before selecting Chronicle's database.
+        urlBuilder.AuthenticationSource ??= urlBuilder.DatabaseName;
+        urlBuilder.DatabaseName = databaseName;
         if (_mongoDBOptions.Value.DirectConnection == true)
         {
             urlBuilder.DirectConnection = true;
