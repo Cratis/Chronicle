@@ -56,6 +56,13 @@ public class ObserverService(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> FlushReplayFor(ObserverDetails observerDetails)
+    {
+        var results = await Task.WhenAll(replayHandlers.Select(handler => handler.FlushReplayFor(observerDetails)));
+        return results.All(result => !result.TryGetError(out var error) || error == ICanHandleReplayForObserver.Error.CannotHandle);
+    }
+
+    /// <inheritdoc/>
     public async Task BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition) => await ForEachReplayHandler(handler => handler.BeginReplayPartitionFor(observerDetails, partition));
 
     /// <inheritdoc/>
