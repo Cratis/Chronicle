@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Observation;
+
 using SinkFailedPartition = Cratis.Chronicle.Storage.Sinks.FailedPartition;
 
 namespace Cratis.Chronicle.Observation;
@@ -20,9 +22,20 @@ internal static class ProjectionBulkFailures
     internal static async Task Record(IGrainFactory grainFactory, ObserverDetails observerDetails, IEnumerable<SinkFailedPartition> failedPartitions)
     {
         var failures = failedPartitions.ToArray();
-        if (failures.Length > 0)
+        if (failures.Length == 0)
         {
-            await grainFactory.GetGrain<IObserver>(observerDetails.Key).PartitionsFailed(failures);
+            return;
+        }
+
+        var observer = grainFactory.GetGrain<IObserver>(observerDetails.Key);
+        if (failures.Length == 1)
+        {
+            var failure = failures[0];
+            await observer.PartitionFailed(failure.EventSourceId, failure.EventSequenceNumber, [MessageFor(failure)], string.Empty, FailureKind.Handling);
+        }
+        else
+        {
+            await observer.PartitionsFailed(failures);
         }
     }
 
