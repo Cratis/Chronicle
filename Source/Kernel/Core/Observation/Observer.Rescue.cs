@@ -131,9 +131,14 @@ public partial class Observer
     /// resets along with it - the attempts belonged to the world the old subscription lived in, and without the
     /// reset a single further stranded catch-up preparation puts the observer straight back into quarantine
     /// because the counter is already past the bound. If catch-up keeps stranding, the bound quarantines the
-    /// observer again. Routing re-evaluates the gap and drives catch-up or observing from there.
+    /// observer again.
     /// </summary>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A subscribed observer runs the same recovery as a fresh subscription: replay evaluation, paused non-replay
+    /// job resumption, retries of eligible failed partitions in a separate turn, and in-flight partition catch-up.
+    /// An unsubscribed observer follows normal activation routing without resuming jobs or retrying partitions.
+    /// </remarks>
     async Task ReviveFromQuarantine()
     {
         if (_subscription.IsSubscribed)

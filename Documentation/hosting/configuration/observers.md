@@ -119,12 +119,16 @@ A Kernel restart ends quarantine only for observers that receive a fresh subscri
 event store subscriptions remain quarantined until an operator clears them.
 
 Completing catch-up or replay still persists progress and clears completed-work markers without resuming the
-observer. Clearing quarantine then re-evaluates remaining work from the recorded position. If the observer
-has no subscription, clearing leaves it disconnected until a subscription is established. Quarantine does
-not cancel already-running catch-up or replay jobs, and partition completion can still start required
-partition continuation work without ending the observer's quarantine.
+observer. Clearing quarantine then re-evaluates remaining work from the recorded position. For a subscribed
+observer, clearing resumes paused non-replay jobs, including catch-up jobs, and retries failed partitions that
+are not individually quarantined, subject to the configured retry limits. Recovery can quarantine the observer
+again if the underlying problem remains. An observer without a subscription follows the same routing as
+activation, including how pending replay is handled, and cannot deliver events until a subscription is established.
+Quarantine does not cancel already-running catch-up or replay jobs, and partition completion can still start
+required partition continuation work without ending the observer's quarantine.
 
-Clearing observer quarantine does not clear failed partitions or their separate quarantine status.
+Clearing observer quarantine does not clear failed partitions or their separate quarantine status. Failed
+partitions stay recorded until they recover or are cleared.
 
 ## Scaled-out clients
 
