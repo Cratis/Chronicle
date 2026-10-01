@@ -86,6 +86,8 @@ To be alerted when an observer's partitions keep failing or run out of retries, 
 
 ## Traces instrumented
 
+These are the server's sources. The Chronicle client in your application emits its own spans on the `Cratis.Chronicle.Client` source, which you register yourself; see [Trace Chronicle client operations with OpenTelemetry](../client-tracing).
+
 Chronicle traces the following activity sources:
 
 | Source | Description |

@@ -18,6 +18,8 @@
   href: once-only.mdx
 - name: Replay
   href: replay.mdx
+- name: Replay notifications
+  href: replay-notifications.mdx
 - name: Delivery identity
   href: delivery-identity.mdx
 - name: Filtering by appended event metadata

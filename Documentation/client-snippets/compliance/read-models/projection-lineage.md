@@ -18,6 +18,6 @@ public record ComplianceReadModelsEmployeeRegistered(ComplianceReadModelsPersonN
 [FromEvent<ComplianceReadModelsEmployeeRegistered>]
 public record ComplianceReadModelsEmployee(
     [Key] Guid Id,
-    string Name,        // mapped from ComplianceReadModelsPersonName — stored encrypted at rest
+    [PII] string Name,  // mapped from ComplianceReadModelsPersonName; [PII] here is what stores it encrypted
     string Department);
 ```

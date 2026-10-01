@@ -11,10 +11,9 @@ Appending adds a single event to an event sequence. The event log is the default
 
 ## How it works
 
-When you append an event, Chronicle:
+Before the event is sent, the .NET client adds any [cross-cutting properties](./cross-cutting-properties) to its content. The Chronicle kernel does not add them. When it receives the event, it:
 
 - Validates the event content against its registered JSON schema
-- Applies any [cross-cutting properties](./cross-cutting-properties)
 - Associates the event with its event source
 - Assigns the next sequence number
 - Persists the event and metadata atomically

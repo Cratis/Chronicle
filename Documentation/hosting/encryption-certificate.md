@@ -366,7 +366,11 @@ The safe rule: never delete a certificate file until every backup that predates 
    prevent.
 2. **Restore the storage backend** (MongoDB or SQL).
 3. **Restore the compliance key store**, if one is configured, to the same point in time as the storage. A
-   PII key that is newer or older than the events it protects reads back as an empty string.
+   key store restored **older** than the storage is missing the keys of subjects created since, so their
+   `[PII]` values read back as an empty string. For subjects erased since, it still holds the key and no
+   erasure fence, so their values read again and an erasure you reported as complete is undone. A key store
+   restored **newer** than the storage keeps the erasures made in between. See
+   [Compliance Storage](configuration/compliance-storage.md#backup-and-restore-ordering).
 4. **Start one node and read the diagnostic before starting the rest.** Keys reported with the role
    `Retired` mean the ring is missing a certificate the restored data needs — add it back under `previous`
    and restart before serving traffic.

@@ -224,3 +224,18 @@ did).
 
 Upgrade the kernel and the clients together across a major boundary, rather than assuming a
 skew will be tolerated.
+
+### The TypeScript client
+
+The TypeScript client, `@cratis/chronicle`, has its own version line (6.x at the time of writing),
+so its version does not follow the kernel's major. What is known about the pairing:
+
+- **6.0.0 needs kernel 18.4.1 or later.** It moved append routing to the kernel, so upgrade every
+  kernel node to 18.4.1 or later before you upgrade the client.
+- **6.x checks compatibility on every connection.** The client sends its contract descriptor to
+  the kernel each time it connects. When the kernel reports an incompatibility, or has no such
+  check, the client throws `IncompatibleChronicleServer`, does not retry, and rejects every later
+  call. Deploy a compatible kernel and create a new client.
+- **Only one pairing is documented as exercised.** The TypeScript client's guides report running
+  their examples against `cratis/chronicle:19.4.8-development`. No compatibility matrix is
+  published, so treat any other pairing as unverified and test it before you rely on it.

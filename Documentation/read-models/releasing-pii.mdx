@@ -9,7 +9,7 @@ Most of the time you never think about this. `GetInstanceById`, `GetInstances`, 
 
 <ChronicleClientTabs snippet="read-models/releasing-pii/read-model" />
 
-`RequesterName` is `[PII]`-marked explicitly on the read model — required for a reducer, since Chronicle can't infer PII lineage through arbitrary reducer logic the way it can for a model-bound projection. `CustomerId` carries `[Subject]`: the ticket's own `Id` identifies the ticket, not the person the PII belongs to, so `Release` needs to be told which property to use as the encryption key's owner. A property having the `Subject` type does not select it by itself; the attribute is what declares the role.
+`RequesterName` is `[PII]`-marked explicitly on the read model — required for a reducer, and for a projection as well, since Chronicle encrypts from the read model's own schema and does not carry an event property's PII marker over to the property it is mapped to. `CustomerId` carries `[Subject]`: the ticket's own `Id` identifies the ticket, not the person the PII belongs to, so `Release` needs to be told which property to use as the encryption key's owner. A property having the `Subject` type does not select it by itself; the attribute is what declares the role.
 
 ## Release a single instance
 
