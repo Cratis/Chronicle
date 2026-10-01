@@ -187,9 +187,9 @@ public partial class Observer
         await WriteStateAsync();
     }
 
-    async Task<bool> TransitionToReplayIfNeeded(bool automatic = false)
+    async Task<bool> TransitionToReplayIfNeeded()
     {
-        if (automatic && State.RunningState == ObserverRunningState.Quarantined)
+        if (State.RunningState == ObserverRunningState.Quarantined)
         {
             return true;
         }
@@ -202,33 +202,34 @@ public partial class Observer
         }
 
         var tailSequenceNumber = await _eventSequence.GetTailSequenceNumber();
-        if (automatic && State.RunningState == ObserverRunningState.Quarantined)
+        if (State.RunningState == ObserverRunningState.Quarantined)
         {
             return true;
         }
 
         var getNextToHandleResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(State.NextEventSequenceNumber, _subscription.EventTypes.ToList());
-        if (automatic && State.RunningState == ObserverRunningState.Quarantined)
+        if (State.RunningState == ObserverRunningState.Quarantined)
         {
             return true;
         }
         var nextUnhandledEventSequenceNumber = getNextToHandleResult.Match(eventSequenceNumber => eventSequenceNumber, _ => EventSequenceNumber.Unavailable);
         var replayEvaluator = new ReplayEvaluator(GrainFactory, _subscription.ObserverKey.EventStore, _observerKey.Namespace);
-        if (!await replayEvaluator.Evaluate(new(
-                State.Identifier,
-                _subscription.ObserverKey,
-                Definition,
-                State,
-                _subscription,
-                tailSequenceNumber,
-                nextUnhandledEventSequenceNumber)))
-        {
-            return false;
-        }
-
-        if (automatic && State.RunningState == ObserverRunningState.Quarantined)
+        var needsReplay = await replayEvaluator.Evaluate(new(
+            State.Identifier,
+            _subscription.ObserverKey,
+            Definition,
+            State,
+            _subscription,
+            tailSequenceNumber,
+            nextUnhandledEventSequenceNumber));
+        if (State.RunningState == ObserverRunningState.Quarantined)
         {
             return true;
+        }
+
+        if (!needsReplay)
+        {
+            return false;
         }
 
         logger.NeedsToReplay();

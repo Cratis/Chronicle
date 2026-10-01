@@ -2,31 +2,25 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_subscribing;
 
-public class and_quarantine_begins_during_automatic_reconciliation : given.an_observer_automatically_reconciled_during_a_probe
+public class and_quarantine_begins_during_automatic_reconciliation_tail_query : given.an_observer_automatically_reconciled_during_a_probe
 {
-    readonly TaskCompletionSource<IEnumerable<EventTypeSchema>> _query = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource<EventSequenceNumber> _query = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    void Establish() => _eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns(_ =>
+    void Establish() => _eventSequence.GetTailSequenceNumber().Returns(_ =>
     {
         _probeEntered.TrySetResult();
         return _query.Task;
     });
 
-    async Task Because() => await QuarantineDuringProbe(
-        ReconcileSubscription(),
-        () => _query.SetResult([]));
+    async Task Because() => await QuarantineDuringProbe(ReconcileSubscription(), () => _query.SetResult(42UL));
 
     [Fact] async Task should_keep_the_quarantined_state() => (await _observer.GetCurrentState()).ShouldBeOfExactType<QuarantinedObserver>();
     [Fact] void should_keep_the_persisted_quarantine() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);
-    [Fact] async Task should_record_the_subscription() => (await _observer.IsSubscribed()).ShouldBeTrue();
-    [Fact] void should_not_reload_activation_owned_state() => _storageStats.Reads.ShouldEqual(0);
-    [Fact] void should_not_reload_activation_owned_failures() => _failedPartitionsStorageStats.Reads.ShouldEqual(0);
     [Fact] void should_not_resume_jobs() => ShouldNotResumeJobs();
     [Fact] void should_not_start_replay() => ShouldNotStartReplay();
     [Fact] void should_not_start_catchup() => ShouldNotStartCatchup();

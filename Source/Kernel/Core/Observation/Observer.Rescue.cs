@@ -138,6 +138,13 @@ public partial class Observer
     /// <returns>Awaitable task.</returns>
     async Task ReviveFromQuarantine()
     {
+        if (_subscription.IsSubscribed)
+        {
+            await LeaveQuarantineForSubscription();
+            await RecoverSubscribedObserver();
+            return;
+        }
+
         _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
         await TransitionTo<Routing>();

@@ -204,7 +204,6 @@ public partial class Observer(
         ThrowIfSealed();
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
-            // With nobody subscribed this is the routing pass every activation of an unsubscribed observer already runs, so it drops nothing a plain reactivation would not.
             await ReviveFromQuarantine();
         }
     }
@@ -667,8 +666,9 @@ public partial class Observer(
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
             // Ordinary subscription re-reads storage, including after a shared test silo's database reset.
-            // Recovery must retain live progress rather than reload a stale persisted position.
-            if (!recovering)
+            // Recovery must retain live progress rather than reload a stale persisted position, and automatic
+            // reconciliation must not let a stale snapshot overwrite an interleaved quarantine.
+            if (!recovering && !automatic)
             {
                 await ReadStateAsync();
                 await observerDefinition.ReadStateAsync();
@@ -689,7 +689,7 @@ public partial class Observer(
                 await LeaveQuarantineForSubscription();
             }
 
-            await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, automatic);
+            await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters);
 
             // A persisted Active marker alone does not prove setup completed after an entry-write failure.
             _subscriptionSetupFailed = await GetCurrentState() is not (Observing or States.Replay);
@@ -707,8 +707,7 @@ public partial class Observer(
         SiloAddress siloAddress,
         object? subscriberArgs,
         bool isReplayable,
-        ObserverFilters? filters,
-        bool automatic = false)
+        ObserverFilters? filters)
         where TObserverSubscriber : IObserverSubscriber
     {
         var owner = GetOwner<TObserverSubscriber>();
@@ -776,29 +775,270 @@ public partial class Observer(
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
 
-        if (automatic && State.RunningState == ObserverRunningState.Quarantined)
+        await RecoverSubscribedObserver();
+    }
+
+    /// <inheritdoc/>
+    public async Task SubscribeToAllEvents<TObserverSubscriber>(
+        ObserverType type,
+        SiloAddress siloAddress,
+        object? subscriberArgs = null,
+        bool isReplayable = true,
+        bool reactivateRetired = true)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        ThrowIfSealed();
+        var owner = GetOwner<TObserverSubscriber>();
+
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+
+        logger.Subscribing();
+        logger.SubscribingToAllEvents();
+
+        await ReadStateAsync();
+        await observerDefinition.ReadStateAsync();
+        await failures.ReadStateAsync();
+        if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
+        await BeginAlertLifecycle();
+        await LeaveQuarantineForSubscription();
+
+        observerDefinition.State = observerDefinition.State with
+        {
+            Type = type,
+            Owner = owner,
+            EventTypes = [],
+            IsReplayable = isReplayable
+        };
+        await observerDefinition.WriteStateAsync();
+
+        _subscription = new(
+            _observerId,
+            _observerKey,
+            [],
+            typeof(TObserverSubscriber),
+            siloAddress,
+            subscriberArgs,
+            isReplayable);
+
+        State = State with { SubscribesToAllEvents = true };
+        await WriteStateAsync();
+
+        await RecoverSubscribedObserver();
+    }
+
+    /// <inheritdoc/>
+    public override IImmutableList<IState<ObserverState>> CreateStates() => new IState<ObserverState>[]
+    {
+        new Disconnected(),
+
+        new Routing(
+            _observerKey,
+            observerDefinition,
+            _eventSequence,
+            loggerFactory.CreateLogger<Routing>()),
+
+        new Replay(
+            _observerKey,
+            observerDefinition,
+            _jobsManager,
+            storage,
+            loggerFactory.CreateLogger<Replay>()),
+
+        new QuarantinedObserver(
+            _observerKey,
+            loggerFactory.CreateLogger<QuarantinedObserver>()),
+
+        new CatchingUpInFlight(
+            _observerKey,
+            observerDefinition,
+            failures,
+            _jobsManager,
+            loggerFactory.CreateLogger<CatchingUpInFlight>()),
+
+        new Observing(
+            _appendedEventsQueues,
+            _observerKey.EventStore,
+            _observerKey.Namespace,
+            _observerKey.EventSequenceId,
+            observerDefinition,
+            _eventSequence,
+            loggerFactory.CreateLogger<Observing>())
+    }.ToImmutableList();
+
+    /// <inheritdoc/>
+    public async Task Unsubscribe()
+    {
+        await PauseJobs();
+        _subscription = ObserverSubscription.Unsubscribed;
+        await TransitionTo<Disconnected>();
+    }
+
+    /// <inheritdoc/>
+    public Task UnsubscribeIfMatchesClient(ConnectionId connectionId)
+    {
+        // Single-threaded grain — the check and the subscription change form an atomic action.
+        // If a new client has already replaced the subscription, the old client's
+        // disconnect cleanup must not tear down the new client's subscription.
+        if (_subscription.IsSubscribed && _subscription.Targets.Count > 0)
+        {
+            var remaining = _subscription.Targets
+                .Where(target => target.ConnectedClient!.ConnectionId != connectionId)
+                .ToArray();
+            if (remaining.Length == _subscription.Targets.Count)
+            {
+                return Task.CompletedTask;
+            }
+
+            if (remaining.Length > 0)
+            {
+                _subscription = _subscription with
+                {
+                    SiloAddress = remaining[0].SiloAddress,
+                    Arguments = remaining[0].ConnectedClient,
+                    Targets = remaining
+                };
+                return Task.CompletedTask;
+            }
+
+            return Unsubscribe();
+        }
+
+        if (_subscription.IsSubscribed &&
+            _subscription.Arguments is ConnectedClient connectedClient &&
+            connectedClient.ConnectionId != connectionId)
+        {
+            return Task.CompletedTask;
+        }
+
+        return Unsubscribe();
+    }
+
+    /// <inheritdoc/>
+    public async Task ReceiveReminder(string reminderName, TickStatus status)
+    {
+        await RemoveReminder(reminderName);
+        if (State.RunningState == ObserverRunningState.Quarantined)
         {
             return;
         }
 
-        if (await TransitionToReplayIfNeeded(automatic))
-        {
-            return;
-        }
-        await ResumeJobs();
-        if (automatic && State.RunningState == ObserverRunningState.Quarantined)
+        if (!_subscription.IsSubscribed)
         {
             return;
         }
 
-        // Recovering failed partitions starts one job per partition through the jobs manager. An observer
-        // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
-        // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
-        // returned: the client timed out, retried, and the observer was recorded as never subscribed.
-        // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards, in
-        // bounded turns of its own that repeated subscribes do not multiply - see Observer.PartitionRecovery.cs.
-        await TryRecoverAllFailedPartitions();
-        await TransitionTo<CatchingUpInFlight>();
+        var partition = failures.State.Partitions.FirstOrDefault(_ => _.Partition.ToString() == reminderName);
+        if (partition is { IsQuarantined: false })
+        {
+            await StartRecoverJobForFailedPartition(partition);
+        }
+    }
+
+    /// <summary>
+    /// Set subscription explicitly, without subscribing. This method is internal and visible to the test suite and only meant to be used with testing.
+    /// </summary>
+    /// <param name="subscription">Subscription to set.</param>
+    internal void SetSubscription(ObserverSubscription subscription)
+    {
+        _subscription = subscription;
+    }
+
+    /// <summary>
+    /// Records, in the observer's metrics, that the observer was quarantined.
+    /// </summary>
+    /// <remarks>
+    /// Entering <see cref="QuarantinedObserver"/> on activation resumes a quarantine that was already counted when it
+    /// began, so that entry is not counted again.
+    /// </remarks>
+    internal void RecordObserverQuarantined()
+    {
+        if (_resumingQuarantine)
+        {
+            _resumingQuarantine = false;
+            return;
+        }
+
+        _metrics?.ObserverQuarantined();
+    }
+
+    /// <summary>
+    /// Removes all reminders for currently failed partitions.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal async Task RemoveFailedPartitionReminders()
+    {
+        foreach (var partition in Failures.Partitions.Select(_ => _.Partition))
+        {
+            await RemoveReminder(partition);
+        }
+    }
+
+    /// <summary>
+    /// Stops all retry jobs for the current observer.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal async Task StopAllRetryFailedPartitionJobs()
+    {
+        var jobs = await _jobsManager.GetAllJobs();
+        var stopTasks = jobs
+            .Where(_ => _.Request is RetryFailedPartitionRequest request && request.ObserverKey == _observerKey)
+            .Select(_ => _jobsManager.Stop(_.Id));
+        await Task.WhenAll(stopTasks);
+    }
+
+    /// <summary>
+    /// Resolves the state to enter on activation. A quarantined observer resumes in <see cref="QuarantinedObserver"/>
+    /// rather than being routed, because <see cref="Routing"/> would send an observer without a subscription to
+    /// <see cref="Disconnected"/> and entering either state replaces the persisted <see cref="ObserverRunningState.Quarantined"/>.
+    /// </summary>
+    /// <returns>The type of the state to enter.</returns>
+    protected override Type ResolveActivationState()
+    {
+        if (State.RunningState != ObserverRunningState.Quarantined)
+        {
+            return base.ResolveActivationState();
+        }
+
+        _resumingQuarantine = true;
+        return typeof(QuarantinedObserver);
+    }
+
+    /// <inheritdoc/>
+    protected override Task OnBeforeEnteringState(IState<ObserverState> state)
+    {
+        if (state is BaseObserverState observerState)
+        {
+            State = State with { RunningState = observerState.RunningState };
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    protected override async Task WriteStateAsync()
+    {
+        if (_stateWritingSuspended) return;
+        await base.WriteStateAsync();
+
+        // Any actual persist carries the observer's current NextEventSequenceNumber, so it flushes whatever
+        // progress-only advance was being debounced. Resetting the counter keeps the debounce window bounded by
+        // the most recent write from any source, not only the progress-only path.
+        _debouncedProgressWrites = 0;
+    }
+
+    static bool FiltersAreEqual(ObserverFilters? left, ObserverFilters? right)
+    {
+        if (left is null || right is null)
+        {
+            return ReferenceEquals(left, right);
+        }
+
+        // ObserverFilters is a record, but its Tags collection makes the generated equality a
+        // reference comparison - two identical registrations from different client instances
+        // would never be considered equal. Compare structurally instead.
+        return left.Tags.ToHashSet().SetEquals(right.Tags) &&
+               Equals(left.EventSourceType, right.EventSourceType) &&
+               Equals(left.EventStreamType, right.EventStreamType);
     }
 
     bool CanFanOutInto<TObserverSubscriber>(IEnumerable<EventType> eventTypes, ObserverFilters? filters)
@@ -853,9 +1093,39 @@ public partial class Observer(
         static bool ShouldPauseJob(JobStatus status) => status is JobStatus.Running or JobStatus.PreparingJob or JobStatus.PreparingSteps or JobStatus.StartingSteps;
     }
 
+    async Task RecoverSubscribedObserver()
+    {
+        if (await TransitionToReplayIfNeeded())
+        {
+            return;
+        }
+
+        await ResumeJobs();
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
+
+        // Failed-partition recovery can exceed the subscription's grain-call budget. Recovery runs in bounded
+        // turns of its own, here and after an operator clears quarantine on an already subscribed observer -
+        // see Observer.PartitionRecovery.cs.
+        await TryRecoverAllFailedPartitions();
+        await TransitionTo<CatchingUpInFlight>();
+    }
+
     async Task ResumeJobs()
     {
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
+
         var unfilteredJobs = await _jobsManager.GetUnfinishedJobs();
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
+
 
         // Explicitly do not resume replay jobs.
         var resumeTasks = unfilteredJobs
@@ -863,7 +1133,9 @@ public partial class Observer(
                           observerJobRequest is not ReplayObserverRequest &&
                           ShouldResumeJob(job.Status) &&
                           observerJobRequest.ObserverKey == _subscription.ObserverKey)
-            .Select(job => _jobsManager.Resume(job.Id));
+            .Select(job => State.RunningState == ObserverRunningState.Quarantined
+                ? Task.CompletedTask
+                : _jobsManager.Resume(job.Id));
         await Task.WhenAll(resumeTasks);
         return;
 
