@@ -9,7 +9,7 @@ public class and_alert_reconciliation_fails : given.all_dependencies
 
     void Establish() => _observerInSecondNamespace.Remove().Returns(Task.FromException(new ObserverAlertsNotReconciled(new(_observerId, _eventStore, _secondNamespace, Concepts.EventSequences.EventSequenceId.Log))));
 
-    async Task Because() => _error = await Catch.Exception(async () => await Remove());
+    async Task Because() => _error = await Catch.Exception(Remove);
 
     [Fact] void should_fail_management() => _error.ShouldBeOfExactType<ObserverAlertsNotReconciled>();
     [Fact] void should_not_delete_jobs_in_any_namespace() => _firstNamespaceJobs.ReceivedCalls().ShouldBeEmpty();

@@ -12,6 +12,9 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
+    /// <summary>
+    /// Identifies the durable wakeup dedicated to alert reconciliation.
+    /// </summary>
     internal const string AlertReminderName = "chronicle-observer-alert-reconciliation";
     readonly SemaphoreSlim _alertMutationLock = new(1, 1);
     readonly SemaphoreSlim _stateWriteLock = new(1, 1);
@@ -28,6 +31,15 @@ public partial class Observer
 
     bool IsRetired => _alertDisposition == AlertDisposition.Retired;
     bool IsRemoving => _alertDisposition == AlertDisposition.Removing;
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _metrics?.Dispose();
+        _alertMutationLock.Dispose();
+        _stateWriteLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
 
     /// <summary>
     /// Coalesces immediate reports into a separate turn, after source persistence and state routing settle.
@@ -49,73 +61,6 @@ public partial class Observer
                 await ReportAlertState();
             }
         });
-    }
-
-    void ChangeAlertState()
-    {
-        _alertRevision++;
-        _alertStateNeedsPersistence = true;
-        ScheduleAlertReport();
-    }
-
-    async Task InitializeAlertState()
-    {
-        _alertLifecycleId = State.AlertLifecycleId;
-        _alertRevision = State.AlertRevision;
-        _alertDisposition = State.AlertDisposition;
-        _quarantineEpisodeId = State.QuarantineEpisodeId;
-        // Retain this reminder even while healthy. Unregistering on an acknowledgment races interleaved recovery.
-        await this.RegisterOrUpdateReminder(AlertReminderName, _minimumRetryReminderPeriod, _minimumRetryReminderPeriod);
-        if (_alertLifecycleId == Guid.Empty)
-        {
-            _alertLifecycleId = Guid.NewGuid();
-            _alertRevision++;
-            await WriteStateAsync();
-        }
-    }
-
-    async Task BeginAlertLifecycle()
-    {
-        await _alertMutationLock.WaitAsync();
-        try
-        {
-            ThrowIfRemoving();
-            _alertLifecycleId = Guid.NewGuid();
-            _alertRevision = 0;
-            _alertDisposition = AlertDisposition.Active;
-            _projectionDefinitionExists = null;
-            ChangeAlertState();
-            await WriteStateAsync();
-        }
-        finally
-        {
-            _alertMutationLock.Release();
-        }
-    }
-
-    void RememberQuarantineEnding(AlertClearedReason reason)
-    {
-        if (_quarantineEpisodeId is { } episode)
-        {
-            _alertEndings[new(episode)] = reason;
-        }
-    }
-
-    void ThrowIfRemoving()
-    {
-        if (IsRemoving || _removed || State.AlertDisposition == AlertDisposition.Removing)
-        {
-            throw new ObserverRemovalInProgress(_observerKey);
-        }
-    }
-
-    async Task ReconcileAlertsIfNeeded()
-    {
-        if (_alertReconciliationPending || Failures.HasFailedPartitions ||
-            (_alertDisposition == AlertDisposition.Active && State.RunningState == ObserverRunningState.Quarantined))
-        {
-            await ReportAlertState();
-        }
     }
 
     /// <summary>
@@ -162,8 +107,14 @@ public partial class Observer
                     var attempts = partition.Attempts.ToArray();
                     var latest = partition.LastAttempt;
                     return new FailedPartitionSnapshot(
-                        partition.Id, partition.Partition.ToString(), attempts.FirstOrDefault()?.Occurred ?? latest.Occurred,
-                        latest.Occurred, attempts.Length, partition.IsQuarantined, latest.Kind, latest.Messages.FirstOrDefault() ?? string.Empty);
+                        partition.Id,
+                        partition.Partition.ToString(),
+                        attempts.FirstOrDefault()?.Occurred ?? latest.Occurred,
+                        latest.Occurred,
+                        attempts.Length,
+                        partition.IsQuarantined,
+                        latest.Kind,
+                        latest.Messages.FirstOrDefault() ?? string.Empty);
                 }).ToArray();
                 snapshot = new(_observerKey, partitions, quarantineDesired, source.AlertDisposition, configuration.MaxRetryAttempts)
                 {
@@ -228,6 +179,74 @@ public partial class Observer
         finally
         {
             _alertReportInProgress = false;
+        }
+    }
+
+    void ChangeAlertState()
+    {
+        _alertRevision++;
+        _alertStateNeedsPersistence = true;
+        ScheduleAlertReport();
+    }
+
+    async Task InitializeAlertState()
+    {
+        _alertLifecycleId = State.AlertLifecycleId;
+        _alertRevision = State.AlertRevision;
+        _alertDisposition = State.AlertDisposition;
+        _quarantineEpisodeId = State.QuarantineEpisodeId;
+
+        // Retain this reminder even while healthy. Unregistering on an acknowledgment races interleaved recovery.
+        await this.RegisterOrUpdateReminder(AlertReminderName, _minimumRetryReminderPeriod, _minimumRetryReminderPeriod);
+        if (_alertLifecycleId == Guid.Empty)
+        {
+            _alertLifecycleId = Guid.NewGuid();
+            _alertRevision++;
+            await WriteStateAsync();
+        }
+    }
+
+    async Task BeginAlertLifecycle()
+    {
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            ThrowIfRemoving();
+            _alertLifecycleId = Guid.NewGuid();
+            _alertRevision = 0;
+            _alertDisposition = AlertDisposition.Active;
+            _projectionDefinitionExists = null;
+            ChangeAlertState();
+            await WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+    }
+
+    void RememberQuarantineEnding(AlertClearedReason reason)
+    {
+        if (_quarantineEpisodeId is { } episode)
+        {
+            _alertEndings[new(episode)] = reason;
+        }
+    }
+
+    void ThrowIfRemoving()
+    {
+        if (IsRemoving || _removed || State.AlertDisposition == AlertDisposition.Removing)
+        {
+            throw new ObserverRemovalInProgress(_observerKey);
+        }
+    }
+
+    async Task ReconcileAlertsIfNeeded()
+    {
+        if (_alertReconciliationPending || Failures.HasFailedPartitions ||
+            (_alertDisposition == AlertDisposition.Active && State.RunningState == ObserverRunningState.Quarantined))
+        {
+            await ReportAlertState();
         }
     }
 

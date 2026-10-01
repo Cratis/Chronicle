@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation.for_Observer;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Observation.for_ObserverRemover.when_removing;

@@ -11,15 +11,15 @@ public enum ObserverAlertReconciliation
     /// <summary>
     /// Every transition currently required by the report is durable.
     /// </summary>
-    Applied,
+    Applied = 0,
 
     /// <summary>
     /// The source no longer authorizes this report.
     /// </summary>
-    Superseded,
+    Superseded = 1,
 
     /// <summary>
     /// Application is incomplete or uncertain; the observer must report again.
     /// </summary>
-    RetryRequired
+    RetryRequired = 2
 }

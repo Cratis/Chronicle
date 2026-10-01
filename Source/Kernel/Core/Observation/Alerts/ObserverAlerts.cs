@@ -40,6 +40,9 @@ public class ObserverAlerts(
     ILogger<ObserverAlerts> logger,
     TimeProvider? timeProvider = null) : Grain, IObserverAlerts
 {
+    /// <summary>
+    /// Limits the append work performed by one reconciliation request.
+    /// </summary>
     internal const int MaximumTransitionsPerReport = 128;
     static readonly TimeSpan _workBudget = TimeSpan.FromSeconds(5);
     static readonly EventType[] _transitionTypes = [typeof(AlertRaised).GetEventType(), typeof(AlertEscalated).GetEventType(), typeof(AlertCleared).GetEventType()];

@@ -11,15 +11,15 @@ public enum AlertDisposition
     /// <summary>
     /// The observer may raise operational incidents.
     /// </summary>
-    Active,
+    Active = 0,
 
     /// <summary>
     /// The observer is retired, even if its operational quarantine is retained.
     /// </summary>
-    Retired,
+    Retired = 1,
 
     /// <summary>
     /// Removal is in progress; subscriptions remain fenced until all cleanup completes.
     /// </summary>
-    Removing
+    Removing = 2
 }

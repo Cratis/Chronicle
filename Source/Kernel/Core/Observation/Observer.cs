@@ -55,7 +55,7 @@ public partial class Observer(
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
-    ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
+    ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable, IDisposable
 {
     ObserverId _observerId = ObserverId.Unspecified;
     ObserverKey _observerKey = ObserverKey.NotSet;
@@ -122,17 +122,24 @@ public partial class Observer(
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        if (_removed)
+        try
         {
-            await base.OnDeactivateAsync(reason, cancellationToken);
-            return;
-        }
+            if (_removed)
+            {
+                await base.OnDeactivateAsync(reason, cancellationToken);
+                return;
+            }
 
-        await FlushDebouncedProgressState();
-        if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
+            await FlushDebouncedProgressState();
+            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
+            {
+                await TransitionTo<Disconnected>();
+                await base.OnDeactivateAsync(reason, cancellationToken);
+            }
+        }
+        finally
         {
-            await TransitionTo<Disconnected>();
-            await base.OnDeactivateAsync(reason, cancellationToken);
+            Dispose();
         }
     }
 
@@ -658,6 +665,7 @@ public partial class Observer(
         try
         {
             if (_removed || _stateWritingSuspended) return;
+
             // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
             // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
             State = State with

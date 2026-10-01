@@ -219,13 +219,13 @@ internal sealed class ChronicleServerStartupTask(
         }
     }
 
-    internal async Task BootstrapObserverAlerts(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
+    async Task BootstrapObserverAlerts(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
     {
         var eventStoreStorage = storage.GetEventStore(eventStore);
         var definitions = (await eventStoreStorage.Observers.GetAll()).ToDictionary(_ => _.Identifier);
         var states = await eventStoreStorage.GetNamespace(namespaceName).Observers.GetAll();
-        var alreadyRehydrated = (await eventStoreStorage.Reducers.GetAll()).Select(_ => _.Identifier)
-            .Concat((await eventStoreStorage.Reactors.GetAll()).Select(_ => _.Identifier)).ToHashSet();
+        var alreadyRehydrated = (await eventStoreStorage.Reducers.GetAll()).Select(_ => (ObserverId)_.Identifier.Value)
+            .Concat((await eventStoreStorage.Reactors.GetAll()).Select(_ => (ObserverId)_.Identifier.Value)).ToHashSet();
         foreach (var state in states.Where(_ => !alreadyRehydrated.Contains(_.Identifier)))
         {
             if (!definitions.TryGetValue(state.Identifier, out var definition))

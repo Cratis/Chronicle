@@ -9,7 +9,7 @@ public class and_cleanup_fails_after_alerts_are_cleared : given.all_dependencies
 
     void Establish() => _observerDefinitions.Delete(_observerId).Returns(Task.FromException(new InvalidOperationException("Shared cleanup failed")));
 
-    async Task Because() => _error = await Catch.Exception(async () => await Remove());
+    async Task Because() => _error = await Catch.Exception(Remove);
 
     [Fact] void should_propagate_the_failure() => _error.ShouldNotBeNull();
     [Fact] async Task should_have_applied_the_first_namespace_removal() => await _observerInFirstNamespace.Received(1).Remove();

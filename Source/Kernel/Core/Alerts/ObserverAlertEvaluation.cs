@@ -28,6 +28,11 @@ public record ObserverAlertEvaluation(IReadOnlyList<object> Transitions, DateTim
         return result.Values.ToArray();
     }
 
+    /// <summary>
+    /// Folds one durable transition into the incident index without copying its existing contents.
+    /// </summary>
+    /// <param name="transition">The durable alert transition.</param>
+    /// <param name="incidents">The open incident index to update.</param>
     internal static void Apply(object transition, IDictionary<IncidentId, OpenIncident> incidents)
     {
         switch (transition)

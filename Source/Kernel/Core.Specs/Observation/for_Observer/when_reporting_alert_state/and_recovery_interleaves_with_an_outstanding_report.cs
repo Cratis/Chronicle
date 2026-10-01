@@ -27,7 +27,7 @@ public class and_recovery_interleaves_with_an_outstanding_report : given.an_obse
     async Task Because()
     {
         var report = ReportAlerts();
-        _original = await _started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        _original = await _started.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         await _observer.FailedPartitionRecovered("partition", 12UL);
         _response.SetResult(new(_original.LifecycleId, _original.Revision, ObserverAlertReconciliation.Applied));
         _oldApplied = await report;

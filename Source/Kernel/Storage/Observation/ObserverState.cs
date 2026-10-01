@@ -39,6 +39,23 @@ public record ObserverState(
     readonly EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ObserverState"/> class.
+    /// </summary>
+    public ObserverState()
+        : this(
+              ObserverId.Unspecified,
+              EventSequenceNumber.Unavailable,
+              ObserverRunningState.Unknown,
+              new HashSet<Key>(),
+              new HashSet<Key>(),
+              [],
+              FailedPartitionCount.Zero,
+              false,
+              false)
+    {
+    }
+
+    /// <summary>
     /// Gets the source-owned lifecycle token, replaced on subscription but not activation.
     /// </summary>
     public Guid AlertLifecycleId { get; init; }
@@ -57,23 +74,6 @@ public record ObserverState(
     /// Gets the current quarantine episode identity, or null outside quarantine.
     /// </summary>
     public Guid? QuarantineEpisodeId { get; init; }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverState"/> class.
-    /// </summary>
-    public ObserverState()
-        : this(
-              ObserverId.Unspecified,
-              EventSequenceNumber.Unavailable,
-              ObserverRunningState.Unknown,
-              new HashSet<Key>(),
-              new HashSet<Key>(),
-              [],
-              FailedPartitionCount.Zero,
-              false,
-              false)
-    {
-    }
 
     /// <summary>
     /// Gets or inits the next <see cref="EventSequenceNumber"/> that the observer is expecting to be handling.

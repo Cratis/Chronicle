@@ -80,7 +80,7 @@ public class an_alert_tracker : Specification
             _lastScope = call.Arg<ConcurrencyScope>();
             _appends.Add(_serialized);
             RecordDurable(_serialized);
-            return AppendResult.Success(CorrelationId.NotSet, _history.Last().Context.SequenceNumber);
+            return AppendResult.Success(CorrelationId.NotSet, _history[^1].Context.SequenceNumber);
         });
         var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
         options.CurrentValue.Returns(new ChronicleOptions());
@@ -138,7 +138,7 @@ public class an_alert_tracker : Specification
 
     protected void RecordDurable(object transition)
     {
-        var sequence = _history.Count == 0 ? EventSequenceNumber.First : _history.Last().Context.SequenceNumber.Next();
+        var sequence = _history.Count == 0 ? EventSequenceNumber.First : _history[^1].Context.SequenceNumber.Next();
         var appended = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(transition.GetType().GetEventType(), sequence);
         _transitions[sequence] = transition;
         _history.Add(appended);

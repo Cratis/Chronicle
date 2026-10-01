@@ -216,9 +216,10 @@ public partial class Observer
     /// <summary>
     /// Forgets every failed partition, in memory and in storage, along with the reminders retrying them.
     /// </summary>
+    /// <param name="reason">The ending reason to retain for each discarded episode.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// The failed partition count is reset in the observer state, which the caller is responsible for writing.
+    /// The updated observer state and failed partitions are both persisted before returning.
     /// </remarks>
     async Task DiscardFailedPartitions(AlertClearedReason reason)
     {
