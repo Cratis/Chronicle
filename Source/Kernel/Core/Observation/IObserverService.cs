@@ -40,6 +40,13 @@ public interface IObserverService : IGrainService
     Task<bool> TryFinalizeReplayFor(ObserverDetails observerDetails);
 
     /// <summary>
+    /// Write everything this silo holds back for a replay of a specific observer, without ending the replay.
+    /// </summary>
+    /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
+    /// <returns>Whether everything held back was written without failed partitions.</returns>
+    Task<bool> FlushReplayFor(ObserverDetails observerDetails);
+
+    /// <summary>
     /// Begin replay for a specific partition of an observer.
     /// </summary>
     /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
