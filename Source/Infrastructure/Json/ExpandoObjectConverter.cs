@@ -140,7 +140,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         {
             return ToJsonObject(
                 expando,
-                schemaProperty.IsArray ? schemaProperty.Item!.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
+                schemaProperty.IsArray ? schemaProperty.Item! : schemaProperty);
         }
 
         // A coarse [PII] value on a whole list/array is blob-encrypted to a single ciphertext string,
@@ -155,7 +155,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         if (schemaProperty.Type.HasFlag(JsonObjectType.Array) && value is IEnumerable enumerable)
         {
             var items = new List<JsonNode?>();
-            var itemSchema = schemaProperty.Item?.Reference ?? schemaProperty.Item;
+            var itemSchema = schemaProperty.Item;
             foreach (var item in enumerable)
             {
                 items.Add(itemSchema is not null
@@ -215,7 +215,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
             return ToExpandoObject(
                 childObject,
-                schemaProperty.IsArray ? schemaProperty.Item!.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
+                schemaProperty.IsArray ? schemaProperty.Item! : schemaProperty);
         }
 
         if (jsonNode is JsonArray array)

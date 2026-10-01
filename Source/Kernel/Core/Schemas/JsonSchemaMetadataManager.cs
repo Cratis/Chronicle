@@ -178,7 +178,7 @@ public class JsonSchemaMetadataManager(
         string path = "",
         bool erasedValuesBecomePlaceholders = false)
     {
-        var metadataForContainer = MetadataAcrossCategories(schema).ToArray();
+        var metadataForContainer = MetadataAcrossCategories(schema).Concat(MetadataAcrossCategories(schema.ActualTypeSchema)).ToArray();
         foreach (var (property, value) in json.ToArray())
         {
             if (schema.Properties is not null && value is not null)
@@ -248,14 +248,14 @@ public class JsonSchemaMetadataManager(
                     // property under them for a marker to sit on. Descending would report every one of them as drift
                     // and fail a document that matches its schema. Only the descent is skipped — a value marked
                     // [PII] or [Encrypted] is still handled as a whole above, like any other container.
-                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath, erasedValuesBecomePlaceholders);
+                    await HandleActionFor(propertySchema, identifier, jsonObjectValue, actionName, action, propertyPath, erasedValuesBecomePlaceholders);
                 }
                 else if (!handlerApplied && value is JsonArray jsonArrayValue)
                 {
                     // The property itself was not encrypted as a whole, so descend into the array and handle
                     // schema metadata that lives on the element type — a [PII]/[Encrypted] scalar concept (e.g.
                     // IReadOnlyList<Email>) or a member marked that way inside element objects.
-                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath, erasedValuesBecomePlaceholders);
+                    await HandleActionForArray(propertySchema, identifier, jsonArrayValue, actionName, action, propertyPath, erasedValuesBecomePlaceholders);
                 }
             }
         }
@@ -270,13 +270,13 @@ public class JsonSchemaMetadataManager(
         string path,
         bool erasedValuesBecomePlaceholders)
     {
-        var itemSchema = arraySchema.Item?.ActualSchema;
+        var itemSchema = arraySchema.Item ?? arraySchema.ActualTypeSchema.Item;
         if (itemSchema is null)
         {
             return;
         }
 
-        var itemMetadata = MetadataAcrossCategories(itemSchema).ToArray();
+        var itemMetadata = MetadataAcrossCategories(itemSchema).Concat(MetadataAcrossCategories(itemSchema.ActualTypeSchema)).ToArray();
         for (var i = 0; i < array.Count; i++)
         {
             var element = array[i];

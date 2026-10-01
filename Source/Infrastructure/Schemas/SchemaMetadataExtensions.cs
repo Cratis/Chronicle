@@ -162,68 +162,48 @@ public static class SchemaMetadataExtensions
         // Same traversal shape and termination guards as HasSchemaMetadata(JsonSchema, string, HashSet, int)
         // below - see its remarks - but this walk has to read and test each entry's metadata type rather than
         // stop at "the key exists", so it cannot share that method's cheap ContainsKey check or its cache.
-        var actual = schema.ActualSchema;
-        if (depth > MaxSchemaMetadataTraversalDepth || !visited.Add(actual))
+        if (depth > MaxSchemaMetadataTraversalDepth || !visited.Add(schema))
         {
             return false;
         }
 
-        var hasMatch = actual.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType));
-
-        if (!hasMatch && actual.Properties.Count > 0)
-        {
-            foreach (var property in actual.GetFlattenedProperties())
-            {
-                hasMatch = HasMatchingSchemaMetadata(property, category, predicate, visited, depth + 1);
-                if (hasMatch) break;
-            }
-        }
-
-        if (!hasMatch && actual.Item is not null)
-        {
-            hasMatch = HasMatchingSchemaMetadata(actual.Item, category, predicate, visited, depth + 1);
-        }
-
-        return hasMatch;
+        return schema.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType)) ||
+            NestedSchemas(schema).Any(child => HasMatchingSchemaMetadata(child, category, predicate, visited, depth + 1));
     }
 
     static bool HasSchemaMetadata(JsonSchema schema, string key, HashSet<JsonSchema> visited, int depth)
     {
-        // Walking a schema graph to look for metadata has to contend with recursive read models (e.g. a child
-        // collection of the model's own type). Two termination guards:
-        //   1. A visited set keyed on the resolved ActualSchema, which recognises a cycle whenever
-        //      references resolve back to one shared definition object.
-        //   2. A depth bound, because NJsonSchema does not guarantee a stable identity for schemas
-        //      reached through $ref/Item — its accessors can hand back a fresh wrapper on each
-        //      access, so (1) alone is not enough for every shape. The bound guarantees termination
-        //      regardless of identity, and does not cause false negatives: schema metadata is
-        //      shallow, so anything real is found long before this depth.
-        var actual = schema.ActualSchema;
-        if (depth > MaxSchemaMetadataTraversalDepth || !visited.Add(actual))
+        // References can create fresh wrappers at each level. At the depth limit protection is unknown,
+        // not absent: keep the compliance walk enabled rather than allowing unexamined plaintext through.
+        if (depth > MaxSchemaMetadataTraversalDepth)
+        {
+            return true;
+        }
+        if (!visited.Add(schema))
         {
             return false;
         }
 
-        var hasMetadata = actual.ExtensionData?.ContainsKey(key) ?? false;
+        return (schema.ExtensionData?.ContainsKey(key) ?? false) ||
+            NestedSchemas(schema).Any(child => HasSchemaMetadata(child, key, visited, depth + 1));
+    }
 
-        if (!hasMetadata && actual.Properties.Count > 0)
+    static IEnumerable<JsonSchema> NestedSchemas(JsonSchema schema)
+    {
+        // Resolving ActualTypeSchema first loses metadata on the wrapper, its local properties, or another
+        // allOf member. Inspect the whole graph, including array items and nullable alternatives.
+        foreach (var child in schema.Properties.Values.Cast<JsonSchema>().Concat(schema.AllOf).Concat(schema.AnyOf).Concat(schema.OneOf))
         {
-            foreach (var property in actual.GetFlattenedProperties())
-            {
-                hasMetadata = HasSchemaMetadata(property, key, visited, depth + 1);
-                if (hasMetadata) break;
-            }
+            yield return child;
         }
-
-        // Metadata can live on an array's element type — e.g. IReadOnlyList<Email> where Email is a [PII]
-        // concept, or a list of objects carrying [PII]/[Encrypted] members. Without descending into the item
-        // schema, list-valued metadata is missed entirely and stored in the clear.
-        if (!hasMetadata && actual.Item is not null)
+        if (schema.Reference is { } reference)
         {
-            hasMetadata = HasSchemaMetadata(actual.Item, key, visited, depth + 1);
+            yield return reference;
         }
-
-        return hasMetadata;
+        if (schema.Item is { } item)
+        {
+            yield return item;
+        }
     }
 
     static void ConvertIfNeeded(JsonSchema schema, string key)

@@ -893,25 +893,34 @@ public class JsonSchema
     List<JsonSchemaProperty> BuildFlattenedProperties()
     {
         var properties = new List<JsonSchemaProperty>();
-        CollectPropertiesInto(properties);
+        CollectPropertiesInto(properties, []);
         return properties;
     }
 
-    void CollectPropertiesInto(List<JsonSchemaProperty> properties)
+    void CollectPropertiesInto(List<JsonSchemaProperty> properties, HashSet<string> references)
     {
-        // Direct properties on this schema.
         properties.AddRange(Properties.Values);
 
-        // Traverse allOf schemas (handles both inheritance refs and inline property groups).
+        // Keep local properties and every allOf member even when this schema also carries a reference.
+        // Track references on this path so a recursive definition cannot recurse forever while flattening.
+        if (Node["$ref"]?.GetValue<string>() is { } reference && references.Add(reference))
+        {
+            Reference?.CollectPropertiesInto(properties, references);
+            references.Remove(reference);
+        }
+
         foreach (var allOfSchema in AllOf)
         {
-            if (allOfSchema.HasReference)
+            allOfSchema.CollectPropertiesInto(properties, references);
+        }
+
+        // Preserve the existing nullable-object union resolution without narrowing allOf compositions.
+        if (!HasReference && Properties.Count == 0 && AllOf.Count == 0 && AnyOf.Count > 0)
+        {
+            var actual = ActualTypeSchema;
+            if (!ReferenceEquals(actual, this))
             {
-                allOfSchema.Reference?.CollectPropertiesInto(properties);
-            }
-            else
-            {
-                allOfSchema.CollectPropertiesInto(properties);
+                actual.CollectPropertiesInto(properties, references);
             }
         }
     }
