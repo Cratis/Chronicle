@@ -50,7 +50,7 @@ Only the in-process and out-of-process fixtures are documented here; the others 
 
 ### Matching versions
 
-Chronicle and Arc have independent release numbers. Match `Cratis.Chronicle.Testing` to your Chronicle client release; its NuGet dependency list identifies the Arc version that release targets. For example, Chronicle.Testing 19.26.0 targets Arc 22.30.0; the updated Chronicle.Testing package targets Arc 22.41.2. A `Cratis` meta-package release can target an earlier Chronicle client, so its version alone does not identify a matching Chronicle.Testing package.
+Chronicle and Arc have independent release numbers. Match `Cratis.Chronicle.Testing` to your Chronicle client release; its NuGet dependency list identifies the Arc version that release targets. For example, in the Chronicle.Testing 19.26.x version line, 19.26.0 targets Arc 22.30.0. Check each release's dependency list rather than assuming all releases in that line target the same Arc version. A `Cratis` meta-package release can target an earlier Chronicle client, so its version alone does not identify a matching Chronicle.Testing package.
 
 To use a newer compatible Arc 22.x release with an older Chronicle.Testing release, pin both `Cratis.Arc` and `Cratis.Arc.Core` to the same version in `Directory.Packages.props` and reference them directly in the test project. Alternatively, enable `CentralPackageTransitivePinningEnabled` in that file to apply the central pins to transitive dependencies. Align any other Arc runtime packages your application uses with that version. Do not downgrade below Chronicle.Testing's declared dependencies; verify your scenarios after overriding them.
 
