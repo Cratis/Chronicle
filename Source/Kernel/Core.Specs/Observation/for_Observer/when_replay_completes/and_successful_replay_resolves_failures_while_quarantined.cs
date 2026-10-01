@@ -26,9 +26,11 @@ public class and_successful_replay_resolves_failures_while_quarantined : given.a
 
     async Task Because()
     {
-        await _observer.ReplayedSuccessfullySince(42UL,
+        await _observer.ReplayedSuccessfullySince(
+            42UL,
             new Dictionary<Key, EventSequenceNumber> { [_recoveredPartition] = 42UL, [_excludedPartition] = 42UL },
-            [_eventType], DateTimeOffset.UtcNow.AddMinutes(1));
+            [_eventType],
+            DateTimeOffset.UtcNow.AddMinutes(1));
         await RunWatchdogTicks();
     }
 
