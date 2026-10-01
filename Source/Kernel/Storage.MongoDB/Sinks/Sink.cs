@@ -353,20 +353,27 @@ public class Sink(
     /// <inheritdoc/>
     public async Task<IEnumerable<FailedPartition>> EndBulk()
     {
-        var failedPartitions = await ExecuteBulk();
-        lock (_bulkLock)
+        // Bulk mode ends whatever the final flush does: a sink left in bulk mode would hold every later
+        // write back until a thousand of them had queued up.
+        try
         {
-            _isBulkMode = false;
-            _bulkOperations.Clear();
-            _bulkOperationMetadata.Clear();
-            _currentBulkSize = 0;
+            return await ExecuteBulk();
         }
+        finally
+        {
+            lock (_bulkLock)
+            {
+                _isBulkMode = false;
+                _bulkOperations.Clear();
+                _bulkOperationMetadata.Clear();
+                _currentBulkSize = 0;
+            }
 
-        _bulkStateCache.Clear();
-        _bulkKeysByCacheKey.Clear();
-        _bulkWatermarks.Clear();
-        _bulkPendingDeletes.Clear();
-        return failedPartitions;
+            _bulkStateCache.Clear();
+            _bulkKeysByCacheKey.Clear();
+            _bulkWatermarks.Clear();
+            _bulkPendingDeletes.Clear();
+        }
     }
 
     /// <inheritdoc/>
@@ -395,12 +402,36 @@ public class Sink(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Ending a replay always takes the sink out of replay mode. The sink is cached and shared by every later write on
+    /// this silo, so one left in replay mode would keep sending live changes to the replay collection, which nothing
+    /// reads, until the process restarts.
+    /// <para>
+    /// Partitions that failed in the final flush do not hold back the promotion. They are returned so the observer
+    /// records them and retries them from the event that failed - against the promoted collection, which holds every
+    /// earlier event for the partition. Not promoting would leave the observer continuing from the end of the replay
+    /// on top of the collection as it was before the replay began; another silo ending the same replay without
+    /// failures would promote it regardless. Only a final flush that throws, leaving the outcome unknown and nothing
+    /// recorded, abandons the rebuilt collection instead.
+    /// </para>
+    /// </remarks>
     public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
-        var failedPartitions = (await EndBulk()).ToArray();
+        FailedPartition[] failedPartitions;
+        try
+        {
+            failedPartitions = (await EndBulk()).ToArray();
+        }
+        catch
+        {
+            logger.AbandoningReplayAfterFailedFlush(readModel.Identifier);
+            collections.AbandonReplay();
+            throw;
+        }
+
         if (failedPartitions.Length > 0)
         {
-            return failedPartitions;
+            logger.EndingReplayWithFailedPartitions(readModel.Identifier, failedPartitions.Length);
         }
 
         await collections.EndReplay(context);
