@@ -4,7 +4,16 @@ name: Verify Semver Label
 # labels are accepted and what the errors say - lives in
 # Cratis/Workflows/.github/workflows/verify-release-intent.yml. Thirty diverging
 # per-repository copies of that logic are how the 2026-08-25 unintended releases
-# happened; do not reintroduce logic here.
+# happened; do not reintroduce logic here. Installed and kept current by
+# Cratis/Workflows' bootstrap-common-workflows.
+#
+# A Dependabot pull request first has its labels corrected: Dependabot adds major,
+# minor or patch on its own, and a Dependabot pull request only ever carries
+# no-release. The gate then reads the labels as they are now, so it sees the
+# correction although a label change made with GITHUB_TOKEN starts no new run.
+#
+# The job is named release-intent so the check reads `release-intent / verify` and
+# does not collide with `verify / verify` from verify-no-work-records.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -12,9 +21,9 @@ concurrency:
 on:
   pull_request:
     types: [opened, reopened, synchronize, labeled, unlabeled]
-    # Scoped to the same base branch Publish releases from. A pull request stacked onto another one's
-    # branch cannot cut a release, so demanding a version label of it would be asking which version a
-    # merge that publishes nothing should carry.
+    # Scoped to the same branch Publish releases from. A pull request stacked onto another one's branch cannot
+    # cut a release, so demanding a version label of it would be asking which version a merge that publishes
+    # nothing should carry.
     branches:
       - main
 
@@ -22,5 +31,17 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  dependabot-labels:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    uses: Cratis/Workflows/.github/workflows/normalize-dependabot-labels.yml@main
+    permissions:
+      pull-requests: write
+
+  release-intent:
+    needs: dependabot-labels
+    # Also after a failed or skipped correction: the gate then reports the labels as they are.
+    if: ${{ !cancelled() }}
     uses: Cratis/Workflows/.github/workflows/verify-release-intent.yml@main
+    permissions:
+      contents: read
+      pull-requests: read
