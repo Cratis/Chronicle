@@ -13,6 +13,8 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -33,14 +35,40 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="changesetConverter">Provider for <see cref="IChangesetConverter"/> for converting changesets.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
 /// <param name="changeStreams"><see cref="IReadModelChangeStreams"/> for observing the collections of the read model.</param>
+/// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
 public class Sink(
     ReadModelDefinition readModel,
     IMongoDBConverter converter,
     ISinkCollections collections,
     IChangesetConverter changesetConverter,
     IExpandoObjectConverter expandoObjectConverter,
-    IReadModelChangeStreams changeStreams) : ISink
+    IReadModelChangeStreams changeStreams,
+    ILogger<Sink> logger) : ISink
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Sink"/> class without a logger.
+    /// </summary>
+    /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
+    /// <param name="converter"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
+    /// <param name="collections">Provider for <see cref="ISinkCollections"/> to use.</param>
+    /// <param name="changesetConverter">Provider for <see cref="IChangesetConverter"/> for converting changesets.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+    /// <param name="changeStreams"><see cref="IReadModelChangeStreams"/> for observing the collections of the read model.</param>
+    /// <remarks>
+    /// Retained so a caller written against the previous constructor keeps compiling; it forgoes the diagnostics
+    /// naming the MongoDB errors behind a failed bulk write.
+    /// </remarks>
+    public Sink(
+        ReadModelDefinition readModel,
+        IMongoDBConverter converter,
+        ISinkCollections collections,
+        IChangesetConverter changesetConverter,
+        IExpandoObjectConverter expandoObjectConverter,
+        IReadModelChangeStreams changeStreams)
+        : this(readModel, converter, collections, changesetConverter, expandoObjectConverter, changeStreams, NullLogger<Sink>.Instance)
+    {
+    }
+
     const int MaxBulkOperations = 1000;
 
     /// <summary>
@@ -663,7 +691,7 @@ public class Sink(
             _currentBulkSize = 0;
         }
 
-        var failedPartitions = new Dictionary<Key, EventSequenceNumber>();
+        var failedPartitions = new Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)>();
         try
         {
             var remainingIndexes = Enumerable.Range(0, snapshot.Count).ToList();
@@ -677,6 +705,8 @@ public class Sink(
                 }
                 catch (MongoBulkWriteException<BsonDocument> ex)
                 {
+                    var reasons = ReportBulkWriteErrors(ex, remainingIndexes, metadataSnapshot);
+
                     // ProcessedRequests includes the failed request, not just the successful writes.
                     // An ordered write can resume only when it identifies an exact processed prefix and
                     // an unprocessed suffix. A write concern error leaves the outcome uncertain.
@@ -689,12 +719,12 @@ public class Sink(
                         !ex.Result.ProcessedRequests.SequenceEqual(remaining.Take(ex.Result.ProcessedRequests.Count)) ||
                         !ex.UnprocessedRequests.SequenceEqual(remaining.Skip(ex.Result.ProcessedRequests.Count)))
                     {
-                        AddFailedPartitions(remainingIndexes, metadataSnapshot, failedPartitions);
+                        AddFailedPartitions(remainingIndexes, metadataSnapshot, failedPartitions, reasons);
                         break;
                     }
 
                     var failedOffset = ex.WriteErrors[0].Index;
-                    AddFailedPartitions([remainingIndexes[failedOffset]], metadataSnapshot, failedPartitions);
+                    AddFailedPartitions([remainingIndexes[failedOffset]], metadataSnapshot, failedPartitions, reasons);
 
                     // The observer will replay a failed partition from its earliest failed sequence number.
                     // Do not write any later changes for that partition ahead of the replayed change.
@@ -703,14 +733,17 @@ public class Sink(
                             !failedPartitions.ContainsKey(metadata.EventSourceId))
                         .ToList();
                 }
-                catch (MongoBulkWriteException)
+                catch (MongoBulkWriteException ex)
                 {
-                    AddFailedPartitions(remainingIndexes, metadataSnapshot, failedPartitions);
+                    var reasons = ReportBulkWriteErrors(ex, remainingIndexes, metadataSnapshot);
+                    AddFailedPartitions(remainingIndexes, metadataSnapshot, failedPartitions, reasons);
                     break;
                 }
             }
 
-            return failedPartitions.Select(partition => new FailedPartition(partition.Key, partition.Value)).ToArray();
+            return failedPartitions
+                .Select(partition => new FailedPartition(partition.Key, partition.Value.SequenceNumber) { Reason = partition.Value.Reason })
+                .ToArray();
         }
         finally
         {
@@ -724,17 +757,64 @@ public class Sink(
     static void AddFailedPartitions(
         IEnumerable<int> indexes,
         Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata,
-        Dictionary<Key, EventSequenceNumber> failedPartitions)
+        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> failedPartitions,
+        BulkWriteFailureReasons reasons)
     {
         foreach (var index in indexes)
         {
             if (metadata.TryGetValue(index, out var operationMetadata) &&
                 (!failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var earliest) ||
-                    operationMetadata.SequenceNumber.Value < earliest.Value))
+                    operationMetadata.SequenceNumber.Value < earliest.SequenceNumber.Value))
             {
-                failedPartitions[operationMetadata.EventSourceId] = operationMetadata.SequenceNumber;
+                failedPartitions[operationMetadata.EventSourceId] = (operationMetadata.SequenceNumber, reasons.For(index));
             }
         }
+    }
+
+    /// <summary>
+    /// Logs every error a bulk write reported and describes them so they can travel with the failed partitions.
+    /// </summary>
+    /// <param name="exception">The <see cref="MongoBulkWriteException"/> the write raised.</param>
+    /// <param name="remainingIndexes">Indexes into the flushed batch of the operations that were sent, in the order they were sent.</param>
+    /// <param name="metadata">The partition and event sequence number for each operation in the flushed batch.</param>
+    /// <returns>The <see cref="BulkWriteFailureReasons"/> for the write.</returns>
+    /// <remarks>
+    /// Only codes and the server's messages are used. The error details document and the exception itself are left
+    /// out, because both can echo the document being written.
+    /// </remarks>
+    BulkWriteFailureReasons ReportBulkWriteErrors(
+        MongoBulkWriteException exception,
+        List<int> remainingIndexes,
+        Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata)
+    {
+        var collection = collections.GetCollection().CollectionNamespace?.CollectionName ?? readModel.ContainerName.Value;
+        var byOperation = new Dictionary<int, string>();
+        var first = string.Empty;
+
+        foreach (var error in exception.WriteErrors)
+        {
+            var operationIndex = error.Index >= 0 && error.Index < remainingIndexes.Count ? remainingIndexes[error.Index] : -1;
+            var partition = metadata.TryGetValue(operationIndex, out var operation) ? operation.EventSourceId.Value.ToString() ?? string.Empty : string.Empty;
+            logger.BulkWriteErrorOccurred(collection, readModel.Identifier, partition, operationIndex, error.Code, error.Category, error.Message);
+
+            var reason = $"MongoDB write error {error.Code} ({error.Category}): {error.Message}";
+            byOperation.TryAdd(operationIndex, reason);
+            if (first.Length == 0)
+            {
+                first = reason;
+            }
+        }
+
+        if (exception.WriteConcernError is { } writeConcernError)
+        {
+            logger.BulkWriteConcernErrorOccurred(collection, readModel.Identifier, writeConcernError.Code, writeConcernError.CodeName, writeConcernError.Message, remainingIndexes.Count);
+            if (first.Length == 0)
+            {
+                first = $"MongoDB write concern error {writeConcernError.Code} ({writeConcernError.CodeName}): {writeConcernError.Message}";
+            }
+        }
+
+        return new(byOperation, first);
     }
 
     bool TryFindValueInDocument(ExpandoObject document, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue)
@@ -817,6 +897,17 @@ public class Sink(
     }
 
     IMongoCollection<BsonDocument> Collection => collections.GetCollection();
+
+    /// <summary>
+    /// The reasons a bulk write failed: the error for each operation the server rejected, and the first error
+    /// reported, which stands in for operations that were not written because of it.
+    /// </summary>
+    /// <param name="ByOperation">The reason for each rejected operation, by its index in the flushed batch.</param>
+    /// <param name="First">The first error the write reported.</param>
+    sealed record BulkWriteFailureReasons(IReadOnlyDictionary<int, string> ByOperation, string First)
+    {
+        public string For(int operationIndex) => ByOperation.TryGetValue(operationIndex, out var reason) ? reason : First;
+    }
 
     sealed record CollectionState(bool PromotingExists, bool PrimaryExists, BsonValue? PrimaryId)
     {

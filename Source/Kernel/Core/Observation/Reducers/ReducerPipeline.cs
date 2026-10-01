@@ -123,7 +123,8 @@ public class ReducerPipeline(
             if (failedPartitions.Any())
             {
                 var firstFailure = failedPartitions.First();
-                throw new InvalidOperationException($"Bulk operation failed for partition {firstFailure.EventSourceId} at sequence number {firstFailure.EventSequenceNumber}");
+                var reason = string.IsNullOrEmpty(firstFailure.Reason) ? string.Empty : $": {firstFailure.Reason}";
+                throw new InvalidOperationException($"Bulk operation failed for partition {firstFailure.EventSourceId} at sequence number {firstFailure.EventSequenceNumber}{reason}");
             }
         }
     }

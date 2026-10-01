@@ -194,7 +194,7 @@ public class ProjectionObserverSubscriber(
                         await observer.PartitionFailed(
                             failedPartition.EventSourceId,
                             failedPartition.EventSequenceNumber,
-                            [$"Bulk operation failed for partition {failedPartition.EventSourceId}"],
+                            [ProjectionBulkFailures.MessageFor(failedPartition)],
                             string.Empty,
                             FailureKind.Handling);
                     }
