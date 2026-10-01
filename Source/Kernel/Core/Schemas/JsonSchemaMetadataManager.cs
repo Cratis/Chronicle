@@ -88,7 +88,7 @@ public class JsonSchemaMetadataManager(
         // even though its schema type stays array (a collection) or object (a value object). Releasing it
         // decrypts back to the original JSON text; re-parse that text into the container the schema expects so
         // the read model round-trips into its collection or value-object type rather than a raw string (which
-        // fails to deserialize). A scalar decrypts to a plain string and is left untouched.
+        // fails to deserialize). Plain string values remain untouched.
         var isContainer = propertySchema.IsArray || propertySchema.Type.HasFlag(JsonObjectType.Object);
         if (isContainer &&
             released is JsonValue releasedValue &&
@@ -103,6 +103,35 @@ public class JsonSchemaMetadataManager(
             }
 
             return JsonNode.Parse(releasedText) ?? released;
+        }
+
+        if (released is JsonValue scalarValue && scalarValue.TryGetValue<string>(out var scalarText))
+        {
+            var actualSchema = propertySchema.ActualTypeSchema;
+
+            // Formatted CLR values (Guid, dates, byte arrays) stringify as quoted JSON, unlike a
+            // JsonValue<string>. Remove that JSON quoting without unquoting ordinary personal text.
+            var targetType = propertySchema.GetTargetTypeForSchema(_typeFormats);
+            if (actualSchema.Type.HasFlag(JsonObjectType.String) && targetType is not null && targetType != typeof(string) && scalarText.StartsWith('"'))
+            {
+                return JsonNode.Parse(scalarText);
+            }
+
+            var enumIndex = actualSchema.EnumerationNames.IndexOf(scalarText);
+            if (actualSchema.Type.HasFlag(JsonObjectType.Integer) && enumIndex >= 0 && enumIndex < actualSchema.Enumeration.Count)
+            {
+                return JsonSerializer.SerializeToNode(actualSchema.Enumeration.ToArray()[enumIndex]);
+            }
+
+            // Encryption stores the textual value, not its JSON token kind. Restore numbers and flags
+            // using the declared schema; parsing plain strings would turn names like "42" into numbers.
+            // Parsing directly also preserves decimal precision rather than rounding through a double.
+            if (actualSchema.Type.HasFlag(JsonObjectType.Integer) ||
+                actualSchema.Type.HasFlag(JsonObjectType.Number) ||
+                actualSchema.Type.HasFlag(JsonObjectType.Boolean))
+            {
+                return JsonNode.Parse(scalarText);
+            }
         }
 
         return released;
