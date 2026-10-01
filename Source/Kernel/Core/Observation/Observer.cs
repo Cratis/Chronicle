@@ -221,13 +221,18 @@ public partial class Observer(
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
+        // KeepAlive activations can survive a storage reset. Reload for both explicit subscriptions and
+        // automatic reconciliation, but do not let a stale storage snapshot overwrite an interleaved quarantine.
+        await ReadStateAsync();
+        await observerDefinition.ReadStateAsync();
+        await failures.ReadStateAsync();
+        if (await GetCurrentState() is QuarantinedObserver)
+        {
+            State = State with { RunningState = ObserverRunningState.Quarantined };
+        }
+
         if (!automatic)
         {
-            // Explicit subscriptions can reconnect after storage has been reset. Automatic reconciliation instead
-            // uses the activation-owned state: reloading a snapshot could overwrite an interleaved quarantine.
-            await ReadStateAsync();
-            await observerDefinition.ReadStateAsync();
-            await failures.ReadStateAsync();
             await LeaveQuarantineForSubscription();
         }
 

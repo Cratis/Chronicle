@@ -25,8 +25,8 @@ public class and_quarantine_begins_during_automatic_reconciliation : given.an_ob
     [Fact] async Task should_keep_the_quarantined_state() => (await _observer.GetCurrentState()).ShouldBeOfExactType<QuarantinedObserver>();
     [Fact] void should_keep_the_persisted_quarantine() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);
     [Fact] async Task should_record_the_subscription() => (await _observer.IsSubscribed()).ShouldBeTrue();
-    [Fact] void should_not_reload_activation_owned_state() => _storageStats.Reads.ShouldEqual(0);
-    [Fact] void should_not_reload_activation_owned_failures() => _failedPartitionsStorageStats.Reads.ShouldEqual(0);
+    [Fact] void should_reload_observer_state() => _storageStats.Reads.ShouldEqual(1);
+    [Fact] void should_reload_failed_partitions() => _failedPartitionsStorageStats.Reads.ShouldEqual(1);
     [Fact] void should_not_resume_jobs() => ShouldNotResumeJobs();
     [Fact] void should_not_start_replay() => ShouldNotStartReplay();
     [Fact] void should_not_start_catchup() => ShouldNotStartCatchup();
