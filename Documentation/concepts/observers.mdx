@@ -34,7 +34,7 @@ SQL-backed failed-partition queries observe the shared database at the configure
 
 ## Quarantined observers
 
-When enough partitions of an observer fail, Chronicle quarantines the observer itself: automatic retries stop and it stops processing until someone acts. A quarantine ends in exactly two ways: an operator clears it (`cratis chronicle observers clear-quarantine`, or the Workbench), or the observer's client subscribes again, for example after a redeploy. Deactivation, reactivation and Kernel restarts keep the observer quarantined, so it still shows as **Quarantined** afterwards rather than **Disconnected**.
+When enough partitions of an observer fail, Chronicle quarantines the observer itself: automatic retries stop and it stops processing until someone acts. A quarantine ends when an operator clears it (`cratis chronicle observers clear-quarantine`, or the Workbench) or when the observer is subscribed again. An application's observers are subscribed again when its client connects again, for example after a redeploy or restart. Projections and the other observers the Kernel owns are subscribed again by the Kernel when it starts, so a Kernel restart ends their quarantine. Deactivating and reactivating the observer's grain does not: it still shows as **Quarantined** afterwards rather than **Disconnected**.
 
 ## Removing an observer
 
