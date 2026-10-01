@@ -15,6 +15,6 @@ public class when_connecting_with_srv : given.all_dependencies
 
     void Because() => Connect();
 
-    [Fact] void should_preserve_the_original_srv_settings() => _settings.All(settings => settings.Equals(MongoClientSettings.FromUrl(new MongoUrl(_server)))).ShouldBeTrue();
-    [Fact] void should_preserve_the_authentication_source() => _settings.All(settings => settings.Credential.Source == "credentials").ShouldBeTrue();
+    [Fact] void should_preserve_the_original_srv_settings() => _settings.TrueForAll(settings => settings.Equals(MongoClientSettings.FromUrl(new MongoUrl(_server)))).ShouldBeTrue();
+    [Fact] void should_preserve_the_authentication_source() => _settings.TrueForAll(settings => settings.Credential.Source == "credentials").ShouldBeTrue();
 }

@@ -11,8 +11,8 @@ public class when_connecting_without_a_database_path : given.all_dependencies
 
     void Because() => Connect();
 
-    [Fact] void should_keep_admin_as_the_authentication_source() => _settings.All(settings => settings.Credential.Source == "admin").ShouldBeTrue();
-    [Fact] void should_preserve_direct_connection() => _settings.All(settings => settings.DirectConnection == true).ShouldBeTrue();
+    [Fact] void should_keep_admin_as_the_authentication_source() => _settings.TrueForAll(settings => settings.Credential.Source == "admin").ShouldBeTrue();
+    [Fact] void should_preserve_direct_connection() => _settings.TrueForAll(settings => settings.DirectConnection).ShouldBeTrue();
     [Fact] void should_select_the_prefixed_event_store() => _client.Received().GetDatabase("run_Ada+es", Arg.Any<MongoDatabaseSettings>());
     [Fact] void should_select_the_prefixed_namespace() => _client.Received().GetDatabase("run_Ada+es+tenant", Arg.Any<MongoDatabaseSettings>());
     [Fact] void should_select_the_prefixed_read_models() => _client.Received().GetDatabase("run_Ada+tenant", Arg.Any<MongoDatabaseSettings>());

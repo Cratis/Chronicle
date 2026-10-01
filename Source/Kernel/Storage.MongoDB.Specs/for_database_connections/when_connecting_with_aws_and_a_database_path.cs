@@ -13,5 +13,5 @@ public class when_connecting_with_aws_and_a_database_path : given.all_dependenci
 
     void Because() => Connect();
 
-    [Fact] void should_keep_the_external_authentication_source_without_a_prefix() => _settings.All(settings => settings.Credential.Source == "$external").ShouldBeTrue();
+    [Fact] void should_keep_the_external_authentication_source_without_a_prefix() => _settings.TrueForAll(settings => settings.Credential.Source == "$external").ShouldBeTrue();
 }

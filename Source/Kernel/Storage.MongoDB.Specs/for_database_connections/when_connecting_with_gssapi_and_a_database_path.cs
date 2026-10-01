@@ -9,5 +9,5 @@ public class when_connecting_with_gssapi_and_a_database_path : given.all_depende
 
     void Because() => Connect();
 
-    [Fact] void should_keep_the_external_authentication_source() => _settings.All(settings => settings.Credential.Source == "$external").ShouldBeTrue();
+    [Fact] void should_keep_the_external_authentication_source() => _settings.TrueForAll(settings => settings.Credential.Source == "$external").ShouldBeTrue();
 }

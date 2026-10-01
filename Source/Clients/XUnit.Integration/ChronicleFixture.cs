@@ -46,6 +46,7 @@ public abstract class ChronicleFixture : IChronicleFixture
         });
 
         Directory.CreateDirectory("backups");
+
         // MongoDBContainer is virtual so derived fixtures can swap the container source.
         // The override is the documented extension point; the base ctor must call it to
         // trigger the lazy build-and-start cycle that every fixture relies on.

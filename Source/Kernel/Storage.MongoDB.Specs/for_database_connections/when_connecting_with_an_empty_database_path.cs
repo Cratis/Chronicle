@@ -9,5 +9,5 @@ public class when_connecting_with_an_empty_database_path : given.all_dependencie
 
     void Because() => Connect();
 
-    [Fact] void should_keep_admin_as_the_authentication_source() => _settings.All(settings => settings.Credential.Source == "admin").ShouldBeTrue();
+    [Fact] void should_keep_admin_as_the_authentication_source() => _settings.TrueForAll(settings => settings.Credential.Source == "admin").ShouldBeTrue();
 }
