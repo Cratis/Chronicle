@@ -25,16 +25,27 @@ public class Sinks(
 {
     readonly Dictionary<SinkTypeId, ISinkFactory> _factories = sinkFactories.Where(_ => _ is not null).ToDictionary(_ => _.TypeId, _ => _);
     readonly ConcurrentDictionary<SinkKey, ISink> _sinks = new();
+    readonly ConcurrentDictionary<SinkKey, bool> _indexed = new();
 
     /// <inheritdoc/>
-    public async Task<ISink> GetFor(ReadModelDefinition readModel)
+    public Task<ISink> GetFor(ReadModelDefinition readModel) => GetFor(readModel, ensureIndexes: true);
+
+    /// <inheritdoc/>
+    public async Task<ISink> GetFor(ReadModelDefinition readModel, bool ensureIndexes)
     {
         ThrowIfUnknownSink(readModel.Sink.Type);
         var key = new SinkKey(readModel.Sink.Type, readModel.Sink.Configuration, readModel.ContainerName);
-        if (_sinks.TryGetValue(key, out var existing)) return existing;
-        var sink = _factories[readModel.Sink.Type].CreateFor(eventStoreName, eventStoreNamespaceName, readModel);
-        await sink.EnsureIndexes();
-        return _sinks.GetOrAdd(key, sink);
+        if (!_sinks.TryGetValue(key, out var sink))
+        {
+            sink = _sinks.GetOrAdd(key, _factories[readModel.Sink.Type].CreateFor(eventStoreName, eventStoreNamespaceName, readModel));
+        }
+        if (ensureIndexes && !_indexed.ContainsKey(key))
+        {
+            await sink.EnsureIndexes();
+            _indexed[key] = true;
+        }
+
+        return sink;
     }
 
     /// <inheritdoc/>

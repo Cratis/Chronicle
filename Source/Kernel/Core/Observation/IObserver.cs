@@ -179,6 +179,18 @@ public interface IObserver : IGrainWithStringKey
     Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Complete only the reducer replay job currently owned by this observer.
+    /// </summary>
+    /// <param name="jobId">The job reporting completion.</param>
+    /// <param name="lastHandledEventSequenceNumber">The published watermark.</param>
+    /// <param name="replayedPartitions">The partitions covered by the ordered walk.</param>
+    /// <param name="replayedEventTypes">The event types covered by the walk.</param>
+    /// <param name="replayStartedAt">When the replay began.</param>
+    /// <param name="preservePosition">Whether this is an unpublished no-op or explicit removal.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReplayedFor(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt, bool preservePosition);
+
+    /// <summary>
     /// Complete a replay, resolving only failures already present when it began.
     /// </summary>
     /// <param name="lastHandledEventSequenceNumber">The last event handled by the replay.</param>

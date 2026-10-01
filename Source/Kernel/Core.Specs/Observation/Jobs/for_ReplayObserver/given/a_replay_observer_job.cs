@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.Reducers;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
@@ -30,6 +31,7 @@ public class a_replay_observer_job : Specification
     protected TestableReplayObserver _job;
     protected IObserverServiceClient _replayServiceClient;
     protected IObserver _observer;
+    protected IReducerReplay _reducerReplay;
     protected IChronicleStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _namespaceStorage;
@@ -97,6 +99,8 @@ public class a_replay_observer_job : Specification
 
         _observer = Substitute.For<IObserver>();
         _silo.AddProbe(_ => _observer);
+        _reducerReplay = Substitute.For<IReducerReplay>();
+        _silo.AddProbe(_ => _reducerReplay);
 
         _stateStorage = _silo.StorageManager.GetStorage<JobStateWithLastHandledEvent>(
             typeof(TestableReplayObserver).FullName!);

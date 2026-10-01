@@ -55,6 +55,11 @@ public class ClusteringFixture : IAsyncLifetime
     public IServiceProvider SiloServices => EventSequencesSilo.ServiceProvider;
 
     /// <summary>
+    /// Gets the second silo's independently cached storage and pipelines.
+    /// </summary>
+    public IServiceProvider SecondSiloServices => ObserversSilo.ServiceProvider;
+
+    /// <summary>
     /// Gets the <see cref="SiloAddress"/> of the silo configured to host EventSequences grains.
     /// </summary>
     public SiloAddress EventSequencesSiloAddress => EventSequencesSilo.SiloAddress;

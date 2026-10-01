@@ -43,6 +43,7 @@ public class InMemorySink(
     readonly Subject<object> _changeSubject = new();
     readonly Lock _collectionLock = new();
     readonly Type? _keyTargetType = readModel.GetSchemaForLatestGeneration().GetTargetTypeForPropertyPath("id", typeFormats);
+    readonly HashSet<ReadModelContainerName> _publishedReplays = [];
     bool _isReplaying;
 
     /// <inheritdoc/>
@@ -342,6 +343,33 @@ public class InMemorySink(
             _changeSubject.OnNext(readModel.ContainerName);
         }
 
+        return Task.FromResult<IEnumerable<FailedPartition>>([]);
+    }
+
+    /// <inheritdoc/>
+    public Task PrepareReplay(ReplayContext context) => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<FailedPartition>> PublishReplay(ReplayContext context, ISink replaySink)
+    {
+        var source = (InMemorySink)replaySink;
+        lock (_collectionLock)
+        {
+            if (!_publishedReplays.Add(context.RevertContainerName))
+            {
+                return Task.FromResult<IEnumerable<FailedPartition>>([]);
+            }
+
+            lock (source._collectionLock)
+            {
+                _collection.Clear();
+                _lastHandledEventSequenceNumbers.Clear();
+                foreach (var (key, value) in source._collection) _collection[key] = value;
+                foreach (var (key, value) in source._lastHandledEventSequenceNumbers) _lastHandledEventSequenceNumbers[key] = value;
+            }
+        }
+
+        _changeSubject.OnNext(readModel.ContainerName);
         return Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
 

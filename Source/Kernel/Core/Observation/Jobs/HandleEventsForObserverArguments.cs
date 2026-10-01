@@ -24,6 +24,11 @@ public record HandleEventsForObserverArguments(
     IEnumerable<EventType> EventTypes) : IObserverJobRequest
 {
     /// <summary>
+    /// Gets the owning full reducer replay job, or empty for other ordered walks.
+    /// </summary>
+    public Guid ReducerReplayJobId { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether events belonging to a partition the observer has already recorded as failed
     /// are skipped rather than delivered.
     /// </summary>

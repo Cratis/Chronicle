@@ -106,7 +106,7 @@ public class ObserverService(
     internal static async Task ResumeReplayForHandlers(IEnumerable<ICanHandleReplayForObserver> handlers, ObserverDetails observerDetails)
     {
         var results = await Task.WhenAll(handlers.Select(handler => handler.ResumeReplayFor(observerDetails)));
-        if (observerDetails.Type is ObserverType.Projection or ObserverType.Reducer)
+        if (observerDetails.Type == ObserverType.Reducer)
         {
             EnsureReplayStarted(results);
         }

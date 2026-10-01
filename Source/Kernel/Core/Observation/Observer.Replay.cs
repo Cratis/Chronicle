@@ -44,6 +44,20 @@ public partial class Observer
     public Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber) => CompleteReplay(lastHandledEventSequenceNumber, new Dictionary<Key, EventSequenceNumber>(), [], DateTimeOffset.MinValue);
 
     /// <inheritdoc/>
+    public async Task ReplayedFor(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt, bool preservePosition)
+    {
+        var replay = (await GetStates()).OfType<Replay>().Single();
+        if (State.RunningState != ObserverRunningState.Replaying || replay.LastStartedJobId != jobId)
+        {
+            // The job may have been removed, superseded, or completed before this delayed notification.
+            // After reactivation a subscription first re-establishes ownership; unowned notifications fail closed.
+            return;
+        }
+
+        await CompleteReplay(preservePosition ? State.LastHandledEventSequenceNumber : lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt);
+    }
+
+    /// <inheritdoc/>
     public Task ReplayedSuccessfullySince(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt) =>
         CompleteReplay(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt);
 

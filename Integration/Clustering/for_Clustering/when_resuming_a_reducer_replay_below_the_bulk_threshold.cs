@@ -4,7 +4,13 @@
 extern alias KernelCore;
 extern alias KernelConcepts;
 
+using System.Dynamic;
+using System.Globalization;
 using Cratis.Chronicle.Reducers;
+using Cratis.Orleans.Jobs;
+
+using Kernel = KernelCore::Cratis.Chronicle;
+using KernelDomain = KernelConcepts::Cratis.Chronicle.Concepts;
 using context = Cratis.Chronicle.Integration.Clustering.for_Clustering.when_resuming_a_reducer_replay_below_the_bulk_threshold.context;
 
 namespace Cratis.Chronicle.Integration.Clustering.for_Clustering;
@@ -16,6 +22,10 @@ public class when_resuming_a_reducer_replay_below_the_bulk_threshold(context _co
     {
         public long DurableDocumentsBeforeResume;
         public int TotalAfterResume;
+        public int TotalAfterLiveAppend;
+        public int TotalAfterRepeatedPublication;
+        public Kernel.Observation.Reducers.ReplayPublication OldPublication;
+        public bool TargetsDiffer;
 
         public async Task InitializeAsync()
         {
@@ -23,43 +33,80 @@ public class when_resuming_a_reducer_replay_below_the_bulk_threshold(context _co
             var eventStore = fixture.ClientEventStore;
             var handler = eventStore.Reducers.GetHandlerFor<InterruptedReplayReducer>();
             await handler.WaitTillActive(timeout);
-            var services = fixture.SiloServices;
-            var replay = services.GetRequiredService<KernelCore::Cratis.Chronicle.Observation.IObserverServiceClient>();
-            var details = new KernelCore::Cratis.Chronicle.Observation.ObserverDetails(
-                new(typeof(InterruptedReplayReducer).FullName!, Constants.EventStore, KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default, KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId.Log),
-                KernelConcepts::Cratis.Chronicle.Concepts.Observation.ObserverType.Reducer);
-            await replay.BeginReplayFor(details);
+            var first = await eventStore.EventLog.Append("interrupted-reducer", new InterruptedNumberAdded(10));
+            var second = await eventStore.EventLog.Append("interrupted-reducer", new InterruptedNumberAdded(5));
+            await handler.WaitTillReachesEventSequenceNumber(second.SequenceNumber, timeout);
+
+            var key = new KernelDomain.Observation.ObserverKey(typeof(InterruptedReplayReducer).FullName!, Constants.EventStore, KernelDomain.EventStoreNamespaceName.Default, KernelDomain.EventSequences.EventSequenceId.Log);
+            var storage = fixture.SiloServices.GetRequiredService<Storage.IStorage>();
+            var store = storage.GetEventStore(key.EventStore);
+            var ns = store.GetNamespace(key.Namespace);
+            var definition = await store.Reducers.Get(new(typeof(InterruptedReplayReducer).FullName!));
+            var events = ns.GetEventSequence(key.EventSequenceId);
+            var firstEvent = await events.GetEventAt(first.SequenceNumber.Value);
+            var secondEvent = await events.GetEventAt(second.SequenceNumber.Value);
+            var coordinator = fixture.SiloServices.GetRequiredService<IGrainFactory>().GetGrain<Kernel.Observation.Reducers.IReducerReplay>(key);
+            var job = JobId.New();
+            var original = await coordinator.Begin(job);
+            var oldPipeline = await fixture.SiloServices.GetRequiredService<Kernel.Observation.Reducers.IReducerPipelineFactory>()
+                .CreateForReplay(key.EventStore, key.Namespace, definition, original);
+            await oldPipeline.Reduce(new([firstEvent], "interrupted-reducer"), (_, initial) => Task.FromResult(Result(initial, 10, firstEvent.Context.SequenceNumber)));
+            DurableDocumentsBeforeResume = (await oldPipeline.Sink.GetInstances()).TotalCount;
+
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var inFlight = oldPipeline.Reduce(new([secondEvent], "interrupted-reducer"), async (_, initial) =>
+            {
+                entered.SetResult();
+                await release.Task.WaitAsync(timeout, TimeProvider.System);
+                return Result(initial, 5, secondEvent.Context.SequenceNumber);
+            });
+            await entered.Task.WaitAsync(timeout, TimeProvider.System);
+            var resumed = original;
             try
             {
-                // Drive one acknowledged reducer batch into the replay sink. Far fewer than 1000 operations
-                // must already be durable: ResumeReplay resets MongoDB's pending bulk operations and cache.
-                var append = await eventStore.EventLog.Append("interrupted-reducer", new InterruptedNumberAdded(10));
-                await handler.WaitTillReachesEventSequenceNumber(append.SequenceNumber, timeout);
-                var storage = services.GetRequiredService<Storage.IStorage>();
-                var store = storage.GetEventStore(details.Key.EventStore);
-                var definition = await store.Reducers.Get(new(typeof(InterruptedReplayReducer).FullName!));
-                var readModel = await store.ReadModels.Get(definition.ReadModel);
-                var sink = await store.GetNamespace(details.Key.Namespace).Sinks.GetFor(readModel);
-                DurableDocumentsBeforeResume = (await sink.GetInstances($"replay-{readModel.ContainerName}")).TotalCount;
-
-                // Model a restart/resume after the batch has been acknowledged. No EndReplay/EndBulk is called
-                // by the test between that acknowledgment and ResumeReplay.
-                await replay.ResumeReplayFor(details);
-                append = await eventStore.EventLog.Append("interrupted-reducer", new InterruptedNumberAdded(5));
-                await handler.WaitTillReachesEventSequenceNumber(append.SequenceNumber, timeout);
-                await replay.EndReplayFor(details with { ReplaySucceededWithEvents = true });
+                // Resume is a fresh attempt on the other silo. An old client reply remains in flight;
+                // neither its completion nor its finalization may touch the replacement target or live sink.
+                resumed = await coordinator.Begin(JobId.New());
+                TargetsDiffer = original.ReplayContainerName != resumed.ReplayContainerName;
+                var newPipeline = await fixture.SecondSiloServices.GetRequiredService<Kernel.Observation.Reducers.IReducerPipelineFactory>()
+                    .CreateForReplay(key.EventStore, key.Namespace, definition, resumed);
+                await newPipeline.Reduce(new([firstEvent, secondEvent], "interrupted-reducer"), (_, initial) => Task.FromResult(Result(initial, 15, secondEvent.Context.SequenceNumber)));
+                release.SetResult();
+                await inFlight;
+                await coordinator.Abandon(job);
+                OldPublication = await coordinator.Publish(original with { AllowEmptyResult = true });
+                await coordinator.Publish(resumed with { AllowEmptyResult = true });
                 TotalAfterResume = (await eventStore.ReadModels.GetInstanceById<InterruptedTotal>("interrupted-reducer")).Number;
             }
-            catch
+            finally
             {
-                await replay.EndReplayFor(details with { ReplayAborted = true });
-                throw;
+                release.TrySetResult();
+                await inFlight;
             }
+
+            var appended = await eventStore.EventLog.Append("interrupted-reducer", new InterruptedNumberAdded(3));
+            await handler.WaitTillReachesEventSequenceNumber(appended.SequenceNumber, timeout);
+            TotalAfterLiveAppend = (await eventStore.ReadModels.GetInstanceById<InterruptedTotal>("interrupted-reducer")).Number;
+            await coordinator.Publish(resumed with { AllowEmptyResult = true });
+            TotalAfterRepeatedPublication = (await eventStore.ReadModels.GetInstanceById<InterruptedTotal>("interrupted-reducer")).Number;
         }
 
         public Task DisposeAsync() => Task.CompletedTask;
+
+        static Kernel.Observation.Reducers.Clients.ReducerSubscriberResult Result(ExpandoObject? initial, int increment, KernelDomain.Events.EventSequenceNumber sequence)
+        {
+            var count = initial is null ? 0 : Convert.ToInt32(((IDictionary<string, object?>)initial)["number"], CultureInfo.InvariantCulture);
+            var result = new ExpandoObject();
+            ((IDictionary<string, object?>)result)["number"] = count + increment;
+            return new(Kernel.Observation.ObserverSubscriberResult.Ok(sequence), result);
+        }
     }
 
     [Fact] void should_persist_an_acknowledged_batch_before_final_flush() => _context.DurableDocumentsBeforeResume.ShouldEqual(1);
-    [Fact] void should_keep_acknowledged_state_when_resuming() => _context.TotalAfterResume.ShouldEqual(15);
+    [Fact] void should_restart_into_an_isolated_target() => _context.TargetsDiffer.ShouldBeTrue();
+    [Fact] void should_fence_the_in_flight_superseded_attempt() => _context.OldPublication.ShouldEqual(Kernel.Observation.Reducers.ReplayPublication.Superseded);
+    [Fact] void should_rebuild_instead_of_double_folding_acknowledged_state() => _context.TotalAfterResume.ShouldEqual(15);
+    [Fact] void should_keep_both_silos_live_sinks_on_the_published_model() => _context.TotalAfterLiveAppend.ShouldEqual(18);
+    [Fact] void should_preserve_live_writes_after_a_repeated_publication_rpc() => _context.TotalAfterRepeatedPublication.ShouldEqual(18);
 }

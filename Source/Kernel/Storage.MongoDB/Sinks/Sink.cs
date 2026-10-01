@@ -114,6 +114,20 @@ public class Sink(
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
+    public Task PrepareReplay(ReplayContext context) => collections.PrepareReplay(context);
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<FailedPartition>> PublishReplay(ReplayContext context, ISink replaySink)
+    {
+        // Isolated reducer pipelines never enter bulk mode. Still fail closed if a sink implementation
+        // reports pending/failed writes: unlike projection retry semantics, a reducer rebuild is all-or-nothing.
+        var failures = (await replaySink.EndBulk()).ToArray();
+        if (failures.Length > 0) return failures;
+        await collections.EndReplay(context);
+        return failures;
+    }
+
+    /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
         if (_isBulkMode)

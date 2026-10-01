@@ -15,7 +15,7 @@ public class and_only_a_few_of_many_partitions_failed : given.a_replay_observer_
 
     void Establish()
     {
-        _request = _request with { ObserverType = ObserverType.Reducer };
+        _request = _request with { ObserverType = ObserverType.Reactor };
         _keyIndex.GetKeys(Arg.Any<EventSequenceNumber>()).Returns(CreateKeys(Enumerable.Range(0, 1000).Select(_ => (Key)$"partition-{_}").ToArray()));
         _observer.GetFailedPartitionKeys().Returns([_failed, _anotherFailed]);
     }

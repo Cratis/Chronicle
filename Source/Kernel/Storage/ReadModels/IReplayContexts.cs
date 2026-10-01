@@ -21,6 +21,14 @@ public interface IReplayContexts
     Task<ReplayContext> Establish(ReadModelType type, ReadModelContainerName containerName);
 
     /// <summary>
+    /// Save the context owned by the serialized replay coordinator.
+    /// </summary>
+    /// <param name="context">The replay context.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="ReplayContextCannotBeSaved">The provider cannot persist an explicit replay identity.</exception>
+    Task Save(ReplayContext context) => throw new ReplayContextCannotBeSaved();
+
+    /// <summary>
     /// Establish a <see cref="ReplayContext"/> for a given <see cref="ReadModelDefinition"/>.
     /// </summary>
     /// <param name="readModel">The <see cref="ReadModelIdentifier"/> the context is for.</param>

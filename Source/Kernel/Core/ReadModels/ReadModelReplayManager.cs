@@ -22,8 +22,11 @@ public class ReadModelReplayManager : Grain<ReadModelReplayManagerState>, IReadM
             context.Type,
             context.ContainerName,
             context.RevertContainerName);
-        State.Occurrences.Add(occurrence);
-        State.NewOccurrences.Add(occurrence);
+        if (!State.Occurrences.Any(_ => _.RevertContainerName == context.RevertContainerName))
+        {
+            State.Occurrences.Add(occurrence);
+            State.NewOccurrences.Add(occurrence);
+        }
         return WriteStateAsync();
     }
 

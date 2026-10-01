@@ -13,6 +13,11 @@ namespace Cratis.Chronicle.Observation.Jobs;
 public class HandleEventsForObserverState : JobStepState
 {
     /// <summary>
+    /// Gets or sets the owning full reducer replay job.
+    /// </summary>
+    public Guid ReducerReplayJobId { get; set; }
+
+    /// <summary>
     /// The <see cref="ObserverKey"/> for the observer.
     /// </summary>
     public ObserverKey ObserverKey { get; set; } = ObserverKey.NotSet;

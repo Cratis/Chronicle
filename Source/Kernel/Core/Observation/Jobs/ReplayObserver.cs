@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
-public class ReplayObserver(
+public partial class ReplayObserver(
     IObserverServiceClient replayStateServiceClient,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
@@ -31,8 +31,8 @@ public class ReplayObserver(
     /// <inheritdoc/>
     /// <remarks>
     /// A definition change replays through Subscribe, and behind Subscribe sits the client's registration call with
-    /// a response timeout on it. A reactor or reducer replays with a step per event source, so bringing those steps
-    /// up must not be billed to that call.
+    /// a response timeout on it. A reactor replays with a step per event source, so bringing those steps
+    /// up must not be billed to that call. Reducers share the projection's ordered walker, independent of the key index.
     /// </remarks>
     protected override bool StartStepsInBackground => true;
 
@@ -44,7 +44,7 @@ public class ReplayObserver(
         State.FailedPartitionKeys = (await observer.GetFailedPartitionKeys()).Distinct().ToList();
         State.ReplayPartitionSteps.Clear();
 
-        if (request.ObserverType == ObserverType.Projection)
+        if (request.ObserverType is ObserverType.Projection or ObserverType.Reducer)
         {
             return
             [
@@ -55,7 +55,10 @@ public class ReplayObserver(
                         EventSequenceNumber.First,
                         EventSequenceNumber.Max,
                         EventObservationState.Replay,
-                        request.EventTypes))
+                        request.EventTypes)
+                    {
+                        ReducerReplayJobId = request.ObserverType == ObserverType.Reducer ? JobId.Value : Guid.Empty
+                    })
             ];
         }
 
@@ -104,7 +107,7 @@ public class ReplayObserver(
             {
                 try
                 {
-                    await replayStateServiceClient.EndReplayFor(State.ObserverDetails with { ReplayAborted = true });
+                    await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
                 }
                 catch (Exception exception)
                 {
@@ -126,8 +129,21 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnBeforeResumingJobSteps()
     {
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.Replay();
+        if (Request.ObserverType != ObserverType.Reducer)
+        {
+            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+            await observer.Replay();
+        }
+
+        if (Request.ObserverType == ObserverType.Reducer)
+        {
+            State.ReducerReplayPhase = ReducerReplayPhase.Building;
+            State.ReducerReplayContext = null;
+            State.LastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+            State.HandledAllEvents = false;
+            await WriteStateAsync();
+        }
+
         try
         {
             await replayStateServiceClient.ResumeReplayFor(State.ObserverDetails);
@@ -143,7 +159,7 @@ public class ReplayObserver(
     }
 
     /// <inheritdoc/>
-    protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
+    protected override async Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
         State.HandleResult(result, jsonSerializerOptions);
         if (result.TryGetFullResult<HandleEventsForPartitionResult>(out var handled, out _, jsonSerializerOptions) &&
@@ -168,11 +184,18 @@ public class ReplayObserver(
             logger.ReplayProgress(completedSteps, progress.TotalSteps, percentComplete, State.LastHandledEventSequenceNumber);
         }
 
-        return Task.CompletedTask;
+        if (Request.ObserverType == ObserverType.Reducer)
+        {
+            // Orleans writes the step count before this callback. Persist the result and target before
+            // publication; a recovered count without a result is not proof of a successful rebuild.
+            await WriteStateAsync();
+        }
     }
 
     /// <inheritdoc/>
-    protected override Task OnStopped() => base.OnStopped();
+    protected override Task OnStopped() => Request.ObserverType == ObserverType.Reducer
+        ? StopReducerReplay()
+        : base.OnStopped();
 
     /// <inheritdoc/>
     protected override async Task OnFailedToPrepare()
@@ -180,7 +203,7 @@ public class ReplayObserver(
         using var scope = logger.BeginJobScope(JobId, JobKey);
         try
         {
-            await replayStateServiceClient.EndReplayFor(State.ObserverDetails with { ReplayAborted = Request.ObserverType == ObserverType.Reducer });
+            await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
         }
         catch (Exception exception)
         {
@@ -189,6 +212,8 @@ public class ReplayObserver(
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
+        if (Request.ObserverType == ObserverType.Reducer) return;
+
         // Preparing failed; never report a successful replay. Avoid waiting on Replay()'s own turn.
         _ = NotifyObserverOfCompletion(observer, false, new Dictionary<Key, EventSequenceNumber>(), [], EventSequenceNumber.Unavailable);
     }
@@ -196,35 +221,22 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        if (Request.ObserverType == ObserverType.Reducer)
+        {
+            await CompleteReducerReplay();
+            return;
+        }
+
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        var aborted = Request.ObserverType == ObserverType.Reducer &&
-            (State.Status == JobStatus.Removing || State.Progress.StoppedSteps > 0);
-        var finalized = !aborted;
-        Exception? finalizationFailure = null;
+        var finalized = true;
         try
         {
-            await replayStateServiceClient.EndReplayFor(State.ObserverDetails with
-            {
-                ReplayAborted = aborted,
-                ReplaySucceededWithEvents = !aborted && AllStepsCompletedSuccessfully && State.HandledAllEvents && State.LastHandledEventSequenceNumber.IsActualValue
-            });
+            await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
         }
         catch (Exception exception)
         {
             logger.ReplayFinalizationFailed(exception);
             finalized = false;
-            finalizationFailure = exception;
-            if (Request.ObserverType == ObserverType.Reducer)
-            {
-                try
-                {
-                    await replayStateServiceClient.EndReplayFor(State.ObserverDetails with { ReplayAborted = true });
-                }
-                catch (Exception cleanupException)
-                {
-                    logger.ReplayFinalizationFailed(cleanupException);
-                }
-            }
         }
 
         if (!AllStepsCompletedSuccessfully)
@@ -249,7 +261,7 @@ public class ReplayObserver(
             try
             {
                 // A projection's single ordered step covers every partition up to its own global watermark.
-                // Reactors and reducers have independent steps: only a successful result from that partition counts.
+                // Reactors have independent steps: only a successful result from that partition counts.
                 coveredPartitions = Request.ObserverType == ObserverType.Projection
                     ? State.FailedPartitionKeys.ToDictionary(_ => _, _ => State.LastHandledEventSequenceNumber)
                     : State.ReplayPartitionSteps
@@ -269,18 +281,13 @@ public class ReplayObserver(
 
         // Do not await from job.Start's turn: Replay() on the observer may still be waiting on us.
         // Observe faults so a failed completion is logged rather than silently reported as success.
-        _ = NotifyObserverOfCompletion(observer, canResolve, coveredPartitions, eventTypes, State.LastHandledEventSequenceNumber, preserveRecoveryPosition: Request.ObserverType == ObserverType.Reducer && !finalized);
-
-        if (Request.ObserverType == ObserverType.Reducer && finalizationFailure is not null)
-        {
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(finalizationFailure).Throw();
-        }
+        _ = NotifyObserverOfCompletion(observer, canResolve, coveredPartitions, eventTypes, State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>
     protected override JobDetails GetJobDetails() => $"{Request.ObserverKey.ObserverId}";
 
-    async Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber, bool preserveRecoveryPosition = false)
+    async Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber)
     {
         try
         {
@@ -290,13 +297,6 @@ public class ReplayObserver(
             }
             else
             {
-                // The live model has not been replaced. Resume from the observer's published position,
-                // not the maximum watermark of independent, unpublished reducer partition steps.
-                if (preserveRecoveryPosition)
-                {
-                    lastHandledEventSequenceNumber = (await observer.GetState()).LastHandledEventSequenceNumber;
-                }
-
                 await observer.Replayed(lastHandledEventSequenceNumber);
             }
         }

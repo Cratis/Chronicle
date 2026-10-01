@@ -213,6 +213,13 @@ public partial class Observer
 
     async Task StartRecoverJobForFailedPartition(FailedPartition failedPartition)
     {
+        if (Definition.Type == ObserverType.Reducer && State.IsReplaying)
+        {
+            // The full rebuild owns recovery. Retrying a failure from its isolated target against the
+            // published model could reapply a deletion or advance the published watermark before the swap.
+            return;
+        }
+
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();

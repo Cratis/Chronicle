@@ -258,6 +258,15 @@ public class Sink : ISink
     }
 
     /// <inheritdoc/>
+    public async Task PrepareReplay(ReplayContext context)
+    {
+        // Create both names without changing the shared live sink's routing. The original (even empty)
+        // guarantees that a unique revert table can prove a committed publication after a lost RPC reply.
+        await using var primary = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var target = await _database.ReadModelTable(_eventStoreName, _namespace, context.ReplayContainerName!.Value, _columns);
+    }
+
+    /// <inheritdoc/>
     public async Task ResumeReplay(ReplayContext context)
     {
         // Re-enter replay mode after an interruption without wiping the replay table — it
@@ -319,40 +328,62 @@ public class Sink : ISink
 
     async Task PerformRenameSwap(ReplayContext context)
     {
-        var replayName = ReplayTableNameFor(_tableName);
+        var replayName = context.ReplayContainerName?.Value ?? ReplayTableNameFor(_tableName);
+        var revertName = context.RevertContainerName.Value;
 
-        // Open the scope on the replay table so the DbContext we use for DDL is bound to a
-        // connection that definitely exists post-replay. Any access through the standard
-        // ReadModelTable path goes through EnsureTableExists, which would recreate the
-        // primary table if it had already been renamed away — using the replay table avoids
-        // that race.
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, replayName, _columns);
-
-        var replayHasRows = await scope.DbContext.Entries.AsNoTracking().AnyAsync();
-        if (!replayHasRows && !context.AllowEmptyResult)
+        // A finalizer must NEVER manufacture a missing shadow. Open the primary instead: swaps below
+        // are transactional, so it is present both before and after a crash. The unique revert table
+        // proves that this identity already committed, even if its job/context bookkeeping did not.
+        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
+        if (await TableExists(scope, revertName)) return;
+        if (!await TableExists(scope, replayName))
         {
-            // Replay produced no writes (e.g. there were no events for this projection yet).
-            // Drop the empty replay table and keep the primary untouched — turning a transient
-            // race into permanent data loss is the very thing the shadow-table dance exists
-            // to prevent.
+            if (context.AllowEmptyResult) throw new ReplayTargetMissing(replayName);
+            return;
+        }
+
+        var sqlHelper = scope.DbContext.GetService<ISqlGenerationHelper>();
+        var hasRows = await Scalar(scope, $"SELECT CASE WHEN EXISTS (SELECT 1 FROM {sqlHelper.DelimitIdentifier(replayName)}) THEN 1 ELSE 0 END");
+        if (hasRows == 0 && !context.AllowEmptyResult)
+        {
             await ExecuteDdl(scope, BuildDropSql(scope, replayName));
+            await transaction.CommitAsync();
             return;
         }
 
         var databaseType = scope.DbContext.Database.GetDatabaseType();
-        var revertName = context.RevertContainerName.Value;
-
-        // Drop any stale backup with the same revert name first (a previous EndReplay may have
-        // left one behind), then rename primary -> revert (preserved for downgrade) and
-        // replay -> primary.
-        await ExecuteDdl(scope, BuildDropSql(scope, revertName));
         await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, _tableName, revertName));
         await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, replayName, _tableName));
-
-        // Renaming a table keeps its primary key name, so move each name along with its table; the
-        // next replay creates its shadow table with the replay table's primary key name again.
         await PrimaryKeyConstraints.NameAfterTable(scope, revertName);
         await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
+        await transaction.CommitAsync();
+    }
+
+    static Task<long> Scalar(DbContextScope<ReadModelDbContext> scope, string sql) => Scalar(scope, sql, null);
+
+    static async Task<long> Scalar(DbContextScope<ReadModelDbContext> scope, string sql, string? table)
+    {
+        await using var command = scope.DbContext.Database.GetDbConnection().CreateCommand();
+        command.Transaction = scope.DbContext.Database.CurrentTransaction?.GetDbTransaction();
+        command.CommandText = sql;
+        if (table is not null)
+        {
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@name";
+            parameter.Value = table;
+            command.Parameters.Add(parameter);
+        }
+
+        return Convert.ToInt64(await command.ExecuteScalarAsync(), CultureInfo.InvariantCulture);
+    }
+
+    static async Task<bool> TableExists(DbContextScope<ReadModelDbContext> scope, string table)
+    {
+        var sql = scope.DbContext.Database.IsSqlite()
+            ? "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = @name"
+            : "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @name";
+        return await Scalar(scope, sql, table) > 0;
     }
 
     /// <summary>

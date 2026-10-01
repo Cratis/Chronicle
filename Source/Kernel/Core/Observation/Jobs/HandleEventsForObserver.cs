@@ -9,9 +9,11 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation.Reducers;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
@@ -49,6 +51,7 @@ public class HandleEventsForObserver(
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     IEventTypesStorage? _eventTypes;
+    ReplayContext? _replayContext;
 
     IHandleEventsForObserver _selfGrainReference = null!;
 
@@ -93,6 +96,7 @@ public class HandleEventsForObserver(
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
         State.SkipFailedPartitions = request.SkipFailedPartitions;
+        State.ReducerReplayJobId = request.ReducerReplayJobId;
         return ValueTask.CompletedTask;
     }
 
@@ -143,6 +147,16 @@ public class HandleEventsForObserver(
                 logger.CancelledBeforeHandlingAnyEvents();
                 return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
             }
+            if (currentState.ReducerReplayJobId != Guid.Empty)
+            {
+                // A checkpoint can lag a durable reducer write, including deletion of the document that held
+                // its watermark. Resume therefore restarts the ordered walk into a NEW isolated attempt;
+                // never fold a redelivered prefix onto a previous attempt's state.
+                _replayContext = await grainFactory.GetGrain<IReducerReplay>(currentState.ObserverKey).Begin(currentState.ReducerReplayJobId);
+                currentState.LastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+                lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+            }
+
             var eventSequenceStorage = GetEventSequenceStorage(
                 currentState.ObserverKey.EventStore,
                 currentState.ObserverKey.Namespace,
@@ -212,7 +226,7 @@ public class HandleEventsForObserver(
                         var exceptionMessages = handleEventsException.GetAllMessages().ToArray();
                         var exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
                         lastEventSequenceNumberAttempted = partitionEvents[0].Context.SequenceNumber;
-                        await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace, handleEventsException.ToFailureKind());
+                        await ReportPartitionFailure(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace, handleEventsException.ToFailureKind());
                         return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), exceptionMessages, exceptionStackTrace));
                     }
                     if (handleEventsResult.TryGetResult(out var handledEventsResult))
@@ -327,7 +341,15 @@ public class HandleEventsForObserver(
         }
     }
 
-    static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
+    HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled) { ReplayContext = _replayContext };
+
+    // A failure in an unpublished target belongs to the replay job, not the published partition. In
+    // particular, a late failure from a superseded worker must not schedule a live retry after its
+    // replacement already published. The step result retains the error and keeps the job visibly failed.
+    Task ReportPartitionFailure(Key partition, EventSequenceNumber sequence, IEnumerable<string> messages, string stackTrace, FailureKind kind) =>
+        _replayContext is null
+            ? _observer.PartitionFailed(partition, sequence, messages, stackTrace, kind)
+            : Task.CompletedTask;
 
     async Task<(JobStepResult? Result, EventSequenceNumber LastSuccessfullyHandledEventSequenceNumber)> HandleSubscriberResult(
         HandleEventsForObserverState currentState,
@@ -362,7 +384,7 @@ public class HandleEventsForObserver(
             case ObserverSubscriberState.Disconnected:
                 var lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                 logger.EventHandlerDisconnected(partition, lastSuccessfullyHandledEventSequenceNumber);
-                await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, [SubscriberDisconnected], string.Empty, FailureKind.Disconnected);
+                await ReportPartitionFailure(partition, lastEventSequenceNumberAttempted, [SubscriberDisconnected], string.Empty, FailureKind.Disconnected);
                 return (
                     JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                         CreateResult(lastSuccessfullyHandledEventSequenceNumber),
@@ -404,7 +426,7 @@ public class HandleEventsForObserver(
 
         logger.FailedHandlingEvents(partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);
         var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
-        await _observer.PartitionFailed(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace, FailureKind.Handling);
+        await ReportPartitionFailure(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace, FailureKind.Handling);
         return (
             JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                 CreateResult(lastSuccessfullyHandledEventSequenceNumber),
@@ -422,7 +444,7 @@ public class HandleEventsForObserver(
         {
             var decryptedEvents = await DecryptEvents(events);
             var target = subscriberSelector.Select(_subscription, partition);
-            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments);
+            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { ReplayContext = _replayContext };
 
             // PerformStep (and everything it calls, including this method) runs off the grain's activation
             // thread - see the <remarks> on JobStep.PerformStep. The ambient Grain.GrainFactory property

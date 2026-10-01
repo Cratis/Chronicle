@@ -34,7 +34,7 @@ public class and_reducer_initialization_fails : given.a_replay_observer_job
 
     [Fact] void should_prevent_job_steps_from_starting() => _error.ShouldBeOfExactType<ReplayInitializationFailed>();
     [Fact] void should_attempt_reducer_initialization() => _replayServiceClient.Received(1).BeginReplayFor(Arg.Any<ObserverDetails>());
-    [Fact] void should_abandon_the_uninitialized_rebuild() => _replayServiceClient.Received(1).EndReplayFor(Arg.Is<ObserverDetails>(details => details.ReplayAborted));
+    [Fact] void should_notify_clients_without_attempting_a_swap() => _replayServiceClient.Received(1).EndReplayFor(Arg.Any<ObserverDetails>());
     [Fact]
     void should_not_report_success() => _observer.DidNotReceive().ReplayedSuccessfullySince(
         Arg.Any<EventSequenceNumber>(), Arg.Any<IReadOnlyDictionary<Key, EventSequenceNumber>>(), Arg.Any<EventType[]>(), Arg.Any<DateTimeOffset>());

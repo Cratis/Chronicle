@@ -37,6 +37,13 @@ public sealed class ReplayContexts : IReplayContexts
                 : Result.Failed<ReplayContext, GetContextError>(GetContextError.NotFound));
 
     /// <inheritdoc/>
+    public Task Save(ReplayContext context)
+    {
+        _contexts[context.Type.Identifier] = context;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task Evict(ReadModelIdentifier readModel)
     {
         _contexts.TryRemove(readModel, out _);
