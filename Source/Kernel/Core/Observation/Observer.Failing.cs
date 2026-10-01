@@ -41,7 +41,8 @@ public partial class Observer
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             await failures.WriteStateAsync();
-            if (!partitionWasAlreadyFailed)
+            var crossedRetryLimit = config.MaxRetryAttempts > 0 && failure.Attempts.Count() == config.MaxRetryAttempts + 1;
+            if (!partitionWasAlreadyFailed || crossedRetryLimit)
             {
                 await ReportAlertState();
             }
