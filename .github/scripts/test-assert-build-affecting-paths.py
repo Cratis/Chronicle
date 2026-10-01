@@ -55,6 +55,11 @@ class BuildAffectingPaths(unittest.TestCase):
                         result, output = self.run_check()
                     self.assertEqual(1, result, output)
                     self.assertIn(f"`{entry}` is required to trigger snippet verification", output)
+                    self.assertIn("A change confined to it would skip Client Snippet Verification.", output)
+                    self.assertIn(f"both the pull_request and push triggers in {checker.SNIPPET_WORKFLOW}", output)
+                    self.assertIn("exclude the entry from the snippet subset in main() with a reason", output)
+                    self.assertNotIn("would merge without ever being built", output)
+                    self.assertNotIn(f"remove it from {checker.CONTRACT}", output)
 
     def test_build_contract_is_still_enforced(self):
         read_paths = checker.read_trigger_paths
@@ -69,6 +74,8 @@ class BuildAffectingPaths(unittest.TestCase):
             result, output = self.run_check()
         self.assertEqual(1, result, output)
         self.assertIn("`Integration/**` is required to trigger a build and a test run", output)
+        self.assertIn("A change confined to it would merge without ever being built.", output)
+        self.assertIn(f"remove it from {checker.CONTRACT}", output)
 
 
 if __name__ == "__main__":

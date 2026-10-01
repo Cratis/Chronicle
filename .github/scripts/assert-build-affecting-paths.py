@@ -140,7 +140,11 @@ def missing_from_disk(root, required):
     return not os.path.exists(os.path.join(root, target))
 
 
-def check_contract(root, required, workflow=WORKFLOW, trigger="pull_request", purpose="a build and a test run"):
+def check_contract(
+    root, required, workflow=WORKFLOW, trigger="pull_request", purpose="a build and a test run",
+    consequence="A change confined to it would merge without ever being built.",
+    remediation=f"Add a pattern that covers it, or remove it from {CONTRACT} and say in the pull request what stops being covered.",
+):
     """Reports every required path the workflow trigger's filter fails to cover."""
     patterns, ignored = read_trigger_paths(root, workflow, trigger)
     failures = 0
@@ -160,8 +164,7 @@ def check_contract(root, required, workflow=WORKFLOW, trigger="pull_request", pu
             print(
                 f"::error::`{entry}` is required to trigger {purpose}, but no pattern in the "
                 f"`paths:` filter of {workflow} covers it (for example `{holes[0]}` matches nothing there). "
-                f"A change confined to it would merge without ever being built. Add a pattern that covers it, "
-                f"or remove it from {CONTRACT} and say in the pull request what stops being covered."
+                f"{consequence} {remediation}"
             )
             failures += 1
 
@@ -181,7 +184,11 @@ def main():
         "/" not in entry and entry not in ("Chronicle.slnx", "specs.runsettings")
     )]
     for trigger in ("pull_request", "push"):
-        failures += check_contract(root, snippet_required, SNIPPET_WORKFLOW, trigger, "snippet verification")
+        failures += check_contract(
+            root, snippet_required, SNIPPET_WORKFLOW, trigger, "snippet verification",
+            consequence="A change confined to it would skip Client Snippet Verification.",
+            remediation=f"Add a pattern that covers it to both the pull_request and push triggers in {SNIPPET_WORKFLOW}, or exclude the entry from the snippet subset in main() with a reason.",
+        )
 
     return 1 if failures else 0
 
