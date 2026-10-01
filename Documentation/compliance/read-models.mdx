@@ -11,7 +11,7 @@ Everything on this page about *how* a read model is encrypted and released — t
 :::
 
 :::note[Client coverage]
-The C# examples on this page combine several mechanisms already covered elsewhere for their per-client support ([PII property annotation](./pii), [projections](../projections/), [reducers](../reducers/)) — this page's specific focus (automatic PII lineage through model-bound AutoMap, and the `_subject`/GDPR-erasure mechanics) hasn't been individually re-verified per client yet.
+The C# examples on this page combine several mechanisms already covered elsewhere for their per-client support ([PII property annotation](./pii), [projections](../projections/), [reducers](../reducers/)) — this page's specific focus (marking projected properties as PII on the read model, and the `_subject`/GDPR-erasure mechanics) hasn't been individually re-verified per client yet.
 :::
 
 ## Observer decryption
@@ -20,17 +20,19 @@ All observers — reactors, webhooks, reducers, and projections — receive decr
 
 The compliance identifier used for key lookup follows this rule: if an explicit `Subject` was set on the event at append time, that value is used. Otherwise, the `EventSourceId` is used as the fallback identifier. This mirrors the encryption key that was used when the event was originally written to the event log.
 
-## Projections — automatic PII lineage
+## Projections — `[PII]` required on the read model property
 
-Projection-backed read models benefit from automatic PII lineage. The kernel knows which read model properties are mapped from PII event properties and encrypts them transparently before writing to storage. No `[PII]` attribute is needed on the read model type.
+A projection copies values from events into a read model, but the kernel decides what to encrypt from the read model's own schema, not from the events the values came from. Marking an event property as PII does not mark the read model property it is mapped to. Without `[PII]` on that read model property, the projected value is stored in plain text, and it stays readable after the subject's key is erased.
+
+Mark every read model property that holds PII, either with `[PII]` on the property or by giving it a concept type that is itself marked `[PII]` (see [Declaring PII on a concept](./pii-with-concepts)).
 
 <ChronicleClientTabs snippet="compliance/read-models/projection-lineage" />
 
-The `Name` property is stored encrypted in MongoDB because `PersonName` is a PII-marked type. When a query returns `Employee` records, the kernel decrypts the values before they reach the caller.
+The `Name` property is mapped from `PersonName` on the event, and carries `[PII]` itself, so it is stored encrypted in MongoDB. When a query returns `Employee` records, the kernel decrypts the values before they reach the caller.
 
 ## Reducers — explicit `[PII]` required
 
-Reducers use arbitrary C# logic to compute state. The kernel cannot infer which properties derive from PII fields because the transformation is opaque. You must annotate PII properties on the read model record with `[PII]`.
+Reducers follow the same rule as projections: you must annotate PII properties on the read model record with `[PII]`. Reducers also use arbitrary C# logic to compute state, so there is no mapping from event properties to follow.
 
 <ChronicleClientTabs snippet="compliance/read-models/reducer-explicit-pii" />
 
