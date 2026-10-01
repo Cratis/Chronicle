@@ -7,5 +7,6 @@ public class ApplicationExtensionPointsRecorder
 {
     public int ScopesBegun { get; set; }
     public int FiltersRun { get; set; }
+    public int KeysResolved { get; set; }
     public bool Handled { get; set; }
 }

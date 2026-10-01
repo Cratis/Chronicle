@@ -23,7 +23,7 @@ namespace Cratis.Chronicle.Setup;
 /// <para>
 /// Discovery in an in-process host sweeps up the application's assemblies as well as the kernel's. Without narrowing,
 /// the kernel's internal commands run through the application's command filters, execution scopes, context values
-/// providers, response value handlers and authorization opinions - so an application that denies by default refuses the
+/// providers, response value handlers, key resolvers and authorization opinions - so an application that denies by default refuses the
 /// kernel's own appends, and a transactional scope that resolves the application's event store deadlocks a host whose
 /// event store is still waiting on that very kernel command.
 /// </para>
@@ -39,7 +39,7 @@ internal sealed class KernelSideInstancesOf<T>(ITypes types, IServiceProvider se
     public IEnumerator<T> GetEnumerator()
     {
         var narrow = !onlyForKernelCommands || KernelCommandExecution.IsActive;
-        foreach (var type in types.FindMultiple<T>().Where(type => !narrow || KernelCommandExtensionPoints.IsKernelSide(type)))
+        foreach (var type in types.FindMultiple<T>().Where(type => KernelCommandExtensionPoints.IsImplementation(type) && (!narrow || KernelCommandExtensionPoints.IsKernelSide(type))))
         {
             yield return (T)(serviceProvider.GetService(type) ?? ActivatorUtilities.CreateInstance(serviceProvider, type));
         }

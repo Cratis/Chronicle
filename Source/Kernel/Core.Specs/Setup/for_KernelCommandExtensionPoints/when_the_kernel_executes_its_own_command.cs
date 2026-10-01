@@ -20,4 +20,5 @@ public class when_the_kernel_executes_its_own_command : given.a_host_shared_with
     [Fact] void should_handle_the_command() => _recorder.Handled.ShouldBeTrue();
     [Fact] void should_not_begin_the_application_command_scope() => _recorder.ScopesBegun.ShouldEqual(0);
     [Fact] void should_not_run_the_application_command_filter() => _recorder.FiltersRun.ShouldEqual(0);
+    [Fact] void should_not_ask_the_application_key_resolver() => _recorder.KeysResolved.ShouldEqual(0);
 }
