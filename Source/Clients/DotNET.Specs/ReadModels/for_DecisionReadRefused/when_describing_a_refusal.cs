@@ -16,7 +16,7 @@ public class when_describing_a_refusal
     public void should_say_what_to_do_about_a_hierarchy() =>
         new DecisionReadRefused(DecisionReadRefusalReason.Hierarchy, typeof(Model)).Message.ShouldEqual(
             $"Decision read of '{typeof(Model)}' was refused: Hierarchy. The projection has children or nested objects, and a decision read only folds flat projections. " +
-            "Read a flat read model, for example a dedicated [Passive] one, instead.");
+            "Read a read model whose projection has no children or nested objects instead.");
 
     record Model;
 }
