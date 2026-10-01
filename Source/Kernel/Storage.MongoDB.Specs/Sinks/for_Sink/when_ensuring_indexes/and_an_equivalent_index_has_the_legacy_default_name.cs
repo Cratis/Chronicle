@@ -6,10 +6,8 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_ensuring_indexes;
 
-public class and_indexes_already_exist : given.a_sink_with_an_existing_index
+public class and_an_equivalent_index_has_the_legacy_default_name : given.a_sink_with_an_existing_index
 {
-    void Establish() => _existingIndex["name"] = $"chronicle_idx_{_indexedProperty.Path}";
-
     async Task Because() => await _sink.EnsureIndexes();
 
     [Fact] void should_not_create_the_index() =>
@@ -17,4 +15,6 @@ public class and_indexes_already_exist : given.a_sink_with_an_existing_index
             Arg.Any<CreateIndexModel<BsonDocument>>(),
             Arg.Any<CreateOneIndexOptions>(),
             Arg.Any<CancellationToken>());
+    [Fact] void should_not_drop_any_indexes() => _indexManager.DidNotReceive().DropOneAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    [Fact] void should_dispose_the_index_cursor() => _indexCursor.Received().Dispose();
 }

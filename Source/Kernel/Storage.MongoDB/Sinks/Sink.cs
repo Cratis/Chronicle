@@ -516,13 +516,17 @@ public class Sink(
     public async Task EnsureIndexes()
     {
         var collection = Collection;
-        var existingIndexes = await GetExistingIndexNamesAsync(collection);
+        using var cursor = await collection.Indexes.ListAsync();
+        var existingIndexes = await cursor.ToListAsync();
+        var collation = existingIndexes.Count > 0 && readModel.Indexes.Count > 0
+            ? await GetCollectionCollation(collection)
+            : BsonNull.Value;
 
         foreach (var indexDefinition in readModel.Indexes)
         {
             var indexName = $"chronicle_idx_{indexDefinition.PropertyPath.Path.Replace('.', '_')}";
 
-            if (existingIndexes.Contains(indexName))
+            if (existingIndexes.Exists(index => IsEquivalentIndex(index, indexDefinition.PropertyPath.Path, collation)))
             {
                 continue;
             }
@@ -666,18 +670,28 @@ public class Sink(
             static (_, current, incoming) => Math.Max(current, incoming),
             eventSequenceNumber);
 
-    async Task<HashSet<string>> GetExistingIndexNamesAsync(IMongoCollection<BsonDocument> collection)
+    static bool IsEquivalentIndex(BsonDocument index, string propertyPath, BsonValue collation) =>
+        index.GetValue("key", BsonNull.Value).Equals(new BsonDocument(propertyPath, 1)) &&
+        index.GetValue("unique", false) == false &&
+        index.GetValue("prepareUnique", false) == false &&
+        index.GetValue("sparse", false) == false &&
+        index.GetValue("hidden", false) == false &&
+        !index.Contains("partialFilterExpression") &&
+        !index.Contains("expireAfterSeconds") &&
+        index.GetValue("collation", BsonNull.Value).Equals(collation);
+
+    async Task<BsonValue> GetCollectionCollation(IMongoCollection<BsonDocument> collection)
     {
-        var indexNames = new HashSet<string>();
-        using var cursor = await collection.Indexes.ListAsync();
-        await cursor.ForEachAsync(index =>
+        // An index without an explicit collation inherits the collection's default. Compare that effective
+        // collation as well as the key, so an index for different string comparisons is not mistaken for ours.
+        using var cursor = await collection.Database.ListCollectionsAsync(new ListCollectionsOptions
         {
-            if (index.TryGetValue("name", out var nameValue))
-            {
-                indexNames.Add(nameValue.AsString);
-            }
+            Filter = new BsonDocument("name", collection.CollectionNamespace.CollectionName)
         });
-        return indexNames;
+        var definitions = await cursor.ToListAsync();
+        return definitions.FirstOrDefault()?
+            .GetValue("options", new BsonDocument()).AsBsonDocument
+            .GetValue("collation", BsonNull.Value) ?? BsonNull.Value;
     }
 
     void AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber)
