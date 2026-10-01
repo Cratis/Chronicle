@@ -10,7 +10,8 @@ namespace Cratis.Chronicle.Alerts;
 /// Represents a failed partition of an observer as the alert evaluator sees it.
 /// </summary>
 /// <remarks>
-/// Only partitions that are still failing are part of a snapshot. A resolved one is simply absent.
+/// Only partitions that are still failing are part of a snapshot. A resolved one is absent, and
+/// <see cref="ObserverAlertSnapshot.PartitionsEndedAs"/> says why it left.
 /// </remarks>
 /// <param name="Id">The <see cref="FailedPartitionId"/>, which is also the identifier of the incident raised for it.</param>
 /// <param name="Partition">The <see cref="AlertPartition"/> that is failing.</param>

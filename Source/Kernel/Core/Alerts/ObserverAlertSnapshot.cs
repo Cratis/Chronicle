@@ -26,8 +26,24 @@ public record ObserverAlertSnapshot(
     int MaxRetryAttempts)
 {
     /// <summary>
+    /// Gets the reason for partition incidents whose failed partition is no longer in <see cref="FailedPartitions"/>.
+    /// </summary>
+    /// <remarks>
+    /// Applies to every departed failure episode in this snapshot. ResolveFailedPartition (including replay resolution)
+    /// supplies Recovered; ClearFailedPartitions supplies Cleared. Removal or retirement sets IsRemoved, which takes
+    /// precedence and clears every incident as Removed. The tracker must retain the reason until the clears are appended.
+    /// </remarks>
+    public AlertClearedReason PartitionsEndedAs { get; init; } = AlertClearedReason.Recovered;
+
+    /// <summary>
     /// Gets the reason to give when the observer quarantine incident ends because <see cref="IsQuarantined"/> is no
     /// longer true. It is <see cref="AlertClearedReason.Cleared"/> unless the caller knows it was a revival.
     /// </summary>
+    /// <remarks>
+    /// A fresh subscription supplies Revived; ClearObserverQuarantine supplies Cleared. Quarantine survives reactivation
+    /// now that #4426 is fixed, so the caller must continue to report IsQuarantined during reactivation. Unguarded exits
+    /// tracked in #4440 clear with the reason the tracker supplies here; the evaluator does not infer an exit reason
+    /// from an observer running state. The tracker must retain the reason until the clear is appended.
+    /// </remarks>
     public AlertClearedReason QuarantineEndedAs { get; init; } = AlertClearedReason.Cleared;
 }

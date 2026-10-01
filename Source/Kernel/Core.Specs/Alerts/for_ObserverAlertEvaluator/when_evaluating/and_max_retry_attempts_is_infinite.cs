@@ -15,7 +15,7 @@ public class and_max_retry_attempts_is_infinite : given.an_evaluator
     ObserverAlertEvaluation _result;
 
     void Because() => _result = Evaluate(
-        SnapshotOf(FailedPartition(_id, TimeSpan.FromHours(1), isQuarantined: false)) with { MaxRetryAttempts = 0 },
+        SnapshotOf(FailedPartition(_id, TimeSpan.FromHours(1), isQuarantined: false, attemptCount: 100)) with { MaxRetryAttempts = 0 },
         OpenPartitionIncident(_id));
 
     [Fact] void should_not_transition() => _result.Transitions.ShouldBeEmpty();

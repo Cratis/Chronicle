@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Concepts.Alerts;
 public enum AlertClearedReason
 {
     /// <summary>
-    /// The partition succeeded again by itself.
+    /// The partition succeeded again, including resolution by replay.
     /// </summary>
     Recovered = 0,
 

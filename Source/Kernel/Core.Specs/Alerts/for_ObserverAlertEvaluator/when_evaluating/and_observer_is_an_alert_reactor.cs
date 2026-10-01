@@ -16,7 +16,7 @@ public class and_observer_is_an_alert_reactor : given.an_evaluator
     void Because() => _result = Evaluate(
         SnapshotOf(FailedPartition(FailedPartitionId.New(), TimeSpan.FromHours(1), isQuarantined: true)) with
         {
-            Observer = _observer with { ObserverId = $"{ObserverAlertEvaluator.AlertObserverPrefix}AlertIncidentsReactor" },
+            Observer = _observer with { ObserverId = $"{AlertObservers.Prefix}AlertIncidentsReactor" },
             IsQuarantined = true
         });
 

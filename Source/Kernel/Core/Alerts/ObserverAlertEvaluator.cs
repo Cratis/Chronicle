@@ -28,10 +28,11 @@ namespace Cratis.Chronicle.Alerts;
 /// <item>A quarantined partition is never retried automatically, so it always needs a person. When the partition is
 /// quarantined the same incident is escalated to <c language="csharp">partition-retries-exhausted</c>. A quarantined partition with
 /// no open incident raises <c language="csharp">partition-retries-exhausted</c> straight away, without waiting for the grace period.
-/// This holds whatever the maximum number of retries is. When the maximum number of retries is 0 (retry forever) a
-/// partition that is not quarantined keeps being retried and is never treated as exhausted by itself.</item>
-/// <item>An incident clears with <see cref="AlertClearedReason.Recovered"/> as soon as its partition is no longer
-/// failing.</item>
+/// A partition whose attempts exceed a positive maximum is also exhausted, even if observer-wide quarantine prevented
+/// the partition flag from being set. At exactly the maximum, one more retry is still allowed. With a maximum of 0
+/// (retry forever), only the partition quarantine flag makes it exhausted.</item>
+/// <item>An incident clears with <see cref="ObserverAlertSnapshot.PartitionsEndedAs"/> as soon as its partition is no
+/// longer failing.</item>
 /// <item><c language="csharp">observer-quarantined</c> raises when the observer is quarantined, with a new incident identifier, and
 /// clears with <see cref="ObserverAlertSnapshot.QuarantineEndedAs"/> when it no longer is.</item>
 /// <item>A removed observer raises nothing, and every incident it has open clears with
@@ -47,17 +48,6 @@ namespace Cratis.Chronicle.Alerts;
 [Singleton]
 public class ObserverAlertEvaluator(IAlertConditions conditions)
 {
-    /// <summary>
-    /// The prefix of the identifiers of the kernel's own alert observers.
-    /// </summary>
-    /// <remarks>
-    /// A kernel reactor is given the identifier <c language="csharp">$system.</c> followed by its reactor identifier, which defaults to the
-    /// full name of its type. The alert observers live in the <c language="csharp">Cratis.Chronicle.Alerts</c> namespace, so that is the
-    /// prefix that is always left out of alerting: an alert observer that fails must not raise an alert about itself.
-    /// Other kernel observers, such as the event store subscriptions, are alerted on like any other.
-    /// </remarks>
-    public const string AlertObserverPrefix = "$system.Cratis.Chronicle.Alerts.";
-
     /// <summary>
     /// Evaluates an observer.
     /// </summary>
@@ -109,7 +99,8 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
             _ => current < candidate ? current : candidate
         };
 
-    static bool IsExhausted(FailedPartitionSnapshot partition) => partition.IsQuarantined;
+    static bool IsExhausted(ObserverAlertSnapshot snapshot, FailedPartitionSnapshot partition) =>
+        partition.IsQuarantined || (snapshot.MaxRetryAttempts > 0 && partition.AttemptCount > snapshot.MaxRetryAttempts);
 
     static AlertCleared Cleared(ObserverAlertSnapshot snapshot, OpenIncident incident, AlertClearedReason reason) =>
         new(incident.Id, incident.Condition, reason, AlertTarget.For(snapshot.Observer, incident.Partition));
@@ -127,7 +118,7 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
             : EvidenceFor(latest);
     }
 
-    IEnumerable<AlertCleared> ClearEndedIncidents(ObserverAlertSnapshot snapshot, IReadOnlyCollection<OpenIncident> openIncidents)
+    static IEnumerable<AlertCleared> ClearEndedIncidents(ObserverAlertSnapshot snapshot, IReadOnlyCollection<OpenIncident> openIncidents)
     {
         foreach (var incident in openIncidents)
         {
@@ -138,12 +129,15 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
                     yield return Cleared(snapshot, incident, snapshot.QuarantineEndedAs);
                 }
             }
-            else if (snapshot.FailedPartitions.All(_ => _.Id != incident.Id))
+            else if (IsPartitionCondition(incident.Condition) && snapshot.FailedPartitions.All(_ => _.Id != incident.Id))
             {
-                yield return Cleared(snapshot, incident, AlertClearedReason.Recovered);
+                yield return Cleared(snapshot, incident, snapshot.PartitionsEndedAs);
             }
         }
     }
+
+    static bool IsPartitionCondition(AlertConditionKind kind) =>
+        kind == AlertConditionKind.PartitionFailing || kind == AlertConditionKind.PartitionRetriesExhausted;
 
     (object? Transition, DateTimeOffset? RaiseDue) EvaluatePartition(
         ObserverAlertSnapshot snapshot,
@@ -157,7 +151,7 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
 
         if (incident is null)
         {
-            if (IsExhausted(partition) && exhausted.Enabled)
+            if (IsExhausted(snapshot, partition) && exhausted.Enabled)
             {
                 return (new AlertRaised(partition.Id, exhausted.Kind, exhausted.Severity, target, EvidenceFor(partition)), null);
             }
@@ -173,7 +167,7 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
                 : (null, due);
         }
 
-        if (IsExhausted(partition) && exhausted.Enabled && incident.Condition != exhausted.Kind)
+        if (IsExhausted(snapshot, partition) && exhausted.Enabled && incident.Condition != exhausted.Kind)
         {
             return (new AlertEscalated(incident.Id, exhausted.Kind, exhausted.Severity, target, EvidenceFor(partition)), null);
         }
@@ -198,5 +192,5 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
     }
 
     bool IsLeftOut(ObserverId observerId) =>
-        observerId.Value.StartsWith(AlertObserverPrefix, StringComparison.Ordinal) || conditions.IsExcluded(observerId);
+        observerId.Value.StartsWith(AlertObservers.Prefix, StringComparison.Ordinal) || conditions.IsExcluded(observerId);
 }
