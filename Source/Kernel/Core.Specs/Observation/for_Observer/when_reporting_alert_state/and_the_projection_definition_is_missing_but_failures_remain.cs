@@ -5,7 +5,7 @@ using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 
-namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
+namespace Cratis.Chronicle.Observation.for_Observer.when_reporting_alert_state;
 
 public class and_the_projection_definition_is_missing_but_failures_remain : for_Observer.given.an_observer
 {
@@ -16,7 +16,7 @@ public class and_the_projection_definition_is_missing_but_failures_remain : for_
         _failedPartitionsState.AddFailedPartition("partition", 12UL);
     }
 
-    async Task Because() => await _observer.RunWatchdogAsync();
+    async Task Because() => await _observer.ReportAlertState();
 
     [Fact] async Task should_not_skip_the_failed_partition_snapshot() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.FailedPartitions.Count == 1));
 }

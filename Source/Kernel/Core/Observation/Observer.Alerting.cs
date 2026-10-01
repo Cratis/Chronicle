@@ -12,6 +12,8 @@ namespace Cratis.Chronicle.Observation;
 public partial class Observer
 {
     bool _alertReconciliationPending;
+    bool _alertsRemovalPending;
+    bool? _projectionDefinitionExists;
     AlertClearedReason _pendingPartitionsEndedAs = AlertClearedReason.Recovered;
     AlertClearedReason _pendingQuarantineEndedAs = AlertClearedReason.Cleared;
 
@@ -35,21 +37,28 @@ public partial class Observer
             return;
         }
 
+        if (!_alertReconciliationPending || partitionsEndedAs != AlertClearedReason.Recovered)
+        {
+            _pendingPartitionsEndedAs = partitionsEndedAs;
+        }
+
+        if (!_alertReconciliationPending || quarantineEndedAs != AlertClearedReason.Cleared)
+        {
+            _pendingQuarantineEndedAs = quarantineEndedAs;
+        }
+
         if (_deferAlertReports)
         {
             _alertReconciliationPending = true;
             return;
         }
-
-        _pendingPartitionsEndedAs = partitionsEndedAs;
-        _pendingQuarantineEndedAs = quarantineEndedAs;
         try
         {
             // Retirement retains the observer definition and quarantine, but Projection.Remove deletes the
             // projection definition. Only an unsubscribed projection with no failures can be skipped this way;
             // a disconnected, still-registered projection must continue reporting its quarantine.
             if (!_subscription.IsSubscribed && !Failures.HasFailedPartitions && Definition.Type == ObserverType.Projection &&
-                !await storage.GetEventStore(_observerKey.EventStore).Projections.Has((ProjectionId)_observerId.Value))
+                !(_projectionDefinitionExists ??= await storage.GetEventStore(_observerKey.EventStore).Projections.Has((ProjectionId)_observerId.Value)))
             {
                 return;
             }
@@ -76,8 +85,8 @@ public partial class Observer
                 _removed,
                 configuration.MaxRetryAttempts)
             {
-                PartitionsEndedAs = partitionsEndedAs,
-                QuarantineEndedAs = quarantineEndedAs
+                PartitionsEndedAs = _pendingPartitionsEndedAs,
+                QuarantineEndedAs = _pendingQuarantineEndedAs
             };
             await GrainFactory.GetGrain<IObserverAlerts>(_observerKey).Reconcile(snapshot);
             _alertReconciliationPending = false;
@@ -93,23 +102,13 @@ public partial class Observer
 
     async Task ReconcileAlertsIfNeeded()
     {
-        if (_retired)
+        if (_alertsRemovalPending)
         {
-            return;
+            await ReportAlertsRemoved();
         }
-
-        try
+        else if (_alertReconciliationPending && !_retired && !_removed)
         {
-            if (_alertReconciliationPending || Failures.HasFailedPartitions || State.RunningState == ObserverRunningState.Quarantined ||
-                await GrainFactory.GetGrain<IObserverAlerts>(_observerKey).HasOpenIncidents())
-            {
-                await ReportAlertState(_pendingPartitionsEndedAs, _pendingQuarantineEndedAs);
-            }
-        }
-        catch (Exception exception)
-        {
-            _alertReconciliationPending = true;
-            logger.AlertStateReportingFailed(_observerKey, exception);
+            await ReportAlertState(_pendingPartitionsEndedAs, _pendingQuarantineEndedAs);
         }
     }
 
@@ -118,9 +117,16 @@ public partial class Observer
         try
         {
             await GrainFactory.GetGrain<IObserverAlerts>(_observerKey).Removed();
+            _alertsRemovalPending = false;
+            _alertReconciliationPending = false;
+            if (_removed)
+            {
+                DeactivateOnIdle();
+            }
         }
         catch (Exception exception)
         {
+            _alertsRemovalPending = true;
             logger.AlertStateReportingFailed(_observerKey, exception);
         }
     }

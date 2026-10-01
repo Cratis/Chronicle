@@ -187,8 +187,9 @@ public partial class Observer(
         _removed = true;
         _stateWritingSuspended = true;
 
+        // Keep this activation's watchdog until a failed removal dispatch reaches the tracker.
+        // Once dispatched, the tracker owns persistence retries and this activation can deactivate.
         await ReportAlertsRemoved();
-        DeactivateOnIdle();
     }
 
     /// <inheritdoc/>
@@ -232,6 +233,7 @@ public partial class Observer(
         await failures.ReadStateAsync();
 
         _retired = false;
+        _projectionDefinitionExists = null;
         await LeaveQuarantineForSubscription();
 
         logger.Subscribing();
@@ -330,6 +332,7 @@ public partial class Observer(
         logger.SubscribingToAllEvents();
 
         _retired = false;
+        _projectionDefinitionExists = null;
         await LeaveQuarantineForSubscription();
 
         observerDefinition.State = observerDefinition.State with

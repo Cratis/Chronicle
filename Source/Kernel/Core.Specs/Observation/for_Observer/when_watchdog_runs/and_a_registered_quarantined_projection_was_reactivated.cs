@@ -22,5 +22,6 @@ public class and_a_registered_quarantined_projection_was_reactivated : an_observ
 
     async Task Because() => await _observer.RunWatchdogAsync();
 
-    [Fact] async Task should_keep_reporting_quarantine_without_a_subscription_or_failed_partitions() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.IsQuarantined && snapshot.FailedPartitions.Count == 0));
+    [Fact] async Task should_not_repeat_successfully_dispatched_quarantine() => await _observerAlerts.DidNotReceive().Reconcile(Arg.Any<ObserverAlertSnapshot>());
+    [Fact] async Task should_not_poll_the_tracker() => await _observerAlerts.DidNotReceive().HasOpenIncidents();
 }
