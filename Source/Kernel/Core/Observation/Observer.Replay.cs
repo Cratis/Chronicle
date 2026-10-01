@@ -104,8 +104,13 @@ public partial class Observer
             LastHandledEventSequenceNumber = lastHandledEventSequenceNumber,
             NextEventSequenceNumber = lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : lastHandledEventSequenceNumber.Next()
         };
+        State.CatchingUpPartitions.Clear();
+        State.ReplayingPartitions.Clear();
         await WriteStateAsync();
-        await TransitionTo<Routing>();
+        if (State.RunningState != ObserverRunningState.Quarantined)
+        {
+            await TransitionTo<Routing>();
+        }
     }
 
     async Task CompletePartitionReplay(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes)
