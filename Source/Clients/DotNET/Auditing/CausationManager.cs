@@ -29,7 +29,7 @@ public class CausationManager : ICausationManager
     {
         Add(type, properties);
 
-        return _current.Value![^1];
+        return new Scope(_current.Value![^1]);
     }
 
     /// <summary>
@@ -67,7 +67,7 @@ public class CausationManager : ICausationManager
     /// scoped causation. Each flow truncates its own chain at the first disposed entry without mutating a list
     /// inherited by another flow.
     /// </remarks>
-    sealed class Entry(Causation causation) : IDisposable
+    sealed class Entry(Causation causation)
     {
         volatile bool _disposed;
 
@@ -81,7 +81,19 @@ public class CausationManager : ICausationManager
         /// </summary>
         public bool IsDisposed => _disposed;
 
+        /// <summary>
+        /// Ends the scope represented by the entry.
+        /// </summary>
+        public void EndScope() => _disposed = true;
+    }
+
+    /// <summary>
+    /// Represents the lifetime of a scoped causation.
+    /// </summary>
+    /// <param name="entry">The entry whose scope ends on disposal.</param>
+    sealed class Scope(Entry entry) : IDisposable
+    {
         /// <inheritdoc/>
-        public void Dispose() => _disposed = true;
+        public void Dispose() => entry.EndScope();
     }
 }
