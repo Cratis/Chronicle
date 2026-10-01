@@ -3,22 +3,31 @@
 
 namespace Cratis.Chronicle.Integration;
 
-internal static class ExternalMongoDBResetSafety
+internal sealed class ExternalMongoDBResetSafety
 {
-    internal static void Verify(string prefix, IEnumerable<string> beforeStartup, IEnumerable<string> afterStartup)
+    internal bool IsVerified { get; private set; }
+
+    internal void Verify(string prefix, IEnumerable<string> beforeStartup, IEnumerable<string> afterStartup)
     {
+        if (IsVerified)
+        {
+            return;
+        }
+
         var names = afterStartup.ToHashSet(StringComparer.Ordinal);
         var expectedDatabase = $"{prefix}chronicle+main";
         var unprefixedNames = names.Where(name => name.StartsWith(prefix, StringComparison.Ordinal))
             .Select(name => name[prefix.Length..]).ToHashSet(StringComparer.Ordinal);
         var unexpectedDatabases = names.Except(beforeStartup, StringComparer.Ordinal)
             .Where(name => !name.StartsWith(prefix, StringComparison.Ordinal)
-                && (name == "chronicle+main" || name.Contains("+es", StringComparison.Ordinal) || unprefixedNames.Contains(name)))
+                && (name == "chronicle+main" || unprefixedNames.Contains(name)))
             .ToArray();
 
         if (string.IsNullOrEmpty(prefix) || !names.Contains(expectedDatabase) || unexpectedDatabases.Length > 0)
         {
             throw new ExternalMongoDBKernelPrefixNotVerified(expectedDatabase, unexpectedDatabases);
         }
+
+        IsVerified = true;
     }
 }

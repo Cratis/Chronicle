@@ -63,6 +63,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
 
     readonly Lazy<string> _inProcessSqliteDirectory = new(CreateInProcessSqliteDirectory);
+    readonly ExternalMongoDBResetSafety _externalMongoDBResetSafety = new();
 
     IEnumerable<string> _mongoDatabaseNamesBeforeKernelStartup = [];
 
@@ -547,11 +548,11 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     async Task ResetOutOfProcessKernelState()
     {
-        if (Options.StorageProvider == ChronicleStorageProvider.MongoDB && ExternalMongoDBConnectionString is not null)
+        if (Options.StorageProvider == ChronicleStorageProvider.MongoDB && ExternalMongoDBConnectionString is not null && !_externalMongoDBResetSafety.IsVerified)
         {
             using var client = new MongoClient(ExternalMongoDBConnectionString);
             using var cursor = await client.ListDatabaseNamesAsync();
-            ExternalMongoDBResetSafety.Verify(MongoDBDatabaseNamePrefix, _mongoDatabaseNamesBeforeKernelStartup, await cursor.ToListAsync());
+            _externalMongoDBResetSafety.Verify(MongoDBDatabaseNamePrefix, _mongoDatabaseNamesBeforeKernelStartup, await cursor.ToListAsync());
         }
 
         // skipTlsValidation because the container serves a self-signed development certificate.

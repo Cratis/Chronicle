@@ -7,7 +7,7 @@ public class when_the_kernel_ignores_the_prefix : Cratis.Specifications.Specific
 {
     Exception _error;
 
-    void Because() => _error = Catch.Exception(() => ExternalMongoDBResetSafety.Verify("run_", ["billing"], ["billing", "chronicle+main", "System+es"]));
+    void Because() => _error = Catch.Exception(() => new ExternalMongoDBResetSafety().Verify("run_", ["billing"], ["billing", "chronicle+main", "System+es"]));
 
     [Fact] void should_refuse_the_reset() => _error.ShouldBeOfExactType<ExternalMongoDBKernelPrefixNotVerified>();
     [Fact] void should_explain_the_data_loss_risk() => _error.Message.ShouldContain("delete unrelated databases");

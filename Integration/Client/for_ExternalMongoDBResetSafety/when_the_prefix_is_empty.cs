@@ -7,7 +7,7 @@ public class when_the_prefix_is_empty : Cratis.Specifications.Specification
 {
     Exception _error;
 
-    void Because() => _error = Catch.Exception(() => ExternalMongoDBResetSafety.Verify(string.Empty, ["chronicle+main"], ["chronicle+main"]));
+    void Because() => _error = Catch.Exception(() => new ExternalMongoDBResetSafety().Verify(string.Empty, ["chronicle+main"], ["chronicle+main"]));
 
     [Fact] void should_refuse_the_reset() => _error.ShouldBeOfExactType<ExternalMongoDBKernelPrefixNotVerified>();
 }

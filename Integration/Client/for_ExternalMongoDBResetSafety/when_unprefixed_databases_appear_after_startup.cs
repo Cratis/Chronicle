@@ -7,7 +7,7 @@ public class when_unprefixed_databases_appear_after_startup : Cratis.Specificati
 {
     Exception _error;
 
-    void Because() => _error = Catch.Exception(() => ExternalMongoDBResetSafety.Verify("run_", ["billing"], ["billing", "run_chronicle+main", "System+es"]));
+    void Because() => _error = Catch.Exception(() => new ExternalMongoDBResetSafety().Verify("run_", ["billing"], ["billing", "run_chronicle+main", "run_System+es", "System+es"]));
 
     [Fact] void should_refuse_the_reset_even_when_the_prefixed_database_exists() => _error.ShouldBeOfExactType<ExternalMongoDBKernelPrefixNotVerified>();
     [Fact] void should_identify_the_unprefixed_database() => _error.Message.ShouldContain("System+es");

@@ -7,7 +7,7 @@ public class when_an_unprefixed_read_model_database_appears : Cratis.Specificati
 {
     Exception _error;
 
-    void Because() => _error = Catch.Exception(() => ExternalMongoDBResetSafety.Verify("run_", [], ["run_chronicle+main", "run_Testing", "Testing"]));
+    void Because() => _error = Catch.Exception(() => new ExternalMongoDBResetSafety().Verify("run_", [], ["run_chronicle+main", "run_Testing", "Testing"]));
 
     [Fact] void should_refuse_the_reset() => _error.ShouldBeOfExactType<ExternalMongoDBKernelPrefixNotVerified>();
 }
