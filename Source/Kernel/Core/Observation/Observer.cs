@@ -164,6 +164,7 @@ public partial class Observer(
     {
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
+            // With nobody subscribed this is the routing pass every activation of an unsubscribed observer already runs, so it drops nothing a plain reactivation would not.
             await ReviveFromQuarantine();
         }
     }
@@ -226,6 +227,8 @@ public partial class Observer(
         await ReadStateAsync();
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
+
+        await LeaveQuarantineForSubscription();
 
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
@@ -291,12 +294,6 @@ public partial class Observer(
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
 
-        if (State.RunningState == ObserverRunningState.Quarantined)
-        {
-            await ReviveFromQuarantine();
-            return;
-        }
-
         if (await TransitionToReplayIfNeeded())
         {
             return;
@@ -328,6 +325,8 @@ public partial class Observer(
         logger.Subscribing();
         logger.SubscribingToAllEvents();
 
+        await LeaveQuarantineForSubscription();
+
         observerDefinition.State = observerDefinition.State with
         {
             Type = type,
@@ -348,12 +347,6 @@ public partial class Observer(
 
         State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
-
-        if (State.RunningState == ObserverRunningState.Quarantined)
-        {
-            await ReviveFromQuarantine();
-            return;
-        }
 
         if (await TransitionToReplayIfNeeded())
         {
@@ -512,6 +505,15 @@ public partial class Observer(
             .Select(_ => _jobsManager.Stop(_.Id));
         await Task.WhenAll(stopTasks);
     }
+
+    /// <summary>
+    /// Resolves the state to enter on activation. A quarantined observer resumes in <see cref="QuarantinedObserver"/>
+    /// rather than being routed, because <see cref="Routing"/> would send an observer without a subscription to
+    /// <see cref="Disconnected"/> and entering either state replaces the persisted <see cref="ObserverRunningState.Quarantined"/>.
+    /// </summary>
+    /// <returns>The type of the state to enter.</returns>
+    protected override Type ResolveActivationState() =>
+        State.RunningState == ObserverRunningState.Quarantined ? typeof(QuarantinedObserver) : base.ResolveActivationState();
 
     /// <inheritdoc/>
     protected override Task OnBeforeEnteringState(IState<ObserverState> state)

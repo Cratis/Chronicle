@@ -61,15 +61,33 @@ public class an_observer : Specification
     protected IEventSequenceStorage _eventSequenceStorage;
     protected IEventCompliance _eventCompliance;
     protected Observers _observersConfig;
+    protected NullLogger<Observer> _logger;
+    protected ILoggerFactory _loggerFactory;
 
     protected virtual Observers CreateObserversConfig() => new();
+
+    void AddServices(TestKitSilo silo)
+    {
+        silo.AddService(_configurationProvider);
+        silo.AddService(_storage);
+        silo.AddService(_eventCompliance);
+        silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
+        silo.AddService(_observerServiceClient);
+        silo.AddKeyedService<IActivitySource<Observer>>(WellKnown.MeterName, new ActivitySource<Observer>());
+        silo.AddService(_logger);
+        silo.AddService(_loggerFactory);
+
+        silo.AddProbe(_ => _subscriber);
+        silo.AddProbe(_ => _jobsManager);
+        silo.AddProbe(_ => _appendedEventsQueues);
+        silo.AddProbe(_ => _eventSequence);
+    }
 
     async Task Establish()
     {
         _observersConfig = CreateObserversConfig();
         _configurationProvider = Substitute.For<IConfigurationForObserverProvider>();
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_observersConfig);
-        _silo.AddService(_configurationProvider);
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
         _eventSequence = Substitute.For<IEventSequence>();
@@ -109,26 +127,15 @@ public class an_observer : Specification
             .Release(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>())
             .Returns(callInfo => Task.FromResult(callInfo.Arg<IEnumerable<AppendedEvent>>().ToArray()));
 
-        _silo.AddService(_storage);
-        _silo.AddService(_eventCompliance);
-        _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
-
-        _silo.AddProbe(_ => _subscriber);
-        _silo.AddProbe(_ => _jobsManager);
-        _silo.AddProbe(_ => _appendedEventsQueues);
-        _silo.AddProbe(_ => _eventSequence);
-
         _failedPartitionsState = Substitute.For<FailedPartitions>();
 
         _observerServiceClient = Substitute.For<IObserverServiceClient>();
-        _silo.AddService(_observerServiceClient);
 
-        _silo.AddKeyedService<IActivitySource<Observer>>(WellKnown.MeterName, new ActivitySource<Observer>());
+        _logger = NullLogger<Observer>.Instance;
+        _loggerFactory = Substitute.For<ILoggerFactory>();
+        _loggerFactory.CreateLogger(Arg.Any<string>()).Returns(_logger);
 
-        var logger = _silo.AddService(NullLogger<Observer>.Instance);
-        var loggerFactory = Substitute.For<ILoggerFactory>();
-        _silo.AddService(loggerFactory);
-        loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
+        AddServices(_silo);
 
         _stateStorage = _silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
         _definitionStorage = _silo.StorageManager.GetStorage<ObserverDefinition>(nameof(ObserverDefinition));
@@ -153,6 +160,33 @@ public class an_observer : Specification
 
         _storageStats.ResetCounts();
         _failedPartitionsStorageStats.ResetCounts();
+    }
+
+    /// <summary>
+    /// Simulates the observer grain being deactivated and then activated again in a fresh silo, with the persisted
+    /// state, definition and failed partitions carried over from the grain that was deactivated.
+    /// </summary>
+    /// <returns>The reactivated <see cref="Observer"/>, which also becomes the observer under specification.</returns>
+    protected async Task<Observer> Reactivate()
+    {
+        await _observer.OnDeactivateAsync(new DeactivationReason(DeactivationReasonCode.ApplicationRequested, "Spec"), default);
+
+        var persistedState = _stateStorage.State;
+        var persistedDefinition = _definitionStorage.State;
+        var persistedFailures = _failedPartitionsStorage.State;
+
+        _silo = new();
+        AddServices(_silo);
+        _stateStorage = _silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
+        _stateStorage.State = persistedState;
+        _definitionStorage = _silo.StorageManager.GetStorage<ObserverDefinition>(nameof(ObserverDefinition));
+        _definitionStorage.State = persistedDefinition;
+        _failedPartitionsStorage = _silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
+        _failedPartitionsStorage.State = persistedFailures;
+
+        _observer = await _silo.CreateGrainAsync<Observer>(_observerKey);
+        _storageStats.ResetCounts();
+        return _observer;
     }
 
     protected void GivenFailedEventAt(Key partition, EventSequenceNumber sequenceNumber, EventType eventType) =>
