@@ -347,6 +347,20 @@ public class InMemorySink(
     }
 
     /// <inheritdoc/>
+    public Task LeaveReplay()
+    {
+        // The replay has been promoted somewhere else, so what this sink wrote for it is not the result anyone reads.
+        lock (_collectionLock)
+        {
+            _rewindCollection.Clear();
+            _rewindLastHandledEventSequenceNumbers.Clear();
+            _isReplaying = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task Remove(ReadModelContainerName containerName)
     {
         var clearedPrimary = containerName == readModel.ContainerName;

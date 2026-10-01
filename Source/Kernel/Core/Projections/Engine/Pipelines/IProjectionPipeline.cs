@@ -34,6 +34,12 @@ public interface IProjectionPipeline
     Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context);
 
     /// <summary>
+    /// Stop treating writes as part of a replay that has already been ended elsewhere, without promoting anything.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task LeaveReplay();
+
+    /// <summary>
     /// Begin bulk operation mode.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
