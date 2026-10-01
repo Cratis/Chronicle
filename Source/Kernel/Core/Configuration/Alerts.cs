@@ -19,7 +19,8 @@ public class Alerts
     /// </summary>
     /// <remarks>
     /// A condition without an entry keeps its built-in defaults, and so does a setting an entry leaves out. The keys
-    /// are not case sensitive. Configuration, including an environment variable such as
+    /// are not case sensitive. Kinds unknown to this kernel version are ignored, with a warning on first evaluation.
+    /// Configuration, including an environment variable such as
     /// <c language="csharp">Cratis__Chronicle__Alerts__Conditions__partition-failing__RaiseAfter</c>, binds into this dictionary.
     /// </remarks>
     public IDictionary<string, AlertConditionOptions> Conditions { get; init; } =

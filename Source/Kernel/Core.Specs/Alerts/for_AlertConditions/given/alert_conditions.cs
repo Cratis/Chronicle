@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using AlertsOptions = Cratis.Chronicle.Configuration.Alerts;
@@ -21,6 +22,6 @@ public class alert_conditions : Specification
     {
         var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
         options.CurrentValue.Returns(new ChronicleOptions { Alerts = alerts });
-        _conditions = new(options);
+        _conditions = new(options, NullLogger<AlertConditions>.Instance);
     }
 }

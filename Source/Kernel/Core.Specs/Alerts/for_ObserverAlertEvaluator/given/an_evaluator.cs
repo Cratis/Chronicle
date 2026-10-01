@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Alerts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using AlertsOptions = Cratis.Chronicle.Configuration.Alerts;
@@ -29,7 +30,7 @@ public class an_evaluator : Specification
     {
         var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
         options.CurrentValue.Returns(new ChronicleOptions { Alerts = alerts });
-        _evaluator = new(new AlertConditions(options));
+        _evaluator = new(new AlertConditions(options, NullLogger<AlertConditions>.Instance));
     }
 
     protected static AlertsOptions AlertsWith(string condition, AlertConditionOptions options) =>

@@ -1,11 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.IO.Enumeration;
 using Cratis.Chronicle.Concepts.Alerts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Alerts;
@@ -20,8 +22,9 @@ namespace Cratis.Chronicle.Alerts;
 /// the next evaluation.
 /// </remarks>
 /// <param name="options">The <see cref="IOptionsMonitor{TOptions}"/> for <see cref="ChronicleOptions"/>.</param>
+/// <param name="logger">The logger.</param>
 [Singleton]
-public class AlertConditions(IOptionsMonitor<ChronicleOptions> options) : IAlertConditions
+public class AlertConditions(IOptionsMonitor<ChronicleOptions> options, ILogger<AlertConditions> logger) : IAlertConditions
 {
     static readonly TimeSpan _defaultRaiseAfter = TimeSpan.FromMinutes(5);
 
@@ -32,6 +35,8 @@ public class AlertConditions(IOptionsMonitor<ChronicleOptions> options) : IAlert
         [AlertConditionKind.ObserverQuarantined] = AlertSeverity.Critical
     };
 
+    readonly ConcurrentDictionary<string, byte> _warnedUnknownConditions = new(StringComparer.OrdinalIgnoreCase);
+
     /// <inheritdoc/>
     public AlertCondition For(AlertConditionKind kind)
     {
@@ -41,6 +46,13 @@ public class AlertConditions(IOptionsMonitor<ChronicleOptions> options) : IAlert
         }
 
         var alerts = options.CurrentValue.Alerts;
+        foreach (var unknown in alerts.Conditions.Keys.Where(key => !_defaultSeverities.Keys.Any(kind => string.Equals(kind.Value, key, StringComparison.OrdinalIgnoreCase))))
+        {
+            if (_warnedUnknownConditions.TryAdd(unknown, 0))
+            {
+                logger.IgnoringUnknownCondition(unknown);
+            }
+        }
 
         // Looked up without regard to case whatever comparer the configured dictionary was created with.
         var configured = alerts.Conditions

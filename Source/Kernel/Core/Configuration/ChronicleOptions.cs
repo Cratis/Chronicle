@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,7 +10,7 @@ namespace Cratis.Chronicle.Configuration;
 /// <summary>
 /// Represents the Chronicle options.
 /// </summary>
-public class ChronicleOptions
+public class ChronicleOptions : IValidatableObject
 {
     /// <summary>
     /// Section paths for Chronicle configuration.
@@ -182,4 +183,12 @@ public class ChronicleOptions
             .ValidateDataAnnotations()
             .ValidateOnStart();
     }
+
+    /// <inheritdoc/>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
+        Alerts.Conditions
+            .Where(_ => _.Value.RaiseAfter < TimeSpan.Zero)
+            .Select(_ => new ValidationResult(
+                $"Alerts.Conditions['{_.Key}'].RaiseAfter must be non-negative; zero raises immediately.",
+                [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]));
 }

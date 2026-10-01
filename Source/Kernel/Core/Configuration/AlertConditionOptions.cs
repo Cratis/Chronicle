@@ -23,7 +23,7 @@ public class AlertConditionOptions
 
     /// <summary>
     /// Gets how long a partition has to keep failing, while still being retried, before <c language="csharp">partition-failing</c>
-    /// raises. It means nothing for the other conditions.
+    /// raises. Must be non-negative; zero raises immediately. It means nothing for the other conditions.
     /// </summary>
     public TimeSpan RaiseAfter { get; init; } = TimeSpan.FromMinutes(5);
 }
