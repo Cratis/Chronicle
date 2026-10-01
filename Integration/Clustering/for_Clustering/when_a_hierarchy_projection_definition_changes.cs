@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Integration.Clustering.for_Clustering.Hierarchy;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.ReadModels;
 using context = Cratis.Chronicle.Integration.Clustering.for_Clustering.when_a_hierarchy_projection_definition_changes.context;
 
 namespace Cratis.Chronicle.Integration.Clustering.for_Clustering;
@@ -65,24 +66,12 @@ public class when_a_hierarchy_projection_definition_changes(context _context)
             return result;
         }
 
-        async Task<IReadOnlyList<EvolvingModule?>> WaitForReplay(IEventStore eventStore, Guid[] modules)
-        {
-            // Only the new definition sets the label, so every module carrying one has been rebuilt by the replay.
-            using var cancellationTokenSource = new CancellationTokenSource(_timeout);
-            IReadOnlyList<EvolvingModule?> result = [];
-            while (!cancellationTokenSource.IsCancellationRequested)
-            {
-                result = await ReadAll(eventStore, modules);
-                if (result.All(module => !string.IsNullOrEmpty(module?.Label)))
-                {
-                    return result;
-                }
-
-                await Task.Delay(250, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-            }
-
-            return result;
-        }
+        // Only the new definition sets the label, so every module carrying one has been rebuilt by the replay.
+        Task<IReadOnlyList<EvolvingModule?>> WaitForReplay(IEventStore eventStore, Guid[] modules) =>
+            eventStore.ReadModels.WaitTillInstancesSatisfy<EvolvingModule>(
+                modules.Select(module => (ReadModelKey)module.ToString()),
+                result => result.All(module => !string.IsNullOrEmpty(module?.Label)),
+                _timeout);
     }
 
     static int FeatureCount(IEnumerable<EvolvingModule?> modules) =>
