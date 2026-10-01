@@ -19,7 +19,7 @@ A quarantined partition is the signal that needs a person. A partition that keep
 
 ## Alert from metrics
 
-Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configuration/open-telemetry/) from the `Cratis.Chronicle` meter. Three counters describe failing observers. Each has one series per observer, tagged `EventStore`, `Namespace`, `ObserverId` and `EventSequenceId`, and each starts at `0` when the observer starts:
+Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configuration/open-telemetry/) from the `Cratis.Chronicle` meter. Three counters describe failing observers. Each has one series per observer, tagged `EventStore`, `Namespace`, `ObserverId` and `EventSequenceId`, and each is recorded as `0` when the observer starts:
 
 | Instrument | Counts |
 | --- | --- |
@@ -29,7 +29,9 @@ Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configurat
 
 With the default translation of the OpenTelemetry Collector's Prometheus exporter, or Prometheus's own OTLP receiver, the counters appear as `chronicle_observer_partitions_failed_total`, `chronicle_observer_partitions_quarantined_total` and `chronicle_observer_quarantined_total`, and the tags keep their names. Look the series up in your backend before relying on the names below.
 
-These Prometheus alerting rules report, per observer, partitions that ran out of retries and observer quarantines in the last 30 minutes, and repeated failed attempts in the last 15 minutes:
+The `0` recorded at startup does not guarantee that your backend ever sees a `0`. Counters are exported as cumulative values, so when the first failure happens before the first export after the observer started, the first value the backend receives is already `1`. A rule built only on `increase()` needs two samples in its window and reports nothing for that series. Each rule below therefore has two halves, joined with `or`: the first catches series that went up inside the window, the second catches series that did not exist at the start of the window and are already above the threshold. Both aggregate to the same labels, so an observer produces one series, and so one alert, whichever half caught it.
+
+The rules select each counter by its name prefix, for example `{__name__=~"chronicle_observer_partitions_quarantined.*"}`, so the same rules work for the long names that earlier Kernels export. These Prometheus alerting rules report, per observer, partitions that ran out of retries and observer quarantines in the last 30 minutes, and repeated failed attempts in the last 15 minutes:
 
 ```yaml title="chronicle-observer-alerts.yml"
 groups:
@@ -38,8 +40,13 @@ groups:
       - alert: ChroniclePartitionsQuarantined
         expr: |
           sum by (EventStore, Namespace, ObserverId) (
-            increase(chronicle_observer_partitions_quarantined_total[30m])
+            increase({__name__=~"chronicle_observer_partitions_quarantined.*"}[30m])
           ) > 0
+          or
+          count by (EventStore, Namespace, ObserverId) (
+            {__name__=~"chronicle_observer_partitions_quarantined.*"} > 0
+            unless {__name__=~"chronicle_observer_partitions_quarantined.*"} offset 30m
+          )
         labels:
           severity: critical
         annotations:
@@ -49,8 +56,13 @@ groups:
       - alert: ChronicleObserverQuarantined
         expr: |
           sum by (EventStore, Namespace, ObserverId) (
-            increase(chronicle_observer_quarantined_total[30m])
+            increase({__name__=~"chronicle_observer_quarantined.*"}[30m])
           ) > 0
+          or
+          count by (EventStore, Namespace, ObserverId) (
+            {__name__=~"chronicle_observer_quarantined.*"} > 0
+            unless {__name__=~"chronicle_observer_quarantined.*"} offset 30m
+          )
         labels:
           severity: critical
         annotations:
@@ -59,18 +71,23 @@ groups:
       - alert: ChroniclePartitionsFailing
         expr: |
           sum by (EventStore, Namespace, ObserverId) (
-            increase(chronicle_observer_partitions_failed_total[15m])
+            increase({__name__=~"chronicle_observer_partitions_failed.*"}[15m])
           ) >= 3
+          or
+          count by (EventStore, Namespace, ObserverId) (
+            {__name__=~"chronicle_observer_partitions_failed.*"} >= 3
+            unless {__name__=~"chronicle_observer_partitions_failed.*"} offset 15m
+          )
         labels:
           severity: warning
         annotations:
           summary: "{{ $labels.ObserverId }} in {{ $labels.EventStore }}/{{ $labels.Namespace }} has failed repeatedly in the last 15 minutes"
 ```
 
-Route the alerts with Alertmanager or Grafana to wherever your team works — email, Slack, Microsoft Teams, PagerDuty. Other backends that receive OTLP, such as Azure Monitor, Datadog or Grafana Cloud, can express the same conditions in their own alert languages.
+Route the alerts with Alertmanager or Grafana to wherever your team works — email, Slack, Microsoft Teams, PagerDuty. Other backends that receive OTLP, such as Azure Monitor, Datadog or Grafana Cloud, can express the same conditions in their own alert languages. The two halves of each rule are what to carry over: a series that appears already above zero is as much a failure as one that climbs.
 
-:::caution[Older Kernels tag failures with the partition]
-In earlier versions these counters also carry a `partition` tag — the event source id, which can identify a person — and there is no `chronicle-observer-quarantined` counter. Each partition then has its own series that starts at its first failure, so `increase()` alone never sees a partition that failed once and was quarantined. Select new series as well: `(x unless x offset 30m) or (increase(x[30m]) > 0)`, counted by the observer tags. Consider dropping the `partition` label at your collector if your telemetry store must not hold personal data.
+:::caution[Older Kernels export different series]
+Earlier versions export these counters with the description appended to the name, for example `chronicle_observer_partitions_failed_Number_of_failed_partitions_per_observer_in_a_given_event_store_and_namespace_total`, which the prefix selectors above match. They also tag every measurement with `partition` — the event source id, which can identify a person — and have no `chronicle-observer-quarantined` counter, so `ChronicleObserverQuarantined` never fires for them. With the `partition` tag each partition has its own series that starts at its first failure, and the rules evaluate the second half per partition series. Consider dropping the `partition` label at your collector if your telemetry store must not hold personal data.
 :::
 
 Know the limits of counters before you depend on them:
