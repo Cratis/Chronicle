@@ -23,6 +23,12 @@ public interface IObserverAlerts : IGrainWithStringKey
     Task Reconcile(ObserverAlertSnapshot snapshot);
 
     /// <summary>
+    /// Checks the durable history for incidents that still need reconciliation.
+    /// </summary>
+    /// <returns>Whether any incidents remain open.</returns>
+    Task<bool> HasOpenIncidents();
+
+    /// <summary>
     /// Clears every open incident because the observer was removed or retired.
     /// </summary>
     /// <returns>Awaitable task, completed at dispatch rather than after reconciliation.</returns>

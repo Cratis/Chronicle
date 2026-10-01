@@ -119,6 +119,13 @@ public class ObserverAlerts(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> HasOpenIncidents()
+    {
+        await LoadHistory();
+        return _openIncidents.Count > 0;
+    }
+
+    /// <inheritdoc/>
     public Task Removed() => Reconcile(new(Key, [], false, true, 0));
 
     async Task LoadHistory()

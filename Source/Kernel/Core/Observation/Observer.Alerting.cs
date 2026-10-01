@@ -11,6 +11,10 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
+    bool _alertReconciliationPending;
+    AlertClearedReason _pendingPartitionsEndedAs = AlertClearedReason.Recovered;
+    AlertClearedReason _pendingQuarantineEndedAs = AlertClearedReason.Cleared;
+
     /// <summary>
     /// Reports the current failure state without waiting for alert evaluation or persistence.
     /// </summary>
@@ -31,6 +35,8 @@ public partial class Observer
             return;
         }
 
+        _pendingPartitionsEndedAs = partitionsEndedAs;
+        _pendingQuarantineEndedAs = quarantineEndedAs;
         try
         {
             // Retirement retains the observer definition and quarantine, but Projection.Remove deletes the
@@ -68,9 +74,35 @@ public partial class Observer
                 QuarantineEndedAs = quarantineEndedAs
             };
             await GrainFactory.GetGrain<IObserverAlerts>(_observerKey).Reconcile(snapshot);
+            _alertReconciliationPending = false;
+            _pendingPartitionsEndedAs = AlertClearedReason.Recovered;
+            _pendingQuarantineEndedAs = AlertClearedReason.Cleared;
         }
         catch (Exception exception)
         {
+            _alertReconciliationPending = true;
+            logger.AlertStateReportingFailed(_observerKey, exception);
+        }
+    }
+
+    async Task ReconcileAlertsIfNeeded()
+    {
+        if (_retired)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_alertReconciliationPending || Failures.HasFailedPartitions || State.RunningState == ObserverRunningState.Quarantined ||
+                await GrainFactory.GetGrain<IObserverAlerts>(_observerKey).HasOpenIncidents())
+            {
+                await ReportAlertState(_pendingPartitionsEndedAs, _pendingQuarantineEndedAs);
+            }
+        }
+        catch (Exception exception)
+        {
+            _alertReconciliationPending = true;
             logger.AlertStateReportingFailed(_observerKey, exception);
         }
     }
