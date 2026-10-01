@@ -89,19 +89,20 @@ Quarantining stops retries and needs an operator to undo, which is the right ans
 that is wrong and the wrong answer for one waiting on congestion that will clear on its own.
 
 A quarantine ends when an operator clears it, with `cratis chronicle observers clear-quarantine` or from
-the Workbench, or when the observer is subscribed again. Who subscribes it, and when, depends on the observer:
+the Workbench, or when the observer is subscribed again. What subscribes it again depends on the observer:
 
 | Observer | Subscribed again |
 | --- | --- |
-| Reactors and reducers of an application | When the application's client connects, including when it reconnects after a Kernel restart |
-| Projections | By the Kernel when it starts, and when a client registers a changed definition for the projection |
-| Webhooks and the Kernel's own reactors | By the Kernel when it starts |
-| Event store subscriptions | By the Kernel when it starts, and by a check the Kernel runs every minute that subscribes them again if they are not subscribed |
+| Reactors and reducers of an application | When an instance of the application's client connects or reconnects, including after a Kernel restart, and when the client registers a changed definition |
+| Projections | When the Kernel starts, when a client registers a changed definition, and when a namespace is added |
+| Webhooks | When the Kernel starts, when a client registers a new or changed webhook, when a webhook is added or edited (target URL, headers, authorization or event types), and when a namespace is added |
+| Event store subscriptions | When the Kernel starts, when a namespace is added, and by the check the Kernel runs every minute, which subscribes one again if it is no longer subscribed or its event types changed |
+| The Kernel's own reactors and pattern capture | When the Kernel starts, when an event store is added, and when a namespace that already holds events is added. Pattern capture is also subscribed again when a client registers new event types |
 
-A Kernel restart therefore ends every quarantine once the Kernel and its clients are back. The observer's
-grain being deactivated and activated again in a running Kernel does not end it: the observer is still
-**Quarantined** afterwards rather than **Disconnected**. Event store subscriptions are the exception, because
-the check that runs every minute finds them no longer subscribed and subscribes them again.
+A Kernel restart therefore ends every quarantine once the Kernel and its clients are back. Deactivating the
+observer's grain and activating it again in a running Kernel does not end the quarantine: the observer is
+still **Quarantined** afterwards rather than **Disconnected**. An event store subscription is the exception,
+because the minute check then finds it no longer subscribed and subscribes it again.
 
 ## Scaled-out clients
 
