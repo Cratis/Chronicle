@@ -51,6 +51,8 @@ After fixing the cause of a failure, an application can inspect a typed reactor'
 
 A retry request is not proof that recovery finished. Inspect the partition before reporting recovery as successful; retrying does not guarantee exactly-once execution of reactor side effects.
 
+To find out about a stuck partition when it happens rather than when someone notices, see [Get alerted when observers stop processing](/chronicle/hosting/alerting-on-observer-failures/).
+
 A partition that ran out of retries before your fix was deployed is quarantined, and does **not** resume on its own. Inspect it with `failed-partitions show` before choosing how to resume it: an ordinary retry is refused for a quarantined partition, and a quarantined *observer* needs `observers clear-quarantine` first. Remember that every retry and replay runs the handler again, so a side effect the handler completed before it failed happens again unless you guard it; see [Delivery identity](/chronicle/reactors/delivery-identity/).
 
 ## A constraint is rejecting an append I expected to succeed

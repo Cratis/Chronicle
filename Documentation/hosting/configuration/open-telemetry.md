@@ -82,6 +82,8 @@ Chronicle instruments the following meters:
 | `Grpc.AspNetCore.Server` | gRPC server request metrics |
 | .NET runtime | GC, thread pool, and memory metrics from the .NET runtime |
 
+To be alerted when an observer's partitions keep failing or run out of retries, see [Get alerted when observers stop processing](../alerting-on-observer-failures.md).
+
 ## Traces instrumented
 
 Chronicle traces the following activity sources:
