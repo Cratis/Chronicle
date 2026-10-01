@@ -110,7 +110,7 @@ public partial class Observer
     /// <returns>True if the observer was re-routed, false if it was left alone.</returns>
     async Task<bool> CheckJobTasks()
     {
-        if (!_subscription.IsSubscribed)
+        if (State.RunningState == ObserverRunningState.Quarantined || !_subscription.IsSubscribed)
         {
             return false;
         }

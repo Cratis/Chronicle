@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
 
 namespace Cratis.Chronicle.Observation;
@@ -78,11 +79,15 @@ public partial class Observer
     /// which fails to start a job again, leaving the flag raised for the next tick to find stranded again. Bounding
     /// the number of consecutive stranded recoveries and quarantining the observer once that bound is exceeded turns
     /// the silent infinite loop into a visible, operator-actionable state instead.
+    /// Quarantine is an intentional stop, not a recoverable strand: preparation is left alone until an operator
+    /// clears quarantine or a fresh subscription resets it.
     /// </para>
     /// </remarks>
     async Task<bool> CheckStrandedCatchupPreparation()
     {
-        if (!_isPreparingCatchup || await HasRunningCatchupJob())
+        if (State.RunningState == ObserverRunningState.Quarantined ||
+            !_isPreparingCatchup ||
+            await HasRunningCatchupJob())
         {
             return false;
         }
@@ -122,6 +127,7 @@ public partial class Observer
     /// <returns>Awaitable task.</returns>
     async Task ReviveFromQuarantine()
     {
+        _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
         await TransitionTo<Routing>();
     }
@@ -146,6 +152,7 @@ public partial class Observer
             return;
         }
 
+        _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
         await quarantined.LeaveForSubscription();
     }
