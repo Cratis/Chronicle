@@ -25,10 +25,11 @@ namespace Cratis.Chronicle.Alerts;
 /// <item>A partition incident has the identifier of the failed partition. <c language="csharp">partition-failing</c> raises once the
 /// partition has been failing for <see cref="AlertCondition.RaiseAfter"/> while still being retried; a partition that
 /// recovers earlier raises nothing.</item>
-/// <item>When the partition runs out of retries the same incident is escalated to <c language="csharp">partition-retries-exhausted</c>.
-/// A partition that has run out of retries with no open incident raises <c language="csharp">partition-retries-exhausted</c> straight
-/// away, without waiting for the grace period. When the maximum number of retries is 0 (retry forever) there is no
-/// escalation and nothing is treated as exhausted.</item>
+/// <item>A quarantined partition is never retried automatically, so it always needs a person. When the partition is
+/// quarantined the same incident is escalated to <c language="csharp">partition-retries-exhausted</c>. A quarantined partition with
+/// no open incident raises <c language="csharp">partition-retries-exhausted</c> straight away, without waiting for the grace period.
+/// This holds whatever the maximum number of retries is. When the maximum number of retries is 0 (retry forever) a
+/// partition that is not quarantined keeps being retried and is never treated as exhausted by itself.</item>
 /// <item>An incident clears with <see cref="AlertClearedReason.Recovered"/> as soon as its partition is no longer
 /// failing.</item>
 /// <item><c language="csharp">observer-quarantined</c> raises when the observer is quarantined, with a new incident identifier, and
@@ -108,8 +109,7 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
             _ => current < candidate ? current : candidate
         };
 
-    static bool IsExhausted(ObserverAlertSnapshot snapshot, FailedPartitionSnapshot partition) =>
-        partition.IsQuarantined && snapshot.MaxRetryAttempts > 0;
+    static bool IsExhausted(FailedPartitionSnapshot partition) => partition.IsQuarantined;
 
     static AlertCleared Cleared(ObserverAlertSnapshot snapshot, OpenIncident incident, AlertClearedReason reason) =>
         new(incident.Id, incident.Condition, reason, AlertTarget.For(snapshot.Observer, incident.Partition));
@@ -157,7 +157,7 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
 
         if (incident is null)
         {
-            if (IsExhausted(snapshot, partition) && exhausted.Enabled)
+            if (IsExhausted(partition) && exhausted.Enabled)
             {
                 return (new AlertRaised(partition.Id, exhausted.Kind, exhausted.Severity, target, EvidenceFor(partition)), null);
             }
@@ -173,7 +173,7 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
                 : (null, due);
         }
 
-        if (IsExhausted(snapshot, partition) && exhausted.Enabled && incident.Condition != exhausted.Kind)
+        if (IsExhausted(partition) && exhausted.Enabled && incident.Condition != exhausted.Kind)
         {
             return (new AlertEscalated(incident.Id, exhausted.Kind, exhausted.Severity, target, EvidenceFor(partition)), null);
         }
