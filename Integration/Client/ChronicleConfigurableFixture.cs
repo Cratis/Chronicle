@@ -127,33 +127,48 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <inheritdoc/>
     public override async ValueTask DisposeAsync()
     {
-        // The kernel container is owned by the base class (assigned during BuildContainer)
-        // and is disposed by base.DisposeAsync — only the auxiliary containers we built
-        // ourselves need disposing here.
-        await (_databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
-        await (_outOfProcessMongoContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
-        await base.DisposeAsync();
+        try
+        {
+            // The kernel container is owned by the base class (assigned during BuildContainer)
+            // and is disposed by base.DisposeAsync — only the auxiliary containers we built
+            // ourselves need disposing here.
+            await (_databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
+            await (_outOfProcessMongoContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
+            await base.DisposeAsync();
+        }
+        finally
+        {
+            // Runs whether or not a container failed to dispose: a throw above used to skip it and leave the
+            // in-process silo's SQLite files in the temp folder.
+            DeleteInProcessSqliteFiles();
+        }
+    }
 
+    void DeleteInProcessSqliteFiles()
+    {
         // Best-effort cleanup of the in-process silo's SQLite files. Pattern matches the
         // cluster file and every per-event-store / per-namespace sibling created at runtime.
-        if (Options.StorageProvider == ChronicleStorageProvider.Sqlite)
+        if (Options.StorageProvider != ChronicleStorageProvider.Sqlite)
         {
-            var directory = Path.GetDirectoryName(InProcessSqliteFilePath);
-            var baseName = Path.GetFileNameWithoutExtension(InProcessSqliteFilePath);
-            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+            return;
+        }
+
+        var directory = Path.GetDirectoryName(InProcessSqliteFilePath);
+        var baseName = Path.GetFileNameWithoutExtension(InProcessSqliteFilePath);
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+        {
+            return;
+        }
+
+        foreach (var file in Directory.GetFiles(directory, $"{baseName}*"))
+        {
+            try
             {
-                foreach (var file in Directory.GetFiles(directory, $"{baseName}*"))
-                {
-                    try
-                    {
-                        File.Delete(file);
-                    }
-                    catch
-                    {
-                        // The file may be held open by a still-shutting-down silo connection;
-                        // the unique GUID in the path means future sessions are unaffected.
-                    }
-                }
+                File.Delete(file);
+            }
+            catch
+            {
+                // The file may be held open by a still-shutting-down silo connection; the unique GUID in the path means future sessions are unaffected.
             }
         }
     }
