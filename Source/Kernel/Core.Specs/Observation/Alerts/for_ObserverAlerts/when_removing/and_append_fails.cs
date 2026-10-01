@@ -9,17 +9,15 @@ namespace Cratis.Chronicle.Observation.Alerts.for_ObserverAlerts.when_removing;
 
 public class and_append_fails : given.an_alert_tracker
 {
-    Exception _error;
-
     void Establish()
     {
         GivenHistory(RaisedForSnapshot());
         AppendReturns(AppendResult.Failed(CorrelationId.NotSet, (AppendError[])[new("Unavailable")]));
     }
 
-    async Task Because() => _error = await Catch.Exception(_tracker.Removed);
+    async Task Because() => _receipt = await ReconcileRemoval();
 
-    [Fact] void should_not_fail_retirement() => _error.ShouldBeNull();
+    [Fact] void should_require_a_retry_before_cleanup() => _receipt.Outcome.ShouldEqual(ObserverAlertReconciliation.RetryRequired);
     [Fact] void should_attempt_a_removed_clear() => ((AlertCleared)_serialized).Reason.ShouldEqual(AlertClearedReason.Removed);
     [Fact] void should_count_the_failed_append() => _metrics.SumOf("chronicle-alert-transitions-failed").ShouldEqual(1);
 }

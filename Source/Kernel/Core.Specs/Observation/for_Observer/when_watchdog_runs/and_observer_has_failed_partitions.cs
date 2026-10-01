@@ -16,6 +16,5 @@ public class and_observer_has_failed_partitions : an_observer
 
     async Task Because() => await _observer.RunWatchdogAsync();
 
-    [Fact] async Task should_not_repeat_successfully_dispatched_failures() => await _observerAlerts.DidNotReceive().Reconcile(Arg.Any<ObserverAlertSnapshot>());
-    [Fact] async Task should_not_poll_for_incidents() => await _observerAlerts.DidNotReceive().HasOpenIncidents();
+    [Fact] async Task should_report_failures_to_cover_grace_deadlines_and_tracker_loss() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.FailedPartitions.Count == 1));
 }

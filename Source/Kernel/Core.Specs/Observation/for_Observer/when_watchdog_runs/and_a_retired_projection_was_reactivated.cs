@@ -29,5 +29,5 @@ public class and_a_retired_projection_was_reactivated : an_observer_with_subscri
 
     [Fact] async Task should_keep_the_quarantined_state() => (await _observer.IsObserverQuarantined()).ShouldBeTrue();
     [Fact] async Task should_have_no_failed_partitions() => (await _observer.HasFailedPartitions()).ShouldBeFalse();
-    [Fact] async Task should_not_report_quarantine_on_activation_or_the_watchdog_tick() => await _observerAlerts.DidNotReceive().Reconcile(Arg.Any<ObserverAlertSnapshot>());
+    [Fact] async Task should_report_retirement_instead_of_reopening_quarantine() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.Disposition == AlertDisposition.Retired));
 }

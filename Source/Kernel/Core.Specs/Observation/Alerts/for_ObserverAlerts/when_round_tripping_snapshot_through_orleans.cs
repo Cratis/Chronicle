@@ -18,11 +18,15 @@ public class when_round_tripping_snapshot_through_orleans : Specification
 {
     ObserverAlertSnapshot _original;
     ObserverAlertSnapshot _result;
+    ObserverAlertReceipt _receipt;
+    ObserverAlertReceipt _receiptResult;
 
-    void Establish() => _original = new(new("observer", "store", "namespace", EventSequenceId.Log), [new(FailedPartitionId.New(), "partition", DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddMinutes(1), 3, true, FailureKind.Handling, "Failed")], true, false, 10)
+    void Establish() => _original = new(new("observer", "store", "namespace", EventSequenceId.Log), [new(FailedPartitionId.New(), "partition", DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddMinutes(1), 3, true, FailureKind.Handling, "Failed")], true, AlertDisposition.Active, 10)
     {
-        PartitionsEndedAs = AlertClearedReason.Cleared,
-        QuarantineEndedAs = AlertClearedReason.Revived
+        LifecycleId = Guid.NewGuid(),
+        Revision = 42,
+        QuarantineEpisodeId = Guid.NewGuid(),
+        Endings = new Dictionary<IncidentId, AlertClearedReason> { [IncidentId.New()] = AlertClearedReason.Revived }
     };
 
     void Because()
@@ -37,12 +41,17 @@ public class when_round_tripping_snapshot_through_orleans : Specification
         using var provider = services.BuildServiceProvider();
         var serializer = provider.GetRequiredService<Serializer>();
         _result = serializer.Deserialize<ObserverAlertSnapshot>(serializer.SerializeToArray(_original));
+        _receipt = new(_original.LifecycleId, _original.Revision, ObserverAlertReconciliation.RetryRequired, _original.QuarantineEpisodeId);
+        _receiptResult = serializer.Deserialize<ObserverAlertReceipt>(serializer.SerializeToArray(_receipt));
     }
 
     [Fact] void should_keep_the_observer_key() => _result.Observer.ShouldEqual(_original.Observer);
     [Fact] void should_keep_the_failure_evidence() => _result.FailedPartitions.ShouldContainOnly(_original.FailedPartitions.Single());
     [Fact] void should_keep_the_quarantine_state() => _result.IsQuarantined.ShouldBeTrue();
     [Fact] void should_keep_the_retry_limit() => _result.MaxRetryAttempts.ShouldEqual(10);
-    [Fact] void should_keep_the_partition_clear_reason() => _result.PartitionsEndedAs.ShouldEqual(AlertClearedReason.Cleared);
-    [Fact] void should_keep_the_quarantine_clear_reason() => _result.QuarantineEndedAs.ShouldEqual(AlertClearedReason.Revived);
+    [Fact] void should_keep_the_episode_ending_hints() => _result.Endings.Single().ShouldEqual(_original.Endings.Single());
+    [Fact] void should_keep_the_lifecycle() => _result.LifecycleId.ShouldEqual(_original.LifecycleId);
+    [Fact] void should_keep_the_revision() => _result.Revision.ShouldEqual(42);
+    [Fact] void should_keep_the_quarantine_identity() => _result.QuarantineEpisodeId.ShouldEqual(_original.QuarantineEpisodeId);
+    [Fact] void should_round_trip_the_receipt() => _receiptResult.ShouldEqual(_receipt);
 }

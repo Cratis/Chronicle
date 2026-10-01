@@ -31,8 +31,8 @@ public class and_the_projection_observer_is_observing : given.an_observer_with_s
     [Fact] void should_persist_the_disconnected_running_state() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Disconnected);
     [Fact] async Task should_unsubscribe_from_the_appended_events_queue() => await _appendedEventsQueues.Received(1).Unsubscribe(new AppendedEventsQueueSubscription(_observerKey, 0));
     [Fact] async Task should_no_longer_have_a_subscriber() => (await _observer.IsSubscribed()).ShouldBeFalse();
-    [Fact] async Task should_clear_incidents_as_removed() => await _observerAlerts.Received(1).Removed();
-    [Fact] async Task should_not_report_a_recovery() => await _observerAlerts.DidNotReceive().Reconcile(Arg.Any<ObserverAlertSnapshot>());
+    [Fact] async Task should_clear_incidents_as_removed() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.Disposition == AlertDisposition.Retired));
+    [Fact] async Task should_not_report_a_recovery() => await _observerAlerts.DidNotReceive().Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.Disposition == AlertDisposition.Active));
     [Fact]
     async Task should_pass_the_removal_guard()
     {

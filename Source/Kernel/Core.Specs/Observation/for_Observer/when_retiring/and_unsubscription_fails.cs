@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Alerts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_retiring;
@@ -18,8 +19,9 @@ public class and_unsubscription_fails : given.an_observer_with_subscription
         _error = await Catch.Exception(_observer.Retire);
         _observerAlerts.ClearReceivedCalls();
         await _observer.PartitionFailed("partition", 12UL, ["Failed"], "Stack");
+        await ReportAlerts();
     }
 
     [Fact] void should_fail_retirement() => _error.ShouldNotBeNull();
-    [Fact] async Task should_keep_reporting_failures() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.FailedPartitions.Count == 1));
+    [Fact] async Task should_keep_the_retired_fence_reportable() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.Disposition == AlertDisposition.Retired && snapshot.FailedPartitions.Count == 0));
 }

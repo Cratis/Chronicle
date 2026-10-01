@@ -53,13 +53,25 @@ public class ObserverRemover(
 
         logger.RemovingObserver(observerId, eventStore);
 
+        // Establish every durable fence and apply every clear before any destructive cleanup begins.
         foreach (var @namespace in namespaces)
         {
-            await RemoveFromNamespace(eventStore, observerId, eventSequenceId, @namespace);
+            await grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, eventSequenceId)).Remove();
+        }
+
+        foreach (var @namespace in namespaces)
+        {
+            await RemoveFromNamespace(eventStore, observerId, @namespace);
         }
 
         await eventStoreStorage.Observers.Delete(observerId);
         await ForgetProjection(eventStore, observerId);
+
+        // Removing records are deliberately last, including after shared definition and projection cleanup.
+        foreach (var @namespace in namespaces)
+        {
+            await grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, eventSequenceId)).CompleteRemoval();
+        }
 
         logger.RemovedObserver(observerId, eventStore);
         return ObserverRemovalResult.Removed;
@@ -121,18 +133,11 @@ public class ObserverRemover(
     async Task RemoveFromNamespace(
         EventStoreName eventStore,
         ObserverId observerId,
-        EventSequenceId eventSequenceId,
         EventStoreNamespaceName @namespace)
     {
-        var observer = grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, eventSequenceId));
-
-        // The grain goes first. It holds the observer's definition, failures and reminders in memory and writes them
-        // back on its way out, so deleting the records while an activation is still alive is a race the records win.
-        await observer.Remove();
         await DeleteJobs(eventStore, observerId, @namespace);
 
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
-        await namespaceStorage.Observers.Delete(observerId);
         await namespaceStorage.FailedPartitions.RemoveAllFor(observerId);
         await namespaceStorage.ObserverHandledCounts.RemoveAllFor(observerId);
         await RemoveInFlightEvents(namespaceStorage, observerId);

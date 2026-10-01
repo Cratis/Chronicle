@@ -12,7 +12,7 @@ public class when_removed : given.an_alert_tracker
         RaisedForSnapshot(),
         new AlertRaised(IncidentId.New(), AlertConditionKind.ObserverQuarantined, AlertSeverity.Critical, AlertTarget.For(_key, AlertPartition.None), RaisedForSnapshot().Evidence));
 
-    async Task Because() => await _tracker.Removed();
+    async Task Because() => await ReconcileRemoval();
 
     [Fact] void should_clear_both_partition_and_quarantine_incidents() => _appends.OfType<AlertCleared>().Count().ShouldEqual(2);
     [Fact] void should_clear_only_as_removed() => _appends.OfType<AlertCleared>().All(clear => clear.Reason == AlertClearedReason.Removed).ShouldBeTrue();

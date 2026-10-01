@@ -15,8 +15,8 @@ public class and_raise_after_elapses : given.an_alert_tracker
         _clock.Now += TimeSpan.FromMinutes(5);
     }
 
-    async Task Because() => await _silo.TimerRegistry.FireAllAsync();
+    async Task Because() => await _tracker.Reconcile(_snapshot);
 
-    [Fact] void should_raise_once_from_the_timer() => _appends.OfType<AlertRaised>().Count().ShouldEqual(1);
-    [Fact] void should_dispose_the_one_shot_timer() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
+    [Fact] void should_raise_once_from_the_next_source_report() => _appends.OfType<AlertRaised>().Count().ShouldEqual(1);
+    [Fact] void should_not_own_a_retry_timer() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
 }

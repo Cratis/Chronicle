@@ -148,7 +148,7 @@ public partial class Observer
         }
 
         _catchupRecoveryAttempts = 0;
+        RememberQuarantineEnding(AlertClearedReason.Revived);
         await quarantined.LeaveForSubscription();
-        await ReportAlertState(quarantineEndedAs: AlertClearedReason.Revived);
     }
 }

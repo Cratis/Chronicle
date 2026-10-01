@@ -20,8 +20,9 @@ public class and_a_quarantined_observers_partition_exhausts_retries : given.a_re
     {
         await _observer.PartitionFailed("partition", 42UL, ["Failed again"], "Stack");
         await _observer.PartitionFailed("partition", 42UL, ["Failed yet again"], "Stack");
+        await ReportAlerts();
     }
 
-    [Fact] async Task should_report_only_the_crossing_of_the_retry_limit() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.IsQuarantined && !snapshot.FailedPartitions.Single().IsQuarantined && snapshot.FailedPartitions.Single().AttemptCount == 2));
-    [Fact] void should_record_later_attempts_without_reporting_them() => _failedPartitionsState.Partitions.Single().Attempts.Count().ShouldEqual(3);
+    [Fact] async Task should_coalesce_the_committed_attempts_into_one_report() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.IsQuarantined && !snapshot.FailedPartitions.Single().IsQuarantined && snapshot.FailedPartitions.Single().AttemptCount == 3));
+    [Fact] void should_persist_every_attempt() => _failedPartitionsState.Partitions.Single().Attempts.Count().ShouldEqual(3);
 }

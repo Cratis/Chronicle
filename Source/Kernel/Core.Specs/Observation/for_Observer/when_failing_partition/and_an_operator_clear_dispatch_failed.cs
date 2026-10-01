@@ -11,13 +11,18 @@ public class and_an_operator_clear_dispatch_failed : given.an_observer
     async Task Establish()
     {
         _failedPartitionsState.AddFailedPartition("old", 12UL);
-        _observerAlerts.Reconcile(Arg.Any<ObserverAlertSnapshot>()).Returns(Task.FromException(new InvalidOperationException("Dispatch failed")));
+        FailAlertReports(new InvalidOperationException("Dispatch failed"));
         await _observer.ClearFailedPartitions();
-        _observerAlerts.Reconcile(Arg.Any<ObserverAlertSnapshot>()).Returns(Task.CompletedTask);
+        await ReportAlerts();
+        ApplyAlertReports();
         _observerAlerts.ClearReceivedCalls();
     }
 
-    async Task Because() => await _observer.PartitionFailed("new", 42UL, ["Failed"], "Stack");
+    async Task Because()
+    {
+        await _observer.PartitionFailed("new", 42UL, ["Failed"], "Stack");
+        await ReportAlerts();
+    }
 
-    [Fact] async Task should_preserve_the_operator_clear_reason() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.PartitionsEndedAs == AlertClearedReason.Cleared && snapshot.FailedPartitions.Single().Partition == "new"));
+    [Fact] async Task should_preserve_the_operator_clear_reason() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.Endings.Values.Contains(AlertClearedReason.Cleared) && snapshot.FailedPartitions.Single().Partition == "new"));
 }

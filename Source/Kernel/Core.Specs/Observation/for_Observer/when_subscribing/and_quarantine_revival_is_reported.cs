@@ -16,7 +16,11 @@ public class and_quarantine_revival_is_reported : given.an_observer_with_subscri
         _observerAlerts.ClearReceivedCalls();
     }
 
-    async Task Because() => await _observer.Subscribe<ObserverSubscriber>(ObserverType.Reactor, [], SiloAddress.Zero);
+    async Task Because()
+    {
+        await _observer.Subscribe<ObserverSubscriber>(ObserverType.Reactor, [], SiloAddress.Zero);
+        await ReportAlerts();
+    }
 
-    [Fact] async Task should_report_the_ended_quarantine_as_revived() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => !snapshot.IsQuarantined && snapshot.QuarantineEndedAs == AlertClearedReason.Revived));
+    [Fact] async Task should_report_the_ended_quarantine_as_revived() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => !snapshot.IsQuarantined && snapshot.Endings.Values.Contains(AlertClearedReason.Revived)));
 }

@@ -16,14 +16,18 @@ public class and_quarantine_restarts_before_a_failed_clear_is_persisted : given.
     {
         _original = new(IncidentId.New(), AlertConditionKind.ObserverQuarantined, AlertSeverity.Critical, AlertTarget.For(_key, AlertPartition.None), AlertEvidence.Create(0, _clock.Now, _clock.Now, FailureKind.Unknown, string.Empty));
         GivenHistory(_original);
-        _snapshot = _snapshot with { FailedPartitions = [], QuarantineEndedAs = AlertClearedReason.Revived };
+        _snapshot = _snapshot with { FailedPartitions = [], Endings = new Dictionary<IncidentId, AlertClearedReason> { [_original.IncidentId] = AlertClearedReason.Revived } };
         AppendReturns(AppendResult.Failed(CorrelationId.NotSet, (AppendError[])[new("Unavailable")]));
         await _tracker.Reconcile(_snapshot);
         GivenHistory(_original);
         AppendSucceedsFrom(1);
     }
 
-    async Task Because() => await _tracker.Reconcile(_snapshot with { IsQuarantined = true });
+    async Task Because()
+    {
+        _snapshot = _snapshot with { IsQuarantined = true, QuarantineEpisodeId = Guid.NewGuid(), Revision = 2 };
+        await _tracker.Reconcile(_snapshot);
+    }
 
     [Fact] void should_complete_the_previous_episode_first() => _appends[0].ShouldBeOfExactType<AlertCleared>();
     [Fact] void should_clear_the_original_incident() => ((AlertCleared)_appends[0]).IncidentId.ShouldEqual(_original.IncidentId);

@@ -6,6 +6,8 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Alerts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
+using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
@@ -16,21 +18,21 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation.Alerts;
 
 /// <summary>
-/// Records alert transitions for an observer, rebuilding its in-memory incidents from the system sequence on first use.
+/// Reconciles authoritative observer levels with durable system-sequence incident history.
 /// </summary>
 /// <remarks>
-/// The event source is <c language="csharp">{store}/{namespace}/{ObserverKey}</c>, where ObserverKey is its existing string grain key
-/// (including the observed event sequence). History and appends use the System store's default namespace and system
-/// sequence, not the affected observer's store. Pending transitions keep their episode and clear reason until appended;
-/// a keep-alive retry timer owns append recovery independently of the observer's lifetime.
+/// There is no transition queue or tracker-owned retry work. The observer's durable reminder retries uncertain
+/// application and revisits grace deadlines. History is fully folded on first use and refreshed from its tail
+/// thereafter; an ambiguous append invalidates the fold. Source authority is read from storage, never by calling
+/// the observer (which may be awaiting this grain).
 /// </remarks>
-/// <param name="storage">The storage from which to fold alert history.</param>
-/// <param name="eventSerializer">The serializer for alert transitions.</param>
-/// <param name="evaluator">The pure observer alert evaluator.</param>
-/// <param name="meter">The meter on which append failures are counted.</param>
+/// <param name="storage">The source state and history storage.</param>
+/// <param name="eventSerializer">The transition serializer.</param>
+/// <param name="evaluator">The pure evaluator.</param>
+/// <param name="meter">The failure meter.</param>
 /// <param name="logger">The logger.</param>
-/// <param name="timeProvider">Optional clock, defaulting to the system clock.</param>
-public partial class ObserverAlerts(
+/// <param name="timeProvider">Optional clock.</param>
+public class ObserverAlerts(
     IStorage storage,
     IEventSerializer eventSerializer,
     ObserverAlertEvaluator evaluator,
@@ -38,101 +40,121 @@ public partial class ObserverAlerts(
     ILogger<ObserverAlerts> logger,
     TimeProvider? timeProvider = null) : Grain, IObserverAlerts
 {
+    internal const int MaximumTransitionsPerReport = 128;
+    static readonly TimeSpan _workBudget = TimeSpan.FromSeconds(5);
     static readonly EventType[] _transitionTypes = [typeof(AlertRaised).GetEventType(), typeof(AlertEscalated).GetEventType(), typeof(AlertCleared).GetEventType()];
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
-    readonly Queue<object> _pendingTransitions = new();
-    readonly HashSet<IncidentId> _knownIncidents = [];
-    IReadOnlyCollection<OpenIncident> _openIncidents = [];
-    ObserverAlertSnapshot? _lastSnapshot;
+    readonly Dictionary<IncidentId, OpenIncident> _openIncidents = [];
     bool _historyLoaded;
     EventSequenceNumber _tail = EventSequenceNumber.BeforeFirst;
-    IGrainTimer? _reconciliationTimer;
-    TimeSpan _retryDelay = TimeSpan.FromSeconds(5);
 
     ObserverKey Key => ObserverKey.Parse(this.GetPrimaryKeyString());
     EventSourceId EventSource => $"{Key.EventStore}/{Key.Namespace}/{Key}";
 
     /// <inheritdoc/>
-    public async Task Reconcile(ObserverAlertSnapshot snapshot)
+    public async Task<ObserverAlertReceipt> Reconcile(ObserverAlertSnapshot snapshot)
     {
-        _lastSnapshot = snapshot;
-        _reconciliationTimer?.Dispose();
-        _reconciliationTimer = null;
+        var started = _clock.GetUtcNow();
+        ObserverAlertReceipt Receipt(ObserverAlertReconciliation outcome, Guid? adoption = null) => new(snapshot.LifecycleId, snapshot.Revision, outcome, adoption);
         try
         {
-            await LoadHistory();
-            if (!await AppendPendingTransitions())
+            if (!await IsAuthoritative(snapshot))
             {
-                ArmRetryTimer();
-                return;
+                return Receipt(ObserverAlertReconciliation.Superseded);
             }
 
-            // Complete the previous episode before evaluating a newer snapshot, especially a new quarantine.
-            var evaluation = evaluator.Evaluate(snapshot, _openIncidents, _clock.GetUtcNow());
+            await RefreshHistory();
+            if (snapshot.IsQuarantined && snapshot.QuarantineEpisodeId is null && snapshot.Disposition == AlertDisposition.Active)
+            {
+                // Legacy handshake only. No transitions are applied until the source persists the proposed identity.
+                var episode = _openIncidents.Values.FirstOrDefault(_ => _.Condition == AlertConditionKind.ObserverQuarantined)?.Id.Value ?? Guid.NewGuid();
+                return Receipt(ObserverAlertReconciliation.RetryRequired, episode);
+            }
+
+            var evaluation = evaluator.Evaluate(snapshot, _openIncidents.Values, _clock.GetUtcNow());
+            var applied = 0;
             foreach (var transition in evaluation.Transitions)
             {
-                _pendingTransitions.Enqueue(transition);
+                if (applied == MaximumTransitionsPerReport || _clock.GetUtcNow() - started >= _workBudget)
+                {
+                    return Receipt(ObserverAlertReconciliation.RetryRequired);
+                }
+
+                if (!await IsAuthoritative(snapshot))
+                {
+                    return Receipt(ObserverAlertReconciliation.Superseded);
+                }
+
+                var result = await GrainFactory.GetSystemEventSequence().Append(
+                    EventSourceType.Default,
+                    EventSource,
+                    EventStreamType.All,
+                    EventStreamId.Default,
+                    transition.GetType().GetEventType(),
+                    eventSerializer.Serialize(transition),
+                    CorrelationId.New(),
+                    [],
+                    Identity.System,
+                    [],
+                    new ConcurrencyScope(_tail, true, null, null, null, _transitionTypes));
+                if (!result.IsSuccess)
+                {
+                    logger.TransitionAppendRejected(Key, transition.GetType().Name, result);
+                    RecordFailure();
+                    _historyLoaded = false;
+                    return Receipt(ObserverAlertReconciliation.RetryRequired);
+                }
+
+                _tail = result.SequenceNumber;
+                ObserverAlertEvaluation.Apply(transition, _openIncidents);
+                applied++;
             }
 
-            if (!await AppendPendingTransitions())
-            {
-                ArmRetryTimer();
-                return;
-            }
-
-            _retryDelay = TimeSpan.FromSeconds(5);
-            ArmRaiseTimer(evaluation.NextRaiseDue);
+            return Receipt(await IsAuthoritative(snapshot) ? ObserverAlertReconciliation.Applied : ObserverAlertReconciliation.Superseded);
         }
         catch (Exception exception)
         {
             _historyLoaded = false;
             logger.ReconciliationFailed(Key, exception);
             RecordFailure();
-            ArmRetryTimer();
+            return Receipt(ObserverAlertReconciliation.RetryRequired);
         }
     }
 
-    /// <inheritdoc/>
-    public async Task<bool> HasOpenIncidents()
+    async Task<bool> IsAuthoritative(ObserverAlertSnapshot snapshot)
     {
-        await LoadHistory();
-        return _openIncidents.Count > 0;
+        if (snapshot.Observer != Key || snapshot.LifecycleId == Guid.Empty)
+        {
+            return false;
+        }
+
+        var source = await storage.GetEventStore(Key.EventStore).GetNamespace(Key.Namespace).Observers.Get(Key.ObserverId);
+        return source.Identifier == Key.ObserverId &&
+            source.AlertLifecycleId == snapshot.LifecycleId &&
+            source.AlertRevision == snapshot.Revision &&
+            source.AlertDisposition == snapshot.Disposition &&
+            source.QuarantineEpisodeId == snapshot.QuarantineEpisodeId;
     }
 
-    /// <inheritdoc/>
-    public Task Removed() => Reconcile(new(Key, [], false, true, 0));
-
-    async Task LoadHistory()
+    async Task RefreshHistory()
     {
-        if (_historyLoaded)
+        if (!_historyLoaded)
         {
-            return;
+            _openIncidents.Clear();
+            _tail = EventSequenceNumber.BeforeFirst;
         }
 
         var sequence = storage.GetEventStore(EventStoreName.System).GetNamespace(EventStoreNamespaceName.Default).GetEventSequence(EventSequenceId.System);
-        using var cursor = await sequence.GetFromSequenceNumber(EventSequenceNumber.First, EventSource, eventTypes: _transitionTypes);
-        IReadOnlyCollection<OpenIncident> incidents = [];
-        var knownIncidents = new HashSet<IncidentId>();
-        var tail = EventSequenceNumber.BeforeFirst;
+        using var cursor = await sequence.GetFromSequenceNumber(_tail.IsActualValue ? _tail.Next() : EventSequenceNumber.First, EventSource, eventTypes: _transitionTypes);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)
             {
-                var transition = eventSerializer.Deserialize(@event);
-                if (transition is AlertRaised raised)
-                {
-                    knownIncidents.Add(raised.IncidentId);
-                }
-
-                incidents = new ObserverAlertEvaluation([transition], null).ApplyTo(incidents);
-                tail = @event.Context.SequenceNumber;
+                ObserverAlertEvaluation.Apply(eventSerializer.Deserialize(@event), _openIncidents);
+                _tail = @event.Context.SequenceNumber;
             }
         }
 
-        _openIncidents = incidents;
-        _knownIncidents.Clear();
-        _knownIncidents.UnionWith(knownIncidents);
-        _tail = tail;
         _historyLoaded = true;
     }
 

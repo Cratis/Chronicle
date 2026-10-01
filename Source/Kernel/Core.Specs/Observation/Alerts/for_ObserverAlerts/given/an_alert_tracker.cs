@@ -15,10 +15,12 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.for_Observer.given;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using NSubstitute.Extensions;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Observation.Alerts.for_ObserverAlerts.given;
@@ -27,14 +29,17 @@ public class an_alert_tracker : Specification
 {
     protected readonly ObserverMetricsRecorder _metrics = new();
     protected readonly ControllableTimeProvider _clock = new();
-    protected readonly TestKitSilo _silo = new();
+    protected TestKitSilo _silo = new();
     protected readonly List<object> _appends = [];
     protected ObserverAlerts _tracker;
     protected ObserverKey _key;
     protected ObserverAlertSnapshot _snapshot;
     protected IStorage _storage;
     protected IEventSequenceStorage _sequenceStorage;
-    protected IEventCursor _cursor;
+    protected readonly List<AppendedEvent> _history = [];
+    readonly Dictionary<EventSequenceNumber, object> _transitions = [];
+    protected ObserverState? _source;
+    protected ObserverAlertReceipt _receipt;
     protected IEventSequence _sequence;
     protected IEventSerializer _serializer;
     protected ILogger<ObserverAlerts> _logger;
@@ -44,13 +49,26 @@ public class an_alert_tracker : Specification
     async Task Establish()
     {
         _key = new(_metrics.ObserverId, "store", "namespace", EventSequenceId.Log);
-        _snapshot = new(_key, [new(FailedPartitionId.New(), "partition", _clock.Now - TimeSpan.FromMinutes(10), _clock.Now, 1, false, FailureKind.Handling, "Failed")], false, false, 10);
+        _snapshot = new(_key, [new(FailedPartitionId.New(), "partition", _clock.Now - TimeSpan.FromMinutes(10), _clock.Now, 1, false, FailureKind.Handling, "Failed")], false, AlertDisposition.Active, 10)
+        {
+            LifecycleId = Guid.NewGuid(),
+            Revision = 1
+        };
         _storage = Substitute.For<IStorage>();
         _sequenceStorage = Substitute.For<IEventSequenceStorage>();
         _storage.GetEventStore(EventStoreName.System).GetNamespace(EventStoreNamespaceName.Default).GetEventSequence(EventSequenceId.System).Returns(_sequenceStorage);
-        _cursor = Substitute.For<IEventCursor>();
-        _sequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, Arg.Any<EventSourceId>(), eventTypes: Arg.Any<IEnumerable<EventType>>()).Returns(_cursor);
+        _storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace).Observers.Get(_key.ObserverId)
+            .Returns(_ => _source ?? SourceFor(_snapshot));
+        _sequenceStorage.GetFromSequenceNumber(Arg.Any<EventSequenceNumber>(), Arg.Any<EventSourceId>(), eventTypes: Arg.Any<IEnumerable<EventType>>()).Returns(call =>
+        {
+            var events = _history.Where(_ => _.Context.SequenceNumber >= call.Arg<EventSequenceNumber>()).ToArray();
+            var cursor = Substitute.For<IEventCursor>();
+            cursor.MoveNext().Returns(events.Length > 0, false);
+            cursor.Current.Returns(events);
+            return cursor;
+        });
         _serializer = Substitute.For<IEventSerializer>();
+        _serializer.Deserialize(Arg.Any<AppendedEvent>()).Returns(call => _transitions[call.Arg<AppendedEvent>().Context.SequenceNumber]);
         _serializer.Serialize(Arg.Any<object>()).Returns(call =>
         {
             _serialized = call.Arg<object>();
@@ -61,13 +79,37 @@ public class an_alert_tracker : Specification
         {
             _lastScope = call.Arg<ConcurrencyScope>();
             _appends.Add(_serialized);
-            return AppendResult.Success(CorrelationId.NotSet, (ulong)(_appends.Count - 1));
+            RecordDurable(_serialized);
+            return AppendResult.Success(CorrelationId.NotSet, _history.Last().Context.SequenceNumber);
         });
         var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
         options.CurrentValue.Returns(new ChronicleOptions());
         var evaluator = new ObserverAlertEvaluator(new AlertConditions(options, NullLogger<AlertConditions>.Instance));
         _logger = Substitute.For<ILogger<ObserverAlerts>>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+        await CreateTracker(evaluator);
+    }
+
+    protected async Task CrashTracker()
+    {
+        // Discard the entire activation without calling graceful deactivation.
+        _silo = new();
+        var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
+        options.CurrentValue.Returns(new ChronicleOptions());
+        await CreateTracker(new ObserverAlertEvaluator(new AlertConditions(options, NullLogger<AlertConditions>.Instance)));
+    }
+
+    protected static ObserverState SourceFor(ObserverAlertSnapshot snapshot) => new()
+    {
+        Identifier = snapshot.Observer.ObserverId,
+        AlertLifecycleId = snapshot.LifecycleId,
+        AlertRevision = snapshot.Revision,
+        AlertDisposition = snapshot.Disposition,
+        QuarantineEpisodeId = snapshot.QuarantineEpisodeId
+    };
+
+    async Task CreateTracker(ObserverAlertEvaluator evaluator)
+    {
         _silo.AddService(_storage);
         _silo.AddService(_serializer);
         _silo.AddService(evaluator);
@@ -78,24 +120,39 @@ public class an_alert_tracker : Specification
         _tracker = await _silo.CreateGrainAsync<ObserverAlerts>(_key);
     }
 
-    protected void GivenHistory(params object[] transitions)
+    protected Task<ObserverAlertReceipt> ReconcileRemoval()
     {
-        var events = transitions.Select((transition, index) =>
-        {
-            var appended = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(transition.GetType().GetEventType(), (ulong)index);
-            _serializer.Deserialize(appended).Returns(transition);
-            return appended;
-        }).ToArray();
-        _cursor.MoveNext().Returns(true, false);
-        _cursor.Current.Returns(events);
+        _snapshot = _snapshot with { Disposition = AlertDisposition.Removing };
+        return _tracker.Reconcile(_snapshot);
     }
 
-    protected void AppendReturns(AppendResult result) => _sequence.Append(Arg.Any<EventSourceType>(), Arg.Any<EventSourceId>(), Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<CorrelationId>(), Arg.Any<IEnumerable<Causation>>(), Arg.Any<Identity>(), Arg.Any<IEnumerable<Tag>>(), Arg.Any<ConcurrencyScope>()).Returns(result);
+    protected void GivenHistory(params object[] transitions)
+    {
+        _history.Clear();
+        _transitions.Clear();
+        foreach (var transition in transitions)
+        {
+            RecordDurable(transition);
+        }
+    }
 
-    protected void AppendSucceedsFrom(ulong nextSequenceNumber) => _sequence.Append(Arg.Any<EventSourceType>(), Arg.Any<EventSourceId>(), Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<CorrelationId>(), Arg.Any<IEnumerable<Causation>>(), Arg.Any<Identity>(), Arg.Any<IEnumerable<Tag>>(), Arg.Any<ConcurrencyScope>()).Returns(call =>
+    protected void RecordDurable(object transition)
+    {
+        var sequence = _history.Count == 0 ? EventSequenceNumber.First : _history.Last().Context.SequenceNumber.Next();
+        var appended = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(transition.GetType().GetEventType(), sequence);
+        _transitions[sequence] = transition;
+        _history.Add(appended);
+    }
+
+    protected void AppendReturns(AppendResult result) => _sequence.Configure().Append(Arg.Any<EventSourceType>(), Arg.Any<EventSourceId>(), Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<CorrelationId>(), Arg.Any<IEnumerable<Causation>>(), Arg.Any<Identity>(), Arg.Any<IEnumerable<Tag>>(), Arg.Any<ConcurrencyScope>()).Returns(result);
+
+    protected void AppendUsing(Func<AppendResult> append) => _sequence.Configure().Append(Arg.Any<EventSourceType>(), Arg.Any<EventSourceId>(), Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<CorrelationId>(), Arg.Any<IEnumerable<Causation>>(), Arg.Any<Identity>(), Arg.Any<IEnumerable<Tag>>(), Arg.Any<ConcurrencyScope>()).Returns(_ => append());
+
+    protected void AppendSucceedsFrom(ulong nextSequenceNumber) => _sequence.Configure().Append(Arg.Any<EventSourceType>(), Arg.Any<EventSourceId>(), Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<CorrelationId>(), Arg.Any<IEnumerable<Causation>>(), Arg.Any<Identity>(), Arg.Any<IEnumerable<Tag>>(), Arg.Any<ConcurrencyScope>()).Returns(call =>
     {
         _lastScope = call.Arg<ConcurrencyScope>();
         _appends.Add(_serialized);
+        RecordDurable(_serialized);
         return AppendResult.Success(CorrelationId.NotSet, nextSequenceNumber++);
     });
 

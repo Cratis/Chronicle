@@ -13,7 +13,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task PartitionsFailed(IReadOnlyCollection<SinkFailedPartition> failedPartitions)
     {
-        if (_retired || failedPartitions.Count == 0)
+        if (IsRetired || IsRemoving || _removed || failedPartitions.Count == 0)
         {
             return;
         }
@@ -31,7 +31,7 @@ public partial class Observer
             _deferAlertReports = false;
             if (_alertReconciliationPending)
             {
-                await ReportAlertState();
+                ScheduleAlertReport();
             }
         }
     }

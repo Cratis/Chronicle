@@ -9,7 +9,11 @@ public class and_the_observer_is_quarantined_with_a_new_failure : given.a_reacti
 {
     void Establish() => _observerAlerts.ClearReceivedCalls();
 
-    async Task Because() => await _observer.PartitionFailed("partition", 42UL, ["Failed"], "Stack");
+    async Task Because()
+    {
+        await _observer.PartitionFailed("partition", 42UL, ["Failed"], "Stack");
+        await ReportAlerts();
+    }
 
     [Fact] async Task should_report_the_new_failure_episode() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.IsQuarantined && snapshot.FailedPartitions.Single().AttemptCount == 1));
 }

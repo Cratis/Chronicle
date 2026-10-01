@@ -15,6 +15,7 @@ public class and_the_observer_was_retired : given.an_observer_with_subscription
         await _observer.Subscribe<ObserverSubscriber>(ObserverType.Projection, [], SiloAddress.Zero);
         _observerAlerts.ClearReceivedCalls();
         await _observer.PartitionFailed("partition", 12UL, ["Failed"], "Stack");
+        await ReportAlerts();
     }
 
     [Fact] async Task should_report_new_failures_again() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.FailedPartitions.Count == 1));

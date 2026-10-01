@@ -16,7 +16,11 @@ public class and_the_partition_becomes_quarantined : given.an_observer
         _observerAlerts.ClearReceivedCalls();
     }
 
-    async Task Because() => await _observer.PartitionFailed("partition", 42UL, ["Failed again"], "Stack");
+    async Task Because()
+    {
+        await _observer.PartitionFailed("partition", 42UL, ["Failed again"], "Stack");
+        await ReportAlerts();
+    }
 
     [Fact] async Task should_report_the_new_partition_quarantine() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.FailedPartitions.Single().IsQuarantined && snapshot.FailedPartitions.Single().AttemptCount == 2));
 }

@@ -16,7 +16,7 @@ public class and_the_observer_grain_is_still_activated : given.all_dependencies
     void Establish()
     {
         _observerInFirstNamespace.When(observer => observer.Remove()).Do(_ => _sequence.Add("grain stood down"));
-        _firstNamespaceStorage.Observers.When(observers => observers.Delete(_observerId)).Do(_ => _sequence.Add("state deleted"));
+        _observerInFirstNamespace.When(observer => observer.CompleteRemoval()).Do(_ => _sequence.Add("state deleted"));
         _firstNamespaceStorage.FailedPartitions.When(partitions => partitions.RemoveAllFor(_observerId)).Do(_ => _sequence.Add("failed partitions deleted"));
     }
 
@@ -24,5 +24,5 @@ public class and_the_observer_grain_is_still_activated : given.all_dependencies
 
     [Fact]
     void should_stand_the_grain_down_before_deleting_its_records() =>
-        string.Join(", ", _sequence).ShouldEqual("grain stood down, state deleted, failed partitions deleted");
+        string.Join(", ", _sequence).ShouldEqual("grain stood down, failed partitions deleted, state deleted");
 }

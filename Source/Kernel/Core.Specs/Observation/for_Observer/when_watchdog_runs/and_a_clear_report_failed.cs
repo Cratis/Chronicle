@@ -11,9 +11,10 @@ public class and_a_clear_report_failed : for_Observer.given.an_observer
     async Task Establish()
     {
         _failedPartitionsState.AddFailedPartition("partition", 12UL);
-        _observerAlerts.Reconcile(Arg.Any<ObserverAlertSnapshot>()).Returns(Task.FromException(new InvalidOperationException("Dispatch failed")));
+        FailAlertReports(new InvalidOperationException("Dispatch failed"));
         await _observer.ClearFailedPartitions();
-        _observerAlerts.Reconcile(Arg.Any<ObserverAlertSnapshot>()).Returns(Task.CompletedTask);
+        await ReportAlerts();
+        ApplyAlertReports();
         _observerAlerts.ClearReceivedCalls();
     }
 
@@ -23,5 +24,5 @@ public class and_a_clear_report_failed : for_Observer.given.an_observer
         await _observer.RunWatchdogAsync();
     }
 
-    [Fact] async Task should_retry_the_clear_once_with_its_original_reason() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.FailedPartitions.Count == 0 && snapshot.PartitionsEndedAs == AlertClearedReason.Cleared));
+    [Fact] async Task should_retry_the_clear_once_with_its_original_reason() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.FailedPartitions.Count == 0 && snapshot.Endings.Values.Contains(AlertClearedReason.Cleared)));
 }

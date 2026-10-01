@@ -1,27 +1,37 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Alerts;
+using Cratis.Chronicle.Concepts.Observation;
+
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
-    bool _retired;
-
     /// <inheritdoc/>
     public async Task Retire()
     {
+        ThrowIfRemoving();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.RetiringObserver();
 
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            _alertDisposition = AlertDisposition.Retired;
+            ChangeAlertState();
+            await WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+
         await Unsubscribe();
-        _retired = true;
         _isPreparingCatchup = false;
 
-        // Normal unsubscription leaves Observing and its queue, but quarantine refuses Disconnected.
-        // Do not clear quarantine or route: an observer quarantined mid-replay would resume its paused job.
-        // The manager deletes those jobs after retirement. The replay flag stays unchanged.
-        await DiscardFailedPartitions();
-        await WriteStateAsync();
-        await ReportAlertsRemoved();
+        // Operational quarantine and replay stay retained, but the durable disposition no longer desires alerts.
+        await RequireAlertReconciliation();
+        await DiscardFailedPartitions(AlertClearedReason.Removed);
     }
 }

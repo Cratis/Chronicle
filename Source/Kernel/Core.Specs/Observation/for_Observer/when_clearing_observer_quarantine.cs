@@ -23,10 +23,11 @@ public class when_clearing_observer_quarantine : given.an_observer_with_subscrip
     {
         await _observer.ClearObserverQuarantine();
         _isQuarantinedAfter = await _observer.IsObserverQuarantined();
+        await ReportAlerts();
     }
 
     [Fact] void should_be_quarantined_before_clearing() => _isQuarantinedBefore.ShouldBeTrue();
     [Fact] void should_not_be_quarantined_after_clearing() => _isQuarantinedAfter.ShouldBeFalse();
     [Fact] void should_transition_to_active_state() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
-    [Fact] async Task should_report_the_ended_quarantine_as_cleared() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => !snapshot.IsQuarantined && snapshot.QuarantineEndedAs == AlertClearedReason.Cleared));
+    [Fact] async Task should_report_the_ended_quarantine_as_cleared() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => !snapshot.IsQuarantined && snapshot.Endings.Values.Contains(AlertClearedReason.Cleared)));
 }

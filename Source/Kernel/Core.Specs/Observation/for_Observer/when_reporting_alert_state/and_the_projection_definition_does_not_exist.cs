@@ -24,5 +24,5 @@ public class and_the_projection_definition_does_not_exist : given.an_observer
     }
 
     [Fact] async Task should_check_the_definition_only_once_per_activation() => await _eventStoreStorage.Projections.Received(1).Has((ProjectionId)_observerId.Value);
-    [Fact] async Task should_not_report_retained_state_without_a_definition() => await _observerAlerts.DidNotReceive().Reconcile(Arg.Any<ObserverAlertSnapshot>());
+    [Fact] async Task should_deliver_the_empty_level_without_quarantine() => await _observerAlerts.Received(2).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => !_.IsQuarantined && _.FailedPartitions.Count == 0));
 }

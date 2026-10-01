@@ -12,16 +12,15 @@ public class and_a_clear_append_is_retried : given.an_alert_tracker
     async Task Establish()
     {
         GivenHistory(RaisedForSnapshot());
-        _snapshot = _snapshot with { FailedPartitions = [], PartitionsEndedAs = AlertClearedReason.Cleared };
+        _snapshot = _snapshot with { FailedPartitions = [], Endings = new Dictionary<IncidentId, AlertClearedReason> { [_snapshot.FailedPartitions.Single().Id] = AlertClearedReason.Cleared } };
         AppendReturns(AppendResult.Failed(CorrelationId.NotSet, (AppendError[])[new("Unavailable")]));
         await _tracker.Reconcile(_snapshot);
 
         // Re-reading on the next reconciliation still sees the raise, because the clear was not durable.
-        _cursor.MoveNext().Returns(true, false);
-        AppendReturns(AppendResult.Success(CorrelationId.NotSet, 1UL));
+        AppendSucceedsFrom(1);
     }
 
-    async Task Because() => await _tracker.Reconcile(_snapshot with { PartitionsEndedAs = AlertClearedReason.Recovered });
+    async Task Because() => await _tracker.Reconcile(_snapshot);
 
     [Fact] void should_keep_the_original_operator_clear_reason() => ((AlertCleared)_serialized).Reason.ShouldEqual(AlertClearedReason.Cleared);
     [Fact] void should_count_only_the_failed_attempt() => _metrics.SumOf("chronicle-alert-transitions-failed").ShouldEqual(1);

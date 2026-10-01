@@ -4,34 +4,19 @@
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
-using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Observation.Alerts;
 
 /// <summary>
-/// Tracks the alert incidents for one observer from its durable transition history.
+/// Reconciles one observer's committed current level against durable incident history.
 /// </summary>
 [KeyedBy<ObserverKey>]
 public interface IObserverAlerts : IGrainWithStringKey
 {
     /// <summary>
-    /// Reconciles the observer's current state with its recorded incidents.
+    /// Applies the transitions currently required by a source-authorized report.
     /// </summary>
-    /// <param name="snapshot">The current observer state.</param>
-    /// <returns>Awaitable task, completed at dispatch rather than after reconciliation.</returns>
-    [OneWay]
-    Task Reconcile(ObserverAlertSnapshot snapshot);
-
-    /// <summary>
-    /// Checks the durable history for incidents that still need reconciliation.
-    /// </summary>
-    /// <returns>Whether any incidents remain open.</returns>
-    Task<bool> HasOpenIncidents();
-
-    /// <summary>
-    /// Clears every open incident because the observer was removed or retired.
-    /// </summary>
-    /// <returns>Awaitable task, completed at dispatch rather than after reconciliation.</returns>
-    [OneWay]
-    Task Removed();
+    /// <param name="snapshot">The immutable, versioned observer report.</param>
+    /// <returns>The version-qualified application receipt. RetryRequired retains work at the observer.</returns>
+    Task<ObserverAlertReceipt> Reconcile(ObserverAlertSnapshot snapshot);
 }

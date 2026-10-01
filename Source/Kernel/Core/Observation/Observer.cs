@@ -90,6 +90,13 @@ public partial class Observer(
     FailedPartitions Failures => failures.State;
 
     /// <inheritdoc/>
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        await base.OnActivateAsync(cancellationToken);
+        ScheduleAlertReport();
+    }
+
+    /// <inheritdoc/>
     public override async Task OnActivation(CancellationToken cancellationToken)
     {
         _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
@@ -109,6 +116,7 @@ public partial class Observer(
         var config = await configurationProvider.GetFor(_observerKey);
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         RegisterWatchdog(config.WatchdogInterval);
+        await InitializeAlertState();
     }
 
     /// <inheritdoc/>
@@ -163,11 +171,11 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task ClearObserverQuarantine()
     {
+        ThrowIfRemoving();
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             // With nobody subscribed this is the routing pass every activation of an unsubscribed observer already runs, so it drops nothing a plain reactivation would not.
             await ReviveFromQuarantine();
-            await ReportAlertState();
         }
     }
 
@@ -177,19 +185,68 @@ public partial class Observer(
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.RemovingObserver();
 
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            // Recheck at the mutation boundary: the earlier management guard may have raced a subscription.
+            if (!IsRemoving && (_subscription.IsSubscribed || State.RunningState == ObserverRunningState.Active))
+            {
+                throw new ObserverRemovalNotAllowed(_observerKey);
+            }
+
+            _alertDisposition = AlertDisposition.Removing;
+            ChangeAlertState();
+            await WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+
+        await RequireAlertReconciliation();
         await PauseJobs();
-        _subscription = ObserverSubscription.Unsubscribed;
         await RemoveFailedPartitionReminders();
+    }
 
-        // From here on this activation must not touch storage again. The caller deletes the observer's records
-        // immediately after, and every write this activation could still make - the deactivation flush, the
-        // Disconnected transition - would put them straight back.
-        _removed = true;
-        _stateWritingSuspended = true;
+    /// <inheritdoc/>
+    public async Task CompleteRemoval()
+    {
+        if (_removed) return;
+        if (!IsRemoving)
+        {
+            throw new ObserverRemovalNotAllowed(_observerKey);
+        }
 
-        // Keep this activation's watchdog until a failed removal dispatch reaches the tracker.
-        // Once dispatched, the tracker owns persistence retries and this activation can deactivate.
-        await ReportAlertsRemoved();
+        await RequireAlertReconciliation();
+        await _alertMutationLock.WaitAsync();
+        await _stateWriteLock.WaitAsync();
+        try
+        {
+            // Drain interleaved writes before deleting the marker, then fence both queued and future writes.
+            _stateWritingSuspended = true;
+            var reminder = await this.GetReminder(AlertReminderName);
+            if (reminder is not null)
+            {
+                await this.UnregisterReminder(reminder);
+            }
+
+            await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Observers.Delete(_observerId);
+            _removed = true;
+            DeactivateOnIdle();
+        }
+        catch
+        {
+            _stateWritingSuspended = false;
+            _alertStateNeedsPersistence = true;
+            ScheduleAlertReport();
+            await this.RegisterOrUpdateReminder(AlertReminderName, _minimumRetryReminderPeriod, _minimumRetryReminderPeriod);
+            throw;
+        }
+        finally
+        {
+            _stateWriteLock.Release();
+            _alertMutationLock.Release();
+        }
     }
 
     /// <inheritdoc/>
@@ -217,6 +274,7 @@ public partial class Observer(
         ObserverFilters? filters = null)
         where TObserverSubscriber : IObserverSubscriber
     {
+        ThrowIfRemoving();
         var owner = GetOwner<TObserverSubscriber>();
 
         var eventTypeSchemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(eventTypes);
@@ -232,8 +290,8 @@ public partial class Observer(
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
 
-        _retired = false;
-        _projectionDefinitionExists = null;
+        ThrowIfRemoving();
+        await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
 
         logger.Subscribing();
@@ -324,6 +382,7 @@ public partial class Observer(
         bool isReplayable = true)
         where TObserverSubscriber : IObserverSubscriber
     {
+        ThrowIfRemoving();
         var owner = GetOwner<TObserverSubscriber>();
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -331,8 +390,9 @@ public partial class Observer(
         logger.Subscribing();
         logger.SubscribingToAllEvents();
 
-        _retired = false;
-        _projectionDefinitionExists = null;
+        await ReadStateAsync();
+        ThrowIfRemoving();
+        await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
 
         observerDefinition.State = observerDefinition.State with
@@ -462,8 +522,14 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
+        if (reminderName == AlertReminderName)
+        {
+            await ReconcileAlertsIfNeeded();
+            return;
+        }
+
         await RemoveReminder(reminderName);
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsRetired || IsRemoving || _removed || State.RunningState == ObserverRunningState.Quarantined)
         {
             return;
         }
@@ -550,26 +616,70 @@ public partial class Observer(
     }
 
     /// <inheritdoc/>
-    protected override Task OnBeforeEnteringState(IState<ObserverState> state)
+    protected override async Task OnBeforeEnteringState(IState<ObserverState> state)
     {
-        if (state is BaseObserverState observerState)
+        await _alertMutationLock.WaitAsync();
+        try
         {
-            State = State with { RunningState = observerState.RunningState };
-        }
+            if (state is BaseObserverState observerState)
+            {
+                var wasQuarantined = State.RunningState == ObserverRunningState.Quarantined;
+                var isQuarantined = observerState.RunningState == ObserverRunningState.Quarantined;
+                if (isQuarantined && !wasQuarantined)
+                {
+                    _quarantineEpisodeId = Guid.NewGuid();
+                    ChangeAlertState();
+                }
+                else if (!isQuarantined && wasQuarantined)
+                {
+                    if (_quarantineEpisodeId is { } episode && !_alertEndings.ContainsKey(new(episode)))
+                    {
+                        RememberQuarantineEnding(Concepts.Alerts.AlertClearedReason.Cleared);
+                    }
 
-        return Task.CompletedTask;
+                    _quarantineEpisodeId = null;
+                    ChangeAlertState();
+                }
+
+                State = State with { RunningState = observerState.RunningState };
+            }
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
     }
 
     /// <inheritdoc/>
     protected override async Task WriteStateAsync()
     {
         if (_stateWritingSuspended) return;
-        await base.WriteStateAsync();
+        await _stateWriteLock.WaitAsync();
+        try
+        {
+            if (_removed || _stateWritingSuspended) return;
+            // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
+            // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
+            State = State with
+            {
+                AlertLifecycleId = _alertLifecycleId,
+                AlertRevision = _alertRevision,
+                AlertDisposition = _alertDisposition,
+                QuarantineEpisodeId = _quarantineEpisodeId
+            };
+            var revision = _alertRevision;
+            await base.WriteStateAsync();
+            if (revision == _alertRevision)
+            {
+                _alertStateNeedsPersistence = false;
+            }
 
-        // Any actual persist carries the observer's current NextEventSequenceNumber, so it flushes whatever
-        // progress-only advance was being debounced. Resetting the counter keeps the debounce window bounded by
-        // the most recent write from any source, not only the progress-only path.
-        _debouncedProgressWrites = 0;
+            _debouncedProgressWrites = 0;
+        }
+        finally
+        {
+            _stateWriteLock.Release();
+        }
     }
 
     static bool FiltersAreEqual(ObserverFilters? left, ObserverFilters? right)

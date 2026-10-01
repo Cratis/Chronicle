@@ -17,6 +17,16 @@ An observer — a reactor, reducer or projection — processes events per **part
 
 A quarantined partition is the signal that needs a person. A partition that keeps failing is an early warning. The retry and quarantine settings are described in [observer configuration](/chronicle/hosting/configuration/observers/).
 
+## Understand recorded incidents
+
+Chronicle records observer incidents in its system event sequence. These incidents describe current operational state, not a complete audit of every failure episode. Open incidents converge to the observer's committed state; an episode that starts and ends before reconciliation may leave no incident history. Distinct quarantine episodes have separate identities, even if reconciliation misses the revival between them.
+
+After a restart, allow approximately one reminder period (one minute), plus reconciliation time, once the cluster, storage, and reminder service are functioning. This is not a one-minute guarantee during an outage. Healthy observers reconcile once after activation, then stop calling the incident tracker until their state changes.
+
+Ending reasons are best-effort across crashes. If an episode's ending reason was not recorded before activation memory was lost, a partition incident clears as `Recovered` and an observer quarantine clears as `Cleared`. The original operator-clear or revival provenance cannot be reconstructed. Retirement and removal have durable dispositions and clear incidents as `Removed`.
+
+Removal and retirement can fail when incident reconciliation cannot be confirmed. Retry the management operation: destructive cleanup waits for confirmed incident clears, and an unfinished removal rejects new subscriptions until cleanup completes. Recording incidents does not itself deliver email or chat notifications; use the monitoring options below for delivery.
+
 ## Alert from metrics
 
 Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configuration/open-telemetry/) from the `Cratis.Chronicle` meter. Three counters describe failing observers. Each has one series per observer, tagged `EventStore`, `Namespace`, `ObserverId` and `EventSequenceId`. An observer has a series on them from its first failure, not before:

@@ -284,17 +284,21 @@ public interface IObserver : IGrainWithStringKey
     Task ClearObserverQuarantine();
 
     /// <summary>
-    /// Remove the observer: stop it consuming events, forget everything it holds in memory and deactivate it.
+    /// Fence removal durably and require current alert clears to be applied before cleanup.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// The counterpart to deleting the observer's stored records. Deleting those alone is not enough: a live
-    /// activation keeps its definition, failure records and reminders in memory and writes them back on its next
-    /// state flush, resurrecting the very documents the removal deleted. This unsubscribes the observer, stops its
-    /// jobs, cancels every reminder it registered and deactivates the grain, so the storage deletion is the last
-    /// word rather than a race against an activation that outlives it.
+    /// Rechecks subscription and activity at the mutation boundary. Removing remains durable across activation
+    /// until CompleteRemoval, and both subscription paths reject it. An unsuccessful reconciliation fails the
+    /// management call; the caller must not proceed with destructive cleanup.
     /// </remarks>
     Task Remove();
+
+    /// <summary>
+    /// Deletes the removal marker and alert reminder after all namespace and shared cleanup completes.
+    /// </summary>
+    /// <returns>Awaitable completion task.</returns>
+    Task CompleteRemoval();
 
     /// <summary>
     /// Retire the observer: stop it consuming events and end its failures, keeping its records in place.
@@ -304,10 +308,9 @@ public interface IObserver : IGrainWithStringKey
     /// Used when a projection is retired. Failed partitions and their reminders are discarded and alert incidents
     /// end as Removed. Normal unsubscription disconnects an observing observer, while a quarantined observer
     /// stays quarantined without routing or changing replay progress or handled counts.
-    /// The projection manager deletes its jobs and projection definition afterwards. This activation stops reporting
-    /// alerts; after reactivation, an unsubscribed projection without failures or a projection definition does not
-    /// report its retained quarantine. No new persisted retirement state is needed. A fresh subscription enables
-    /// reporting again.
+    /// The durable Retired disposition suppresses retained quarantine across crashes. A failed reconciliation
+    /// fails this call and is retried by the lifetime alert reminder; the manager retains the orphan for retry.
+    /// A fresh subscription establishes a new alert lifecycle and supersedes any old retirement report.
     /// </remarks>
     Task Retire();
 

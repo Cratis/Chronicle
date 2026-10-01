@@ -23,8 +23,8 @@ public class and_observer_is_disconnected_in_every_namespace : given.all_depende
 
     [Fact] async Task should_delete_the_store_level_definition() => await _observerDefinitions.Received(1).Delete(_observerId);
 
-    [Fact] async Task should_delete_the_state_in_the_first_namespace() => await _firstNamespaceStorage.Observers.Received(1).Delete(_observerId);
-    [Fact] async Task should_delete_the_state_in_the_second_namespace() => await _secondNamespaceStorage.Observers.Received(1).Delete(_observerId);
+    [Fact] async Task should_delete_the_state_in_the_first_namespace() => await _observerInFirstNamespace.Received(1).CompleteRemoval();
+    [Fact] async Task should_delete_the_state_in_the_second_namespace() => await _observerInSecondNamespace.Received(1).CompleteRemoval();
 
     [Fact] async Task should_remove_the_failed_partitions_in_every_namespace()
     {

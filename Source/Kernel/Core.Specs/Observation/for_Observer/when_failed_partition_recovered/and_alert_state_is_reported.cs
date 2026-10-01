@@ -8,7 +8,11 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_failed_partition_recove
 
 public class and_alert_state_is_reported : given.all_dependencies
 {
-    async Task Because() => await _observer.FailedPartitionRecovered(_partition, _lastHandledEventSequenceNumber);
+    async Task Because()
+    {
+        await _observer.FailedPartitionRecovered(_partition, _lastHandledEventSequenceNumber);
+        await ReportAlerts();
+    }
 
-    [Fact] async Task should_report_the_ended_episode_as_recovered() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.Observer == _observerKey && snapshot.FailedPartitions.Count == 0 && snapshot.PartitionsEndedAs == AlertClearedReason.Recovered));
+    [Fact] async Task should_report_the_ended_episode_as_recovered() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.Observer == _observerKey && snapshot.FailedPartitions.Count == 0 && snapshot.Endings.Values.Contains(AlertClearedReason.Recovered)));
 }

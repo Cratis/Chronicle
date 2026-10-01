@@ -10,7 +10,11 @@ public class when_clearing_failed_partitions : given.an_observer
 {
     void Establish() => _failedPartitionsState.AddFailedPartition("partition", 12UL);
 
-    async Task Because() => await _observer.ClearFailedPartitions();
+    async Task Because()
+    {
+        await _observer.ClearFailedPartitions();
+        await ReportAlerts();
+    }
 
-    [Fact] async Task should_report_the_ended_episodes_as_cleared() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.FailedPartitions.Count == 0 && snapshot.PartitionsEndedAs == AlertClearedReason.Cleared));
+    [Fact] async Task should_report_the_ended_episodes_as_cleared() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.FailedPartitions.Count == 0 && snapshot.Endings.Values.Contains(AlertClearedReason.Cleared)));
 }

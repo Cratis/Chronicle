@@ -47,6 +47,6 @@ public class and_the_observer_is_quarantined_while_replaying : given.a_reactivat
     [Fact] async Task should_not_start_a_replay_job() => await _jobsManager.DidNotReceive().Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<ReplayObserverRequest>());
     [Fact] async Task should_not_resume_the_paused_replay_job() => await _jobsManager.DidNotReceive().Resume(_replayJob);
     [Fact] async Task should_not_remove_the_handled_counts() => await _observerHandledCountsStorage.DidNotReceive().RemoveAllFor(Arg.Any<ObserverId>());
-    [Fact] async Task should_clear_alerts_as_removed() => await _observerAlerts.Received(1).Removed();
-    [Fact] async Task should_not_report_an_operator_clear() => await _observerAlerts.DidNotReceive().Reconcile(Arg.Any<ObserverAlertSnapshot>());
+    [Fact] async Task should_clear_alerts_as_removed() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.Disposition == AlertDisposition.Retired));
+    [Fact] async Task should_not_report_an_operator_clear() => await _observerAlerts.DidNotReceive().Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.Disposition == AlertDisposition.Active));
 }

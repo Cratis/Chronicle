@@ -18,7 +18,11 @@ public class and_one_partition_failed : an_observer
         _grainFactory.GetGrain<IObserver>(_observerKey).Returns(_observer);
     }
 
-    async Task Because() => await ProjectionBulkFailures.Record(_grainFactory, new(_observerKey, ObserverType.Projection), [new("partition", 42UL) { Reason = "Duplicate key" }]);
+    async Task Because()
+    {
+        await ProjectionBulkFailures.Record(_grainFactory, new(_observerKey, ObserverType.Projection), [new("partition", 42UL) { Reason = "Duplicate key" }]);
+        await ReportAlerts();
+    }
 
     [Fact] void should_record_the_failed_partition() => _failedPartitionsState.Partitions.Single().Partition.ToString().ShouldEqual("partition");
     [Fact] void should_keep_the_failure_sequence_number() => _failedPartitionsState.Partitions.Single().LastAttempt.SequenceNumber.ShouldEqual((EventSequenceNumber)42UL);

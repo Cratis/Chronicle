@@ -12,7 +12,11 @@ public class and_alert_state_is_reported : given.an_observer
 
     void Establish() => _observerAlerts.Reconcile(Arg.Do<ObserverAlertSnapshot>(snapshot => _snapshot = snapshot));
 
-    async Task Because() => await _observer.PartitionFailed("partition", 42UL, ["Failed", "Inner message"], "Stack", FailureKind.Handling);
+    async Task Because()
+    {
+        await _observer.PartitionFailed("partition", 42UL, ["Failed", "Inner message"], "Stack", FailureKind.Handling);
+        await ReportAlerts();
+    }
 
     [Fact] void should_report_the_observer_key() => _snapshot.Observer.ShouldEqual(_observerKey);
     [Fact] void should_use_the_persisted_failure_episode_identifier() => _snapshot.FailedPartitions.Single().Id.ShouldEqual(_failedPartitionsState.Partitions.Single().Id);
