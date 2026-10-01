@@ -16,7 +16,7 @@ The notifications are calls of their own. They are not events and they do not go
 
 ## Each notification gets a new instance
 
-Chronicle creates the reactor or reducer for each notification, from a new dependency injection scope, and disposes it afterwards. `BeginReplay()` and `EndReplay()` therefore run on different instances, and neither is the instance that handles the events. Anything they need to share must live outside the class, in a registered service such as the one injected in the reactor example above.
+Chronicle creates the reactor or reducer for each notification, from a new dependency injection scope, and disposes it afterwards. `BeginReplay()` and `EndReplay()` therefore run on different instances, and neither is the instance that handles the events. Anything they need to share must live outside the class, in a service registered as a singleton, such as the one injected in the reactor example above. A scoped or transient service is created anew for each notification, so it could not carry state from `BeginReplay()` to `EndReplay()`.
 
 ## Replaying a single partition
 
