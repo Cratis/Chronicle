@@ -13,8 +13,8 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.RetiringObserver();
 
-        _retired = true;
         await Unsubscribe();
+        _retired = true;
         _isPreparingCatchup = false;
 
         // Normal unsubscription leaves Observing and its queue, but quarantine refuses Disconnected.
