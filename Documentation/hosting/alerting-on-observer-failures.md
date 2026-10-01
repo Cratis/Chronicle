@@ -19,7 +19,7 @@ A quarantined partition is the signal that needs a person. A partition that keep
 
 ## Alert from metrics
 
-Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configuration/open-telemetry/) from the `Cratis.Chronicle` meter. Three counters describe failing observers. Each has one series per observer, tagged `EventStore`, `Namespace`, `ObserverId` and `EventSequenceId`, and each is recorded as `0` when the observer starts:
+Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configuration/open-telemetry/) from the `Cratis.Chronicle` meter. Three counters describe failing observers. Each has one series per observer, tagged `EventStore`, `Namespace`, `ObserverId` and `EventSequenceId`. An observer has a series on them from its first failure, not before:
 
 | Instrument | Counts |
 | --- | --- |
@@ -29,7 +29,7 @@ Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configurat
 
 With the default translation of the OpenTelemetry Collector's Prometheus exporter, or Prometheus's own OTLP receiver, the counters appear as `chronicle_observer_partitions_failed_total`, `chronicle_observer_partitions_quarantined_total` and `chronicle_observer_quarantined_total`, and the tags keep their names. Look the series up in your backend before relying on the names below.
 
-The `0` recorded at startup does not guarantee that your backend ever sees a `0`. Counters are exported as cumulative values, so when the first failure happens before the first export after the observer started, the first value the backend receives is already `1`. A rule built only on `increase()` needs two samples in its window and reports nothing for that series. Each rule below therefore has two halves, joined with `or`: the first catches series that went up inside the window, the second catches series that did not exist at the start of the window and are already above the threshold. Both aggregate to the same labels, so an observer produces one series, and so one alert, whichever half caught it.
+A series is created by the first failure and starts at `1`; Chronicle does not record a `0` beforehand, so healthy observers cost no series. The first value your backend receives for an observer is therefore already `1`. A rule built only on `increase()` needs two samples in its window and reports nothing for that series. Each rule below therefore has two halves, joined with `or`: the first catches series that went up inside the window, the second catches series that did not exist at the start of the window and are already above the threshold. Both aggregate to the same labels, so an observer produces one series, and so one alert, whichever half caught it.
 
 The rules select each counter by its name prefix, for example `{__name__=~"chronicle_observer_partitions_quarantined.*"}`, so the same rules work for the long names that earlier Kernels export. These Prometheus alerting rules report, per observer, partitions that ran out of retries and observer quarantines in the last 30 minutes, and repeated failed attempts in the last 15 minutes:
 
@@ -94,6 +94,7 @@ Know the limits of counters before you depend on them:
 
 - **They say "recently", not "still".** The quarantine alerts fire when something is quarantined, then resolve after 30 minutes even if it is still stuck. The failing alert cannot tell a partition that is still failing from one that recovered after its latest failure. Keep the scheduled check below for the current state.
 - **They reset when the Kernel restarts.** `increase()` handles resets, and a partition that fails again after a restart is counted again.
+- **A gap in your own data raises false alerts.** The second half of each rule fires for every series that is above the threshold now and did not exist 30 minutes ago (15 for the failing alert). After Prometheus or the collector restarts, a scrape outage, or a series dropped by retention, every observer that has ever failed qualifies, and the alerts resolve once the window has passed. A `for:` clause does not help, because the condition stays true for the whole window. Inhibit these alerts in Alertmanager while your monitoring itself is recovering, for example with an alert on `time() - process_start_time_seconds < 1800` for the Prometheus job.
 
 ## Alert from a scheduled health check
 

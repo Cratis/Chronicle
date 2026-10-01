@@ -95,7 +95,9 @@ Chronicle counts observer failures on the `Cratis.Chronicle` meter. Every one of
 
 The Prometheus names are what the OpenTelemetry Collector's Prometheus exporter and Prometheus's own OTLP receiver produce by default. These four instruments have no unit and carry their description, so a Prometheus `HELP` line explains each of them. Earlier Kernels created them with the description in the unit position, which gave them long names such as `chronicle_observer_partitions_failed_Number_of_failed_partitions_per_observer_in_a_given_event_store_and_namespace_total` and an empty `HELP`.
 
-When an observer starts, Chronicle records a `0` for each of these, so the series exists before the first failure. A backend that exports cumulative values only sees that `0` if it exports before the first failure. If the failure comes first, the first value it sees is already `1`, so alerts on these counters should not rely on the `0` being there. The [alerting guide](../alerting-on-observer-failures.md) shows how.
+An observer has a series on these instruments from its first failure, not before: Chronicle records nothing when an observer starts, so healthy observers add no series and the number of series follows the number of observers that fail. The first value a backend receives for an observer is therefore already `1`, and alerts on these counters should not depend on seeing a `0` first. The [alerting guide](../alerting-on-observer-failures.md) shows how.
+
+The SDK limits each instrument to 500 series. Beyond that it folds the excess into one series without the tags, which can no longer be attributed to an observer. That takes more than 500 observer instances in one process, counted across observers, namespaces and event stores.
 
 To be alerted when an observer's partitions keep failing or run out of retries, see [Get alerted when observers stop processing](../alerting-on-observer-failures.md).
 
