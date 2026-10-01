@@ -58,6 +58,15 @@ public interface ISinkCollections
     Task EndReplay(ReplayContext context);
 
     /// <summary>
+    /// Leaves replay mode without promoting the replay collection.
+    /// </summary>
+    /// <remarks>
+    /// Used when a replay cannot be ended cleanly. Writes go to the primary collection again, and the replay collection
+    /// is left as it is until the next replay begins and clears it.
+    /// </remarks>
+    void AbandonReplay();
+
+    /// <summary>
     /// Prepare the sink for an initial run.
     /// </summary>
     /// <remarks>

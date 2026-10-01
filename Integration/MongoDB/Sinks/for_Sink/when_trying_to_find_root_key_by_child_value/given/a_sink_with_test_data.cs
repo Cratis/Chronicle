@@ -121,6 +121,7 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Integrat
         public Task BeginReplay(Storage.ReadModels.ReplayContext context) => Task.CompletedTask;
         public Task ResumeReplay(Storage.ReadModels.ReplayContext context) => Task.CompletedTask;
         public Task EndReplay(Storage.ReadModels.ReplayContext context) => Task.CompletedTask;
+        public void AbandonReplay() { }
         public Task PrepareInitialRun() => Task.CompletedTask;
         public Task Remove(ReadModelContainerName collectionName) => Task.CompletedTask;
     }

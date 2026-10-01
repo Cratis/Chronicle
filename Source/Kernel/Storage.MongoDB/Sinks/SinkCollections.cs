@@ -67,6 +67,9 @@ public class SinkCollections(
     }
 
     /// <inheritdoc/>
+    public void AbandonReplay() => _isReplaying = false;
+
+    /// <inheritdoc/>
     public async Task PrepareInitialRun()
     {
         var collection = GetCollection();
