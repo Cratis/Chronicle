@@ -45,6 +45,16 @@ public abstract class MongoDBSpecification(ChronicleInProcessFixture fixture) : 
     protected int MongoDBPort => fixture.MongoDBContainer.GetMappedPublicPort(27017);
 
     /// <summary>
+    /// Gets the MongoDB connection string.
+    /// </summary>
+    protected string MongoDBConnectionString => fixture.MongoDBConnectionString;
+
+    /// <summary>
+    /// Gets the database-name prefix for the test run.
+    /// </summary>
+    protected string MongoDBDatabaseNamePrefix => fixture.MongoDBDatabaseNamePrefix;
+
+    /// <summary>
     /// Sets the name of the fixture. No-op for MongoDB-only specs.
     /// </summary>
     /// <param name="name">The name.</param>

@@ -14,6 +14,7 @@ using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using EphemeralMongo;
+using MongoDB.Driver;
 using Orleans.TestingHost;
 using Configuration = KernelCore::Cratis.Chronicle.Configuration;
 
@@ -35,6 +36,9 @@ public class ClusteringFixture : IAsyncLifetime
 {
     const string EventSequencesSiloName = "Silo_0";
     const string ObserversSiloName = "Silo_1";
+
+    readonly string? _externalConnectionString = Environment.GetEnvironmentVariable("CHRONICLE_MONGODB_CONNECTION_DETAILS") is { Length: > 0 } value ? value : null;
+    readonly string _databaseNamePrefix = $"t_{Guid.NewGuid().ToString("N")[..16]}_";
 
     IMongoRunner? _mongoRunner;
     InProcessTestCluster? _cluster;
@@ -100,10 +104,13 @@ public class ClusteringFixture : IAsyncLifetime
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
-        _mongoRunner = await MongoRunner.RunAsync(new MongoRunnerOptions
+        if (_externalConnectionString is null)
         {
-            UseSingleNodeReplicaSet = true
-        });
+            _mongoRunner = await MongoRunner.RunAsync(new MongoRunnerOptions
+            {
+                UseSingleNodeReplicaSet = true
+            });
+        }
 
         // The in-process test cluster removes the classic localhost-clustering races (membership gossip,
         // port contention, divergent startup ordering), but the Chronicle pipeline itself still has
@@ -116,7 +123,7 @@ public class ClusteringFixture : IAsyncLifetime
         {
             try
             {
-                await BringUpClusterAsync(_mongoRunner.ConnectionString);
+                await BringUpClusterAsync(_externalConnectionString ?? _mongoRunner!.ConnectionString);
                 await WarmUpAsync();
                 return;
             }
@@ -136,6 +143,15 @@ public class ClusteringFixture : IAsyncLifetime
     {
         await TearDownClusterAsync();
         _mongoRunner?.Dispose();
+        if (_externalConnectionString is not null)
+        {
+            using var client = new MongoClient(_externalConnectionString);
+            using var cursor = await client.ListDatabaseNamesAsync();
+            foreach (var name in (await cursor.ToListAsync()).Where(name => name.StartsWith(_databaseNamePrefix, StringComparison.Ordinal)))
+            {
+                await client.DropDatabaseAsync(name);
+            }
+        }
     }
 
     /// <summary>
@@ -172,7 +188,7 @@ public class ClusteringFixture : IAsyncLifetime
                     mongo =>
                     {
                         mongo.Server = mongoUrl;
-                        mongo.Database = "orleans";
+                        mongo.Database = $"{_databaseNamePrefix}orleans";
                     },
                     _ => { });
 
@@ -201,7 +217,7 @@ public class ClusteringFixture : IAsyncLifetime
             {
                 KernelGrpc::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     siloBuilder,
-                    chronicleBuilder => chronicleBuilder.WithMongoDB(mongoUrl, Constants.EventStore));
+                    chronicleBuilder => chronicleBuilder.WithMongoDB(mongoUrl, Constants.EventStore, databaseNamePrefix: _databaseNamePrefix));
 
                 siloBuilder.ConfigureServices(services =>
                 {

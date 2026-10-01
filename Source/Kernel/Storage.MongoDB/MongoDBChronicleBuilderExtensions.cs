@@ -32,7 +32,7 @@ public static class MongoDBChronicleBuilderExtensions
     /// <param name="options"><see cref="ChronicleOptions"/> to use.</param>
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
     public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, ChronicleOptions options) =>
-        builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle, options.Clustering.Type == ClusteringType.MongoDB);
+        builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle, options.Clustering.Type == ClusteringType.MongoDB, options.Storage.DatabaseNamePrefix);
 
     /// <summary>
     /// Configure Chronicle to use MongoDB.
@@ -41,13 +41,16 @@ public static class MongoDBChronicleBuilderExtensions
     /// <param name="server">Connection string for the MongoDB server.</param>
     /// <param name="database">Name of the database to use. Defaults to the <see cref="WellKnownDatabaseNames.Chronicle"/>.</param>
     /// <param name="useClustering">Whether to also use MongoDB for Orleans cluster membership, letting multiple nodes form one cluster.</param>
+    /// <param name="databaseNamePrefix">The prefix prepended to every database name. Empty preserves the default names.</param>
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
-    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle, bool useClustering = false)
+    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle, bool useClustering = false, string databaseNamePrefix = "")
     {
         var settings = GetMongoClientSettings(server);
+        database = Cratis.Chronicle.Storage.MongoDB.DatabaseNames.WithPrefix(database, databaseNamePrefix);
 
         builder.ConfigureServices(services =>
         {
+            services.Configure<MongoDBStorageOptions>(options => options.DatabaseNamePrefix = databaseNamePrefix);
             var mongoClientDescriptor = services.LastOrDefault(_ => !_.IsKeyedService && _.ServiceType == typeof(IMongoClient));
             if (mongoClientDescriptor is null || mongoClientDescriptor.Lifetime != ServiceLifetime.Singleton)
             {
@@ -99,7 +102,7 @@ public static class MongoDBChronicleBuilderExtensions
                 sp.GetRequiredService<ICustomSerializers>(),
                 Options.Create(new MongoDBJobsStorageOptions
                 {
-                    DatabaseNameResolver = (scope, @namespace) => Cratis.Chronicle.Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace)
+                    DatabaseNameResolver = (scope, @namespace) => Cratis.Chronicle.Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix)
                 })));
             services.AddSingleton<ICustomSerializers, CustomSerializers>();
 

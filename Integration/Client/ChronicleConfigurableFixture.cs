@@ -83,12 +83,20 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     public string InProcessMongoDatabaseName { get; } = $"chronicle_inprocess_{Guid.NewGuid():N}";
 
     /// <summary>
+    /// Gets the separate database-name prefix for the in-process silo in out-of-process MongoDB mode.
+    /// </summary>
+    public string InProcessMongoDatabaseNamePrefix => $"{MongoDBDatabaseNamePrefix}ip_";
+
+    /// <inheritdoc/>
+    protected override bool RequiresContainer => Options.Mode == ChronicleRuntimeMode.OutOfProcess || base.RequiresContainer;
+
+    /// <summary>
     /// Gets a unique SQLite file path for the in-process Orleans silo, inside a directory of the fixture's own. The first test class of a
     /// session does not run the wipe sequence (the factory is built lazily on first access, no
     /// prior state to wipe), so reusing a process-wide file path would carry data from earlier
     /// <c language="csharp">dotnet test</c> invocations into the next session's first test. A fixture-scoped directory
     /// guarantees every test session opens a fresh file regardless of what previous sessions
-    /// left in <c language="csharp">/tmp</c>, and SQLite's <c>-wal</c>, <c>-shm</c> and per-event-store sibling files
+    /// left in <c language="csharp">/tmp</c>, and SQLite's <c language="text">-wal</c>, <c language="text">-shm</c> and per-event-store sibling files
     /// all live in it, so removing the directory removes every one of them.
     /// </summary>
     public string InProcessSqliteFilePath => Path.Combine(_inProcessSqliteDirectory.Value, "chronicle.db");
@@ -219,8 +227,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             // own databases via gRPC), so without an explicit drop here the in-process silo
             // would carry every previous test's grain state — observer NextEventSequenceNumber,
             // reminder rows, projection sinks — into the next test.
-            if (Options.StorageProvider == ChronicleStorageProvider.MongoDB &&
-                _outOfProcessMongoContainer is not null)
+            if (Options.StorageProvider == ChronicleStorageProvider.MongoDB)
             {
                 await DropInProcessMongoDatabase();
             }
@@ -234,13 +241,18 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
     async Task DropInProcessMongoDatabase()
     {
-        var urlBuilder = new MongoUrlBuilder($"mongodb://localhost:{_outOfProcessMongoContainer.GetMappedPublicPort(27017)}")
+        using var client = new MongoClient(MongoDBConnectionString);
+        if (ExternalMongoDBConnectionString is null)
         {
-            DirectConnection = true
-        };
-        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
-        using var client = new MongoClient(settings);
-        await client.DropDatabaseAsync(InProcessMongoDatabaseName);
+            await client.DropDatabaseAsync(InProcessMongoDatabaseName);
+            return;
+        }
+
+        using var cursor = await client.ListDatabaseNamesAsync();
+        foreach (var name in (await cursor.ToListAsync()).Where(name => name.StartsWith(InProcessMongoDatabaseNamePrefix, StringComparison.Ordinal)))
+        {
+            await client.DropDatabaseAsync(name);
+        }
     }
 
     /// <inheritdoc/>
@@ -343,6 +355,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
             .WithEnvironment("Cratis__Chronicle__Storage__Type", storageType)
             .WithEnvironment("Cratis__Chronicle__Storage__ConnectionDetails", connectionDetails)
+            .WithEnvironment("Cratis__Chronicle__Storage__DatabaseNamePrefix", MongoDBDatabaseNamePrefix)
             .WithEnvironment("Logging__LogLevel__Default", "Information")
             .WithEnvironment("Logging__LogLevel__Cratis", "Debug");
 
@@ -398,6 +411,11 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
     string BuildAndStartMongoDB(INetwork network)
     {
+        if (ExternalMongoDBConnectionString is not null)
+        {
+            return ExternalMongoDBConnectionString;
+        }
+
         // Initiate the replica set using the docker-network hostname as the member name so
         // that drivers connecting from another container (the kernel) follow the SRV record
         // back to a name the docker DNS can resolve. Initiating with 'localhost' breaks

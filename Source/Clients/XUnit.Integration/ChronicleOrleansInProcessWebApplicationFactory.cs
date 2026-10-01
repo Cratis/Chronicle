@@ -71,7 +71,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var builder = Host.CreateDefaultBuilder();
 
         var mongoServer = storageHostConfiguration is null
-            ? $"mongodb://localhost:{_fixture.MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true"
+            ? _fixture.MongoDBConnectionString
             : "mongodb://localhost:27017/?directConnection=true";
 
         if (storageHostConfiguration is not null)
@@ -84,8 +84,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             mongo =>
             {
                 mongo.Server = mongoServer;
-                mongo.Database = "orleans";
-                mongo.DirectConnection = true;
+                mongo.Database = $"{_fixture.MongoDBDatabaseNamePrefix}orleans";
+                mongo.DirectConnection = MongoDB.Driver.MongoClientSettings.FromConnectionString(mongoServer).DirectConnection;
             },
             configureMongoDB);
         builder.ConfigureLogging(_ =>
@@ -166,7 +166,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 KernelGrpc::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     silo,
                     chronicleBuilder =>
-                        (configureStorage ?? (cb => cb.WithMongoDB(mongoServer, Constants.EventStore)))(chronicleBuilder));
+                        (configureStorage ?? (cb => cb.WithMongoDB(mongoServer, Constants.EventStore, databaseNamePrefix: _fixture.MongoDBDatabaseNamePrefix)))(chronicleBuilder));
 
                 silo.AddActivityPropagation();
 

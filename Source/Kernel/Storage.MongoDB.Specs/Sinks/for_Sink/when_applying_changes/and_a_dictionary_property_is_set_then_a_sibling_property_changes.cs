@@ -47,7 +47,7 @@ public class and_a_dictionary_property_is_set_then_a_sibling_property_changes(co
 
         public async Task InitializeAsync()
         {
-            _databaseName = $"chronicle_sink_specs_{Guid.NewGuid():N}";
+            _databaseName = MongoDBSpecDatabaseNames.New();
             _client = new MongoClient(fixture.ConnectionString);
             _database = _client.GetDatabase(_databaseName);
             _schema = CreateSchema();

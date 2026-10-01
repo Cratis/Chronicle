@@ -71,6 +71,12 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// </summary>
     public IContainer MongoDBContainer => ChronicleFixture.MongoDBContainer;
 
+    /// <inheritdoc/>
+    public string MongoDBConnectionString => ChronicleFixture.MongoDBConnectionString;
+
+    /// <inheritdoc/>
+    public string MongoDBDatabaseNamePrefix => ChronicleFixture.MongoDBDatabaseNamePrefix;
+
     /// <summary>
     /// Gets the docker network.
     /// </summary>

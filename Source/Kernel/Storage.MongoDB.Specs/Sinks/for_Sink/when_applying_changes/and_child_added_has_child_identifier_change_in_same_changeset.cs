@@ -34,7 +34,7 @@ public class and_child_added_has_child_identifier_change_in_same_changeset(conte
 
         public async Task InitializeAsync()
         {
-            _databaseName = $"chronicle_sink_specs_{Guid.NewGuid():N}";
+            _databaseName = MongoDBSpecDatabaseNames.New();
             _client = new MongoClient(fixture.ConnectionString);
             _database = _client.GetDatabase(_databaseName);
             _key = new Key(ContractId, ArrayIndexers.NoIndexers);

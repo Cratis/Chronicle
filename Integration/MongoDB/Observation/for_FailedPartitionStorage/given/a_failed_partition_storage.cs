@@ -20,7 +20,7 @@ public class a_failed_partition_storage(ChronicleInProcessFixture fixture) : Int
     async Task Establish()
     {
         // MongoDB caps a database name at 63 characters and the suffix alone is 32, so the prefix has to stay short.
-        _databaseName = $"failed_partition_specs_{Guid.NewGuid():N}";
+        _databaseName = $"{MongoDBDatabaseNamePrefix}{Guid.NewGuid().ToString("N")[..16]}";
         _mongoDatabase = _client.GetDatabase(_databaseName);
 
         _database = Substitute.For<IEventStoreNamespaceDatabase>();

@@ -57,7 +57,7 @@ public class when_a_projection_persists_a_polymorphic_child(when_a_projection_pe
             var typeFormats = new TypeFormats();
             var sinkConverter = new ExpandoObjectConverter(typeFormats);
 
-            _databaseName = $"chronicle_polymorphic_child_{Guid.NewGuid():N}";
+            _databaseName = MongoDBSpecDatabaseNames.New();
             _client = new MongoClient(fixture.ConnectionString);
             var database = _client.GetDatabase(_databaseName);
 

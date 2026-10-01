@@ -20,7 +20,7 @@ public class a_reactor_definitions_storage(ChronicleInProcessFixture fixture) : 
 
     async Task Establish()
     {
-        _databaseName = $"chronicle_reactor_defs_specs_{Guid.NewGuid():N}";
+        _databaseName = $"{MongoDBDatabaseNamePrefix}{Guid.NewGuid().ToString("N")[..16]}";
         _mongoDatabase = _client.GetDatabase(_databaseName);
 
         _database = Substitute.For<IEventStoreDatabase>();
