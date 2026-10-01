@@ -20,7 +20,10 @@ public class ReplayContexts(IReplayContextsStorage storage) : IReplayContexts
     {
         var replayStarted = DateTimeOffset.UtcNow;
         var rewoundCollectionsPrefix = $"{containerName}-";
-        var revertContainerName = $"{rewoundCollectionsPrefix}{replayStarted:yyyyMMddHHmmss}";
+
+        // The time alone names two replays of one read model started in the same second alike, and the second one's
+        // promotion then fails renaming the read model to a revert container that already exists.
+        var revertContainerName = $"{rewoundCollectionsPrefix}{replayStarted:yyyyMMddHHmmss}-{Guid.NewGuid().ToString("N")[..8]}";
         var context = new ReplayContext(type, containerName, revertContainerName, replayStarted);
         _contexts[type.Identifier] = context;
         await storage.Save(context);
