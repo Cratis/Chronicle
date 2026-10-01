@@ -18,7 +18,8 @@ public static class ProjectedColumns
     /// Derive the table columns for a read model from its latest-generation <see cref="JsonSchema"/>.
     /// The returned list always includes <c language="csharp">Id</c> as the primary key column (using the schema's likely
     /// key name when it does not declare an explicit <c language="csharp">Id</c> / <c language="csharp">id</c>) and the sink-owned
-    /// <see cref="WellKnownProperties.LastHandledEventSequenceNumber"/> bookkeeping column.
+    /// <see cref="WellKnownProperties.LastHandledEventSequenceNumber"/> and
+    /// <see cref="WellKnownProperties.ReadModelInstanceInitialized"/> bookkeeping columns.
     /// </summary>
     /// <param name="schema">The read model's schema.</param>
     /// <returns>The ordered list of columns.</returns>
@@ -44,7 +45,8 @@ public static class ProjectedColumns
         // expose __lastHandledEventSequenceNumber publicly do), we skip the schema copy because the
         // bookkeeping declaration here owns the canonical typed-column shape (Int64, nullable).
         var orderedNames = schema.Properties.Keys
-            .Where(name => !string.Equals(name, WellKnownProperties.LastHandledEventSequenceNumber, StringComparison.Ordinal))
+            .Where(name => !string.Equals(name, WellKnownProperties.LastHandledEventSequenceNumber, StringComparison.Ordinal) &&
+                !string.Equals(name, WellKnownProperties.ReadModelInstanceInitialized, StringComparison.Ordinal))
             .OrderBy(name => string.Equals(name, keyName, StringComparison.Ordinal) ? 0 : 1)
             .ToArray();
 
@@ -72,6 +74,14 @@ public static class ProjectedColumns
             IsJson: false,
             IsArray: false,
             IsNullable: true));
+
+        columns.Add(new ProjectedColumn(
+            WellKnownProperties.ReadModelInstanceInitialized,
+            typeof(bool),
+            IsKey: false,
+            IsJson: false,
+            IsArray: false,
+            IsNullable: false));
 
         // Sink-owned subject column. A read model with a [PII] property, or an [Encrypted] property using
         // the default subject scope, encrypts under a per-subject key and stamps the resolved subject into

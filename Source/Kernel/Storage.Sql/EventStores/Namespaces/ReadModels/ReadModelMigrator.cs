@@ -72,11 +72,12 @@ public class ReadModelMigrator(
 
             foreach (var column in missingColumns)
             {
-                // New columns added to an existing table must be nullable so existing rows
-                // receive NULL rather than a default value. Primary-key columns cannot be
-                // missing from an existing table, so this case only applies to non-key columns.
+                // Model properties remain nullable; initialization metadata instead backfills true.
                 var op = BuildAddColumnOperation(column, databaseType, tableName);
-                op.IsNullable = true;
+                if (column.Name != WellKnownProperties.ReadModelInstanceInitialized)
+                {
+                    op.IsNullable = true;
+                }
                 migrationBuilder.Operations.Add(op);
             }
 
@@ -174,6 +175,13 @@ public class ReadModelMigrator(
             ColumnType = GetColumnType(column, databaseType),
             IsNullable = column.IsNullable && !column.IsKey
         };
+
+        if (column.Name == WellKnownProperties.ReadModelInstanceInitialized)
+        {
+            // Older SQL rows have no evidence of being placeholders. Treating them as uninitialized
+            // would replace legitimately null properties with initial values on their next root event.
+            op.DefaultValue = true;
+        }
 
         if (column.IsJson)
         {

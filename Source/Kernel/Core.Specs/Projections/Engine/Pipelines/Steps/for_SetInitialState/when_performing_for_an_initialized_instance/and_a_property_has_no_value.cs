@@ -1,0 +1,25 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Dynamic;
+using Cratis.Chronicle.Concepts.Keys;
+
+namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_SetInitialState.when_performing_for_an_initialized_instance;
+
+public class and_a_property_has_no_value : given.a_set_initial_state_step_with_an_uninitialized_instance
+{
+    ProjectionEventContext _context;
+
+    void Establish()
+    {
+        var stored = new ExpandoObject();
+        ((IDictionary<string, object?>)stored)["__initialized"] = true;
+        _sink.FindOrDefault(Arg.Any<Key>()).Returns(stored);
+        _context = CreateContext(ProjectionOperationType.From);
+    }
+
+    async Task Because() => _context = await _step.Perform(_projection, _context);
+
+    [Fact] void should_not_fill_in_the_initial_value() => ((IDictionary<string, object?>)_context.Changeset.CurrentState).ContainsKey("status").ShouldBeFalse();
+    [Fact] void should_not_record_any_initial_values() => _context.Changeset.HasChanges.ShouldBeFalse();
+}

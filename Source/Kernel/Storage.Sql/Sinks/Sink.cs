@@ -911,6 +911,21 @@ public class Sink : ISink
 
         var json = (JsonObject)JsonSerializer.SerializeToNode(dict, ReadModelDbContext.JsonSerializerOptions)!;
         var result = _expandoObjectConverter.ToExpandoObject(json, _schema);
+        var resultDictionary = (IDictionary<string, object?>)result;
+        if (entity.TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) && initialized is bool isInitialized)
+        {
+            // Schema conversion supplies CLR defaults for absent numeric properties. A placeholder must
+            // retain absence so the root event can fill in the projection's initial values instead.
+            if (!isInitialized)
+            {
+                foreach (var column in _columns.Where(column => !dict.ContainsKey(column.Name)))
+                {
+                    resultDictionary.Remove(column.Name);
+                }
+            }
+
+            resultDictionary[WellKnownProperties.ReadModelInstanceInitialized] = isInitialized;
+        }
 
         // The schema-aware conversion only carries schema-declared properties. The compliance subject is a
         // sink-owned column that lives outside the read model schema, so re-attach it onto the materialized
@@ -941,7 +956,11 @@ public class Sink : ISink
                 continue;
             }
 
-            if (column.IsJson)
+            if (column.Name == WellKnownProperties.ReadModelInstanceInitialized)
+            {
+                entity[column.Name] = true;
+            }
+            else if (column.IsJson)
             {
                 entity[column.Name] = column.IsArray ? "[]" : "{}";
             }

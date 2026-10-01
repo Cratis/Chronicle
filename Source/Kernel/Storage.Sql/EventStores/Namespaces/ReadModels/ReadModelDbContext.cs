@@ -104,6 +104,11 @@ public class ReadModelDbContext(
             {
                 var propertyBuilder = entity.IndexerProperty(column.ClrType, column.Name);
                 propertyBuilder.IsRequired(!column.IsNullable);
+                if (column.Name == WellKnownProperties.ReadModelInstanceInitialized)
+                {
+                    // False is an explicit placeholder, not EF's sentinel for using the database default.
+                    propertyBuilder.HasDefaultValue(true).ValueGeneratedNever();
+                }
 
                 if (column.IsJson)
                 {

@@ -60,7 +60,6 @@
 1 Integration/Client/for_Reactors/ReactorWithoutDelay.cs
 1 Integration/Client/for_Reactors/ReactorWithoutDelayHandlingPii.cs
 1 Integration/Client/for_Reactors/SomeReactor.cs  # knob
-1 Integration/Client/for_ReadModels/StoredReadModelDocument.cs
 1 Integration/Client/for_ReadModels/given/a_projection_with_events.cs
 1 Integration/Client/for_ReadModels/given/a_projection_with_many_instances.cs
 1 Integration/Client/for_ReadModels/when_a_composed_read_model_lifts_pii/given/two_stored_subjects.cs

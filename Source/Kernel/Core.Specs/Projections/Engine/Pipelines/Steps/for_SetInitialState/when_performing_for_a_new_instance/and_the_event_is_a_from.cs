@@ -13,4 +13,5 @@ public class and_the_event_is_a_from : given.a_set_initial_state_step
 
     [Fact] void should_create_the_instance_even_without_property_changes() => _context.Changeset.HasChanges.ShouldBeTrue();
     [Fact] void should_need_the_initial_state() => _context.NeedsInitialState.ShouldBeTrue();
+    [Fact] void should_initialize_the_state_cached_by_the_sink() => ((IDictionary<string, object?>)_context.Changeset.CurrentState)["__initialized"].ShouldEqual(true);
 }

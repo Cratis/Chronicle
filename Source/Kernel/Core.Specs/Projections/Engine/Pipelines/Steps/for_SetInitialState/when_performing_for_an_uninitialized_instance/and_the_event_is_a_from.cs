@@ -17,4 +17,5 @@ public class and_the_event_is_a_from : given.a_set_initial_state_step_with_an_un
     [Fact] void should_not_record_the_key_as_a_change() => ChangedProperties(_context).ShouldNotContain((PropertyPath)"id");
     [Fact] void should_not_record_the_children_as_a_change() => ChangedProperties(_context).ShouldNotContain((PropertyPath)"items");
     [Fact] void should_mark_the_instance_as_initialized() => ChangedProperties(_context).ShouldContain((PropertyPath)"__initialized");
+    [Fact] void should_initialize_the_state_cached_by_the_sink() => ((IDictionary<string, object?>)_context.Changeset.CurrentState)["__initialized"].ShouldEqual(true);
 }

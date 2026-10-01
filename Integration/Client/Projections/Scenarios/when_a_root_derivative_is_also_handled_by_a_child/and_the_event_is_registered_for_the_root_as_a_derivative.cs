@@ -5,6 +5,7 @@
 
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Integration.for_ReadModels;
 using Cratis.Serialization;
 using MongoDB.Bson;
@@ -24,6 +25,7 @@ public class and_the_event_is_registered_for_the_root_as_a_derivative(context co
     public class context(ChronicleFixture fixture) : Specification(fixture)
     {
         public BsonDocument? StoredDocument { get; private set; }
+        public DepotWidget Result { get; private set; }
 
         public bool DocumentCanBeInspected => StoredReadModelDocument.CanBeInspected(ChronicleFixture);
 
@@ -78,11 +80,12 @@ public class and_the_event_is_registered_for_the_root_as_a_derivative(context co
                 FullSet = false
             });
 
-            await EventStore.EventLog.Append("depot-widget-1", new WidgetRegisteredAtDepot("Sprocket", "part-1"));
-            StoredDocument = await StoredReadModelDocument.ReadWhen(
-                ChronicleFixture,
-                namingPolicy.GetReadModelName(typeof(DepotWidget)),
-                document => StoredReadModelDocument.Field(document, "parts") is BsonArray { Count: 1 });
+            var handler = new ProjectionHandler(EventStore, definition.Identifier, typeof(DepotWidget), namingPolicy.GetReadModelName(typeof(DepotWidget)), EventSequenceId.Log);
+            await handler.WaitTillActive();
+            var appended = await EventStore.EventLog.Append("depot-widget-1", new WidgetRegisteredAtDepot("Sprocket", "part-1"));
+            await handler.WaitTillReachesEventSequenceNumber(appended.SequenceNumber);
+            Result = await StoredReadModelDocument.ReadInstance<DepotWidget>(EventStore, "depot-widget-1");
+            StoredDocument = await StoredReadModelDocument.Read(ChronicleFixture, namingPolicy.GetReadModelName(typeof(DepotWidget)));
         }
 
         static Contracts.Events.EventType ToContract(EventType eventType) => new()
@@ -92,6 +95,10 @@ public class and_the_event_is_registered_for_the_root_as_a_derivative(context co
             Tombstone = eventType.Tombstone
         };
     }
+
+    [Fact] void should_read_the_root_property_on_every_backend() => Context.Result.Name.ShouldEqual("Sprocket");
+    [Fact] void should_read_the_initial_values_on_every_backend() => Context.Result.Status.ShouldEqual("pending");
+    [Fact] void should_read_the_child_on_every_backend() => Context.Result.Parts.Single().PartId.ShouldEqual("part-1");
 
     [Fact] void should_have_read_the_stored_document_when_the_backend_allows_it() =>
         (!Context.DocumentCanBeInspected || Context.StoredDocument is not null).ShouldBeTrue();

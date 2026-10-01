@@ -1,6 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
+using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.ReadModels;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -24,6 +28,8 @@ namespace Cratis.Chronicle.Integration.for_ReadModels;
 /// </remarks>
 public static class StoredReadModelDocument
 {
+    static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+
     /// <summary>
     /// Gets whether the current run stores read models where this helper can read them.
     /// </summary>
@@ -52,33 +58,26 @@ public static class StoredReadModelDocument
     }
 
     /// <summary>
-    /// Reads the single document in a read model's collection, waiting until it exists and satisfies a condition.
+    /// Reads a typed instance through the kernel for a directly registered projection on any backend.
     /// </summary>
-    /// <param name="fixture">The <see cref="ChronicleFixture"/> for the run.</param>
-    /// <param name="collectionName">The name of the read model collection.</param>
-    /// <param name="condition">The condition the stored document has to satisfy before it is returned.</param>
-    /// <returns>The stored <see cref="BsonDocument"/>, or null when the backend cannot be inspected or the document never satisfied the condition.</returns>
-    public static async Task<BsonDocument?> ReadWhen(ChronicleFixture fixture, string collectionName, Func<BsonDocument, bool> condition)
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="eventStore">The event store to query.</param>
+    /// <param name="key">The instance key.</param>
+    /// <returns>The typed stored instance.</returns>
+    public static async Task<TReadModel> ReadInstance<TReadModel>(IEventStore eventStore, ReadModelKey key)
     {
-        if (!CanBeInspected(fixture))
+        // Direct contract registration bypasses the client's projection discovery catalog. Query the same
+        // kernel read path as GetInstanceById without requiring a second, different client-side definition.
+        var services = ((IChronicleServicesAccessor)eventStore.Connection).Services;
+        var response = await services.ReadModels.GetInstanceByKey(new()
         {
-            return null;
-        }
-
-        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-        BsonDocument? document = null;
-        while (!cts.IsCancellationRequested)
-        {
-            document = await Read(fixture, collectionName);
-            if (document is not null && condition(document))
-            {
-                return document;
-            }
-
-            await Task.Delay(200);
-        }
-
-        return null;
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            ReadModelIdentifier = typeof(TReadModel).GetReadModelIdentifier(),
+            EventSequenceId = EventSequenceId.Log,
+            ReadModelKey = key
+        });
+        return JsonSerializer.Deserialize<TReadModel>(response.ReadModel, _jsonOptions)!;
     }
 
     /// <summary>

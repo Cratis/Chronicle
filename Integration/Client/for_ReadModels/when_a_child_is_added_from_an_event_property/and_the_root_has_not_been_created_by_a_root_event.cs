@@ -5,6 +5,8 @@
 
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Jobs;
 using Cratis.Serialization;
 using MongoDB.Bson;
 using context = Cratis.Chronicle.Integration.for_ReadModels.when_a_child_is_added_from_an_event_property.and_the_root_has_not_been_created_by_a_root_event.context;
@@ -26,6 +28,9 @@ public class and_the_root_has_not_been_created_by_a_root_event(context context) 
         public EventSourceId ShelfId { get; } = "child-only-shelf-1";
         public BsonDocument? DocumentAfterTheChildOnlyEvent { get; private set; }
         public BsonDocument? DocumentAfterTheRootEvent { get; private set; }
+        public ChildOnlyShelf AfterTheChildOnlyEvent { get; private set; }
+        public ChildOnlyShelf Result { get; private set; }
+        public ChildOnlyShelf Replayed { get; private set; }
 
         public bool DocumentCanBeInspected => StoredReadModelDocument.CanBeInspected(ChronicleFixture);
 
@@ -45,7 +50,7 @@ public class and_the_root_has_not_been_created_by_a_root_event(context context) 
                 Identifier = typeof(ChildOnlyShelf).FullName!,
                 ReadModel = typeof(ChildOnlyShelf).FullName!,
                 IsActive = true,
-                InitialModelState = $$"""{"{{nameof(ChildOnlyShelf.Status)}}":"open"}""",
+                InitialModelState = $$"""{"{{nameof(ChildOnlyShelf.Status)}}":"open","{{nameof(ChildOnlyShelf.Capacity)}}":42}""",
                 From = new Dictionary<Contracts.Events.EventType, Contracts.Projections.FromDefinition>
                 {
                     [ToContract(createdEventType)] = new() { Key = WellKnownExpressions.EventSourceId, Properties = new Dictionary<string, string> { [nameof(ChildOnlyShelf.Name)] = namingPolicy.GetPropertyName(nameof(ChildOnlyShelfCreated.Name)) } }
@@ -69,17 +74,23 @@ public class and_the_root_has_not_been_created_by_a_root_event(context context) 
                 FullSet = false
             });
 
-            await EventStore.EventLog.Append(ShelfId, new ChildOnlyBookShelved(new ChildOnlyShelfBook("978-1", "Event Modeling")));
-            DocumentAfterTheChildOnlyEvent = await StoredReadModelDocument.ReadWhen(
-                ChronicleFixture,
-                namingPolicy.GetReadModelName(typeof(ChildOnlyShelf)),
-                document => StoredReadModelDocument.Field(document, "books") is BsonArray { Count: 1 });
+            var handler = new ProjectionHandler(EventStore, definition.Identifier, typeof(ChildOnlyShelf), namingPolicy.GetReadModelName(typeof(ChildOnlyShelf)), EventSequenceId.Log);
+            await handler.WaitTillActive();
+            var child = await EventStore.EventLog.Append(ShelfId, new ChildOnlyBookShelved(new ChildOnlyShelfBook("978-1", "Event Modeling")));
+            await handler.WaitTillReachesEventSequenceNumber(child.SequenceNumber);
+            AfterTheChildOnlyEvent = await StoredReadModelDocument.ReadInstance<ChildOnlyShelf>(EventStore, ShelfId.Value);
+            DocumentAfterTheChildOnlyEvent = await StoredReadModelDocument.Read(ChronicleFixture, namingPolicy.GetReadModelName(typeof(ChildOnlyShelf)));
 
-            await EventStore.EventLog.Append(ShelfId, new ChildOnlyShelfCreated("Fiction"));
-            DocumentAfterTheRootEvent = await StoredReadModelDocument.ReadWhen(
-                ChronicleFixture,
-                namingPolicy.GetReadModelName(typeof(ChildOnlyShelf)),
-                document => StoredReadModelDocument.Field(document, "name") is { IsString: true });
+            var root = await EventStore.EventLog.Append(ShelfId, new ChildOnlyShelfCreated("Fiction"));
+            await handler.WaitTillReachesEventSequenceNumber(root.SequenceNumber);
+            Result = await StoredReadModelDocument.ReadInstance<ChildOnlyShelf>(EventStore, ShelfId.Value);
+            DocumentAfterTheRootEvent = await StoredReadModelDocument.Read(ChronicleFixture, namingPolicy.GetReadModelName(typeof(ChildOnlyShelf)));
+
+            var replay = await EventStore.Projections.Replay(definition.Identifier);
+            await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(replay);
+            await handler.WaitTillActive();
+            await handler.WaitTillReachesEventSequenceNumber(root.SequenceNumber);
+            Replayed = await StoredReadModelDocument.ReadInstance<ChildOnlyShelf>(EventStore, ShelfId.Value);
         }
 
         static Contracts.Events.EventType ToContract(EventType eventType) => new()
@@ -89,6 +100,17 @@ public class and_the_root_has_not_been_created_by_a_root_event(context context) 
             Tombstone = eventType.Tombstone
         };
     }
+
+    [Fact] void should_read_the_placeholder_on_every_backend() => Context.AfterTheChildOnlyEvent.ShouldNotBeNull();
+    [Fact] void should_not_read_initial_values_before_the_root_event_on_any_backend() => Context.AfterTheChildOnlyEvent.Status.ShouldBeNull();
+    [Fact] void should_read_the_child_before_the_root_event_on_every_backend() => Context.AfterTheChildOnlyEvent.Books.Single().Isbn.ShouldEqual("978-1");
+    [Fact] void should_read_the_root_property_on_every_backend() => Context.Result.Name.ShouldEqual("Fiction");
+    [Fact] void should_read_the_initial_values_after_the_root_event_on_every_backend() => Context.Result.Status.ShouldEqual("open");
+    [Fact] void should_read_the_numeric_initial_value_on_every_backend() => Context.Result.Capacity.ShouldEqual(42);
+    [Fact] void should_replay_the_numeric_initial_value_on_every_backend() => Context.Replayed.Capacity.ShouldEqual(42);
+    [Fact] void should_read_the_preserved_child_on_every_backend() => Context.Result.Books.Single().Isbn.ShouldEqual("978-1");
+    [Fact] void should_replay_the_initial_values_on_every_backend() => Context.Replayed.Status.ShouldEqual("open");
+    [Fact] void should_replay_the_child_on_every_backend() => Context.Replayed.Books.Single().Isbn.ShouldEqual("978-1");
 
     [Fact] void should_have_read_the_stored_documents_when_the_backend_allows_it() =>
         (!Context.DocumentCanBeInspected || (Context.DocumentAfterTheChildOnlyEvent is not null && Context.DocumentAfterTheRootEvent is not null)).ShouldBeTrue();
@@ -120,6 +142,6 @@ public record ChildOnlyShelfBook(string Isbn, string Title);
 [EventType]
 public record ChildOnlyBookShelved(ChildOnlyShelfBook Book);
 
-public record ChildOnlyShelf(string Id, string Name, string Status, IEnumerable<ChildOnlyShelfBook> Books);
+public record ChildOnlyShelf(string Id, string Name, string Status, IEnumerable<ChildOnlyShelfBook> Books, int Capacity);
 
 #pragma warning restore SA1402

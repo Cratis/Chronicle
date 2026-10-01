@@ -65,6 +65,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
             {
                 needsInitialState = true;
                 initialState = projection.InitialModelState.Clone();
+                ((IDictionary<string, object?>)initialState)[WellKnownProperties.ReadModelInstanceInitialized] = true;
                 context.Changeset.SetInitialized(true);
             }
 
@@ -116,6 +117,8 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
                 }
             }
 
+            // Bulk sinks cache CurrentState between events, before the recorded differences reach storage.
+            initialStateAsDictionary[WellKnownProperties.ReadModelInstanceInitialized] = true;
             context.Changeset.SetInitialized(true);
         }
 
