@@ -7,6 +7,8 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 
@@ -90,13 +92,26 @@ public class ReducerPipeline(
                 identifier,
                 result.ReadModelState);
 
-            if (!objectComparer.Compare(initial, encryptedState, out var differences))
+            // Reducer results are rebuilt from the schema and do not carry sink bookkeeping.
+            // Compare a copy so removing those fields cannot mutate a sink's cached instance.
+            ExpandoObject? initialForComparison = null;
+            if (initial is not null)
+            {
+                initialForComparison = new ExpandoObject();
+                var declaredProperties = schema.GetFlattenedProperties().Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
+                foreach (var (name, value) in initial.Where(property => !WellKnownProperties.All.Contains(property.Key) || declaredProperties.Contains(property.Key)))
+                {
+                    ((IDictionary<string, object?>)initialForComparison)[name] = value;
+                }
+            }
+
+            if (!objectComparer.Compare(initialForComparison, encryptedState, out var differences))
             {
                 // The comparer has no child identity for reducer-owned collections. A nested,
                 // unindexed array path cannot be applied safely by sinks, so replace that collection.
                 changeset.Add(new PropertiesChanged<ExpandoObject>(
                     null!,
-                    differences.Collapse(initial, encryptedState)));
+                    differences.Collapse(initialForComparison, encryptedState)));
             }
         }
 

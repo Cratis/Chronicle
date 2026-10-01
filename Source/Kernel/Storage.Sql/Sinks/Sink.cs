@@ -656,7 +656,8 @@ public class Sink : ISink
     void ApplySingleDifference(EntityEntry<DynamicReadModelEntity> entry, PropertyDifference difference)
     {
         var firstSegment = difference.PropertyPath.Segments.FirstOrDefault()?.Value;
-        if (firstSegment is null)
+        if (firstSegment is null ||
+            (firstSegment == WellKnownProperties.ReadModelInstanceInitialized && difference.Changed is not bool))
         {
             return;
         }
@@ -928,6 +929,15 @@ public class Sink : ISink
                 foreach (var column in _columns.Where(column => !dict.ContainsKey(column.Name)))
                 {
                     resultDictionary.Remove(column.Name);
+                }
+            }
+            else
+            {
+                // Nulls on an initialized row are data, not absent initial values. The schema converter
+                // otherwise omits nullable members or substitutes CLR defaults for numeric columns.
+                foreach (var column in _columns.Where(column => _schema.Properties.ContainsKey(column.Name) && (!dict.TryGetValue(column.Name, out var value) || value is null)))
+                {
+                    resultDictionary[column.Name] = null;
                 }
             }
 
