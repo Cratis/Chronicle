@@ -45,6 +45,10 @@ public class QuarantinedObserver(
         logger.ObserverQuarantined();
 
         var observer = (Observer)Observer;
+
+        // OnEnter runs once per real transition: a quarantined observer can only transition to Routing, and
+        // an activating observer always starts in Routing, so this is not reached again for the same quarantine.
+        observer.RecordObserverQuarantined();
         await observer.RemoveFailedPartitionReminders();
         await observer.StopAllRetryFailedPartitionJobs();
 
