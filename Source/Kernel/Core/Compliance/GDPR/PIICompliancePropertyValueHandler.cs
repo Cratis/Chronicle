@@ -32,14 +32,6 @@ public class PIICompliancePropertyValueHandler(
     /// <inheritdoc/>
     public async Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
-        // An empty value carries nothing personal, and it is exactly what Release surfaces for an erased subject.
-        // Provisioning a key for it would fail behind the erasure fence and freeze every later update of the read
-        // model (#4453), so it is stored as is; Release passes a value without the encryption shape straight through.
-        if (IsEmpty(value))
-        {
-            return value;
-        }
-
         var key = await provisioner.EnsureKeyFor(eventStore, eventStoreNamespace, identifier);
         return ProtectedValueCodec.Encrypt(encryption, key, value);
     }
@@ -76,12 +68,4 @@ public class PIICompliancePropertyValueHandler(
 
         return ProtectedValueCodec.Decrypt(encryption, key, encrypted);
     }
-
-    static bool IsEmpty(JsonNode value) => value switch
-    {
-        JsonValue scalar => scalar.TryGetValue<string>(out var text) && text.Length == 0,
-        JsonObject container => container.Count == 0,
-        JsonArray items => items.Count == 0,
-        _ => false,
-    };
 }

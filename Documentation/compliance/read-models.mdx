@@ -66,9 +66,7 @@ Deleting an encryption key is the Chronicle mechanism for GDPR erasure:
 
 Read model documents written before the erasure still hold the ciphertext. Nothing can decrypt it once the key is gone, which is what crypto-shredding relies on.
 
-:::caution[A rebuild does not clear the ciphertext]
-Do not plan on a replay to rewrite those documents. Rebuilding a stored read model re-applies protection to the values it writes, so a rebuild that touches an erased subject asks for that subject's key and is refused for its partition — see [The encryption key lifecycle](key-lifecycle.mdx). If your policy requires the ciphertext itself removed from the read model store, that is a deliberate operation on the store, planned with those limits in mind.
-:::
+The read model keeps updating after the erasure. Writing it for an erased subject — the next event that changes it, or a replay that covers the subject — stores each of their protected values as the erased placeholder, the empty value a shredded ciphertext already reads back as, rather than asking for a key the erasure no longer allows. No key is created and nothing of the value being written is kept, so the members that are not personal go on changing and the subject's personal data keeps reading as empty. A document rewritten this way no longer holds the old ciphertext. See [The encryption key lifecycle](key-lifecycle.mdx).
 
 For full erasure of event content, combine key deletion with [event redaction](../events/redaction).
 

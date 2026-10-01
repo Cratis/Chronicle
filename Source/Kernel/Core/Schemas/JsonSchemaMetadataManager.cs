@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.Compliance;
 using Cratis.DependencyInjection;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -36,6 +37,19 @@ public class JsonSchemaMetadataManager(
 
         var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token));
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<JsonObject> ApplyToReadModel(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
+    {
+        if (!schema.HasSchemaMetadata())
+        {
+            return json;
+        }
+
+        var result = (json.DeepClone() as JsonObject)!;
+        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token), erasedValuesBecomePlaceholders: true);
         return result;
     }
 
@@ -78,6 +92,15 @@ public class JsonSchemaMetadataManager(
         return released;
     }
 
+    static JsonValue ErasedPlaceholder()
+    {
+        // Stored the way a crypto-shredded value already reads back: an empty string where the ciphertext would
+        // have been. Nothing of the incoming value survives, and releasing the placeholder goes exactly the way
+        // releasing a shredded ciphertext does - an empty scalar, or the empty container RestoreReleasedContainerShape
+        // gives a value object or collection marked as a whole.
+        return JsonValue.Create(string.Empty);
+    }
+
     IEnumerable<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> MetadataAcrossCategories(JsonSchema schema) =>
         _categories.SelectMany(category => schema.GetSchemaMetadata(category).Select(metadata => (category, metadata)));
 
@@ -87,7 +110,8 @@ public class JsonSchemaMetadataManager(
         JsonObject json,
         string actionName,
         Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> action,
-        string path = "")
+        string path = "",
+        bool erasedValuesBecomePlaceholders = false)
     {
         var metadataForContainer = MetadataAcrossCategories(schema).ToArray();
         foreach (var (property, value) in json.ToArray())
@@ -111,6 +135,19 @@ public class JsonSchemaMetadataManager(
                         {
                             var handled = await action(handler, identifier, value);
                             json[property] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, propertySchema) : handled;
+                            handlerApplied = true;
+                        }
+                        catch (EncryptionKeyErased) when (erasedValuesBecomePlaceholders)
+                        {
+                            // The erasure fence refused a key for the subject (#4453). A read model is derived state:
+                            // whatever arrives here for an erased subject is either what releasing their shredded
+                            // values gave back - an empty string, or an empty or default-filled value object - or
+                            // personal data that reached the read model in the clear and must not be kept for a
+                            // person who asked to be forgotten. Either way the only thing that may be stored is the
+                            // erased placeholder; refusing instead would freeze every later update of the partition,
+                            // non-personal members included, while protecting nothing. The fence itself is untouched:
+                            // no key is created, and appending events keeps refusing through Apply.
+                            json[property] = ErasedPlaceholder();
                             handlerApplied = true;
                         }
                         catch (Exception ex)
@@ -146,14 +183,14 @@ public class JsonSchemaMetadataManager(
                     // property under them for a marker to sit on. Descending would report every one of them as drift
                     // and fail a document that matches its schema. Only the descent is skipped — a value marked
                     // [PII] or [Encrypted] is still handled as a whole above, like any other container.
-                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath);
+                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath, erasedValuesBecomePlaceholders);
                 }
                 else if (!handlerApplied && value is JsonArray jsonArrayValue)
                 {
                     // The property itself was not encrypted as a whole, so descend into the array and handle
                     // schema metadata that lives on the element type — a [PII]/[Encrypted] scalar concept (e.g.
                     // IReadOnlyList<Email>) or a member marked that way inside element objects.
-                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath);
+                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath, erasedValuesBecomePlaceholders);
                 }
             }
         }
@@ -165,7 +202,8 @@ public class JsonSchemaMetadataManager(
         JsonArray array,
         string actionName,
         Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> action,
-        string path)
+        string path,
+        bool erasedValuesBecomePlaceholders)
     {
         var itemSchema = arraySchema.Item?.ActualSchema;
         if (itemSchema is null)
@@ -189,11 +227,11 @@ public class JsonSchemaMetadataManager(
                 // the value branch below — handled as a whole when the element type is marked, left alone when it
                 // is not. Walking into it would report its GeoJSON members as drift, the same as for a property.
                 case JsonObject elementObject when !itemSchema.DescribesGeospatialValue():
-                    await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath);
+                    await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath, erasedValuesBecomePlaceholders);
                     break;
 
                 case JsonArray elementArray:
-                    await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath);
+                    await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath, erasedValuesBecomePlaceholders);
                     break;
 
                 default:
@@ -204,6 +242,10 @@ public class JsonSchemaMetadataManager(
                             try
                             {
                                 array[i] = await action(handler, identifier, element);
+                            }
+                            catch (EncryptionKeyErased) when (erasedValuesBecomePlaceholders)
+                            {
+                                array[i] = ErasedPlaceholder();
                             }
                             catch (Exception ex)
                             {
