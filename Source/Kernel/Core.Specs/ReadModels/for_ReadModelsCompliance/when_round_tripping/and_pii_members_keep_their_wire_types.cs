@@ -21,8 +21,10 @@ public class and_pii_members_keep_their_wire_types : Specification
 
     Member _beforeErasure;
     Member _afterErasure;
+    Member _releasedFromClearValues;
     JsonObject _stored;
     JsonObject _rewritten;
+    JsonObject _storedFromClearValues;
     InMemoryEncryptionKeyStorage _keys;
 
     async Task Because()
@@ -49,6 +51,7 @@ public class and_pii_members_keep_their_wire_types : Specification
                 "History": { "type": "array", "items": { "type": "object", "properties": { "Value": { "type": "integer", "compliance": [{ "metadataType": "PII", "details": "" }] } } } },
                 "PrivateObject": { "type": "object", "properties": { "Value": { "type": "integer" } }, "compliance": [{ "metadataType": "PII", "details": "" }] },
                 "PrivateArray": { "type": "array", "items": { "type": "integer" }, "compliance": [{ "metadataType": "PII", "details": "" }] },
+                "Age": { "type": ["integer", "null"], "compliance": [{ "metadataType": "PII", "details": "" }] },
                 "Status": { "type": "string" }
               }
             }
@@ -60,7 +63,7 @@ public class and_pii_members_keep_their_wire_types : Specification
             NullLogger<JsonSchemaMetadataManager>.Instance);
         var converter = new ExpandoObjectConverter(new TypeFormats());
         var compliance = new ReadModelsCompliance(manager, converter);
-        var state = JsonSerializer.SerializeToNode(new Member("Ada Lovelace", new Address("St James's Square", 1815, true, _identifier, _registered, 12345.67890123456789m, AddressKind.Home), [42, 73], [new Entry(91)], new Entry(101), [102, 103], "registered"))!.AsObject();
+        var state = JsonSerializer.SerializeToNode(new Member("Ada Lovelace", new Address("St James's Square", 1815, true, _identifier, _registered, 12345.67890123456789m, AddressKind.Home), [42, 73], [new Entry(91)], new Entry(101), [102, 103], 1815, "registered"))!.AsObject();
         var stored = await compliance.Apply("store", "Default", schema, Subject, converter.ToExpandoObject(state, schema));
         _stored = converter.ToJsonObject(stored, schema);
         _stored["__subject"] = Subject;
@@ -73,6 +76,10 @@ public class and_pii_members_keep_their_wire_types : Specification
         _rewritten = await manager.ApplyToReadModel("store", "Default", schema, Subject, released);
         _rewritten["__subject"] = Subject;
         _afterErasure = (await compliance.ReleaseJson("store", "Default", schema, _rewritten)).Deserialize<Member>()!;
+        var fromClearValues = await compliance.Apply("store", "Default", schema, Subject, converter.ToExpandoObject(state, schema));
+        _storedFromClearValues = converter.ToJsonObject(fromClearValues, schema);
+        _storedFromClearValues["__subject"] = Subject;
+        _releasedFromClearValues = (await compliance.ReleaseJson("store", "Default", schema, _storedFromClearValues)).Deserialize<Member>()!;
     }
 
     [Fact] void should_release_the_name_before_erasure() => _beforeErasure.Name.ShouldEqual("Ada Lovelace");
@@ -111,21 +118,32 @@ public class and_pii_members_keep_their_wire_types : Specification
     [Fact] void should_erase_the_whole_array_after_the_update() => _afterErasure.PrivateArray.ShouldBeEmpty();
     [Fact] void should_store_the_non_personal_update() => _afterErasure.Status.ShouldEqual("updated");
     [Fact] void should_store_the_name_as_erased() => _rewritten["Name"]!.GetValue<string>().ShouldEqual(string.Empty);
-    [Fact] void should_store_the_postal_code_as_erased() => _rewritten["Address"]!["PostalCode"]!.GetValue<string>().ShouldEqual(string.Empty);
-    [Fact] void should_store_the_flag_as_erased() => _rewritten["Address"]!["Verified"]!.GetValue<string>().ShouldEqual(string.Empty);
-    [Fact] void should_store_the_enum_as_erased() => _rewritten["Address"]!["Kind"]!.GetValue<string>().ShouldEqual(string.Empty);
-    [Fact] void should_store_the_identifier_as_erased() => _rewritten["Address"]!["Identifier"]!.GetValue<string>().ShouldEqual(string.Empty);
-    [Fact] void should_store_the_date_as_erased() => _rewritten["Address"]!["Registered"]!.GetValue<string>().ShouldEqual(string.Empty);
-    [Fact] void should_store_the_decimal_as_erased() => _rewritten["Address"]!["Balance"]!.GetValue<string>().ShouldEqual(string.Empty);
-    [Fact] void should_store_the_scalar_array_as_erased() => _rewritten["Scores"]![0]!.GetValue<string>().ShouldEqual(string.Empty);
-    [Fact] void should_store_the_object_array_as_erased() => _rewritten["History"]![0]!["Value"]!.GetValue<string>().ShouldEqual(string.Empty);
+    [Fact] void should_store_the_postal_code_as_erased() => _rewritten["Address"]!["PostalCode"]!.GetValue<int>().ShouldEqual(0);
+    [Fact] void should_store_the_flag_as_erased() => _rewritten["Address"]!["Verified"]!.GetValue<bool>().ShouldBeFalse();
+    [Fact] void should_store_the_enum_as_erased() => _rewritten["Address"]!["Kind"]!.GetValue<int>().ShouldEqual(0);
+    [Fact] void should_store_the_identifier_as_erased() => _rewritten["Address"]!["Identifier"]!.Deserialize<Guid>().ShouldEqual(Guid.Empty);
+    [Fact] void should_store_the_date_as_erased() => _rewritten["Address"]!["Registered"]!.Deserialize<DateTime>().ShouldEqual(default);
+    [Fact] void should_store_the_decimal_as_erased() => _rewritten["Address"]!["Balance"]!.GetValue<decimal>().ShouldEqual(0m);
+    [Fact] void should_store_the_scalar_array_as_erased() => _rewritten["Scores"]![0]!.GetValue<int>().ShouldEqual(0);
+    [Fact] void should_store_the_object_array_as_erased() => _rewritten["History"]![0]!["Value"]!.GetValue<int>().ShouldEqual(0);
     [Fact] void should_store_the_whole_object_as_erased() => _rewritten["PrivateObject"]!.GetValue<string>().ShouldEqual(string.Empty);
     [Fact] void should_store_the_whole_array_as_erased() => _rewritten["PrivateArray"]!.GetValue<string>().ShouldEqual(string.Empty);
+    [Fact] void should_store_the_nullable_number_encrypted_before_erasure() => IsEncrypted(_stored["Age"]!).ShouldBeTrue();
+    [Fact] void should_release_the_nullable_number_before_erasure() => _beforeErasure.Age.ShouldEqual(1815);
+    [Fact] void should_erase_the_nullable_number_after_the_update() => _afterErasure.Age.ShouldBeNull();
+    [Fact] void should_not_restore_clear_personal_data_when_the_erased_value_is_null() => _storedFromClearValues["Age"].ShouldBeNull();
+    [Fact] void should_not_release_the_clear_nullable_number_for_an_erased_subject() => _releasedFromClearValues.Age.ShouldBeNull();
+    [Fact] void should_not_release_the_clear_name_for_an_erased_subject() => _releasedFromClearValues.Name.ShouldEqual(string.Empty);
+    [Fact] void should_not_release_the_clear_address_for_an_erased_subject() => _releasedFromClearValues.Address.ShouldEqual(new Address(string.Empty, 0, false, Guid.Empty, default, 0m, AddressKind.Unknown));
+    [Fact] void should_not_release_the_clear_scalar_array_for_an_erased_subject() => _releasedFromClearValues.Scores.ShouldEqual([0, 0]);
+    [Fact] void should_not_release_the_clear_object_array_for_an_erased_subject() => _releasedFromClearValues.History[0].Value.ShouldEqual(0);
+    [Fact] void should_not_release_the_clear_whole_object_for_an_erased_subject() => _releasedFromClearValues.PrivateObject.Value.ShouldEqual(0);
+    [Fact] void should_not_release_the_clear_whole_array_for_an_erased_subject() => _releasedFromClearValues.PrivateArray.ShouldBeEmpty();
     [Fact] async Task should_not_recreate_the_key() => (await _keys.HasFor("store", "Default", Subject)).ShouldBeFalse();
 
     static bool IsEncrypted(JsonNode value) => ProtectedValueCodec.TryDecodeCipherText(new Encryption(), value.GetValue<string>(), out _);
 
-    record Member(string Name, Address Address, int[] Scores, Entry[] History, Entry PrivateObject, int[] PrivateArray, string Status);
+    record Member(string Name, Address Address, int[] Scores, Entry[] History, Entry PrivateObject, int[] PrivateArray, int? Age, string Status);
     record Address(string Street, int PostalCode, bool Verified, Guid Identifier, DateTime Registered, decimal Balance, AddressKind Kind);
     record Entry(int Value);
     enum AddressKind

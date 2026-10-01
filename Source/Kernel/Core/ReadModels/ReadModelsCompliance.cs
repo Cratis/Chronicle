@@ -58,10 +58,12 @@ public class ReadModelsCompliance(
         // bookkeeping fields that live outside the read model schema — the sink's primary key column and
         // similar — are lost. Downstream difference computation would then see them as removed and emit a
         // spurious "property -> null" change; for the SQL sink that nulls the read model's primary key and
-        // the save fails on every attempt. Carry any such non-schema property through unchanged.
+        // the save fails on every attempt. Carry any such non-schema property through unchanged. A declared
+        // property can be absent because its erased placeholder is null; never restore its original clear value.
+        var declaredProperties = schema.GetFlattenedProperties().Select(_ => _.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var (propertyName, propertyValue) in (IDictionary<string, object?>)instance)
         {
-            if (!resultAsDictionary.ContainsKey(propertyName))
+            if (!declaredProperties.Contains(propertyName) && !resultAsDictionary.ContainsKey(propertyName))
             {
                 resultAsDictionary[propertyName] = propertyValue;
             }
