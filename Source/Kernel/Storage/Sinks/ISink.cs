@@ -105,6 +105,16 @@ public interface ISink
     Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context);
 
     /// <summary>
+    /// Stop writing to the replay container for a replay that another silo has already ended and promoted.
+    /// </summary>
+    /// <remarks>
+    /// A sink that keeps its replay state per process stays in replay mode until it is told otherwise, sending every
+    /// later write to a container that nothing reads. Sinks without a replay container have nothing to leave.
+    /// </remarks>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task LeaveReplay() => Task.CompletedTask;
+
+    /// <summary>
     /// Remove a read model occurrence container from the sink.
     /// </summary>
     /// <param name="containerName">The <see cref="ReadModelContainerName"/> to remove.</param>

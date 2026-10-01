@@ -88,7 +88,40 @@ public class ProjectionReplayHandler(
             await replayManager.Replayed(observerDetails.Key.ObserverId, context);
             await namespaceStorage.ReplayContexts.Evict(projection.ReadModel.Identifier);
             return Result<ICanHandleReplayForObserver.Error>.Success();
-        });
+        },
+
+        // The context is gone because another silo has already ended this replay and promoted the read model. This
+        // silo's sink is still writing to the replay container, which nothing reads any more - it has to stop.
+        pipeline => pipeline.LeaveReplay());
+
+    /// <inheritdoc/>
+    public async Task<Result<ICanHandleReplayForObserver.Error>> FlushReplayFor(ObserverDetails observerDetails)
+    {
+        try
+        {
+            if (!CanHandle(observerDetails))
+            {
+                return ICanHandleReplayForObserver.Error.CannotHandle;
+            }
+
+            if (!projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+            {
+                return Result<ICanHandleReplayForObserver.Error>.Success();
+            }
+
+            var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
+            var failedPartitions = (await pipeline.EndBulk()).ToArray();
+            await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
+            return failedPartitions.Length > 0
+                ? ICanHandleReplayForObserver.Error.Unknown
+                : Result<ICanHandleReplayForObserver.Error>.Success();
+        }
+        catch (Exception ex)
+        {
+            logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
+            return ICanHandleReplayForObserver.Error.Unknown;
+        }
+    }
 
     /// <inheritdoc/>
     public Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition)
@@ -117,7 +150,8 @@ public class ProjectionReplayHandler(
     async Task<Result<ICanHandleReplayForObserver.Error>> DoWorkOnPipeline(
         ObserverDetails observerDetails,
         Func<IProjection, Task<Result<ReplayContext, GetContextError>>> getContext,
-        Func<IProjectionPipeline, IProjection, ReplayContext, Task<Result<ICanHandleReplayForObserver.Error>>> doWork)
+        Func<IProjectionPipeline, IProjection, ReplayContext, Task<Result<ICanHandleReplayForObserver.Error>>> doWork,
+        Func<IProjectionPipeline, Task>? onMissingContext = null)
     {
         try
         {
@@ -138,11 +172,17 @@ public class ProjectionReplayHandler(
             projectionPipelineManager.EvictFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId);
 
             var getReplayContext = await getContext(projection);
+            var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
             if (getReplayContext.TryPickT1(out _, out var replayContext))
             {
+                if (onMissingContext is not null)
+                {
+                    await onMissingContext(pipeline);
+                }
+
                 return ICanHandleReplayForObserver.Error.CouldNotGetReplayContext;
             }
-            var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
+
             return await doWork(pipeline, projection, replayContext);
         }
         catch (Exception ex)

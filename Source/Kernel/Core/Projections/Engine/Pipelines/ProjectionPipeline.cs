@@ -89,6 +89,20 @@ public class ProjectionPipeline(
     }
 
     /// <inheritdoc/>
+    public async Task LeaveReplay()
+    {
+        replayScopedCache.EndReplaySession();
+        try
+        {
+            await sink.LeaveReplay();
+        }
+        finally
+        {
+            await changesetStorage.EndReplay(projection.ReadModel.ContainerName);
+        }
+    }
+
+    /// <inheritdoc/>
     public Task BeginBulk() => sink.BeginBulk();
 
     /// <inheritdoc/>
