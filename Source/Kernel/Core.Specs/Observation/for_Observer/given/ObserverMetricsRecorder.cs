@@ -25,6 +25,7 @@ public sealed class ObserverMetricsRecorder : IDisposable
 
     readonly MeterListener _listener = new();
     readonly ConcurrentQueue<RecordedMeasurement> _measurements = new();
+    readonly ConcurrentDictionary<string, Instrument> _instruments = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverMetricsRecorder"/> class and starts listening.
@@ -37,6 +38,7 @@ public sealed class ObserverMetricsRecorder : IDisposable
         {
             if (ReferenceEquals(instrument.Meter, SharedMeter))
             {
+                _instruments[instrument.Name] = instrument;
                 listener.EnableMeasurementEvents(instrument);
             }
         };
@@ -48,6 +50,13 @@ public sealed class ObserverMetricsRecorder : IDisposable
     /// Gets the <see cref="ObserverId"/> of the observer the recorder listens to.
     /// </summary>
     public ObserverId ObserverId { get; }
+
+    /// <summary>
+    /// Gets an instrument that was created on the shared meter.
+    /// </summary>
+    /// <param name="instrument">The name of the instrument.</param>
+    /// <returns>The <see cref="Instrument"/>, or null if it has not been created.</returns>
+    public Instrument? InstrumentNamed(string instrument) => _instruments.GetValueOrDefault(instrument);
 
     /// <summary>
     /// Gets the recorded measurements of an instrument.

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Metrics;
 
@@ -22,22 +23,42 @@ internal static partial class ObserverMetrics
     const string ObserverQuarantinedName = "chronicle-observer-quarantined";
     const string ObserverQuarantinedDescription = "Number of times an observer was quarantined";
 
-    static readonly Lock _initializationLock = new();
+    static readonly Lock _failureCountersLock = new();
+    static FailureCounters? _failureCounters;
 
     [Counter<int>("chronicle-observer-successful-observations", "Number of successful observations per observer in a given event store and namespace")]
     internal static partial void SuccessfulObservation(this IMeterScope<Observer> meter);
 
-    [Counter<int>(PartitionFailedName, PartitionFailedDescription)]
-    internal static partial void PartitionFailed(this IMeterScope<Observer> meter);
+    // The four failure counters below are written by hand rather than with the [Counter<int>] attribute.
+    // The generator emits Meter.CreateCounter<T>(name, description) and the second positional parameter of
+    // that method is the unit, so the description ends up as the unit and the description stays empty.
+    // Exporters that put the unit in the metric name (the Prometheus exporters do) then produce names such as
+    // chronicle_observer_partitions_failed_Number_of_failed_partitions_..._total with an empty HELP.
+    // Remove this, and use the attribute again, once Cratis/Fundamentals#1138 is fixed and consumed.
 
-    [Counter<int>(PartitionRetryAttemptName, PartitionRetryAttemptDescription)]
-    internal static partial void PartitionRetryAttempt(this IMeterScope<Observer> meter);
+    /// <summary>
+    /// Records a failed handling attempt for a partition of the observer.
+    /// </summary>
+    /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
+    internal static void PartitionFailed(this IMeterScope<Observer> meter) => meter.Record(_ => _.PartitionFailed, 1);
 
-    [Counter<int>(PartitionQuarantinedName, PartitionQuarantinedDescription)]
-    internal static partial void PartitionQuarantined(this IMeterScope<Observer> meter);
+    /// <summary>
+    /// Records that a failed partition of the observer was evaluated for retry.
+    /// </summary>
+    /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
+    internal static void PartitionRetryAttempt(this IMeterScope<Observer> meter) => meter.Record(_ => _.PartitionRetryAttempt, 1);
 
-    [Counter<int>(ObserverQuarantinedName, ObserverQuarantinedDescription)]
-    internal static partial void ObserverQuarantined(this IMeterScope<Observer> meter);
+    /// <summary>
+    /// Records that a partition of the observer ran out of retry attempts and was quarantined.
+    /// </summary>
+    /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
+    internal static void PartitionQuarantined(this IMeterScope<Observer> meter) => meter.Record(_ => _.PartitionQuarantined, 1);
+
+    /// <summary>
+    /// Records that the observer was quarantined.
+    /// </summary>
+    /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
+    internal static void ObserverQuarantined(this IMeterScope<Observer> meter) => meter.Record(_ => _.ObserverQuarantined, 1);
 
     /// <summary>
     /// Records a zero for the observer failure counters, so their series exist for the observer before its first failure.
@@ -46,35 +67,62 @@ internal static partial class ObserverMetrics
     /// <remarks>
     /// A counter series only exists from its first measurement. Without this, an observer's first failure creates
     /// its series at 1, and a rate or increase over a window sees no change since there is nothing to compare to.
-    /// The generated methods above create their instruments lazily and keep them in the static fields they declare.
-    /// This creates them the same way, with the same name and description, into the same fields, so there is one
-    /// instrument per counter regardless of which of the two reaches it first.
+    /// This makes the series exist, but it does not guarantee that a backend sees the zero: with cumulative export,
+    /// a failure before the first export after activation makes the first exported value already 1.
     /// </remarks>
     internal static void InitializeFailureCounters(this IMeterScope<Observer> meter)
     {
-        if (meter.Meter is null)
+        meter.Record(_ => _.PartitionFailed, 0);
+        meter.Record(_ => _.PartitionRetryAttempt, 0);
+        meter.Record(_ => _.PartitionQuarantined, 0);
+        meter.Record(_ => _.ObserverQuarantined, 0);
+    }
+
+    static void Record(this IMeterScope<Observer> meter, Func<FailureCounters, Counter<int>> counter, int value)
+    {
+        var counters = GetFailureCounters(meter);
+        if (counters is null)
         {
             return;
         }
 
-        lock (_initializationLock)
-        {
-            PartitionFailedMetric ??= meter.Meter.CreateCounter<int>(PartitionFailedName, description: PartitionFailedDescription);
-            PartitionRetryAttemptMetric ??= meter.Meter.CreateCounter<int>(PartitionRetryAttemptName, description: PartitionRetryAttemptDescription);
-            PartitionQuarantinedMetric ??= meter.Meter.CreateCounter<int>(PartitionQuarantinedName, description: PartitionQuarantinedDescription);
-            ObserverQuarantinedMetric ??= meter.Meter.CreateCounter<int>(ObserverQuarantinedName, description: ObserverQuarantinedDescription);
-        }
-
         var tags = default(TagList);
-        foreach (var (key, value) in meter.Tags)
+        foreach (var (key, tag) in meter.Tags)
         {
-            tags.Add(key, value);
+            tags.Add(key, tag);
         }
 
-        PartitionFailedMetric.Add(0, tags);
-        PartitionRetryAttemptMetric.Add(0, tags);
-        PartitionQuarantinedMetric.Add(0, tags);
-        ObserverQuarantinedMetric.Add(0, tags);
+        counter(counters).Add(value, tags);
+    }
+
+    /// <summary>
+    /// Gets the failure counters, creating them once on the first meter that is used, the way the generated metrics do.
+    /// </summary>
+    /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
+    /// <returns>The <see cref="FailureCounters"/>, or null if there is no meter to create them on.</returns>
+    static FailureCounters? GetFailureCounters(IMeterScope<Observer> meter)
+    {
+        var counters = Volatile.Read(ref _failureCounters);
+        if (counters is not null || meter.Meter is null)
+        {
+            return counters;
+        }
+
+        lock (_failureCountersLock)
+        {
+            return _failureCounters ??= new FailureCounters(meter.Meter);
+        }
+    }
+
+    sealed class FailureCounters(Meter meter)
+    {
+        public Counter<int> PartitionFailed { get; } = meter.CreateCounter<int>(PartitionFailedName, unit: null, description: PartitionFailedDescription);
+
+        public Counter<int> PartitionRetryAttempt { get; } = meter.CreateCounter<int>(PartitionRetryAttemptName, unit: null, description: PartitionRetryAttemptDescription);
+
+        public Counter<int> PartitionQuarantined { get; } = meter.CreateCounter<int>(PartitionQuarantinedName, unit: null, description: PartitionQuarantinedDescription);
+
+        public Counter<int> ObserverQuarantined { get; } = meter.CreateCounter<int>(ObserverQuarantinedName, unit: null, description: ObserverQuarantinedDescription);
     }
 }
 
