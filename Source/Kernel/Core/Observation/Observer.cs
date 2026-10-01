@@ -122,7 +122,13 @@ public partial class Observer(
         await FlushDebouncedProgressState();
         if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
         {
-            await TransitionTo<Disconnected>();
+            // A quarantine ends only when an operator clears it or the client subscribes again, never because the
+            // grain went away. Disconnected would overwrite the persisted running state the next activation relies on.
+            if (State.RunningState != ObserverRunningState.Quarantined)
+            {
+                await TransitionTo<Disconnected>();
+            }
+
             await base.OnDeactivateAsync(reason, cancellationToken);
         }
     }
@@ -512,6 +518,15 @@ public partial class Observer(
             .Select(_ => _jobsManager.Stop(_.Id));
         await Task.WhenAll(stopTasks);
     }
+
+    /// <summary>
+    /// Resolves the state to enter on activation. A quarantined observer resumes in <see cref="QuarantinedObserver"/>
+    /// rather than being routed, because <see cref="Routing"/> would send an observer without a subscription to
+    /// <see cref="Disconnected"/> and entering either state replaces the persisted <see cref="ObserverRunningState.Quarantined"/>.
+    /// </summary>
+    /// <returns>The type of the state to enter.</returns>
+    protected override Type ResolveActivationState() =>
+        State.RunningState == ObserverRunningState.Quarantined ? typeof(QuarantinedObserver) : base.ResolveActivationState();
 
     /// <inheritdoc/>
     protected override Task OnBeforeEnteringState(IState<ObserverState> state)
