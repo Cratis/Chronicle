@@ -101,6 +101,8 @@ export CHRONICLE_SQLITE_CONNECTION_DETAILS="Data Source=/tmp/chronicle.db"
 
 ### Running against an external MongoDB
 
+> **Data-loss warning:** Never run out-of-process tests against a server containing valuable data with an older Chronicle kernel image. Images that ignore `DatabaseNamePrefix` can delete unrelated databases during reset. Build the current kernel image and select it with `CRATIS_CHRONICLE_LOCAL_IMAGE`. The client fixture refuses reset unless its prefixed cluster database exists and no new unprefixed Chronicle databases appeared after startup; this check does not make old images safe for shared servers.
+
 Set `CHRONICLE_MONGODB_CONNECTION_DETAILS` to a MongoDB connection string. The client, kernel, API, and MongoDB integration fixtures and `Storage.MongoDB.Specs` use it instead of starting their own MongoDB. The client and API out-of-process modes still require Docker for the Chronicle kernel.
 
 ```bash

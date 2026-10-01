@@ -36,17 +36,12 @@ public class EventStoreDatabase : IEventStoreDatabase
     {
         _storageOptions = storageOptions ?? Options.Create(new MongoDBStorageOptions());
         var databaseName = DatabaseNames.ForEventStore(eventStore, _storageOptions.Value.DatabaseNamePrefix);
-        var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server);
-
-        // Preserve the URI path's implicit authentication database before selecting Chronicle's database.
-        urlBuilder.AuthenticationSource ??= urlBuilder.DatabaseName;
-        urlBuilder.DatabaseName = DatabaseNames.WithPrefix(eventStore.Value, _storageOptions.Value.DatabaseNamePrefix);
+        var settings = MongoClientSettings.FromUrl(new MongoUrl(mongoDBOptions.Value.Server));
         if (mongoDBOptions.Value.DirectConnection == true)
         {
-            urlBuilder.DirectConnection = true;
+            settings.DirectConnection = true;
         }
 
-        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
         var client = clientManager.GetClientFor(settings);
 
         // TODO: The name of the database should be configurable or coming from a configurable provider with conventions

@@ -30,6 +30,7 @@ public abstract class ChronicleFixture : IChronicleFixture
     MongoDBDatabase? _eventStoreForNamespace;
     MongoDBDatabase? _readModels;
     IContainer? _container;
+    INetwork? _network;
     bool _started;
     bool _reserveKernelPorts = true;
 
@@ -45,10 +46,6 @@ public abstract class ChronicleFixture : IChronicleFixture
         });
 
         Directory.CreateDirectory("backups");
-        Network = new NetworkBuilder()
-            .WithName(Guid.NewGuid().ToString("D"))
-            .Build();
-
         // MongoDBContainer is virtual so derived fixtures can swap the container source.
         // The override is the documented extension point; the base ctor must call it to
         // trigger the lazy build-and-start cycle that every fixture relies on.
@@ -102,7 +99,18 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <inheritdoc/>
-    public INetwork Network { get; }
+    public INetwork Network
+    {
+        get
+        {
+            lock (_containerLock)
+            {
+                return _network ??= new NetworkBuilder()
+                    .WithName(Guid.NewGuid().ToString("D"))
+                    .Build();
+            }
+        }
+    }
 
     /// <inheritdoc/>
     public MongoDBDatabase EventStore => _eventStore ??= new(MongoDBConnectionString, $"{MongoDBDatabaseNamePrefix}{Constants.EventStoreDatabaseName}");
@@ -134,7 +142,7 @@ public abstract class ChronicleFixture : IChronicleFixture
             _readModels?.Dispose();
             await DropMongoDBDatabases();
         }
-        await Network.DisposeAsync();
+        await (_network?.DisposeAsync() ?? ValueTask.CompletedTask);
     }
 
     /// <inheritdoc/>

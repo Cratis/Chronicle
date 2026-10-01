@@ -64,6 +64,8 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
     readonly Lazy<string> _inProcessSqliteDirectory = new(CreateInProcessSqliteDirectory);
 
+    IEnumerable<string> _mongoDatabaseNamesBeforeKernelStartup = [];
+
     IContainer? _databaseContainer;
     IContainer? _outOfProcessMongoContainer;
 #pragma warning disable CA2213 // _outOfProcessKernelContainer is a reference to the container the base class owns and disposes via base.DisposeAsync.
@@ -413,6 +415,9 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     {
         if (ExternalMongoDBConnectionString is not null)
         {
+            using var client = new MongoClient(ExternalMongoDBConnectionString);
+            using var cursor = client.ListDatabaseNames();
+            _mongoDatabaseNamesBeforeKernelStartup = cursor.ToList();
             return ExternalMongoDBConnectionString;
         }
 
@@ -542,6 +547,13 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     async Task ResetOutOfProcessKernelState()
     {
+        if (Options.StorageProvider == ChronicleStorageProvider.MongoDB && ExternalMongoDBConnectionString is not null)
+        {
+            using var client = new MongoClient(ExternalMongoDBConnectionString);
+            using var cursor = await client.ListDatabaseNamesAsync();
+            ExternalMongoDBResetSafety.Verify(MongoDBDatabaseNamePrefix, _mongoDatabaseNamesBeforeKernelStartup, await cursor.ToListAsync());
+        }
+
         // skipTlsValidation because the container serves a self-signed development certificate.
         var connectionString = new ChronicleConnectionString($"chronicle://localhost:{KernelGrpcHostPort}/?skipTlsValidation=true");
         var options = new ChronicleClientOptions
