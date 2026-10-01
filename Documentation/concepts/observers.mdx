@@ -32,6 +32,10 @@ The client exposes `IsResolved` and nullable `IsQuarantined`. A missing quaranti
 
 SQL-backed failed-partition queries observe the shared database at the configured live-query polling interval, including changes made by another instance. They emit only changed snapshots, and unsubscribe when the query consumer disconnects. Resolution and retry activity therefore update the view without a manual refresh, subject to the polling interval.
 
+## Quarantined observers
+
+When enough partitions of an observer fail, Chronicle quarantines the observer itself: automatic retries stop and it stops processing until someone acts. A quarantine ends in exactly two ways: an operator clears it (`cratis chronicle observers clear-quarantine`, or the Workbench), or the observer's client subscribes again, for example after a redeploy. Deactivation, reactivation and Kernel restarts keep the observer quarantined, so it still shows as **Quarantined** afterwards rather than **Disconnected**.
+
 ## Removing an observer
 
 An observer outlives the code that declared it. Delete a read model and its projection, or remove a reactor, and nothing tells the event store — the observer simply stops being reported by any client, settles into `Disconnected` and stays there, keeping its definition, its state and handled counts in every namespace, its failed partitions and, for a projection, its projection definition.

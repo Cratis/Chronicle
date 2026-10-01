@@ -88,6 +88,14 @@ A partition whose last attempt is a `Timeout` does not count toward the quaranti
 Quarantining stops retries and needs an operator to undo, which is the right answer for an observer
 that is wrong and the wrong answer for one waiting on congestion that will clear on its own.
 
+A quarantine ends in exactly two ways:
+
+- An operator clears it, with `cratis chronicle observers clear-quarantine` or from the Workbench.
+- The observer's client subscribes to it again, for example when the application is redeployed or restarted.
+
+Nothing else ends it. The observer stays quarantined when its grain deactivates and activates again and
+when the Kernel restarts, until one of the two above happens.
+
 ## Scaled-out clients
 
 When multiple instances of the same client application connect, its reactors and reducers all
