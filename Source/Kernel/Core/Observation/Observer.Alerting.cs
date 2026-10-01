@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts.Alerts;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Observation.Alerts;
 
 namespace Cratis.Chronicle.Observation;
@@ -25,8 +26,22 @@ public partial class Observer
         AlertClearedReason partitionsEndedAs = AlertClearedReason.Recovered,
         AlertClearedReason quarantineEndedAs = AlertClearedReason.Cleared)
     {
+        if (_retired)
+        {
+            return;
+        }
+
         try
         {
+            // Retirement retains the observer definition and quarantine, but Projection.Remove deletes the
+            // projection definition. Only an unsubscribed projection with no failures can be skipped this way;
+            // a disconnected, still-registered projection must continue reporting its quarantine.
+            if (!_subscription.IsSubscribed && !Failures.HasFailedPartitions && Definition.Type == ObserverType.Projection &&
+                !await storage.GetEventStore(_observerKey.EventStore).Projections.Has((ProjectionId)_observerId.Value))
+            {
+                return;
+            }
+
             var configuration = await configurationProvider.GetFor(_observerKey);
             var partitions = Failures.Partitions.Select(partition =>
             {

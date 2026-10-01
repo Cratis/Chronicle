@@ -127,23 +127,13 @@ public partial class Observer
     public async Task ClearFailedPartitions()
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        var partitions = Failures.Partitions.Select(p => p.Partition).ToArray();
-        if (partitions.Length == 0)
+        if (Failures.HasFailedPartitions)
         {
-            await ReportAlertState(partitionsEndedAs: AlertClearedReason.Cleared);
-            return;
+            logger.ClearingFailedPartitions(Failures.Partitions.Count());
+            await DiscardFailedPartitions();
+            await WriteStateAsync();
         }
 
-        logger.ClearingFailedPartitions(partitions.Length);
-        foreach (var partition in partitions)
-        {
-            await RemoveReminder(partition);
-            failures.State.Remove(partition);
-        }
-
-        State = State with { FailedPartitionCount = 0 };
-        await failures.WriteStateAsync();
-        await WriteStateAsync();
         await ReportAlertState(partitionsEndedAs: AlertClearedReason.Cleared);
     }
 
@@ -206,6 +196,25 @@ public partial class Observer
     /// </remarks>
     static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
         retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
+
+    /// <summary>
+    /// Forgets every failed partition, in memory and in storage, along with the reminders retrying them.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The failed partition count is reset in the observer state, which the caller is responsible for writing.
+    /// </remarks>
+    async Task DiscardFailedPartitions()
+    {
+        foreach (var partition in Failures.Partitions.Select(p => p.Partition).ToArray())
+        {
+            await RemoveReminder(partition);
+            failures.State.Remove(partition);
+        }
+
+        State = State with { FailedPartitionCount = 0 };
+        await failures.WriteStateAsync();
+    }
 
     async Task ResolveFailedPartition(Key partition)
     {

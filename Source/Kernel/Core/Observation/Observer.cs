@@ -231,6 +231,7 @@ public partial class Observer(
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
 
+        _retired = false;
         await LeaveQuarantineForSubscription();
 
         logger.Subscribing();
@@ -328,6 +329,7 @@ public partial class Observer(
         logger.Subscribing();
         logger.SubscribingToAllEvents();
 
+        _retired = false;
         await LeaveQuarantineForSubscription();
 
         observerDefinition.State = observerDefinition.State with

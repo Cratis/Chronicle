@@ -15,18 +15,16 @@ public class and_the_retired_observer_is_quarantined : given.a_projections_manag
 
     async Task Because() => await _grain.Register([], ProjectionOwner.Client);
 
-    [Fact] async Task should_clear_the_failed_partitions_through_the_observer() => await _observerGrain.Received(1).ClearFailedPartitions();
-    [Fact] async Task should_clear_the_observers_quarantine() => await _observerGrain.Received(1).ClearObserverQuarantine();
-    [Fact] async Task should_report_the_retired_observers_alerts_as_removed() => await _observerAlerts.Received(1).Removed();
+    [Fact] async Task should_retire_the_observer() => await _observerGrain.Received(1).Retire();
+    [Fact] async Task should_not_clear_the_observers_quarantine() => await _observerGrain.DidNotReceive().ClearObserverQuarantine();
+    [Fact] async Task should_not_clear_failed_partitions_as_an_operator() => await _observerGrain.DidNotReceive().ClearFailedPartitions();
+    [Fact] async Task should_not_unsubscribe_with_a_state_transition() => await _observerGrain.DidNotReceive().Unsubscribe();
     [Fact] async Task should_not_remove_the_observer() => await _observerGrain.DidNotReceive().Remove();
     [Fact]
-    void should_report_removed_only_after_the_observers_failure_state_is_cleared() => Received.InOrder(() =>
+    void should_retire_before_deleting_jobs_and_the_projection() => Received.InOrder(() =>
     {
-        _observerGrain.Unsubscribe();
-        _observerGrain.ClearFailedPartitions();
-        _observerGrain.IsObserverQuarantined();
-        _observerGrain.ClearObserverQuarantine();
+        _observerGrain.Retire();
         _jobsManager.GetAllJobs();
-        _observerAlerts.Removed();
+        _projectionGrain.Remove();
     });
 }

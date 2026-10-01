@@ -290,6 +290,20 @@ public interface IObserver : IGrainWithStringKey
     Task Remove();
 
     /// <summary>
+    /// Retire the observer: stop it consuming events and end its failures, keeping its records in place.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Used when a projection is retired. Failed partitions and their reminders are discarded and alert incidents
+    /// end as Removed, without a state transition or a change to replay progress or handled counts.
+    /// The projection manager deletes its jobs and projection definition afterwards. This activation stops reporting
+    /// alerts; after reactivation, an unsubscribed projection without failures or a projection definition does not
+    /// report its retained quarantine. No new persisted retirement state is needed. A fresh subscription enables
+    /// reporting again.
+    /// </remarks>
+    Task Retire();
+
+    /// <summary>
     /// Catch up the observer.
     /// </summary>
     /// <returns>Awaitable task.</returns>

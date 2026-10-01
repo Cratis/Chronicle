@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Observation.Alerts;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.ReadModels;
@@ -89,12 +88,7 @@ public partial class ProjectionsManager
     async Task StopObserverFor(ProjectionDefinition orphan, EventStoreNamespaceName @namespace)
     {
         var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(orphan.Identifier, _eventStoreName, @namespace, orphan.EventSequenceId));
-        await observer.Unsubscribe();
-        await observer.ClearFailedPartitions();
-        if (await observer.IsObserverQuarantined())
-        {
-            await observer.ClearObserverQuarantine();
-        }
+        await observer.Retire();
 
         var jobsManager = GrainFactory.GetJobsManager(_eventStoreName, @namespace);
         var jobs = await jobsManager.GetAllJobs();
@@ -106,8 +100,6 @@ public partial class ProjectionsManager
         {
             await jobsManager.Delete(job.Id);
         }
-
-        await GrainFactory.GetGrain<IObserverAlerts>(new ObserverKey(orphan.Identifier, _eventStoreName, @namespace, orphan.EventSequenceId)).Removed();
     }
 
     async Task AddReplayRecommendationForContainerSuccessors(

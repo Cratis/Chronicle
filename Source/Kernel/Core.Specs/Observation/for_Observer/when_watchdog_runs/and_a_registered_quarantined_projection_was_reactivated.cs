@@ -1,0 +1,26 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Alerts;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Observation.for_Observer.given;
+using Cratis.Chronicle.Observation.States;
+
+namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
+
+public class and_a_registered_quarantined_projection_was_reactivated : an_observer_with_subscription
+{
+    async Task Establish()
+    {
+        _definitionStorage.State = _definitionStorage.State with { Type = ObserverType.Projection };
+        _eventStoreStorage.Projections.Has((ProjectionId)_observerId.Value).Returns(true);
+        await _observer.TransitionTo<QuarantinedObserver>();
+        await Reactivate();
+        _observerAlerts.ClearReceivedCalls();
+    }
+
+    async Task Because() => await _observer.RunWatchdogAsync();
+
+    [Fact] async Task should_keep_reporting_quarantine_without_a_subscription_or_failed_partitions() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(snapshot => snapshot.IsQuarantined && snapshot.FailedPartitions.Count == 0));
+}

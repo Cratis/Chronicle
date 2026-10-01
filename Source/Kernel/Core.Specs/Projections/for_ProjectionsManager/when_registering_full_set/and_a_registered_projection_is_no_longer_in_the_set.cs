@@ -38,11 +38,10 @@ public class and_a_registered_projection_is_no_longer_in_the_set : given.a_proje
 
     async Task Because() => await _grain.Register([_remaining], ProjectionOwner.Client);
 
-    [Fact] async Task should_clear_the_retired_observers_alerts() => await _observerAlerts.Received(1).Removed();
-    [Fact] void should_unsubscribe_the_orphaned_observer() => _observerGrain.Received(1).Unsubscribe();
+    [Fact] async Task should_retire_the_orphaned_observer() => await _observerGrain.Received(1).Retire();
     [Fact] void should_unregister_the_orphan_from_the_engine() => _projectionsServiceClient.Received(1).Unregister((EventStoreName)EventStore, (ProjectionId)"orphaned-projection");
     [Fact] void should_remove_the_orphaned_projection_grain() => _projectionGrain.Received(1).Remove();
-    [Fact] async Task should_clear_the_orphaned_failed_partitions_through_the_observer() => await _observerGrain.Received(1).ClearFailedPartitions();
+    [Fact] async Task should_not_clear_failed_partitions_as_an_operator() => await _observerGrain.DidNotReceive().ClearFailedPartitions();
     [Fact] void should_not_clear_failed_partitions_directly_in_storage() => _failedPartitionsStorage.DidNotReceiveWithAnyArgs().Save(default!, default!);
     [Fact] async Task should_not_clear_a_quarantine_that_is_not_present() => await _observerGrain.DidNotReceive().ClearObserverQuarantine();
     [Fact] async Task should_not_remove_the_observer() => await _observerGrain.DidNotReceive().Remove();

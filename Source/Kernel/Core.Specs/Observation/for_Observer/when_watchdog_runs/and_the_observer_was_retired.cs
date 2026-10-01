@@ -14,15 +14,7 @@ public class and_the_observer_was_retired : an_observer_with_subscription
         _failedPartitionsState.AddFailedPartition("partition", 12UL);
         await _observer.TransitionTo<QuarantinedObserver>();
 
-        // Retirement leaves the KeepAlive grain in place, but clears its failure state before reporting Removed.
-        await _observer.Unsubscribe();
-        await _observer.ClearFailedPartitions();
-        if (await _observer.IsObserverQuarantined())
-        {
-            await _observer.ClearObserverQuarantine();
-        }
-
-        await _observerAlerts.Removed();
+        await _observer.Retire();
         _observerAlerts.ClearReceivedCalls();
     }
 
@@ -30,7 +22,7 @@ public class and_the_observer_was_retired : an_observer_with_subscription
 
     [Fact] async Task should_have_no_failed_partitions_in_memory() => (await _observer.HasFailedPartitions()).ShouldBeFalse();
     [Fact] void should_have_no_failed_partitions_in_storage() => _failedPartitionsStorage.State.HasFailedPartitions.ShouldBeFalse();
-    [Fact] async Task should_not_be_quarantined() => (await _observer.IsObserverQuarantined()).ShouldBeFalse();
+    [Fact] async Task should_keep_the_quarantined_state() => (await _observer.IsObserverQuarantined()).ShouldBeTrue();
     [Fact] async Task should_remain_unsubscribed() => (await _observer.IsSubscribed()).ShouldBeFalse();
     [Fact] async Task should_not_send_a_snapshot_that_could_raise_retired_incidents_again() => await _observerAlerts.DidNotReceive().Reconcile(Arg.Any<ObserverAlertSnapshot>());
 }
