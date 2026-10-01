@@ -147,14 +147,15 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 }
                 finally
                 {
-                    // Always runs, so a container that fails to dispose cannot leave the kernel or the in-process silo running.
+                    // Always runs, so a container that fails to dispose cannot leave the kernel container running.
                     await base.DisposeAsync();
                 }
             }
         }
         finally
         {
-            // Last, once the kernel and the silo have stopped and no longer hold the files open.
+            // Last, after the kernel container has stopped. The in-process silo is shared across fixtures and may still hold
+            // the files open, so this is best effort: it succeeds on Linux and macOS and reports what it cannot delete elsewhere.
             DeleteInProcessSqliteDirectory();
         }
     }
