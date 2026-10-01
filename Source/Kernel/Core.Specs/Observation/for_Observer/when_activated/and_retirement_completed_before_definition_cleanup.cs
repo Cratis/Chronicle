@@ -8,7 +8,7 @@ using Cratis.Chronicle.Observation.States;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_activated;
 
-public class and_retirement_completed_before_definition_cleanup : given.an_observer
+public class and_retirement_completed_before_definition_cleanup : given.an_observer_with_subscription
 {
     async Task Establish()
     {

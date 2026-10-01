@@ -5,7 +5,7 @@ using Cratis.Chronicle.Observation.States;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_activated;
 
-public class and_quarantine_identity_is_already_persisted : given.an_observer
+public class and_quarantine_identity_is_already_persisted : given.an_observer_with_subscription
 {
     Guid? _episode;
     Guid _lifecycle;

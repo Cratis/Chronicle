@@ -36,5 +36,5 @@ public class and_recovery_interleaves_with_an_outstanding_report : given.an_obse
     }
 
     [Fact] void should_not_acknowledge_the_newer_level_from_an_old_receipt() => _oldApplied.ShouldBeFalse();
-    [Fact] async Task should_report_the_committed_recovery_with_its_episode_reason() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.Revision > _original.Revision && _.FailedPartitions.Count == 0 && _.Endings[(IncidentId)_original.FailedPartitions.Single().Id] == AlertClearedReason.Recovered));
+    [Fact] async Task should_report_the_committed_recovery_with_its_episode_reason() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.Revision > _original.Revision && _.FailedPartitions.Count == 0 && _.Endings[_original.FailedPartitions.Single().Id.Value] == AlertClearedReason.Recovered));
 }

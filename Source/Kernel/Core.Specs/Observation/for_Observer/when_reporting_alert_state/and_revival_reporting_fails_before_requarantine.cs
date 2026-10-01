@@ -3,12 +3,13 @@
 
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts.Alerts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_reporting_alert_state;
 
-public class and_revival_reporting_fails_before_requarantine : given.an_observer
+public class and_revival_reporting_fails_before_requarantine : given.an_observer_with_subscription
 {
     Guid _original;
 
@@ -17,7 +18,7 @@ public class and_revival_reporting_fails_before_requarantine : given.an_observer
         await _observer.TransitionTo<QuarantinedObserver>();
         _original = _stateStorage.State.QuarantineEpisodeId!.Value;
         await ReportAlerts();
-        await _observer.Subscribe<ObserverSubscriber>(ObserverType.Reactor, [], SiloAddress.Zero);
+        await _observer.Subscribe<ObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
         FailAlertReports(new TimeoutException());
         await ReportAlerts();
         ApplyAlertReports();
@@ -30,6 +31,7 @@ public class and_revival_reporting_fails_before_requarantine : given.an_observer
         await ReportAlerts();
     }
 
+    [Fact] void should_persist_the_current_quarantine_identity() => _stateStorage.State.QuarantineEpisodeId.ShouldNotBeNull();
     [Fact] void should_persist_a_distinct_episode() => _stateStorage.State.QuarantineEpisodeId.ShouldNotEqual(_original);
-    [Fact] async Task should_report_both_current_identity_and_the_old_ending() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.IsQuarantined && _.QuarantineEpisodeId != _original && _.Endings[new IncidentId(_original)] == AlertClearedReason.Revived));
+    [Fact] async Task should_report_both_current_identity_and_the_old_ending() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.IsQuarantined && _.QuarantineEpisodeId != _original && _.Endings[_original] == AlertClearedReason.Revived));
 }

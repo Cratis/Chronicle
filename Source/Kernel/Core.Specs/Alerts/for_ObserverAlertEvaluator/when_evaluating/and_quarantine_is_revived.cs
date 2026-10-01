@@ -17,7 +17,7 @@ public class and_quarantine_is_revived : given.an_evaluator
 
     void Because()
     {
-        _result = Evaluate(SnapshotOf() with { Endings = new Dictionary<IncidentId, AlertClearedReason> { [_id] = AlertClearedReason.Revived } }, OpenQuarantineIncident(_id));
+        _result = Evaluate(SnapshotOf() with { Endings = new Dictionary<Guid, AlertClearedReason> { [_id.Value] = AlertClearedReason.Revived } }, OpenQuarantineIncident(_id));
         _cleared = _result.Transitions.OfType<AlertCleared>().Single();
     }
 

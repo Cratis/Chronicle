@@ -134,12 +134,12 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
             {
                 if (!snapshot.IsQuarantined || snapshot.QuarantineEpisodeId != incident.Id.Value)
                 {
-                    yield return Cleared(snapshot, incident, snapshot.Endings.GetValueOrDefault(incident.Id, AlertClearedReason.Cleared));
+                    yield return Cleared(snapshot, incident, snapshot.Endings.GetValueOrDefault(incident.Id.Value, AlertClearedReason.Cleared));
                 }
             }
             else if (IsPartitionCondition(incident.Condition) && !failedPartitionIds.Contains(incident.Id))
             {
-                yield return Cleared(snapshot, incident, snapshot.Endings.GetValueOrDefault(incident.Id, AlertClearedReason.Recovered));
+                yield return Cleared(snapshot, incident, snapshot.Endings.GetValueOrDefault(incident.Id.Value, AlertClearedReason.Recovered));
             }
         }
     }

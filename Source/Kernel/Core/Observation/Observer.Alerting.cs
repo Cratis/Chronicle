@@ -121,7 +121,7 @@ public partial class Observer
                     LifecycleId = source.AlertLifecycleId,
                     Revision = source.AlertRevision,
                     QuarantineEpisodeId = source.QuarantineEpisodeId,
-                    Endings = _alertEndings.ToImmutableDictionary()
+                    Endings = _alertEndings.ToImmutableDictionary(_ => _.Key.Value, _ => _.Value)
                 };
             }
             finally
@@ -157,9 +157,10 @@ public partial class Observer
                 _alertReconciliationPending = false;
                 foreach (var ending in snapshot.Endings)
                 {
-                    if (_alertEndings.TryGetValue(ending.Key, out var reason) && reason == ending.Value)
+                    var incidentId = new IncidentId(ending.Key);
+                    if (_alertEndings.TryGetValue(incidentId, out var reason) && reason == ending.Value)
                     {
-                        _alertEndings.Remove(ending.Key);
+                        _alertEndings.Remove(incidentId);
                     }
                 }
 

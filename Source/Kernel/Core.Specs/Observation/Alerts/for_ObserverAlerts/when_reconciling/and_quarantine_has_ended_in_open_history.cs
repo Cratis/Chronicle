@@ -15,7 +15,7 @@ public class and_quarantine_has_ended_in_open_history : given.an_alert_tracker
     {
         _incidentId = IncidentId.New();
         GivenHistory(new AlertRaised(_incidentId, AlertConditionKind.ObserverQuarantined, AlertSeverity.Critical, AlertTarget.For(_key, AlertPartition.None), AlertEvidence.Create(0, _clock.Now, _clock.Now, FailureKind.Unknown, string.Empty)));
-        _snapshot = _snapshot with { FailedPartitions = [], Endings = new Dictionary<IncidentId, AlertClearedReason> { [_incidentId] = AlertClearedReason.Revived } };
+        _snapshot = _snapshot with { FailedPartitions = [], Endings = new Dictionary<Guid, AlertClearedReason> { [_incidentId.Value] = AlertClearedReason.Revived } };
     }
 
     async Task Because() => _receipt = await _tracker.Reconcile(_snapshot);

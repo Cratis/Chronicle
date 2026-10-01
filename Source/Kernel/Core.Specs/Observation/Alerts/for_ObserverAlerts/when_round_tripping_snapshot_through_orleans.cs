@@ -26,7 +26,7 @@ public class when_round_tripping_snapshot_through_orleans : Specification
         LifecycleId = Guid.NewGuid(),
         Revision = 42,
         QuarantineEpisodeId = Guid.NewGuid(),
-        Endings = new Dictionary<IncidentId, AlertClearedReason> { [IncidentId.New()] = AlertClearedReason.Revived }
+        Endings = new Dictionary<Guid, AlertClearedReason> { [Guid.NewGuid()] = AlertClearedReason.Revived }
     };
 
     void Because()

@@ -12,7 +12,7 @@ public class and_a_clear_append_is_retried : given.an_alert_tracker
     async Task Establish()
     {
         GivenHistory(RaisedForSnapshot());
-        _snapshot = _snapshot with { FailedPartitions = [], Endings = new Dictionary<IncidentId, AlertClearedReason> { [_snapshot.FailedPartitions.Single().Id] = AlertClearedReason.Cleared } };
+        _snapshot = _snapshot with { FailedPartitions = [], Endings = new Dictionary<Guid, AlertClearedReason> { [_snapshot.FailedPartitions.Single().Id.Value] = AlertClearedReason.Cleared } };
         AppendReturns(AppendResult.Failed(CorrelationId.NotSet, (AppendError[])[new("Unavailable")]));
         await _tracker.Reconcile(_snapshot);
 

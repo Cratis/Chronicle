@@ -14,7 +14,7 @@ public class and_revival_was_not_reported_before_requarantine : given.an_evaluat
         {
             IsQuarantined = true,
             QuarantineEpisodeId = Guid.NewGuid(),
-            Endings = new Dictionary<IncidentId, AlertClearedReason> { [new(_defaultQuarantineEpisodeId)] = AlertClearedReason.Revived }
+            Endings = new Dictionary<Guid, AlertClearedReason> { [_defaultQuarantineEpisodeId] = AlertClearedReason.Revived }
         },
         OpenQuarantineIncident());
 

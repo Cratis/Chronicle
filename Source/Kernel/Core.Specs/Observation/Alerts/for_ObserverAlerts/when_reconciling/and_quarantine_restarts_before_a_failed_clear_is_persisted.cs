@@ -16,7 +16,7 @@ public class and_quarantine_restarts_before_a_failed_clear_is_persisted : given.
     {
         _original = new(IncidentId.New(), AlertConditionKind.ObserverQuarantined, AlertSeverity.Critical, AlertTarget.For(_key, AlertPartition.None), AlertEvidence.Create(0, _clock.Now, _clock.Now, FailureKind.Unknown, string.Empty));
         GivenHistory(_original);
-        _snapshot = _snapshot with { FailedPartitions = [], Endings = new Dictionary<IncidentId, AlertClearedReason> { [_original.IncidentId] = AlertClearedReason.Revived } };
+        _snapshot = _snapshot with { FailedPartitions = [], Endings = new Dictionary<Guid, AlertClearedReason> { [_original.IncidentId.Value] = AlertClearedReason.Revived } };
         AppendReturns(AppendResult.Failed(CorrelationId.NotSet, (AppendError[])[new("Unavailable")]));
         await _tracker.Reconcile(_snapshot);
         GivenHistory(_original);

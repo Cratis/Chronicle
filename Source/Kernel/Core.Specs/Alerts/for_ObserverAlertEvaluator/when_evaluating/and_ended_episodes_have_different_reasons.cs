@@ -15,7 +15,7 @@ public class and_ended_episodes_have_different_reasons : given.an_evaluator
     void Because() => _result = Evaluate(
         SnapshotOf() with
         {
-            Endings = new Dictionary<IncidentId, AlertClearedReason> { [_cleared] = AlertClearedReason.Cleared, [_recovered] = AlertClearedReason.Recovered }
+            Endings = new Dictionary<Guid, AlertClearedReason> { [_cleared.Value] = AlertClearedReason.Cleared, [_recovered.Value] = AlertClearedReason.Recovered }
         },
         OpenPartitionIncident(_cleared),
         OpenPartitionIncident(_recovered));

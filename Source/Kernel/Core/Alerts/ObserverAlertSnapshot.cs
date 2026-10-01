@@ -45,5 +45,9 @@ public record ObserverAlertSnapshot(
     /// <summary>
     /// Gets the reasons for identified ended episodes that have not yet been acknowledged.
     /// </summary>
-    public IReadOnlyDictionary<IncidentId, AlertClearedReason> Endings { get; init; } = ImmutableDictionary<IncidentId, AlertClearedReason>.Empty;
+    /// <remarks>
+    /// Keys carry the incident's GUID value because the Orleans JSON codec cannot use concept converters for
+    /// dictionary property names. The observer keeps strongly typed incident keys in its local bookkeeping.
+    /// </remarks>
+    public IReadOnlyDictionary<Guid, AlertClearedReason> Endings { get; init; } = ImmutableDictionary<Guid, AlertClearedReason>.Empty;
 }
