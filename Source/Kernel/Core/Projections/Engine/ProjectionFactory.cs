@@ -1023,11 +1023,16 @@ public class ProjectionFactory(
         // a nested definition that also projects T via [SetFrom<T>] on its properties. We OR the
         // ProjectionOperationType flags together so a single event type can carry multiple operation
         // semantics (From + Remove, From + Join, etc.) without colliding on dictionary insert.
+        // Derivative and from-event-property registrations count too: a parent derives ChildrenAffected from its
+        // children's entries, so an event type a child handles only that way must be in the child's map or the
+        // parent would treat the event as one that creates its own instance.
         var operationTypes = fromEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.From))
             .Concat(joinEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.Join)))
             .Concat(removedWithEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.Remove)))
             .Concat(removedWithJoinEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.Join | ProjectionOperationType.Remove)))
             .Concat(nestedEventTypes.Select(_ => (_.Event.EventType, Op: _.Operation)))
+            .Concat(projectionDefinition.FromDerivatives?.SelectMany(_ => _.EventTypes).Select(_ => (EventType: _, Op: ProjectionOperationType.From)) ?? [])
+            .Concat(projectionDefinition.FromEventProperty is null ? [] : [(EventType: projectionDefinition.FromEventProperty.Event, Op: ProjectionOperationType.From)])
             .GroupBy(t => t.EventType)
             .ToDictionary(g => g.Key, g => g.Aggregate(ProjectionOperationType.None, (acc, x) => acc | x.Op));
 
