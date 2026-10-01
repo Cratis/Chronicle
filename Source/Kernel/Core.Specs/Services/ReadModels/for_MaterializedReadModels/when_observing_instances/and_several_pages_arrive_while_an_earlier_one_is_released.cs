@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.ReadModels;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_MaterializedReadModels.when_observing_instances;
 
@@ -63,7 +64,7 @@ public class and_several_pages_arrive_while_an_earlier_one_is_released : for_Rea
                 return Task.FromResult<IEnumerable<ExpandoObject>>(instances);
             });
 
-        _materializedService = new(_grainFactory, _storage, _complianceHelper);
+        _materializedService = new(_grainFactory, _storage, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
     }
 
     async Task Because()

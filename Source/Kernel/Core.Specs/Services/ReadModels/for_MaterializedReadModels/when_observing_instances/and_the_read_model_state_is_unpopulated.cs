@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.ReadModels;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_MaterializedReadModels.when_observing_instances;
 
@@ -14,7 +15,7 @@ public class and_the_read_model_state_is_unpopulated : for_ReadModels.given.all_
     void Establish()
     {
         _readModel.GetDefinition().Returns(_readModelDefinition with { Sink = null! });
-        _materializedService = new(_grainFactory, _storage, _complianceHelper);
+        _materializedService = new(_grainFactory, _storage, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
     }
 
     async Task Because() => _result = await Catch.Exception(async () => await _materializedService.ObserveInstances(new()

@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.ReadModels;
@@ -17,10 +18,12 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
 /// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting compliance and security fields.</param>
+/// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
 internal sealed class MaterializedReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
-    IReadModelsCompliance complianceHelper) : IMaterializedReadModels
+    IReadModelsCompliance complianceHelper,
+    ILogger<MaterializedReadModels> logger) : IMaterializedReadModels
 {
     /// <inheritdoc/>
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
@@ -86,24 +89,26 @@ internal sealed class MaterializedReadModels(
         // count and a page read to deliver a snapshot that a newer one has already replaced.
         .SelectMany(state =>
             state.sink.ObserveInstances(state.occurrence, state.skip, request.PageSize)
-                .SelectLatestSequentially(async instances =>
-                {
-                    var releasedInstances = await complianceHelper.Release(
-                        request.EventStore,
-                        request.Namespace,
-                        state.schema,
-                        instances);
-
-                    var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
-                    var (_, totalCount) = await state.sink.GetInstances(state.occurrence, state.skip, request.PageSize);
-
-                    return new ObserveInstancesResponse
+                .SelectLatestSequentially(
+                    async instances =>
                     {
-                        Instances = instancesAsJson,
-                        TotalCount = (int)totalCount,
-                        Page = request.Page,
-                        PageSize = request.PageSize
-                    };
-                }));
+                        var releasedInstances = await complianceHelper.Release(
+                            request.EventStore,
+                            request.Namespace,
+                            state.schema,
+                            instances);
+
+                        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
+                        var (_, totalCount) = await state.sink.GetInstances(state.occurrence, state.skip, request.PageSize);
+
+                        return new ObserveInstancesResponse
+                        {
+                            Instances = instancesAsJson,
+                            TotalCount = (int)totalCount,
+                            Page = request.Page,
+                            PageSize = request.PageSize
+                        };
+                    },
+                    logger));
     }
 }
