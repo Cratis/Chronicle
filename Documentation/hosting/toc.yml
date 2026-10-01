@@ -2,6 +2,10 @@
   href: index.md
 - name: Production
   href: production.md
+- name: Alerting on Observer Failures
+  href: alerting-on-observer-failures.md
+- name: Tracing Client Operations
+  href: client-tracing.mdx
 - name: Data Protection Key Encryption
   href: encryption-certificate.md
 - name: Configuration

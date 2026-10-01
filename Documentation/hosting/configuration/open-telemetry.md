@@ -82,7 +82,28 @@ Chronicle instruments the following meters:
 | `Grpc.AspNetCore.Server` | gRPC server request metrics |
 | .NET runtime | GC, thread pool, and memory metrics from the .NET runtime |
 
+### Observer failure metrics
+
+Chronicle counts observer failures on the `Cratis.Chronicle` meter. Every one of these instruments carries the tags `EventStore`, `Namespace`, `ObserverId` and `EventSequenceId`, and no others. Neither the partition nor the event source id is a tag, so the number of series depends on the number of observers and never on how many partitions fail.
+
+| Instrument | Prometheus name | Counts |
+| --- | --- | --- |
+| `chronicle-observer-partitions-failed` | `chronicle_observer_partitions_failed_total` | Every failed handling attempt of a partition, including the failure of each retry. It is not a count of failed partitions. |
+| `chronicle-observer-partition-retry-attempts` | `chronicle_observer_partition_retry_attempts_total` | Every time a failed partition was evaluated for retry. It is recorded together with each failed attempt, whether or not a retry ends up being scheduled, so it does not count retries that ran. |
+| `chronicle-observer-partitions-quarantined` | `chronicle_observer_partitions_quarantined_total` | Partitions that ran out of retry attempts and were quarantined. It does not count an observer being quarantined. |
+| `chronicle-observer-quarantined` | `chronicle_observer_quarantined_total` | Times an observer was quarantined. |
+
+The Prometheus names are what the OpenTelemetry Collector's Prometheus exporter and Prometheus's own OTLP receiver produce by default. These four instruments have no unit and carry their description, so a Prometheus `HELP` line explains each of them. Earlier Kernels created them with the description in the unit position, which gave them long names such as `chronicle_observer_partitions_failed_Number_of_failed_partitions_per_observer_in_a_given_event_store_and_namespace_total` and an empty `HELP`.
+
+An observer has a series on these instruments from its first failure, not before: Chronicle records nothing when an observer starts, so healthy observers add no series and the number of series follows the number of observers that fail. The first value a backend receives for an observer is therefore already `1`, and alerts on these counters should not depend on seeing a `0` first. The [alerting guide](../alerting-on-observer-failures.md) shows how.
+
+The SDK limits each instrument to 500 series. Beyond that it folds the excess into one series without the tags, which can no longer be attributed to an observer. That takes more than 500 observer instances in one process, counted across observers, namespaces and event stores.
+
+To be alerted when an observer's partitions keep failing or run out of retries, see [Get alerted when observers stop processing](../alerting-on-observer-failures.md).
+
 ## Traces instrumented
+
+These are the server's sources. The Chronicle client in your application emits its own spans on the `Cratis.Chronicle.Client` source, which you register yourself; see [Trace Chronicle client operations with OpenTelemetry](../client-tracing).
 
 Chronicle traces the following activity sources:
 

@@ -13,3 +13,4 @@ Read every concern below before working in this repository. Together they are th
 - [The wire protocol is generated from Core — don't think about the protocol](.cratis/ai/rules/project/the-wire-protocol-is-generated-from-core-don-t-think-about-the-protocol.md)
 - [AI-assisted development](.cratis/ai/rules/project/ai-assisted-development.md)
 - [Chronicle documentation authoring](.cratis/ai/rules/project/chronicle-documentation-authoring.md)
+- [Issue label conventions](.cratis/ai/rules/project/issue-label-conventions.md)

@@ -75,14 +75,31 @@ public class ProjectionPipeline(
     public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
         replayScopedCache.EndReplaySession();
-        var failedPartitions = (await sink.EndReplay(context)).ToArray();
-        if (failedPartitions.Length > 0)
-        {
-            return failedPartitions;
-        }
 
-        await changesetStorage.EndReplay(projection.ReadModel.ContainerName);
-        return failedPartitions;
+        // The changeset storage leaves replay whether or not the sink reported failed partitions: those are
+        // returned for the observer to record and retry, and the replay is over regardless.
+        try
+        {
+            return (await sink.EndReplay(context)).ToArray();
+        }
+        finally
+        {
+            await changesetStorage.EndReplay(projection.ReadModel.ContainerName);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task LeaveReplay()
+    {
+        replayScopedCache.EndReplaySession();
+        try
+        {
+            await sink.LeaveReplay();
+        }
+        finally
+        {
+            await changesetStorage.EndReplay(projection.ReadModel.ContainerName);
+        }
     }
 
     /// <inheritdoc/>

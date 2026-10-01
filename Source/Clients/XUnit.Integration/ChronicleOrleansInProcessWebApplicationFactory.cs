@@ -21,6 +21,7 @@ using Cratis.Traces;
 using KernelCore::Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using KernelCore::Cratis.Chronicle.Observation.Reactors.Clients;
 using KernelCore::Cratis.Chronicle.Observation.Reducers.Clients;
+using KernelCore::Cratis.Chronicle.Setup;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -191,6 +192,13 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                             services.Remove(descriptor);
                         }
                     }
+
+                    // The kernel shares this host - and its type discovery - with the application under test, so its
+                    // own commands would otherwise run through the application's command filters, execution scopes and
+                    // authorization: a deny-by-default policy refuses the kernel's appends, and Arc.Chronicle's
+                    // transactional scope deadlocks start-up by resolving the event store that is waiting on the very
+                    // kernel command it wraps. The application's own commands keep every extension point.
+                    services.AddKernelSideCommandExtensionPointsForKernelCommands();
 
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();

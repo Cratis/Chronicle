@@ -283,6 +283,13 @@ public class Sink : ISink
     }
 
     /// <inheritdoc/>
+    public async Task LeaveReplay()
+    {
+        _replayingTables.End(_eventStoreName, _namespace, _tableName);
+        await EndBulk();
+    }
+
+    /// <inheritdoc/>
     public async Task Remove(ReadModelContainerName containerName)
     {
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName.Value, _columns);

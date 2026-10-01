@@ -17,6 +17,8 @@ The rules are:
 - An event type handled **only** by a `Replay` handler is still subscribed to, so the replay it exists for
   delivers it.
 
+To be told when a replay starts and ends, rather than to change what a handler does during it, see [Replay notifications](replay-notifications).
+
 Reach for [OnceOnly](once-only) instead when the side effect should simply not happen again. Use `Replay` when
 a replay needs to do something *different* rather than nothing. Neither covers the re-delivery that follows a
 failed partition being recovered — for that, see [Delivery identity](delivery-identity).

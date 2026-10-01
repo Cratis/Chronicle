@@ -18,4 +18,5 @@ public class and_projection_and_context_does_not_exist : given.a_projection_repl
     Task Because() => _handler.EndReplayFor(_observerDetails);
 
     [Fact] void should_not_end_replay() => _projectionPipeline.DidNotReceiveWithAnyArgs().EndReplay(null!);
+    [Fact] void should_leave_replay_on_this_silo() => _projectionPipeline.Received(1).LeaveReplay();
 }

@@ -78,8 +78,10 @@ Restore in this order:
 
 Step 3 is the one specific to this page, and it is a point-in-time match rather than a "latest wins":
 
-- A key store restored **older** than the storage is missing keys for subjects created since. Every `[PII]` value belonging to those subjects reads back as an **empty string** — byte-for-byte identical to a completed [right to erasure](../../compliance/index.md), reported by nothing.
-- A key store restored **newer** than the storage brings back keys for subjects whose erasure the storage backup predates. Nothing breaks, and that is the problem: an erasure you have already reported as complete is silently undone.
+- A key store restored **older** than the storage has two gaps. It is missing keys for subjects created since, so every `[PII]` value belonging to those subjects reads back as an **empty string** — byte-for-byte identical to a completed [right to erasure](../../compliance/index.md), reported by nothing. And for every subject erased since, it still holds the key with no erasure fence, because the fence is kept in the key store beside the keys. Those subjects' `[PII]` values read again, and an erasure you have already reported as complete is silently undone.
+- A key store restored **newer** than the storage keeps the key deletions and erasure fences from the time in between, so the erasures made in that period hold. It does not bring erased keys back.
+
+Restore to the same point in time regardless: the newer case is not a licence to restore the latest key store. See [what the fence cannot protect against](../../compliance/key-lifecycle.mdx#not-stopped).
 
 When `migrateFromDefaultStorage` is on, both stores are live and both are part of the backup set. Restoring only the dedicated store leaves the keys that had not been read yet — the ones still living only in the default storage — out of the restore.
 

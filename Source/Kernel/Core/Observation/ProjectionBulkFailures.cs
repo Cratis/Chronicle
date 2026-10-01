@@ -26,9 +26,19 @@ internal static class ProjectionBulkFailures
             await observer.PartitionFailed(
                 failedPartition.EventSourceId,
                 failedPartition.EventSequenceNumber,
-                [$"Bulk operation failed for partition {failedPartition.EventSourceId}"],
+                [MessageFor(failedPartition)],
                 string.Empty,
                 FailureKind.Handling);
         }
     }
+
+    /// <summary>
+    /// Describes a failed partition for its failure record, including the reason the sink gave when it gave one.
+    /// </summary>
+    /// <param name="failedPartition">The failed partition from the sink.</param>
+    /// <returns>The message to record.</returns>
+    internal static string MessageFor(SinkFailedPartition failedPartition) =>
+        string.IsNullOrEmpty(failedPartition.Reason)
+            ? $"Bulk operation failed for partition {failedPartition.EventSourceId}"
+            : $"Bulk operation failed for partition {failedPartition.EventSourceId}: {failedPartition.Reason}";
 }

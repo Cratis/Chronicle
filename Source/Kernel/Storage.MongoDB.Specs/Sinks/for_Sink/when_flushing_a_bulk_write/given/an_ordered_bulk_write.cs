@@ -29,6 +29,15 @@ public class an_ordered_bulk_write : Specification
     protected List<int[]> _attempts = [];
     protected FailedPartition[] _failedPartitions = [];
 
+    /// <summary>
+    /// Content planted in the details of every error the simulated server reports. The details echo the document that
+    /// was being written, so this must never reach a log entry or a failure reason.
+    /// </summary>
+    protected const string DocumentContent = "a-value-from-the-document";
+    protected const string WriteErrorMessage = "E11000 duplicate key error";
+    protected const string WriteConcernErrorMessage = "waiting for replication timed out";
+    protected readonly for_Sink.given.RecordingLogger _logger = new();
+
     protected Sink _sink;
     IMongoCollection<BsonDocument> _collection;
     IChangeset<AppendedEvent, ExpandoObject> _changeset;
@@ -57,7 +66,7 @@ public class an_ordered_bulk_write : Specification
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema> { { ReadModelGeneration.First, new JsonSchema() } },
             []);
-        _sink = new Sink(readModel, converter, collections, Substitute.For<IChangesetConverter>(), Substitute.For<IExpandoObjectConverter>(), Substitute.For<IReadModelChangeStreams>());
+        _sink = new Sink(readModel, converter, collections, Substitute.For<IChangesetConverter>(), Substitute.For<IExpandoObjectConverter>(), Substitute.For<IReadModelChangeStreams>(), _logger);
         _collection.BulkWriteAsync(Arg.Any<IEnumerable<WriteModel<BsonDocument>>>(), Arg.Any<BulkWriteOptions>(), Arg.Any<CancellationToken>())
             .Returns(info => SimulateWrite(info.ArgAt<IEnumerable<WriteModel<BsonDocument>>>(0)));
     }
@@ -121,8 +130,8 @@ public class an_ordered_bulk_write : Specification
         {
             var processed = _writeConcernFailure ? attempt : attempt[..(failureIndex + 1)];
             var result = new BulkWriteResult<BsonDocument>.Acknowledged(attempt.Length, 0, 0, 0, 0, processed, []);
-            var error = failureIndex >= 0 ? new[] { Create<BulkWriteError>(failureIndex, ServerErrorCategory.DuplicateKey, 11000, "duplicate", new BsonDocument()) } : [];
-            var concern = _writeConcernFailure ? Create<WriteConcernError>(64, "WriteConcernFailed", "write concern failed", new BsonDocument(), Array.Empty<string>()) : null;
+            var error = failureIndex >= 0 ? new[] { Create<BulkWriteError>(failureIndex, ServerErrorCategory.DuplicateKey, 11000, WriteErrorMessage, new BsonDocument("value", DocumentContent)) } : [];
+            var concern = _writeConcernFailure ? Create<WriteConcernError>(64, "WriteConcernFailed", WriteConcernErrorMessage, new BsonDocument("value", DocumentContent), Array.Empty<string>()) : null;
             throw new MongoBulkWriteException<BsonDocument>(_connectionId, result, error, concern, attempt[processed.Length..]);
         }
 

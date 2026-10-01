@@ -62,6 +62,7 @@ public partial class Observer(
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
+    bool _resumingQuarantine;
 
     /// <summary>
     /// Set once the observer has been removed, so nothing this activation does afterwards writes it back.
@@ -164,6 +165,7 @@ public partial class Observer(
     {
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
+            // With nobody subscribed this is the routing pass every activation of an unsubscribed observer already runs, so it drops nothing a plain reactivation would not.
             await ReviveFromQuarantine();
         }
     }
@@ -226,6 +228,8 @@ public partial class Observer(
         await ReadStateAsync();
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
+
+        await LeaveQuarantineForSubscription();
 
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
@@ -291,12 +295,6 @@ public partial class Observer(
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
 
-        if (State.RunningState == ObserverRunningState.Quarantined)
-        {
-            await ReviveFromQuarantine();
-            return;
-        }
-
         if (await TransitionToReplayIfNeeded())
         {
             return;
@@ -328,6 +326,8 @@ public partial class Observer(
         logger.Subscribing();
         logger.SubscribingToAllEvents();
 
+        await LeaveQuarantineForSubscription();
+
         observerDefinition.State = observerDefinition.State with
         {
             Type = type,
@@ -348,12 +348,6 @@ public partial class Observer(
 
         State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
-
-        if (State.RunningState == ObserverRunningState.Quarantined)
-        {
-            await ReviveFromQuarantine();
-            return;
-        }
 
         if (await TransitionToReplayIfNeeded())
         {
@@ -489,6 +483,24 @@ public partial class Observer(
     }
 
     /// <summary>
+    /// Records, in the observer's metrics, that the observer was quarantined.
+    /// </summary>
+    /// <remarks>
+    /// Entering <see cref="QuarantinedObserver"/> on activation resumes a quarantine that was already counted when it
+    /// began, so that entry is not counted again.
+    /// </remarks>
+    internal void RecordObserverQuarantined()
+    {
+        if (_resumingQuarantine)
+        {
+            _resumingQuarantine = false;
+            return;
+        }
+
+        _metrics?.ObserverQuarantined();
+    }
+
+    /// <summary>
     /// Removes all reminders for currently failed partitions.
     /// </summary>
     /// <returns>Awaitable task.</returns>
@@ -511,6 +523,23 @@ public partial class Observer(
             .Where(_ => _.Request is RetryFailedPartitionRequest request && request.ObserverKey == _observerKey)
             .Select(_ => _jobsManager.Stop(_.Id));
         await Task.WhenAll(stopTasks);
+    }
+
+    /// <summary>
+    /// Resolves the state to enter on activation. A quarantined observer resumes in <see cref="QuarantinedObserver"/>
+    /// rather than being routed, because <see cref="Routing"/> would send an observer without a subscription to
+    /// <see cref="Disconnected"/> and entering either state replaces the persisted <see cref="ObserverRunningState.Quarantined"/>.
+    /// </summary>
+    /// <returns>The type of the state to enter.</returns>
+    protected override Type ResolveActivationState()
+    {
+        if (State.RunningState != ObserverRunningState.Quarantined)
+        {
+            return base.ResolveActivationState();
+        }
+
+        _resumingQuarantine = true;
+        return typeof(QuarantinedObserver);
     }
 
     /// <inheritdoc/>

@@ -51,6 +51,8 @@ After fixing the cause of a failure, an application can inspect a typed reactor'
 
 A retry request is not proof that recovery finished. Inspect the partition before reporting recovery as successful; retrying does not guarantee exactly-once execution of reactor side effects.
 
+To find out about a stuck partition when it happens rather than when someone notices, see [Get alerted when observers stop processing](/chronicle/hosting/alerting-on-observer-failures/).
+
 A partition that ran out of retries before your fix was deployed is quarantined, and does **not** resume on its own. Inspect it with `failed-partitions show` before choosing how to resume it: an ordinary retry is refused for a quarantined partition, and a quarantined *observer* needs `observers clear-quarantine` first. Remember that every retry and replay runs the handler again, so a side effect the handler completed before it failed happens again unless you guard it; see [Delivery identity](/chronicle/reactors/delivery-identity/).
 
 ## A constraint is rejecting an append I expected to succeed
@@ -73,6 +75,10 @@ On the write side the append fails outright; on the read side the failing partit
 A [geospatial](/chronicle/concepts/geospatial/) `Point`, `LineString` or `Polygon` is never the cause — the walk stops at those by design and never reads their GeoJSON members as properties.
 
 Two shapes *are* a cause, deliberately: a polymorphic base type and a dictionary both hold members the schema does not declare, and Chronicle would rather fail here than write a value it was told is personal into the store unprotected. Model the data as a value object with declared properties. See [Geospatial values are not looked inside](/chronicle/compliance/pii#geospatial-values-are-not-looked-inside).
+
+## My traces have no Chronicle spans
+
+The Chronicle client emits its spans on an activity source named `Cratis.Chronicle.Client`, and OpenTelemetry records a source only after it has been registered. Without the registration nothing fails, the spans are just missing. Add `AddCratisChronicleInstrumentation()` to your tracer provider configuration. See [Trace Chronicle client operations with OpenTelemetry](/chronicle/hosting/client-tracing/).
 
 ## I can't connect to the Chronicle kernel
 

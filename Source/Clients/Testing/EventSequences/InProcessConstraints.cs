@@ -42,7 +42,9 @@ internal sealed class InProcessConstraints(ICanProvideConstraints constraintProv
             throw new UnknownConstraint(constraintName);
         }
 
-        return _constraints.Single(_ => _.Name == constraintName);
+        // More than one provider can declare a name. Looking one up must not fail the resolution of a violation's message
+        // for that, so it returns the first declaration rather than insisting there is only one.
+        return _constraints.First(_ => _.Name == constraintName);
     }
 
     /// <inheritdoc/>

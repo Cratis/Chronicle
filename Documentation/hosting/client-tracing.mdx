@@ -1,0 +1,98 @@
+---
+title: Trace Chronicle client operations with OpenTelemetry
+description: Register the Chronicle client activity source so appends, unit-of-work commits and reactor and reducer handling show up as spans in your tracing backend.
+---
+
+The Chronicle client creates spans for the work it does inside your application: appending events, committing a unit of work, and handling an event in a reactor or a reducer. Those spans are emitted on an activity source named `Cratis.Chronicle.Client`, and an OpenTelemetry tracer provider only records a source it has been told about. If you never register it, nothing is recorded, nothing fails, and the spans are simply missing from your traces.
+
+One call registers it: `AddCratisChronicleInstrumentation()`.
+
+This page is about the client in your application. The Chronicle server exports its own telemetry; see [Open Telemetry](/chronicle/hosting/configuration/open-telemetry/) for that.
+
+## Register the instrumentation
+
+`AddCratisChronicleInstrumentation()` is an extension on `TracerProviderBuilder` in the `Cratis.Chronicle.AspNetCore` package, in the `Cratis.Chronicle.AspNetCore.OpenTelemetry` namespace. Add it next to the other instrumentation when you configure tracing:
+
+<ChronicleClientTabs snippet="hosting/client-tracing/register" variants="csharp" />
+
+The snippet also needs the `OpenTelemetry.Extensions.Hosting` and `OpenTelemetry.Exporter.OpenTelemetryProtocol` packages, which provide `AddOpenTelemetry()` and `AddOtlpExporter()`.
+
+If your host does not reference `Cratis.Chronicle.AspNetCore`, such as a worker service, register the source by name instead. `ClientActivity.SourceName` is the constant `Cratis.Chronicle.Client`:
+
+<ChronicleClientTabs snippet="hosting/client-tracing/add-source" variants="csharp" />
+
+## What you will see
+
+Every span name starts with `client.`. The tags below hold identifiers, not event content.
+
+| Span | Kind | Tags |
+| --- | --- | --- |
+| `client.event_sequence.append` | Client | `event_store_name`, `namespace_name`, `event_sequence_id`, `event_source_type`, `event_source_id` |
+| `client.event_sequence.append_many` | Client | `event_store_name`, `namespace_name`, `event_sequence_id` |
+| `client.unit_of_work.commit` | Client | `correlation_id` |
+| `client.unit_of_work.rollback` | Client | `correlation_id` |
+| `client.reactor.handle` | Consumer | `event_store_name`, `namespace_name`, `event_sequence_id`, `reactor_id` |
+| `client.reducer.handle` | Consumer | `event_store_name`, `namespace_name`, `event_sequence_id`, `reducer_id` |
+
+A reactor or reducer span covers one delivery of events to that observer. Replay notifications do not produce one.
+
+## Send the spans to a backend
+
+`AddOtlpExporter()` follows the standard OpenTelemetry environment variables, so the same code works against any backend that accepts [OTLP](https://opentelemetry.io/docs/specs/otlp/). Set the endpoint, and the headers when your backend needs them, in the environment of the application:
+
+```shell
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.example.com
+OTEL_EXPORTER_OTLP_HEADERS=x-api-key=<your-api-key>
+OTEL_SERVICE_NAME=orders-api
+```
+
+Read the key from your secret store or deployment configuration. Do not commit it, and do not put it in a tag or a log line.
+
+### Try it locally with the Aspire Dashboard
+
+The [.NET Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard/overview) is a single container that receives OTLP and shows traces, which makes it the quickest way to see these spans:
+
+```shell
+docker run --rm -d --name aspire-dashboard \
+  -p 18888:18888 -p 4317:18889 \
+  -e DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true \
+  mcr.microsoft.com/dotnet/aspire-dashboard:latest
+```
+
+Start your application with the dashboard as the endpoint, then append an event:
+
+```shell
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 dotnet run
+```
+
+Open [http://localhost:18888](http://localhost:18888), go to **Traces**, and look for your service. You should see `client.event_sequence.append` for the append, and, if a reactor observes that event, a `client.reactor.handle` span. Stop the dashboard with `docker stop aspire-dashboard`.
+
+The dashboard allows anonymous access in this setup. Use it on your own machine only.
+
+## When no spans appear
+
+Chronicle gives no warning when the source is not registered, so check these in order:
+
+- **The source is not registered.** `AddCratisChronicleInstrumentation()` or `AddSource("Cratis.Chronicle.Client")` must be part of the same `WithTracing` configuration that adds the exporter. Registering other Chronicle names, such as the server's `Cratis.Chronicle` source, does not enable the client's spans.
+- **Nothing has happened yet.** Spans exist only for work the client has done. Append an event, then look.
+- **The exporter is not configured.** Without an endpoint the exporter sends to its default, `http://localhost:4317`, which is only right when something is listening there.
+- **A sampler drops them.** A sampler that records nothing, or a parent that was not sampled, hides these spans along with the rest.
+
+## Keep sensitive data out of traces
+
+The spans Chronicle creates identify what happened and where, not what the event said. Two tags can still hold values you care about:
+
+- `event_source_id` is the event source id exactly as you appended it. If you use an email address, a national id or another personal value as the event source id, that value is sent to your tracing backend. Use an opaque id, or treat the backend as holding personal data.
+- `correlation_id` is the correlation id of the unit of work. It is meant to be searched for, so do not derive it from anything private.
+
+When you add your own tags or enrich these spans, do the same: ids and counts are fine, while credentials, tokens and event or read model content are not.
+
+## Correlating spans
+
+`client.unit_of_work.commit` and `client.unit_of_work.rollback` carry the unit of work's `correlation_id`. The append, reactor and reducer spans do not carry it, so searching on a correlation id finds the commit or rollback span only.
+
+## See also
+
+- [Open Telemetry](/chronicle/hosting/configuration/open-telemetry/) for the server's own telemetry
+- [Get alerted when observers stop processing](/chronicle/hosting/alerting-on-observer-failures/)
+- [Troubleshooting](/chronicle/troubleshooting/)

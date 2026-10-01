@@ -335,6 +335,8 @@ def generate_project() -> str:
             <Aliases>KernelStorageSql</Aliases>
         </ProjectReference>
         <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
         <PackageReference Include="Cratis.Specifications" />
         <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="xunit" />
