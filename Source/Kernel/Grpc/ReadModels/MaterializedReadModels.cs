@@ -80,11 +80,13 @@ internal sealed class MaterializedReadModels(
             return (sink, occurrence, skip, schema);
         })
 
-        // Each page is released and counted one after the other, so a slower earlier page can never
-        // overtake a later one and leave the subscriber holding a stale page.
+        // Pages are released and counted one at a time and in order, so a slower earlier page can never overtake a
+        // later one. Only the latest page is kept waiting while one is being processed: under sustained writes the
+        // sink emits faster than a slow client or release can drain, and every page queued would cost a release, a
+        // count and a page read to deliver a snapshot that a newer one has already replaced.
         .SelectMany(state =>
             state.sink.ObserveInstances(state.occurrence, state.skip, request.PageSize)
-                .Select(instances => Observable.FromAsync(async () =>
+                .SelectLatestSequentially(async instances =>
                 {
                     var releasedInstances = await complianceHelper.Release(
                         request.EventStore,
@@ -102,7 +104,6 @@ internal sealed class MaterializedReadModels(
                         Page = request.Page,
                         PageSize = request.PageSize
                     };
-                }))
-                .Concat());
+                }));
     }
 }
