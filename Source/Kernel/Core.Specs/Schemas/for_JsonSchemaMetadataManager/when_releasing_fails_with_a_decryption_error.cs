@@ -35,5 +35,5 @@ public class when_releasing_fails_with_a_decryption_error : given.a_value_handle
 
     [Fact] void should_not_fail_the_release() => _exception.ShouldBeNull();
 
-    [Fact] void should_surface_the_unreadable_property_as_empty() => _result[PropertyName].ToString().ShouldEqual(string.Empty);
+    [Fact] void should_surface_the_unreadable_property_as_its_type_default() => _result[PropertyName]!.GetValue<int>().ShouldEqual(0);
 }

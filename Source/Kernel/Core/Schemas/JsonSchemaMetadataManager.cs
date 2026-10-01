@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
@@ -23,6 +24,8 @@ public class JsonSchemaMetadataManager(
     IInstancesOf<IJsonSchemaMetadataValueHandler> propertyValueHandlers,
     ILogger<JsonSchemaMetadataManager> logger) : IJsonSchemaMetadataManager
 {
+    static readonly TypeFormats _typeFormats = new();
+
     readonly Dictionary<(SchemaMetadataCategory Category, SchemaMetadataTypeName Type), IJsonSchemaMetadataValueHandler> _propertyValueHandlers =
         propertyValueHandlers.ToDictionary(_ => (_.Category, _.Type), _ => _);
     readonly IReadOnlyCollection<SchemaMetadataCategory> _categories = propertyValueHandlers.Select(_ => _.Category).Distinct().ToArray();
@@ -66,8 +69,21 @@ public class JsonSchemaMetadataManager(
         return result;
     }
 
-    static JsonNode RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
+    static JsonNode? RestoreReleasedShape(JsonNode released, JsonSchema propertySchema)
     {
+        if (released is JsonValue scalar && scalar.TryGetValue<string>(out var text) && text.Length == 0 &&
+            !propertySchema.IsArray && !propertySchema.Type.HasFlag(JsonObjectType.Object))
+        {
+            // An erased scalar must still travel as its declared type. The empty string is the storage marker,
+            // not a valid integer, flag, identifier or date on the wire. Keep plain strings empty; typed values
+            // use the same defaults as schema materialization, and optional values remain null.
+            var targetType = propertySchema.GetTargetTypeForSchema(_typeFormats);
+            if (propertySchema.IsNullableSchema() || (targetType is not null && targetType != typeof(string)))
+            {
+                return JsonSerializer.SerializeToNode(propertySchema.GetDefaultValueForSchema(_typeFormats));
+            }
+        }
+
         // A coarse schema metadata marker on a whole container is blob-encrypted to a single ciphertext string,
         // even though its schema type stays array (a collection) or object (a value object). Releasing it
         // decrypts back to the original JSON text; re-parse that text into the container the schema expects so
@@ -96,7 +112,7 @@ public class JsonSchemaMetadataManager(
     {
         // Stored the way a crypto-shredded value already reads back: an empty string where the ciphertext would
         // have been. Nothing of the incoming value survives, and releasing the placeholder goes exactly the way
-        // releasing a shredded ciphertext does - an empty scalar, or the empty container RestoreReleasedContainerShape
+        // releasing a shredded ciphertext does - an empty scalar, or the empty container RestoreReleasedShape
         // gives a value object or collection marked as a whole.
         return JsonValue.Create(string.Empty);
     }
@@ -134,7 +150,7 @@ public class JsonSchemaMetadataManager(
                         try
                         {
                             var handled = await action(handler, identifier, value);
-                            json[property] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, propertySchema) : handled;
+                            json[property] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedShape(handled, propertySchema) : handled;
                             handlerApplied = true;
                         }
                         catch (EncryptionKeyErased) when (erasedValuesBecomePlaceholders)
@@ -165,7 +181,7 @@ public class JsonSchemaMetadataManager(
                             }
 
                             logger.FailedToReleaseProperty(propertyPath, identifier, failure);
-                            json[property] = RestoreReleasedContainerShape(JsonValue.Create(string.Empty), propertySchema);
+                            json[property] = RestoreReleasedShape(JsonValue.Create(string.Empty), propertySchema);
                             handlerApplied = true;
                         }
                     }
@@ -241,7 +257,8 @@ public class JsonSchemaMetadataManager(
                         {
                             try
                             {
-                                array[i] = await action(handler, identifier, element);
+                                var handled = await action(handler, identifier, element);
+                                array[i] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedShape(handled, itemSchema) : handled;
                             }
                             catch (EncryptionKeyErased) when (erasedValuesBecomePlaceholders)
                             {
@@ -259,7 +276,7 @@ public class JsonSchemaMetadataManager(
                                 }
 
                                 logger.FailedToReleaseProperty(elementPath, identifier, failure);
-                                array[i] = JsonValue.Create(string.Empty);
+                                array[i] = RestoreReleasedShape(JsonValue.Create(string.Empty), itemSchema);
                             }
                         }
                     }

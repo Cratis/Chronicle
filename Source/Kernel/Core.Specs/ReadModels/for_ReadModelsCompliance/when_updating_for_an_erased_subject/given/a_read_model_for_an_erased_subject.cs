@@ -80,7 +80,7 @@ public abstract class a_read_model_for_an_erased_subject : Specification
 
     protected abstract ExpandoObject CreateState();
 
-    protected static object? ValueOf(ExpandoObject instance, string property) => ((IDictionary<string, object?>)instance)[property];
+    protected static object? ValueOf(ExpandoObject instance, string property) => ((IDictionary<string, object?>)instance).TryGetValue(property, out var value) ? value : null;
 
     protected static string Serialized(object? value) => JsonSerializer.Serialize(value);
 

@@ -64,6 +64,8 @@ public class and_their_read_model_is_updated(context context) : Given<context>(c
     [Fact] void should_store_the_update() => Context.AfterUpdate!.Status.ShouldEqual(Context.StatusChanged.Status);
     [Fact] void should_keep_the_name_erased() => Context.AfterUpdate!.Name.ShouldEqual(string.Empty);
     [Fact] void should_keep_the_street_erased() => Context.AfterUpdate!.Address.Street.ShouldEqual(string.Empty);
+    [Fact] void should_keep_the_postal_code_erased() => Context.AfterUpdate!.Address.PostalCode.ShouldEqual(0);
+    [Fact] void should_keep_the_verification_flag_erased() => Context.AfterUpdate!.Address.Verified.ShouldBeFalse();
     [Fact] void should_store_no_personal_data_when_the_backend_allows_it() => (!Context.DocumentCanBeInspected || Context.StoredDocument?.ToJson().Contains(Context.Registered.Name) == false).ShouldBeTrue();
 }
 

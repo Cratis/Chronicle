@@ -171,7 +171,16 @@ public static class JsonSchemaExtensions
     /// <param name="schemaProperty"><see cref="JsonSchemaProperty"/> to find property from.</param>
     /// <param name="typeFormats"><see cref="ITypeFormats"/> holding known JSON schema type formats.</param>
     /// <returns>The actual type or null if its not a known property path within the schema.</returns>
-    public static Type? GetTargetTypeForJsonSchemaProperty(this JsonSchemaProperty schemaProperty, ITypeFormats typeFormats)
+    public static Type? GetTargetTypeForJsonSchemaProperty(this JsonSchemaProperty schemaProperty, ITypeFormats typeFormats) =>
+        GetTargetTypeForSchema(schemaProperty, typeFormats);
+
+    /// <summary>
+    /// Gets the CLR type for a property or collection element schema.
+    /// </summary>
+    /// <param name="schemaProperty">The value schema.</param>
+    /// <param name="typeFormats">The known type formats.</param>
+    /// <returns>The CLR type, or null if it is unknown.</returns>
+    public static Type? GetTargetTypeForSchema(this JsonSchema schemaProperty, ITypeFormats typeFormats)
     {
         if (!string.IsNullOrEmpty(schemaProperty.Format) && typeFormats.IsKnown(schemaProperty.Format))
         {
@@ -180,7 +189,7 @@ public static class JsonSchemaExtensions
 
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
                     schemaProperty.Reference?.Type ??
-                        (schemaProperty.HasOneOfSchemaReference ?
+                        (schemaProperty is JsonSchemaProperty { HasOneOfSchemaReference: true } ?
                             schemaProperty.OneOf[0].Reference?.Type ?? JsonObjectType.None :
                             JsonObjectType.None) :
                     schemaProperty.Type;
@@ -213,14 +222,23 @@ public static class JsonSchemaExtensions
     /// Writing one leaves a reader with two bad choices: refuse it, and take a whole observable query down rather
     /// than one row, or round it off to something that reads like a deliberate answer.
     /// </remarks>
-    public static object? GetDefaultValue(this JsonSchemaProperty schemaProperty, ITypeFormats typeFormats)
+    public static object? GetDefaultValue(this JsonSchemaProperty schemaProperty, ITypeFormats typeFormats) =>
+        GetDefaultValueForSchema(schemaProperty, typeFormats);
+
+    /// <summary>
+    /// Gets the default value for a property or collection element schema.
+    /// </summary>
+    /// <param name="schemaProperty">The value schema.</param>
+    /// <param name="typeFormats">The known type formats.</param>
+    /// <returns>The allowed default value, or null.</returns>
+    public static object? GetDefaultValueForSchema(this JsonSchema schemaProperty, ITypeFormats typeFormats)
     {
-        if (schemaProperty.IsNullable())
+        if (schemaProperty.IsNullableSchema())
         {
             return null;
         }
 
-        var type = schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats);
+        var type = schemaProperty.GetTargetTypeForSchema(typeFormats);
 
         if (type is not null && (type.IsPrimitive || !type.IsByRef) &&
                 type != typeof(string) &&
@@ -252,7 +270,14 @@ public static class JsonSchemaExtensions
     /// suffix therefore read every nullable enum and every nullable flag as non-nullable, and the round trip
     /// materialized a type default for a property whose whole point was that it might not have one.
     /// </remarks>
-    public static bool IsNullable(this JsonSchemaProperty schemaProperty) =>
+    public static bool IsNullable(this JsonSchemaProperty schemaProperty) => IsNullableSchema(schemaProperty);
+
+    /// <summary>
+    /// Gets whether a property or collection element schema permits null.
+    /// </summary>
+    /// <param name="schemaProperty">The value schema.</param>
+    /// <returns>True if the schema permits null.</returns>
+    public static bool IsNullableSchema(this JsonSchema schemaProperty) =>
         (schemaProperty.Format?.EndsWith('?') ?? false) ||
         schemaProperty.Type.HasFlag(JsonObjectType.Null);
 
@@ -276,7 +301,7 @@ public static class JsonSchemaExtensions
         return node?.ToJsonString() ?? schemaJson;
     }
 
-    static bool IsDeclaredMember(JsonSchemaProperty schemaProperty, object? value)
+    static bool IsDeclaredMember(JsonSchema schemaProperty, object? value)
     {
         if (schemaProperty.Enumeration.Count == 0 || value is null)
         {
