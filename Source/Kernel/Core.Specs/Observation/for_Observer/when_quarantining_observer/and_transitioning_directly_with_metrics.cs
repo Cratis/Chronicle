@@ -16,5 +16,5 @@ public class and_transitioning_directly_with_metrics : given.an_observer_with_me
     }
 
     [Fact] void should_count_the_observer_as_quarantined_once() => _metrics.SumOf(ObserverQuarantined).ShouldEqual(1);
-    [Fact] void should_not_count_any_failed_partition() => _metrics.SumOf(PartitionsFailed).ShouldEqual(0);
+    [Fact] void should_not_count_any_failed_partition() => _metrics.For(PartitionsFailed).ShouldBeEmpty();
 }

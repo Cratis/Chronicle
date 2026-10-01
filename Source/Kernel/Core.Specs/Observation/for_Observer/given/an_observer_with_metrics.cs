@@ -26,5 +26,27 @@ public class an_observer_with_metrics : an_observer_with_subscription
 
     protected override IMeter<Observer> CreateMeter() => new Meter<Observer>(ObserverMetricsRecorder.SharedMeter);
 
+    /// <summary>
+    /// Gets whether an instrument has measurements and every one of them is tagged with the observer scope only.
+    /// </summary>
+    /// <param name="instrument">The name of the instrument.</param>
+    /// <returns>True if there are measurements and all carry exactly the observer scope tags.</returns>
+    protected bool IsTaggedWithObserverScopeOnly(string instrument)
+    {
+        var measurements = _metrics.For(instrument).ToArray();
+        return measurements.Length > 0 && measurements.All(_ => _.Tags.Keys.Order().SequenceEqual(_observerScopeTags.Order()));
+    }
+
+    /// <summary>
+    /// Gets whether an instrument has measurements and none of them is tagged with the partition.
+    /// </summary>
+    /// <param name="instrument">The name of the instrument.</param>
+    /// <returns>True if there are measurements and none carries a partition tag.</returns>
+    protected bool IsNotTaggedWithPartition(string instrument)
+    {
+        var measurements = _metrics.For(instrument).ToArray();
+        return measurements.Length > 0 && !measurements.Any(_ => _.Tags.ContainsKey("partition"));
+    }
+
     void Destroy() => _metrics.Dispose();
 }

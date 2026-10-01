@@ -9,8 +9,12 @@ public class with_metrics : given.an_observer_with_metrics
 
     [Fact] void should_count_the_failed_attempt() => _metrics.SumOf(PartitionsFailed).ShouldEqual(1);
     [Fact] void should_count_the_retry_attempt() => _metrics.SumOf(PartitionRetryAttempts).ShouldEqual(1);
-    [Fact] void should_not_count_a_quarantined_partition() => _metrics.SumOf(PartitionsQuarantined).ShouldEqual(0);
-    [Fact] void should_not_count_a_quarantined_observer() => _metrics.SumOf(ObserverQuarantined).ShouldEqual(0);
-    [Fact] void should_not_tag_any_failure_instrument_with_the_partition() => _failureInstruments.Any(instrument => _metrics.For(instrument).Any(_ => _.Tags.ContainsKey("partition"))).ShouldBeFalse();
-    [Fact] void should_tag_every_failure_instrument_with_the_observer_scope_only() => _failureInstruments.All(instrument => _metrics.For(instrument).All(_ => _.Tags.Keys.Order().SequenceEqual(_observerScopeTags.Order()))).ShouldBeTrue();
+    [Fact] void should_not_count_a_quarantined_partition() => _metrics.For(PartitionsQuarantined).ShouldBeEmpty();
+    [Fact] void should_not_count_a_quarantined_observer() => _metrics.For(ObserverQuarantined).ShouldBeEmpty();
+    [Fact] void should_not_tag_the_failed_attempt_with_the_partition() => IsNotTaggedWithPartition(PartitionsFailed).ShouldBeTrue();
+    [Fact] void should_not_tag_the_retry_attempt_with_the_partition() => IsNotTaggedWithPartition(PartitionRetryAttempts).ShouldBeTrue();
+    [Fact] void should_tag_the_failed_attempt_with_the_observer_scope_only() => IsTaggedWithObserverScopeOnly(PartitionsFailed).ShouldBeTrue();
+    [Fact] void should_tag_the_retry_attempt_with_the_observer_scope_only() => IsTaggedWithObserverScopeOnly(PartitionRetryAttempts).ShouldBeTrue();
+    [Fact] void should_create_every_failure_instrument_without_a_unit() => _failureInstruments.All(instrument => _metrics.InstrumentNamed(instrument) is { Unit: null }).ShouldBeTrue();
+    [Fact] void should_create_every_failure_instrument_with_a_description() => _failureInstruments.All(instrument => !string.IsNullOrWhiteSpace(_metrics.InstrumentNamed(instrument)?.Description)).ShouldBeTrue();
 }

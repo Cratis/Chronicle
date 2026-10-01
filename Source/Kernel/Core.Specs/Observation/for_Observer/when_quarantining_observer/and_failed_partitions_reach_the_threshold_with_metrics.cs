@@ -18,6 +18,6 @@ public class and_failed_partitions_reach_the_threshold_with_metrics : given.an_o
     }
 
     [Fact] void should_count_the_observer_as_quarantined_once() => _metrics.SumOf(ObserverQuarantined).ShouldEqual(1);
-    [Fact] void should_not_tag_the_quarantine_with_a_partition() => _metrics.For(ObserverQuarantined).Any(_ => _.Tags.ContainsKey("partition")).ShouldBeFalse();
-    [Fact] void should_tag_the_quarantine_with_the_observer_scope_only() => _metrics.For(ObserverQuarantined).All(_ => _.Tags.Keys.Order().SequenceEqual(_observerScopeTags.Order())).ShouldBeTrue();
+    [Fact] void should_not_tag_the_quarantine_with_a_partition() => IsNotTaggedWithPartition(ObserverQuarantined).ShouldBeTrue();
+    [Fact] void should_tag_the_quarantine_with_the_observer_scope_only() => IsTaggedWithObserverScopeOnly(ObserverQuarantined).ShouldBeTrue();
 }

@@ -17,7 +17,7 @@ public class and_the_partition_runs_out_of_retries_with_metrics : given.an_obser
 
     [Fact] void should_count_both_failed_attempts() => _metrics.SumOf(PartitionsFailed).ShouldEqual(2);
     [Fact] void should_count_the_partition_as_quarantined_once() => _metrics.SumOf(PartitionsQuarantined).ShouldEqual(1);
-    [Fact] void should_not_count_a_quarantined_observer() => _metrics.SumOf(ObserverQuarantined).ShouldEqual(0);
-    [Fact] void should_not_tag_the_quarantined_partition_with_the_partition() => _metrics.For(PartitionsQuarantined).Any(_ => _.Tags.ContainsKey("partition")).ShouldBeFalse();
-    [Fact] void should_tag_the_quarantined_partition_with_the_observer_scope_only() => _metrics.For(PartitionsQuarantined).All(_ => _.Tags.Keys.Order().SequenceEqual(_observerScopeTags.Order())).ShouldBeTrue();
+    [Fact] void should_not_count_a_quarantined_observer() => _metrics.For(ObserverQuarantined).ShouldBeEmpty();
+    [Fact] void should_not_tag_the_quarantined_partition_with_the_partition() => IsNotTaggedWithPartition(PartitionsQuarantined).ShouldBeTrue();
+    [Fact] void should_tag_the_quarantined_partition_with_the_observer_scope_only() => IsTaggedWithObserverScopeOnly(PartitionsQuarantined).ShouldBeTrue();
 }

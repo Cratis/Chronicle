@@ -35,50 +35,37 @@ internal static partial class ObserverMetrics
     // Exporters that put the unit in the metric name (the Prometheus exporters do) then produce names such as
     // chronicle_observer_partitions_failed_Number_of_failed_partitions_..._total with an empty HELP.
     // Remove this, and use the attribute again, once Cratis/Fundamentals#1138 is fixed and consumed.
+    //
+    // A counter is only recorded when something happens, so an observer has a series on these instruments from its
+    // first failure, and never before. Recording a zero when the observer activates would give every observer
+    // instance a series on each of the four, whether it ever fails or not, which spends the cardinality limit on
+    // healthy observers (see OpenTelemetryConfigurationExtensions).
 
     /// <summary>
     /// Records a failed handling attempt for a partition of the observer.
     /// </summary>
     /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
-    internal static void PartitionFailed(this IMeterScope<Observer> meter) => meter.Record(_ => _.PartitionFailed, 1);
+    internal static void PartitionFailed(this IMeterScope<Observer> meter) => meter.Increment(_ => _.PartitionFailed);
 
     /// <summary>
     /// Records that a failed partition of the observer was evaluated for retry.
     /// </summary>
     /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
-    internal static void PartitionRetryAttempt(this IMeterScope<Observer> meter) => meter.Record(_ => _.PartitionRetryAttempt, 1);
+    internal static void PartitionRetryAttempt(this IMeterScope<Observer> meter) => meter.Increment(_ => _.PartitionRetryAttempt);
 
     /// <summary>
     /// Records that a partition of the observer ran out of retry attempts and was quarantined.
     /// </summary>
     /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
-    internal static void PartitionQuarantined(this IMeterScope<Observer> meter) => meter.Record(_ => _.PartitionQuarantined, 1);
+    internal static void PartitionQuarantined(this IMeterScope<Observer> meter) => meter.Increment(_ => _.PartitionQuarantined);
 
     /// <summary>
     /// Records that the observer was quarantined.
     /// </summary>
     /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
-    internal static void ObserverQuarantined(this IMeterScope<Observer> meter) => meter.Record(_ => _.ObserverQuarantined, 1);
+    internal static void ObserverQuarantined(this IMeterScope<Observer> meter) => meter.Increment(_ => _.ObserverQuarantined);
 
-    /// <summary>
-    /// Records a zero for the observer failure counters, so their series exist for the observer before its first failure.
-    /// </summary>
-    /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
-    /// <remarks>
-    /// A counter series only exists from its first measurement. Without this, an observer's first failure creates
-    /// its series at 1, and a rate or increase over a window sees no change since there is nothing to compare to.
-    /// This makes the series exist, but it does not guarantee that a backend sees the zero: with cumulative export,
-    /// a failure before the first export after activation makes the first exported value already 1.
-    /// </remarks>
-    internal static void InitializeFailureCounters(this IMeterScope<Observer> meter)
-    {
-        meter.Record(_ => _.PartitionFailed, 0);
-        meter.Record(_ => _.PartitionRetryAttempt, 0);
-        meter.Record(_ => _.PartitionQuarantined, 0);
-        meter.Record(_ => _.ObserverQuarantined, 0);
-    }
-
-    static void Record(this IMeterScope<Observer> meter, Func<FailureCounters, Counter<int>> counter, int value)
+    static void Increment(this IMeterScope<Observer> meter, Func<FailureCounters, Counter<int>> counter)
     {
         var counters = GetFailureCounters(meter);
         if (counters is null)
@@ -92,7 +79,7 @@ internal static partial class ObserverMetrics
             tags.Add(key, tag);
         }
 
-        counter(counters).Add(value, tags);
+        counter(counters).Add(1, tags);
     }
 
     /// <summary>
