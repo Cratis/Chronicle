@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
 
 namespace Cratis.Chronicle.Observation;
@@ -118,8 +117,7 @@ public partial class Observer
     /// resets along with it - the attempts belonged to the world the old subscription lived in, and without the
     /// reset a single further stranded catch-up preparation puts the observer straight back into quarantine
     /// because the counter is already past the bound. If catch-up keeps stranding, the bound quarantines the
-    /// observer again. Routing is the only transition quarantine allows, and it re-evaluates the gap and
-    /// drives catch-up or observing from there.
+    /// observer again. Routing re-evaluates the gap and drives catch-up or observing from there.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     async Task ReviveFromQuarantine()
@@ -136,29 +134,19 @@ public partial class Observer
     /// </summary>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// Routing is the only way out of quarantine. It is entered with no subscription, so it settles the observer in
-    /// <see cref="Disconnected"/> without starting catch-up or subscribing to the appended events queue - the
-    /// state a never-quarantined observer is in when its client connects. The subscription the caller is about to
-    /// replace or extend is put back afterwards, and the subscribe flow then routes the observer exactly once, through
+    /// The observer moves straight to <see cref="Disconnected"/>, the state it is in when its client connects. It is
+    /// not routed: routing here would act on the observer before the new subscription is in place - entering a replay
+    /// or forgetting the partitions catching up - and the subscribe flow routes it anyway, through
     /// <see cref="CatchingUpInFlight"/>.
     /// </remarks>
     async Task LeaveQuarantineForSubscription()
     {
-        if (State.RunningState != ObserverRunningState.Quarantined)
+        if (await GetCurrentState() is not QuarantinedObserver quarantined)
         {
             return;
         }
 
-        var subscription = _subscription;
-        _subscription = ObserverSubscription.Unsubscribed;
         _catchupRecoveryAttempts = 0;
-        try
-        {
-            await TransitionTo<Routing>();
-        }
-        finally
-        {
-            _subscription = subscription;
-        }
+        await quarantined.LeaveForSubscription();
     }
 }
