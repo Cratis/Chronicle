@@ -439,6 +439,15 @@ public class Sink(
     }
 
     /// <inheritdoc/>
+    public async Task LeaveReplay()
+    {
+        // Whatever is still held back belongs to a replay that has been promoted without it. Writing it to the replay
+        // collection would lose it, so it goes to the read model's own collection once replay mode is left.
+        collections.AbandonReplay();
+        await EndBulk();
+    }
+
+    /// <inheritdoc/>
     public Task Remove(ReadModelContainerName containerName) => collections.Remove(containerName);
 
     /// <inheritdoc/>
