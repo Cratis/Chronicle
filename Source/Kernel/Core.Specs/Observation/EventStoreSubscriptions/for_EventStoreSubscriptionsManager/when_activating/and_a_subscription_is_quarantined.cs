@@ -7,6 +7,7 @@ public class and_a_subscription_is_quarantined : given.a_manager_with_a_quaranti
 {
     async Task Because() => await _manager.OnActivateAsync(CancellationToken.None);
 
-    [Fact] void should_not_revive_the_observer() => ShouldNotSubscribe(_observer);
+    [Fact] void should_reconcile_the_subscription_without_revival() => ShouldSubscribe(_observer);
+    [Fact] void should_not_explicitly_subscribe() => ShouldNotSubscribe(_observer);
     [Fact] void should_schedule_the_reminder() => ShouldScheduleReminder(2);
 }

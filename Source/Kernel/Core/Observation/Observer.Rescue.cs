@@ -29,7 +29,8 @@ public partial class Observer
     /// </remarks>
     async Task CheckStrandedSubscription()
     {
-        if (State.IsReplaying ||
+        if (State.RunningState == ObserverRunningState.Quarantined ||
+            State.IsReplaying ||
             State.CatchingUpPartitions.Count > 0 ||
             _isPreparingCatchup ||
             Failures.HasFailedPartitions)
@@ -37,12 +38,13 @@ public partial class Observer
             return;
         }
 
-        if (await _appendedEventsQueues.IsSubscribed(_observerKey))
+        if (await _appendedEventsQueues.IsSubscribed(_observerKey) ||
+            State.RunningState == ObserverRunningState.Quarantined)
         {
             return;
         }
 
-        if (await HasRunningCatchupJob())
+        if (await HasRunningCatchupJob() || State.RunningState == ObserverRunningState.Quarantined)
         {
             return;
         }
@@ -89,25 +91,32 @@ public partial class Observer
     {
         if (State.RunningState == ObserverRunningState.Quarantined ||
             !_isPreparingCatchup ||
-            await HasRunningCatchupJob())
+            await HasRunningCatchupJob() ||
+            State.RunningState == ObserverRunningState.Quarantined)
         {
             return false;
         }
-
-        logger.WatchdogRescuingStrandedCatchupPreparation();
-        _isPreparingCatchup = false;
 
         if (!_subscription.IsSubscribed)
         {
             // Nothing subscribed means nothing was ever going to drive a catch-up forward - route the observer on
             // regardless, so it settles into Disconnected (or wherever routing decides) instead of being left
             // stuck in whatever state it happened to be in when the flag came down.
+            logger.WatchdogRescuingStrandedCatchupPreparation();
+            _isPreparingCatchup = false;
             await TransitionTo<Routing>();
             return true;
         }
 
-        _catchupRecoveryAttempts++;
         var config = await configurationProvider.GetFor(_observerKey);
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return false;
+        }
+
+        logger.WatchdogRescuingStrandedCatchupPreparation();
+        _isPreparingCatchup = false;
+        _catchupRecoveryAttempts++;
         if (_catchupRecoveryAttempts > config.MaxCatchupRecoveryAttempts)
         {
             logger.GivingUpOnCatchupPreparationRecovery(_catchupRecoveryAttempts, config.MaxCatchupRecoveryAttempts);

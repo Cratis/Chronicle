@@ -11,6 +11,7 @@ public class and_the_unsubscribed_observer_is_quarantined : given.a_manager_with
         await _manager.ReceiveReminder(ReminderName, default);
     }
 
-    [Fact] void should_not_revive_the_observer() => ShouldNotSubscribe(_observer);
+    [Fact] void should_reconcile_the_subscription_once() => ShouldSubscribe(_observer);
+    [Fact] void should_not_explicitly_subscribe() => ShouldNotSubscribe(_observer);
     [Fact] void should_keep_scheduling_the_reminder() => ShouldScheduleReminder(3);
 }

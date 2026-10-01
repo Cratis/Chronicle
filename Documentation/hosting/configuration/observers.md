@@ -94,7 +94,8 @@ An observer's quarantine ends only through one of these actions:
 
 1. An operator clears it with `cratis chronicle observers clear-quarantine`, from the Workbench, or through
    the corresponding clear-quarantine API.
-2. The observer receives an actual fresh subscription through `Subscribe` or `SubscribeToAllEvents`.
+2. The observer receives an explicit fresh subscription through `Subscribe` or `SubscribeToAllEvents`.
+   Automatic event-store-subscription reconciliation does not end quarantine.
 
 What can establish a fresh subscription depends on the observer:
 
@@ -103,7 +104,7 @@ What can establish a fresh subscription depends on the observer:
 | Reactors and reducers of an application | When an instance of the application's client connects or reconnects, including after a Kernel restart, and when the client registers a changed definition |
 | Projections | When the Kernel starts, when a client registers a changed definition, and when a namespace is added |
 | Webhooks | When the Kernel starts, when a client registers a new or changed webhook, when a webhook is added or edited (target URL, headers, authorization or event types), and when a namespace is added |
-| Event store subscriptions | Automatic reconciliation does not subscribe a quarantined observer. Clear quarantine first; the next minute check can establish a missing subscription. An explicit fresh subscription can also end quarantine |
+| Event store subscriptions | Use `ClearObserverQuarantine` through the CLI, Workbench or API to end quarantine. Automatic reconciliation establishes the subscription and updates its event types without ending quarantine |
 | The Kernel's own reactors and pattern capture | When the Kernel starts, when an event store is added, and when a namespace that already holds events is added. Pattern capture is also subscribed again when a client registers new event types |
 
 These actions do **not** end quarantine:
@@ -115,7 +116,7 @@ These actions do **not** end quarantine:
   source availability, namespace notifications, definition reconciliation, or the minute check.
 
 A Kernel restart ends quarantine only for observers that receive a fresh subscription as listed above;
-event store subscriptions remain quarantined until cleared or explicitly subscribed again.
+event store subscriptions remain quarantined until an operator clears them.
 
 Completing catch-up or replay still persists progress and clears completed-work markers without resuming the
 observer. Clearing quarantine then re-evaluates remaining work from the recorded position. If the observer

@@ -295,9 +295,10 @@ public partial class Observer(
         object? subscriberArgs = null,
         bool isReplayable = true,
         ObserverFilters? filters = null,
-        bool reactivateRetired = true)
+        bool reactivateRetired = true,
+        bool automatic = false)
         where TObserverSubscriber : IObserverSubscriber
-        => SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, reactivateRetired: reactivateRetired);
+        => SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, reactivateRetired: reactivateRetired, automatic: automatic);
 
     /// <inheritdoc/>
     public async Task SubscribeToAllEvents<TObserverSubscriber>(
@@ -642,7 +643,8 @@ public partial class Observer(
         ObserverFilters? filters,
         bool additive = false,
         bool recovering = false,
-        bool reactivateRetired = true)
+        bool reactivateRetired = true,
+        bool automatic = false)
         where TObserverSubscriber : IObserverSubscriber
     {
         // Automatic kernel subscription cannot revive a retired observer or a sealed activation.
@@ -682,12 +684,12 @@ public partial class Observer(
                 _subscriptionSetupFailed = true;
                 await TransitionTo<Disconnected>();
             }
-            else
+            else if (!automatic)
             {
                 await LeaveQuarantineForSubscription();
             }
 
-            await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters);
+            await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, automatic);
 
             // A persisted Active marker alone does not prove setup completed after an entry-write failure.
             _subscriptionSetupFailed = await GetCurrentState() is not (Observing or States.Replay);
@@ -705,7 +707,8 @@ public partial class Observer(
         SiloAddress siloAddress,
         object? subscriberArgs,
         bool isReplayable,
-        ObserverFilters? filters)
+        ObserverFilters? filters,
+        bool automatic = false)
         where TObserverSubscriber : IObserverSubscriber
     {
         var owner = GetOwner<TObserverSubscriber>();
@@ -773,11 +776,20 @@ public partial class Observer(
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
 
-        if (await TransitionToReplayIfNeeded())
+        if (automatic && State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
+
+        if (await TransitionToReplayIfNeeded(automatic))
         {
             return;
         }
         await ResumeJobs();
+        if (automatic && State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
 
         // Recovering failed partitions starts one job per partition through the jobs manager. An observer
         // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends

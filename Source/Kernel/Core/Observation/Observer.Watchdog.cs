@@ -133,6 +133,12 @@ public partial class Observer
             (_subscription.EventTypes.Any() || State.SubscribesToAllEvents || State.RunningState == ObserverRunningState.Replaying))
         {
             var replayJobs = await _jobsManager.GetUnfinishedJobs();
+            if (State.RunningState == ObserverRunningState.Quarantined)
+            {
+                return false;
+            }
+
+
             var hasRunningReplayJob = replayJobs.Any(job =>
                 job.Request is ReplayObserverRequest req &&
                 req.ObserverKey == _observerKey &&
@@ -146,8 +152,14 @@ public partial class Observer
             }
         }
 
-        if (State.CatchingUpPartitions.Count > 0 && !await HasRunningCatchupJob())
+        if (State.CatchingUpPartitions.Count > 0)
         {
+            var hasRunningCatchupJob = await HasRunningCatchupJob();
+            if (State.RunningState == ObserverRunningState.Quarantined || hasRunningCatchupJob)
+            {
+                return false;
+            }
+
             logger.WatchdogCatchupJobMissing();
             await TransitionTo<Routing>();
             return true;

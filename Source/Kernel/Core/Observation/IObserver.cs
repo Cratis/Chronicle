@@ -95,6 +95,7 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="isReplayable">Whether the observer supports replay scenarios. Defaults to true.</param>
     /// <param name="filters">Optional <see cref="ObserverFilters"/> to apply when observing events.</param>
     /// <param name="reactivateRetired">Whether explicit registration may start a fresh lifecycle for a retired observer. Automatic recovery must pass false.</param>
+    /// <param name="automatic">Whether this subscription is automatic reconciliation, which updates the subscription without ending quarantine.</param>
     /// <returns>Awaitable task.</returns>
     Task Subscribe<TObserverSubscriber>(
         ObserverType type,
@@ -103,7 +104,8 @@ public interface IObserver : IGrainWithStringKey
         object? subscriberArgs = default,
         bool isReplayable = true,
         ObserverFilters? filters = default,
-        bool reactivateRetired = true)
+        bool reactivateRetired = true,
+        bool automatic = false)
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>

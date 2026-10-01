@@ -32,6 +32,19 @@ public class a_manager_with_a_quarantined_subscription : Specification
         _observer = Substitute.For<IObserver>();
         _observer.IsSubscribed().Returns(false);
         _observer.IsObserverQuarantined().Returns(true);
+        _observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
+            ObserverType.External,
+            Arg.Any<IEnumerable<EventType>>(),
+            Arg.Any<SiloAddress>(),
+            Arg.Any<object?>(),
+            Arg.Any<bool>(),
+            Arg.Any<ObserverFilters?>(),
+            true).Returns(call =>
+            {
+                _observer.IsSubscribed().Returns(true);
+                _observer.GetEventTypes().Returns(call.Arg<IEnumerable<EventType>>());
+                return Task.CompletedTask;
+            });
         _silo.AddProbe<IObserver>(identity => GetObserver(identity.ToString()));
 
         _manager = await _silo.CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
@@ -49,5 +62,5 @@ public class a_manager_with_a_quarantined_subscription : Specification
         Times.Exactly(count));
 
     protected void ShouldSubscribe(IObserver observer) => observer.Received(1)
-        .Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), TargetEventStore, Arg.Any<bool>());
+        .Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), TargetEventStore, Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), true);
 }
