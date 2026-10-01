@@ -180,13 +180,6 @@ public partial class Observer
 
     async Task<bool> TransitionToReplayIfNeeded()
     {
-        if (State.IsReplaying && State.RunningState != ObserverRunningState.Replaying)
-        {
-            logger.Replaying();
-            await TransitionTo<Routing>();
-            return true;
-        }
-
         if (State.RunningState == ObserverRunningState.Replaying)
         {
             logger.Replaying();
