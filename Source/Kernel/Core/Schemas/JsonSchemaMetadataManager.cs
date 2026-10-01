@@ -108,13 +108,23 @@ public class JsonSchemaMetadataManager(
         return released;
     }
 
-    static JsonValue ErasedPlaceholder()
+    static JsonNode? ErasedPlaceholder(JsonSchema propertySchema)
     {
-        // Stored the way a crypto-shredded value already reads back: an empty string where the ciphertext would
-        // have been. Nothing of the incoming value survives, and releasing the placeholder goes exactly the way
-        // releasing a shredded ciphertext does - an empty scalar, or the empty container RestoreReleasedShape
-        // gives a value object or collection marked as a whole.
-        return JsonValue.Create(string.Empty);
+        // A container (object/array) marked as a whole is stored the way a crypto-shredded value already reads
+        // back: an empty string where the ciphertext would have been. RestoreReleasedShape recognizes exactly
+        // that shape on release and turns it back into the empty object or collection the schema expects.
+        if (propertySchema.IsArray || propertySchema.Type.HasFlag(JsonObjectType.Object))
+        {
+            return JsonValue.Create(string.Empty);
+        }
+
+        // A scalar leaf is stored here exactly as it is handed to the sink — unlike a genuinely encrypted value,
+        // there is no later release pass guaranteed to see this exact placeholder and restore its type (a sink
+        // round-trips whatever CLR value it is given). So the placeholder must already carry the declared type
+        // RestoreReleasedShape would otherwise reconstruct: an empty string stored where an int, bool or date
+        // belongs fails to parse back into that property. Reuse the same type resolution so an erased scalar
+        // materializes identically whether it came from a fresh placeholder or a released shredded ciphertext.
+        return RestoreReleasedShape(JsonValue.Create(string.Empty), propertySchema);
     }
 
     IEnumerable<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> MetadataAcrossCategories(JsonSchema schema) =>
@@ -163,7 +173,7 @@ public class JsonSchemaMetadataManager(
                             // erased placeholder; refusing instead would freeze every later update of the partition,
                             // non-personal members included, while protecting nothing. The fence itself is untouched:
                             // no key is created, and appending events keeps refusing through Apply.
-                            json[property] = ErasedPlaceholder();
+                            json[property] = ErasedPlaceholder(propertySchema);
                             handlerApplied = true;
                         }
                         catch (Exception ex)
@@ -262,7 +272,7 @@ public class JsonSchemaMetadataManager(
                             }
                             catch (EncryptionKeyErased) when (erasedValuesBecomePlaceholders)
                             {
-                                array[i] = ErasedPlaceholder();
+                                array[i] = ErasedPlaceholder(itemSchema);
                             }
                             catch (Exception ex)
                             {
