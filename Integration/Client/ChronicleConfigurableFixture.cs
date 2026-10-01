@@ -62,6 +62,8 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
     readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
 
+    readonly Lazy<string> _inProcessSqliteDirectory = new(CreateInProcessSqliteDirectory);
+
     IContainer? _databaseContainer;
     IContainer? _outOfProcessMongoContainer;
 #pragma warning disable CA2213 // _outOfProcessKernelContainer is a reference to the container the base class owns and disposes via base.DisposeAsync.
@@ -81,14 +83,15 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     public string InProcessMongoDatabaseName { get; } = $"chronicle_inprocess_{Guid.NewGuid():N}";
 
     /// <summary>
-    /// Gets a unique SQLite file path for the in-process Orleans silo. The first test class of a
+    /// Gets a unique SQLite file path for the in-process Orleans silo, inside a directory of the fixture's own. The first test class of a
     /// session does not run the wipe sequence (the factory is built lazily on first access, no
     /// prior state to wipe), so reusing a process-wide file path would carry data from earlier
-    /// <c language="csharp">dotnet test</c> invocations into the next session's first test. A fixture-scoped GUID
+    /// <c language="csharp">dotnet test</c> invocations into the next session's first test. A fixture-scoped directory
     /// guarantees every test session opens a fresh file regardless of what previous sessions
-    /// left in <c language="csharp">/tmp</c>.
+    /// left in <c language="csharp">/tmp</c>, and SQLite's <c>-wal</c>, <c>-shm</c> and per-event-store sibling files
+    /// all live in it, so removing the directory removes every one of them.
     /// </summary>
-    public string InProcessSqliteFilePath { get; } = Path.Combine(Path.GetTempPath(), $"chronicle-inprocess-{Guid.NewGuid():N}.db");
+    public string InProcessSqliteFilePath => Path.Combine(_inProcessSqliteDirectory.Value, "chronicle.db");
 
     /// <summary>
     /// Gets the storage type string for the in-process silo (matches Chronicle server StorageType constants).
@@ -127,34 +130,63 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <inheritdoc/>
     public override async ValueTask DisposeAsync()
     {
-        // The kernel container is owned by the base class (assigned during BuildContainer)
-        // and is disposed by base.DisposeAsync — only the auxiliary containers we built
-        // ourselves need disposing here.
-        await (_databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
-        await (_outOfProcessMongoContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
-        await base.DisposeAsync();
-
-        // Best-effort cleanup of the in-process silo's SQLite files. Pattern matches the
-        // cluster file and every per-event-store / per-namespace sibling created at runtime.
-        if (Options.StorageProvider == ChronicleStorageProvider.Sqlite)
+        try
         {
-            var directory = Path.GetDirectoryName(InProcessSqliteFilePath);
-            var baseName = Path.GetFileNameWithoutExtension(InProcessSqliteFilePath);
-            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+            try
             {
-                foreach (var file in Directory.GetFiles(directory, $"{baseName}*"))
+                // The kernel container is owned by the base class (assigned during BuildContainer)
+                // and is disposed by base.DisposeAsync — only the auxiliary containers we built
+                // ourselves need disposing here.
+                await (_databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
+            }
+            finally
+            {
+                try
                 {
-                    try
-                    {
-                        File.Delete(file);
-                    }
-                    catch
-                    {
-                        // The file may be held open by a still-shutting-down silo connection;
-                        // the unique GUID in the path means future sessions are unaffected.
-                    }
+                    await (_outOfProcessMongoContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
+                }
+                finally
+                {
+                    // Always runs, so a container that fails to dispose cannot leave the kernel container running.
+                    await base.DisposeAsync();
                 }
             }
+        }
+        finally
+        {
+            // Last, after the kernel container has stopped. The in-process silo is shared across fixtures and may still hold
+            // the files open, so this is best effort: it succeeds on Linux and macOS and reports what it cannot delete elsewhere.
+            DeleteInProcessSqliteDirectory();
+        }
+    }
+
+    static string CreateInProcessSqliteDirectory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"chronicle-inprocess-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        return directory;
+    }
+
+    void DeleteInProcessSqliteDirectory()
+    {
+        if (!_inProcessSqliteDirectory.IsValueCreated)
+        {
+            return;
+        }
+
+        var directory = _inProcessSqliteDirectory.Value;
+        try
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Cleanup must not fail the run, but a leftover directory must not go unnoticed either. The unique directory
+            // means later sessions are unaffected.
+            Console.WriteLine($"Failed to delete the in-process SQLite directory '{directory}': {ex.Message}");
         }
     }
 
