@@ -20,6 +20,7 @@ Both steps are required. A production deployment that skips key encryption is no
 ## All Hosting Topics
 
 - **[Production](production.md)** — Docker-based production deployment
+- **[Tracing Client Operations](client-tracing)** — Send the Chronicle client's spans to OpenTelemetry
 - **[Data Protection Key Encryption](encryption-certificate.md)** — Certificate-backed key encryption for production
 - **[Configuration](configuration/index.md)** — Complete configuration reference
 - **[Aspire](aspire)** — Microsoft Aspire hosting integration

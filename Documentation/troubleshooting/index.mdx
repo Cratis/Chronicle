@@ -76,6 +76,10 @@ A [geospatial](/chronicle/concepts/geospatial/) `Point`, `LineString` or `Polygo
 
 Two shapes *are* a cause, deliberately: a polymorphic base type and a dictionary both hold members the schema does not declare, and Chronicle would rather fail here than write a value it was told is personal into the store unprotected. Model the data as a value object with declared properties. See [Geospatial values are not looked inside](/chronicle/compliance/pii#geospatial-values-are-not-looked-inside).
 
+## My traces have no Chronicle spans
+
+The Chronicle client emits its spans on an activity source named `Cratis.Chronicle.Client`, and OpenTelemetry records a source only after it has been registered. Without the registration nothing fails, the spans are just missing. Add `AddCratisChronicleInstrumentation()` to your tracer provider configuration. See [Trace Chronicle client operations with OpenTelemetry](/chronicle/hosting/client-tracing/).
+
 ## I can't connect to the Chronicle kernel
 
 - **Confirm the kernel is running** — `curl --insecure https://localhost:35000/health` prints `Healthy` when a local kernel is up. For local development, the quickest path is `docker run -d --name chronicle -p 127.0.0.1:35000:35000 -p 127.0.0.1:27017:27017 cratis/chronicle:latest-development`, which publishes the ports on this machine only. For other setups (Docker Compose, Aspire, or production), see [Choose an application host model](/chronicle/get-started/choose-hosting-model/).
