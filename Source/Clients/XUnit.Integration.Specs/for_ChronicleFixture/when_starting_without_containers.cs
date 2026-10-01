@@ -20,21 +20,17 @@ public class when_starting_without_containers : Specification
     [Fact] void should_start_without_requiring_docker() => _fixture.ShouldNotBeNull();
     [Fact] void should_use_the_external_connection_string() => _fixture.MongoDBConnectionString.ShouldEqual("mongodb://localhost:27017");
 
-    async Task Destroy()
+    void Destroy()
     {
         Environment.SetEnvironmentVariable("CHRONICLE_MONGODB_CONNECTION_DETAILS", _originalConnectionString);
 
         // Startup creates no database clients or containers. Only the logger factory needs cleanup;
         // disposing the whole fixture would contact MongoDB to drop databases that this spec never created.
-        await (_fixture?.DisposeAsync() ?? ValueTask.CompletedTask);
+        _fixture?.DisposeLoggerFactory();
     }
 
     class ExternalFixture : ChronicleInProcessFixture
     {
-        public override ValueTask DisposeAsync()
-        {
-            LoggerFactory.Dispose();
-            return ValueTask.CompletedTask;
-        }
+        public void DisposeLoggerFactory() => LoggerFactory.Dispose();
     }
 }

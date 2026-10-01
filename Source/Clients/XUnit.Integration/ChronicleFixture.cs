@@ -200,6 +200,22 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <summary>
+    /// Selects owned databases for cleanup, applying exclusions to their logical names.
+    /// </summary>
+    /// <param name="names">The available database names.</param>
+    /// <param name="databaseNamePrefix">The prefix identifying databases owned by the fixture.</param>
+    /// <param name="excludePrefixes">The logical database-name prefixes to preserve.</param>
+    /// <returns>The database names to drop.</returns>
+    internal static IEnumerable<string> GetMongoDBDatabasesToDrop(IEnumerable<string> names, string databaseNamePrefix, IEnumerable<string>? excludePrefixes = null)
+    {
+        var systemNames = new[] { "admin", "config", "local" };
+        return names.Where(name =>
+            !systemNames.Contains(name) &&
+            name.StartsWith(databaseNamePrefix, StringComparison.Ordinal) &&
+            excludePrefixes?.Any(p => name[databaseNamePrefix.Length..].StartsWith(p, StringComparison.OrdinalIgnoreCase)) != true);
+    }
+
+    /// <summary>
     /// Builds the container with the specified network.
     /// </summary>
     /// <param name="network">The network to use.</param>
@@ -227,11 +243,7 @@ public abstract class ChronicleFixture : IChronicleFixture
         using var mongoClient = new MongoClient(MongoDBConnectionString);
         using var namesCursor = await mongoClient.ListDatabaseNamesAsync();
         var names = await namesCursor.ToListAsync();
-        var systemNames = new[] { "admin", "config", "local" };
-        foreach (var name in names.Where(name =>
-            !systemNames.Contains(name) &&
-            (string.IsNullOrEmpty(MongoDBDatabaseNamePrefix) || name.StartsWith(MongoDBDatabaseNamePrefix, StringComparison.Ordinal)) &&
-            excludePrefixes?.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase)) != true))
+        foreach (var name in GetMongoDBDatabasesToDrop(names, MongoDBDatabaseNamePrefix, excludePrefixes))
         {
             await mongoClient.DropDatabaseAsync(name);
         }
