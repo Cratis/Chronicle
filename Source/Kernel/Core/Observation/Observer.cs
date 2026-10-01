@@ -122,13 +122,7 @@ public partial class Observer(
         await FlushDebouncedProgressState();
         if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
         {
-            // A quarantine ends only when an operator clears it or the client subscribes again, never because the
-            // grain went away. Disconnected would overwrite the persisted running state the next activation relies on.
-            if (State.RunningState != ObserverRunningState.Quarantined)
-            {
-                await TransitionTo<Disconnected>();
-            }
-
+            await TransitionTo<Disconnected>();
             await base.OnDeactivateAsync(reason, cancellationToken);
         }
     }
@@ -233,6 +227,8 @@ public partial class Observer(
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
 
+        await LeaveQuarantineForSubscription();
+
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
 
@@ -297,12 +293,6 @@ public partial class Observer(
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
 
-        if (State.RunningState == ObserverRunningState.Quarantined)
-        {
-            await ReviveFromQuarantine();
-            return;
-        }
-
         if (await TransitionToReplayIfNeeded())
         {
             return;
@@ -334,6 +324,8 @@ public partial class Observer(
         logger.Subscribing();
         logger.SubscribingToAllEvents();
 
+        await LeaveQuarantineForSubscription();
+
         observerDefinition.State = observerDefinition.State with
         {
             Type = type,
@@ -354,12 +346,6 @@ public partial class Observer(
 
         State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
-
-        if (State.RunningState == ObserverRunningState.Quarantined)
-        {
-            await ReviveFromQuarantine();
-            return;
-        }
 
         if (await TransitionToReplayIfNeeded())
         {
