@@ -21,4 +21,10 @@ public record ReplayContext(
     ReadModelType Type,
     ReadModelContainerName ContainerName,
     ReadModelContainerName RevertContainerName,
-    DateTimeOffset Started);
+    DateTimeOffset Started)
+{
+    /// <summary>
+    /// Gets whether successful event processing proved that an empty replay result may replace the live model.
+    /// </summary>
+    public bool AllowEmptyResult { get; init; }
+}

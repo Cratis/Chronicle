@@ -94,7 +94,26 @@ public class ReplayObserver(
     protected override async Task OnBeforeStartingJobSteps()
     {
         await DeleteAllOtherJobsForObserver();
-        await replayStateServiceClient.BeginReplayFor(State.ObserverDetails);
+        try
+        {
+            await replayStateServiceClient.BeginReplayFor(State.ObserverDetails);
+        }
+        catch
+        {
+            if (Request.ObserverType == ObserverType.Reducer)
+            {
+                try
+                {
+                    await replayStateServiceClient.EndReplayFor(State.ObserverDetails with { ReplayAborted = true });
+                }
+                catch (Exception exception)
+                {
+                    logger.ReplayFinalizationFailed(exception);
+                }
+            }
+
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -150,7 +169,7 @@ public class ReplayObserver(
         using var scope = logger.BeginJobScope(JobId, JobKey);
         try
         {
-            await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
+            await replayStateServiceClient.EndReplayFor(State.ObserverDetails with { ReplayAborted = Request.ObserverType == ObserverType.Reducer });
         }
         catch (Exception exception)
         {
@@ -170,7 +189,10 @@ public class ReplayObserver(
         var finalized = true;
         try
         {
-            await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
+            await replayStateServiceClient.EndReplayFor(State.ObserverDetails with
+            {
+                ReplaySucceededWithEvents = AllStepsCompletedSuccessfully && State.HandledAllEvents && State.LastHandledEventSequenceNumber.IsActualValue
+            });
         }
         catch (Exception exception)
         {

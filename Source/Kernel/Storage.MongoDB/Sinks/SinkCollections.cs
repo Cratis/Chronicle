@@ -40,6 +40,17 @@ public class SinkCollections(
         // and left there it would make this replay's own claim fail.
         await DropIfExists(PromotingCollectionName);
         await PrepareInitialRun();
+        if (!await CollectionExists(ReplayCollectionName))
+        {
+            try
+            {
+                await database.CreateCollectionAsync(ReplayCollectionName);
+            }
+            catch (MongoCommandException exception) when (exception.Code == NamespaceExists)
+            {
+                // Begin is sent to every silo; another silo created the shared replay collection first.
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -97,18 +108,17 @@ public class SinkCollections(
 
     async Task PromoteReplayCollection(Chronicle.Storage.ReadModels.ReplayContext context)
     {
-        // Only perform the rename swap when the replay collection contains documents. If the
-        // replay produced zero writes (e.g. the job's PrepareSteps observed no keys yet because
-        // the event index hadn't caught up), renaming main → revert without a populated
-        // replacement would wipe the existing read model — turning a transient race into
-        // permanent data loss. Leaving main untouched in that case correctly treats the empty
-        // replay as a no-op.
-        if (!await CollectionHasDocuments(ReplayCollectionName))
+        // Without proof of successful event processing, an empty replay may mean the job's index observed
+        // no keys before catching up. Keep the live model in that case. A reducer that successfully handled
+        // events and intentionally returned null for every source is instead allowed to replace it with empty state.
+        if (!context.AllowEmptyResult && !await CollectionHasDocuments(ReplayCollectionName))
         {
             await DropIfExists(ReplayCollectionName);
             return;
         }
 
+        // BeginReplay creates the empty collection as well. Its atomic claim
+        // makes an intentionally empty promotion just as exclusive as a populated one.
         if (!await TryClaimReplayCollection())
         {
             return;

@@ -46,6 +46,16 @@ public class ReducerReplayHandler(
         async (pipeline, context) =>
         {
             await pipeline.BeginReplay(context);
+
+            // Reducer batches are checkpointed independently. Their writes must be durable before a batch is
+            // acknowledged, rather than held back until the entire replay ends (or lost when it resumes).
+            var failedPartitions = (await pipeline.EndBulk()).ToArray();
+            await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
+            if (failedPartitions.Length > 0)
+            {
+                return ICanHandleReplayForObserver.Error.Unknown;
+            }
+
             reducerMediator.OnBeginReplay(new ReducerId(observerDetails.Key.ObserverId.Value), observerDetails.Key.EventStore, observerDetails.Key.Namespace);
             return Result<ICanHandleReplayForObserver.Error>.Success();
         });
@@ -57,29 +67,82 @@ public class ReducerReplayHandler(
         async (pipeline, context) =>
         {
             await pipeline.Sink.ResumeReplay(context);
-            return Result<ICanHandleReplayForObserver.Error>.Success();
+            var failedPartitions = (await pipeline.EndBulk()).ToArray();
+            await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
+            return failedPartitions.Length > 0
+                ? ICanHandleReplayForObserver.Error.Unknown
+                : Result<ICanHandleReplayForObserver.Error>.Success();
         });
 
     /// <inheritdoc/>
-    public Task<Result<ICanHandleReplayForObserver.Error>> EndReplayFor(ObserverDetails observerDetails) => DoWorkOnPipeline(
-        observerDetails,
-        pipeline => storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace).ReplayContexts.TryGet(pipeline.ReadModel.Identifier),
-        async (pipeline, context) =>
+    public async Task<Result<ICanHandleReplayForObserver.Error>> EndReplayFor(ObserverDetails observerDetails)
+    {
+        try
         {
-            var failedPartitions = (await pipeline.EndReplay(context)).ToArray();
-            await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
-            if (failedPartitions.Length > 0)
+            return await DoWorkOnPipeline(
+                observerDetails,
+                pipeline => storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace).ReplayContexts.TryGet(pipeline.ReadModel.Identifier),
+                async (pipeline, context) =>
+                {
+                    if (observerDetails.ReplayAborted || observerDetails.ReplayAlreadyFinalized)
+                    {
+                        await pipeline.Sink.LeaveReplay();
+                        if (observerDetails.ReplayAborted)
+                        {
+                            await storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace).ReplayContexts.Evict(pipeline.ReadModel.Identifier);
+                        }
+
+                        return Result<ICanHandleReplayForObserver.Error>.Success();
+                    }
+
+                    var failedPartitions = (await pipeline.EndReplay(context with { AllowEmptyResult = observerDetails.ReplaySucceededWithEvents })).ToArray();
+                    await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
+                    if (failedPartitions.Length > 0)
+                    {
+                        return ICanHandleReplayForObserver.Error.Unknown;
+                    }
+
+                    var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
+                    var replayManager = grainFactory.GetReadModelReplayManager(observerDetails.Key.EventStore, observerDetails.Key.Namespace, pipeline.ReadModel.Identifier);
+                    await replayManager.Replayed(observerDetails.Key.ObserverId, context);
+                    await namespaceStorage.ReplayContexts.Evict(pipeline.ReadModel.Identifier);
+                    return Result<ICanHandleReplayForObserver.Error>.Success();
+                },
+                pipeline => pipeline.Sink.LeaveReplay());
+        }
+        finally
+        {
+            if (CanHandle(observerDetails))
             {
-                return ICanHandleReplayForObserver.Error.Unknown;
+                reducerMediator.OnEndReplay(new ReducerId(observerDetails.Key.ObserverId.Value), observerDetails.Key.EventStore, observerDetails.Key.Namespace);
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<ICanHandleReplayForObserver.Error>> FlushReplayFor(ObserverDetails observerDetails)
+    {
+        try
+        {
+            if (!CanHandle(observerDetails))
+            {
+                return ICanHandleReplayForObserver.Error.CannotHandle;
             }
 
-            var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
-            var replayManager = grainFactory.GetReadModelReplayManager(observerDetails.Key.EventStore, observerDetails.Key.Namespace, pipeline.ReadModel.Identifier);
-            await replayManager.Replayed(observerDetails.Key.ObserverId, context);
-            await namespaceStorage.ReplayContexts.Evict(pipeline.ReadModel.Identifier);
-            reducerMediator.OnEndReplay(new ReducerId(observerDetails.Key.ObserverId.Value), observerDetails.Key.EventStore, observerDetails.Key.Namespace);
-            return Result<ICanHandleReplayForObserver.Error>.Success();
-        });
+            var definition = await storage.GetEventStore(observerDetails.Key.EventStore).Reducers.Get(new ReducerId(observerDetails.Key.ObserverId.Value));
+            var pipeline = await reducerPipelineFactory.Create(observerDetails.Key.EventStore, observerDetails.Key.Namespace, definition);
+            var failedPartitions = (await pipeline.EndBulk()).ToArray();
+            await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
+            return failedPartitions.Length > 0
+                ? ICanHandleReplayForObserver.Error.Unknown
+                : Result<ICanHandleReplayForObserver.Error>.Success();
+        }
+        catch (Exception ex)
+        {
+            logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
+            return ICanHandleReplayForObserver.Error.Unknown;
+        }
+    }
 
     /// <inheritdoc/>
     public Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition)
@@ -120,7 +183,8 @@ public class ReducerReplayHandler(
     async Task<Result<ICanHandleReplayForObserver.Error>> DoWorkOnPipeline(
         ObserverDetails observerDetails,
         Func<IReducerPipeline, Task<Result<ReplayContext, GetContextError>>> getContext,
-        Func<IReducerPipeline, ReplayContext, Task<Result<ICanHandleReplayForObserver.Error>>> doWork)
+        Func<IReducerPipeline, ReplayContext, Task<Result<ICanHandleReplayForObserver.Error>>> doWork,
+        Func<IReducerPipeline, Task>? onMissingContext = null)
     {
         try
         {
@@ -135,6 +199,11 @@ public class ReducerReplayHandler(
             var getReplayContext = await getContext(pipeline);
             if (getReplayContext.TryPickT1(out _, out var replayContext))
             {
+                if (onMissingContext is not null)
+                {
+                    await onMissingContext(pipeline);
+                }
+
                 return ICanHandleReplayForObserver.Error.CouldNotGetReplayContext;
             }
 

@@ -32,7 +32,7 @@ public class ObserverService(
     /// <inheritdoc/>
     public async Task BeginReplayFor(ObserverDetails observerDetails)
     {
-        if (observerDetails.Type != ObserverType.Projection)
+        if (observerDetails.Type is not (ObserverType.Projection or ObserverType.Reducer))
         {
             await ForEachReplayHandler(handler => handler.BeginReplayFor(observerDetails));
             return;

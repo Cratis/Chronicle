@@ -84,6 +84,11 @@ public class ClusteringFixture : IAsyncLifetime
     public FanOutReactorSignal FanOutSignal { get; } = new();
 
     /// <summary>
+    /// Gets the reducer calculation shared by both clients for replay specifications.
+    /// </summary>
+    public ReplayCalculation ReplayCalculation { get; } = new();
+
+    /// <summary>
     /// Gets the <see cref="IEventStore"/> from the second client instance, co-hosted on the observers silo.
     /// </summary>
     public IEventStore SecondClientEventStore => ObserversSilo.ServiceProvider.GetRequiredService<IEventStore>();
@@ -183,6 +188,7 @@ public class ClusteringFixture : IAsyncLifetime
                 services.AddSingleton(ReactorSignal);
                 services.AddSingleton(ScaledOutSignal);
                 services.AddSingleton(FanOutSignal);
+                services.AddSingleton(ReplayCalculation);
 
                 ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
                 ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();

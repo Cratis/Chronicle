@@ -311,11 +311,10 @@ public class InMemorySink(
             // without this the sink kept serving the pre-replay documents and the entire replay result
             // was discarded. The persistent sinks swap the replay container in at this point.
             //
-            // A replay that produced no writes is a no-op, not an instruction to empty the read model:
-            // promoting an empty collection would turn a transient race - the job observing no keys
-            // before the event index caught up - into permanent data loss, which is why MongoDB guards
-            // its rename the same way.
-            promoted = _rewindCollection.Count > 0;
+            // An empty replay without proven successful event processing is a no-op: the index may have
+            // returned no work before catching up. Successfully processing events to an intentionally empty
+            // result, however, must replace the live model just like a populated rebuild.
+            promoted = _isReplaying && (_rewindCollection.Count > 0 || context.AllowEmptyResult);
             if (promoted)
             {
                 _collection.Clear();

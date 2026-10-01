@@ -31,7 +31,7 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
     /// <inheritdoc/>
     public async Task<bool> TryFinalizeReplayFor(ObserverDetails observerDetails)
     {
-        if (observerDetails.Type != ObserverType.Projection)
+        if (observerDetails.Type is not (ObserverType.Projection or ObserverType.Reducer))
         {
             await ForEachGrainService(service => service.EndReplayFor(observerDetails));
             return false;
@@ -80,8 +80,34 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
     internal static async Task<bool> FinalizeProjectionReplay(IReadOnlyCollection<IObserverService> silos, ObserverDetails observerDetails)
     {
         var flushed = await Task.WhenAll(silos.Select(silo => silo.FlushReplayFor(observerDetails)));
-        var results = await Task.WhenAll(silos.Select(silo => silo.TryFinalizeReplayFor(observerDetails)));
-        EnsureProjectionReplayFinalized(results);
+        if (observerDetails.Type == ObserverType.Reducer && !observerDetails.ReplayAborted)
+        {
+            // One silo promotes a reducer rebuild, then every other silo leaves replay without another swap.
+            // In particular, an intentionally empty SQL rebuild must not recreate and promote an empty shadow
+            // table a second time. Every silo has already flushed before the first promotion begins.
+            var remaining = silos.ToList();
+            var finalized = false;
+            try
+            {
+                while (remaining.Count > 0 && !finalized)
+                {
+                    var silo = remaining[0];
+                    remaining.RemoveAt(0);
+                    finalized = await silo.TryFinalizeReplayFor(observerDetails);
+                }
+
+                EnsureProjectionReplayFinalized([finalized]);
+            }
+            finally
+            {
+                await Task.WhenAll(remaining.Select(silo => silo.TryFinalizeReplayFor(observerDetails with { ReplayAlreadyFinalized = true })));
+            }
+        }
+        else
+        {
+            var results = await Task.WhenAll(silos.Select(silo => silo.TryFinalizeReplayFor(observerDetails)));
+            EnsureProjectionReplayFinalized(results);
+        }
 
         // A final flush that left failed partitions has recorded them for retry, and the replay is still promoted, as
         // it was when each silo flushed while ending. The replay is still not reported as cleanly finalized.

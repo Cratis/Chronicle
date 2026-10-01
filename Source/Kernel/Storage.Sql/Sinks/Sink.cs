@@ -329,7 +329,7 @@ public class Sink : ISink
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, replayName, _columns);
 
         var replayHasRows = await scope.DbContext.Entries.AsNoTracking().AnyAsync();
-        if (!replayHasRows)
+        if (!replayHasRows && !context.AllowEmptyResult)
         {
             // Replay produced no writes (e.g. there were no events for this projection yet).
             // Drop the empty replay table and keep the primary untouched — turning a transient
