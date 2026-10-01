@@ -46,7 +46,7 @@ public class and_the_event_is_registered_for_the_root_as_a_derivative(context co
                     new()
                     {
                         EventTypes = [registeredEventType, registeredAtDepotEventType],
-                        From = new() { Properties = new Dictionary<string, string> { ["name"] = "name" } }
+                        From = new() { Key = WellKnownExpressions.EventSourceId, Properties = new Dictionary<string, string> { ["name"] = "name" } }
                     }
                 ],
                 Children = new Dictionary<string, Contracts.Projections.ChildrenDefinition>

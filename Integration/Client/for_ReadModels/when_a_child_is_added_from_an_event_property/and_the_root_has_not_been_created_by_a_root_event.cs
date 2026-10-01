@@ -45,7 +45,7 @@ public class and_the_root_has_not_been_created_by_a_root_event(context context) 
                 InitialModelState = """{"status":"open"}""",
                 From = new Dictionary<Contracts.Events.EventType, Contracts.Projections.FromDefinition>
                 {
-                    [ToContract(createdEventType)] = new() { Properties = new Dictionary<string, string> { ["name"] = "name" } }
+                    [ToContract(createdEventType)] = new() { Key = WellKnownExpressions.EventSourceId, Properties = new Dictionary<string, string> { ["name"] = "name" } }
                 },
                 Children = new Dictionary<string, Contracts.Projections.ChildrenDefinition>
                 {
