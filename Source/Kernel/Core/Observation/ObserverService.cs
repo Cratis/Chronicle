@@ -43,7 +43,7 @@ public class ObserverService(
     }
 
     /// <inheritdoc/>
-    public async Task ResumeReplayFor(ObserverDetails observerDetails) => await ForEachReplayHandler(handler => handler.ResumeReplayFor(observerDetails));
+    public async Task ResumeReplayFor(ObserverDetails observerDetails) => await ResumeReplayForHandlers(replayHandlers, observerDetails);
 
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails) => _ = await TryFinalizeReplayFor(observerDetails);
@@ -94,6 +94,21 @@ public class ObserverService(
             {
                 throw new CatchupFinalizationFailed(error);
             }
+        }
+    }
+
+    /// <summary>
+    /// Reattach every replay handler before the job resumes its steps.
+    /// </summary>
+    /// <param name="handlers">The replay handlers on this silo.</param>
+    /// <param name="observerDetails">The observer being resumed.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task ResumeReplayForHandlers(IEnumerable<ICanHandleReplayForObserver> handlers, ObserverDetails observerDetails)
+    {
+        var results = await Task.WhenAll(handlers.Select(handler => handler.ResumeReplayFor(observerDetails)));
+        if (observerDetails.Type is ObserverType.Projection or ObserverType.Reducer)
+        {
+            EnsureReplayStarted(results);
         }
     }
 

@@ -128,7 +128,18 @@ public class ReplayObserver(
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         await observer.Replay();
-        await replayStateServiceClient.ResumeReplayFor(State.ObserverDetails);
+        try
+        {
+            await replayStateServiceClient.ResumeReplayFor(State.ObserverDetails);
+        }
+        catch
+        {
+            // The base job sets Running before this hook. Keep a failed attachment resumable,
+            // rather than letting a subsequent Resume report that unattached steps are running.
+            State.Status = JobStatus.Stopped;
+            await WriteStateAsync();
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -186,18 +197,34 @@ public class ReplayObserver(
     protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        var finalized = true;
+        var aborted = Request.ObserverType == ObserverType.Reducer &&
+            (State.Status == JobStatus.Removing || State.Progress.StoppedSteps > 0);
+        var finalized = !aborted;
+        Exception? finalizationFailure = null;
         try
         {
             await replayStateServiceClient.EndReplayFor(State.ObserverDetails with
             {
-                ReplaySucceededWithEvents = AllStepsCompletedSuccessfully && State.HandledAllEvents && State.LastHandledEventSequenceNumber.IsActualValue
+                ReplayAborted = aborted,
+                ReplaySucceededWithEvents = !aborted && AllStepsCompletedSuccessfully && State.HandledAllEvents && State.LastHandledEventSequenceNumber.IsActualValue
             });
         }
         catch (Exception exception)
         {
             logger.ReplayFinalizationFailed(exception);
             finalized = false;
+            finalizationFailure = exception;
+            if (Request.ObserverType == ObserverType.Reducer)
+            {
+                try
+                {
+                    await replayStateServiceClient.EndReplayFor(State.ObserverDetails with { ReplayAborted = true });
+                }
+                catch (Exception cleanupException)
+                {
+                    logger.ReplayFinalizationFailed(cleanupException);
+                }
+            }
         }
 
         if (!AllStepsCompletedSuccessfully)
@@ -242,13 +269,18 @@ public class ReplayObserver(
 
         // Do not await from job.Start's turn: Replay() on the observer may still be waiting on us.
         // Observe faults so a failed completion is logged rather than silently reported as success.
-        _ = NotifyObserverOfCompletion(observer, canResolve, coveredPartitions, eventTypes, State.LastHandledEventSequenceNumber);
+        _ = NotifyObserverOfCompletion(observer, canResolve, coveredPartitions, eventTypes, State.LastHandledEventSequenceNumber, preserveRecoveryPosition: Request.ObserverType == ObserverType.Reducer && !finalized);
+
+        if (Request.ObserverType == ObserverType.Reducer && finalizationFailure is not null)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(finalizationFailure).Throw();
+        }
     }
 
     /// <inheritdoc/>
     protected override JobDetails GetJobDetails() => $"{Request.ObserverKey.ObserverId}";
 
-    async Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber)
+    async Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber, bool preserveRecoveryPosition = false)
     {
         try
         {
@@ -258,6 +290,13 @@ public class ReplayObserver(
             }
             else
             {
+                // The live model has not been replaced. Resume from the observer's published position,
+                // not the maximum watermark of independent, unpublished reducer partition steps.
+                if (preserveRecoveryPosition)
+                {
+                    lastHandledEventSequenceNumber = (await observer.GetState()).LastHandledEventSequenceNumber;
+                }
+
                 await observer.Replayed(lastHandledEventSequenceNumber);
             }
         }

@@ -79,7 +79,33 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
     /// <exception cref="ReplayFinalizationFailed">No silo finalized the replay, or a silo flushed with failed partitions.</exception>
     internal static async Task<bool> FinalizeProjectionReplay(IReadOnlyCollection<IObserverService> silos, ObserverDetails observerDetails)
     {
-        var flushed = await Task.WhenAll(silos.Select(silo => silo.FlushReplayFor(observerDetails)));
+        bool[] flushed;
+        try
+        {
+            flushed = await Task.WhenAll(silos.Select(silo => silo.FlushReplayFor(observerDetails)));
+        }
+        catch
+        {
+            if (observerDetails.Type == ObserverType.Reducer)
+            {
+                // A failed RPC must not prevent surviving silos from leaving their replay sinks.
+                // Keep the original barrier failure even if an unreachable silo also fails cleanup.
+                await Task.WhenAll(silos.Select(async silo =>
+                {
+                    try
+                    {
+                        await silo.TryFinalizeReplayFor(observerDetails with { ReplayAborted = true });
+                    }
+                    catch
+                    {
+                        // Best effort: the silo may have disappeared since hosts were discovered.
+                    }
+                }));
+            }
+
+            throw;
+        }
+
         if (observerDetails.Type == ObserverType.Reducer && !observerDetails.ReplayAborted)
         {
             // One silo promotes a reducer rebuild, then every other silo leaves replay without another swap.

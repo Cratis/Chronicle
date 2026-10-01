@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage;
 using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -85,6 +86,9 @@ public class a_replay_observer_job : Specification
         _silo.AddService(_storage);
         _silo.AddService(_jobTypes);
         _silo.AddService(NullLogger<IJob>.Instance);
+        var jobsStorage = Substitute.For<IJobsStorage>();
+        jobsStorage.GetFor(_jobKey.Scope, _jobKey.Namespace).Returns(new JobsStorage(_jobStorage, _jobStepStorage));
+        _silo.AddService(jobsStorage);
         _silo.AddService(NullLogger<ObserverManager<IJobObserver>>.Instance);
 
         var loggerFactory = Substitute.For<ILoggerFactory>();
