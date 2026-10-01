@@ -40,6 +40,24 @@ public class SinkCollections(
         // and left there it would make this replay's own claim fail.
         await DropIfExists(PromotingCollectionName);
         await PrepareInitialRun();
+        if (!await CollectionExists(ReplayCollectionName))
+        {
+            try
+            {
+                await database.CreateCollectionAsync(ReplayCollectionName);
+            }
+            catch (MongoCommandException exception) when (exception.Code == NamespaceExists)
+            {
+                // Begin is sent to every silo; another silo created the shared replay collection first.
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task PrepareReplay(Chronicle.Storage.ReadModels.ReplayContext context)
+    {
+        await CreateIfMissing(readModel.ContainerName);
+        await CreateIfMissing(context.ReplayContainerName!.Value);
     }
 
     /// <inheritdoc/>
@@ -58,7 +76,14 @@ public class SinkCollections(
         // show for it (#4296).
         try
         {
-            await PromoteReplayCollection(context);
+            if (context.ReplayContainerName is not null)
+            {
+                await PromoteIsolatedReplay(context);
+            }
+            else
+            {
+                await PromoteReplayCollection(context);
+            }
         }
         finally
         {
@@ -95,20 +120,60 @@ public class SinkCollections(
     static bool IsNamespaceConflict(MongoCommandException exception) =>
         exception.Code is NamespaceNotFound or NamespaceExists;
 
+    async Task CreateIfMissing(string name)
+    {
+        try
+        {
+            await database.CreateCollectionAsync(name);
+        }
+        catch (MongoCommandException exception) when (exception.Code == NamespaceExists)
+        {
+            // Preparation is allowed to find the existing primary; it must never clear it.
+        }
+    }
+
+    async Task PromoteIsolatedReplay(Chronicle.Storage.ReadModels.ReplayContext context)
+    {
+        var replay = context.ReplayContainerName!.Value;
+        var promoting = $"{replay}-promoting";
+        var revert = context.RevertContainerName.Value;
+        var primary = readModel.ContainerName.Value;
+
+        // Prepare created even an empty original. Its unique revert name is therefore durable evidence
+        // of this identity's swap. A repeated RPC must not claim a late/recreated replay collection.
+        if (await CollectionExists(revert))
+        {
+            if (await CollectionExists(primary)) return;
+            if (!await CollectionExists(promoting)) throw new ReplayTargetMissing(replay);
+            await database.RenameCollectionAsync(promoting, primary);
+            return;
+        }
+
+        if (!await CollectionExists(promoting))
+        {
+            if (!await CollectionExists(replay)) throw new ReplayTargetMissing(replay);
+            await database.RenameCollectionAsync(replay, promoting);
+        }
+
+        // Unlike the legacy broadcast path, one coordinator owns this identity. Recover a crash after
+        // claiming or after moving the original without dropping any claimed or published collection.
+        await database.RenameCollectionAsync(primary, revert);
+        await database.RenameCollectionAsync(promoting, primary);
+    }
+
     async Task PromoteReplayCollection(Chronicle.Storage.ReadModels.ReplayContext context)
     {
-        // Only perform the rename swap when the replay collection contains documents. If the
-        // replay produced zero writes (e.g. the job's PrepareSteps observed no keys yet because
-        // the event index hadn't caught up), renaming main → revert without a populated
-        // replacement would wipe the existing read model — turning a transient race into
-        // permanent data loss. Leaving main untouched in that case correctly treats the empty
-        // replay as a no-op.
-        if (!await CollectionHasDocuments(ReplayCollectionName))
+        // Without proof of successful event processing, an empty replay may mean the job's index observed
+        // no keys before catching up. Keep the live model in that case. A reducer that successfully handled
+        // events and intentionally returned null for every source is instead allowed to replace it with empty state.
+        if (!context.AllowEmptyResult && !await CollectionHasDocuments(ReplayCollectionName))
         {
             await DropIfExists(ReplayCollectionName);
             return;
         }
 
+        // BeginReplay creates the empty collection as well. Its atomic claim
+        // makes an intentionally empty promotion just as exclusive as a populated one.
         if (!await TryClaimReplayCollection())
         {
             return;

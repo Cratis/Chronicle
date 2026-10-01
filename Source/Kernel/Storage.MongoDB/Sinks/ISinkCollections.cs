@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Sinks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -42,6 +44,14 @@ public interface ISinkCollections
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task BeginReplay(ReplayContext context);
+
+    /// <summary>
+    /// Create the isolated target and an original collection without switching local replay mode.
+    /// </summary>
+    /// <param name="context">The replay identity and target.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="ReplayIsolationNotSupported">The provider does not support isolated replay targets.</exception>
+    Task PrepareReplay(ReplayContext context) => throw new ReplayIsolationNotSupported(WellKnownSinkTypes.MongoDB);
 
     /// <summary>
     /// Signals that a replay is about to resume.

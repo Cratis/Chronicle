@@ -1,10 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.ReadModels;
+
 namespace Cratis.Chronicle.Observation;
 
 /// <summary>
 /// Represents the context for an observer subscriber.
 /// </summary>
 /// <param name="Metadata">Optional metadata associated.</param>
-public record ObserverSubscriberContext(object? Metadata);
+public record ObserverSubscriberContext(object? Metadata)
+{
+    /// <summary>
+    /// Gets the full reducer replay's isolated target, independent of the receiving silo's cached pipelines.
+    /// </summary>
+    public ReplayContext? ReplayContext { get; init; }
+}

@@ -10,82 +10,43 @@ using Cratis.Monads;
 namespace Cratis.Chronicle.Observation;
 
 /// <summary>
-/// Represents an implementation of <see cref="ICanHandleReplayForObserver"/> for reducers.
+/// Notifies reducer clients of replay boundaries. The job owns the isolated target and its publication;
+/// a silo notification must never switch a live sink or promote a partially rebuilt model.
 /// </summary>
-/// <param name="reducerMediator"><see cref="IReducerMediator"/> for notifying connected clients.</param>
+/// <param name="reducerMediator">The connected reducer clients.</param>
 public class ReducerReplayHandler(IReducerMediator reducerMediator) : ICanHandleReplayForObserver
 {
     /// <inheritdoc/>
-    public Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayFor(ObserverDetails observerDetails)
+    public Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayFor(ObserverDetails observerDetails) => Notify(
+        observerDetails,
+        () => reducerMediator.OnBeginReplay(new ReducerId(observerDetails.Key.ObserverId.Value), observerDetails.Key.EventStore, observerDetails.Key.Namespace));
+
+    /// <inheritdoc/>
+    public Task<Result<ICanHandleReplayForObserver.Error>> ResumeReplayFor(ObserverDetails observerDetails) => BeginReplayFor(observerDetails);
+
+    /// <inheritdoc/>
+    public Task<Result<ICanHandleReplayForObserver.Error>> EndReplayFor(ObserverDetails observerDetails) => Notify(
+        observerDetails,
+        () => reducerMediator.OnEndReplay(new ReducerId(observerDetails.Key.ObserverId.Value), observerDetails.Key.EventStore, observerDetails.Key.Namespace));
+
+    /// <inheritdoc/>
+    public Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition) => Notify(
+        observerDetails,
+        () => reducerMediator.OnBeginReplayPartition(new ReducerId(observerDetails.Key.ObserverId.Value), observerDetails.Key.EventStore, observerDetails.Key.Namespace, partition));
+
+    /// <inheritdoc/>
+    public Task<Result<ICanHandleReplayForObserver.Error>> EndReplayPartitionFor(ObserverDetails observerDetails, Key partition) => Notify(
+        observerDetails,
+        () => reducerMediator.OnEndReplayPartition(new ReducerId(observerDetails.Key.ObserverId.Value), observerDetails.Key.EventStore, observerDetails.Key.Namespace, partition));
+
+    static Task<Result<ICanHandleReplayForObserver.Error>> Notify(ObserverDetails details, Action notify)
     {
-        if (!CanHandle(observerDetails))
+        if (details.Type != ObserverType.Reducer)
         {
             return Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
         }
 
-        reducerMediator.OnBeginReplay(
-            new ReducerId(observerDetails.Key.ObserverId.Value),
-            observerDetails.Key.EventStore,
-            observerDetails.Key.Namespace);
-
+        notify();
         return Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success());
     }
-
-    /// <inheritdoc/>
-    public Task<Result<ICanHandleReplayForObserver.Error>> ResumeReplayFor(ObserverDetails observerDetails) =>
-        CanHandle(observerDetails)
-            ? Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success())
-            : Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
-
-    /// <inheritdoc/>
-    public Task<Result<ICanHandleReplayForObserver.Error>> EndReplayFor(ObserverDetails observerDetails)
-    {
-        if (!CanHandle(observerDetails))
-        {
-            return Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
-        }
-
-        reducerMediator.OnEndReplay(
-            new ReducerId(observerDetails.Key.ObserverId.Value),
-            observerDetails.Key.EventStore,
-            observerDetails.Key.Namespace);
-
-        return Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success());
-    }
-
-    /// <inheritdoc/>
-    public Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition)
-    {
-        if (!CanHandle(observerDetails))
-        {
-            return Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
-        }
-
-        reducerMediator.OnBeginReplayPartition(
-            new ReducerId(observerDetails.Key.ObserverId.Value),
-            observerDetails.Key.EventStore,
-            observerDetails.Key.Namespace,
-            partition);
-
-        return Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success());
-    }
-
-    /// <inheritdoc/>
-    public Task<Result<ICanHandleReplayForObserver.Error>> EndReplayPartitionFor(ObserverDetails observerDetails, Key partition)
-    {
-        if (!CanHandle(observerDetails))
-        {
-            return Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
-        }
-
-        reducerMediator.OnEndReplayPartition(
-            new ReducerId(observerDetails.Key.ObserverId.Value),
-            observerDetails.Key.EventStore,
-            observerDetails.Key.Namespace,
-            partition);
-
-        return Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success());
-    }
-
-    static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Reducer;
 }

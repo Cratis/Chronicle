@@ -91,6 +91,22 @@ public interface ISink
     Task BeginReplay(ReplayContext context);
 
     /// <summary>
+    /// Create an isolated replay target without changing where the live sink reads or writes.
+    /// </summary>
+    /// <param name="context">The replay identity and target.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="ReplayIsolationNotSupported">The sink does not support isolated replay targets.</exception>
+    Task PrepareReplay(ReplayContext context) => throw new ReplayIsolationNotSupported(TypeId);
+
+    /// <summary>
+    /// Publish an isolated replay. Repeating this operation for the same identity must not change the published model.
+    /// </summary>
+    /// <param name="context">The replay identity and target.</param>
+    /// <param name="replaySink">The sink containing the isolated result.</param>
+    /// <returns>Partitions that could not be written.</returns>
+    Task<IEnumerable<FailedPartition>> PublishReplay(ReplayContext context, ISink replaySink) => EndReplay(context);
+
+    /// <summary>
     /// Re-enter replay state.
     /// </summary>
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>

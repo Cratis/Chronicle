@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
-public class ReplayObserver(
+public partial class ReplayObserver(
     IObserverServiceClient replayStateServiceClient,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
@@ -31,8 +31,8 @@ public class ReplayObserver(
     /// <inheritdoc/>
     /// <remarks>
     /// A definition change replays through Subscribe, and behind Subscribe sits the client's registration call with
-    /// a response timeout on it. A reactor or reducer replays with a step per event source, so bringing those steps
-    /// up must not be billed to that call.
+    /// a response timeout on it. A reactor replays with a step per event source, so bringing those steps
+    /// up must not be billed to that call. Reducers share the projection's ordered walker, independent of the key index.
     /// </remarks>
     protected override bool StartStepsInBackground => true;
 
@@ -44,7 +44,7 @@ public class ReplayObserver(
         State.FailedPartitionKeys = (await observer.GetFailedPartitionKeys()).Distinct().ToList();
         State.ReplayPartitionSteps.Clear();
 
-        if (request.ObserverType == ObserverType.Projection)
+        if (request.ObserverType is ObserverType.Projection or ObserverType.Reducer)
         {
             return
             [
@@ -55,7 +55,10 @@ public class ReplayObserver(
                         EventSequenceNumber.First,
                         EventSequenceNumber.Max,
                         EventObservationState.Replay,
-                        request.EventTypes))
+                        request.EventTypes)
+                    {
+                        ReducerReplayJobId = request.ObserverType == ObserverType.Reducer ? JobId.Value : Guid.Empty
+                    })
             ];
         }
 
@@ -94,7 +97,26 @@ public class ReplayObserver(
     protected override async Task OnBeforeStartingJobSteps()
     {
         await DeleteAllOtherJobsForObserver();
-        await replayStateServiceClient.BeginReplayFor(State.ObserverDetails);
+        try
+        {
+            await replayStateServiceClient.BeginReplayFor(State.ObserverDetails);
+        }
+        catch
+        {
+            if (Request.ObserverType == ObserverType.Reducer)
+            {
+                try
+                {
+                    await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
+                }
+                catch (Exception exception)
+                {
+                    logger.ReplayFinalizationFailed(exception);
+                }
+            }
+
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -107,13 +129,37 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnBeforeResumingJobSteps()
     {
-        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.Replay();
-        await replayStateServiceClient.ResumeReplayFor(State.ObserverDetails);
+        if (Request.ObserverType != ObserverType.Reducer)
+        {
+            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+            await observer.Replay();
+        }
+
+        if (Request.ObserverType == ObserverType.Reducer)
+        {
+            State.ReducerReplayPhase = ReducerReplayPhase.Building;
+            State.ReducerReplayContext = null;
+            State.LastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+            State.HandledAllEvents = false;
+            await WriteStateAsync();
+        }
+
+        try
+        {
+            await replayStateServiceClient.ResumeReplayFor(State.ObserverDetails);
+        }
+        catch
+        {
+            // The base job sets Running before this hook. Keep a failed attachment resumable,
+            // rather than letting a subsequent Resume report that unattached steps are running.
+            State.Status = JobStatus.Stopped;
+            await WriteStateAsync();
+            throw;
+        }
     }
 
     /// <inheritdoc/>
-    protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
+    protected override async Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
         State.HandleResult(result, jsonSerializerOptions);
         if (result.TryGetFullResult<HandleEventsForPartitionResult>(out var handled, out _, jsonSerializerOptions) &&
@@ -138,11 +184,18 @@ public class ReplayObserver(
             logger.ReplayProgress(completedSteps, progress.TotalSteps, percentComplete, State.LastHandledEventSequenceNumber);
         }
 
-        return Task.CompletedTask;
+        if (Request.ObserverType == ObserverType.Reducer)
+        {
+            // Orleans writes the step count before this callback. Persist the result and target before
+            // publication; a recovered count without a result is not proof of a successful rebuild.
+            await WriteStateAsync();
+        }
     }
 
     /// <inheritdoc/>
-    protected override Task OnStopped() => base.OnStopped();
+    protected override Task OnStopped() => Request.ObserverType == ObserverType.Reducer
+        ? StopReducerReplay()
+        : base.OnStopped();
 
     /// <inheritdoc/>
     protected override async Task OnFailedToPrepare()
@@ -159,6 +212,8 @@ public class ReplayObserver(
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
+        if (Request.ObserverType == ObserverType.Reducer) return;
+
         // Preparing failed; never report a successful replay. Avoid waiting on Replay()'s own turn.
         _ = NotifyObserverOfCompletion(observer, false, new Dictionary<Key, EventSequenceNumber>(), [], EventSequenceNumber.Unavailable);
     }
@@ -166,6 +221,12 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        if (Request.ObserverType == ObserverType.Reducer)
+        {
+            await CompleteReducerReplay();
+            return;
+        }
+
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var finalized = true;
         try
@@ -200,7 +261,7 @@ public class ReplayObserver(
             try
             {
                 // A projection's single ordered step covers every partition up to its own global watermark.
-                // Reactors and reducers have independent steps: only a successful result from that partition counts.
+                // Reactors have independent steps: only a successful result from that partition counts.
                 coveredPartitions = Request.ObserverType == ObserverType.Projection
                     ? State.FailedPartitionKeys.ToDictionary(_ => _, _ => State.LastHandledEventSequenceNumber)
                     : State.ReplayPartitionSteps

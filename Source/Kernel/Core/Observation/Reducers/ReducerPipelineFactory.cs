@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.ReadModels;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation.Reducers;
@@ -27,13 +28,29 @@ public class ReducerPipelineFactory(
     IOptions<ChronicleOptions> options) : IReducerPipelineFactory
 {
     /// <inheritdoc/>
-    public async Task<IReducerPipeline> Create(
-        EventStoreName eventStore,
-        EventStoreNamespaceName @namespace,
-        ReducerDefinition definition)
+    public Task<IReducerPipeline> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerDefinition definition) =>
+        CreatePipeline(eventStore, @namespace, definition, null);
+
+    /// <inheritdoc/>
+    public Task<IReducerPipeline> CreateForReplay(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerDefinition definition, ReplayContext context) =>
+        CreatePipeline(eventStore, @namespace, definition, context);
+
+    async Task<IReducerPipeline> CreatePipeline(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerDefinition definition, ReplayContext? context)
     {
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
+        if (context is not null)
+        {
+            if (context.ReplayContainerName is null || context.Type.Identifier != readModel.Identifier)
+            {
+                throw new ReplayInitializationFailed(ICanHandleReplayForObserver.Error.CouldNotGetReplayContext);
+            }
+
+            // Sinks are cached by container name. No BeginReplay/ResumeReplay call changes the live sink,
+            // and a late reply belonging to a removed job can only change its own obsolete target.
+            readModel = readModel with { ContainerName = context.ReplayContainerName };
+        }
+
         var sink = await namespaceStorage.Sinks.GetFor(readModel);
         return new ReducerPipeline(
             readModel,

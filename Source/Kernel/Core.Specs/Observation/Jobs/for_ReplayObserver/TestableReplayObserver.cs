@@ -27,6 +27,12 @@ public class TestableReplayObserver(
     public Type GrainType => typeof(IReplayObserver);
 
     /// <summary>
+    /// Invokes replay initialization before any job steps are started.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public Task InitializeReplayForTesting() => OnBeforeStartingJobSteps();
+
+    /// <summary>
     /// Invokes <see cref="ReplayObserver.PrepareSteps"/> for testing.
     /// </summary>
     /// <param name="request">The request to prepare steps for.</param>

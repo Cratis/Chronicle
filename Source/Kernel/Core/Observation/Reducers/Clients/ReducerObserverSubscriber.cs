@@ -68,7 +68,10 @@ public class ReducerObserverSubscriber(
                 events,
                 partition);
 
-            await (_pipeline?.Reduce(reducerContext, async (events, initialState) =>
+            var pipeline = context.ReplayContext is { } replay
+                ? await reducerPipelineFactory.CreateForReplay(_key.EventStore, _key.Namespace, State, replay)
+                : _pipeline;
+            await (pipeline?.Reduce(reducerContext, async (events, initialState) =>
             {
                 var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
                 reducerMediator.OnNext(

@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 
@@ -15,6 +16,16 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// </summary>
 public class JobStateWithLastHandledEvent : JobState
 {
+    /// <summary>
+    /// Gets or sets the isolated target returned by a successful reducer replay step.
+    /// </summary>
+    public ReplayContext? ReducerReplayContext { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reducer publication phase.
+    /// </summary>
+    public ReducerReplayPhase ReducerReplayPhase { get; set; }
+
     /// <summary>
     /// Gets or sets the event sequence number of the last handled event.
     /// </summary>
@@ -72,6 +83,10 @@ public class JobStateWithLastHandledEvent : JobState
     public void HandleResult(JobStepResult result, JsonSerializerOptions jsonSerializerOptions)
     {
         var isFullResult = result.TryGetFullResult<HandleEventsForPartitionResult>(out var handleEventsResult, out _, jsonSerializerOptions);
+        if (isFullResult && handleEventsResult?.ReplayContext is not null)
+        {
+            ReducerReplayContext = handleEventsResult.ReplayContext;
+        }
 
         // A step can report success without carrying a result at all, so the annotation on TryGetFullResult is
         // not enough on its own — there is nothing to record when the step did not come back with one.

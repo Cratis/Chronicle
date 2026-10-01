@@ -55,6 +55,11 @@ public class ClusteringFixture : IAsyncLifetime
     public IServiceProvider SiloServices => EventSequencesSilo.ServiceProvider;
 
     /// <summary>
+    /// Gets the second silo's independently cached storage and pipelines.
+    /// </summary>
+    public IServiceProvider SecondSiloServices => ObserversSilo.ServiceProvider;
+
+    /// <summary>
     /// Gets the <see cref="SiloAddress"/> of the silo configured to host EventSequences grains.
     /// </summary>
     public SiloAddress EventSequencesSiloAddress => EventSequencesSilo.SiloAddress;
@@ -82,6 +87,11 @@ public class ClusteringFixture : IAsyncLifetime
     /// Gets the shared <see cref="FanOutReactorSignal"/> for the fan out rerouting specs.
     /// </summary>
     public FanOutReactorSignal FanOutSignal { get; } = new();
+
+    /// <summary>
+    /// Gets the reducer calculation shared by both clients for replay specifications.
+    /// </summary>
+    public ReplayCalculation ReplayCalculation { get; } = new();
 
     /// <summary>
     /// Gets the <see cref="IEventStore"/> from the second client instance, co-hosted on the observers silo.
@@ -183,6 +193,7 @@ public class ClusteringFixture : IAsyncLifetime
                 services.AddSingleton(ReactorSignal);
                 services.AddSingleton(ScaledOutSignal);
                 services.AddSingleton(FanOutSignal);
+                services.AddSingleton(ReplayCalculation);
 
                 ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
                 ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
