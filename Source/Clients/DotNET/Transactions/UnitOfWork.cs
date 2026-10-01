@@ -146,9 +146,9 @@ public class UnitOfWork(
                 ValidateLegacyEventSequenceIdsForOrderedBatch(eventSequenceId);
                 EnsureEventSequenceCanBeUsed(eventSequenceId);
             }
-            if (scope != ConcurrencyScope.NotSet && _decisionScopes.TryGetValue(eventSourceId, out var decisionScope))
+            if (scope != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(eventSourceId))
             {
-                throw new ConflictingConcurrencyScopesForLabel(eventSourceId, decisionScope, scope);
+                throw new DecisionReadConflictsWithConcurrencyScope(eventSourceId);
             }
             if (_hasOrderedBatch)
             {
@@ -202,9 +202,9 @@ public class UnitOfWork(
             var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
             foreach (var (label, scope) in batch.ConcurrencyScopes)
             {
-                if (scope != ConcurrencyScope.NotSet && _decisionScopes.TryGetValue(label, out var decisionScope))
+                if (scope != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(label))
                 {
-                    throw new ConflictingConcurrencyScopesForLabel(label, decisionScope, scope);
+                    throw new DecisionReadConflictsWithConcurrencyScope(label);
                 }
             }
             ValidateLegacyEventSequenceIdsForOrderedBatch(eventSequenceId);
@@ -245,9 +245,9 @@ public class UnitOfWork(
             }
             else
             {
-                if (_concurrencyScopes.TryGetValue(label, out var explicitScope))
+                if (_concurrencyScopes.ContainsKey(label))
                 {
-                    throw new ConflictingConcurrencyScopesForLabel(label, explicitScope, read.Scope);
+                    throw new DecisionReadConflictsWithConcurrencyScope(label);
                 }
                 _decisionScopes.Add(label, read.Scope);
             }
