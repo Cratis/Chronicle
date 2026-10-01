@@ -21,11 +21,15 @@ public class with_alert_lifecycle : Specification
         var database = Substitute.For<IEventStoreNamespaceDatabase>();
         var collection = Substitute.For<IMongoCollection<ObserverState>>();
         database.GetObserverStateCollection().Returns(collection);
-        collection.UpdateOneAsync(Arg.Any<FilterDefinition<ObserverState>>(), Arg.Do<UpdateDefinition<ObserverState>>(update =>
-        {
-            var registry = BsonSerializer.SerializerRegistry;
-            _set = update.Render(new RenderArgs<ObserverState>(registry.GetSerializer<ObserverState>(), registry))["$set"].AsBsonDocument;
-        }), Arg.Any<UpdateOptions>(), Arg.Any<CancellationToken>()).Returns(new UpdateResult.Acknowledged(1, 1, null));
+        collection.UpdateOneAsync(
+            Arg.Any<FilterDefinition<ObserverState>>(),
+            Arg.Do<UpdateDefinition<ObserverState>>(update =>
+            {
+                var registry = BsonSerializer.SerializerRegistry;
+                _set = update.Render(new RenderArgs<ObserverState>(registry.GetSerializer<ObserverState>(), registry))["$set"].AsBsonDocument;
+            }),
+            Arg.Any<UpdateOptions>(),
+            Arg.Any<CancellationToken>()).Returns(new UpdateResult.Acknowledged(1, 1, null));
         _storage = new(database);
         _state = new()
         {
