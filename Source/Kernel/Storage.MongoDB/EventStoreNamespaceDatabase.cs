@@ -45,6 +45,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     {
         var databaseName = DatabaseNames.ForEventStoreNamespace(eventStore, @namespace, storageOptions?.Value.DatabaseNamePrefix ?? string.Empty);
         var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server);
+
         // Preserve the URI path's implicit authentication database before selecting Chronicle's database.
         urlBuilder.AuthenticationSource ??= urlBuilder.DatabaseName;
         urlBuilder.DatabaseName = databaseName;
