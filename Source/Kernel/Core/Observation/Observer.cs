@@ -62,6 +62,7 @@ public partial class Observer(
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
+    bool _resumingQuarantine;
 
     /// <summary>
     /// Set once the observer has been removed, so nothing this activation does afterwards writes it back.
@@ -482,6 +483,24 @@ public partial class Observer(
     }
 
     /// <summary>
+    /// Records, in the observer's metrics, that the observer was quarantined.
+    /// </summary>
+    /// <remarks>
+    /// Entering <see cref="QuarantinedObserver"/> on activation resumes a quarantine that was already counted when it
+    /// began, so that entry is not counted again.
+    /// </remarks>
+    internal void RecordObserverQuarantined()
+    {
+        if (_resumingQuarantine)
+        {
+            _resumingQuarantine = false;
+            return;
+        }
+
+        _metrics?.ObserverQuarantined();
+    }
+
+    /// <summary>
     /// Removes all reminders for currently failed partitions.
     /// </summary>
     /// <returns>Awaitable task.</returns>
@@ -512,8 +531,16 @@ public partial class Observer(
     /// <see cref="Disconnected"/> and entering either state replaces the persisted <see cref="ObserverRunningState.Quarantined"/>.
     /// </summary>
     /// <returns>The type of the state to enter.</returns>
-    protected override Type ResolveActivationState() =>
-        State.RunningState == ObserverRunningState.Quarantined ? typeof(QuarantinedObserver) : base.ResolveActivationState();
+    protected override Type ResolveActivationState()
+    {
+        if (State.RunningState != ObserverRunningState.Quarantined)
+        {
+            return base.ResolveActivationState();
+        }
+
+        _resumingQuarantine = true;
+        return typeof(QuarantinedObserver);
+    }
 
     /// <inheritdoc/>
     protected override Task OnBeforeEnteringState(IState<ObserverState> state)

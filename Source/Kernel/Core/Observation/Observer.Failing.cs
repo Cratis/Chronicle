@@ -25,7 +25,7 @@ public partial class Observer
         FailureKind kind = FailureKind.Unknown)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        _metrics?.PartitionFailed(partition);
+        _metrics?.PartitionFailed();
         logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         var partitionWasAlreadyFailed = Failures.IsFailed(partition);
         var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
@@ -34,7 +34,7 @@ public partial class Observer
             State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
         }
 
-        _metrics?.PartitionRetryAttempt(partition);
+        _metrics?.PartitionRetryAttempt();
         var config = await configurationProvider.GetFor(_observerKey);
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
@@ -63,7 +63,7 @@ public partial class Observer
         {
             logger.QuarantiningFailedPartition(partition);
             failures.State.Quarantine(partition);
-            _metrics?.PartitionQuarantined(partition);
+            _metrics?.PartitionQuarantined();
         }
 
         await failures.WriteStateAsync();

@@ -19,22 +19,19 @@ A quarantined partition is the signal that needs a person. A partition that keep
 
 ## Alert from metrics
 
-Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configuration/open-telemetry/) from the `Cratis.Chronicle` meter. Two counters describe failing partitions:
+Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configuration/open-telemetry/) from the `Cratis.Chronicle` meter. Three counters describe failing observers. Each has one series per observer, tagged `EventStore`, `Namespace`, `ObserverId` and `EventSequenceId`. An observer has a series on them from its first failure, not before:
 
-| Instrument | Counts | Tags |
-| --- | --- | --- |
-| `chronicle-observer-partitions-failed` | Every failed attempt, including each retry. It is not a count of partitions. | `EventStore`, `Namespace`, `ObserverId`, `EventSequenceId`, `partition` |
-| `chronicle-observer-partitions-quarantined` | Partitions that ran out of retries | `EventStore`, `Namespace`, `ObserverId`, `EventSequenceId`, `partition` |
+| Instrument | Counts |
+| --- | --- |
+| `chronicle-observer-partitions-failed` | Every failed attempt, including each retry. It is not a count of partitions. |
+| `chronicle-observer-partitions-quarantined` | Partitions that ran out of retries |
+| `chronicle-observer-quarantined` | Times the whole observer was quarantined |
 
-Observer quarantine has no metric yet. The scheduled check below catches it only when the quarantined observer also has failed partitions; for the rest, check `cratis chronicle observers list` for observers in the `Quarantined` state.
+With the default translation of the OpenTelemetry Collector's Prometheus exporter, or Prometheus's own OTLP receiver, the counters appear as `chronicle_observer_partitions_failed_total`, `chronicle_observer_partitions_quarantined_total` and `chronicle_observer_quarantined_total`, and the tags keep their names. Look the series up in your backend before relying on the names below.
 
-In Prometheus the counter names carry a suffix: the instruments currently export their description as their unit, which exporters append to the name. Through the OpenTelemetry Collector's Prometheus exporter, `chronicle-observer-partitions-quarantined` appears as `chronicle_observer_partitions_quarantined_Number_of_partitions_moved_to_quarantine_per_observer_total`. The tags keep their names. The rules below therefore select each counter by its name prefix, which keeps working when the suffix goes away. Look the series up in your backend before relying on them.
+A series is created by the first failure and starts at `1`; Chronicle does not record a `0` beforehand, so healthy observers cost no series. The first value your backend receives for an observer is therefore already `1`. A rule built only on `increase()` needs two samples in its window and reports nothing for that series. Each rule below therefore has two halves, joined with `or`: the first catches series that went up inside the window, the second catches series that did not exist at the start of the window and are already above the threshold. Both aggregate to the same labels, so an observer produces one series, and so one alert, whichever half caught it.
 
-:::caution[`increase()` alone misses a newly quarantined partition]
-Each partition has its own series, and a series only exists from its first increment. A quarantined partition's counter is born at `1` and stays there, so `increase()` — which needs two samples inside its window — reports nothing for it, and a rule built only on `increase()` never fires. Also select series that did not exist at the start of the window, as the rules below do.
-:::
-
-These Prometheus alerting rules report, per observer, how many partitions ran out of retries in the last 30 minutes, and how many have recorded at least five failed attempts with at least one in the last 15 minutes:
+The rules select each counter by its name prefix, for example `{__name__=~"chronicle_observer_partitions_quarantined.*"}`, so the same rules work for the long names that earlier Kernels export. These Prometheus alerting rules report, per observer, partitions that ran out of retries and observer quarantines in the last 30 minutes, and repeated failed attempts in the last 15 minutes:
 
 ```yaml title="chronicle-observer-alerts.yml"
 groups:
@@ -42,40 +39,62 @@ groups:
     rules:
       - alert: ChroniclePartitionsQuarantined
         expr: |
+          sum by (EventStore, Namespace, ObserverId) (
+            increase({__name__=~"chronicle_observer_partitions_quarantined.*"}[30m])
+          ) > 0
+          or
           count by (EventStore, Namespace, ObserverId) (
-            ({__name__=~"chronicle_observer_partitions_quarantined.*"}
-              unless {__name__=~"chronicle_observer_partitions_quarantined.*"} offset 30m)
-            or (increase({__name__=~"chronicle_observer_partitions_quarantined.*"}[30m]) > 0)
+            {__name__=~"chronicle_observer_partitions_quarantined.*"} > 0
+            unless {__name__=~"chronicle_observer_partitions_quarantined.*"} offset 30m
           )
         labels:
           severity: critical
         annotations:
-          summary: "{{ $value }} partition(s) of {{ $labels.ObserverId }} in {{ $labels.EventStore }}/{{ $labels.Namespace }} ran out of retries"
+          summary: "Partitions of {{ $labels.ObserverId }} in {{ $labels.EventStore }}/{{ $labels.Namespace }} ran out of retries"
           description: "Chronicle will not retry them again. Inspect with: cratis chronicle failed-partitions list -e {{ $labels.EventStore }} -n {{ $labels.Namespace }}"
+
+      - alert: ChronicleObserverQuarantined
+        expr: |
+          sum by (EventStore, Namespace, ObserverId) (
+            increase({__name__=~"chronicle_observer_quarantined.*"}[30m])
+          ) > 0
+          or
+          count by (EventStore, Namespace, ObserverId) (
+            {__name__=~"chronicle_observer_quarantined.*"} > 0
+            unless {__name__=~"chronicle_observer_quarantined.*"} offset 30m
+          )
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.ObserverId }} in {{ $labels.EventStore }}/{{ $labels.Namespace }} was quarantined and processes no events"
 
       - alert: ChroniclePartitionsFailing
         expr: |
+          sum by (EventStore, Namespace, ObserverId) (
+            increase({__name__=~"chronicle_observer_partitions_failed.*"}[15m])
+          ) >= 3
+          or
           count by (EventStore, Namespace, ObserverId) (
-            ({__name__=~"chronicle_observer_partitions_failed.*"} >= 5)
-            and (
-              ({__name__=~"chronicle_observer_partitions_failed.*"}
-                unless {__name__=~"chronicle_observer_partitions_failed.*"} offset 15m)
-              or (increase({__name__=~"chronicle_observer_partitions_failed.*"}[15m]) > 0)
-            )
+            {__name__=~"chronicle_observer_partitions_failed.*"} >= 3
+            unless {__name__=~"chronicle_observer_partitions_failed.*"} offset 15m
           )
         labels:
           severity: warning
         annotations:
-          summary: "{{ $value }} partition(s) of {{ $labels.ObserverId }} in {{ $labels.EventStore }}/{{ $labels.Namespace }} have failed at least five times, most recently within 15 minutes"
+          summary: "{{ $labels.ObserverId }} in {{ $labels.EventStore }}/{{ $labels.Namespace }} has failed repeatedly in the last 15 minutes"
 ```
 
-Route the alerts with Alertmanager or Grafana to wherever your team works — email, Slack, Microsoft Teams, PagerDuty. Other backends that receive OTLP, such as Azure Monitor, Datadog or Grafana Cloud, can express the same two conditions in their own alert languages.
+Route the alerts with Alertmanager or Grafana to wherever your team works — email, Slack, Microsoft Teams, PagerDuty. Other backends that receive OTLP, such as Azure Monitor, Datadog or Grafana Cloud, can express the same conditions in their own alert languages. The two halves of each rule are what to carry over: a series that appears already above zero is as much a failure as one that climbs.
+
+:::caution[Older Kernels export different series]
+Earlier versions export these counters with the description appended to the name, for example `chronicle_observer_partitions_failed_Number_of_failed_partitions_per_observer_in_a_given_event_store_and_namespace_total`, which the prefix selectors above match. They also tag every measurement with `partition` — the event source id, which can identify a person — and have no `chronicle-observer-quarantined` counter, so `ChronicleObserverQuarantined` never fires for them. With the `partition` tag each partition has its own series that starts at its first failure, and the rules evaluate the second half per partition series. Consider dropping the `partition` label at your collector if your telemetry store must not hold personal data.
+:::
 
 Know the limits of counters before you depend on them:
 
-- **They say "recently", not "still".** The quarantine alert fires when a partition runs out of retries, then resolves after 30 minutes even if the partition is still stuck. The failing alert cannot tell a partition that is still failing from one that recovered after its latest failure. Keep the scheduled check below for the current state.
+- **They say "recently", not "still".** The quarantine alerts fire when something is quarantined, then resolve after 30 minutes even if it is still stuck. The failing alert cannot tell a partition that is still failing from one that recovered after its latest failure. Keep the scheduled check below for the current state.
 - **They reset when the Kernel restarts.** `increase()` handles resets, and a partition that fails again after a restart is counted again.
-- **They carry the partition as a tag.** Always aggregate over the observer tags, as the rules do. The partition is the event source id, so it can identify a person — consider dropping the `partition` label at your collector if your telemetry store must not hold personal data.
+- **A gap in your own data raises false alerts.** The second half of each rule fires for every series that is above the threshold now and did not exist 30 minutes ago (15 for the failing alert). After Prometheus or the collector restarts, a scrape outage, or a series dropped by retention, every observer that has ever failed qualifies, and the alerts resolve once the window has passed. A `for:` clause does not help, because the condition stays true for the whole window. Inhibit these alerts in Alertmanager while your monitoring itself is recovering, for example with an alert on `time() - process_start_time_seconds < 1800` for the Prometheus job.
 
 ## Alert from a scheduled health check
 
@@ -116,7 +135,7 @@ jobs:
 The same command works from a Kubernetes CronJob or any cron-style scheduler with the CLI installed. Add one run per namespace you care about; the matrix above does that.
 
 :::caution[Check what `diagnose` did not look at]
-`diagnose` currently counts a check it could not run — for example a failed-partitions query that returned an error — as zero failures, and it does not treat a quarantined observer as unhealthy unless that observer also has failed partitions. Treat a green run as "no failed partitions were reported", and use `cratis chronicle observers list` to find quarantined observers.
+`diagnose` currently counts a check it could not run — for example a failed-partitions query that returned an error — as zero failures, and it does not treat a quarantined observer as unhealthy unless that observer also has failed partitions. Treat a green run as "no failed partitions were reported", and rely on the `ChronicleObserverQuarantined` alert or `cratis chronicle observers list` for quarantined observers.
 :::
 
 ## When an alert fires

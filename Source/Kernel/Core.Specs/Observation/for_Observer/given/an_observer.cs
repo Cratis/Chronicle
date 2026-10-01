@@ -14,6 +14,7 @@ using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Metrics;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 using Cratis.Traces;
@@ -41,7 +42,7 @@ public class an_observer : Specification
     protected IJobsManager _jobsManager;
     protected IObserverServiceClient _observerServiceClient;
     protected FailedPartitions _failedPartitionsState;
-    protected ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
+    protected virtual ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
     protected ObserverKey _observerKey => new(_observerId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
     protected TestKitSilo _silo = new();
     protected IStorage<ObserverState> _stateStorage;
@@ -63,6 +64,7 @@ public class an_observer : Specification
     protected Observers _observersConfig;
     protected NullLogger<Observer> _logger;
     protected ILoggerFactory _loggerFactory;
+    protected IMeter<Observer>? _meter;
 
     protected virtual Observers CreateObserversConfig() => new();
 
@@ -77,11 +79,22 @@ public class an_observer : Specification
         silo.AddService(_logger);
         silo.AddService(_loggerFactory);
 
+        if (_meter is not null)
+        {
+            silo.AddKeyedService(WellKnown.MeterName, _meter);
+        }
+
         silo.AddProbe(_ => _subscriber);
         silo.AddProbe(_ => _jobsManager);
         silo.AddProbe(_ => _appendedEventsQueues);
         silo.AddProbe(_ => _eventSequence);
     }
+
+    /// <summary>
+    /// Creates the meter the observer records its metrics on. By default there is none, so the observer records nothing.
+    /// </summary>
+    /// <returns>The <see cref="IMeter{T}"/> to register, or null for none.</returns>
+    protected virtual IMeter<Observer>? CreateMeter() => null;
 
     async Task Establish()
     {
@@ -135,6 +148,7 @@ public class an_observer : Specification
         _loggerFactory = Substitute.For<ILoggerFactory>();
         _loggerFactory.CreateLogger(Arg.Any<string>()).Returns(_logger);
 
+        _meter = CreateMeter();
         AddServices(_silo);
 
         _stateStorage = _silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
