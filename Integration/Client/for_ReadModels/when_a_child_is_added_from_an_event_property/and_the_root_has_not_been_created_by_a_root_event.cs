@@ -5,6 +5,7 @@
 
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
+using Cratis.Serialization;
 using MongoDB.Bson;
 using context = Cratis.Chronicle.Integration.for_ReadModels.when_a_child_is_added_from_an_event_property.and_the_root_has_not_been_created_by_a_root_event.context;
 
@@ -34,6 +35,8 @@ public class and_the_root_has_not_been_created_by_a_root_event(context context) 
         {
             await EventStore.ReadModels.Register<ChildOnlyShelf>();
 
+            var namingPolicy = Services.GetService<INamingPolicy>() ?? new DefaultNamingPolicy();
+
             var createdEventType = EventStore.EventTypes.GetEventTypeFor(typeof(ChildOnlyShelfCreated));
             var shelvedEventType = EventStore.EventTypes.GetEventTypeFor(typeof(ChildOnlyBookShelved));
             var definition = new Contracts.Projections.ProjectionDefinition
@@ -42,17 +45,17 @@ public class and_the_root_has_not_been_created_by_a_root_event(context context) 
                 Identifier = typeof(ChildOnlyShelf).FullName!,
                 ReadModel = typeof(ChildOnlyShelf).FullName!,
                 IsActive = true,
-                InitialModelState = """{"status":"open"}""",
+                InitialModelState = $$"""{"{{nameof(ChildOnlyShelf.Status)}}":"open"}""",
                 From = new Dictionary<Contracts.Events.EventType, Contracts.Projections.FromDefinition>
                 {
-                    [ToContract(createdEventType)] = new() { Key = WellKnownExpressions.EventSourceId, Properties = new Dictionary<string, string> { ["name"] = "name" } }
+                    [ToContract(createdEventType)] = new() { Key = WellKnownExpressions.EventSourceId, Properties = new Dictionary<string, string> { [nameof(ChildOnlyShelf.Name)] = namingPolicy.GetPropertyName(nameof(ChildOnlyShelfCreated.Name)) } }
                 },
                 Children = new Dictionary<string, Contracts.Projections.ChildrenDefinition>
                 {
-                    ["books"] = new()
+                    [nameof(ChildOnlyShelf.Books)] = new()
                     {
-                        IdentifiedBy = "isbn",
-                        FromEventProperty = new() { Event = ToContract(shelvedEventType), PropertyExpression = "book" }
+                        IdentifiedBy = nameof(ChildOnlyShelfBook.Isbn),
+                        FromEventProperty = new() { Event = ToContract(shelvedEventType), PropertyExpression = namingPolicy.GetPropertyName(nameof(ChildOnlyBookShelved.Book)) }
                     }
                 }
             };

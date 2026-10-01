@@ -6,6 +6,7 @@
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.for_ReadModels;
+using Cratis.Serialization;
 using MongoDB.Bson;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_a_root_derivative_is_also_handled_by_a_child.and_the_event_is_registered_for_the_root_as_a_derivative.context;
 
@@ -32,6 +33,8 @@ public class and_the_event_is_registered_for_the_root_as_a_derivative(context co
         {
             await EventStore.ReadModels.Register<DepotWidget>();
 
+            var namingPolicy = Services.GetService<INamingPolicy>() ?? new DefaultNamingPolicy();
+
             var registeredEventType = ToContract(EventStore.EventTypes.GetEventTypeFor(typeof(WidgetRegistered)));
             var registeredAtDepotEventType = ToContract(EventStore.EventTypes.GetEventTypeFor(typeof(WidgetRegisteredAtDepot)));
             var definition = new Contracts.Projections.ProjectionDefinition
@@ -40,26 +43,26 @@ public class and_the_event_is_registered_for_the_root_as_a_derivative(context co
                 Identifier = typeof(DepotWidget).FullName!,
                 ReadModel = typeof(DepotWidget).FullName!,
                 IsActive = true,
-                InitialModelState = """{"status":"pending"}""",
+                InitialModelState = $$"""{"{{nameof(DepotWidget.Status)}}":"pending"}""",
                 FromEvery =
                 [
                     new()
                     {
                         EventTypes = [registeredEventType, registeredAtDepotEventType],
-                        From = new() { Key = WellKnownExpressions.EventSourceId, Properties = new Dictionary<string, string> { ["name"] = "name" } }
+                        From = new() { Key = WellKnownExpressions.EventSourceId, Properties = new Dictionary<string, string> { [nameof(DepotWidget.Name)] = namingPolicy.GetPropertyName(nameof(WidgetRegistered.Name)) } }
                     }
                 ],
                 Children = new Dictionary<string, Contracts.Projections.ChildrenDefinition>
                 {
-                    ["parts"] = new()
+                    [nameof(DepotWidget.Parts)] = new()
                     {
-                        IdentifiedBy = "partId",
+                        IdentifiedBy = nameof(DepotPart.PartId),
                         From = new Dictionary<Contracts.Events.EventType, Contracts.Projections.FromDefinition>
                         {
                             [registeredAtDepotEventType] = new()
                             {
-                                Key = "partId",
-                                Properties = new Dictionary<string, string> { ["label"] = "name" }
+                                Key = namingPolicy.GetPropertyName(nameof(WidgetRegisteredAtDepot.PartId)),
+                                Properties = new Dictionary<string, string> { [nameof(DepotPart.Label)] = namingPolicy.GetPropertyName(nameof(WidgetRegisteredAtDepot.Name)) }
                             }
                         }
                     }
