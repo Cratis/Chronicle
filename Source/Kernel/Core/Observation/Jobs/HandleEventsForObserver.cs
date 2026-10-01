@@ -343,9 +343,22 @@ public class HandleEventsForObserver(
 
     HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled) { ReplayContext = _replayContext };
 
-    // A failure in an unpublished target belongs to the replay job, not the published partition. In
-    // particular, a late failure from a superseded worker must not schedule a live retry after its
-    // replacement already published. The step result retains the error and keeps the job visibly failed.
+    /// <summary>
+    /// Reports a partition failure, routing it to the replay job rather than the published
+    /// partition when a replay is in progress.
+    /// </summary>
+    /// <param name="partition">The <see cref="Key"/> of the partition that failed.</param>
+    /// <param name="sequence">The <see cref="EventSequenceNumber"/> of the last attempted event.</param>
+    /// <param name="messages">The failure messages.</param>
+    /// <param name="stackTrace">The stack trace associated with the failure.</param>
+    /// <param name="kind">The <see cref="FailureKind"/> of the failure.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// A failure in an unpublished target belongs to the replay job, not the published partition.
+    /// In particular, a late failure from a superseded worker must not schedule a live retry after
+    /// its replacement already published. The step result retains the error and keeps the job
+    /// visibly failed.
+    /// </remarks>
     Task ReportPartitionFailure(Key partition, EventSequenceNumber sequence, IEnumerable<string> messages, string stackTrace, FailureKind kind) =>
         _replayContext is null
             ? _observer.PartitionFailed(partition, sequence, messages, stackTrace, kind)
