@@ -28,7 +28,7 @@ Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configurat
 
 Observer quarantine has no metric yet. The scheduled check below catches it only when the quarantined observer also has failed partitions; for the rest, check `cratis chronicle observers list` for observers in the `Quarantined` state.
 
-With the default translation of the OpenTelemetry Collector's Prometheus exporter, or Prometheus's own OTLP receiver, the counters appear as `chronicle_observer_partitions_failed_total` and `chronicle_observer_partitions_quarantined_total`, and the tags keep their names. Look the series up in your backend before relying on the names below.
+In Prometheus the counter names carry a suffix: the instruments currently export their description as their unit, which exporters append to the name. Through the OpenTelemetry Collector's Prometheus exporter, `chronicle-observer-partitions-quarantined` appears as `chronicle_observer_partitions_quarantined_Number_of_partitions_moved_to_quarantine_per_observer_total`. The tags keep their names. The rules below therefore select each counter by its name prefix, which keeps working when the suffix goes away. Look the series up in your backend before relying on them.
 
 :::caution[`increase()` alone misses a newly quarantined partition]
 Each partition has its own series, and a series only exists from its first increment. A quarantined partition's counter is born at `1` and stays there, so `increase()` — which needs two samples inside its window — reports nothing for it, and a rule built only on `increase()` never fires. Also select series that did not exist at the start of the window, as the rules below do.
@@ -43,9 +43,9 @@ groups:
       - alert: ChroniclePartitionsQuarantined
         expr: |
           count by (EventStore, Namespace, ObserverId) (
-            (chronicle_observer_partitions_quarantined_total
-              unless chronicle_observer_partitions_quarantined_total offset 30m)
-            or (increase(chronicle_observer_partitions_quarantined_total[30m]) > 0)
+            ({__name__=~"chronicle_observer_partitions_quarantined.*"}
+              unless {__name__=~"chronicle_observer_partitions_quarantined.*"} offset 30m)
+            or (increase({__name__=~"chronicle_observer_partitions_quarantined.*"}[30m]) > 0)
           )
         labels:
           severity: critical
@@ -56,11 +56,11 @@ groups:
       - alert: ChroniclePartitionsFailing
         expr: |
           count by (EventStore, Namespace, ObserverId) (
-            (chronicle_observer_partitions_failed_total >= 5)
+            ({__name__=~"chronicle_observer_partitions_failed.*"} >= 5)
             and (
-              (chronicle_observer_partitions_failed_total
-                unless chronicle_observer_partitions_failed_total offset 15m)
-              or (increase(chronicle_observer_partitions_failed_total[15m]) > 0)
+              ({__name__=~"chronicle_observer_partitions_failed.*"}
+                unless {__name__=~"chronicle_observer_partitions_failed.*"} offset 15m)
+              or (increase({__name__=~"chronicle_observer_partitions_failed.*"}[15m]) > 0)
             )
           )
         labels:
