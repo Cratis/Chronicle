@@ -50,4 +50,43 @@ public static class StoredReadModelDocument
             .Find(Builders<BsonDocument>.Filter.Empty)
             .FirstOrDefaultAsync();
     }
+
+    /// <summary>
+    /// Reads the single document in a read model's collection, waiting until it exists and satisfies a condition.
+    /// </summary>
+    /// <param name="fixture">The <see cref="ChronicleFixture"/> for the run.</param>
+    /// <param name="collectionName">The name of the read model collection.</param>
+    /// <param name="condition">The condition the stored document has to satisfy before it is returned.</param>
+    /// <returns>The stored <see cref="BsonDocument"/>, or null when the backend cannot be inspected or the document never satisfied the condition.</returns>
+    public static async Task<BsonDocument?> ReadWhen(ChronicleFixture fixture, string collectionName, Func<BsonDocument, bool> condition)
+    {
+        if (!CanBeInspected(fixture))
+        {
+            return null;
+        }
+
+        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+        BsonDocument? document = null;
+        while (!cts.IsCancellationRequested)
+        {
+            document = await Read(fixture, collectionName);
+            if (document is not null && condition(document))
+            {
+                return document;
+            }
+
+            await Task.Delay(200);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets a field of a stored document by name, ignoring the casing the sink stores it with.
+    /// </summary>
+    /// <param name="document">The stored <see cref="BsonDocument"/>, or null.</param>
+    /// <param name="name">The name of the field.</param>
+    /// <returns>The <see cref="BsonValue"/>, or null when there is no document or no such field.</returns>
+    public static BsonValue? Field(BsonDocument? document, string name) =>
+        document?.Elements.FirstOrDefault(element => string.Equals(element.Name, name, StringComparison.OrdinalIgnoreCase)).Value;
 }
