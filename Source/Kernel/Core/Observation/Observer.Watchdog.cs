@@ -115,7 +115,8 @@ public partial class Observer
             return false;
         }
 
-        if (State.IsReplaying)
+        // Routing defers an explicitly typed replay with no event types. It cannot own a job yet.
+        if (State.IsReplaying && (_subscription.EventTypes.Any() || State.SubscribesToAllEvents))
         {
             var replayJobs = await _jobsManager.GetJobsOfType<IReplayObserver, ReplayObserverRequest>();
             var hasRunningReplayJob = replayJobs.Any(job =>
