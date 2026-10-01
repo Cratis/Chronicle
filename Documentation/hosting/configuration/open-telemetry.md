@@ -82,6 +82,19 @@ Chronicle instruments the following meters:
 | `Grpc.AspNetCore.Server` | gRPC server request metrics |
 | .NET runtime | GC, thread pool, and memory metrics from the .NET runtime |
 
+### Observer failure metrics
+
+Chronicle counts observer failures on the `Cratis.Chronicle` meter. Every one of these instruments carries the tags `EventStore`, `Namespace`, `ObserverId` and `EventSequenceId`, and no others. Neither the partition nor the event source id is a tag, so the number of series depends on the number of observers and never on how many partitions fail.
+
+| Instrument | Counts |
+| --- | --- |
+| `chronicle-observer-partitions-failed` | Every failed handling attempt of a partition, including the failure of each retry. It is not a count of failed partitions. |
+| `chronicle-observer-partition-retry-attempts` | Every time a failed partition was evaluated for retry. It is recorded together with each failed attempt, whether or not a retry ends up being scheduled, so it does not count retries that ran. |
+| `chronicle-observer-partitions-quarantined` | Partitions that ran out of retry attempts and were quarantined. It does not count an observer being quarantined. |
+| `chronicle-observer-quarantined` | Times an observer was quarantined. |
+
+When an observer starts, Chronicle records a `0` for each of these, so the series exists before the first failure and the first failure shows up as an increase.
+
 To be alerted when an observer's partitions keep failing or run out of retries, see [Get alerted when observers stop processing](../alerting-on-observer-failures.md).
 
 ## Traces instrumented
