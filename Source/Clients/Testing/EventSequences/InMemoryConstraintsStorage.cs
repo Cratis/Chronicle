@@ -50,7 +50,8 @@ internal sealed class InMemoryConstraintsStorage(ClientConstraints.ICanProvideCo
                 (KernelConstraints::ConstraintName)unique.Name.Value,
                 eventsWithProperties,
                 ToKernelEventTypeIds(unique.RemovedWith),
-                unique.IgnoreCasing)
+                unique.IgnoreCasing,
+                ToKernelScope(unique.Scope))
             {
                 EventSequences = ToKernelEventSequenceIds(unique.EventSequences)
             };
@@ -61,13 +62,27 @@ internal sealed class InMemoryConstraintsStorage(ClientConstraints.ICanProvideCo
             return new KernelConstraints::UniqueEventTypeConstraintDefinition(
                 (KernelConstraints::ConstraintName)uniqueType.Name.Value,
                 ToKernelEventTypeIds(uniqueType.EventTypeIds),
-                ToKernelEventTypeIds(uniqueType.RemovedWith))
+                ToKernelEventTypeIds(uniqueType.RemovedWith),
+                ToKernelScope(uniqueType.Scope))
             {
                 EventSequences = ToKernelEventSequenceIds(uniqueType.EventSequences)
             };
         }
 
         return null;
+    }
+
+    static KernelConstraints::ConstraintScope? ToKernelScope(ClientConstraints.ConstraintScope? scope)
+    {
+        if (scope?.HasScope != true)
+        {
+            return null;
+        }
+
+        return new KernelConstraints::ConstraintScope(
+            scope.EventSourceType is not null ? (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventSourceType)scope.EventSourceType.Value : null,
+            scope.EventStreamType is not null ? (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventStreamType)scope.EventStreamType.Value : null,
+            scope.EventStreamId is not null ? (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventStreamId)scope.EventStreamId.Value : null);
     }
 
     static KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId[] ToKernelEventTypeIds(IEnumerable<global::Cratis.Chronicle.Events.EventTypeId> eventTypeIds) =>
