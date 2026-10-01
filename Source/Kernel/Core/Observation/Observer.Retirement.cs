@@ -13,13 +13,13 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.RetiringObserver();
 
-        await PauseJobs();
-        _subscription = ObserverSubscription.Unsubscribed;
-        _isPreparingCatchup = false;
         _retired = true;
+        await Unsubscribe();
+        _isPreparingCatchup = false;
 
+        // Normal unsubscription leaves Observing and its queue, but quarantine refuses Disconnected.
         // Do not clear quarantine or route: an observer quarantined mid-replay would resume its paused job.
-        // The manager deletes those jobs after retirement. Neither the running state nor the replay flag changes.
+        // The manager deletes those jobs after retirement. The replay flag stays unchanged.
         await DiscardFailedPartitions();
         await WriteStateAsync();
         await ReportAlertsRemoved();
