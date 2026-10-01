@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.ReadModels;
 
 using SinkFailedPartition = Cratis.Chronicle.Storage.Sinks.FailedPartition;
@@ -19,7 +18,7 @@ public class and_the_final_flush_fails_with_a_reason : given.a_projection_replay
     const string Reason = "MongoDB write error 11000 (DuplicateKey): E11000 duplicate key error";
     readonly Key _partition = "partition";
     readonly EventSequenceNumber _sequenceNumber = 42UL;
-    IEnumerable<string> _messages = [];
+    IReadOnlyCollection<SinkFailedPartition> _failures = [];
 
     void Establish()
     {
@@ -27,12 +26,12 @@ public class and_the_final_flush_fails_with_a_reason : given.a_projection_replay
         _replayContexts.TryGet(_readModelType.Identifier).Returns(replayContext);
         _projectionPipeline.EndReplay(replayContext).Returns(Task.FromResult<IEnumerable<SinkFailedPartition>>([new(_partition, _sequenceNumber) { Reason = Reason }]));
         _observer
-            .When(_ => _.PartitionFailed(_partition, _sequenceNumber, Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), FailureKind.Handling))
-            .Do(call => _messages = call.ArgAt<IEnumerable<string>>(2).ToArray());
+            .When(_ => _.PartitionsFailed(Arg.Any<IReadOnlyCollection<SinkFailedPartition>>()))
+            .Do(call => _failures = call.Arg<IReadOnlyCollection<SinkFailedPartition>>());
     }
 
     async Task Because() => await _handler.EndReplayFor(_observerDetails);
 
-    [Fact] void should_record_the_partition() => _messages.Single().ShouldContain(_partition.ToString());
-    [Fact] void should_record_the_reason() => _messages.Single().ShouldContain(Reason);
+    [Fact] void should_record_the_partition() => _failures.Single().EventSourceId.ShouldEqual(_partition);
+    [Fact] void should_record_the_reason() => _failures.Single().Reason.ShouldEqual(Reason);
 }

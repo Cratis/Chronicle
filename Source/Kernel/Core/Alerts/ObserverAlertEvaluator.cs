@@ -68,12 +68,19 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
         var transitions = new List<object>();
         transitions.AddRange(ClearEndedIncidents(snapshot, openIncidents));
 
+        var incidentsById = new Dictionary<IncidentId, OpenIncident>();
+        foreach (var incident in openIncidents)
+        {
+            incidentsById.TryAdd(incident.Id, incident);
+        }
+
         DateTimeOffset? nextRaiseDue = null;
         if (!IsLeftOut(snapshot.Observer.ObserverId))
         {
             foreach (var partition in snapshot.FailedPartitions)
             {
-                var (transition, due) = EvaluatePartition(snapshot, partition, openIncidents.FirstOrDefault(_ => _.Id == partition.Id), now);
+                incidentsById.TryGetValue(partition.Id, out var incident);
+                var (transition, due) = EvaluatePartition(snapshot, partition, incident, now);
                 if (transition is not null)
                 {
                     transitions.Add(transition);
@@ -120,6 +127,7 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
 
     static IEnumerable<AlertCleared> ClearEndedIncidents(ObserverAlertSnapshot snapshot, IReadOnlyCollection<OpenIncident> openIncidents)
     {
+        var failedPartitionIds = snapshot.FailedPartitions.Select(partition => (IncidentId)partition.Id).ToHashSet();
         foreach (var incident in openIncidents)
         {
             if (incident.Condition == AlertConditionKind.ObserverQuarantined)
@@ -129,7 +137,7 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
                     yield return Cleared(snapshot, incident, snapshot.QuarantineEndedAs);
                 }
             }
-            else if (IsPartitionCondition(incident.Condition) && snapshot.FailedPartitions.All(_ => _.Id != incident.Id))
+            else if (IsPartitionCondition(incident.Condition) && !failedPartitionIds.Contains(incident.Id))
             {
                 yield return Cleared(snapshot, incident, snapshot.PartitionsEndedAs);
             }

@@ -35,6 +35,12 @@ public partial class Observer
             return;
         }
 
+        if (_deferAlertReports)
+        {
+            _alertReconciliationPending = true;
+            return;
+        }
+
         _pendingPartitionsEndedAs = partitionsEndedAs;
         _pendingQuarantineEndedAs = quarantineEndedAs;
         try

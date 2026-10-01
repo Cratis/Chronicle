@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Monads;
@@ -28,7 +27,7 @@ public class and_the_final_flush_fails : given.a_projection_replay_handler_with_
 
     async Task Because() => _result = await _handler.EndReplayFor(_observerDetails);
 
-    [Fact] void should_record_the_failed_partition() => _observer.Received(1).PartitionFailed(_partition, _sequenceNumber, Arg.Any<IEnumerable<string>>(), string.Empty, FailureKind.Handling);
+    [Fact] void should_record_the_failed_partition() => _observer.Received(1).PartitionsFailed(Arg.Is<IReadOnlyCollection<SinkFailedPartition>>(failures => failures.Single().EventSourceId == _partition && failures.Single().EventSequenceNumber == _sequenceNumber));
     [Fact] void should_not_signal_replayed_to_replay_manager() => _readModelReplayManager.DidNotReceiveWithAnyArgs().Replayed(default!, default!);
     [Fact] void should_not_evict_the_replay_context() => _replayContexts.DidNotReceiveWithAnyArgs().Evict(default!);
     [Fact] void should_report_a_finalization_error() => _result.TryGetError(out _).ShouldBeTrue();

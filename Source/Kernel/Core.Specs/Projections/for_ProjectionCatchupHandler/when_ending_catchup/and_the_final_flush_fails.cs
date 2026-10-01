@@ -47,6 +47,6 @@ public class and_the_final_flush_fails : Specification
 
     async Task Because() => _result = await _handler.EndCatchupFor(_observerDetails);
 
-    [Fact] void should_record_the_failed_partition() => _observer.Received(1).PartitionFailed(_partition, _sequenceNumber, Arg.Any<IEnumerable<string>>(), string.Empty, FailureKind.Handling);
+    [Fact] void should_record_the_failed_partition() => _observer.Received(1).PartitionsFailed(Arg.Is<IReadOnlyCollection<SinkFailedPartition>>(failures => failures.Single().EventSourceId == _partition && failures.Single().EventSequenceNumber == _sequenceNumber));
     [Fact] void should_report_a_finalization_error() => _result.TryGetError(out _).ShouldBeTrue();
 }

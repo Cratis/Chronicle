@@ -225,6 +225,13 @@ public interface IObserver : IGrainWithStringKey
     Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown);
 
     /// <summary>
+    /// Records a projection bulk flush's failed partitions with one alert snapshot for the batch.
+    /// </summary>
+    /// <param name="failedPartitions">The failures returned by the projection sink.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionsFailed(IReadOnlyCollection<Cratis.Chronicle.Storage.Sinks.FailedPartition> failedPartitions);
+
+    /// <summary>
     /// Notify that the partition has recovered.
     /// </summary>
     /// <param name="partition">The partition that has recovered.</param>
