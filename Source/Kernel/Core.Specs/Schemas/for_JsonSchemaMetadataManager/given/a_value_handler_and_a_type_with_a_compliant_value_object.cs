@@ -45,8 +45,8 @@ public class a_value_handler_and_a_type_with_a_compliant_value_object : Specific
         _valueHandler.Category.Returns(SchemaMetadataCategory.Compliance);
         _valueHandler.Apply(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>())
             .Returns(callInfo => Task.FromResult<JsonNode>(JsonValue.Create(Convert.ToBase64String(Encoding.UTF8.GetBytes(callInfo.ArgAt<JsonNode>(3).ToJsonString())))));
-        _valueHandler.Release(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>())
-            .Returns(callInfo => Task.FromResult<JsonNode>(JsonValue.Create(Encoding.UTF8.GetString(Convert.FromBase64String(callInfo.ArgAt<JsonNode>(3).GetValue<string>())))));
+        _valueHandler.ReleaseWithStatus(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>())
+            .Returns(callInfo => new ReleasedSchemaMetadataValue(JsonValue.Create(Encoding.UTF8.GetString(Convert.FromBase64String(callInfo.ArgAt<JsonNode>(3).GetValue<string>())))));
 
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(_valueHandler), NullLogger<JsonSchemaMetadataManager>.Instance);
     }

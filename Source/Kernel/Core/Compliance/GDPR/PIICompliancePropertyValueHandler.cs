@@ -37,7 +37,11 @@ public class PIICompliancePropertyValueHandler(
     }
 
     /// <inheritdoc/>
-    public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
+    public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        (await ReleaseWithStatus(eventStore, eventStoreNamespace, identifier, value)).Value;
+
+    /// <inheritdoc/>
+    public async Task<ReleasedSchemaMetadataValue> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
         // Only a value this encryption produced can be released. One that carries none of its shape was never
         // encrypted under this subject — it is resolved in memory at the query edge for display, or it predates
@@ -53,19 +57,19 @@ public class PIICompliancePropertyValueHandler(
         // here, still falls through to the key lookup, and still blanks.
         if (!ProtectedValueCodec.TryDecodeCipherText(encryption, value.ToString(), out var encrypted))
         {
-            return value;
+            return new(value);
         }
 
         var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier);
 
         // When the encryption key has been deleted (GDPR right-to-erasure / crypto-shredding),
-        // the PII is permanently unreadable. Surface it as empty rather than throwing so that
-        // queries and read models for an erased subject keep working instead of crashing.
+        // the PII is permanently unreadable. Signal that separately from decrypted empty plaintext so
+        // the schema manager can supply a typed placeholder without changing a live subject's empty string.
         if (key is null)
         {
-            return JsonValue.Create(string.Empty);
+            return new(JsonValue.Create(string.Empty), IsUnreadable: true);
         }
 
-        return ProtectedValueCodec.Decrypt(encryption, key, encrypted);
+        return new(ProtectedValueCodec.Decrypt(encryption, key, encrypted));
     }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
@@ -53,21 +54,9 @@ public class ReadModelsCompliance(
         var result = expandoObjectConverter.ToExpandoObject(applied, schema);
         var resultAsDictionary = (IDictionary<string, object?>)result;
 
-        // Encryption must only change the PII members; it must not drop the rest of the document. The
-        // schema round-trip above only carries schema-declared properties, so document identity and
-        // bookkeeping fields that live outside the read model schema — the sink's primary key column and
-        // similar — are lost. Downstream difference computation would then see them as removed and emit a
-        // spurious "property -> null" change; for the SQL sink that nulls the read model's primary key and
-        // the save fails on every attempt. Carry any such non-schema property through unchanged. A declared
-        // property can be absent because its erased placeholder is null; never restore its original clear value.
-        var declaredProperties = schema.GetFlattenedProperties().Select(_ => _.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var (propertyName, propertyValue) in (IDictionary<string, object?>)instance)
-        {
-            if (!declaredProperties.Contains(propertyName) && !resultAsDictionary.ContainsKey(propertyName))
-            {
-                resultAsDictionary[propertyName] = propertyValue;
-            }
-        }
+        // Schema conversion omits explicit nulls and non-schema bookkeeping. Preserve unprotected state,
+        // including nested members, but never restore a protected value replaced by an erasure placeholder.
+        PreserveUnprotectedValue(instance, result, schema);
 
         resultAsDictionary[WellKnownProperties.Subject] = defaultSubject;
         return result;
@@ -166,6 +155,50 @@ public class ReadModelsCompliance(
         }
 
         return result;
+    }
+
+    static object? PreserveUnprotectedValue(object? original, object? protectedValue, JsonSchema schema)
+    {
+        if (schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any() ||
+            schema.ActualTypeSchema.GetComplianceMetadata().Any() || schema.ActualTypeSchema.GetSecurityMetadata().Any())
+        {
+            return protectedValue;
+        }
+
+        if (!schema.HasSchemaMetadata())
+        {
+            return original;
+        }
+
+        if (original is ExpandoObject originalObject && protectedValue is ExpandoObject protectedObject)
+        {
+            var properties = schema.ActualTypeSchema.GetFlattenedProperties().ToArray();
+            var result = (IDictionary<string, object?>)protectedObject;
+            foreach (var (name, value) in (IDictionary<string, object?>)originalObject)
+            {
+                var property = schema.ActualTypeSchema.Properties.FirstOrDefault(_ => _.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value ??
+                    properties.FirstOrDefault(_ => _.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                var resultName = string.IsNullOrEmpty(property?.Name) ? name : property.Name;
+                if (property?.HasSchemaMetadata() != true)
+                {
+                    result[resultName] = value;
+                }
+                else if (result.TryGetValue(resultName, out var currentValue))
+                {
+                    result[resultName] = PreserveUnprotectedValue(value, currentValue, property);
+                }
+            }
+        }
+        else if (original is IEnumerable originalItems and not string && protectedValue is object?[] protectedItems && schema.Item is { } itemSchema)
+        {
+            var items = originalItems.Cast<object?>().ToArray();
+            for (var index = 0; index < Math.Min(items.Length, protectedItems.Length); index++)
+            {
+                protectedItems[index] = PreserveUnprotectedValue(items[index], protectedItems[index], itemSchema);
+            }
+        }
+
+        return protectedValue;
     }
 
     static async Task<JsonObject> HandleBySubject(

@@ -51,8 +51,8 @@ public class when_releasing_erased_typed_values : given.a_value_handler_and_a_ty
             """
             { "address": { "Street": "ciphertext", "PostalCode": "ciphertext", "Verified": "ciphertext", "RegionId": "ciphertext", "MovedInAt": "ciphertext", "Kind": "ciphertext", "Age": "ciphertext", "BirthDate": "ciphertext" }, "numbers": ["ciphertext"], "optionalNumbers": ["ciphertext"], "status": "active" }
             """)!.AsObject();
-        _valueHandler.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<JsonNode>())
-            .Returns(_ => JsonValue.Create(string.Empty));
+        _valueHandler.ReleaseWithStatus(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<JsonNode>())
+            .Returns(_ => new ReleasedSchemaMetadataValue(JsonValue.Create(string.Empty), IsUnreadable: true));
     }
 
     async Task Because()

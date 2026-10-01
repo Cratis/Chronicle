@@ -23,8 +23,8 @@ public class when_releasing_fails_with_a_decryption_error : given.a_value_handle
 
     void Establish() =>
         _valueHandler
-            .Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<JsonNode>())
-            .Returns<Task<JsonNode>>(_ => throw new CryptographicException("error:02000079:rsa routines::oaep decoding error"));
+            .ReleaseWithStatus(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<JsonNode>())
+            .Returns<Task<ReleasedSchemaMetadataValue>>(_ => throw new CryptographicException("error:02000079:rsa routines::oaep decoding error"));
 
     async Task Because() => _exception = await Catch.Exception(async () => _result = await _manager.Release(
         EventStoreName.NotSet,

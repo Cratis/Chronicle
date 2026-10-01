@@ -15,7 +15,7 @@ public class when_releasing_with_applicable_value_handler : given.a_value_handle
     void Establish()
     {
         _propertyValue = JsonValue.Create(ChangedValue);
-        _valueHandler.Release(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>()).Returns(Task.FromResult(_propertyValue));
+        _valueHandler.ReleaseWithStatus(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>()).Returns(new ReleasedSchemaMetadataValue(_propertyValue));
     }
 
     async Task Because() => _result = await _manager.Release(string.Empty, string.Empty, _schema, Identifier, _input);

@@ -52,7 +52,11 @@ public class EncryptedGlobalValueHandler(
             value);
 
     /// <inheritdoc/>
-    public Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+    public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        (await ReleaseWithStatus(eventStore, eventStoreNamespace, identifier, value)).Value;
+
+    /// <inheritdoc/>
+    public Task<ReleasedSchemaMetadataValue> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
         EncryptedValueOperations.Release(
             encryptionKeyStore,
             encryption,

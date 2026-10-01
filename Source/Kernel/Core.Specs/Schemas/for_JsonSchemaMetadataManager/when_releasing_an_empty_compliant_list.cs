@@ -11,8 +11,8 @@ public class when_releasing_an_empty_compliant_list : given.a_value_handler_and_
     JsonObject _result;
 
     void Establish() =>
-        _valueHandler.Release(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>())
-            .Returns(Task.FromResult<JsonNode>(JsonValue.Create("[]")));
+        _valueHandler.ReleaseWithStatus(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>())
+            .Returns(new ReleasedSchemaMetadataValue(JsonValue.Create("[]")));
 
     async Task Because() => _result = await _manager.Release(string.Empty, string.Empty, _schema, Identifier, _input);
 

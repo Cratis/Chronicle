@@ -48,4 +48,15 @@ public interface IJsonSchemaMetadataValueHandler
     /// <param name="value">Value to release.</param>
     /// <returns>Released value.</returns>
     Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value);
+
+    /// <summary>
+    /// Release a value while distinguishing unreadable protected contents from legitimate empty plaintext.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the value belongs to.</param>
+    /// <param name="eventStoreNamespace"><see cref="EventStoreNamespaceName"/> the value belongs to.</param>
+    /// <param name="identifier">Identifier to use.</param>
+    /// <param name="value">Value to release.</param>
+    /// <returns>The released value and its readability.</returns>
+    async Task<ReleasedSchemaMetadataValue> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        new(await Release(eventStore, eventStoreNamespace, identifier, value));
 }

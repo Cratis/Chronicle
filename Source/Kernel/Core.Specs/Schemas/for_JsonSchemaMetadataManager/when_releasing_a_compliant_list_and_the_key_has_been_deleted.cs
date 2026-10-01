@@ -15,8 +15,8 @@ public class when_releasing_a_compliant_list_and_the_key_has_been_deleted : give
         // After the subject's encryption key has been crypto-shredded (GDPR right-to-erasure), the handler
         // surfaces the erased value as an empty string. The manager must round-trip that into an empty array
         // for a coarse [PII] collection instead of throwing while re-parsing the empty released value.
-        _valueHandler.Release(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>())
-            .Returns(Task.FromResult<JsonNode>(JsonValue.Create(string.Empty)));
+        _valueHandler.ReleaseWithStatus(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>())
+            .Returns(new ReleasedSchemaMetadataValue(JsonValue.Create(string.Empty), IsUnreadable: true));
     }
 
     async Task Because() => _result = await _manager.Release(string.Empty, string.Empty, _schema, Identifier, _input);

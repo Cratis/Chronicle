@@ -39,7 +39,7 @@ public class JsonSchemaMetadataManager(
         }
 
         var result = (json.DeepClone() as JsonObject)!;
-        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token));
+        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, async (h, id, token) => new(await h.Apply(eventStore, eventStoreNamespace, id, token)));
         return result;
     }
 
@@ -52,7 +52,7 @@ public class JsonSchemaMetadataManager(
         }
 
         var result = (json.DeepClone() as JsonObject)!;
-        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token), erasedValuesBecomePlaceholders: true);
+        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, async (h, id, token) => new(await h.Apply(eventStore, eventStoreNamespace, id, token)), erasedValuesBecomePlaceholders: true);
         return result;
     }
 
@@ -65,20 +65,30 @@ public class JsonSchemaMetadataManager(
         }
 
         var result = (json.DeepClone() as JsonObject)!;
-        await HandleActionFor(schema, identifier, result!, SchemaMetadataActionFailed.ReleaseAction, async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
+        await HandleActionFor(schema, identifier, result!, SchemaMetadataActionFailed.ReleaseAction, async (h, id, token) => await h.ReleaseWithStatus(eventStore, eventStoreNamespace, id, token));
         return result;
     }
 
-    static JsonNode? RestoreReleasedShape(JsonNode released, JsonSchema propertySchema)
+    static JsonNode? RestoreReleasedShape(JsonNode released, JsonSchema propertySchema, bool isUnreadable = false)
     {
+        if (isUnreadable)
+        {
+            if (propertySchema.IsNullableSchema() && !propertySchema.IsArray && !propertySchema.Type.HasFlag(JsonObjectType.Object))
+            {
+                return null;
+            }
+
+            released = JsonValue.Create(string.Empty);
+        }
+
         if (released is JsonValue scalar && scalar.TryGetValue<string>(out var text) && text.Length == 0 &&
             !propertySchema.IsArray && !propertySchema.Type.HasFlag(JsonObjectType.Object))
         {
-            // An erased scalar must still travel as its declared type. The empty string is the storage marker,
-            // not a valid integer, flag, identifier or date on the wire. Keep plain strings empty; typed values
-            // use the same defaults as schema materialization, and optional values remain null.
+            // Empty text is legitimate for strings, including nullable strings, but cannot represent a typed
+            // integer, flag, identifier or date. Unreadable nullable scalars were handled above; legacy empty
+            // markers for other typed scalars use the same defaults as schema materialization.
             var targetType = propertySchema.GetTargetTypeForSchema(_typeFormats);
-            if (propertySchema.IsNullableSchema() || (targetType is not null && targetType != typeof(string)))
+            if (targetType is not null && targetType != typeof(string))
             {
                 return JsonSerializer.SerializeToNode(propertySchema.GetDefaultValueForSchema(_typeFormats));
             }
@@ -153,7 +163,7 @@ public class JsonSchemaMetadataManager(
         // RestoreReleasedShape would otherwise reconstruct: an empty string stored where an int, bool or date
         // belongs fails to parse back into that property. Reuse the same type resolution so an erased scalar
         // materializes identically whether it came from a fresh placeholder or a released shredded ciphertext.
-        return RestoreReleasedShape(JsonValue.Create(string.Empty), propertySchema);
+        return RestoreReleasedShape(JsonValue.Create(string.Empty), propertySchema, isUnreadable: true);
     }
 
     IEnumerable<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> MetadataAcrossCategories(JsonSchema schema) =>
@@ -164,7 +174,7 @@ public class JsonSchemaMetadataManager(
         string identifier,
         JsonObject json,
         string actionName,
-        Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> action,
+        Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<ReleasedSchemaMetadataValue>> action,
         string path = "",
         bool erasedValuesBecomePlaceholders = false)
     {
@@ -189,7 +199,7 @@ public class JsonSchemaMetadataManager(
                         try
                         {
                             var handled = await action(handler, identifier, value);
-                            json[property] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedShape(handled, propertySchema) : handled;
+                            json[property] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedShape(handled.Value, propertySchema, handled.IsUnreadable) : handled.Value;
                             handlerApplied = true;
                         }
                         catch (EncryptionKeyErased) when (erasedValuesBecomePlaceholders)
@@ -220,7 +230,7 @@ public class JsonSchemaMetadataManager(
                             }
 
                             logger.FailedToReleaseProperty(propertyPath, identifier, failure);
-                            json[property] = RestoreReleasedShape(JsonValue.Create(string.Empty), propertySchema);
+                            json[property] = RestoreReleasedShape(JsonValue.Create(string.Empty), propertySchema, isUnreadable: true);
                             handlerApplied = true;
                         }
                     }
@@ -256,7 +266,7 @@ public class JsonSchemaMetadataManager(
         string identifier,
         JsonArray array,
         string actionName,
-        Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> action,
+        Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<ReleasedSchemaMetadataValue>> action,
         string path,
         bool erasedValuesBecomePlaceholders)
     {
@@ -297,7 +307,11 @@ public class JsonSchemaMetadataManager(
                             try
                             {
                                 var handled = await action(handler, identifier, element);
-                                array[i] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedShape(handled, itemSchema) : handled;
+                                var restored = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedShape(handled.Value, itemSchema, handled.IsUnreadable) : handled.Value;
+                                if (!ReferenceEquals(element, restored))
+                                {
+                                    array[i] = restored;
+                                }
                             }
                             catch (EncryptionKeyErased) when (erasedValuesBecomePlaceholders)
                             {
@@ -315,7 +329,7 @@ public class JsonSchemaMetadataManager(
                                 }
 
                                 logger.FailedToReleaseProperty(elementPath, identifier, failure);
-                                array[i] = RestoreReleasedShape(JsonValue.Create(string.Empty), itemSchema);
+                                array[i] = RestoreReleasedShape(JsonValue.Create(string.Empty), itemSchema, isUnreadable: true);
                             }
                         }
                     }

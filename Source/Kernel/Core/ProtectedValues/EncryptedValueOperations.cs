@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.ProtectedValues;
@@ -48,8 +49,8 @@ static class EncryptedValueOperations
     /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> the key was provisioned under.</param>
     /// <param name="keyIdentifier">The <see cref="EncryptionKeyIdentifier"/> the value was encrypted under.</param>
     /// <param name="value">The <see cref="JsonNode"/> to decrypt.</param>
-    /// <returns>The decrypted <see cref="JsonNode"/>.</returns>
-    public static async Task<JsonNode> Release(
+    /// <returns>The decrypted value and whether its key was unavailable.</returns>
+    public static async Task<ReleasedSchemaMetadataValue> Release(
         IEncryptionKeyStorage encryptionKeyStore,
         IEncryption encryption,
         EventStoreName eventStore,
@@ -62,7 +63,7 @@ static class EncryptedValueOperations
         // than an error.
         if (!ProtectedValueCodec.TryDecodeCipherText(encryption, value.ToString(), out var encrypted))
         {
-            return value;
+            return new(value);
         }
 
         var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, keyIdentifier);
@@ -73,9 +74,9 @@ static class EncryptedValueOperations
         // rest of the document working, exactly as the PII path already does for its own missing-key case.
         if (key is null)
         {
-            return JsonValue.Create(string.Empty);
+            return new(JsonValue.Create(string.Empty), IsUnreadable: true);
         }
 
-        return ProtectedValueCodec.Decrypt(encryption, key, encrypted);
+        return new(ProtectedValueCodec.Decrypt(encryption, key, encrypted));
     }
 }

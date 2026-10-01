@@ -60,7 +60,7 @@ Once a fence exists, the key store refuses, in every backend:
 - **Saving at or below the floor.** `SaveFor` refuses any revision at or below `ErasedThrough`. This is what stops a composed store healing a survivor back into the store that was erased.
 - **Restoring the destroyed material.** Any save of a key whose public-key fingerprint matches a destroyed one is refused, *at any revision, even after a new lifecycle is authorized*. This is the one that closes the cross-store copy: the copy carries the very same key bytes, and those bytes are exactly what the fingerprint fence names.
 
-Reads are untouched. `TryGetFor`, `HasFor` and `GetFor` answer about key material and keep answering exactly as they did — an erased subject has no key, so `[PII]` values release as empty strings and queries keep working.
+Reads are untouched. `TryGetFor`, `HasFor` and `GetFor` answer about key material and keep answering exactly as they did — an erased subject has no key, so `[PII]` values release as typed placeholders and queries keep working. Non-nullable strings are empty, nullable scalars are null, other scalars use their type defaults, and whole protected objects and collections release as empty containers.
 
 ### What it does *not* refuse
 
@@ -137,7 +137,7 @@ Until you make that call, appending a `[PII]` value for an erased subject fails 
 > [!IMPORTANT]
 > A forwarded event carrying `[PII]` for an erased subject fails to append in the target event store, and the observer partition for that event source enters a failed state. The rest of the subscription keeps flowing. Either stop appending that subject's personal data, or authorize a new key — both are deliberate acts, which is the intent.
 
-Stored read models are the exception, because they are derived from the events rather than written by an application. When a projection or reducer writes a read model for an erased subject — the next event that changes it, or a replay that covers the subject — each protected value is stored as the erased placeholder, the empty value a shredded ciphertext already reads back as, instead of asking for a key. That keeps the fence intact — no key is minted, and nothing of the value being written is kept — without freezing the read model's partition over personal data nobody can hold any more. Once a new key has been authorized, values written for the subject are protected under it again.
+Stored read models are the exception, because they are derived from the events rather than written by an application. When a projection or reducer writes a read model for an erased subject — the next event that changes it, or a replay that covers the subject — each PII scalar is stored as its declared type's erased placeholder when the fence refuses a key. Whole protected containers use an empty storage marker and release as empty containers. Non-PII state is preserved, including explicit nulls. That keeps the fence intact — no key is minted, and nothing of the value being written is kept — without freezing the read model's partition over personal data nobody can hold any more. Once a new key has been authorized, values written for the subject are protected under it again.
 
 ## The threat model
 

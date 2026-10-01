@@ -66,7 +66,7 @@ Deleting an encryption key is the Chronicle mechanism for GDPR erasure:
 
 Read model documents written before the erasure still hold the ciphertext. Nothing can decrypt it once the key is gone, which is what crypto-shredding relies on.
 
-The read model keeps updating after the erasure. Writing it for an erased subject — the next event that changes it, or a replay that covers the subject — stores each of their protected values as the erased placeholder, the empty value a shredded ciphertext already reads back as, rather than asking for a key the erasure no longer allows. No key is created and nothing of the value being written is kept, so the members that are not personal go on changing and the subject's personal data keeps reading as empty. A document rewritten this way no longer holds the old ciphertext. Erased values retain their declared types when released: plain strings are empty, non-nullable numbers and flags use their type defaults, and nullable values are null. This also applies to protected members of nested objects and collection elements. See [The encryption key lifecycle](key-lifecycle.mdx).
+The read model keeps updating after the erasure. Writing it for an erased subject — the next event that changes it, or a replay that covers the subject — replaces each of their PII values with an erased placeholder when the erasure fence refuses a key. No key is created and nothing of the value being written is kept, so the members that are not personal go on changing and the subject's personal data keeps reading as empty. A document rewritten this way no longer holds the old ciphertext. Erased values retain their declared types when released: plain strings are empty, non-nullable numbers and flags use their type defaults, and nullable values are null. This also applies to protected members of nested objects and collection elements. Whole protected objects and collections release as empty containers. Values belonging to other subjects remain encrypted at rest and release unchanged, including legitimate empty nullable strings. Non-PII members retain their values, including explicit nulls. See [The encryption key lifecycle](key-lifecycle.mdx).
 
 For full erasure of event content, combine key deletion with [event redaction](../events/redaction).
 
@@ -86,10 +86,10 @@ Decryption is resolved per property, and a property that cannot be read never fa
 
 | The stored value | What the caller gets |
 |---|---|
-| Encrypted under this subject | The decrypted value. |
-| Encrypted, but the subject's key was deleted | An empty value — the erasure case above. |
+| Encrypted under this subject | The decrypted value in its declared JSON type, including an empty string when that was the plaintext. |
+| Encrypted, but the subject's key was deleted | A typed erased placeholder — the erasure case above. |
 | Never encrypted under this subject | The value, untouched. |
-| Encrypted under a *different* subject and missing ownership metadata | An empty value for that property, plus an error in the Kernel log naming the property, the subject, and the likely cause. |
+| Encrypted under a *different* subject and missing ownership metadata | A typed unreadable placeholder for that property, plus an error in the Kernel log naming the property, the subject, and the likely cause. |
 
 The third row matters when a `[PII]`-typed property is resolved in memory at the query edge — for display on a view whose own compliance subject is not that person — or when a property was marked `[PII]` after values had already been stored. Chronicle recognizes the shape of the values it encrypts, so a value it never encrypted is passed through rather than blanked or rejected.
 

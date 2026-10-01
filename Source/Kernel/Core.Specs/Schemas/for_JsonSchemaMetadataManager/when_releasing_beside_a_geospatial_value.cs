@@ -19,7 +19,7 @@ public class when_releasing_beside_a_geospatial_value : given.a_value_handler_an
     void Establish()
     {
         _input["organizerDisplayName"] = "encrypted";
-        _valueHandler.Release(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>()).Returns(_ => Task.FromResult<JsonNode>(JsonValue.Create(DisplayName)));
+        _valueHandler.ReleaseWithStatus(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>()).Returns(_ => new ReleasedSchemaMetadataValue(JsonValue.Create(DisplayName)));
     }
 
     async Task Because() => _exception = await Catch.Exception(async () => _result = await _manager.Release(string.Empty, string.Empty, _schema, Identifier, _input));

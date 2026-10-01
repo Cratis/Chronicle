@@ -61,8 +61,8 @@ public class and_document_is_owned_by_the_caller : given.all_dependencies
         var valueHandler = Substitute.For<IJsonSchemaMetadataValueHandler>();
         valueHandler.Type.Returns((SchemaMetadataTypeName)"PII");
         valueHandler.Category.Returns(SchemaMetadataCategory.Compliance);
-        valueHandler.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Key, Arg.Any<JsonNode>())
-            .Returns(Task.FromResult<JsonNode>(JsonValue.Create(DecryptedName)));
+        valueHandler.ReleaseWithStatus(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Key, Arg.Any<JsonNode>())
+            .Returns(new ReleasedSchemaMetadataValue(JsonValue.Create(DecryptedName)));
 
         _service = new ReadModels(
             _grainFactory,
