@@ -72,13 +72,13 @@ public class and_the_root_has_not_been_created_by_a_root_event(context context) 
             await EventStore.EventLog.Append(ShelfId, new ChildOnlyBookShelved(new ChildOnlyShelfBook("978-1", "Event Modeling")));
             DocumentAfterTheChildOnlyEvent = await StoredReadModelDocument.ReadWhen(
                 ChronicleFixture,
-                nameof(ChildOnlyShelf),
+                namingPolicy.GetReadModelName(typeof(ChildOnlyShelf)),
                 document => StoredReadModelDocument.Field(document, "books") is BsonArray { Count: 1 });
 
             await EventStore.EventLog.Append(ShelfId, new ChildOnlyShelfCreated("Fiction"));
             DocumentAfterTheRootEvent = await StoredReadModelDocument.ReadWhen(
                 ChronicleFixture,
-                nameof(ChildOnlyShelf),
+                namingPolicy.GetReadModelName(typeof(ChildOnlyShelf)),
                 document => StoredReadModelDocument.Field(document, "name") is { IsString: true });
         }
 

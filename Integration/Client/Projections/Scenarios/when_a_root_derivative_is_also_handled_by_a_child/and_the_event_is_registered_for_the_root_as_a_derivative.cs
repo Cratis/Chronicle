@@ -81,7 +81,7 @@ public class and_the_event_is_registered_for_the_root_as_a_derivative(context co
             await EventStore.EventLog.Append("depot-widget-1", new WidgetRegisteredAtDepot("Sprocket", "part-1"));
             StoredDocument = await StoredReadModelDocument.ReadWhen(
                 ChronicleFixture,
-                nameof(DepotWidget),
+                namingPolicy.GetReadModelName(typeof(DepotWidget)),
                 document => StoredReadModelDocument.Field(document, "parts") is BsonArray { Count: 1 });
         }
 

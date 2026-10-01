@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
@@ -68,16 +70,39 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
 
             SetKeyForInitialState(projection, initialState, context.Key);
         }
-        else if (!HasBeenInitialized(initialState))
+        else if (context.CreatesInstance && !HasBeenInitialized(initialState))
         {
             var initialStateAsDictionary = (IDictionary<string, object?>)initialState;
             var initialModelStateAsDictionary = (IDictionary<string, object?>)projection.InitialModelState;
 
+            // Children collections are owned by the events that add and remove their children, so they are not recorded
+            // from the initial state - only the properties of the instance itself are.
+            var childrenRoots = projection.GetChildrenPropertyPaths()
+                .Where(_ => !_.IsRoot)
+                .Select(_ => _.Segments.First().Value)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var keyPropertyName = GetKeyPropertyName(projection);
+
             // TODO: Ideally we should do this recursively, as properties can be joined deep in the hierarchy and we want to
             // initialize all properties that are not set. This is a simple implementation that only works for the first level.
-            foreach (var property in initialModelStateAsDictionary.Where((kvp) => !initialStateAsDictionary.ContainsKey(kvp.Key)))
+            var missing = initialModelStateAsDictionary
+                .Where(kvp => !initialStateAsDictionary.ContainsKey(kvp.Key))
+                .ToArray();
+
+            foreach (var property in missing)
             {
                 initialStateAsDictionary[property.Key] = property.Value;
+            }
+
+            // The sink only stores what the changeset records, so the filled in values have to be recorded as changes.
+            var recorded = missing
+                .Where(kvp => !childrenRoots.Contains(kvp.Key) && !string.Equals(kvp.Key, keyPropertyName, StringComparison.OrdinalIgnoreCase))
+                .Select(_ => new PropertyDifference(new PropertyPath(_.Key), null, _.Value))
+                .ToArray();
+            if (recorded.Length > 0)
+            {
+                context.Changeset.Add(new PropertiesChanged<ExpandoObject>(context.Changeset.CurrentState, recorded));
             }
 
             context.Changeset.SetInitialized(true);
@@ -96,7 +121,9 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
         // TODO: We should improve how we work with Keys and not just "magic strings" like id or _id (MongoDB):
         // https://github.com/Cratis/Chronicle/issues/1387
         // https://github.com/Cratis/Chronicle/issues/1630
-        var keyPropertyName = projection.TargetReadModelSchema.HasKeyProperty() ? projection.TargetReadModelSchema.GetKeyProperty().Name : projection.TargetReadModelSchema.GetLikelyKeyPropertyName();
-        ((IDictionary<string, object?>)initialState)[keyPropertyName] = key.Value;
+        ((IDictionary<string, object?>)initialState)[GetKeyPropertyName(projection)] = key.Value;
     }
+
+    string GetKeyPropertyName(IProjection projection) =>
+        projection.TargetReadModelSchema.HasKeyProperty() ? projection.TargetReadModelSchema.GetKeyProperty().Name : projection.TargetReadModelSchema.GetLikelyKeyPropertyName();
 }
