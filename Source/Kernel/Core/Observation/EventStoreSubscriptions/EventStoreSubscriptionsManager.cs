@@ -263,6 +263,11 @@ public class EventStoreSubscriptionsManager(
 
         try
         {
+            if (await observer.IsObserverQuarantined())
+            {
+                return;
+            }
+
             var subscribed = await observer.IsSubscribed();
             if (subscribed)
             {
@@ -317,6 +322,10 @@ public class EventStoreSubscriptionsManager(
     async Task SubscribeIfNotSubscribed(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
         var observer = GetObserver(definition, namespaceName);
+        if (await observer.IsObserverQuarantined())
+        {
+            return;
+        }
 
         logger.Subscribing(definition.Identifier, namespaceName);
         await observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
