@@ -12,25 +12,33 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_MaterializedReadModels.when_observing_instances;
 
-public class and_an_earlier_page_is_released_slower_than_a_later_one : for_ReadModels.given.all_dependencies
+/// <summary>
+/// Under sustained writes the sink emits faster than a slow release can drain. Every page that queued behind the one
+/// being released used to cost a release, a count and a page read, and the client was served them one by one long after
+/// a newer page existed. Only the latest page is kept waiting now, so the pages in between are never processed.
+/// </summary>
+public class and_several_pages_arrive_while_an_earlier_one_is_released : for_ReadModels.given.all_dependencies
 {
     static readonly TimeSpan _deadline = TimeSpan.FromSeconds(10);
 
     readonly TaskCompletionSource<IEnumerable<ExpandoObject>> _slowRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _firstReleaseStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    readonly TaskCompletionSource _bothPagesSent = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly List<ObserveInstancesResponse> _responses = [];
+    readonly List<string> _released = [];
     MaterializedReadModels _materializedService;
     ReplaySubject<IEnumerable<ExpandoObject>> _pages;
-    int _releases;
 
     void Establish()
     {
         _pages = new();
         _pages.OnNext([Named("first")]);
         _pages.OnNext([Named("second")]);
+        _pages.OnNext([Named("third")]);
+        _pages.OnNext([Named("fourth")]);
+        _pages.OnCompleted();
         _sink.ObserveInstances(Arg.Any<ReadModelContainerName?>(), Arg.Any<int>(), Arg.Any<int>()).Returns(_pages);
-        _sink.GetInstances(Arg.Any<ReadModelContainerName?>(), Arg.Any<int>(), Arg.Any<int>()).Returns(new ReadModelInstances([], 2));
+        _sink.GetInstances(Arg.Any<ReadModelContainerName?>(), Arg.Any<int>(), Arg.Any<int>()).Returns(new ReadModelInstances([], 4));
 
         _complianceHelper.Release(
             Arg.Any<EventStoreName>(),
@@ -40,7 +48,14 @@ public class and_an_earlier_page_is_released_slower_than_a_later_one : for_ReadM
             .Returns(callInfo =>
             {
                 var instances = callInfo.ArgAt<IEnumerable<ExpandoObject>>(3).ToList();
-                if (Interlocked.Increment(ref _releases) == 1)
+                bool isFirst;
+                lock (_released)
+                {
+                    _released.Add(NameOf(instances[0]));
+                    isFirst = _released.Count == 1;
+                }
+
+                if (isFirst)
                 {
                     _firstReleaseStarted.TrySetResult();
                     return _slowRelease.Task;
@@ -66,21 +81,22 @@ public class and_an_earlier_page_is_released_slower_than_a_later_one : for_ReadM
                 lock (_responses)
                 {
                     _responses.Add(response);
-                    if (_responses.Count == 2)
-                    {
-                        _bothPagesSent.TrySetResult();
-                    }
                 }
             },
-            error => _bothPagesSent.TrySetException(error));
+            error => _completed.TrySetException(error),
+            () => _completed.TrySetResult());
 
         await _firstReleaseStarted.Task.WaitAsync(_deadline);
         _slowRelease.SetResult([Named("first")]);
-        await _bothPagesSent.Task.WaitAsync(_deadline);
+
+        // The source has completed, so the result completes once everything that was going to be sent has been.
+        await _completed.Task.WaitAsync(_deadline);
     }
 
-    [Fact] void should_send_the_earlier_page_first() => _responses[0].Instances.Single().ShouldContain("first");
-    [Fact] void should_send_the_later_page_last() => _responses[1].Instances.Single().ShouldContain("second");
+    [Fact] void should_send_two_pages() => _responses.Count.ShouldEqual(2);
+    [Fact] void should_send_the_page_being_released_first() => _responses[0].Instances.Single().ShouldContain("first");
+    [Fact] void should_send_the_latest_page_last() => _responses[1].Instances.Single().ShouldContain("fourth");
+    [Fact] void should_release_only_the_first_and_the_latest_page() => _released.ShouldContainOnly(["first", "fourth"]);
 
     static ExpandoObject Named(string name)
     {
@@ -88,4 +104,6 @@ public class and_an_earlier_page_is_released_slower_than_a_later_one : for_ReadM
         ((IDictionary<string, object?>)instance)["name"] = name;
         return instance;
     }
+
+    static string NameOf(ExpandoObject instance) => (string)((IDictionary<string, object?>)instance)["name"]!;
 }

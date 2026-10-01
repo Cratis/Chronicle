@@ -24,11 +24,15 @@ public class LanguageService(
     IInstancesOf<IProjectionCodeGenerator> codeGenerators) : ILanguageService
 {
     /// <summary>
+    /// The Screenplay diagnostic code reported when a projection declares no block. Diagnostic codes are stable and
+    /// never reused, unlike the message text.
+    /// </summary>
+    /// <remarks>
     /// Screenplay requires a projection to declare at least one block. Chronicle's projection declaration
     /// language also counts `automap`, `no automap` and `sequence` as directives, so this specific
     /// diagnostic is relaxed when any of those are present on the projection.
-    /// </summary>
-    const string MissingDirectivesDiagnosticSuffix = "must contain at least one directive";
+    /// </remarks>
+    internal const string MissingDirectivesDiagnosticCode = "PLAY0057";
 
     readonly ScreenplayCompiler _compiler = new();
 
@@ -111,7 +115,7 @@ public class LanguageService(
         var errors = diagnostics
             .Where(diagnostic =>
                 diagnostic.Severity == DiagnosticSeverity.Error &&
-                !(ignoreMissingDirectives && diagnostic.Message.EndsWith(MissingDirectivesDiagnosticSuffix, StringComparison.Ordinal)))
+                !(ignoreMissingDirectives && diagnostic.Code == MissingDirectivesDiagnosticCode))
             .Select(diagnostic => new CompilerError(diagnostic.Message, diagnostic.Location.Line, diagnostic.Location.Column));
 
         return new CompilerErrors(errors);
