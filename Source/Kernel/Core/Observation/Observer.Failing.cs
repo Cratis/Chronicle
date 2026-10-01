@@ -25,6 +25,11 @@ public partial class Observer
         string exceptionStackTrace,
         FailureKind kind = FailureKind.Unknown)
     {
+        if (_retired)
+        {
+            return;
+        }
+
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         _metrics?.PartitionFailed();
         logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
