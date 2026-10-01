@@ -88,15 +88,20 @@ A partition whose last attempt is a `Timeout` does not count toward the quaranti
 Quarantining stops retries and needs an operator to undo, which is the right answer for an observer
 that is wrong and the wrong answer for one waiting on congestion that will clear on its own.
 
-A quarantine ends when:
+A quarantine ends when an operator clears it, with `cratis chronicle observers clear-quarantine` or from
+the Workbench, or when the observer is subscribed again. Who subscribes it, and when, depends on the observer:
 
-- An operator clears it, with `cratis chronicle observers clear-quarantine` or from the Workbench.
-- The observer is subscribed again. For an application's observers that is when the application's client
-  connects again, for example after a redeploy or restart. Projections and the other observers the Kernel
-  owns are subscribed again by the Kernel itself when it starts, so a Kernel restart ends their quarantine.
+| Observer | Subscribed again |
+| --- | --- |
+| Reactors and reducers of an application | When the application's client connects, including when it reconnects after a Kernel restart |
+| Projections | By the Kernel when it starts, and when a client registers a changed definition for the projection |
+| Webhooks and the Kernel's own reactors | By the Kernel when it starts |
+| Event store subscriptions | By the Kernel when it starts, and by a check the Kernel runs every minute that subscribes them again if they are not subscribed |
 
-An observer's grain being deactivated and activated again does not end it, and neither does a Kernel restart
-for an application's observers: they stay quarantined until the application connects again.
+A Kernel restart therefore ends every quarantine once the Kernel and its clients are back. The observer's
+grain being deactivated and activated again in a running Kernel does not end it: the observer is still
+**Quarantined** afterwards rather than **Disconnected**. Event store subscriptions are the exception, because
+the check that runs every minute finds them no longer subscribed and subscribes them again.
 
 ## Scaled-out clients
 
