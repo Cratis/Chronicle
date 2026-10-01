@@ -34,6 +34,10 @@ public partial class Observer
         await CheckConnectedClient();
         await RecoverIfStuck();
         await FlushDebouncedProgressState();
+        if (Failures.HasFailedPartitions || State.RunningState == ObserverRunningState.Quarantined)
+        {
+            await ReportAlertState();
+        }
     }
 
     /// <summary>

@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation.Alerts;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -40,6 +41,7 @@ public class an_observer : Specification
     protected IStreamProvider _sequenceStreamProvider;
     protected IObserverSubscriber _subscriber;
     protected IJobsManager _jobsManager;
+    protected IObserverAlerts _observerAlerts;
     protected IObserverServiceClient _observerServiceClient;
     protected FailedPartitions _failedPartitionsState;
     protected virtual ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
@@ -84,6 +86,7 @@ public class an_observer : Specification
             silo.AddKeyedService(WellKnown.MeterName, _meter);
         }
 
+        silo.AddProbe(_ => _observerAlerts);
         silo.AddProbe(_ => _subscriber);
         silo.AddProbe(_ => _jobsManager);
         silo.AddProbe(_ => _appendedEventsQueues);
@@ -103,6 +106,7 @@ public class an_observer : Specification
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_observersConfig);
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
+        _observerAlerts = Substitute.For<IObserverAlerts>();
         _eventSequence = Substitute.For<IEventSequence>();
 
         // A subscribed observer is on its queue - the queue only drops it behind the observer's back when it spills

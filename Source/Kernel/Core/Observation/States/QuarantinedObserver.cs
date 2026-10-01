@@ -51,6 +51,7 @@ public class QuarantinedObserver(
         observer.RecordObserverQuarantined();
         await observer.RemoveFailedPartitionReminders();
         await observer.StopAllRetryFailedPartitionJobs();
+        await observer.ReportAlertState();
 
         return state;
     }

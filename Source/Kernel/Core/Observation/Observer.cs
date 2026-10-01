@@ -167,6 +167,7 @@ public partial class Observer(
         {
             // With nobody subscribed this is the routing pass every activation of an unsubscribed observer already runs, so it drops nothing a plain reactivation would not.
             await ReviveFromQuarantine();
+            await ReportAlertState();
         }
     }
 
@@ -186,6 +187,7 @@ public partial class Observer(
         _removed = true;
         _stateWritingSuspended = true;
 
+        await ReportAlertsRemoved();
         DeactivateOnIdle();
     }
 

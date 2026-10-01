@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Alerts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -39,6 +40,7 @@ public partial class Observer
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             await failures.WriteStateAsync();
+            await ReportAlertState();
             return;
         }
 
@@ -51,6 +53,7 @@ public partial class Observer
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             await failures.WriteStateAsync();
+            await ReportAlertState();
             return;
         }
 
@@ -71,6 +74,8 @@ public partial class Observer
         {
             await WriteStateAsync();
         }
+
+        await ReportAlertState();
     }
 
     /// <inheritdoc/>
@@ -125,6 +130,7 @@ public partial class Observer
         var partitions = Failures.Partitions.Select(p => p.Partition).ToArray();
         if (partitions.Length == 0)
         {
+            await ReportAlertState(partitionsEndedAs: AlertClearedReason.Cleared);
             return;
         }
 
@@ -138,6 +144,7 @@ public partial class Observer
         State = State with { FailedPartitionCount = 0 };
         await failures.WriteStateAsync();
         await WriteStateAsync();
+        await ReportAlertState(partitionsEndedAs: AlertClearedReason.Cleared);
     }
 
     /// <inheritdoc/>
@@ -209,6 +216,8 @@ public partial class Observer
         {
             State = State with { FailedPartitionCount = State.FailedPartitionCount - 1 };
         }
+
+        await ReportAlertState(partitionsEndedAs: AlertClearedReason.Recovered);
     }
 
     async Task StartRecoverJobForFailedPartition(FailedPartition failedPartition)
