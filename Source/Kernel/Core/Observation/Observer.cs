@@ -164,6 +164,7 @@ public partial class Observer(
     {
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
+            // With nobody subscribed this is the routing pass every activation of an unsubscribed observer already runs, so it drops nothing a plain reactivation would not.
             await ReviveFromQuarantine();
         }
     }
