@@ -22,16 +22,6 @@ public interface IChronicleFixture : IAsyncDisposable
     IContainer MongoDBContainer { get; }
 
     /// <summary>
-    /// Gets the MongoDB connection string used by the host-side clients.
-    /// </summary>
-    string MongoDBConnectionString => $"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true";
-
-    /// <summary>
-    /// Gets the database-name prefix used by this fixture.
-    /// </summary>
-    string MongoDBDatabaseNamePrefix => string.Empty;
-
-    /// <summary>
     /// Gets the event store database.
     /// </summary>
     MongoDBDatabase EventStore { get; }

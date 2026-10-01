@@ -18,17 +18,11 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
     public const string HostName = "chronicle";
 
     /// <inheritdoc/>
-    protected override bool RequiresContainer => true;
-
-    /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
-        var waitStrategy = Wait.ForUnixContainer();
-        if (ExternalMongoDBConnectionString is null)
-        {
-            waitStrategy = waitStrategy.UntilInternalTcpPortIsAvailable(27017);
-        }
-        waitStrategy = waitStrategy.AddCustomWaitStrategy(new HttpsHealthWait(35000));
+        var waitStrategy = Wait.ForUnixContainer()
+            .UntilInternalTcpPortIsAvailable(27017)
+            .AddCustomWaitStrategy(new HttpsHealthWait(35000));
 
         var builder = new ContainerBuilder("cratis/chronicle:latest-development");
         builder = ConfigureImage(builder)
@@ -47,14 +41,6 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
                 Console.WriteLine($"Chronicle container {container.Id} started successfully");
                 return Task.CompletedTask;
             });
-
-        if (ExternalMongoDBConnectionString is not null)
-        {
-            builder = builder
-                .WithEnvironment("Cratis__Chronicle__Storage__Type", "MongoDB")
-                .WithEnvironment("Cratis__Chronicle__Storage__ConnectionDetails", ExternalMongoDBConnectionString)
-                .WithEnvironment("Cratis__Chronicle__Storage__DatabaseNamePrefix", MongoDBDatabaseNamePrefix);
-        }
 
         return WithReservedKernelPorts(builder).Build();
     }

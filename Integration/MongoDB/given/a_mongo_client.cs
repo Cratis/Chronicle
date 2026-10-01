@@ -11,7 +11,7 @@ public class a_mongo_client(ChronicleInProcessFixture fixture) : Specification(f
 
     void Establish()
     {
-        _client = new MongoClient(MongoDBConnectionString);
+        _client = new MongoClient($"mongodb://localhost:{MongoDBPort}/?directConnection=true");
     }
 
     public override void Dispose()

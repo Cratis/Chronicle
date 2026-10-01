@@ -26,16 +26,6 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     public IContainer MongoDBContainer { get; }
 
     /// <summary>
-    /// Gets the MongoDB connection string used by the host-side clients.
-    /// </summary>
-    public string MongoDBConnectionString => $"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true";
-
-    /// <summary>
-    /// Gets the database-name prefix used by this fixture.
-    /// </summary>
-    public string MongoDBDatabaseNamePrefix => string.Empty;
-
-    /// <summary>
     /// Gets the docker network.
     /// </summary>
     public INetwork Network { get; }

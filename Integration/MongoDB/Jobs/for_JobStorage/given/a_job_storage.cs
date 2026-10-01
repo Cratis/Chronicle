@@ -18,7 +18,7 @@ public class a_job_storage(ChronicleInProcessFixture fixture) : Integration.give
 
     async Task Establish()
     {
-        _databaseName = $"{MongoDBDatabaseNamePrefix}{Guid.NewGuid().ToString("N")[..16]}";
+        _databaseName = $"chronicle_job_storage_specs_{Guid.NewGuid():N}";
         _mongoDatabase = _client.GetDatabase(_databaseName);
 
         if (!BsonClassMap.IsClassMapRegistered(typeof(JobState)))

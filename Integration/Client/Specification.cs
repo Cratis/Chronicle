@@ -29,11 +29,10 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : XUnit
         // different databases prevents cross-silo interference.
         if (configurable.Options.StorageProvider == ChronicleStorageProvider.MongoDB)
         {
-            var server = configurable.MongoDBConnectionString;
-            var external = configurable.ExternalMongoDBConnectionString is not null;
-            var dbName = external ? "chronicle" : configurable.InProcessMongoDatabaseName;
-            var prefix = external ? configurable.InProcessMongoDatabaseNamePrefix : string.Empty;
-            return cb => Setup.MongoDBChronicleBuilderExtensions.WithMongoDB(cb, server, dbName, databaseNamePrefix: prefix);
+            var port = configurable.MongoDBContainer.GetMappedPublicPort(27017);
+            var server = $"mongodb://localhost:{port}/?directConnection=true";
+            var dbName = configurable.InProcessMongoDatabaseName;
+            return cb => Setup.MongoDBChronicleBuilderExtensions.WithMongoDB(cb, server, dbName);
         }
 
         if (configurable.InProcessStorageType is null)

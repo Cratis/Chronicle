@@ -30,7 +30,6 @@ public abstract class ChronicleFixture : IChronicleFixture
     MongoDBDatabase? _eventStoreForNamespace;
     MongoDBDatabase? _readModels;
     IContainer? _container;
-    INetwork? _network;
     bool _started;
     bool _reserveKernelPorts = true;
 
@@ -46,49 +45,27 @@ public abstract class ChronicleFixture : IChronicleFixture
         });
 
         Directory.CreateDirectory("backups");
+        Network = new NetworkBuilder()
+            .WithName(Guid.NewGuid().ToString("D"))
+            .Build();
 
         // MongoDBContainer is virtual so derived fixtures can swap the container source.
         // The override is the documented extension point; the base ctor must call it to
         // trigger the lazy build-and-start cycle that every fixture relies on.
 #pragma warning disable MA0056
-        if (RequiresContainer)
-        {
-            StartContainer(MongoDBContainer).GetAwaiter().GetResult();
-        }
+        StartContainer(MongoDBContainer).GetAwaiter().GetResult();
 #pragma warning restore MA0056
     }
 
     /// <summary>
-    /// Gets the externally supplied MongoDB connection string, if configured.
-    /// </summary>
-    public string? ExternalMongoDBConnectionString { get; } =
-        Environment.GetEnvironmentVariable("CHRONICLE_MONGODB_CONNECTION_DETAILS") is { Length: > 0 } value ? value : null;
-
-    /// <inheritdoc/>
-    public string MongoDBConnectionString => ExternalMongoDBConnectionString
-        ?? $"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true";
-
-    /// <inheritdoc/>
-    public string MongoDBDatabaseNamePrefix { get; } =
-        string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CHRONICLE_MONGODB_CONNECTION_DETAILS"))
-            ? string.Empty
-            : $"t_{Guid.NewGuid().ToString("N")[..16]}_";
-
-    /// <summary>
     /// Get the MongoDB container.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown when using an external MongoDB without a container.</exception>
     public virtual IContainer MongoDBContainer
     {
         get
         {
             lock (_containerLock)
             {
-                if (!RequiresContainer)
-                {
-                    throw new InvalidOperationException("An external MongoDB connection is configured; no MongoDB container exists.");
-                }
-
                 if (_container is null)
                 {
                     _container = BuildContainer(Network);
@@ -100,32 +77,16 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <inheritdoc/>
-    public INetwork Network
-    {
-        get
-        {
-            lock (_containerLock)
-            {
-                return _network ??= new NetworkBuilder()
-                    .WithName(Guid.NewGuid().ToString("D"))
-                    .Build();
-            }
-        }
-    }
+    public INetwork Network { get; }
 
     /// <inheritdoc/>
-    public MongoDBDatabase EventStore => _eventStore ??= new(MongoDBConnectionString, $"{MongoDBDatabaseNamePrefix}{Constants.EventStoreDatabaseName}");
+    public MongoDBDatabase EventStore => _eventStore ??= new(MongoDBContainer, Constants.EventStoreDatabaseName);
 
     /// <inheritdoc/>
-    public MongoDBDatabase EventStoreForNamespace => _eventStoreForNamespace ??= new(MongoDBConnectionString, $"{MongoDBDatabaseNamePrefix}{Constants.EventStoreNamespaceDatabaseName}");
+    public MongoDBDatabase EventStoreForNamespace => _eventStoreForNamespace ??= new(MongoDBContainer, Constants.EventStoreNamespaceDatabaseName);
 
     /// <inheritdoc/>
-    public MongoDBDatabase ReadModels => _readModels ??= new(MongoDBConnectionString, $"{MongoDBDatabaseNamePrefix}{Constants.ReadModelsDatabaseName}");
-
-    /// <summary>
-    /// Gets a value indicating whether this fixture must start a container.
-    /// </summary>
-    protected virtual bool RequiresContainer => ExternalMongoDBConnectionString is null;
+    public MongoDBDatabase ReadModels => _readModels ??= new(MongoDBContainer, Constants.ReadModelsDatabaseName);
 
     /// <summary>
     /// Gets the logger factory for creating loggers.
@@ -136,24 +97,12 @@ public abstract class ChronicleFixture : IChronicleFixture
     public virtual async ValueTask DisposeAsync()
     {
         await (_container?.DisposeAsync() ?? ValueTask.CompletedTask);
-        if (ExternalMongoDBConnectionString is not null)
-        {
-            _eventStore?.Dispose();
-            _eventStoreForNamespace?.Dispose();
-            _readModels?.Dispose();
-            await DropMongoDBDatabases();
-        }
-        await (_network?.DisposeAsync() ?? ValueTask.CompletedTask);
+        await Network.DisposeAsync();
     }
 
     /// <inheritdoc/>
     public virtual async Task PerformBackupAsync(string? prefix = null)
     {
-        if (ExternalMongoDBConnectionString is not null)
-        {
-            return;
-        }
-
         prefix ??= string.Empty;
         if (!string.IsNullOrEmpty(prefix))
         {
@@ -176,7 +125,25 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <inheritdoc/>
-    public virtual Task RemoveAllDatabases(IEnumerable<string>? excludePrefixes = null) => DropMongoDBDatabases(excludePrefixes);
+    public virtual async Task RemoveAllDatabases(IEnumerable<string>? excludePrefixes = null)
+    {
+        var urlBuilder = new MongoUrlBuilder($"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}")
+        {
+            DirectConnection = true
+        };
+        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
+
+        using var mongoClient = new MongoClient(settings);
+        var namesCursor = await mongoClient.ListDatabaseNamesAsync();
+        var names = await namesCursor.ToListAsync();
+        var systemNames = new[] { "admin", "config", "local" };
+        foreach (var name in names.Where(name =>
+            !systemNames.Contains(name) &&
+            excludePrefixes?.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase)) != true))
+        {
+            await mongoClient.DropDatabaseAsync(name);
+        }
+    }
 
     /// <summary>
     /// Restarts the MongoDB server so that client reconnection behavior can be tested.
@@ -190,29 +157,8 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public virtual async Task RestartMongoDBAsync()
     {
-        if (ExternalMongoDBConnectionString is not null)
-        {
-            return;
-        }
-
         await MongoDBContainer.StopAsync();
         await MongoDBContainer.StartAsync();
-    }
-
-    /// <summary>
-    /// Selects owned databases for cleanup, applying exclusions to their logical names.
-    /// </summary>
-    /// <param name="names">The available database names.</param>
-    /// <param name="databaseNamePrefix">The prefix identifying databases owned by the fixture.</param>
-    /// <param name="excludePrefixes">The logical database-name prefixes to preserve.</param>
-    /// <returns>The database names to drop.</returns>
-    internal static IEnumerable<string> GetMongoDBDatabasesToDrop(IEnumerable<string> names, string databaseNamePrefix, IEnumerable<string>? excludePrefixes = null)
-    {
-        var systemNames = new[] { "admin", "config", "local" };
-        return names.Where(name =>
-            !systemNames.Contains(name) &&
-            name.StartsWith(databaseNamePrefix, StringComparison.Ordinal) &&
-            excludePrefixes?.Any(p => name[databaseNamePrefix.Length..].StartsWith(p, StringComparison.OrdinalIgnoreCase)) != true);
     }
 
     /// <summary>
@@ -237,17 +183,6 @@ public abstract class ChronicleFixture : IChronicleFixture
             parameters.HostConfig = hostConfig;
         })
         : builder;
-
-    async Task DropMongoDBDatabases(IEnumerable<string>? excludePrefixes = null)
-    {
-        using var mongoClient = new MongoClient(MongoDBConnectionString);
-        using var namesCursor = await mongoClient.ListDatabaseNamesAsync();
-        var names = await namesCursor.ToListAsync();
-        foreach (var name in GetMongoDBDatabasesToDrop(names, MongoDBDatabaseNamePrefix, excludePrefixes))
-        {
-            await mongoClient.DropDatabaseAsync(name);
-        }
-    }
 
     async Task StartContainer(IContainer container)
     {

@@ -20,7 +20,7 @@ public class an_observer_state_storage(ChronicleInProcessFixture fixture) : Inte
     async Task Establish()
     {
         // MongoDB caps a database name at 63 characters and the suffix alone is 32, so the prefix has to stay short.
-        _databaseName = $"{MongoDBDatabaseNamePrefix}{Guid.NewGuid().ToString("N")[..16]}";
+        _databaseName = $"observer_state_specs_{Guid.NewGuid():N}";
         _mongoDatabase = _client.GetDatabase(_databaseName);
 
         _database = Substitute.For<IEventStoreNamespaceDatabase>();

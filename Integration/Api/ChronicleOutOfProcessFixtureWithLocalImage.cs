@@ -108,8 +108,9 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
 
     async Task EnsureAdminUserHasPassword()
     {
-        using var mongoClient = new MongoClient(MongoDBConnectionString);
-        var database = mongoClient.GetDatabase(DatabaseNames.WithPrefix(WellKnownDatabaseNames.Chronicle, MongoDBDatabaseNamePrefix));
+        var mongoUrl = new MongoUrl($"mongodb://localhost:{MongoDBPort}/?replicaSet=rs0&directConnection=true");
+        var mongoClient = new MongoClient(mongoUrl);
+        var database = mongoClient.GetDatabase(WellKnownDatabaseNames.Chronicle);
         var usersCollection = database.GetCollection<BsonDocument>("users");
 
         var existingUser = await usersCollection.Find(new BsonDocument("username", DefaultAdminUsername)).FirstOrDefaultAsync();
@@ -210,14 +211,6 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
                 Console.WriteLine($"Chronicle container {container.Id} started successfully");
                 return Task.CompletedTask;
             });
-
-        if (ExternalMongoDBConnectionString is not null)
-        {
-            builder = builder
-                .WithEnvironment("Cratis__Chronicle__Storage__Type", "MongoDB")
-                .WithEnvironment("Cratis__Chronicle__Storage__ConnectionDetails", ExternalMongoDBConnectionString)
-                .WithEnvironment("Cratis__Chronicle__Storage__DatabaseNamePrefix", MongoDBDatabaseNamePrefix);
-        }
 
         return WithReservedKernelPorts(builder).Build();
     }

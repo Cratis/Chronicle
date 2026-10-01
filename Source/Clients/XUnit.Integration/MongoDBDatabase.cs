@@ -22,18 +22,14 @@ public class MongoDBDatabase : IDisposable
     /// <param name="mongoDBContainer"><see cref="IContainer"/> for the MongoDB server.</param>
     /// <param name="database">Database to work with.</param>
     public MongoDBDatabase(IContainer mongoDBContainer, string database)
-        : this($"mongodb://{mongoDBContainer.Hostname}:{mongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true", database)
     {
-    }
+        var urlBuilder = new MongoUrlBuilder($"mongodb://{mongoDBContainer.Hostname}:{mongoDBContainer.GetMappedPublicPort(27017)}")
+        {
+            DirectConnection = true
+        };
+        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
 
-    /// <summary>
-    /// Initializes a new instance of <see cref="MongoDBDatabase"/> with an external connection string.
-    /// </summary>
-    /// <param name="connectionString">The MongoDB connection string.</param>
-    /// <param name="database">Database to work with.</param>
-    public MongoDBDatabase(string connectionString, string database)
-    {
-        _mongoClient = new(MongoClientSettings.FromConnectionString(connectionString));
+        _mongoClient = new(settings);
 
         Database = _mongoClient.GetDatabase(database);
         var changeDatabase = _mongoClient.GetDatabase($"{database}-changes");

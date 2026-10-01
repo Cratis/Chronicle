@@ -101,27 +101,18 @@ export CHRONICLE_SQLITE_CONNECTION_DETAILS="Data Source=/tmp/chronicle.db"
 
 ### Running against an external MongoDB
 
-> **Data-loss warning:** Never run out-of-process tests against a server containing valuable data with an older Chronicle kernel image. Images that ignore `DatabaseNamePrefix` can delete unrelated databases during reset. Build the current kernel image and select it with `CRATIS_CHRONICLE_LOCAL_IMAGE`. The client fixture refuses reset unless its prefixed cluster database exists and no new unprefixed Chronicle databases appeared after startup; this check does not make old images safe for shared servers.
-
-Set `CHRONICLE_MONGODB_CONNECTION_DETAILS` to a MongoDB connection string. The client, kernel, API, and MongoDB integration fixtures and `Storage.MongoDB.Specs` use it instead of starting their own MongoDB. The client and API out-of-process modes still require Docker for the Chronicle kernel.
+Set `CHRONICLE_MONGODB_CONNECTION_DETAILS` to a MongoDB connection string to run `Storage.MongoDB.Specs` against an external service instead of starting MongoDB containers. The client, kernel, API, MongoDB integration, and clustering suites do not support this external mode.
 
 ```bash
 export CHRONICLE_MONGODB_CONNECTION_DETAILS="mongodb://mongo.example.test:27017/?replicaSet=myReplicaSet"
-CHRONICLE_RUNTIME_MODE=inprocess CHRONICLE_STORAGE_PROVIDER=mongodb \
-    dotnet test Integration/Client/Client.csproj --configuration Release
-
-dotnet test Integration/MongoDB/MongoDB.csproj --configuration Release
-
 dotnet test Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj --configuration Release
 ```
 
-Use the service's connection string unchanged, including authentication, TLS, replica-set, or SRV options. For out-of-process tests, its address must be reachable both from your host and from the Chronicle container; `localhost` inside that container is not your host. Build a kernel image containing the current changes before running out-of-process tests.
+Use the service's connection string unchanged, including authentication, TLS, replica-set, or SRV options. Storage specs create unique, run-prefixed databases and remove only the databases they create. The prefix reduces the available database-name budget by its length. External mode does not start or restart containers or initiate a replica set.
 
-Each fixture generates a unique database-name prefix and configures the kernel and its database readers to use it. Cleanup and kernel resets are restricted to that prefix; unrelated databases are never dropped. Storage specs also create unique, run-prefixed databases and remove only the databases they create. Container restarts, replica-set initiation, and `mongodump` backups are skipped for external MongoDB, even with `CHRONICLE_BACKUP_ENABLED=true`.
+The external service must support the MongoDB features used by the Storage specs, including multi-document transactions and change streams for event-sequence and observation specs. Grant permissions to create and drop databases, create indexes, read/write collections, and enumerate database names. Providing a connection string does not imply compatibility with a managed service; a failing spec can reveal an unsupported feature.
 
-The external service must support the MongoDB features used by the selected suite, including multi-document transactions and change streams for event-sequence and observation specs. Grant permissions to create and drop databases, create indexes, read/write collections, and enumerate database names. Providing a connection string does not imply compatibility with a managed service; a failing spec can reveal an unsupported feature.
-
-Unset `CHRONICLE_MONGODB_CONNECTION_DETAILS` to return to the default container-backed fixtures. `CHRONICLE_MONGODB_IMAGE` and `CHRONICLE_SPECS_MONGODB_IMAGE` apply only when the fixtures start MongoDB themselves.
+Unset `CHRONICLE_MONGODB_CONNECTION_DETAILS` to return to the default container-backed Storage spec fixtures. `CHRONICLE_SPECS_MONGODB_IMAGE` applies only when these fixtures start MongoDB themselves.
 
 ### Running a single test
 

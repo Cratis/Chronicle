@@ -21,7 +21,7 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Integrat
 
     void Establish()
     {
-        _database = _client.GetDatabase($"{MongoDBDatabaseNamePrefix}{Guid.NewGuid().ToString("N")[..16]}");
+        _database = _client.GetDatabase($"chronicle_sink_specs_{Guid.NewGuid():N}");
         const string collectionName = "test_read_model";
         _collection = _database.GetCollection<BsonDocument>(collectionName);
 
