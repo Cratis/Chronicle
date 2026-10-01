@@ -22,7 +22,7 @@ public class and_several_pages_arrive_while_an_earlier_one_is_released : for_Rea
 
     readonly TaskCompletionSource<IEnumerable<ExpandoObject>> _slowRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _firstReleaseStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    readonly TaskCompletionSource _lastPageSent = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly List<ObserveInstancesResponse> _responses = [];
     readonly List<string> _released = [];
     MaterializedReadModels _materializedService;
@@ -35,6 +35,7 @@ public class and_several_pages_arrive_while_an_earlier_one_is_released : for_Rea
         _pages.OnNext([Named("second")]);
         _pages.OnNext([Named("third")]);
         _pages.OnNext([Named("fourth")]);
+        _pages.OnCompleted();
         _sink.ObserveInstances(Arg.Any<ReadModelContainerName?>(), Arg.Any<int>(), Arg.Any<int>()).Returns(_pages);
         _sink.GetInstances(Arg.Any<ReadModelContainerName?>(), Arg.Any<int>(), Arg.Any<int>()).Returns(new ReadModelInstances([], 4));
 
@@ -79,20 +80,16 @@ public class and_several_pages_arrive_while_an_earlier_one_is_released : for_Rea
                 lock (_responses)
                 {
                     _responses.Add(response);
-                    if (_responses.Count == 2)
-                    {
-                        _lastPageSent.TrySetResult();
-                    }
                 }
             },
-            error => _lastPageSent.TrySetException(error));
+            error => _completed.TrySetException(error),
+            () => _completed.TrySetResult());
 
         await _firstReleaseStarted.Task.WaitAsync(_deadline);
         _slowRelease.SetResult([Named("first")]);
-        await _lastPageSent.Task.WaitAsync(_deadline);
 
-        // Let anything that would still be queued after the latest page show itself before asserting.
-        await Task.Delay(200);
+        // The source has completed, so the result completes once everything that was going to be sent has been.
+        await _completed.Task.WaitAsync(_deadline);
     }
 
     [Fact] void should_send_two_pages() => _responses.Count.ShouldEqual(2);
