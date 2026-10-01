@@ -92,6 +92,13 @@ public class an_alert_tracker : Specification
 
     protected void AppendReturns(AppendResult result) => _sequence.Append(Arg.Any<EventSourceType>(), Arg.Any<EventSourceId>(), Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<CorrelationId>(), Arg.Any<IEnumerable<Causation>>(), Arg.Any<Identity>(), Arg.Any<IEnumerable<Tag>>(), Arg.Any<ConcurrencyScope>()).Returns(result);
 
+    protected void AppendSucceedsFrom(ulong nextSequenceNumber) => _sequence.Append(Arg.Any<EventSourceType>(), Arg.Any<EventSourceId>(), Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<CorrelationId>(), Arg.Any<IEnumerable<Causation>>(), Arg.Any<Identity>(), Arg.Any<IEnumerable<Tag>>(), Arg.Any<ConcurrencyScope>()).Returns(call =>
+    {
+        _lastScope = call.Arg<ConcurrencyScope>();
+        _appends.Add(_serialized);
+        return AppendResult.Success(CorrelationId.NotSet, nextSequenceNumber++);
+    });
+
     protected AlertRaised RaisedForSnapshot() => new(_snapshot.FailedPartitions.Single().Id, Concepts.Alerts.AlertConditionKind.PartitionFailing, Concepts.Alerts.AlertSeverity.Warning, AlertTarget.For(_key, "partition"), AlertEvidence.Create(1, _clock.Now, _clock.Now, FailureKind.Handling, "Failed"));
 
     void Destroy() => _metrics.Dispose();
