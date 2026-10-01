@@ -19,6 +19,10 @@ public static class ObserverStateConverters
         new()
         {
             Id = definition.Identifier,
+            AlertLifecycleId = definition.AlertLifecycleId,
+            AlertRevision = definition.AlertRevision,
+            AlertDisposition = definition.AlertDisposition,
+            QuarantineEpisodeId = definition.QuarantineEpisodeId,
             LastHandledEventSequenceNumber = definition.LastHandledEventSequenceNumber,
             NextEventSequenceNumber = definition.NextEventSequenceNumber,
             TailEventSequenceNumber = definition.TailEventSequenceNumber,
@@ -70,6 +74,10 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            AlertLifecycleId = state.AlertLifecycleId,
+            AlertRevision = state.AlertRevision,
+            AlertDisposition = state.AlertDisposition,
+            QuarantineEpisodeId = state.QuarantineEpisodeId,
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber
         };

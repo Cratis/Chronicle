@@ -39,6 +39,26 @@ public record ObserverState(
     readonly EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
 
     /// <summary>
+    /// Gets the source-owned lifecycle token, replaced on subscription but not activation.
+    /// </summary>
+    public Guid AlertLifecycleId { get; init; }
+
+    /// <summary>
+    /// Gets the revision of committed alert-relevant state in this lifecycle.
+    /// </summary>
+    public long AlertRevision { get; init; }
+
+    /// <summary>
+    /// Gets the durable lifecycle disposition used to fence alert reports and removal.
+    /// </summary>
+    public AlertDisposition AlertDisposition { get; init; }
+
+    /// <summary>
+    /// Gets the current quarantine episode identity, or null outside quarantine.
+    /// </summary>
+    public Guid? QuarantineEpisodeId { get; init; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ObserverState"/> class.
     /// </summary>
     public ObserverState()

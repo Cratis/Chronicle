@@ -100,6 +100,12 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         var renamed = new ObserverState
         {
             Id = newId,
+            AlertLifecycleId = existing.AlertLifecycleId,
+            AlertRevision = existing.AlertRevision,
+            AlertDisposition = existing.AlertDisposition,
+            QuarantineEpisodeId = existing.QuarantineEpisodeId,
+            NextEventSequenceNumber = existing.NextEventSequenceNumber,
+            SubscribesToAllEvents = existing.SubscribesToAllEvents,
             LastHandledEventSequenceNumber = existing.LastHandledEventSequenceNumber,
             TailEventSequenceNumber = existing.TailEventSequenceNumber,
             RunningState = existing.RunningState,
