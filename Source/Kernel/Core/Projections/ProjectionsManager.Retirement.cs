@@ -42,7 +42,7 @@ public partial class ProjectionsManager
         await WriteStateAsync();
     }
 
-    async Task RetireUnregisteredProjections(IReadOnlyList<ProjectionDefinition> registeredDefinitions, ProjectionOwner owner)
+    async Task RetireUnregisteredProjections(IReadOnlyList<ProjectionDefinition> registeredDefinitions, ProjectionOwner owner, Dictionary<ProjectionId, Exception> failures)
     {
         var registeredIdentifiers = registeredDefinitions.Select(definition => definition.Identifier).ToHashSet();
         var orphans = State.Projections
@@ -78,6 +78,7 @@ public partial class ProjectionsManager
             {
                 // The projection stays in the registered state so the next full-set registration retries
                 // retiring it, rather than leaving it half retired and forgotten.
+                failures[orphan.Identifier] = exception;
                 logger.FailedRetiringProjection(exception, orphan.Identifier);
             }
         }

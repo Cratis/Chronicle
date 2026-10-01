@@ -157,7 +157,7 @@ public partial class ProjectionsManager(
 
         if (fullSetOwner is not null)
         {
-            await RetireUnregisteredProjections(definitionList, fullSetOwner.Value);
+            await RetireUnregisteredProjections(definitionList, fullSetOwner.Value, failures);
         }
 
         if (failures.Count > 0)
