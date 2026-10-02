@@ -222,6 +222,10 @@ public partial class Observer(
         bool automatic = false)
         where TObserverSubscriber : IObserverSubscriber
     {
+        if (!automatic)
+        {
+            _recoverSubscriptionAfterQuarantine = false;
+        }
         var owner = GetOwner<TObserverSubscriber>();
         var wasQuarantined = IsQuarantined;
 
@@ -249,6 +253,7 @@ public partial class Observer(
         {
             // The quarantine belonged to a wiped world. Discard it only after all state has been reloaded,
             // so routing cannot act on stale definitions or failures from that world.
+            _recoverSubscriptionAfterQuarantine = false;
             _isPreparingCatchup = false;
             _catchupRecoveryAttempts = 0;
             _subscription = ObserverSubscription.Unsubscribed;
@@ -335,6 +340,7 @@ public partial class Observer(
         bool isReplayable = true)
         where TObserverSubscriber : IObserverSubscriber
     {
+        _recoverSubscriptionAfterQuarantine = false;
         var owner = GetOwner<TObserverSubscriber>();
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -410,6 +416,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        _recoverSubscriptionAfterQuarantine = false;
         await PauseJobs();
         _subscription = ObserverSubscription.Unsubscribed;
         await TransitionTo<Disconnected>();
@@ -548,6 +555,10 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override Task OnBeforeEnteringState(IState<ObserverState> state)
     {
+        if (state is not Disconnected)
+        {
+            _recoverSubscriptionAfterQuarantine = false;
+        }
         _isQuarantined = state is QuarantinedObserver;
         if (state is BaseObserverState observerState)
         {
@@ -563,7 +574,10 @@ public partial class Observer(
         if (state is Disconnected && _recoverSubscriptionAfterQuarantine)
         {
             _recoverSubscriptionAfterQuarantine = false;
-            await RecoverSubscribedObserver();
+            if (_subscription.IsSubscribed)
+            {
+                await RecoverSubscribedObserver();
+            }
         }
     }
 
