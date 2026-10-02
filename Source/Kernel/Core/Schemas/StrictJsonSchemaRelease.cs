@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 
@@ -71,6 +72,14 @@ internal sealed class StrictJsonSchemaRelease(IReadOnlyDictionary<(SchemaMetadat
 
             if (metadata.Length == 1)
             {
+                var type = ProtectedType(current);
+                if (type is not (JsonObjectType.String or JsonObjectType.Integer or JsonObjectType.Number or JsonObjectType.Boolean or JsonObjectType.Array or JsonObjectType.Object))
+                {
+                    // The codec encrypts ToString(), not typed JSON. Without exactly one non-null
+                    // type, a decrypted "42" cannot tell us whether the original was text or a number.
+                    return (false, null);
+                }
+
                 var entry = metadata[0];
                 if (!handlers.TryGetValue((entry.Category, entry.Metadata.metadataType), out var handler))
                 {
@@ -83,20 +92,21 @@ internal sealed class StrictJsonSchemaRelease(IReadOnlyDictionary<(SchemaMetadat
                     return (false, null);
                 }
 
-                // Encryption represents every scalar as text. Restore only the protected value's
-                // schema shape, never round-trip the document through a CLR event or drop members.
-                if (released is JsonValue scalar && scalar.TryGetValue<string>(out var text) &&
-                    !current.Type.HasFlag(JsonObjectType.String) &&
-                    (current.IsArray || (current.Type & (JsonObjectType.Object | JsonObjectType.Integer | JsonObjectType.Number | JsonObjectType.Boolean)) != JsonObjectType.None))
+                if (type != JsonObjectType.String && released is JsonValue scalar && scalar.TryGetValue<string>(out var text))
                 {
                     released = JsonNode.Parse(text);
-                    if (released is null)
-                    {
-                        return (false, null);
-                    }
                 }
 
-                return (true, released);
+                var valid = type switch
+                {
+                    JsonObjectType.String => released?.GetValueKind() == JsonValueKind.String,
+                    JsonObjectType.Boolean => released?.GetValueKind() is JsonValueKind.True or JsonValueKind.False,
+                    JsonObjectType.Integer or JsonObjectType.Number => released?.GetValueKind() == JsonValueKind.Number,
+                    JsonObjectType.Array => released is JsonArray,
+                    JsonObjectType.Object => released is JsonObject,
+                    _ => false
+                };
+                return (valid, released);
             }
 
             switch (node)
@@ -104,32 +114,82 @@ internal sealed class StrictJsonSchemaRelease(IReadOnlyDictionary<(SchemaMetadat
                 case JsonObject child when !current.DescribesGeospatialValue():
                     return (await ReleaseObject(current.ActualTypeSchema, child), child);
                 case JsonArray array:
-                    var item = current.ActualTypeSchema.Item?.ActualSchema;
-                    if (item is null)
-                    {
-                        return (false, null);
-                    }
-
-                    for (var index = 0; index < array.Count; index++)
-                    {
-                        if (array[index] is not { } element)
-                        {
-                            continue;
-                        }
-
-                        var (success, released) = await ReleaseNode(item, element, []);
-                        if (!success)
-                        {
-                            return (false, null);
-                        }
-
-                        array[index] = released;
-                    }
-
-                    break;
+                    return (await ReleaseArray(current.ActualTypeSchema, array), array);
             }
 
             return (true, node);
         }
+
+        async Task<bool> ReleaseArray(JsonSchema current, JsonArray array)
+        {
+            var item = current.Item?.ActualSchema;
+            if (item is null)
+            {
+                return false;
+            }
+
+            for (var index = 0; index < array.Count; index++)
+            {
+                if (array[index] is not { } element)
+                {
+                    continue;
+                }
+
+                // Mirror JsonSchemaMetadataManager.HandleActionForArray: object-level metadata
+                // protects each member, not the whole element. Nested arrays also descend first.
+                switch (element)
+                {
+                    case JsonObject child when !item.DescribesGeospatialValue():
+                        if (!await ReleaseObject(item, child))
+                        {
+                            return false;
+                        }
+
+                        break;
+                    case JsonArray nested:
+                        if (!await ReleaseArray(item, nested))
+                        {
+                            return false;
+                        }
+
+                        break;
+                    default:
+                        var (success, released) = await ReleaseNode(current.Item!, element, []);
+                        if (!success)
+                        {
+                            return false;
+                        }
+
+                        array[index] = released;
+                        break;
+                }
+            }
+
+            return true;
+        }
+    }
+
+    static JsonObjectType ProtectedType(JsonSchema schema)
+    {
+        // Do not use ActualTypeSchema here: for a union it selects the first non-null branch,
+        // which would hide exactly the ambiguity this operation must reject.
+        var type = schema.Type;
+        if (schema.HasReference)
+        {
+            type |= ProtectedType(schema.Reference!);
+        }
+
+        foreach (var alternative in schema.OneOf.Concat(schema.AnyOf).Concat(schema.AllOf))
+        {
+            var alternativeType = ProtectedType(alternative);
+            if (alternativeType == JsonObjectType.None && alternative.Type != JsonObjectType.Null)
+            {
+                return JsonObjectType.None;
+            }
+
+            type |= alternativeType;
+        }
+
+        return type & ~JsonObjectType.Null;
     }
 }
