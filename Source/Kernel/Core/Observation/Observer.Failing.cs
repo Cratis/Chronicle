@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Alerts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -24,78 +25,99 @@ public partial class Observer
         string exceptionStackTrace,
         FailureKind kind = FailureKind.Unknown)
     {
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        _metrics?.PartitionFailed();
-        logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
-        var partitionWasAlreadyFailed = Failures.IsFailed(partition);
-        var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
-        if (!partitionWasAlreadyFailed)
+        if (IsRetired || _removed)
         {
-            State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
-        }
-
-        _metrics?.PartitionRetryAttempt();
-        var config = await configurationProvider.GetFor(_observerKey);
-        if (State.RunningState == ObserverRunningState.Quarantined)
-        {
-            await failures.WriteStateAsync();
             return;
         }
 
-        if (ShouldQuarantineObserver(config))
+        var quarantineObserver = false;
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            var config = await configurationProvider.GetFor(_observerKey);
+            using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+            _metrics?.PartitionFailed();
+            logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
+            var partitionWasAlreadyFailed = Failures.IsFailed(partition);
+            var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
+            if (!partitionWasAlreadyFailed)
+            {
+                State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
+            }
+
+            _metrics?.PartitionRetryAttempt();
+            if (State.RunningState != ObserverRunningState.Quarantined)
+            {
+                quarantineObserver = ShouldQuarantineObserver(config);
+                if (!quarantineObserver)
+                {
+                    if (config.MaxRetryAttempts == 0 || failure.AttemptsInCurrentBudget <= config.MaxRetryAttempts)
+                    {
+                        var retryDelay = GetNextRetryDelay(failure, config);
+                        await this.RegisterOrUpdateReminder(PartitionReminderName(failure.Id), retryDelay, GetRetryReminderPeriod(retryDelay));
+                    }
+                    else
+                    {
+                        logger.QuarantiningFailedPartition(partition);
+                        failures.State.Quarantine(partition);
+                        _metrics?.PartitionQuarantined();
+                    }
+                }
+            }
+
+            // Fence old reports before the partition write. A crash between the two writes reports whichever
+            // partition level actually committed. Reports alone are coalesced, never these source writes.
+            ChangeAlertState();
+            await WriteStateAsync();
+            await failures.WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+
+        // Entering quarantine stops jobs, which can call the AlwaysInterleave recovery callbacks. Never hold the
+        // source mutation lock over those calls. The separate reporting turn runs after this transition commits.
+        if (quarantineObserver)
         {
             await TransitionTo<QuarantinedObserver>();
-        }
-
-        var attemptCount = failure.AttemptsInCurrentBudget;
-        if (State.RunningState == ObserverRunningState.Quarantined)
-        {
-            await failures.WriteStateAsync();
-            return;
-        }
-
-        if (config.MaxRetryAttempts == 0 || attemptCount <= config.MaxRetryAttempts)
-        {
-            var retryDelay = GetNextRetryDelay(failure, config);
-            await this.RegisterOrUpdateReminder(partition.ToString(), retryDelay, GetRetryReminderPeriod(retryDelay));
-        }
-        else
-        {
-            logger.QuarantiningFailedPartition(partition);
-            failures.State.Quarantine(partition);
-            _metrics?.PartitionQuarantined();
-        }
-
-        await failures.WriteStateAsync();
-        if (!partitionWasAlreadyFailed)
-        {
-            await WriteStateAsync();
         }
     }
 
     /// <inheritdoc/>
     public async Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
+        if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FailingPartitionRecovered(partition);
-        await ResolveFailedPartition(partition);
-        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
-        await WriteStateAsync();
+        await ResolveFailedPartition(partition, lastHandledEventSequenceNumber);
         await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>
     public async Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
-        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
-        await WriteStateAsync();
+        if (IsRetired || _removed) return;
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (IsRetired || _removed) return;
+            using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+            logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
+            HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+            await WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
     }
 
     /// <inheritdoc/>
     public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
+        ThrowIfSealed();
+        if (IsRetired) return PartitionRecoveryOutcome.PartitionNotFound;
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
@@ -121,34 +143,45 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task<ClearPartitionQuarantineResult> ClearPartitionQuarantine(Key partition, bool retry)
     {
+        ThrowIfSealed();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        if (!Failures.TryGet(partition, out var failure))
+        FailedPartition? failure;
+        await _alertMutationLock.WaitAsync();
+        try
         {
-            logger.SkippingClearPartitionQuarantineBecausePartitionNotFound(partition);
-            return new(ClearPartitionQuarantineOutcome.NotFound, PartitionRecoveryOutcome.Started);
-        }
+            if (IsRetired || _removed || !Failures.TryGet(partition, out failure))
+            {
+                logger.SkippingClearPartitionQuarantineBecausePartitionNotFound(partition);
+                return new(ClearPartitionQuarantineOutcome.NotFound, PartitionRecoveryOutcome.Started);
+            }
 
-        if (!failure.IsQuarantined)
+            if (!failure.IsQuarantined)
+            {
+                logger.SkippingClearPartitionQuarantineBecausePartitionNotQuarantined(partition);
+                return new(ClearPartitionQuarantineOutcome.NotQuarantined, PartitionRecoveryOutcome.Started);
+            }
+
+            logger.ClearingPartitionQuarantine(partition);
+            failures.State.ClearQuarantine(partition);
+            ChangeAlertState();
+            await failures.WriteStateAsync();
+            _metrics?.PartitionQuarantineCleared();
+        }
+        finally
         {
-            logger.SkippingClearPartitionQuarantineBecausePartitionNotQuarantined(partition);
-            return new(ClearPartitionQuarantineOutcome.NotQuarantined, PartitionRecoveryOutcome.Started);
+            _alertMutationLock.Release();
         }
-
-        logger.ClearingPartitionQuarantine(partition);
-        failures.State.ClearQuarantine(partition);
-        await failures.WriteStateAsync();
-        _metrics?.PartitionQuarantineCleared();
 
         if (!retry)
         {
-            await RegisterRetryReminder(failure, partition);
+            await RegisterRetryReminder(failure);
             return new(ClearPartitionQuarantineOutcome.Cleared, PartitionRecoveryOutcome.Started);
         }
 
         var retryOutcome = await TryStartRecoverJobForFailedPartition(partition);
         if (retryOutcome != PartitionRecoveryOutcome.Started)
         {
-            await RegisterRetryReminder(failure, partition);
+            await RegisterRetryReminder(failure);
         }
 
         return new(ClearPartitionQuarantineOutcome.Cleared, retryOutcome);
@@ -157,28 +190,21 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task ClearFailedPartitions()
     {
+        ThrowIfSealed();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        var partitions = Failures.Partitions.Select(p => p.Partition).ToArray();
-        if (partitions.Length == 0)
+        if (Failures.HasFailedPartitions)
         {
-            return;
+            logger.ClearingFailedPartitions(Failures.Partitions.Count());
+            await DiscardFailedPartitions(AlertClearedReason.Cleared);
         }
 
-        logger.ClearingFailedPartitions(partitions.Length);
-        foreach (var partition in partitions)
-        {
-            await RemoveReminder(partition);
-            failures.State.Remove(partition);
-        }
-
-        State = State with { FailedPartitionCount = 0 };
-        await failures.WriteStateAsync();
-        await WriteStateAsync();
+        ScheduleAlertReport();
     }
 
     /// <inheritdoc/>
     public async Task TryRecoverAllFailedPartitions()
     {
+        if (IsRetired || _removed) return;
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
@@ -236,26 +262,75 @@ public partial class Observer
     static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
         retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
 
-    async Task RegisterRetryReminder(FailedPartition failure, Key partition)
+    async Task RegisterRetryReminder(FailedPartition failure)
     {
         var config = await configurationProvider.GetFor(_observerKey);
         var retryDelay = GetNextRetryDelay(failure, config);
-        await this.RegisterOrUpdateReminder(partition.ToString(), retryDelay, GetRetryReminderPeriod(retryDelay));
+        await this.RegisterOrUpdateReminder(PartitionReminderName(failure.Id), retryDelay, GetRetryReminderPeriod(retryDelay));
     }
 
-    async Task ResolveFailedPartition(Key partition)
+    /// <summary>
+    /// Forgets every failed partition, in memory and in storage, along with the reminders retrying them.
+    /// </summary>
+    /// <param name="reason">The ending reason to retain for each discarded episode.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The updated observer state and failed partitions are both persisted before returning.
+    /// </remarks>
+    async Task DiscardFailedPartitions(AlertClearedReason reason)
     {
-        var partitionWasFailed = Failures.IsFailed(partition);
-        failures.State.Remove(partition);
-        await failures.WriteStateAsync();
-        if (partitionWasFailed)
+        await _alertMutationLock.WaitAsync();
+        try
         {
-            State = State with { FailedPartitionCount = State.FailedPartitionCount - 1 };
+            foreach (var partition in Failures.Partitions.ToArray())
+            {
+                _alertEndings[partition.Id] = reason;
+                await RemoveReminder(partition);
+                failures.State.Remove(partition.Partition);
+            }
+
+            State = State with { FailedPartitionCount = 0 };
+            ChangeAlertState();
+            await WriteStateAsync();
+            await failures.WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+    }
+
+    async Task ResolveFailedPartition(Key partition, EventSequenceNumber? lastHandled = null)
+    {
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (IsRetired || _removed) return;
+            if (lastHandled is not null)
+            {
+                HandleNewLastHandledEvent(lastHandled);
+            }
+
+            if (Failures.TryGet(partition, out var failure))
+            {
+                _alertEndings[failure.Id] = AlertClearedReason.Recovered;
+                failures.State.Remove(partition);
+                State = State with { FailedPartitionCount = State.FailedPartitionCount - 1 };
+            }
+
+            ChangeAlertState();
+            await WriteStateAsync();
+            await failures.WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
         }
     }
 
     async Task StartRecoverJobForFailedPartition(FailedPartition failedPartition)
     {
+        if (IsRetired || _removed) return;
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();

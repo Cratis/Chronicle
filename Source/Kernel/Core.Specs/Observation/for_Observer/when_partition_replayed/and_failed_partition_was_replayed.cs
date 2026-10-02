@@ -23,5 +23,5 @@ public class and_failed_partition_was_replayed : given.an_observer_with_replayin
     [Fact] void should_remove_failed_partition() => _failedPartitionsStorage.State.Partitions.ShouldBeEmpty();
     [Fact] void should_decrement_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual(FailedPartitionCount.Zero);
     [Fact] void should_persist_failed_partitions() => _failedPartitionsStorageStats.Writes.ShouldEqual(1);
-    [Fact] void should_persist_observer_state() => _storageStats.Writes.ShouldEqual(1);
+    [Fact] void should_persist_the_alert_fence_and_final_replay_progress() => _storageStats.Writes.ShouldEqual(2);
 }

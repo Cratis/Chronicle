@@ -5,9 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Namespaces;
-using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
@@ -24,8 +22,9 @@ namespace Cratis.Chronicle.Observation;
 /// Removal is deliberately store-wide rather than per namespace. An observer's definition, and the projection
 /// definition it has when it is a projection, are store-level records shared by every namespace; deleting those while
 /// leaving the namespaced state behind elsewhere produces exactly the half-present observer the removal exists to get
-/// rid of. So the guard is evaluated in every namespace and, only if it passes everywhere, the removal runs
-/// everywhere.
+/// rid of. The guard is evaluated in every namespace before sequential, nontransactional cleanup. A later failure
+/// does not restore earlier namespaces or undo committed retirement. Concurrent explicit registration is not fenced
+/// across namespaces or shared-definition cleanup.
 /// </remarks>
 public class ObserverRemover(
     IGrainFactory grainFactory,
@@ -55,7 +54,7 @@ public class ObserverRemover(
 
         foreach (var @namespace in namespaces)
         {
-            await RemoveFromNamespace(eventStore, observerId, eventSequenceId, @namespace);
+            await grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, eventSequenceId)).Remove();
         }
 
         await eventStoreStorage.Observers.Delete(observerId);
@@ -116,49 +115,6 @@ public class ObserverRemover(
         }
 
         return ObserverRemovalResult.Removed;
-    }
-
-    async Task RemoveFromNamespace(
-        EventStoreName eventStore,
-        ObserverId observerId,
-        EventSequenceId eventSequenceId,
-        EventStoreNamespaceName @namespace)
-    {
-        var observer = grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, eventSequenceId));
-
-        // The grain goes first. It holds the observer's definition, failures and reminders in memory and writes them
-        // back on its way out, so deleting the records while an activation is still alive is a race the records win.
-        await observer.Remove();
-        await DeleteJobs(eventStore, observerId, @namespace);
-
-        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
-        await namespaceStorage.Observers.Delete(observerId);
-        await namespaceStorage.FailedPartitions.RemoveAllFor(observerId);
-        await namespaceStorage.ObserverHandledCounts.RemoveAllFor(observerId);
-        await RemoveInFlightEvents(namespaceStorage, observerId);
-    }
-
-    async Task RemoveInFlightEvents(IEventStoreNamespaceStorage namespaceStorage, ObserverId observerId)
-    {
-        var inFlight = await namespaceStorage.InFlightEvents.GetFor(observerId);
-        foreach (var inFlightEvent in inFlight)
-        {
-            await namespaceStorage.InFlightEvents.Remove(observerId, inFlightEvent.Partition, inFlightEvent.EventSequenceNumber);
-        }
-    }
-
-    async Task DeleteJobs(EventStoreName eventStore, ObserverId observerId, EventStoreNamespaceName @namespace)
-    {
-        var jobsManager = grainFactory.GetJobsManager(eventStore, @namespace);
-        var jobs = await jobsManager.GetAllJobs();
-        var observerJobs = jobs
-            .Where(job => job.Request is IObserverJobRequest observerJobRequest && observerJobRequest.ObserverKey.ObserverId == observerId)
-            .ToArray();
-
-        foreach (var job in observerJobs)
-        {
-            await jobsManager.Delete(job.Id);
-        }
     }
 
     /// <summary>

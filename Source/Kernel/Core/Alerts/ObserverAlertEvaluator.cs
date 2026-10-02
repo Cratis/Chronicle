@@ -31,10 +31,10 @@ namespace Cratis.Chronicle.Alerts;
 /// A partition whose attempts exceed a positive maximum is also exhausted, even if observer-wide quarantine prevented
 /// the partition flag from being set. At exactly the maximum, one more retry is still allowed. With a maximum of 0
 /// (retry forever), only the partition quarantine flag makes it exhausted.</item>
-/// <item>An incident clears with <see cref="ObserverAlertSnapshot.PartitionsEndedAs"/> as soon as its partition is no
+/// <item>An incident clears with the episode's ending hint (or Recovered after a crash) as soon as its partition is no
 /// longer failing.</item>
 /// <item><c language="csharp">observer-quarantined</c> raises when the observer is quarantined, with a new incident identifier, and
-/// clears with <see cref="ObserverAlertSnapshot.QuarantineEndedAs"/> when it no longer is.</item>
+/// clears with the episode's ending hint (or Cleared after a crash) when it no longer is.</item>
 /// <item>A removed observer raises nothing, and every incident it has open clears with
 /// <see cref="AlertClearedReason.Removed"/>.</item>
 /// </list>
@@ -60,7 +60,7 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
         IReadOnlyCollection<OpenIncident> openIncidents,
         DateTimeOffset now)
     {
-        if (snapshot.IsRemoved)
+        if (snapshot.Disposition != AlertDisposition.Active)
         {
             return new([.. openIncidents.Select(incident => Cleared(snapshot, incident, AlertClearedReason.Removed))], null);
         }
@@ -68,12 +68,19 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
         var transitions = new List<object>();
         transitions.AddRange(ClearEndedIncidents(snapshot, openIncidents));
 
+        var incidentsById = new Dictionary<IncidentId, OpenIncident>();
+        foreach (var incident in openIncidents)
+        {
+            incidentsById.TryAdd(incident.Id, incident);
+        }
+
         DateTimeOffset? nextRaiseDue = null;
         if (!IsLeftOut(snapshot.Observer.ObserverId))
         {
             foreach (var partition in snapshot.FailedPartitions)
             {
-                var (transition, due) = EvaluatePartition(snapshot, partition, openIncidents.FirstOrDefault(_ => _.Id == partition.Id), now);
+                incidentsById.TryGetValue(partition.Id, out var incident);
+                var (transition, due) = EvaluatePartition(snapshot, partition, incident, now);
                 if (transition is not null)
                 {
                     transitions.Add(transition);
@@ -120,18 +127,19 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
 
     static IEnumerable<AlertCleared> ClearEndedIncidents(ObserverAlertSnapshot snapshot, IReadOnlyCollection<OpenIncident> openIncidents)
     {
+        var failedPartitionIds = snapshot.FailedPartitions.Select(partition => (IncidentId)partition.Id).ToHashSet();
         foreach (var incident in openIncidents)
         {
             if (incident.Condition == AlertConditionKind.ObserverQuarantined)
             {
-                if (!snapshot.IsQuarantined)
+                if (!snapshot.IsQuarantined || snapshot.QuarantineEpisodeId != incident.Id.Value)
                 {
-                    yield return Cleared(snapshot, incident, snapshot.QuarantineEndedAs);
+                    yield return Cleared(snapshot, incident, snapshot.Endings.GetValueOrDefault(incident.Id.Value, AlertClearedReason.Cleared));
                 }
             }
-            else if (IsPartitionCondition(incident.Condition) && snapshot.FailedPartitions.All(_ => _.Id != incident.Id))
+            else if (IsPartitionCondition(incident.Condition) && !failedPartitionIds.Contains(incident.Id))
             {
-                yield return Cleared(snapshot, incident, snapshot.PartitionsEndedAs);
+                yield return Cleared(snapshot, incident, snapshot.Endings.GetValueOrDefault(incident.Id.Value, AlertClearedReason.Recovered));
             }
         }
     }
@@ -183,13 +191,14 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
     AlertRaised? EvaluateQuarantine(ObserverAlertSnapshot snapshot, IReadOnlyCollection<OpenIncident> openIncidents, DateTimeOffset now)
     {
         var condition = conditions.For(AlertConditionKind.ObserverQuarantined);
-        if (!snapshot.IsQuarantined || !condition.Enabled || openIncidents.Any(_ => _.Condition == condition.Kind))
+        if (!snapshot.IsQuarantined || snapshot.QuarantineEpisodeId is null || !condition.Enabled ||
+            openIncidents.Any(_ => _.Condition == condition.Kind && _.Id.Value == snapshot.QuarantineEpisodeId))
         {
             return null;
         }
 
         return new AlertRaised(
-            IncidentId.New(),
+            new IncidentId(snapshot.QuarantineEpisodeId.Value),
             condition.Kind,
             condition.Severity,
             AlertTarget.For(snapshot.Observer, AlertPartition.None),

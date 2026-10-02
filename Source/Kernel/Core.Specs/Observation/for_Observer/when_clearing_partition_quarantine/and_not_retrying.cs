@@ -23,6 +23,6 @@ public class and_not_retrying : given.a_quarantined_partition
     [Fact] void should_not_start_a_recover_job() => _jobsManager.DidNotReceive()
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>());
     [Fact] void should_register_a_retry_reminder() => _silo.ReminderRegistry.Mock.Verify(
-        _ => _.RegisterOrUpdateReminder(It.IsAny<GrainId>(), Partition, It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>()),
+        _ => _.RegisterOrUpdateReminder(It.IsAny<GrainId>(), Observer.PartitionReminderName(FailedPartition.Id), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>()),
         Times.Once);
 }

@@ -17,6 +17,10 @@ public static class ObserverStateConverters
         new()
         {
             Id = state.Identifier,
+            AlertLifecycleId = state.AlertLifecycleId,
+            AlertRevision = state.AlertRevision,
+            AlertDisposition = state.AlertDisposition,
+            QuarantineEpisodeId = state.QuarantineEpisodeId,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
@@ -50,6 +54,10 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            AlertLifecycleId = state.AlertLifecycleId,
+            AlertRevision = state.AlertRevision,
+            AlertDisposition = state.AlertDisposition,
+            QuarantineEpisodeId = state.QuarantineEpisodeId,
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             InFlightPartitions = state.InFlightPartitions.ToHashSet(),
@@ -76,6 +84,10 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            AlertLifecycleId = state.AlertLifecycleId,
+            AlertRevision = state.AlertRevision,
+            AlertDisposition = state.AlertDisposition,
+            QuarantineEpisodeId = state.QuarantineEpisodeId,
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             InFlightPartitions = state.InFlightPartitions.ToHashSet(),

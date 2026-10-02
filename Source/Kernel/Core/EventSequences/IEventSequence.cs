@@ -27,6 +27,17 @@ public interface IEventSequence : IGrainWithStringKey
     Task Rehydrate();
 
     /// <summary>
+    /// Wait for preceding append calls to finish executing on this sequence.
+    /// </summary>
+    /// <returns>Awaitable task. Failure or timeout does not confirm that preceding appends have finished.</returns>
+    /// <remarks>
+    /// This call must not interleave with appends. A caller's response timeout does not cancel an executing append;
+    /// awaiting this barrier before reading storage prevents acknowledging history while that append can still commit.
+    /// This is an execution barrier, not a reservation against future appends or a storage transaction fence.
+    /// </remarks>
+    Task DrainAppends();
+
+    /// <summary>
     /// Re-read the constraints registered for the event store and rebuild the validators from them.
     /// </summary>
     /// <returns>Awaitable task.</returns>
