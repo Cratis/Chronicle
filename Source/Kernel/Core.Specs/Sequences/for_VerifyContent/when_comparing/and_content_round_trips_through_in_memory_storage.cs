@@ -19,7 +19,7 @@ public class and_content_round_trips_through_in_memory_storage : given.content_w
         _stored = cursor.Current.Single();
     }
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_recognize_the_duplicate_after_storage_conversion() => _result.Result.ShouldEqual(ContentVerificationResult.Equal);
 }

@@ -51,6 +51,9 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public bool SupportsRevisionTracking => true;
+
+    /// <inheritdoc/>
     public string SerializeContentForVerification(ExpandoObject content, JsonSchema schema) => Serialize(content);
 
     /// <inheritdoc/>

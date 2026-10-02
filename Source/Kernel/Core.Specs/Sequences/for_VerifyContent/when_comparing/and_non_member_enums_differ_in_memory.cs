@@ -11,7 +11,7 @@ public class and_non_member_enums_differ_in_memory : given.a_storage_round_trip
         _command = _command with { Content = """{"flags":0,"status":0}""" };
     }
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_not_substitute_the_declared_zero_member() => _result.Result.ShouldEqual(ContentVerificationResult.Different);
 }

@@ -9,7 +9,7 @@ public class and_the_event_is_redacted : given.a_stored_event
 {
     void Establish() => _stored = _stored with { Context = _stored.Context with { EventType = new(GlobalEventTypes.Redaction, EventTypeGeneration.First) } };
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_report_unavailable() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }

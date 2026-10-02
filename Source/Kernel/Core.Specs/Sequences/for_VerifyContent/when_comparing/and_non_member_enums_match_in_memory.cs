@@ -7,7 +7,7 @@ public class and_non_member_enums_match_in_memory : given.a_storage_round_trip
 {
     async Task Establish() => await Store(EnumSchema, NonMemberEnums, sql: false);
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_compare_the_stored_enum_values() => _result.Result.ShouldEqual(ContentVerificationResult.Equal);
 }

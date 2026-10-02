@@ -11,7 +11,7 @@ public class and_decimal_digits_differ_in_memory : given.a_storage_round_trip
         _command = _command with { Content = """{"value":0.1234567890123456789012345679}""" };
     }
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_detect_the_last_decimal_digit() => _result.Result.ShouldEqual(ContentVerificationResult.Different);
 }

@@ -138,7 +138,9 @@ internal sealed class StrictJsonSchemaRelease(IReadOnlyDictionary<(SchemaMetadat
             var item = current.Item?.ActualSchema;
             if (item is null)
             {
-                return false;
+                // Apply skips an array with no item schema. Any metadata on the array itself
+                // has already been handled at its protected boundary before reaching here.
+                return true;
             }
 
             for (var index = 0; index < array.Count; index++)

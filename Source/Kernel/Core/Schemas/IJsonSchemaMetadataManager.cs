@@ -86,4 +86,16 @@ public interface IJsonSchemaMetadataManager
     /// <param name="convert">The loss-checked backend conversion.</param>
     /// <returns>The plaintext storage shape, or null if it cannot be established without loss.</returns>
     Task<JsonObject?> TryPrepareForComparison(JsonSchema schema, JsonObject json, Func<JsonObject, JsonObject?> convert) => Task.FromResult<JsonObject?>(null);
+
+    /// <summary>
+    /// Masks protected values before migration and restores them in every generation's storage shape.
+    /// </summary>
+    /// <param name="schema">The attempted generation schema.</param>
+    /// <param name="json">The attempted plaintext.</param>
+    /// <param name="convert">The loss-checked migration and backend conversion for each generation.</param>
+    /// <returns>Complete plaintext generation content, or null if any generation cannot be prepared.</returns>
+    Task<IReadOnlyDictionary<int, JsonObject>?> TryPrepareGenerationsForComparison(
+        JsonSchema schema,
+        JsonObject json,
+        Func<JsonObject, Task<IReadOnlyDictionary<int, (JsonSchema Schema, JsonObject Content)>?>> convert) => Task.FromResult<IReadOnlyDictionary<int, JsonObject>?>(null);
 }

@@ -35,6 +35,9 @@ public class EventSequenceStorage(
     IIdentityStorage identityStorage,
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
 {
+    /// <inheritdoc/>
+    public bool SupportsRevisionTracking => false;
+
     /// <summary>
     /// Truncate a <see cref="DateTimeOffset"/> to microsecond precision (10 .NET ticks).
     /// </summary>

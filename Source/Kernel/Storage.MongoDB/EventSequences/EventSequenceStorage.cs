@@ -55,6 +55,9 @@ public class EventSequenceStorage(
     readonly IMongoCollection<Event> _collection = database.GetEventSequenceCollectionFor(eventSequenceId);
 
     /// <inheritdoc/>
+    public bool SupportsRevisionTracking => true;
+
+    /// <inheritdoc/>
     public string SerializeContentForVerification(ExpandoObject content, JsonSchema schema) => SerializeContent(content, schema).ToString();
 
     /// <inheritdoc/>

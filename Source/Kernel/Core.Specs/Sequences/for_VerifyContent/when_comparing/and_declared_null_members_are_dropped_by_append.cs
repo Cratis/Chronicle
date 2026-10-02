@@ -7,7 +7,7 @@ public class and_declared_null_members_are_dropped_by_append : given.a_storage_r
 {
     async Task Establish() => await Store("""{"type":"object","properties":{"value":{"type":["string","null"]},"name":{"type":"string"}}}""", """{"value":null,"name":"kept"}""", sql: true);
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_compare_the_append_shape_without_restoring_dropped_members() => _result.Result.ShouldEqual(ContentVerificationResult.Equal);
 }
