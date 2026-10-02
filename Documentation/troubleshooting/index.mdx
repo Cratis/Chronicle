@@ -59,12 +59,7 @@ A partition that ran out of retries before your fix was deployed is quarantined,
 
 ### Clear the quarantine of one reactor partition from a client
 
-```csharp
-var result = await reactors.ClearFailedPartitionQuarantineFor<MyReactor>(partition, retryImmediately: true);
-
-// result.Outcome:      Cleared, NotFound or NotQuarantined
-// result.RetryOutcome: Started, ObserverQuarantined, ... (only meaningful when retryImmediately is true)
-```
+<ChronicleClientTabs snippet="troubleshooting/clear-partition-quarantine" />
 
 Every refusal has its own outcome — nothing reports success when it changed nothing. The same operation is available on the `Observers` service as `ClearPartitionQuarantine`.
 
