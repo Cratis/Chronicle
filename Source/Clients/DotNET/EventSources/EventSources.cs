@@ -12,11 +12,10 @@ namespace Cratis.Chronicle.EventSources;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSources"/>.
 /// </summary>
-/// <param name="eventStore">The <see cref="IEventStore"/> the event sources belong to.</param>
+/// <param name="eventStore">The <see cref="IEventStore"/> the event sources belong to. Can be null for discovery only, in which case <see cref="Register"/> is not possible.</param>
 /// <param name="clientArtifacts">The <see cref="IClientArtifactsProvider"/> providing the event source types.</param>
-public class EventSources(IEventStore eventStore, IClientArtifactsProvider clientArtifacts) : IEventSources
+public class EventSources(IEventStore? eventStore, IClientArtifactsProvider clientArtifacts) : IEventSources
 {
-    readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     FrozenDictionary<Type, EventSourceDefinition> _byType = FrozenDictionary<Type, EventSourceDefinition>.Empty;
     FrozenDictionary<string, EventSourceDefinition> _byName = FrozenDictionary<string, EventSourceDefinition>.Empty;
 
@@ -49,7 +48,13 @@ public class EventSources(IEventStore eventStore, IClientArtifactsProvider clien
             return;
         }
 
-        await _servicesAccessor.Services.EventSources.RegisterEventSources(new RegisterEventSourcesRequest
+        if (eventStore is null)
+        {
+            throw new InvalidOperationException("Event sources can only be registered when they belong to an event store.");
+        }
+
+        var servicesAccessor = (IChronicleServicesAccessor)eventStore.Connection;
+        await servicesAccessor.Services.EventSources.RegisterEventSources(new RegisterEventSourcesRequest
         {
             EventStore = eventStore.Name.Value,
             Sources = [.. All.Select(_ => _.ToContract())]
