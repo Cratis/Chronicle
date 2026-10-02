@@ -28,12 +28,14 @@ public static class ImplementationValues
     /// </exception>
     public static string ToDomain(string expression, Type declaredType, bool isNullable = false)
     {
-        // A nullable value type wrapping something that needs converting (a struct-backed concept, a nullable
-        // enum shared type) has no defined behavior here: unlike the response side's ForNullable, which special
-        // cases a transport stand-in and otherwise refuses, a request parameter is rare enough there is no
-        // proven cast/null-check shape to fall back to. Refuse rather than silently treating the wire value as
-        // already being the domain type, which is what happens when a generic type - Nullable<T> is one - falls
-        // through the checks below untouched.
+        // A lifted enum cast preserves null and converts between the generated mirror and domain enum.
+        if (Nullable.GetUnderlyingType(declaredType) is { IsEnum: true } enumType &&
+            SharedTypeRegistry.QualifiedNameFor(enumType) is not null)
+        {
+            return $"({QualifiedTypeName.For(enumType)}?){expression}";
+        }
+
+        // Other nullable value types needing conversion still have no defined request conversion.
         if (Nullable.GetUnderlyingType(declaredType) is { } underlyingType &&
             (TypeHelper.IsConceptType(underlyingType) || SharedTypeRegistry.QualifiedNameFor(underlyingType) is not null))
         {
