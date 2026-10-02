@@ -116,7 +116,7 @@ public partial class Observer
         if (_catchupRecoveryAttempts > config.MaxCatchupRecoveryAttempts)
         {
             logger.GivingUpOnCatchupPreparationRecovery(_catchupRecoveryAttempts, config.MaxCatchupRecoveryAttempts);
-            await TransitionTo<QuarantinedObserver>();
+            await RequestQuarantine();
             return true;
         }
 
