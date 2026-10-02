@@ -26,6 +26,10 @@ public interface ICausationManager
     /// </summary>
     /// <param name="type">Type to add.</param>
     /// <param name="properties">Properties associated with the causation.</param>
+    /// <remarks>
+    /// Additions apply to the current async flow and flows it starts afterwards. They do not propagate back to
+    /// the caller after an awaited async method returns.
+    /// </remarks>
     void Add(CausationType type, IDictionary<string, string> properties);
 
     /// <summary>
@@ -35,6 +39,11 @@ public interface ICausationManager
     /// <param name="properties">Properties associated with the causation.</param>
     /// <returns>An <see cref="IDisposable"/> that removes the causation again.</returns>
     /// <remarks>
+    /// <para>
+    /// Like <see cref="Add"/>, the addition applies to the current async flow and flows it starts afterwards,
+    /// not back to the caller after an awaited async method returns. Scope disposal is shared with flows forked
+    /// inside the scope, including disposal after awaiting.
+    /// </para>
     /// <para>
     /// <see cref="Add"/> is append-only, which is right for a link that describes how the work arrived and stays
     /// true for everything that follows - an HTTP request, a reactor invocation. It is wrong for a link that
