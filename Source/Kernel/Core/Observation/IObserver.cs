@@ -327,6 +327,14 @@ public interface IObserver : IGrainWithStringKey
     Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition);
 
     /// <summary>
+    /// Clear the quarantine of a single failed partition and reset its retry budget, keeping its attempt history.
+    /// </summary>
+    /// <param name="partition">The quarantined partition.</param>
+    /// <param name="retry">Whether to start recovering the partition immediately.</param>
+    /// <returns>The <see cref="ClearPartitionQuarantineResult"/> describing what happened.</returns>
+    Task<ClearPartitionQuarantineResult> ClearPartitionQuarantine(Key partition, bool retry);
+
+    /// <summary>
     /// Clear all failed partition records for the observer, giving an operator a supported way to recover a wedged
     /// observer without direct storage surgery.
     /// </summary>

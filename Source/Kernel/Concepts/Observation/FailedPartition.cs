@@ -48,6 +48,18 @@ public class FailedPartition
     public bool IsQuarantined { get; set; }
 
     /// <summary>
+    /// Gets or sets how many of <see cref="Attempts"/> were made before the retry budget was last reset.
+    /// Clearing the quarantine of a partition starts a new retry budget without discarding the attempt history.
+    /// </summary>
+    public int AttemptsBeforeBudgetReset { get; set; }
+
+    /// <summary>
+    /// Gets the number of attempts counted against the current retry budget, which is the attempts made since the
+    /// budget was last reset.
+    /// </summary>
+    public int AttemptsInCurrentBudget => Math.Max(0, _attempts.Count - AttemptsBeforeBudgetReset);
+
+    /// <summary>
     /// Gets the last attempt for the failed partition.
     /// </summary>
     public FailedPartitionAttempt LastAttempt => _attempts.LastOrDefault() ?? FailedPartitionAttempt.NoAttempt;

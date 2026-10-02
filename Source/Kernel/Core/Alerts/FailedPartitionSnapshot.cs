@@ -18,6 +18,8 @@ namespace Cratis.Chronicle.Alerts;
 /// <param name="FirstAttempt">When the partition first failed.</param>
 /// <param name="LastAttempt">When the partition last failed.</param>
 /// <param name="AttemptCount">How many times the partition has failed.</param>
+/// <param name="AttemptsInCurrentBudget">How many of the attempts count against the current retry budget, which is
+/// the attempts since the quarantine of the partition was last cleared.</param>
 /// <param name="IsQuarantined">Whether the partition has run out of retries and will not be retried automatically.</param>
 /// <param name="FailureKind">What kind of thing went wrong on the latest failure.</param>
 /// <param name="Message">The first message of the latest failure.</param>
@@ -27,6 +29,7 @@ public record FailedPartitionSnapshot(
     DateTimeOffset FirstAttempt,
     DateTimeOffset LastAttempt,
     int AttemptCount,
+    int AttemptsInCurrentBudget,
     bool IsQuarantined,
     FailureKind FailureKind,
     string Message);

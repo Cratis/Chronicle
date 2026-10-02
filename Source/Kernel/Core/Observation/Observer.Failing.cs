@@ -47,7 +47,7 @@ public partial class Observer
             await TransitionTo<QuarantinedObserver>();
         }
 
-        var attemptCount = failure.Attempts.Count();
+        var attemptCount = failure.AttemptsInCurrentBudget;
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             await failures.WriteStateAsync();
@@ -119,6 +119,42 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
+    public async Task<ClearPartitionQuarantineResult> ClearPartitionQuarantine(Key partition, bool retry)
+    {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        if (!Failures.TryGet(partition, out var failure))
+        {
+            logger.SkippingClearPartitionQuarantineBecausePartitionNotFound(partition);
+            return new(ClearPartitionQuarantineOutcome.NotFound, PartitionRecoveryOutcome.Started);
+        }
+
+        if (!failure.IsQuarantined)
+        {
+            logger.SkippingClearPartitionQuarantineBecausePartitionNotQuarantined(partition);
+            return new(ClearPartitionQuarantineOutcome.NotQuarantined, PartitionRecoveryOutcome.Started);
+        }
+
+        logger.ClearingPartitionQuarantine(partition);
+        failures.State.ClearQuarantine(partition);
+        await failures.WriteStateAsync();
+        _metrics?.PartitionQuarantineCleared();
+
+        if (!retry)
+        {
+            await RegisterRetryReminder(failure, partition);
+            return new(ClearPartitionQuarantineOutcome.Cleared, PartitionRecoveryOutcome.Started);
+        }
+
+        var retryOutcome = await TryStartRecoverJobForFailedPartition(partition);
+        if (retryOutcome != PartitionRecoveryOutcome.Started)
+        {
+            await RegisterRetryReminder(failure, partition);
+        }
+
+        return new(ClearPartitionQuarantineOutcome.Cleared, retryOutcome);
+    }
+
+    /// <inheritdoc/>
     public async Task ClearFailedPartitions()
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -152,7 +188,7 @@ public partial class Observer
         var config = await configurationProvider.GetFor(_observerKey);
         foreach (var partition in Failures.Partitions.Where(p => !p.IsQuarantined))
         {
-            var attemptCount = partition.Attempts.Count();
+            var attemptCount = partition.AttemptsInCurrentBudget;
             if (config.MaxRetryAttempts > 0 && attemptCount > config.MaxRetryAttempts)
             {
                 logger.SkippingRecoveryMaxAttemptsExceeded(partition.Partition, attemptCount, config.MaxRetryAttempts);
@@ -170,7 +206,7 @@ public partial class Observer
 
     static TimeSpan GetNextRetryDelay(FailedPartition failure, Observers config)
     {
-        var time = TimeSpan.FromSeconds(config.BackoffDelay * Math.Pow(config.ExponentialBackoffDelayFactor, failure.Attempts.Count()));
+        var time = TimeSpan.FromSeconds(config.BackoffDelay * Math.Pow(config.ExponentialBackoffDelayFactor, failure.AttemptsInCurrentBudget));
         var maxTime = TimeSpan.FromSeconds(config.MaximumBackoffDelay);
 
         if (time > maxTime)
@@ -199,6 +235,13 @@ public partial class Observer
     /// </remarks>
     static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
         retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
+
+    async Task RegisterRetryReminder(FailedPartition failure, Key partition)
+    {
+        var config = await configurationProvider.GetFor(_observerKey);
+        var retryDelay = GetNextRetryDelay(failure, config);
+        await this.RegisterOrUpdateReminder(partition.ToString(), retryDelay, GetRetryReminderPeriod(retryDelay));
+    }
 
     async Task ResolveFailedPartition(Key partition)
     {

@@ -144,5 +144,22 @@ public class FailedPartitions
         }
     }
 
+    /// <summary>
+    /// Clear the quarantine of a failed partition and start a new retry budget for it, keeping its attempt history.
+    /// </summary>
+    /// <param name="partition"><see cref="Key"/> to clear the quarantine for.</param>
+    /// <returns>True when the partition was quarantined and is now cleared, false when it is unknown or was not quarantined.</returns>
+    public bool ClearQuarantine(Key partition)
+    {
+        if (!TryGet(partition, out var failedPartition) || !failedPartition.IsQuarantined)
+        {
+            return false;
+        }
+
+        failedPartition.IsQuarantined = false;
+        failedPartition.AttemptsBeforeBudgetReset = failedPartition.Attempts.Count();
+        return true;
+    }
+
     void Add(FailedPartition failedPartition) => _partitions[failedPartition.Id] = failedPartition;
 }
