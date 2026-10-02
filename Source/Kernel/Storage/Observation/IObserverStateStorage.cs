@@ -31,6 +31,13 @@ public interface IObserverStateStorage
     Task<IEnumerable<ObserverState>> GetAll();
 
     /// <summary>
+    /// Gets the identifiers of retired observers among the submitted candidates without loading their state.
+    /// </summary>
+    /// <param name="observerIds">The candidate observer identifiers.</param>
+    /// <returns>The identifiers of candidates whose alert disposition is retired.</returns>
+    Task<IEnumerable<ObserverId>> GetRetired(IEnumerable<ObserverId> observerIds);
+
+    /// <summary>
     /// Save the state of an observer.
     /// </summary>
     /// <param name="state"><see cref="ObserverState"/> to save.</param>

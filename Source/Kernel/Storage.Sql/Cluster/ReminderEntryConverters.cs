@@ -1,6 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+
 namespace Cratis.Chronicle.Storage.Sql.Cluster;
 
 /// <summary>
@@ -14,7 +18,15 @@ public static class ReminderEntryConverters
     /// <param name="grainId">The grain identifier.</param>
     /// <param name="reminderName">The reminder name.</param>
     /// <returns>The row key.</returns>
-    public static string GetRowKey(GrainId grainId, string reminderName) => $"{grainId}-{reminderName}";
+    public static string GetRowKey(GrainId grainId, string reminderName)
+    {
+        var legacyKey = GetLegacyRowKey(grainId, reminderName);
+        if (legacyKey.Length <= 200) return legacyKey;
+
+        // A serialized pair avoids delimiter ambiguity. The hash bounds the complete key, including long grain IDs.
+        var identity = JsonSerializer.Serialize(new[] { grainId.ToString(), reminderName });
+        return $"sha256:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)))}";
+    }
 
     /// <summary>
     /// Gets the hash a reminder is stored under, which is what the reminder service reads ranges of reminders by.
@@ -60,4 +72,12 @@ public static class ReminderEntryConverters
             StartAt = entry.StartAt.ToBinary(),
             Period = (long)entry.Period.TotalMilliseconds
         };
+
+    /// <summary>
+    /// Gets the composite key used by earlier versions, including oversized keys accepted by SQLite.
+    /// </summary>
+    /// <param name="grainId">The grain identifier.</param>
+    /// <param name="reminderName">The reminder name.</param>
+    /// <returns>The legacy row key.</returns>
+    internal static string GetLegacyRowKey(GrainId grainId, string reminderName) => $"{grainId}-{reminderName}";
 }

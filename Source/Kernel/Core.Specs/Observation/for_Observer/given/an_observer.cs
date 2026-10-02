@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -10,6 +11,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation.Alerts;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -20,6 +22,7 @@ using Cratis.Orleans.Storage.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute.Extensions;
 using Orleans.Core;
 using Orleans.Streams;
 using Orleans.TestKit;
@@ -40,6 +43,7 @@ public class an_observer : Specification
     protected IStreamProvider _sequenceStreamProvider;
     protected IObserverSubscriber _subscriber;
     protected IJobsManager _jobsManager;
+    protected IObserverAlerts _observerAlerts;
     protected IObserverServiceClient _observerServiceClient;
     protected FailedPartitions _failedPartitionsState;
     protected virtual ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
@@ -84,6 +88,7 @@ public class an_observer : Specification
             silo.AddKeyedService(WellKnown.MeterName, _meter);
         }
 
+        silo.AddProbe(_ => _observerAlerts);
         silo.AddProbe(_ => _subscriber);
         silo.AddProbe(_ => _jobsManager);
         silo.AddProbe(_ => _appendedEventsQueues);
@@ -103,6 +108,8 @@ public class an_observer : Specification
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_observersConfig);
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
+        _observerAlerts = Substitute.For<IObserverAlerts>();
+        ApplyAlertReports();
         _eventSequence = Substitute.For<IEventSequence>();
 
         // A subscribed observer is on its queue - the queue only drops it behind the observer's back when it spills
@@ -162,6 +169,8 @@ public class an_observer : Specification
 
         _failedPartitionsStorage = _silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
         _failedPartitionsStorage.State = _failedPartitionsState;
+        _eventStoreNamespaceStorage.Observers.Get(_observerId).Returns(_ => _stateStorage.State with { Identifier = _observerId });
+        _eventStoreNamespaceStorage.FailedPartitions.GetFor(_observerId).Returns(_ => _failedPartitionsStorage.State);
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
@@ -171,6 +180,8 @@ public class an_observer : Specification
             .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
 
         _observer = await _silo.CreateGrainAsync<Observer>(_observerKey);
+        await _observer.ReportAlertState();
+        _observerAlerts.ClearReceivedCalls();
 
         _storageStats.ResetCounts();
         _failedPartitionsStorageStats.ResetCounts();
@@ -185,9 +196,47 @@ public class an_observer : Specification
     {
         await _observer.OnDeactivateAsync(new DeactivationReason(DeactivationReasonCode.ApplicationRequested, "Spec"), default);
 
-        var persistedState = _stateStorage.State;
-        var persistedDefinition = _definitionStorage.State;
-        var persistedFailures = _failedPartitionsStorage.State;
+        return await Crash();
+    }
+
+    protected void ApplyAlertReports() => _observerAlerts.Configure().Reconcile(Arg.Any<ObserverAlertSnapshot>()).Returns(call =>
+    {
+        // NSubstitute also invokes an existing return callback with matcher placeholders during reconfiguration.
+        return call[0] is ObserverAlertSnapshot snapshot
+            ? new ObserverAlertReceipt(snapshot.LifecycleId, snapshot.Revision, ObserverAlertReconciliation.Applied)
+            : new ObserverAlertReceipt(Guid.Empty, 0, ObserverAlertReconciliation.RetryRequired);
+    });
+
+    protected void FailAlertReports(Exception error) => _observerAlerts.Configure().Reconcile(Arg.Any<ObserverAlertSnapshot>()).Returns(Task.FromException<ObserverAlertReceipt>(error));
+
+    protected Task<bool> ReportAlerts() => _observer.ReportAlertState();
+
+    /// <summary>
+    /// Discards activation memory without running OnDeactivateAsync or its flushes.
+    /// </summary>
+    /// <param name="resetStorageStatistics">Whether to reset the write counts after activation.</param>
+    /// <returns>The fresh activation backed by copies of the stored records.</returns>
+    protected async Task<Observer> Crash(bool resetStorageStatistics = true)
+    {
+        var persistedState = _stateStorage.State with
+        {
+            ReplayingPartitions = _stateStorage.State.ReplayingPartitions.ToHashSet(),
+            CatchingUpPartitions = _stateStorage.State.CatchingUpPartitions.ToHashSet(),
+            InFlightPartitions = _stateStorage.State.InFlightPartitions.ToHashSet()
+        };
+        var persistedDefinition = _definitionStorage.State with { EventTypes = _definitionStorage.State.EventTypes.ToArray() };
+        var persistedFailures = new FailedPartitions
+        {
+            Partitions = _failedPartitionsStorage.State.Partitions.Select(partition => new FailedPartition
+            {
+                Id = partition.Id,
+                ObserverId = partition.ObserverId,
+                Partition = partition.Partition,
+                IsQuarantined = partition.IsQuarantined,
+                IsResolved = partition.IsResolved,
+                Attempts = partition.Attempts.ToArray()
+            }).ToArray()
+        };
 
         _silo = new();
         AddServices(_silo);
@@ -197,9 +246,13 @@ public class an_observer : Specification
         _definitionStorage.State = persistedDefinition;
         _failedPartitionsStorage = _silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
         _failedPartitionsStorage.State = persistedFailures;
+        _failedPartitionsState = persistedFailures;
 
         _observer = await _silo.CreateGrainAsync<Observer>(_observerKey);
-        _storageStats.ResetCounts();
+        if (resetStorageStatistics)
+        {
+            _storageStats.ResetCounts();
+        }
         return _observer;
     }
 

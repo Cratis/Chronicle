@@ -42,7 +42,7 @@ public partial class ProjectionsManager
         await WriteStateAsync();
     }
 
-    async Task RetireUnregisteredProjections(IReadOnlyList<ProjectionDefinition> registeredDefinitions, ProjectionOwner owner)
+    async Task RetireUnregisteredProjections(IReadOnlyList<ProjectionDefinition> registeredDefinitions, ProjectionOwner owner, Dictionary<ProjectionId, Exception> failures)
     {
         var registeredIdentifiers = registeredDefinitions.Select(definition => definition.Identifier).ToHashSet();
         var orphans = State.Projections
@@ -78,6 +78,7 @@ public partial class ProjectionsManager
             {
                 // The projection stays in the registered state so the next full-set registration retries
                 // retiring it, rather than leaving it half retired and forgotten.
+                failures[orphan.Identifier] = exception;
                 logger.FailedRetiringProjection(exception, orphan.Identifier);
             }
         }
@@ -88,7 +89,7 @@ public partial class ProjectionsManager
     async Task StopObserverFor(ProjectionDefinition orphan, EventStoreNamespaceName @namespace)
     {
         var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(orphan.Identifier, _eventStoreName, @namespace, orphan.EventSequenceId));
-        await observer.Unsubscribe();
+        await observer.Retire();
 
         var jobsManager = GrainFactory.GetJobsManager(_eventStoreName, @namespace);
         var jobs = await jobsManager.GetAllJobs();
@@ -100,8 +101,6 @@ public partial class ProjectionsManager
         {
             await jobsManager.Delete(job.Id);
         }
-
-        await storage.GetEventStore(_eventStoreName).GetNamespace(@namespace).FailedPartitions.Save(orphan.Identifier.Value, new FailedPartitions());
     }
 
     async Task AddReplayRecommendationForContainerSuccessors(

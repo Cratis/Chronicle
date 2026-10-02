@@ -61,6 +61,12 @@ public class Routing(
 
         logger.Entering();
 
+        if (state.AlertDisposition == AlertDisposition.Retired)
+        {
+            await StateMachine.TransitionTo<Disconnected>();
+            return state;
+        }
+
         _tailEventSequenceNumber = await eventSequence.GetTailSequenceNumber();
         if (_tailEventSequenceNumber.IsActualValue && (!state.TailEventSequenceNumber.IsActualValue || state.TailEventSequenceNumber < _tailEventSequenceNumber))
         {

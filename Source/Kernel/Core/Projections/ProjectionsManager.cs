@@ -116,7 +116,9 @@ public partial class ProjectionsManager(
         // it also collapses a queue of identical registrations: the first request does the work, every queued
         // duplicate compares equal against the registered state and returns immediately instead of repeating the
         // per-namespace fan-out. Without this, stacked retries kept the request queue from ever draining.
-        var changedDefinitions = await GetChangedDefinitions(definitionList);
+        var changedDefinitions = (await GetChangedDefinitions(definitionList)).ToList();
+        var unchanged = definitionList.ExceptBy(changedDefinitions.Select(definition => definition.Identifier), definition => definition.Identifier).ToArray();
+        changedDefinitions.AddRange(await GetRetiredDefinitions(unchanged));
         var failures = new Dictionary<ProjectionId, Exception>();
 
         if (changedDefinitions.Count == 0)
@@ -130,7 +132,7 @@ public partial class ProjectionsManager(
 
             // Subscribe projections immediately so that seeded events appended after registration
             // are not missed due to the asynchronous timer-based subscription scheduling
-            foreach (var (identifier, exception) in await SetDefinitionAndSubscribeForProjections(acceptedByEngine))
+            foreach (var (identifier, exception) in await SetDefinitionAndSubscribeForProjections(acceptedByEngine, reactivateRetired: true))
             {
                 failures[identifier] = exception;
             }
@@ -157,7 +159,7 @@ public partial class ProjectionsManager(
 
         if (fullSetOwner is not null)
         {
-            await RetireUnregisteredProjections(definitionList, fullSetOwner.Value);
+            await RetireUnregisteredProjections(definitionList, fullSetOwner.Value, failures);
         }
 
         if (failures.Count > 0)
@@ -223,7 +225,7 @@ public partial class ProjectionsManager(
                     return;
                 }
 
-                await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinition, added.Namespace, eventTypeSchemas);
+                await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinition, added.Namespace, eventTypeSchemas, reactivateRetired: false);
             }
             catch (Exception exception)
             {
@@ -258,6 +260,24 @@ public partial class ProjectionsManager(
         return changed;
     }
 
+    async Task<IEnumerable<ProjectionDefinition>> GetRetiredDefinitions(ProjectionDefinition[] definitions)
+    {
+        if (definitions.Length == 0) return [];
+
+        // Only query the submitted unchanged projections, and only return their retired identifiers. Loading
+        // every observer's full state makes identical client registrations pay for unrelated observers and failures.
+        // The observer's subscription call still makes the authoritative retirement decision inside its own turn.
+        var observerIds = definitions.Select(definition => (ObserverId)definition.Identifier).Distinct().ToArray();
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        var retired = new HashSet<ObserverId>();
+        foreach (var namespaceName in namespaces)
+        {
+            retired.UnionWith(await storage.GetEventStore(_eventStoreName).GetNamespace(namespaceName).Observers.GetRetired(observerIds));
+        }
+
+        return definitions.Where(definition => retired.Contains(definition.Identifier));
+    }
+
     async Task SetDefinitionAndSubscribeForAllProjections()
     {
         if (Interlocked.CompareExchange(ref _subscribePassInFlight, 1, 0) != 0)
@@ -267,7 +287,7 @@ public partial class ProjectionsManager(
 
         try
         {
-            await SetDefinitionAndSubscribeForProjections(State.Projections);
+            await SetDefinitionAndSubscribeForProjections(State.Projections, reactivateRetired: false);
         }
         finally
         {
@@ -316,7 +336,7 @@ public partial class ProjectionsManager(
             }
 
             logger.ResubscribingProjectionsThatAreNotSubscribed(notSubscribed.Length);
-            foreach (var (identifier, exception) in await SetDefinitionAndSubscribeForProjections(notSubscribed))
+            foreach (var (identifier, exception) in await SetDefinitionAndSubscribeForProjections(notSubscribed, reactivateRetired: false))
             {
                 failures[identifier] = exception;
             }
@@ -327,7 +347,7 @@ public partial class ProjectionsManager(
         }
     }
 
-    async Task<IReadOnlyDictionary<ProjectionId, Exception>> SetDefinitionAndSubscribeForProjections(IEnumerable<ProjectionDefinition> definitions)
+    async Task<IReadOnlyDictionary<ProjectionId, Exception>> SetDefinitionAndSubscribeForProjections(IEnumerable<ProjectionDefinition> definitions, bool reactivateRetired)
     {
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         var readModelDefinitions = (await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions())
@@ -353,7 +373,7 @@ public partial class ProjectionsManager(
                     return;
                 }
 
-                await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition, eventTypeSchemas);
+                await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition, eventTypeSchemas, reactivateRetired);
             }
             catch (Exception exception)
             {
@@ -401,7 +421,7 @@ public partial class ProjectionsManager(
         State.Projections = projections;
     }
 
-    async Task SetDefinitionAndSubscribeForProjection(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
+    async Task SetDefinitionAndSubscribeForProjection(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas, bool reactivateRetired)
     {
         logger.SettingDefinition(definition.Identifier);
         var key = new ProjectionKey(definition.Identifier, _eventStoreName);
@@ -413,10 +433,10 @@ public partial class ProjectionsManager(
             return;
         }
 
-        await Task.WhenAll(namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName, eventTypeSchemas)));
+        await Task.WhenAll(namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName, eventTypeSchemas, reactivateRetired)));
     }
 
-    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName, IEnumerable<EventTypeSchema> eventTypeSchemas)
+    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName, IEnumerable<EventTypeSchema> eventTypeSchemas, bool reactivateRetired)
     {
         if (!definition.IsActive)
         {
@@ -443,11 +463,13 @@ public partial class ProjectionsManager(
             definition.SubscribesToAllEvents
                 ? observer.SubscribeToAllEvents<TSubscriber>(
                     ObserverType.Projection,
-                    localSiloDetails.SiloAddress)
+                    localSiloDetails.SiloAddress,
+                    reactivateRetired: reactivateRetired)
                 : observer.Subscribe<TSubscriber>(
                     ObserverType.Projection,
                     projection.EventTypes,
-                    localSiloDetails.SiloAddress);
+                    localSiloDetails.SiloAddress,
+                    reactivateRetired: reactivateRetired);
 
         // The subscriber type is how the observer learns whether the projection's partitions may be spread across
         // the silos of a cluster. A projection that can collapse several event sources onto one read model
@@ -461,7 +483,14 @@ public partial class ProjectionsManager(
 
             // Only on success - a pair left out here is one the next registration reconciles. Concurrent
             // because the fan-out subscribes definitions and namespaces in parallel.
-            _subscribed.TryAdd((definition.Identifier, namespaceName), default);
+            if (await observer.IsSubscribed())
+            {
+                _subscribed.TryAdd((definition.Identifier, namespaceName), default);
+            }
+            else
+            {
+                _subscribed.TryRemove((definition.Identifier, namespaceName), out _);
+            }
         }
         finally
         {

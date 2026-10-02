@@ -162,6 +162,9 @@ public class EventSequence(
     public Task Rehydrate() => Task.CompletedTask;
 
     /// <inheritdoc/>
+    public Task DrainAppends() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     /// <remarks>
     /// The version is read first, since definitions read after it are at least as new, but published only once the
     /// validators are built. Should building them fail, the sequence keeps its previous version, so its next version
