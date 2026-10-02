@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -94,9 +95,9 @@ public class SqlSinkHarness : ISinkHarness
 
     async Task<ReadModelDbContext> CreateContext(string containerName)
     {
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>()
-            .UseSqlite(ConnectionString)
-            .AddConceptAsSupport()
+        var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
+        builder.UseDatabaseFromConnectionString(ConnectionString);
+        var options = builder.AddConceptAsSupport()
             .AddInterceptors(Interceptors)
             .Options;
 

@@ -343,20 +343,36 @@ public class Sink : ISink
         // read can see the primary table missing and recreate it through EnsureTableExists, making
         // replay -> primary collide. A database transaction also protects readers on other silos
         // and restores the previous tables if any step of the promotion fails.
-        await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
+        var database = scope.DbContext.Database;
+        var strategy = database.CreateExecutionStrategy();
+        await strategy.ExecuteInTransactionAsync(
+            async () =>
+            {
+                // Drop any stale backup, then preserve primary -> revert and promote replay -> primary.
+                await ExecuteDdl(scope, BuildDropSql(scope, revertName));
+                await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, _tableName, revertName));
+                await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, replayName, _tableName));
 
-        // Drop any stale backup with the same revert name first (a previous EndReplay may have
-        // left one behind), then rename primary -> revert (preserved for downgrade) and
-        // replay -> primary.
-        await ExecuteDdl(scope, BuildDropSql(scope, revertName));
-        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, _tableName, revertName));
-        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, replayName, _tableName));
+                // Constraint names must move in the same transaction, before the next replay is created.
+                await PrimaryKeyConstraints.NameAfterTable(scope, revertName);
+                await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
+            },
 
-        // Renaming a table keeps its primary key name, so move each name along with its table; the
-        // next replay creates its shadow table with the replay table's primary key name again.
-        await PrimaryKeyConstraints.NameAfterTable(scope, revertName);
-        await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
-        await transaction.CommitAsync();
+            // A lost commit acknowledgment must not repeat the swap and destroy the revert backup.
+            // Inspect the catalog directly: ReadModelTable would recreate the missing replay table.
+            async () => !await TableExists(database, databaseType, replayName) && await TableExists(database, databaseType, _tableName));
+    }
+
+    static Task<bool> TableExists(DatabaseFacade database, DatabaseType databaseType, string table)
+    {
+        var name = PrimaryKeyNames.TableIdentifier(databaseType, table);
+        var query = databaseType switch
+        {
+            DatabaseType.PostgreSql => database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM pg_tables WHERE schemaname = current_schema() AND tablename = {name}"),
+            DatabaseType.SqlServer => database.SqlQuery<int>($"SELECT 1 AS [Value] FROM sys.tables WHERE schema_id = SCHEMA_ID() AND name = {name}"),
+            _ => database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM sqlite_master WHERE type = 'table' AND name = {name}")
+        };
+        return query.AnyAsync();
     }
 
     /// <summary>
