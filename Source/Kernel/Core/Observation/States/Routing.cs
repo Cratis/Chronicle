@@ -42,10 +42,13 @@ public class Routing(
     /// <inheritdoc/>
     public override Task<ObserverState> OnLeave(ObserverState state)
     {
-        definitionState.State = definitionState.State with
+        if (_subscription.IsSubscribed)
         {
-            EventTypes = _subscription.EventTypes,
-        };
+            definitionState.State = definitionState.State with
+            {
+                EventTypes = _subscription.EventTypes,
+            };
+        }
 
         return base.OnLeave(state);
     }
@@ -88,12 +91,6 @@ public class Routing(
 
     async Task<ObserverState> EvaluateState(ObserverState state)
     {
-        if (state.IsReplaying)
-        {
-            await StateMachine.TransitionTo<Replay>();
-            return state;
-        }
-
         if (!_subscription.IsSubscribed)
         {
             logger.NotSubscribed();
@@ -108,6 +105,13 @@ public class Routing(
         {
             logger.NoEventTypes();
             await StateMachine.TransitionTo<Disconnected>();
+            return state;
+        }
+
+        // Like catch-up, a pending replay waits for a valid subscription before starting work.
+        if (state.IsReplaying)
+        {
+            await StateMachine.TransitionTo<Replay>();
             return state;
         }
 

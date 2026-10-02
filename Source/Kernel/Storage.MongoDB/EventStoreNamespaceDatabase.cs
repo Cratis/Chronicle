@@ -35,22 +35,20 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the database is for.</param>
     /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
     /// <param name="mongoDBOptions"><see cref="Configuration.Storage"/> configuration.</param>
+    /// <param name="storageOptions">Chronicle-specific database naming options.</param>
     public EventStoreNamespaceDatabase(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         IMongoDBClientManager clientManager,
-        IOptions<MongoDBOptions> mongoDBOptions)
+        IOptions<MongoDBOptions> mongoDBOptions,
+        IOptions<MongoDBStorageOptions>? storageOptions = null)
     {
-        var databaseName = DatabaseNames.ForEventStoreNamespace(eventStore, @namespace);
-        var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server)
-        {
-            DatabaseName = databaseName
-        };
+        var databaseName = DatabaseNames.ForEventStoreNamespace(eventStore, @namespace, storageOptions?.Value.DatabaseNamePrefix ?? string.Empty);
+        var settings = MongoClientSettings.FromUrl(new MongoUrl(mongoDBOptions.Value.Server));
         if (mongoDBOptions.Value.DirectConnection == true)
         {
-            urlBuilder.DirectConnection = true;
+            settings.DirectConnection = true;
         }
-        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
 
         // TODO: Performance optimization - separate reads from writes in a clustered setup. Read from secondary.
         // settings.ReadPreference = ReadPreference.SecondaryPreferred;

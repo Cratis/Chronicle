@@ -30,7 +30,7 @@ public abstract class an_accumulating_read_model(MongoDBFixture fixture) : Speci
 
     void Establish()
     {
-        _databaseName = $"chronicle_watermark_specs_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
         _key = new Key("counter-1", ArrayIndexers.NoIndexers);

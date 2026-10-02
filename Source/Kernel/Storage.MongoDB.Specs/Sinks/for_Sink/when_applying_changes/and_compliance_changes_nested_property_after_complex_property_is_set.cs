@@ -35,7 +35,7 @@ public class and_compliance_changes_nested_property_after_complex_property_is_se
 
         public async Task InitializeAsync()
         {
-            _databaseName = $"chronicle_sink_specs_{Guid.NewGuid():N}";
+            _databaseName = MongoDBSpecDatabaseNames.New();
             _client = new MongoClient(fixture.ConnectionString);
             _database = _client.GetDatabase(_databaseName);
             _key = new Key(UserId, ArrayIndexers.NoIndexers);

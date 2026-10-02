@@ -99,6 +99,21 @@ For SQLite, you can optionally set:
 export CHRONICLE_SQLITE_CONNECTION_DETAILS="Data Source=/tmp/chronicle.db"
 ```
 
+### Running against an external MongoDB
+
+Set `CHRONICLE_MONGODB_CONNECTION_DETAILS` to a MongoDB connection string to run `Storage.MongoDB.Specs` against an external service instead of starting MongoDB containers. The client, kernel, API, MongoDB integration, and clustering suites do not support this external mode.
+
+```bash
+export CHRONICLE_MONGODB_CONNECTION_DETAILS="mongodb://mongo.example.test:27017/?replicaSet=myReplicaSet"
+dotnet test Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj --configuration Release
+```
+
+Use the service's connection string unchanged, including authentication, TLS, replica-set, or SRV options. Storage specs create unique, run-prefixed databases and remove only the databases they create. The prefix reduces the available database-name budget by its length. External mode does not start or restart containers or initiate a replica set.
+
+The external service must support the MongoDB features used by the Storage specs, including multi-document transactions and change streams for event-sequence and observation specs. Grant permissions to create and drop databases, create indexes, read/write collections, and enumerate database names. Providing a connection string does not imply compatibility with a managed service; a failing spec can reveal an unsupported feature.
+
+Unset `CHRONICLE_MONGODB_CONNECTION_DETAILS` to return to the default container-backed Storage spec fixtures. `CHRONICLE_SPECS_MONGODB_IMAGE` applies only when these fixtures start MongoDB themselves.
+
 ### Running a single test
 
 Use `--filter` with the fully qualified type name or a substring of it:

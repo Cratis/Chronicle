@@ -21,7 +21,7 @@ public abstract class two_silos_sharing_a_database(MongoDBFixture fixture) : IAs
     protected const string ReplayName = "replay-things";
     protected const string PromotingName = "replay-things-promoting";
 
-    readonly string _databaseName = $"sink_collections_{Guid.NewGuid():N}";
+    readonly string _databaseName = MongoDBSpecDatabaseNames.New();
     IMongoClient _client = default!;
 
     protected IMongoDatabase Database { get; private set; } = default!;
