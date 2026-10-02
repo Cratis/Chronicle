@@ -41,8 +41,7 @@ public class and_only_some_definitions_have_changed : given.a_projections_manage
             (EventStoreName)EventStore,
             Arg.Is<IEnumerable<ProjectionDefinition>>(definitions => definitions.SequenceEqual(new[] { _changedIncoming })));
 
-    [Fact] async Task should_only_query_the_unchanged_submitted_identifier() => await _observerStates.Received(1).GetRetired(
-        Arg.Is<IEnumerable<ObserverId>>(ids => ids.SequenceEqual(new ObserverId[] { _unchangedIncoming.Identifier })));
+    [Fact] async Task should_only_query_the_unchanged_submitted_identifier() => await _observerStates.Received(1).GetRetired(Arg.Is<IEnumerable<ObserverId>>(ids => ids.SequenceEqual(new ObserverId[] { _unchangedIncoming.Identifier })));
 
     [Fact] void should_only_set_the_changed_definition_on_its_projection_grain() => _projectionGrain.Received(1).SetDefinition(_changedIncoming);
 

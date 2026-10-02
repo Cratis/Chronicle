@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.for_ObserverStateStorage.when_querying_retired;

@@ -66,9 +66,8 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
 
         var filter = Builders<ObserverState>.Filter.In(state => state.Id, ids) &
             Builders<ObserverState>.Filter.Eq(state => state.AlertDisposition, AlertDisposition.Retired);
-        var retired = await _collection.Find(filter).Project(state => state.Id).ToListAsync().ConfigureAwait(false);
 
-        return retired;
+        return await _collection.Find(filter).Project(state => state.Id).ToListAsync().ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
