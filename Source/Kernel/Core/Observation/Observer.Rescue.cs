@@ -148,6 +148,7 @@ public partial class Observer
             return;
         }
 
+        _quarantinePending = false;
         _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
         await TransitionTo<Routing>();
@@ -168,8 +169,18 @@ public partial class Observer
     /// </remarks>
     async Task LeaveQuarantineForSubscription()
     {
+        var wasPending = _quarantinePending;
+        _quarantinePending = false;
         if (await GetCurrentState() is not QuarantinedObserver quarantined)
         {
+            if (wasPending)
+            {
+                // A failed outer transition can discard the scheduled quarantine without entering it.
+                // Authorized revival still starts recovery from Disconnected, just like a fresh subscription.
+                _isPreparingCatchup = false;
+                _catchupRecoveryAttempts = 0;
+                await TransitionTo<Disconnected>();
+            }
             return;
         }
 
