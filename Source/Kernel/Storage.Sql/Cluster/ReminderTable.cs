@@ -22,6 +22,7 @@ public class ReminderTable(IDatabase database) : IReminderTable
     /// </remarks>
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         await using var scope = await database.Cluster();
         var dbContext = scope.DbContext;
         var reminders = await dbContext.Reminders.ToListAsync(cancellationToken);
