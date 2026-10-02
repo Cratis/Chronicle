@@ -113,7 +113,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             throw new TypeIsNotAnEventType(type);
         }
 
-        var eventType = _eventTypes.GetEventTypeFor(type).ToContract();
+        var eventType = GetFromEventType(_eventTypes.GetEventTypeFor(type));
         _enteringEventTypes.Add(eventType);
 
         // The entering event is what creates the variant, so it must have a From even when the author maps no

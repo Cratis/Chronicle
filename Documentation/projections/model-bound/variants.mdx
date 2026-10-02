@@ -42,6 +42,12 @@ create one.
 `[EntersOn<T>]`, Chronicle reclassifies that mapping into an update-only join on the variant's own key
 before it ever reaches the projection engine — the entering event stays the only door into the variant.
 
+If the same non-entering event also has a `[Join<TEvent>]` attribute, the join keeps its mappings and
+routing rather than being replaced. Non-conflicting `From` mappings are added, and the join wins on
+conflicting properties. Its key remains the event source ID. Its `On` uses the attribute's explicit
+property name, or defaults to the annotated member's name — not the variant's key property. Specify
+`on: nameof(Id)` on the join attribute if you want it to match the variant's `Id`.
+
 :::caution[Why this matters]
 Without that reclassification, an out-of-order or replayed `BuildCompleted` event could **resurrect** a
 `PullRequestItem` for an entity that has since moved on to another variant, or even one that was never a

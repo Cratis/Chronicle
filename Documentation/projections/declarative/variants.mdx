@@ -49,6 +49,10 @@ variant, but it can never create one.
 it into an update-only join — keyed on the same property `.VariantOf<T>(_ => _.Id)` declared — before the
 definition ever reaches the projection engine. The entering event stays the only door into the variant.
 
+If a non-entering event also has an explicit `.Join<TEvent>()`, reclassification combines its `From`
+mappings with that join, including mappings inherited through `.From<BaseEvent>()`. The explicit join
+keeps its `On` and key settings and wins on conflicting property mappings, regardless of registration order.
+
 :::caution[Why this matters]
 Without that reclassification, an out-of-order or replayed `BuildCompleted` event could **resurrect** a
 pull-request variant for an entity that has since moved on to another variant, or even one that was never
