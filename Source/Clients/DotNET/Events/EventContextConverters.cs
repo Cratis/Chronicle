@@ -99,6 +99,14 @@ internal static class EventContextConverters
     };
 
     /// <summary>
+    /// Resolves the <see cref="EventSourceName"/> a server sent.
+    /// </summary>
+    /// <param name="eventSource">The event source name as carried on the contract.</param>
+    /// <returns>The <see cref="EventSourceName"/>, or null when the event was not appended through an event source.</returns>
+    static EventSourceName? ResolveEventSource(string? eventSource) =>
+        string.IsNullOrEmpty(eventSource) ? null : new EventSourceName(eventSource);
+
+    /// <summary>
     /// Resolves the <see cref="Subject"/> a server sent, falling back to the event source id when the server did not carry one.
     /// </summary>
     /// <param name="subject">The subject as carried on the contract.</param>
@@ -108,9 +116,6 @@ internal static class EventContextConverters
     /// The fallback exists only for a server that predates the subject member on the contract, where an absent value
     /// meant "the subject is the event source id". An explicitly carried subject is never replaced by the event source id.
     /// </remarks>
-    static EventSourceName? ResolveEventSource(string? eventSource) =>
-        string.IsNullOrEmpty(eventSource) ? null : new EventSourceName(eventSource);
-
     static Subject ResolveSubject(string? subject, string eventSourceId) =>
         string.IsNullOrEmpty(subject)
             ? new Subject(eventSourceId)

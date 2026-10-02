@@ -57,7 +57,8 @@ public interface IEventStore
     /// <summary>
     /// Gets the <see cref="IEventSources"/> for the event store.
     /// </summary>
-    IEventSources EventSources { get; }
+    /// <exception cref="EventSourcesNotSupported">Thrown when the implementation does not support event sources.</exception>
+    IEventSources EventSources => throw new EventSourcesNotSupported(GetType());
 
     /// <summary>
     /// Gets the <see cref="IConstraints"/> for the event store.

@@ -11,9 +11,9 @@ using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
@@ -103,7 +103,7 @@ public class EventSequence(
         AppendCore(eventSourceId, @event, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
 
     /// <inheritdoc/>
-    public async Task<AppendResult> Append(
+    public async Task<AppendResult> AppendThroughEventSource(
         Type eventSource,
         EventSourceId eventSourceId,
         object @event,
@@ -132,7 +132,7 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public async Task<AppendManyResult> AppendMany(
+    public async Task<AppendManyResult> AppendManyThroughEventSource(
         Type eventSource,
         EventSourceId eventSourceId,
         IEnumerable<object> events,
@@ -917,7 +917,7 @@ public class EventSequence(
 
     async Task<Dictionary<EventSourceId, ConcurrencyScope>> ResolveConcurrencyScopes(
         IEnumerable<EventForEventSourceId> events,
-        IReadOnlyList<ResolvedEventRouting?> routings,
+        List<ResolvedEventRouting?> routings,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes)
     {
         var resolvedConcurrencyScopes = concurrencyScopes?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value) ?? [];

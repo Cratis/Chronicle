@@ -64,6 +64,12 @@ public class EventSources(IEventStore eventStore, IClientArtifactsProvider clien
     public EventSourceDefinition GetFor(string name) =>
         _byName.TryGetValue(name, out var definition) ? definition : throw new UnknownEventSource(name);
 
+    /// <summary>
+    /// Describes the definition carried by a type.
+    /// </summary>
+    /// <param name="type">The type carrying the definition.</param>
+    /// <returns>The <see cref="EventSourceDefinition"/>.</returns>
+    /// <exception cref="DuplicateEventStreamName">The type declares the same stream twice.</exception>
     internal static EventSourceDefinition Describe(Type type)
     {
         var attribute = type.GetCustomAttribute<EventSourceAttribute>();

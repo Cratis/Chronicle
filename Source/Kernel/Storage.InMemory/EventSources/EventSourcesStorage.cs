@@ -12,7 +12,8 @@ namespace Cratis.Chronicle.Storage.InMemory.EventSources;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IEventSourcesStorage"/>.
 /// </summary>
-public sealed class EventSourcesStorage : IEventSourcesStorage, IDisposable
+#pragma warning disable CA1001 // The replay subject holds no unmanaged resources and lives as long as the storage.
+public sealed class EventSourcesStorage : IEventSourcesStorage
 {
     readonly ConcurrentDictionary<EventSourceName, EventSourceDefinition> _definitions = new();
     readonly ReplaySubject<IEnumerable<EventSourceDefinition>> _allSubject = new(1);
@@ -40,8 +41,6 @@ public sealed class EventSourcesStorage : IEventSourcesStorage, IDisposable
         return Task.CompletedTask;
     }
 
-    /// <inheritdoc/>
-    public void Dispose() => _allSubject.Dispose();
-
     EventSourceDefinition[] Snapshot() => [.. _definitions.Values];
 }
+#pragma warning restore CA1001

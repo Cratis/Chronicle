@@ -748,8 +748,9 @@ public class EventSequence(
                     eventSourceId,
                     State.SequenceNumber);
 
-                appendResult = eventSource?.IsSet == true
-                    ? await AppendThroughEventSource(
+                if (eventSource?.IsSet == true)
+                {
+                    appendResult = await AppendThroughEventSource(
                         new EventToAppendToStorage(
                             State.SequenceNumber,
                             eventSourceType,
@@ -770,8 +771,11 @@ public class EventSequence(
                             EventSource = eventSource,
                             GenerationalContent = migratedContent,
                             ContentHashes = contentHashes
-                        })
-                    : namedTags.Count == 0
+                        });
+                    continue;
+                }
+
+                appendResult = namedTags.Count == 0
                     ? await EventSequenceStorage.Append(
                         State.SequenceNumber,
                         eventSourceType,

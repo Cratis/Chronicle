@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.EventSources;
 /// The type is never instantiated. It carries an <see cref="EventSourceAttribute"/> and any number of
 /// <see cref="EventStreamAttribute"/>, is discovered at startup and is registered with the Kernel.
 /// </remarks>
-public interface IEventSource
-{
-}
+public interface IEventSource;

@@ -90,7 +90,7 @@ public class OptimisticConcurrencyStrategy(IEventSequence eventSequence, Concurr
             return await GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType, eventTypes);
         }
 
-        EventSourceId? scopedEventSourceId = dimensions.HasFlag(ConcurrencyDimensions.EventSourceId) ? eventSourceId : null;
+        var scopedEventSourceId = dimensions.HasFlag(ConcurrencyDimensions.EventSourceId) ? eventSourceId : null;
         var scopedStreamType = dimensions.HasFlag(ConcurrencyDimensions.EventStreamType) ? eventStreamType : null;
         var scopedStreamId = dimensions.HasFlag(ConcurrencyDimensions.EventStreamId) ? eventStreamId : null;
         var scopedSourceType = dimensions.HasFlag(ConcurrencyDimensions.EventSourceType) ? eventSourceType : null;

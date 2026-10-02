@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage.EventSources;
@@ -49,7 +48,7 @@ internal static class EventSourceResolution
         EventStreamType eventStreamType,
         CorrelationId correlationId)
     {
-        if (eventSource is null || !eventSource.IsSet)
+        if (eventSource?.IsSet != true)
         {
             return eventSourceType;
         }

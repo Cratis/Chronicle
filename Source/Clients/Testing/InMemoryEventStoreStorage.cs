@@ -40,6 +40,7 @@ namespace Cratis.Chronicle.Testing;
 /// <param name="closedStreamsStorage">Optional <see cref="InMemoryClosedStreamsConstraintStorage"/> for closed streams.</param>
 /// <param name="identityStorage">Optional <see cref="InMemoryIdentityStorage"/>.</param>
 /// <param name="eventTypesStorage">Optional <see cref="InMemoryEventTypesStorage"/>.</param>
+/// <param name="eventSourcesStorage">Optional <see cref="IEventSourcesStorage"/> holding the registered event source definitions.</param>
 internal sealed class InMemoryEventStoreStorage(
     KernelConcept::EventStoreName eventStore,
     InMemoryEventSequenceStorage eventSequenceStorage,
