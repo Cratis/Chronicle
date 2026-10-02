@@ -533,7 +533,7 @@ public class Sink(
             if (candidates.Count > 0)
             {
                 collation ??= await GetCollectionCollation(collection);
-                if (candidates.Exists(index => index.GetValue("collation", BsonNull.Value).Equals(collation)))
+                if (candidates.Exists(index => GetCollation(index).Equals(collation)))
                 {
                     continue;
                 }
@@ -687,6 +687,12 @@ public class Sink(
         !index.Contains("partialFilterExpression") &&
         !index.Contains("expireAfterSeconds");
 
+    static BsonValue GetCollation(BsonDocument definition)
+    {
+        // MongoDB 9 lists simple index collation explicitly; older servers omit it. Both mean binary comparison.
+        return definition.GetValue("collation", new BsonDocument("locale", "simple"));
+    }
+
     async Task<BsonValue> GetCollectionCollation(IMongoCollection<BsonDocument> collection)
     {
         // An index without an explicit collation inherits the collection's default. Compare that effective
@@ -696,9 +702,8 @@ public class Sink(
             Filter = new BsonDocument("name", collection.CollectionNamespace.CollectionName)
         });
         var definitions = await cursor.ToListAsync();
-        return definitions.FirstOrDefault()?
-            .GetValue("options", new BsonDocument()).AsBsonDocument
-            .GetValue("collation", BsonNull.Value) ?? BsonNull.Value;
+        var options = definitions.FirstOrDefault()?.GetValue("options", new BsonDocument()).AsBsonDocument ?? new BsonDocument();
+        return GetCollation(options);
     }
 
     void AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber)
