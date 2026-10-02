@@ -9,7 +9,7 @@ using Cratis.Chronicle.Storage.Alerts;
 namespace Cratis.Chronicle.Alerts;
 
 /// <summary>
-/// Validates required scope and paired continuation arguments.
+/// Validates required scope and identity-enabled continuation arguments.
 /// </summary>
 internal static class AlertIncidentQueryArguments
 {
@@ -31,23 +31,24 @@ internal static class AlertIncidentQueryArguments
     }
 
     /// <summary>
-    /// Validates that a continuation is paired and contains an actual supported position.
+    /// Validates that an identity-enabled continuation contains an actual supported position.
     /// </summary>
     /// <param name="sequenceNumber">Exclusive raise position.</param>
     /// <param name="incidentId">Exclusive identity.</param>
     /// <returns>The paired continuation, or no continuation.</returns>
-    /// <exception cref="InvalidAlertIncidentQuery">The continuation is incomplete or invalid.</exception>
-    internal static AlertIncidentCursor? Cursor(EventSequenceNumber? sequenceNumber, IncidentId? incidentId)
+    /// <exception cref="InvalidAlertIncidentQuery">The continuation position is invalid.</exception>
+    internal static AlertIncidentCursor? Cursor(EventSequenceNumber sequenceNumber, IncidentId? incidentId)
     {
-        if ((sequenceNumber is null) != (incidentId is null))
+        if (incidentId is null || incidentId.Value == Guid.Empty)
         {
-            throw new InvalidAlertIncidentQuery("Both continuation fields must be supplied together.");
+            return null;
         }
-        if (sequenceNumber is not null && (!sequenceNumber.IsActualValue || sequenceNumber.Value > long.MaxValue))
+
+        if (!sequenceNumber.IsActualValue || sequenceNumber.Value > long.MaxValue)
         {
             throw new InvalidAlertIncidentQuery("The continuation must contain an actual signed 64-bit sequence number.");
         }
 
-        return sequenceNumber is null ? null : new(sequenceNumber, incidentId!);
+        return new(sequenceNumber, incidentId);
     }
 }

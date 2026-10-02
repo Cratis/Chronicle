@@ -4,7 +4,6 @@
 using Cratis.Arc.Queries.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Alerts;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
@@ -35,10 +34,11 @@ public record AlertIncidentPage(
     /// <param name="observerId">Optional observer filter.</param>
     /// <param name="condition">Optional condition filter.</param>
     /// <param name="minimumSeverity">Optional minimum severity.</param>
-    /// <param name="limit">Requested limit, defaulting to 100 when absent and bounded to 1–500.</param>
-    /// <param name="afterRaisedSequenceNumber">Exclusive raise position paired with identity.</param>
-    /// <param name="afterIncidentId">Exclusive identity paired with raise position.</param>
+    /// <param name="limit">Requested limit; zero selects the default 100, positive values clamp to 500, and negatives are rejected.</param>
+    /// <param name="afterRaisedSequenceNumber">Exclusive raise position, defaulting to zero and read only when an identity is supplied.</param>
+    /// <param name="afterIncidentId">Exclusive identity; a non-empty identity enables continuation.</param>
     /// <returns>The page with its sampled health.</returns>
+    /// <exception cref="InvalidAlertIncidentQuery">The scope, cursor, or page limit is invalid.</exception>
     internal static async Task<AlertIncidentPage> GetOpenIncidents(
         EventStoreName eventStore,
         IStorage storage,
@@ -47,15 +47,20 @@ public record AlertIncidentPage(
         ObserverId? observerId = null,
         AlertConditionKind? condition = null,
         AlertSeverity? minimumSeverity = null,
-        int? limit = null,
-        EventSequenceNumber? afterRaisedSequenceNumber = null,
+        int limit = 0,
+        ulong afterRaisedSequenceNumber = 0,
         IncidentId? afterIncidentId = null)
     {
         var scope = AlertIncidentQueryArguments.Scope(eventStore, @namespace);
         var after = AlertIncidentQueryArguments.Cursor(afterRaisedSequenceNumber, afterIncidentId);
-        var page = await storage.GetEventStore(EventStoreName.System).GetNamespace(EventStoreNamespaceName.Default).AlertIncidents
-            .GetOpenPage(new(scope, observerId, condition, minimumSeverity), after, AlertIncidentStorageRules.Limit(limit ?? 100));
+        if (limit < 0)
+        {
+            throw new InvalidAlertIncidentQuery("The page limit cannot be negative.");
+        }
+        var pageLimit = AlertIncidentStorageRules.Limit(limit == 0 ? 100 : limit);
         var status = await readiness.Get();
+        var page = await storage.GetEventStore(EventStoreName.System).GetNamespace(EventStoreNamespaceName.Default).AlertIncidents
+            .GetOpenPage(new(scope, observerId, condition, minimumSeverity), after, pageLimit);
 
         return new(status, page.Items.Select(row => row.ToDetails()).ToArray(), page.Next?.ToContinuation());
     }

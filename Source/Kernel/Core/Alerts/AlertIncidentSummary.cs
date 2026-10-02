@@ -34,8 +34,8 @@ public record AlertIncidentSummary(
         EventStoreNamespaceName? @namespace = null)
     {
         var scope = AlertIncidentQueryArguments.Scope(eventStore, @namespace);
-        var counts = await storage.GetEventStore(EventStoreName.System).GetNamespace(EventStoreNamespaceName.Default).AlertIncidents.GetOpenCounts(scope);
         var status = await readiness.Get();
+        var counts = await storage.GetEventStore(EventStoreName.System).GetNamespace(EventStoreNamespaceName.Default).AlertIncidents.GetOpenCounts(scope);
 
         return new(status, counts.Select(count => count.ToDetails()).ToArray());
     }

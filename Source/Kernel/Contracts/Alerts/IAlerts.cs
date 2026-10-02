@@ -154,13 +154,13 @@ public class GetOpenIncidentsRequest
     /// Gets or sets the limit.
     /// </summary>
     [ProtoMember(6)]
-    public int? Limit { get; set; }
+    public int Limit { get; set; }
 
     /// <summary>
     /// Gets or sets the afterRaisedSequenceNumber.
     /// </summary>
     [ProtoMember(7)]
-    public global::System.UInt64? AfterRaisedSequenceNumber { get; set; }
+    public global::System.UInt64 AfterRaisedSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the afterIncidentId.

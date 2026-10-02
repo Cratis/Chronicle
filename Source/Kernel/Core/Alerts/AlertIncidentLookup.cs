@@ -37,9 +37,9 @@ public record AlertIncidentLookup(
         EventStoreNamespaceName? @namespace = null)
     {
         var scope = AlertIncidentQueryArguments.Scope(eventStore, @namespace);
+        var status = await readiness.Get();
         var incident = await storage.GetEventStore(EventStoreName.System).GetNamespace(EventStoreNamespaceName.Default).AlertIncidents
             .GetOpen(scope, incidentId);
-        var status = await readiness.Get();
 
         return new(status, incident?.ToDetails());
     }

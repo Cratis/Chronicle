@@ -31,13 +31,13 @@ Counts cover the **complete** matching open population, grouped by affected name
 
 CatchingUp and Degraded responses can still contain partial or stale rows. Do not interpret an empty non-ready response as proof that no incidents exist. Storage and observer-state read failures fail the query; they do not produce a zero count or a Ready-empty result.
 
-Ready is a **sampled health check**, not a contiguous checkpoint. Normal in-flight live batches do not prevent Ready. The sample reads the transition tail, reactor state, and reactor failures in that order, and concurrent events can arrive between those reads.
+Status is sampled before reading the incident rows. Ready is a **sampled health check**, not a contiguous checkpoint. Normal in-flight live batches do not prevent Ready. The sample reads the transition tail, reactor state, and reactor failures in that order, and concurrent events can arrive between those reads.
 
 ## Page with both continuation fields
 
-Pages sort ascending by `(raisedSequenceNumber, incidentId)`. The identity tie-breaker uses its canonical lowercase, 32-character string in ordinal order. The default limit is 100; supplied limits are bounded to 1–500.
+Pages sort ascending by `(raisedSequenceNumber, incidentId)`. The identity tie-breaker uses its canonical lowercase, 32-character string in ordinal order. Omitting `limit` or supplying `0` selects the default limit of 100. Positive limits clamp to 500; negative limits are rejected.
 
-When `next` is present, pass its `raisedSequenceNumber` as `afterRaisedSequenceNumber` and its `incidentId` as `afterIncidentId` on the next request, keeping the scope and filters unchanged. Both fields must be supplied together. A half-specified continuation or sentinel sequence is rejected rather than restarting traversal. Sequence numbers follow the existing numeric client representation; JavaScript callers must account for its integer precision limit.
+When `next` is present, pass its `raisedSequenceNumber` as `afterRaisedSequenceNumber` and its `incidentId` as `afterIncidentId` on the next request, keeping the scope and filters unchanged. A non-empty `afterIncidentId` enables continuation; an omitted `afterRaisedSequenceNumber` then means `0`. Without that identity, Chronicle ignores the sequence field and starts at the beginning. Sentinel sequence numbers are rejected when continuation is enabled. Sequence numbers follow the existing numeric client representation; JavaScript callers must account for its integer precision limit.
 
 There is no snapshot across pages or between pages and counts. A later raise can reopen a closed incident and reset its raise position, moving it to another page. Concurrent changes can therefore make an incident appear again or disappear during traversal.
 
