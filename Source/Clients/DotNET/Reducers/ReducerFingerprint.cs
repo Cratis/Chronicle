@@ -53,11 +53,14 @@ static class ReducerFingerprint
     }
 
     /// <summary>
-    /// Creates a conservative, build-specific fingerprint when IL normalization fails.
+    /// Creates a conservative fingerprint tied to the reducer's assembly when IL normalization fails.
     /// </summary>
     /// <param name="reducerType">The reducer type.</param>
     /// <returns>The SHA-256 fingerprint.</returns>
-    /// <remarks>The MVID identifies the entire built module, including IL and signatures we could not normalize.</remarks>
+    /// <remarks>
+    /// The MVID identifies the entire built module, including IL and signatures we could not normalize.
+    /// Deterministic builds of identical inputs retain the same MVID and fingerprint; assembly changes invalidate it.
+    /// </remarks>
     internal static string CreateFallback(Type reducerType) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{reducerType.AssemblyQualifiedName}:{reducerType.Module.ModuleVersionId:D}")));
 
@@ -81,6 +84,9 @@ static class ReducerFingerprint
         {
             return $"method:{(type.IsUnmanagedFunctionPointer ? "unmanaged" : "managed")}({string.Join(',', type.GetFunctionPointerCallingConventions().Select(GetTypeIdentity))})({string.Join(',', type.GetFunctionPointerParameterTypes().Select(GetTypeIdentity))}):{GetTypeIdentity(type.GetFunctionPointerReturnType())}";
         }
+
+        // Modified types preserve function-pointer calling conventions but do not support custom-attribute reflection.
+        type = type.UnderlyingSystemType;
         if (type.IsDefined(typeof(CompilerGeneratedAttribute), false))
         {
             if (type.Name.StartsWith("<>f__AnonymousType", StringComparison.Ordinal))
@@ -111,7 +117,7 @@ static class ReducerFingerprint
     internal static string GetMemberIdentity(MemberInfo member) => member switch
     {
         Type type => GetTypeIdentity(type),
-        FieldInfo field => $"{GetTypeIdentity(field.DeclaringType!)}::{field.Name}:{GetTypeIdentity(field.FieldType)}",
+        FieldInfo field => $"{GetTypeIdentity(field.DeclaringType!)}::{field.Name}:{GetTypeIdentity(field.GetModifiedFieldType())}",
         MethodBase method => $"{GetTypeIdentity(method.DeclaringType!)}::{method.Name}{GetGenericArguments(method)}({string.Join(',', method.GetParameters().Select(GetParameterIdentity))}):{(method is MethodInfo info ? GetParameterIdentity(info.ReturnParameter) : "void")}:{method.CallingConvention}",
         _ => member.Name
     };
@@ -154,7 +160,7 @@ static class ReducerFingerprint
     static string GetNamedTypeIdentity(Type type) => $"{type.Assembly.GetName().Name}::{type.FullName ?? type.Name}";
 
     static string GetParameterIdentity(ParameterInfo parameter) =>
-        $"{GetTypeIdentity(parameter.ParameterType)} modreq({string.Join(',', parameter.GetRequiredCustomModifiers().Select(GetTypeIdentity))}) modopt({string.Join(',', parameter.GetOptionalCustomModifiers().Select(GetTypeIdentity))})";
+        $"{GetTypeIdentity(parameter.GetModifiedParameterType())} modreq({string.Join(',', parameter.GetRequiredCustomModifiers().Select(GetTypeIdentity))}) modopt({string.Join(',', parameter.GetOptionalCustomModifiers().Select(GetTypeIdentity))})";
 
     static string GetGenericArguments(MethodBase method) => method.IsGenericMethod
         ? $"<{string.Join(',', method.GetGenericArguments().Select(GetTypeIdentity))}>"

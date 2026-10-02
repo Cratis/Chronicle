@@ -19,7 +19,7 @@ public static class CompiledReducer
         .Select(path => MetadataReference.CreateFromFile(path))
         .ToArray();
 
-    public static Type Compile(string members, string version = "1.0.0.0", string before = "", string model = "ReadModel", string culture = "", (string Name, byte[] Image)[]? dependencies = null)
+    public static Type Compile(string members, string version = "1.0.0.0", string before = "", string model = "ReadModel", string culture = "", (string Name, byte[] Image)[]? dependencies = null, bool deterministic = false)
     {
         dependencies ??= [];
         var source = $$"""
@@ -43,7 +43,7 @@ public static class CompiledReducer
             }
             """;
         var references = dependencies.Select(_ => MetadataReference.CreateFromImage(_.Image, MetadataReferenceProperties.Assembly.WithAliases([_.Name])));
-        var image = CompileAssembly("FingerprintFixture", source, references);
+        var image = CompileAssembly("FingerprintFixture", source, references, deterministic);
         var assembly = Assembly.Load(image);
         AssemblyLoadContext.GetLoadContext(assembly)!.Resolving += (_, name) =>
         {
@@ -53,13 +53,13 @@ public static class CompiledReducer
         return assembly.GetType("FingerprintFixture.Reducer")!;
     }
 
-    public static byte[] CompileAssembly(string name, string source, IEnumerable<MetadataReference>? references = null)
+    public static byte[] CompileAssembly(string name, string source, IEnumerable<MetadataReference>? references = null, bool deterministic = false)
     {
         var compilation = CSharpCompilation.Create(
             name,
             [CSharpSyntaxTree.ParseText(source)],
             _references.Concat(references ?? []),
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optimizationLevel: OptimizationLevel.Release, allowUnsafe: true));
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optimizationLevel: OptimizationLevel.Release, allowUnsafe: true, deterministic: deterministic));
         using var stream = new MemoryStream();
         var result = compilation.Emit(stream);
         Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));

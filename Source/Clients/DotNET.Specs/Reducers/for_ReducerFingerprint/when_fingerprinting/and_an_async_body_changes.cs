@@ -8,7 +8,7 @@ public class and_an_async_body_changes : Specification
     const string Members = """
         public async Task<ReadModel> Reduce(Event @event, ReadModel current)
         {
-            await Task.Yield();
+            await Task.CompletedTask;
             return new(current.Value + @event.Value + 1);
         }
         """;
