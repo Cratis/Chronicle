@@ -58,10 +58,13 @@ public class ReducerPipeline(
     public async Task Reduce(ReducerContext context, ReducerDelegate reducer)
     {
         var schema = ReadModel.GetSchemaForLatestGeneration();
-        var initial = await Sink.FindOrDefault(context.Key);
+        var storedInitial = await Sink.FindOrDefault(context.Key);
+        var initial = storedInitial;
+        object? storedSubject = null;
 
         if (initial is not null)
         {
+            ((IDictionary<string, object?>)initial).TryGetValue(WellKnownProperties.Subject, out storedSubject);
             initial = await readModelsCompliance.Release(
                 eventStore,
                 eventStoreNamespace,
@@ -75,7 +78,9 @@ public class ReducerPipeline(
 
         var identifier = context.Events.First().Context.ResolveComplianceIdentifier(context.Key);
 
-        var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, context.Events.First(), initial ?? new ExpandoObject());
+        // Sinks apply encrypted differences to the stored snapshot, not the released schema-only state.
+        // In-memory sinks also need its subject metadata when the subject itself has not changed.
+        var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, context.Events.First(), storedInitial ?? new ExpandoObject());
         if (result.ReadModelState is null)
         {
             if (initial is not null)
@@ -102,6 +107,10 @@ public class ReducerPipeline(
                 foreach (var (name, value) in initial.Where(property => !WellKnownProperties.All.Contains(property.Key) || declaredProperties.Contains(property.Key)))
                 {
                     ((IDictionary<string, object?>)initialForComparison)[name] = value;
+                }
+                if (storedSubject is not null)
+                {
+                    ((IDictionary<string, object?>)initialForComparison)[WellKnownProperties.Subject] = storedSubject;
                 }
             }
 

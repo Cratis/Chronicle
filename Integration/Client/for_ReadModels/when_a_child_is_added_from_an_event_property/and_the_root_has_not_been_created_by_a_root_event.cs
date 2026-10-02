@@ -3,6 +3,7 @@
 
 #pragma warning disable SA1402
 
+using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -121,6 +122,9 @@ public class and_the_root_has_not_been_created_by_a_root_event(context context) 
     [Fact] void should_store_the_root_without_initial_values_after_the_child_only_event() =>
         (!Context.DocumentCanBeInspected || StoredReadModelDocument.Field(Context.DocumentAfterTheChildOnlyEvent, "status") is null).ShouldBeTrue();
 
+    [Fact] void should_not_store_a_synthesized_numeric_default_on_the_placeholder() =>
+        (!Context.DocumentCanBeInspected || StoredReadModelDocument.Field(Context.DocumentAfterTheChildOnlyEvent, "capacity") is null).ShouldBeTrue();
+
     [Fact] void should_store_the_child_after_the_child_only_event() =>
         (!Context.DocumentCanBeInspected || StoredReadModelDocument.Field(Context.DocumentAfterTheChildOnlyEvent, "books") is BsonArray { Count: 1 }).ShouldBeTrue();
 
@@ -142,6 +146,6 @@ public record ChildOnlyShelfBook(string Isbn, string Title);
 [EventType]
 public record ChildOnlyBookShelved(ChildOnlyShelfBook Book);
 
-public record ChildOnlyShelf(string Id, string Name, string Status, IEnumerable<ChildOnlyShelfBook> Books, int Capacity);
+public record ChildOnlyShelf(string Id, string Name, string Status, IEnumerable<ChildOnlyShelfBook> Books, int Capacity, [property: PII] string Secret);
 
 #pragma warning restore SA1402
