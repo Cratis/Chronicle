@@ -10,6 +10,9 @@ because a change confined to that file matched none of the patterns the filter h
 This compares the two and fails on any required path no pattern covers, so the next narrowing has to
 state in the pull request what stops being covered.
 
+Source projects and central root-level build files also govern client snippet compilation. Check those
+contract entries against both snippet triggers; solution membership and test settings do not affect that build.
+
 Coverage is decided by glob semantics, never string equality: a required entry denotes a set of files,
 and a pattern covers it only when it matches every file in that set. GitHub's filter patterns are read
 as documented - `**` matches any character including `/`, `*` matches any character except `/`, `?`
@@ -22,6 +25,7 @@ import sys
 
 CONTRACT = ".github/build-affecting-paths.txt"
 WORKFLOW = ".github/workflows/dotnet-build.yml"
+SNIPPET_WORKFLOW = ".github/workflows/client-snippets.yml"
 PROBE = "probe-for-coverage"
 
 
@@ -56,8 +60,8 @@ def child(lines, start, indent, key):
     return None
 
 
-def read_trigger_paths(root, workflow):
-    """Returns the `paths:` and `paths-ignore:` patterns of the workflow's `pull_request:` trigger."""
+def read_trigger_paths(root, workflow, trigger="pull_request"):
+    """Returns the `paths:` and `paths-ignore:` patterns of the requested workflow trigger."""
     with open(os.path.join(root, workflow), encoding="utf-8") as file:
         lines = [_ for _ in file.read().splitlines() if not _.strip().startswith("#")]
 
@@ -65,14 +69,14 @@ def read_trigger_paths(root, workflow):
     if on is None:
         raise SystemExit(f"::error::{workflow} has no `on:` trigger block.")
 
-    pull_request = child(lines, on, 0, "pull_request:")
-    if pull_request is None:
-        raise SystemExit(f"::error::{workflow} has no `pull_request:` trigger to read a path filter from.")
+    event = child(lines, on, 0, f"{trigger}:")
+    if event is None:
+        raise SystemExit(f"::error::{workflow} has no `{trigger}:` trigger to read a path filter from.")
 
-    indent = len(lines[pull_request]) - len(lines[pull_request].lstrip())
+    indent = len(lines[event]) - len(lines[event].lstrip())
     found = {}
     for key in ("paths:", "paths-ignore:"):
-        at = child(lines, pull_request, indent, key)
+        at = child(lines, event, indent, key)
         items = [] if at is None else [_.strip()[1:].strip().strip("\"'") for _ in block(lines, at, indent + 1)]
         found[key.rstrip(":")] = items
 
@@ -136,15 +140,17 @@ def missing_from_disk(root, required):
     return not os.path.exists(os.path.join(root, target))
 
 
-def main():
-    """Reports every required path the build workflow's pull request filter fails to cover."""
-    root = sys.argv[1] if len(sys.argv) > 1 else "."
-    required = read_contract(root)
-    patterns, ignored = read_trigger_paths(root, WORKFLOW)
+def check_contract(
+    root, required, workflow=WORKFLOW, trigger="pull_request", purpose="a build and a test run",
+    consequence="A change confined to it would merge without ever being built.",
+    remediation=f"Add a pattern that covers it, or remove it from {CONTRACT} and say in the pull request what stops being covered.",
+):
+    """Reports every required path the workflow trigger's filter fails to cover."""
+    patterns, ignored = read_trigger_paths(root, workflow, trigger)
     failures = 0
 
     if ignored:
-        print(f"::error::{WORKFLOW} uses `paths-ignore:`, which can exclude a required path. Express the filter as `paths:` so this contract can be checked.")
+        print(f"::error::{workflow} uses `paths-ignore:`, which can exclude a required path. Express the filter as `paths:` so this contract can be checked.")
         failures += 1
 
     for entry in required:
@@ -156,14 +162,34 @@ def main():
         holes = uncovered(entry, patterns)
         if holes:
             print(
-                f"::error::`{entry}` is required to trigger a build and a test run, but no pattern in the "
-                f"`paths:` filter of {WORKFLOW} covers it (for example `{holes[0]}` matches nothing there). "
-                f"A change confined to it would merge without ever being built. Add a pattern that covers it, "
-                f"or remove it from {CONTRACT} and say in the pull request what stops being covered."
+                f"::error::`{entry}` is required to trigger {purpose}, but no pattern in the "
+                f"`paths:` filter of {workflow} covers it (for example `{holes[0]}` matches nothing there). "
+                f"{consequence} {remediation}"
             )
             failures += 1
 
-    print(f"{len(required)} required path(s) checked against {len(patterns)} pattern(s) in {WORKFLOW}")
+    print(f"{len(required)} required path(s) checked against {len(patterns)} pattern(s) in {workflow} ({trigger})")
+    return failures
+
+
+def main():
+    """Checks the build contract and its central-file subset for both snippet triggers."""
+    root = sys.argv[1] if len(sys.argv) > 1 else "."
+    required = read_contract(root)
+    failures = check_contract(root, required)
+
+    # The generated snippet project references Source projects and inherits the central build files.
+    # It does not build the solution, run specs, or consume the other trees and CI infrastructure paths.
+    snippet_required = [entry for entry in required if entry == "Source/**" or (
+        "/" not in entry and entry not in ("Chronicle.slnx", "specs.runsettings")
+    )]
+    for trigger in ("pull_request", "push"):
+        failures += check_contract(
+            root, snippet_required, SNIPPET_WORKFLOW, trigger, "snippet verification",
+            consequence="A change confined to it would skip Client Snippet Verification.",
+            remediation=f"Add a pattern that covers it to both the pull_request and push triggers in {SNIPPET_WORKFLOW}, or exclude the entry from the snippet subset in main() with a reason.",
+        )
+
     return 1 if failures else 0
 
 
