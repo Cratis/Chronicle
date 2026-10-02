@@ -95,38 +95,44 @@ public class PatternCapture(
         var observer = grainFactory.GetGrain<IObserver>(key);
         if (recovering && !await observer.NeedsSubscriptionRecovery(eventTypes))
         {
+            eventTypes = (await observer.GetSubscription()).EventTypes.ToArray();
+        }
+        else
+        {
+            logger.SubscribingPatternCapture(eventStore, @namespace, eventTypes.Length);
+            eventTypes = (recovering
+                ? await observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(
+                    ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, isReplayable: false)
+                : await observer.SubscribeAdditively<IPatternCaptureSubscriber>(
+                    ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, isReplayable: false)).ToArray();
+        }
+
+        if (eventTypes.Length == 0)
+        {
             return;
         }
 
-        if (recovering)
+        var reactors = storage.GetEventStore(eventStore).Reactors;
+        if (recovering && await reactors.Has(key.ObserverId))
         {
-            // A registry snapshot can predate registrations already installed on the observer. Keep those
-            // types and their latest generations in the stored definition as well as in the subscription.
-            var subscription = await observer.GetSubscription();
-            eventTypes = eventTypes.Concat(subscription.EventTypes)
-                .GroupBy(eventType => eventType.Id)
-                .Select(group => group.OrderByDescending(eventType => eventType.Generation.Value).First())
-                .ToArray();
+            var definition = await reactors.Get(key.ObserverId);
+            var storedGenerations = definition.EventTypes.GroupBy(eventType => eventType.EventType.Id)
+                .ToDictionary(group => group.Key, group => group.Max(eventType => eventType.EventType.Generation.Value));
+            if (eventTypes.All(eventType => storedGenerations.TryGetValue(eventType.Id, out var generation) &&
+                generation >= eventType.Generation.Value))
+            {
+                return;
+            }
         }
 
-        logger.SubscribingPatternCapture(eventStore, @namespace, eventTypes.Length);
-
-        await storage.GetEventStore(eventStore).Reactors.Save(new ReactorDefinition(
+        // The effective set is merged inside the observer turn, but this store-wide definition write is
+        // outside it. Concurrent saves remain best-effort: reconciliation self-heals a narrower stored
+        // definition even when the subscription itself needs no recovery, without writing when covered.
+        await reactors.Save(new ReactorDefinition(
             key.ObserverId,
             ReactorOwner.Kernel,
             EventSequenceId.Log,
             [.. eventTypes.Select(eventType => new EventTypeWithKeyExpression(eventType, WellKnownExpressions.EventSourceId))],
             false));
-
-        if (recovering)
-        {
-            await observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(
-                ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, isReplayable: false);
-        }
-        else
-        {
-            await observer.Subscribe<IPatternCaptureSubscriber>(
-                ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, isReplayable: false);
-        }
     }
 }

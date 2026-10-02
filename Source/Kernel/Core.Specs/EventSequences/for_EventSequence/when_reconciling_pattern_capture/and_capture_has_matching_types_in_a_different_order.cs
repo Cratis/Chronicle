@@ -14,6 +14,7 @@ public class and_capture_has_matching_types_in_a_different_order : given.an_even
     async Task Establish()
     {
         _registeredTypes = [_eventType, new EventType("another-event", EventTypeGeneration.First)];
+        StoredCaptureTypesAre(_registeredTypes);
         await _captureObserver.Subscribe<IPatternCaptureSubscriber>(ObserverType.Reactor, _registeredTypes.Reverse(), SiloAddress.Zero, isReplayable: false);
         _captureState.ClearReceivedCalls();
         _appendedEventsQueues.ClearReceivedCalls();

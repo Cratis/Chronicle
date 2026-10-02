@@ -105,6 +105,26 @@ public interface IObserver : IGrainWithStringKey
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
+    /// Subscribe a kernel observer additively, retaining the highest generation of every already subscribed type.
+    /// </summary>
+    /// <typeparam name="TObserverSubscriber">The kernel-owned subscriber type.</typeparam>
+    /// <param name="type">The observer type.</param>
+    /// <param name="eventTypes">The event types to observe.</param>
+    /// <param name="siloAddress">The subscriber's silo address.</param>
+    /// <param name="subscriberArgs">Optional subscriber arguments.</param>
+    /// <param name="isReplayable">Whether the observer supports replay.</param>
+    /// <param name="filters">Optional event filters.</param>
+    /// <returns>The effective merged event types from this non-interleaved grain request.</returns>
+    Task<IEnumerable<EventType>> SubscribeAdditively<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        object? subscriberArgs = default,
+        bool isReplayable = true,
+        ObserverFilters? filters = default)
+        where TObserverSubscriber : IObserverSubscriber;
+
+    /// <summary>
     /// Check whether a kernel subscription is missing, has failed setup, or observes a different event-type set.
     /// </summary>
     /// <remarks>
@@ -132,8 +152,8 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="subscriberArgs">Optional subscriber arguments.</param>
     /// <param name="isReplayable">Whether the observer supports replay.</param>
     /// <param name="filters">Optional event filters.</param>
-    /// <returns>Awaitable task.</returns>
-    Task RecoverStalledSubscription<TObserverSubscriber>(
+    /// <returns>The effective event types, including registrations merged in this grain request.</returns>
+    Task<IEnumerable<EventType>> RecoverStalledSubscription<TObserverSubscriber>(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,

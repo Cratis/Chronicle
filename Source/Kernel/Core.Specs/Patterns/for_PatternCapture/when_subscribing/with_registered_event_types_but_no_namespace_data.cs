@@ -22,7 +22,7 @@ public class with_registered_event_types_but_no_namespace_data : given.a_pattern
 
     [Fact]
     async Task should_subscribe_an_observer_for_the_first_append() =>
-        await _observer.Received(1).Subscribe<IPatternCaptureSubscriber>(
+        await _observer.Received(1).SubscribeAdditively<IPatternCaptureSubscriber>(
             Arg.Any<ObserverType>(),
             Arg.Any<IEnumerable<EventType>>(),
             Arg.Any<SiloAddress>(),

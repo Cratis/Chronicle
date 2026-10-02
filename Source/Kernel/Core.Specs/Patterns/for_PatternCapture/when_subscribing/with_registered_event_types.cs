@@ -28,7 +28,7 @@ public class with_registered_event_types : given.a_pattern_capture
     }
 
     [Fact] async Task should_subscribe_the_observer_to_every_registered_event_type() =>
-        await _observer.Received(1).Subscribe<IPatternCaptureSubscriber>(
+        await _observer.Received(1).SubscribeAdditively<IPatternCaptureSubscriber>(
             ObserverType.Reactor,
             Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.Count() == 3),
             Arg.Any<SiloAddress>(),

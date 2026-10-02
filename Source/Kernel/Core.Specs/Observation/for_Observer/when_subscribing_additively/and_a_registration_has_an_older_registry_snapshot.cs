@@ -4,9 +4,9 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 
-namespace Cratis.Chronicle.Observation.for_Observer.when_recovering_stalled_subscription;
+namespace Cratis.Chronicle.Observation.for_Observer.when_subscribing_additively;
 
-public class and_an_expected_type_is_missing_from_a_newer_subscription : given.an_observer
+public class and_a_registration_has_an_older_registry_snapshot : given.an_observer
 {
     EventType[] _expectedTypes;
     EventType[] _mergedTypes;
@@ -20,14 +20,14 @@ public class and_an_expected_type_is_missing_from_a_newer_subscription : given.a
         var missingType = new EventType("missing-event", EventTypeGeneration.First);
         _expectedTypes = [oldType, missingType];
         _mergedTypes = [newerType, extraType, missingType];
-        await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [newerType, extraType], SiloAddress.Zero, isReplayable: false);
+        await _observer.SubscribeAdditively<NullObserverSubscriber>(ObserverType.Reactor, [newerType, extraType], SiloAddress.Zero, isReplayable: false);
         _appendedEventsQueues.ClearReceivedCalls();
     }
 
-    async Task Because() => _effectiveTypes = await _observer.RecoverStalledSubscription<NullObserverSubscriber>(ObserverType.Reactor, _expectedTypes, SiloAddress.Zero, isReplayable: false);
+    async Task Because() => _effectiveTypes = await _observer.SubscribeAdditively<NullObserverSubscriber>(ObserverType.Reactor, _expectedTypes, SiloAddress.Zero, isReplayable: false);
 
     [Fact] void should_return_the_effective_merged_types() => _effectiveTypes.ShouldContainOnly(_mergedTypes);
-    [Fact] async Task should_preserve_newer_types_in_the_subscription() => (await _observer.GetSubscription()).EventTypes.ShouldContainOnly(_mergedTypes);
-    [Fact] void should_preserve_newer_types_in_the_observer_definition() => _definitionStorage.State.EventTypes.ShouldContainOnly(_mergedTypes);
+    [Fact] async Task should_not_narrow_the_subscription() => (await _observer.GetSubscription()).EventTypes.ShouldContainOnly(_mergedTypes);
+    [Fact] void should_not_narrow_the_observer_definition() => _definitionStorage.State.EventTypes.ShouldContainOnly(_mergedTypes);
     [Fact] async Task should_subscribe_the_queue_to_the_merged_types() => await _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Is<IEnumerable<EventType>>(types => types.ToHashSet().SetEquals(_mergedTypes)), Arg.Any<ObserverFilters?>());
 }

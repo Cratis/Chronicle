@@ -20,7 +20,7 @@ public class a_pattern_capture_with_a_failing_namespace : a_pattern_capture
         _failedObserver = Substitute.For<IObserver>();
         var key = new ObserverKey(PatternCapture.ObserverIdentifier, _eventStore, _namespace, EventSequenceId.Log);
         _grainFactory.GetGrain<IObserver>(key.ToString(), Arg.Any<string>()).Returns(_failedObserver);
-        _failedObserver.Subscribe<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Any<IEnumerable<EventType>>(), SiloAddress.Zero, isReplayable: false)
-            .Returns(Task.FromException(new TimeoutException()));
+        _failedObserver.SubscribeAdditively<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Any<IEnumerable<EventType>>(), SiloAddress.Zero, isReplayable: false)
+            .Returns(Task.FromException<IEnumerable<EventType>>(new TimeoutException()));
     }
 }

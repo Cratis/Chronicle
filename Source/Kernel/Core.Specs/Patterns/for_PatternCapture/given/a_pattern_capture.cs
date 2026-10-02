@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Schemas;
@@ -36,6 +37,10 @@ public class a_pattern_capture : Specification
         _reactors = Substitute.For<IReactorDefinitionsStorage>();
         _observer = Substitute.For<IObserver>();
         _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
+        _observer.SubscribeAdditively<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
+            .Returns(call => call.Arg<IEnumerable<EventType>>());
+        _observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
+            .Returns(call => call.Arg<IEnumerable<EventType>>());
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _namespaceStorage.HasData().Returns(Task.FromResult(true));
 

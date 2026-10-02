@@ -35,7 +35,25 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public async Task RecoverStalledSubscription<TObserverSubscriber>(
+    public async Task<IEnumerable<EventType>> SubscribeAdditively<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        object? subscriberArgs = null,
+        bool isReplayable = true,
+        ObserverFilters? filters = null)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        // Merge inside the observer turn so two registrations cannot replace a newer subscription
+        // with an older registry snapshot. Ordinary client subscriptions remain replacement-based.
+        eventTypes = MergeSubscribedEventTypes(eventTypes);
+        await Subscribe<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters);
+
+        return _subscription.EventTypes;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventType>> RecoverStalledSubscription<TObserverSubscriber>(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
@@ -48,15 +66,12 @@ public partial class Observer
         // a Subscribe that was still running when reconciliation requested recovery finishes before this decision.
         if (!await NeedsSubscriptionRecovery(eventTypes))
         {
-            return;
+            return _subscription.EventTypes;
         }
 
         // Preserve registrations installed after the caller read the registry, even if another expected type
         // is missing. Recovery is additive and keeps the highest generation for each event type.
-        eventTypes = eventTypes.Concat(_subscription.EventTypes)
-            .GroupBy(eventType => eventType.Id)
-            .Select(group => group.OrderByDescending(eventType => eventType.Generation.Value).First())
-            .ToArray();
+        eventTypes = MergeSubscribedEventTypes(eventTypes);
 
         // Keep the failure indication until setup completes, including when refreshing a healthy observer's
         // event types. A failed refresh must remain repairable even after installing the new subscription.
@@ -70,5 +85,12 @@ public partial class Observer
         // to release quarantine; ordinary application Subscribe retains its existing behavior.
         await SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, recovering: true);
         _subscriptionSetupFailed = await GetCurrentState() is not (Observing or States.Replay);
+
+        return _subscription.EventTypes;
     }
+
+    EventType[] MergeSubscribedEventTypes(IEnumerable<EventType> eventTypes) => eventTypes.Concat(_subscription.EventTypes)
+        .GroupBy(eventType => eventType.Id)
+        .Select(group => group.OrderByDescending(eventType => eventType.Generation.Value).First())
+        .ToArray();
 }
