@@ -20,7 +20,7 @@ public class an_event_sequence_with_pattern_capture : an_event_sequence
         _silo.AddProbe(_ => _captureObserver);
         _captureObserver.IsSubscribed().Returns(_ => _captureIsSubscribed);
         _captureObserver.GetState().Returns(_ => ObserverState.Empty with { RunningState = _captureRunningState });
-        _patternCapture.Subscribe(EventStore, EventStoreNamespace).Returns(_ =>
+        _patternCapture.RecoverSubscription(EventStore, EventStoreNamespace).Returns(_ =>
         {
             _captureIsSubscribed = true;
             return Task.CompletedTask;

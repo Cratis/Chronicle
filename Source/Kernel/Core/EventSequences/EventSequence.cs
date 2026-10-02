@@ -1172,10 +1172,9 @@ public class EventSequence(
             if (state.RunningState != ObserverRunningState.Quarantined &&
                 (!isSubscribed || state.RunningState is ObserverRunningState.Disconnected or ObserverRunningState.Unknown))
             {
-                // Subscribe installs its in-memory subscription before persistence, job recovery and routing
-                // finish. A failed setup can therefore still report IsSubscribed while disconnected. Retry
-                // that setup too, preserving progress and leaving active or quarantined observers alone.
-                await patternCapture.Subscribe(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+                // These interleaved reads are only a cheap hint. The observer makes the authoritative
+                // decision in a serialized turn, after any in-flight subscription or quarantine transition.
+                await patternCapture.RecoverSubscription(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
             }
         }
         catch (Exception exception)

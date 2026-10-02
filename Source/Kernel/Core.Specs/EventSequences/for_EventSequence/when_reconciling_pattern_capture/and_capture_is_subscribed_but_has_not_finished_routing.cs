@@ -15,5 +15,5 @@ public class and_capture_is_subscribed_but_has_not_finished_routing : given.an_e
 
     Task Because() => _silo.TimerRegistry.FireAllAsync();
 
-    [Fact] async Task should_retry_capture_setup() => await _patternCapture.Received(1).Subscribe(EventStore, EventStoreNamespace);
+    [Fact] async Task should_ask_the_observer_to_check_for_stalled_setup() => await _patternCapture.Received(1).RecoverSubscription(EventStore, EventStoreNamespace);
 }

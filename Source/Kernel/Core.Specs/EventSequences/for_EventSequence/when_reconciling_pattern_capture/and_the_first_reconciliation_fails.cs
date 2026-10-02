@@ -10,7 +10,7 @@ public class and_the_first_reconciliation_fails : given.an_event_sequence_with_p
 
     async Task Establish()
     {
-        _patternCapture.Subscribe(EventStore, EventStoreNamespace).Returns(_ =>
+        _patternCapture.RecoverSubscription(EventStore, EventStoreNamespace).Returns(_ =>
         {
             if (++_attempts == 1)
             {

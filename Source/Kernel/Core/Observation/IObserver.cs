@@ -105,6 +105,31 @@ public interface IObserver : IGrainWithStringKey
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
+    /// Recover a missing or failed explicitly typed kernel subscription without releasing quarantine or resetting progress.
+    /// </summary>
+    /// <remarks>
+    /// The decision and recovery run in one non-interleaved grain request. A subscribed observer is retried only
+    /// after setup has failed and left it disconnected or in a transient state, not while setup is still running.
+    /// This kernel-only operation is not exposed through the client contracts.
+    /// </remarks>
+    /// <typeparam name="TObserverSubscriber">The kernel-owned subscriber type.</typeparam>
+    /// <param name="type">The observer type.</param>
+    /// <param name="eventTypes">The event types to observe.</param>
+    /// <param name="siloAddress">The subscriber's silo address.</param>
+    /// <param name="subscriberArgs">Optional subscriber arguments.</param>
+    /// <param name="isReplayable">Whether the observer supports replay.</param>
+    /// <param name="filters">Optional event filters.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RecoverStalledSubscription<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        object? subscriberArgs = default,
+        bool isReplayable = true,
+        ObserverFilters? filters = default)
+        where TObserverSubscriber : IObserverSubscriber;
+
+    /// <summary>
     /// Subscribe to all event types in the observer.
     /// </summary>
     /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>

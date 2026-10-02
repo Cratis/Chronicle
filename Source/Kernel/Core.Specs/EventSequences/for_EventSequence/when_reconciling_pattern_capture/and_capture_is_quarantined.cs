@@ -11,5 +11,5 @@ public class and_capture_is_quarantined : given.an_event_sequence_with_pattern_c
 
     Task Because() => _silo.TimerRegistry.FireAllAsync();
 
-    [Fact] async Task should_not_bypass_quarantine() => await _patternCapture.DidNotReceive().Subscribe(EventStore, EventStoreNamespace);
+    [Fact] async Task should_not_bypass_quarantine() => await _patternCapture.DidNotReceive().RecoverSubscription(EventStore, EventStoreNamespace);
 }

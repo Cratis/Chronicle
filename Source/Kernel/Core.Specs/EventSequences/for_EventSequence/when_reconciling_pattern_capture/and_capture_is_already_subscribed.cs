@@ -9,5 +9,5 @@ public class and_capture_is_already_subscribed : given.an_event_sequence_with_pa
 
     Task Because() => _silo.TimerRegistry.FireAllAsync();
 
-    [Fact] async Task should_not_resubscribe_capture() => await _patternCapture.DidNotReceive().Subscribe(EventStore, EventStoreNamespace);
+    [Fact] async Task should_not_resubscribe_capture() => await _patternCapture.DidNotReceive().RecoverSubscription(EventStore, EventStoreNamespace);
 }

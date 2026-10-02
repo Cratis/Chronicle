@@ -63,7 +63,12 @@ public class PatternCapture(
     }
 
     /// <inheritdoc/>
-    public async Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    public Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace) => Subscribe(eventStore, @namespace, recovering: false);
+
+    /// <inheritdoc/>
+    public Task RecoverSubscription(EventStoreName eventStore, EventStoreNamespaceName @namespace) => Subscribe(eventStore, @namespace, recovering: true);
+
+    async Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace, bool recovering)
     {
         var schemas = await storage.GetEventStore(eventStore).EventTypes.GetLatestForAllEventTypes();
         var eventTypes = schemas.Select(schema => schema.Type).ToArray();
@@ -86,11 +91,15 @@ public class PatternCapture(
             false));
 
         var observer = grainFactory.GetGrain<IObserver>(key);
-        await observer.Subscribe<IPatternCaptureSubscriber>(
-            ObserverType.Reactor,
-            eventTypes,
-            localSiloDetails.SiloAddress,
-            null,
-            false);
+        if (recovering)
+        {
+            await observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(
+                ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, isReplayable: false);
+        }
+        else
+        {
+            await observer.Subscribe<IPatternCaptureSubscriber>(
+                ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, isReplayable: false);
+        }
     }
 }

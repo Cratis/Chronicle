@@ -63,6 +63,7 @@ public partial class Observer(
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
     bool _resumingQuarantine;
+    bool _subscriptionSetupFailed;
 
     /// <summary>
     /// Set once the observer has been removed, so nothing this activation does afterwards writes it back.
@@ -214,101 +215,16 @@ public partial class Observer(
         ObserverFilters? filters = null)
         where TObserverSubscriber : IObserverSubscriber
     {
-        var owner = GetOwner<TObserverSubscriber>();
-
-        var eventTypeSchemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(eventTypes);
-        _eventTypeSchemas = eventTypeSchemas.ToDictionary(s => s.Type);
-
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-
-        // Re-read all persistent state from storage. When the silo is shared
-        // across tests (KeepAlive grains survive ForceActivationCollection),
-        // the in-memory state may be stale if databases were dropped between
-        // tests. Reading from storage detects this and resets to defaults.
-        await ReadStateAsync();
-        await observerDefinition.ReadStateAsync();
-        await failures.ReadStateAsync();
-
-        await LeaveQuarantineForSubscription();
-
-        logger.Subscribing();
-        logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
-
-        observerDefinition.State = observerDefinition.State with
+        try
         {
-            Type = type,
-            Owner = owner,
-            EventTypes = eventTypes,
-            IsReplayable = isReplayable
-        };
-        await observerDefinition.WriteStateAsync();
-
-        if (subscriberArgs is ConnectedClient connectedClient)
-        {
-            var target = new ObserverSubscriberTarget(siloAddress, connectedClient);
-            if (CanFanOutInto<TObserverSubscriber>(eventTypes, filters))
-            {
-                // Another instance of the same client is already subscribed with an identical
-                // definition - add this instance as a fan-out target instead of replacing the
-                // subscription. The stable ordering keeps partition selection deterministic.
-                var targets = _subscription.Targets
-                    .Where(existing => existing.ConnectedClient!.ConnectionId != connectedClient.ConnectionId)
-                    .Append(target)
-                    .OrderBy(existing => existing.ConnectedClient!.ConnectionId.Value)
-                    .ToArray();
-                _subscription = _subscription with
-                {
-                    SiloAddress = targets[0].SiloAddress,
-                    Arguments = targets[0].ConnectedClient,
-                    Targets = targets
-                };
-            }
-            else
-            {
-                _subscription = new(
-                    _observerId,
-                    _observerKey,
-                    eventTypes,
-                    typeof(TObserverSubscriber),
-                    siloAddress,
-                    subscriberArgs,
-                    isReplayable,
-                    filters)
-                {
-                    Targets = [target]
-                };
-            }
+            await SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, recovering: false);
+            _subscriptionSetupFailed = State.RunningState is ObserverRunningState.Disconnected or ObserverRunningState.Unknown;
         }
-        else
+        catch
         {
-            _subscription = new(
-                _observerId,
-                _observerKey,
-                eventTypes,
-                typeof(TObserverSubscriber),
-                siloAddress,
-                subscriberArgs,
-                isReplayable,
-                filters);
+            _subscriptionSetupFailed = true;
+            throw;
         }
-
-        State = State with { SubscribesToAllEvents = false };
-        await WriteStateAsync();
-
-        if (await TransitionToReplayIfNeeded())
-        {
-            return;
-        }
-        await ResumeJobs();
-
-        // Recovering failed partitions starts one job per partition through the jobs manager. An observer
-        // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
-        // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
-        // returned: the client timed out, retried, and the observer was recorded as never subscribed.
-        // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards,
-        // in a turn of its own.
-        this.ScheduleInSeparateTurn(TryRecoverAllFailedPartitions);
-        await TransitionTo<CatchingUpInFlight>();
     }
 
     /// <inheritdoc/>
@@ -578,6 +494,116 @@ public partial class Observer(
         return left.Tags.ToHashSet().SetEquals(right.Tags) &&
                Equals(left.EventSourceType, right.EventSourceType) &&
                Equals(left.EventStreamType, right.EventStreamType);
+    }
+
+    async Task SubscribeToEventTypes<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        object? subscriberArgs,
+        bool isReplayable,
+        ObserverFilters? filters,
+        bool recovering)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        var owner = GetOwner<TObserverSubscriber>();
+
+        var eventTypeSchemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(eventTypes);
+        _eventTypeSchemas = eventTypeSchemas.ToDictionary(s => s.Type);
+
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+
+        // Re-read all persistent state from storage. When the silo is shared
+        // across tests (KeepAlive grains survive ForceActivationCollection),
+        // the in-memory state may be stale if databases were dropped between
+        // tests. Reading from storage detects this and resets to defaults.
+        if (!recovering)
+        {
+            await ReadStateAsync();
+            await observerDefinition.ReadStateAsync();
+            await failures.ReadStateAsync();
+
+            await LeaveQuarantineForSubscription();
+        }
+
+        logger.Subscribing();
+        logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
+
+        observerDefinition.State = observerDefinition.State with
+        {
+            Type = type,
+            Owner = owner,
+            EventTypes = eventTypes,
+            IsReplayable = isReplayable
+        };
+        await observerDefinition.WriteStateAsync();
+
+        if (subscriberArgs is ConnectedClient connectedClient)
+        {
+            var target = new ObserverSubscriberTarget(siloAddress, connectedClient);
+            if (CanFanOutInto<TObserverSubscriber>(eventTypes, filters))
+            {
+                // Another instance of the same client is already subscribed with an identical
+                // definition - add this instance as a fan-out target instead of replacing the
+                // subscription. The stable ordering keeps partition selection deterministic.
+                var targets = _subscription.Targets
+                    .Where(existing => existing.ConnectedClient!.ConnectionId != connectedClient.ConnectionId)
+                    .Append(target)
+                    .OrderBy(existing => existing.ConnectedClient!.ConnectionId.Value)
+                    .ToArray();
+                _subscription = _subscription with
+                {
+                    SiloAddress = targets[0].SiloAddress,
+                    Arguments = targets[0].ConnectedClient,
+                    Targets = targets
+                };
+            }
+            else
+            {
+                _subscription = new(
+                    _observerId,
+                    _observerKey,
+                    eventTypes,
+                    typeof(TObserverSubscriber),
+                    siloAddress,
+                    subscriberArgs,
+                    isReplayable,
+                    filters)
+                {
+                    Targets = [target]
+                };
+            }
+        }
+        else
+        {
+            _subscription = new(
+                _observerId,
+                _observerKey,
+                eventTypes,
+                typeof(TObserverSubscriber),
+                siloAddress,
+                subscriberArgs,
+                isReplayable,
+                filters);
+        }
+
+        State = State with { SubscribesToAllEvents = false };
+        await WriteStateAsync();
+
+        if (await TransitionToReplayIfNeeded())
+        {
+            return;
+        }
+        await ResumeJobs();
+
+        // Recovering failed partitions starts one job per partition through the jobs manager. An observer
+        // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
+        // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
+        // returned: the client timed out, retried, and the observer was recorded as never subscribed.
+        // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards,
+        // in a turn of its own.
+        this.ScheduleInSeparateTurn(TryRecoverAllFailedPartitions);
+        await TransitionTo<CatchingUpInFlight>();
     }
 
     bool CanFanOutInto<TObserverSubscriber>(IEnumerable<EventType> eventTypes, ObserverFilters? filters)

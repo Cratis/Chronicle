@@ -11,6 +11,6 @@ public class and_the_sequence_is_not_the_event_log : given.an_event_sequence_wit
 
     Task Because() => _silo.TimerRegistry.FireAllAsync();
 
-    [Fact] async Task should_not_subscribe_capture() => await _patternCapture.DidNotReceive().Subscribe(EventStore, EventStoreNamespace);
+    [Fact] async Task should_not_subscribe_capture() => await _patternCapture.DidNotReceive().RecoverSubscription(EventStore, EventStoreNamespace);
     [Fact] void should_not_schedule_capture_reconciliation() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
 }

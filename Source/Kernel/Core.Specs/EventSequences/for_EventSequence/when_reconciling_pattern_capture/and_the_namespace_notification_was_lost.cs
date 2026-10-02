@@ -8,5 +8,5 @@ public class and_the_namespace_notification_was_lost : given.an_event_sequence_w
     Task Because() => _silo.TimerRegistry.FireAllAsync();
 
     [Fact] void should_subscribe_capture_without_a_notification_or_observer_definition() => _captureIsSubscribed.ShouldBeTrue();
-    [Fact] async Task should_subscribe_in_the_sequences_namespace() => await _patternCapture.Received(1).Subscribe(EventStore, EventStoreNamespace);
+    [Fact] async Task should_subscribe_in_the_sequences_namespace() => await _patternCapture.Received(1).RecoverSubscription(EventStore, EventStoreNamespace);
 }
