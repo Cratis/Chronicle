@@ -2,14 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Namespaces;
+using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.BroadcastChannel;
+using Orleans.Hosting.for_ChronicleServerStartupTask.given;
 
-namespace Cratis.Chronicle.Patterns.for_PatternCaptureSubscriptions;
+namespace Cratis.Chronicle.Patterns.for_PatternCaptureSubscriptions.given;
 
-public class when_a_namespace_is_added : Specification
+public class a_namespace_subscription : Specification
 {
-    IPatternCapture _capture;
-    Func<NamespaceAdded, Task> _onNamespaceAdded;
+    protected IPatternCapture _capture;
+    protected Func<NamespaceAdded, Task> _onNamespaceAdded;
+    protected bool _subscribed;
+    protected NamespaceAdded _added = new("some-store", "second-namespace");
 
     async Task Establish()
     {
@@ -17,11 +21,7 @@ public class when_a_namespace_is_added : Specification
         var subscription = Substitute.For<IBroadcastChannelSubscription>();
         subscription.When(_ => _.Attach(Arg.Any<Func<NamespaceAdded, Task>>(), Arg.Any<Func<Exception, Task>>()))
             .Do(call => _onNamespaceAdded = call.Arg<Func<NamespaceAdded, Task>>());
-        var subscriptions = new PatternCaptureSubscriptions(_capture);
+        var subscriptions = new PatternCaptureSubscriptions(_capture, NullLogger<PatternCaptureSubscriptions>.Instance, new an_immediate_time_provider());
         await subscriptions.OnSubscribed(subscription);
     }
-
-    Task Because() => _onNamespaceAdded(new NamespaceAdded("some-store", "second-namespace"));
-
-    [Fact] async Task should_subscribe_capture_in_the_added_namespace() => await _capture.Received(1).Subscribe("some-store", "second-namespace");
 }

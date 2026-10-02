@@ -122,6 +122,7 @@ internal static class InProcessEventSequence
                 storage,
                 new KernelConstraints::ConstraintValidationFactory(storage),
                 eventTypeMigrations,
+                new NoOpPatternCapture(),
                 null!,
                 new ActivitySource<KernelEventSequences::EventSequence>(),
                 compliance.Manager,

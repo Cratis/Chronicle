@@ -22,6 +22,7 @@ using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Events.Constraints;
@@ -47,6 +48,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
 /// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
 /// <param name="eventTypeMigrations"><see cref="IEventTypeMigrations"/> for migrating events between generations.</param>
+/// <param name="patternCapture">The pattern capture subscriptions to reconcile.</param>
 /// <param name="meter">The meter to use for metrics.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="jsonComplianceManagerProvider"><see cref="IJsonSchemaMetadataManager"/> for handling compliance on events.</param>
@@ -62,6 +64,7 @@ public class EventSequence(
     IStorage storage,
     IConstraintValidationFactory constraintValidatorSetFactory,
     IEventTypeMigrations eventTypeMigrations,
+    IPatternCapture patternCapture,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<EventSequence> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<EventSequence> activitySource,
     IJsonSchemaMetadataManager jsonComplianceManagerProvider,
@@ -126,6 +129,19 @@ public class EventSequence(
 
         await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
+
+        if (_eventSequenceId == EventSequenceId.Log)
+        {
+            this.RegisterGrainTimer(ReconcilePatternCapture, new GrainTimerCreationOptions
+            {
+                DueTime = TimeSpan.Zero,
+                Period = TimeSpan.FromSeconds(Math.Max(1, options.Value.Observers.WatchdogInterval)),
+
+                // Subscribing the observer reads this sequence's tail. Let that call run while the timer
+                // awaits Subscribe; neither activation nor an append may wait on this analytics work.
+                Interleave = true
+            });
+        }
     }
 
     /// <inheritdoc/>
@@ -1143,6 +1159,25 @@ public class EventSequence(
 
         _lastConstraintsVersionCheck = now;
         return true;
+    }
+
+    async Task ReconcilePatternCapture(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(
+                PatternCapture.ObserverIdentifier, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventSequenceId.Log));
+            if (!await observer.IsSubscribed() && !await observer.IsObserverQuarantined())
+            {
+                // Do not depend on NamespaceAdded delivery or on a persisted observer definition: both can
+                // be missing after a failed first subscription. Subscribe preserves the observer's progress.
+                await patternCapture.Subscribe(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+            }
+        }
+        catch (Exception exception)
+        {
+            logger.FailedReconcilingPatternCapture(exception, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+        }
     }
 
     async Task RewindPartitionForAffectedObservers(
