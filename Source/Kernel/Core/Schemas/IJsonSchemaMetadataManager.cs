@@ -58,4 +58,15 @@ public interface IJsonSchemaMetadataManager
     /// <param name="json">JSON to release rules for.</param>
     /// <returns>Released version of the JSON.</returns>
     Task<JsonObject> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json);
+
+    /// <summary>
+    /// Releases protection while retaining unreadable paths for consumers such as constraint reindexing.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="schema">The document schema.</param>
+    /// <param name="identifier">The subject identifier.</param>
+    /// <param name="json">The protected document.</param>
+    /// <returns>The released document and paths replaced with placeholders.</returns>
+    Task<ReleasedSchemaMetadata> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json);
 }

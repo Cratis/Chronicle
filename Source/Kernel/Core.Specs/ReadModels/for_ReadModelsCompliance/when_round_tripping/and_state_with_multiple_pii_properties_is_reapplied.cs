@@ -24,29 +24,29 @@ public class and_state_with_multiple_pii_properties_is_reapplied : Specification
             "id": { "type": "string", "format": "guid" },
             "email": {
               "type": "string",
-              "compliance": [{ "metadataType": "cae5580e-83d6-44dc-9d7a-a72e8a2f17d7", "details": "" }]
+              "compliance": [{ "metadataType": "PII", "details": "" }]
             },
             "personalDetails": {
               "type": ["object", "null"],
               "properties": {
                 "firstName": {
                   "type": "string",
-                  "compliance": [{ "metadataType": "cae5580e-83d6-44dc-9d7a-a72e8a2f17d7", "details": "" }]
+                  "compliance": [{ "metadataType": "PII", "details": "" }]
                 },
                 "lastName": {
                   "type": "string",
-                  "compliance": [{ "metadataType": "cae5580e-83d6-44dc-9d7a-a72e8a2f17d7", "details": "" }]
+                  "compliance": [{ "metadataType": "PII", "details": "" }]
                 },
                 "displayName": {
                   "type": "string",
-                  "compliance": [{ "metadataType": "cae5580e-83d6-44dc-9d7a-a72e8a2f17d7", "details": "" }]
+                  "compliance": [{ "metadataType": "PII", "details": "" }]
                 }
               },
               "required": ["firstName", "lastName", "displayName"]
             },
             "kcSub": {
               "type": "string",
-              "compliance": [{ "metadataType": "cae5580e-83d6-44dc-9d7a-a72e8a2f17d7", "details": "" }]
+              "compliance": [{ "metadataType": "PII", "details": "" }]
             },
             "kcSubHash": { "type": "string" },
             "organizationNumber": { "type": "string" },
@@ -87,6 +87,7 @@ public class and_state_with_multiple_pii_properties_is_reapplied : Specification
             .Apply("Ada", "Default", _schema, Identifier, CreateUserState())
             .GetAwaiter()
             .GetResult();
+        ProtectedValueCodec.TryDecodeCipherText(encryption, ((IDictionary<string, object?>)_encryptedInitialState)["email"]!.ToString()!, out _).ShouldBeTrue();
     }
 
     async Task Because()

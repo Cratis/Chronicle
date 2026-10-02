@@ -25,19 +25,19 @@ public class and_event_has_multiple_pii_properties : Specification
           "properties": {
             "firstName": {
               "type": "string",
-              "compliance": [{ "metadataType": "cae5580e-83d6-44dc-9d7a-a72e8a2f17d7", "details": "" }]
+              "compliance": [{ "metadataType": "PII", "details": "" }]
             },
             "lastName": {
               "type": "string",
-              "compliance": [{ "metadataType": "cae5580e-83d6-44dc-9d7a-a72e8a2f17d7", "details": "" }]
+              "compliance": [{ "metadataType": "PII", "details": "" }]
             },
             "displayName": {
               "type": "string",
-              "compliance": [{ "metadataType": "cae5580e-83d6-44dc-9d7a-a72e8a2f17d7", "details": "" }]
+              "compliance": [{ "metadataType": "PII", "details": "" }]
             },
             "bio": {
               "type": "string",
-              "compliance": [{ "metadataType": "cae5580e-83d6-44dc-9d7a-a72e8a2f17d7", "details": "" }]
+              "compliance": [{ "metadataType": "PII", "details": "" }]
             }
           },
           "required": ["firstName", "lastName", "displayName", "bio"]
@@ -67,6 +67,7 @@ public class and_event_has_multiple_pii_properties : Specification
             Identifier,
             _converter.ToJsonObject(CreateEventContent(), _schema));
 
+        ProtectedValueCodec.TryDecodeCipherText(new Encryption(), encryptedContent["firstName"]!.GetValue<string>(), out _).ShouldBeTrue();
         var compliance = new EventCompliance(_complianceManager, _converter);
         _released = await compliance.Release(
             CreateEvent(_converter.ToExpandoObject(encryptedContent, _schema)),

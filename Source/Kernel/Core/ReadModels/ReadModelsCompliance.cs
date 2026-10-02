@@ -30,6 +30,7 @@ public class ReadModelsCompliance(
         string identifier,
         ExpandoObject instance)
     {
+        schema.EnsureProtectionCanBeResolved();
         if (!schema.HasSchemaMetadata())
         {
             ((IDictionary<string, object?>)instance)[WellKnownProperties.Subject] = identifier;
@@ -88,6 +89,7 @@ public class ReadModelsCompliance(
         JsonSchema schema,
         JsonObject instance)
     {
+        schema.EnsureProtectionCanBeResolved();
         if (!schema.HasSchemaMetadata())
         {
             return instance;
@@ -134,6 +136,7 @@ public class ReadModelsCompliance(
         JsonSchema schema,
         ExpandoObject instance)
     {
+        schema.EnsureProtectionCanBeResolved();
         if (!schema.HasSchemaMetadata())
         {
             return instance;

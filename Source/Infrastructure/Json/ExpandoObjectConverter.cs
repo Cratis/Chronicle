@@ -27,7 +27,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     {
         var jsonObject = new JsonObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
-        var schemaProperties = schema.GetFlattenedProperties().ToList();
+        var schemaProperties = schema.ResolveComposition().GetFlattenedProperties().ToList();
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the expando object is preserved.
@@ -60,7 +60,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
             if (value is null)
             {
-                var defaultValue = property.GetDefaultValue(typeFormats);
+                var defaultValue = property.ResolveComposition().GetDefaultValueForSchema(typeFormats);
                 if (defaultValue is not null)
                 {
                     value = ConvertToJsonNode(defaultValue, property);
@@ -82,7 +82,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         var expandoObject = new ExpandoObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
 
-        var schemaProperties = schema.GetFlattenedProperties().ToList();
+        var schemaProperties = schema.ResolveComposition().GetFlattenedProperties().ToList();
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the document is preserved.
@@ -102,8 +102,10 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         foreach (var property in schemaProperties)
         {
             var name = property.Name;
-            var sourceValue = document[name]
-                ?? document.FirstOrDefault(kv => kv.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value;
+            if (!document.TryGetPropertyValue(name, out var sourceValue))
+            {
+                sourceValue = document.FirstOrDefault(kv => kv.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value;
+            }
 
             object? value = null;
             if (sourceValue is not null)
@@ -111,7 +113,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 value = ConvertFromJsonNode(sourceValue, property);
             }
 
-            value ??= property.GetDefaultValue(typeFormats);
+            value ??= property.ResolveComposition().GetDefaultValueForSchema(typeFormats);
             if (value is not null)
             {
                 expandoObjectAsDictionary[name] = value;
@@ -123,6 +125,8 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
     JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty)
     {
+        schemaProperty = schemaProperty.ResolveComposition();
+
         // Compliance handlers replace protected scalar values with opaque strings while the registered schema
         // intentionally remains the schema of the plaintext event. Keep those strings opaque until the
         // compliance manager releases them instead of coercing ciphertext through the plaintext scalar type.
@@ -191,6 +195,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
     object? ConvertFromJsonNode(JsonNode? jsonNode, JsonSchema schemaProperty)
     {
+        schemaProperty = schemaProperty.ResolveComposition();
         if (jsonNode is null)
         {
             return null;

@@ -66,7 +66,9 @@ Deleting an encryption key is the Chronicle mechanism for GDPR erasure:
 
 Read model documents written before the erasure still hold the ciphertext. Nothing can decrypt it once the key is gone, which is what crypto-shredding relies on.
 
-The read model keeps updating after the erasure. Writing it for an erased subject — the next event that changes it, or a replay that covers the subject — replaces each of their PII values with an erased placeholder when the erasure fence refuses a key. No key is created and nothing of the value being written is kept, so the members that are not personal go on changing and the subject's personal data keeps reading as empty. A document rewritten this way no longer holds the old ciphertext. Erased values retain their declared types when released: plain strings are empty, non-nullable numbers and flags use their type defaults, and nullable values are null. This also applies to protected members of nested objects and collection elements. Whole protected objects and collections release as empty containers. Values belonging to other subjects remain encrypted at rest and release unchanged, including legitimate empty nullable strings. Non-PII members retain their values, including explicit nulls. See [The encryption key lifecycle](key-lifecycle.mdx).
+When every member's protection can be resolved, the read model keeps updating after the erasure. Writing it for an erased subject — the next event that changes it, or a replay that covers the subject — replaces each of their PII values with an erased placeholder when the erasure fence refuses a key. No key is created and nothing of the value being written is kept, so the members that are not personal go on changing and the subject's personal data keeps reading as empty. A document rewritten this way no longer holds the old ciphertext. Erased values retain their declared types when released: plain strings are empty, non-nullable numbers and flags use their type defaults, and nullable values are null. This also applies to protected members of nested objects and collection elements. Whole protected objects and collections release as empty containers. Values belonging to other subjects remain encrypted at rest and release unchanged, including legitimate empty nullable strings. Non-PII members retain their values, including explicit nulls. See [The encryption key lifecycle](key-lifecycle.mdx).
+
+Protection follows scalar `$ref` definitions and every `allOf` member declaration: if any declaration marks a member as PII, that member is protected. Unresolved references, conflicting declarations, ambiguous unions, unsupported dynamic or conditional members, and unavailable protection handlers fail closed. Such a write is refused rather than storing plaintext, even if this means the partition remains stopped after erasure. Schema-resolution failures also refuse release; they are not treated as per-value decryption failures. Constraint reindexing skips unreadable protected values regardless of their placeholder type, without skipping legitimate zero or false values.
 
 For full erasure of event content, combine key deletion with [event redaction](../events/redaction).
 
@@ -82,7 +84,7 @@ That automatic decryption covers `IReadModels`' query methods. For an instance t
 
 ### One property never fails the whole read
 
-Decryption is resolved per property, and a property that cannot be read never fails the read model or the query returning it:
+Once the schema's protection is resolved, decryption is handled per property, and a value that cannot be decrypted does not fail the read model or the query returning it:
 
 | The stored value | What the caller gets |
 |---|---|

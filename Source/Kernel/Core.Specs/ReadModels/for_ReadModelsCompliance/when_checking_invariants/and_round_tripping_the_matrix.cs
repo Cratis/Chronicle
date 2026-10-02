@@ -44,51 +44,79 @@ public class and_round_tripping_the_matrix(ITestOutputHelper output)
         Exception? initialError = null;
         var details = new List<string>();
 
-        try
+        var stage = "initial";
+        ExpandoObject? stored = null;
+        ExpandoObject? released = null;
+        await Observe(async () =>
         {
-            var stored = await Store(specimen.State);
+            stored = await Store(specimen.State);
             CheckStored(stored, false);
             CheckReleased(await compliance.Release("store", "Default", specimen.Schema, stored), false);
-            if (erased)
-            {
-                await keys.RecordErasureFor("store", "Default", "matrix-subject");
-                await keys.DeleteFor("store", "Default", "matrix-subject");
-                var released = await compliance.Release("store", "Default", specimen.Schema, stored);
-                CheckReleased(released, true);
-                try
-                {
-                    var updated = await Store(specimen.State);
-                    CheckStored(updated, true);
-                    CheckReleased(await compliance.Release("store", "Default", specimen.Schema, updated), true);
-                    var reapplied = await Store(released);
-                    CheckReleased(await compliance.Release("store", "Default", specimen.Schema, reapplied), true);
-                    Check(!await keys.HasFor("store", "Default", "matrix-subject"), "fence", "no new key after erasure");
-                }
-                catch (Exception exception)
-                {
-                    Check(false, "freeze", $"{exception.GetType().Name}: {exception.Message}; {exception.InnerException?.GetType().Name}");
-                }
-            }
-        }
-        catch (Exception exception)
+        });
+        if (erased)
         {
-            initialError = exception;
-            Check(false, "apply_or_release", $"{exception.GetType().Name}: {exception.Message}; {exception.InnerException?.GetType().Name}");
+            await keys.RecordErasureFor("store", "Default", "matrix-subject");
+            await keys.DeleteFor("store", "Default", "matrix-subject");
+            stage = "release_erased";
+            if (stored is not null)
+            {
+                await Observe(async () =>
+                {
+                    released = await compliance.Release("store", "Default", specimen.Schema, stored);
+                    CheckReleased(released, true);
+                });
+            }
+            stage = "fresh_erased";
+            await Observe(async () =>
+            {
+                var updated = await Store(specimen.State);
+                CheckStored(updated, true);
+                CheckReleased(await compliance.Release("store", "Default", specimen.Schema, updated), true);
+            });
+            stage = "reapplied_erased";
+            if (released is not null)
+            {
+                await Observe(async () =>
+                {
+                    var reapplied = await Store(released);
+                    CheckStored(reapplied, true, onlyProtection: true);
+                    CheckReleased(await compliance.Release("store", "Default", specimen.Schema, reapplied), true);
+                });
+            }
+            Check(!await keys.HasFor("store", "Default", "matrix-subject"), "fence", "no new key after erasure");
+        }
+
+        async Task Observe(Func<Task> action)
+        {
+            try
+            {
+                await action();
+            }
+            catch (Exception exception)
+            {
+                initialError ??= exception;
+                Check(false, protection == "undeclared" && exception is SchemaPropertyNotFoundInSchema ? "I4_nested" : "apply_or_release", $"{exception.GetType().Name}: {exception.Message}; {exception.InnerException?.GetType().Name}");
+            }
         }
 
         var unexpected = failures.Where(invariant => !given.known_main_limitations.Allows(shape, erased, member, protection, invariant, initialError)).ToArray();
-        if (failures.Count > 0) output.WriteLine($"Observed limitations: {string.Join(',', failures.Order(StringComparer.Ordinal))}");
+        if (failures.Count > 0) output.WriteLine($"Observed limitations: {string.Join(',', failures.Order(StringComparer.Ordinal))}\n{string.Join('\n', details)}");
+        Assert.DoesNotContain(details, _ => _.StartsWith("I1/initial:", StringComparison.Ordinal));
+        Assert.DoesNotContain(details, _ => _.StartsWith("I1/fresh_erased:", StringComparison.Ordinal));
+        Assert.DoesNotContain(details, _ => _.StartsWith("I1/reapplied_erased:", StringComparison.Ordinal));
+        Assert.DoesNotContain(details, _ => _.StartsWith("I2/", StringComparison.Ordinal));
         Assert.True(unexpected.Length == 0, $"INVARIANTS: {string.Join(',', unexpected.Order(StringComparer.Ordinal))}\n{string.Join('\n', details)}");
 
         void Check(bool holds, string invariant, string detail)
         {
             if (holds) return;
             failures.Add(invariant);
-            details.Add($"{invariant}: {detail}");
+            details.Add($"{invariant}/{stage}: {detail}");
         }
 
-        void CheckStored(ExpandoObject stored, bool isErased)
+        void CheckStored(ExpandoObject stored, bool isErased, bool onlyProtection = false)
         {
+            if (onlyProtection && protection != "pii") return;
             var document = JsonSerializer.SerializeToNode(stored)!.AsObject();
             foreach (var path in specimen.Paths)
             {
@@ -111,6 +139,7 @@ public class and_round_tripping_the_matrix(ITestOutputHelper output)
                     if (expected is null && !path.Contains('.', StringComparison.Ordinal)) Check(document.ContainsKey(path), "I4_null", path);
                 }
             }
+            if (onlyProtection) return;
             Check(document[specimen.Key]?.GetValue<string>() == "matrix-subject", "I4_key", document[specimen.Key]?.ToJsonString() ?? "missing");
             Check(document["extra"]?.GetValue<string>() == "undeclared-state", "I4_undeclared", document["extra"]?.ToJsonString() ?? "missing");
             Check(document["__initialized"]?.GetValue<bool>() == true && document["__lastHandledEventSequenceNumber"]?.GetValue<long>() == 42, "I4_bookkeeping", "initialization flag or watermark changed");

@@ -63,7 +63,7 @@ public class and_restoring_only_classified_values
         if (kind == "unresolved")
         {
             // Main also rejects this unresolved schema. A failed operation is closed, not a restored value.
-            error.ShouldBeOfExactType<NullReferenceException>();
+            error.ShouldBeOfExactType<UnresolvedSchemaProtection>();
             stored.ShouldBeNull();
             return;
         }

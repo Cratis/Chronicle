@@ -160,9 +160,36 @@ public static class SchemaMetadataExtensions
             (!node.HasReference || node.Reference is not null));
 
     /// <summary>
-    /// Gets the schema key a given <see cref="SchemaMetadataCategory"/> is stored under.
+    /// Rejects schema shapes whose protection cannot be completely resolved before a write or release.
     /// </summary>
-    /// <param name="category">The <see cref="SchemaMetadataCategory"/> to get the key for.</param>
+    /// <param name="schema">The document schema.</param>
+    /// <exception cref="UnresolvedSchemaProtection">A declaration cannot be resolved safely.</exception>
+    public static void EnsureProtectionCanBeResolved(this JsonSchema schema)
+    {
+        foreach (var declaration in NestedSchemasAndSelf(schema))
+        {
+            _ = declaration.ResolveComposition();
+            if (declaration.Node.Any(_ => new[] { "if", "then", "else", "not", "patternProperties", "dependentSchemas", "dependencies", "prefixItems", "contains", "unevaluatedProperties", "unevaluatedItems", "propertyNames", "$dynamicRef", "$recursiveRef", "contentSchema" }.Contains(_.Key, StringComparer.Ordinal) ||
+                ((_.Key == "additionalProperties" || _.Key == "additionalItems") && _.Value is JsonObject) ||
+                (_.Key == "items" && _.Value is JsonArray)))
+            {
+                throw new UnresolvedSchemaProtection("conditional or dynamic member declarations");
+            }
+            foreach (var category in new[] { SchemaMetadataCategory.Compliance, SchemaMetadataCategory.Security })
+            {
+                if (declaration.Node.TryGetPropertyValue(KeyFor(category), out var metadata) &&
+                    (metadata is not JsonArray entries || entries.Count != declaration.GetSchemaMetadata(category).Count()))
+                {
+                    throw new UnresolvedSchemaProtection($"malformed {category} metadata");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets the schema key a category is stored under.
+    /// </summary>
+    /// <param name="category">The metadata category.</param>
     /// <returns>The extension data key.</returns>
     internal static string KeyFor(SchemaMetadataCategory category) =>
         category == SchemaMetadataCategory.Compliance ? ComplianceJsonSchemaExtensions.ComplianceKey : SecurityJsonSchemaExtensions.SecurityKey;

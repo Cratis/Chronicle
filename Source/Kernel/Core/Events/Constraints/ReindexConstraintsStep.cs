@@ -43,6 +43,7 @@ public class ReindexConstraintsStep(
     /// <param name="seen">The set of already-cleared (event source, scope) entries for this definition.</param>
     /// <param name="validator">The <see cref="UniqueConstraintValidator"/> that updates the index.</param>
     /// <param name="uniqueConstraintsStorage">The <see cref="IUniqueConstraintsStorage"/> to update.</param>
+    /// <param name="unreadablePaths">Protected paths replaced with typed erasure placeholders.</param>
     /// <returns>Awaitable task.</returns>
     internal static async Task ReindexEvent(
         UniqueConstraintDefinition definition,
@@ -50,7 +51,8 @@ public class ReindexConstraintsStep(
         ExpandoObject content,
         HashSet<(EventSourceId EventSourceId, string ScopeKey)> seen,
         UniqueConstraintValidator validator,
-        IUniqueConstraintsStorage uniqueConstraintsStorage)
+        IUniqueConstraintsStorage uniqueConstraintsStorage,
+        IReadOnlySet<string>? unreadablePaths = null)
     {
         var scopeKey = definition.Scope.BuildScopeKey(
             @event.Context.EventSourceType,
@@ -71,14 +73,13 @@ public class ReindexConstraintsStep(
             @event.Context.EventStreamType,
             @event.Context.EventStreamId);
 
-        // A value-carrying event whose covered property released to an empty value means the subject's
-        // encryption key was erased (GDPR right-to-erasure) and the plaintext is permanently unreadable.
-        // Skip re-indexing so every erased subject does not collide on the hash of an empty value; the
-        // claim simply stays released. Removal and unsupported events fall through to Update, which
-        // releases or ignores the claim as appropriate.
+        // Release status, not a default-value comparison, distinguishes erased integers/flags/identifiers
+        // from legitimate zero/false/empty identifiers. A covered child is also unreadable when its whole
+        // container was erased. Removal events still release their claim.
         if (definition.SupportsEventType(@event.Context.EventType.Id) &&
             !definition.RemovedWith.Contains(@event.Context.EventType.Id) &&
-            definition.GetPropertiesAndValues(context).Any(_ => string.IsNullOrEmpty(_.Value)))
+            definition.GetPropertiesAndValues(context).Any(_ => string.IsNullOrEmpty(_.Value) ||
+                unreadablePaths?.Any(path => _.Property == path || _.Property.StartsWith($"{path}.", StringComparison.Ordinal)) == true))
         {
             return;
         }
@@ -157,11 +158,11 @@ public class ReindexConstraintsStep(
                     // Constraint hashes must be derived from the original plaintext, so release (decrypt) any
                     // PII before establishing the validation context. The append-time index write already uses
                     // plaintext; reindexing must match it or a rebuilt PII index would diverge from new appends.
-                    var content = await ReleaseContent(jobStepKey.Scope, jobStepKey.Namespace, @event, eventSchema);
+                    var (content, unreadablePaths) = await ReleaseContent(jobStepKey.Scope, jobStepKey.Namespace, @event, eventSchema);
 
                     foreach (var definition in changedDefinitions)
                     {
-                        await ReindexEvent(definition, @event, content, seenConstraintEntries[definition.Name], validators[definition.Name], uniqueConstraintsStorage);
+                        await ReindexEvent(definition, @event, content, seenConstraintEntries[definition.Name], validators[definition.Name], uniqueConstraintsStorage, unreadablePaths);
                     }
                 }
             }
@@ -182,16 +183,16 @@ public class ReindexConstraintsStep(
     /// <param name="event">The <see cref="AppendedEvent"/> whose content should be released.</param>
     /// <param name="eventSchema">The <see cref="EventTypeSchema"/> describing the event content.</param>
     /// <returns>The released (decrypted) content, or the original content when the event carries no compliance metadata.</returns>
-    async Task<ExpandoObject> ReleaseContent(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, AppendedEvent @event, EventTypeSchema eventSchema)
+    async Task<(ExpandoObject Content, IReadOnlySet<string> UnreadablePaths)> ReleaseContent(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, AppendedEvent @event, EventTypeSchema eventSchema)
     {
         if (!eventSchema.Schema.HasSchemaMetadata())
         {
-            return @event.Content;
+            return (@event.Content, new HashSet<string>(StringComparer.Ordinal));
         }
 
         var identifier = @event.Context.Subject.IsSet ? @event.Context.Subject.Value : @event.Context.EventSourceId.Value;
         var json = expandoObjectConverter.ToJsonObject(@event.Content, eventSchema.Schema);
-        var released = await complianceManager.Release(eventStore, eventStoreNamespace, eventSchema.Schema, identifier, json);
-        return expandoObjectConverter.ToExpandoObject(released, eventSchema.Schema);
+        var released = await complianceManager.ReleaseWithStatus(eventStore, eventStoreNamespace, eventSchema.Schema, identifier, json);
+        return (expandoObjectConverter.ToExpandoObject(released.Value, eventSchema.Schema), released.UnreadablePaths);
     }
 }

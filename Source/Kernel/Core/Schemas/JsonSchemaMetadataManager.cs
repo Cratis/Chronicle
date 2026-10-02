@@ -25,14 +25,15 @@ public class JsonSchemaMetadataManager(
     ILogger<JsonSchemaMetadataManager> logger) : IJsonSchemaMetadataManager
 {
     static readonly TypeFormats _typeFormats = new();
+    static readonly SchemaMetadataCategory[] _categories = [SchemaMetadataCategory.Compliance, SchemaMetadataCategory.Security];
 
     readonly Dictionary<(SchemaMetadataCategory Category, SchemaMetadataTypeName Type), IJsonSchemaMetadataValueHandler> _propertyValueHandlers =
         propertyValueHandlers.ToDictionary(_ => (_.Category, _.Type), _ => _);
-    readonly IReadOnlyCollection<SchemaMetadataCategory> _categories = propertyValueHandlers.Select(_ => _.Category).Distinct().ToArray();
 
     /// <inheritdoc/>
     public async Task<JsonObject> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
+        schema.EnsureProtectionCanBeResolved();
         if (!schema.HasSchemaMetadata())
         {
             return json;
@@ -46,6 +47,7 @@ public class JsonSchemaMetadataManager(
     /// <inheritdoc/>
     public async Task<JsonObject> ApplyToReadModel(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
+        schema.EnsureProtectionCanBeResolved();
         if (!schema.HasSchemaMetadata())
         {
             return json;
@@ -57,16 +59,22 @@ public class JsonSchemaMetadataManager(
     }
 
     /// <inheritdoc/>
-    public async Task<JsonObject> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
+    public async Task<JsonObject> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json) =>
+        (await ReleaseWithStatus(eventStore, eventStoreNamespace, schema, identifier, json)).Value;
+
+    /// <inheritdoc/>
+    public async Task<ReleasedSchemaMetadata> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
+        schema.EnsureProtectionCanBeResolved();
+        var unreadablePaths = new HashSet<string>(StringComparer.Ordinal);
         if (!schema.HasSchemaMetadata())
         {
-            return json;
+            return new(json, unreadablePaths);
         }
 
         var result = (json.DeepClone() as JsonObject)!;
-        await HandleActionFor(schema, identifier, result!, SchemaMetadataActionFailed.ReleaseAction, async (h, id, token) => await h.ReleaseWithStatus(eventStore, eventStoreNamespace, id, token));
-        return result;
+        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ReleaseAction, async (h, id, token) => await h.ReleaseWithStatus(eventStore, eventStoreNamespace, id, token), unreadablePaths: unreadablePaths);
+        return new(result, unreadablePaths);
     }
 
     static JsonNode? RestoreReleasedShape(JsonNode released, JsonSchema propertySchema, bool isUnreadable = false)
@@ -166,8 +174,15 @@ public class JsonSchemaMetadataManager(
         return RestoreReleasedShape(JsonValue.Create(string.Empty), propertySchema, isUnreadable: true);
     }
 
-    IEnumerable<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> MetadataAcrossCategories(JsonSchema schema) =>
-        _categories.SelectMany(category => schema.GetSchemaMetadata(category).Select(metadata => (category, metadata)));
+    (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] MetadataAcrossCategories(JsonSchema schema)
+    {
+        var entries = _categories.SelectMany(category => schema.GetSchemaMetadata(category).Select(metadata => (Category: category, Metadata: metadata))).ToArray();
+        foreach (var entry in entries.Where(_ => !_propertyValueHandlers.ContainsKey((_.Category, _.Metadata.metadataType))))
+        {
+            throw new UnresolvedSchemaProtection($"no handler for {entry.Category}/{entry.Metadata.metadataType}");
+        }
+        return entries;
+    }
 
     async Task HandleActionFor(
         JsonSchema schema,
@@ -176,9 +191,11 @@ public class JsonSchemaMetadataManager(
         string actionName,
         Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<ReleasedSchemaMetadataValue>> action,
         string path = "",
-        bool erasedValuesBecomePlaceholders = false)
+        bool erasedValuesBecomePlaceholders = false,
+        HashSet<string>? unreadablePaths = null)
     {
-        var metadataForContainer = MetadataAcrossCategories(schema).Concat(MetadataAcrossCategories(schema.ActualTypeSchema)).ToArray();
+        schema = schema.ResolveComposition();
+        var metadataForContainer = MetadataAcrossCategories(schema).ToArray();
         foreach (var (property, value) in json.ToArray())
         {
             if (schema.Properties is not null && value is not null)
@@ -186,19 +203,20 @@ public class JsonSchemaMetadataManager(
                 var propertyPath = string.IsNullOrEmpty(path) ? property : $"{path}.{property}";
                 var flattenedProperties = schema.GetFlattenedProperties();
 
-                // FirstOrDefault rather than Single: a schema flattened across inheritance can declare the same
-                // property name more than once, and the duplicate is not a reason to fail the whole walk.
-                var propertySchema = flattenedProperties.FirstOrDefault(_ => _.Name == property) ??
-                    throw new SchemaPropertyNotFoundInSchema(actionName, propertyPath, identifier, flattenedProperties.Select(_ => _.Name));
+                var propertySchema = (flattenedProperties.SingleOrDefault(_ => _.Name == property) ??
+                    throw new SchemaPropertyNotFoundInSchema(actionName, propertyPath, identifier, flattenedProperties.Select(_ => _.Name))).ResolveComposition();
 
                 var handlerApplied = false;
-                foreach (var (category, metadata) in MetadataAcrossCategories(propertySchema).Concat(metadataForContainer).DistinctBy(_ => (_.Category, _.Metadata.metadataType)))
+                var protection = MetadataAcrossCategories(propertySchema).Concat(metadataForContainer).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();
+                if (protection.Length > 1) throw new UnresolvedSchemaProtection($"multiple protection handlers for {propertyPath}");
+                foreach (var (category, metadata) in protection)
                 {
                     if (_propertyValueHandlers.TryGetValue((category, metadata.metadataType), out var handler))
                     {
                         try
                         {
                             var handled = await action(handler, identifier, value);
+                            if (handled.IsUnreadable) unreadablePaths?.Add(propertyPath);
                             json[property] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedShape(handled.Value, propertySchema, handled.IsUnreadable) : handled.Value;
                             handlerApplied = true;
                         }
@@ -230,6 +248,7 @@ public class JsonSchemaMetadataManager(
                             }
 
                             logger.FailedToReleaseProperty(propertyPath, identifier, failure);
+                            unreadablePaths?.Add(propertyPath);
                             json[property] = RestoreReleasedShape(JsonValue.Create(string.Empty), propertySchema, isUnreadable: true);
                             handlerApplied = true;
                         }
@@ -248,14 +267,14 @@ public class JsonSchemaMetadataManager(
                     // property under them for a marker to sit on. Descending would report every one of them as drift
                     // and fail a document that matches its schema. Only the descent is skipped — a value marked
                     // [PII] or [Encrypted] is still handled as a whole above, like any other container.
-                    await HandleActionFor(propertySchema, identifier, jsonObjectValue, actionName, action, propertyPath, erasedValuesBecomePlaceholders);
+                    await HandleActionFor(propertySchema, identifier, jsonObjectValue, actionName, action, propertyPath, erasedValuesBecomePlaceholders, unreadablePaths);
                 }
                 else if (!handlerApplied && value is JsonArray jsonArrayValue)
                 {
                     // The property itself was not encrypted as a whole, so descend into the array and handle
                     // schema metadata that lives on the element type — a [PII]/[Encrypted] scalar concept (e.g.
                     // IReadOnlyList<Email>) or a member marked that way inside element objects.
-                    await HandleActionForArray(propertySchema, identifier, jsonArrayValue, actionName, action, propertyPath, erasedValuesBecomePlaceholders);
+                    await HandleActionForArray(propertySchema, identifier, jsonArrayValue, actionName, action, propertyPath, erasedValuesBecomePlaceholders, unreadablePaths);
                 }
             }
         }
@@ -268,15 +287,18 @@ public class JsonSchemaMetadataManager(
         string actionName,
         Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<ReleasedSchemaMetadataValue>> action,
         string path,
-        bool erasedValuesBecomePlaceholders)
+        bool erasedValuesBecomePlaceholders,
+        HashSet<string>? unreadablePaths)
     {
-        var itemSchema = arraySchema.Item ?? arraySchema.ActualTypeSchema.Item;
+        arraySchema = arraySchema.ResolveComposition();
+        var itemSchema = arraySchema.Item?.ResolveComposition();
         if (itemSchema is null)
         {
             return;
         }
 
-        var itemMetadata = MetadataAcrossCategories(itemSchema).Concat(MetadataAcrossCategories(itemSchema.ActualTypeSchema)).ToArray();
+        var itemMetadata = MetadataAcrossCategories(itemSchema).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();
+        if (itemMetadata.Length > 1) throw new UnresolvedSchemaProtection($"multiple protection handlers for {path}");
         for (var i = 0; i < array.Count; i++)
         {
             var element = array[i];
@@ -291,12 +313,12 @@ public class JsonSchemaMetadataManager(
                 // A geospatial element is a single typed value, not a container of members, so it falls through to
                 // the value branch below — handled as a whole when the element type is marked, left alone when it
                 // is not. Walking into it would report its GeoJSON members as drift, the same as for a property.
-                case JsonObject elementObject when !itemSchema.DescribesGeospatialValue():
-                    await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath, erasedValuesBecomePlaceholders);
+                case JsonObject elementObject when itemMetadata.Length == 0 && !itemSchema.DescribesGeospatialValue():
+                    await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath, erasedValuesBecomePlaceholders, unreadablePaths);
                     break;
 
-                case JsonArray elementArray:
-                    await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath, erasedValuesBecomePlaceholders);
+                case JsonArray elementArray when itemMetadata.Length == 0:
+                    await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath, erasedValuesBecomePlaceholders, unreadablePaths);
                     break;
 
                 default:
@@ -307,6 +329,7 @@ public class JsonSchemaMetadataManager(
                             try
                             {
                                 var handled = await action(handler, identifier, element);
+                                if (handled.IsUnreadable) unreadablePaths?.Add(elementPath);
                                 var restored = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedShape(handled.Value, itemSchema, handled.IsUnreadable) : handled.Value;
                                 if (!ReferenceEquals(element, restored))
                                 {
@@ -329,6 +352,7 @@ public class JsonSchemaMetadataManager(
                                 }
 
                                 logger.FailedToReleaseProperty(elementPath, identifier, failure);
+                                unreadablePaths?.Add(elementPath);
                                 array[i] = RestoreReleasedShape(JsonValue.Create(string.Empty), itemSchema, isUnreadable: true);
                             }
                         }
