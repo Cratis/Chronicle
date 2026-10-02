@@ -29,16 +29,10 @@ public class a_read_completed_after_caching : a_mocked_event_types_storage
             .Returns(_ => ++reads == 1 ? _pendingRead.Task : Task.FromResult(CursorFor(_eventTypesInDatabase[0])));
     }
 
-    protected void CompleteRead()
+    protected void CompleteRead(MongoEventType staleDocument)
     {
-        // A competing read has already populated the cache. This stale document cannot be converted,
-        // so returning the cached instance also proves that the losing read never parses it.
-        var staleDocument = new MongoEventType(
-            _eventTypeId,
-            EventTypeOwner.Client,
-            EventTypeSource.Code,
-            false,
-            new Dictionary<string, BsonDocument> { { "invalid-generation", new BsonDocument("type", 42) } });
+        // A competing read has already populated the cache. Each spec supplies a stale document
+        // that its conversion cannot handle, proving that the losing read skips that conversion.
         _pendingRead.SetResult(CursorFor(staleDocument));
     }
 

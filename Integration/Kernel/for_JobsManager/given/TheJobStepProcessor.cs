@@ -73,39 +73,40 @@ public class TheJobStepProcessor
         return completedJobSteps;
     }
 
-#pragma warning disable MA0106
     public void JobStepPrepared(JobId JobId, JobStepId jobStepId, Type jobStepType)
     {
-        JobSteps.AddOrUpdate(JobId, new PreparedJobSteps([(jobStepId, jobStepType)]), (_, jobSteps) => new(jobSteps.Concat([(jobStepId, jobStepType)])));
+        JobSteps.AddOrUpdate(
+            JobId,
+            static (_, step) => new PreparedJobSteps([step]),
+            static (_, jobSteps, step) => new(jobSteps.Concat([step])),
+            (jobStepId, jobStepType));
         Interlocked.Increment(ref _numJobStepsPrepared);
     }
-#pragma warning restore MA0106
 
     public void PerformJobStep(JobId jobId, JobStepId jobStepId, TheJobStepState jobStepState)
     {
         JobStepPerformCalls.AddOrUpdate(
             jobId,
-            new PerformedJobStepCalls
+            static (_, step) => new PerformedJobStepCalls
             {
                 {
-                    jobStepId, new List<TheJobStepState>
+                    step.jobStepId, new List<TheJobStepState>
                     {
-                        jobStepState
+                        step.jobStepState
                     }
                 }
             },
-#pragma warning disable MA0106
-            (id, states) =>
+            static (_, states, step) =>
             {
-                if (!states.TryGetValue(jobStepId, out var jobStepStates))
+                if (!states.TryGetValue(step.jobStepId, out var jobStepStates))
                 {
                     jobStepStates = [];
                 }
-                jobStepStates.Add(jobStepState);
-                states[jobStepId] = jobStepStates;
+                jobStepStates.Add(step.jobStepState);
+                states[step.jobStepId] = jobStepStates;
                 return states;
-            });
-#pragma warning restore MA0106
+            },
+            (jobStepId, jobStepState));
 
         Interlocked.Increment(ref _numJobStepsStarted);
         if (_numJobStepsStarted >= _numJobStepsPrepared)
@@ -118,19 +119,18 @@ public class TheJobStepProcessor
     {
         CompletedSteps.AddOrUpdate(
             jobId,
-            new CompletedJobSteps
+            static (_, step) => new CompletedJobSteps
             {
                 {
-                    jobStepId, (jobStepState, status)
+                    step.jobStepId, (step.jobStepState, step.status)
                 }
             },
-#pragma warning disable MA0106
-            (id, states) =>
+            static (_, states, step) =>
             {
-                states[jobStepId] = (jobStepState, status);
+                states[step.jobStepId] = (step.jobStepState, step.status);
                 return states;
-            });
-#pragma warning restore MA0106
+            },
+            (jobStepId, jobStepState, status));
         Interlocked.Increment(ref _numJobStepsCompleted);
         if (_numJobStepsCompleted >= _numJobStepsToComplete)
         {
