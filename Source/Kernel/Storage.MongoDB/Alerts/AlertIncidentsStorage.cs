@@ -14,8 +14,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Alerts;
 /// <param name="database">The namespace database.</param>
 public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAlertIncidentsStorage
 {
-    readonly IMongoCollection<AlertIncidentDocument> _collection = database.GetCollection<AlertIncidentDocument>(WellKnownCollectionNames.AlertIncidents)
-        .WithReadPreference(ReadPreference.Primary).WithWriteConcern(WriteConcern.Acknowledged);
+    readonly IMongoCollection<AlertIncidentDocument> _collection = AcknowledgedCollection(database);
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
 
     /// <inheritdoc/>
@@ -76,7 +75,16 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
         }
         catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            // A guarded upsert collided with an existing primary key. Confirm only an equal/newer row.
+            // Another insert may have won with an older position. Retry the same guard without inserting.
+            var result = await _collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = false, Collation = Collation.Simple }, cancellationToken);
+            if (!result.IsAcknowledged)
+            {
+                throw new AlertIncidentWriteNotConfirmed(transition.Id);
+            }
+            if (result.MatchedCount > 0)
+            {
+                return AlertIncidentWriteOutcome.Applied;
+            }
         }
         var current = await _collection.Find(_ => _.Id == document.Id, new FindOptions { Collation = Collation.Simple })
             .FirstOrDefaultAsync(cancellationToken);
@@ -126,6 +134,16 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
     /// <inheritdoc/>
     public Task<AlertIncidentStoragePage> EnumerateOpen(AlertIncidentCursor? after, int limit, CancellationToken cancellationToken = default) =>
         Page(Builders<AlertIncidentDocument>.Filter.Eq(_ => _.IsOpen, true), after, limit, cancellationToken);
+
+    static IMongoCollection<AlertIncidentDocument> AcknowledgedCollection(IEventStoreNamespaceDatabase database)
+    {
+        var collection = database.GetCollection<AlertIncidentDocument>(WellKnownCollectionNames.AlertIncidents)
+            .WithReadPreference(ReadPreference.Primary);
+
+        return collection.Settings.WriteConcern?.IsAcknowledged == false
+            ? collection.WithWriteConcern(WriteConcern.Acknowledged)
+            : collection;
+    }
 
     static FilterDefinition<AlertIncidentDocument> Scope(AlertIncidentScope scope)
     {
