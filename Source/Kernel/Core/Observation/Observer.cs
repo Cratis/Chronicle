@@ -64,6 +64,7 @@ public partial class Observer(
     bool _stateWritingSuspended;
     bool _resumingQuarantine;
     bool _isQuarantined;
+    bool _recoverSubscriptionAfterQuarantine;
 
     /// <summary>
     /// Set once the observer has been removed, so nothing this activation does afterwards writes it back.
@@ -554,6 +555,16 @@ public partial class Observer(
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    protected override async Task OnAfterEnteringState(IState<ObserverState> state)
+    {
+        if (state is Disconnected && _recoverSubscriptionAfterQuarantine)
+        {
+            _recoverSubscriptionAfterQuarantine = false;
+            await RecoverSubscribedObserver();
+        }
     }
 
     /// <inheritdoc/>
