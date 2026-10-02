@@ -36,7 +36,7 @@ public partial class Observer
 
         _metrics?.PartitionRetryAttempt();
         var config = await configurationProvider.GetFor(_observerKey);
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             await failures.WriteStateAsync();
             return;
@@ -48,7 +48,7 @@ public partial class Observer
         }
 
         var attemptCount = failure.Attempts.Count();
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             await failures.WriteStateAsync();
             return;
@@ -96,7 +96,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
             return PartitionRecoveryOutcome.ObserverQuarantined;
@@ -143,7 +143,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task TryRecoverAllFailedPartitions()
     {
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
             return;
@@ -213,7 +213,7 @@ public partial class Observer
 
     async Task StartRecoverJobForFailedPartition(FailedPartition failedPartition)
     {
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
             return;

@@ -101,7 +101,7 @@ public partial class Observer
         _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
 
-        if (State.RunningState != ObserverRunningState.Quarantined)
+        if (!IsQuarantined)
         {
             await TransitionTo<Routing>();
         }

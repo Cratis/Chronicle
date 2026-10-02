@@ -28,10 +28,13 @@ public class ObserverStateGrainStorageProvider(IStorage storage) : IGrainStorage
         var failedPartitionsStorage = eventStoreNamespace.FailedPartitions;
         var failedPartitions = await failedPartitionsStorage.GetFor(observerKey.ObserverId);
         var actualFailedPartitions = failedPartitions.Partitions.ToArray();
-        actualGrainState.State = await observers.Get(observerKey.ObserverId);
-        actualGrainState.State = actualGrainState.State with
+        var storedState = await observers.Get(observerKey.ObserverId);
+        var recordExists = !ReferenceEquals(storedState, ObserverState.Empty);
+        actualGrainState.RecordExists = recordExists;
+        actualGrainState.State = storedState with
         {
-            Identifier = observerKey.ObserverId,
+            // Preserve a missing record's sentinel until the observer activation supplies its identity.
+            Identifier = recordExists ? observerKey.ObserverId : ObserverId.Unspecified,
             FailedPartitions = actualFailedPartitions,
             FailedPartitionCount = actualFailedPartitions.Length
         };

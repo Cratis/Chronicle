@@ -105,7 +105,7 @@ public partial class Observer
         State.CatchingUpPartitions.Clear();
         State.ReplayingPartitions.Clear();
         await WriteStateAsync();
-        if (State.RunningState != ObserverRunningState.Quarantined)
+        if (!IsQuarantined)
         {
             await TransitionTo<Routing>();
         }
@@ -185,7 +185,7 @@ public partial class Observer
 
     async Task<bool> TransitionToReplayIfNeeded()
     {
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             return true;
         }
@@ -198,13 +198,13 @@ public partial class Observer
         }
 
         var tailSequenceNumber = await _eventSequence.GetTailSequenceNumber();
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             return true;
         }
 
         var getNextToHandleResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(State.NextEventSequenceNumber, _subscription.EventTypes.ToList());
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             return true;
         }
@@ -218,7 +218,7 @@ public partial class Observer
             _subscription,
             tailSequenceNumber,
             nextUnhandledEventSequenceNumber));
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             return true;
         }

@@ -110,7 +110,7 @@ public partial class Observer
     /// <returns>True if the observer was re-routed, false if it was left alone.</returns>
     async Task<bool> CheckJobTasks()
     {
-        if (State.RunningState == ObserverRunningState.Quarantined || !_subscription.IsSubscribed)
+        if (IsQuarantined || !_subscription.IsSubscribed)
         {
             return false;
         }
@@ -118,7 +118,7 @@ public partial class Observer
         if (State.IsReplaying)
         {
             var replayJobs = await _jobsManager.GetJobsOfType<IReplayObserver, ReplayObserverRequest>();
-            if (State.RunningState == ObserverRunningState.Quarantined)
+            if (IsQuarantined)
             {
                 return false;
             }
@@ -139,7 +139,7 @@ public partial class Observer
         if (State.CatchingUpPartitions.Count > 0)
         {
             var hasRunningCatchupJob = await HasRunningCatchupJob();
-            if (State.RunningState == ObserverRunningState.Quarantined || hasRunningCatchupJob)
+            if (IsQuarantined || hasRunningCatchupJob)
             {
                 return false;
             }
@@ -163,7 +163,7 @@ public partial class Observer
 
     async Task<bool> CheckNextSequenceNumber()
     {
-        if (!_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
+        if (IsQuarantined || !_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
         {
             return false;
         }

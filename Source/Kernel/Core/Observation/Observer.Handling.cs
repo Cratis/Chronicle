@@ -358,7 +358,7 @@ public partial class Observer
             return false;
         }
 
-        if (State.RunningState != ObserverRunningState.Active)
+        if (IsQuarantined || State.RunningState != ObserverRunningState.Active)
         {
             logger.ObserverIsNotActive();
             return false;
