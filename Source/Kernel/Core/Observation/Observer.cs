@@ -77,6 +77,7 @@ public partial class Observer(
     bool _resumingQuarantine;
     bool _subscriptionSetupFailed;
     bool _isQuarantined;
+    bool _quarantinePending;
 
     /// <summary>
     /// Set once the observer has been removed, so nothing this activation does afterwards writes it back.
@@ -110,9 +111,9 @@ public partial class Observer(
     protected override Type InitialState => typeof(Routing);
 
     /// <summary>
-    /// Gets whether the activation is quarantined, independently of reloadable stored-state snapshots.
+    /// Gets whether the activation is quarantined or has requested quarantine, independently of reloadable snapshots.
     /// </summary>
-    bool IsQuarantined => _isQuarantined;
+    bool IsQuarantined => _isQuarantined || _quarantinePending;
 
     ObserverDefinition Definition => observerDefinition.State;
 
@@ -381,6 +382,7 @@ public partial class Observer(
             observerDefinition,
             failures,
             _jobsManager,
+            RequestQuarantine,
             loggerFactory.CreateLogger<CatchingUpInFlight>()),
 
         new Observing(
@@ -486,6 +488,17 @@ public partial class Observer(
     }
 
     /// <summary>
+    /// Requests quarantine, stopping automatic recovery even while the state transition is pending.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal Task RequestQuarantine()
+    {
+        _quarantinePending = true;
+
+        return TransitionTo<QuarantinedObserver>();
+    }
+
+    /// <summary>
     /// Records, in the observer's metrics, that the observer was quarantined.
     /// </summary>
     /// <remarks>
@@ -548,6 +561,7 @@ public partial class Observer(
     protected override async Task OnBeforeEnteringState(IState<ObserverState> state)
     {
         _isQuarantined = state is QuarantinedObserver;
+        _quarantinePending = false;
         await _alertMutationLock.WaitAsync();
         try
         {

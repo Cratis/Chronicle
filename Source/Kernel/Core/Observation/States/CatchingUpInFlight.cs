@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Observation.States;
 /// <param name="definitionState"><see cref="IPersistentState{ObserverDefinition}"/> for the observer's definition.</param>
 /// <param name="failuresState"><see cref="IPersistentState{FailedPartitions}"/> for the observer's failed partitions.</param>
 /// <param name="jobsManager"><see cref="IJobsManager"/> for starting partition catch-up jobs.</param>
+/// <param name="requestQuarantine">Requests quarantine on the observer, including while a state transition is pending.</param>
 /// <param name="logger">Logger for logging.</param>
 /// <remarks>
 /// On entry, every partition recorded as in-flight on the observer state — but that is not already failed,
@@ -32,6 +33,7 @@ public class CatchingUpInFlight(
     IPersistentState<ObserverDefinition> definitionState,
     IPersistentState<FailedPartitions> failuresState,
     IJobsManager jobsManager,
+    Func<Task> requestQuarantine,
     ILogger<CatchingUpInFlight> logger) : BaseObserverState
 {
     /// <inheritdoc/>
@@ -87,7 +89,7 @@ public class CatchingUpInFlight(
                 {
                     var error = startResult?.TryGetError(out var startError) is true ? startError : default;
                     logger.CouldNotStartInFlightCatchUpForPartition(partition, error);
-                    await StateMachine.TransitionTo<QuarantinedObserver>();
+                    await requestQuarantine();
                     return state;
                 }
             }
@@ -95,7 +97,7 @@ public class CatchingUpInFlight(
         catch (Exception ex)
         {
             logger.FailedToCatchUpInFlightPartitions(ex);
-            await StateMachine.TransitionTo<QuarantinedObserver>();
+            await requestQuarantine();
             return state;
         }
 

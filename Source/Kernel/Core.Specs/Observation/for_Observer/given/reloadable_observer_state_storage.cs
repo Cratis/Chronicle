@@ -11,12 +11,15 @@ public class reloadable_observer_state_storage : IStorage<ObserverState>, IStora
 {
     public TaskCompletionSource ReadStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public TaskCompletionSource ReleaseRead { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource WriteStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource ReleaseWrite { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public ObserverState PersistedState { get; set; } = new();
     public ObserverState State { get; set; } = new();
     public TestStorageStats Stats { get; } = new() { Reads = -1 };
     public string Etag => string.Empty;
     public bool RecordExists { get; private set; }
     public bool SuspendNextRead { get; set; }
+    public bool SuspendNextWrite { get; set; }
 
     public async Task ReadStateAsync()
     {
@@ -31,12 +34,18 @@ public class reloadable_observer_state_storage : IStorage<ObserverState>, IStora
         State = snapshot;
     }
 
-    public Task WriteStateAsync()
+    public async Task WriteStateAsync()
     {
-        PersistedState = State;
-        RecordExists = true;
+        var snapshot = State;
         Stats.Writes++;
-        return Task.CompletedTask;
+        if (SuspendNextWrite)
+        {
+            SuspendNextWrite = false;
+            WriteStarted.SetResult();
+            await ReleaseWrite.Task;
+        }
+        PersistedState = snapshot;
+        RecordExists = true;
     }
 
     public Task ClearStateAsync()
