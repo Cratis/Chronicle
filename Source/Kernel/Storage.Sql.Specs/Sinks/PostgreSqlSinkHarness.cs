@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// and shadow table names within PostgreSQL's 63 bytes (48 bytes or less); longer ones fail in the migrator
 /// (issue #4340).
 /// </remarks>
-public class PostgreSqlSinkHarness : ISinkHarness
+public class PostgreSqlSinkHarness : ISqlSinkHarness
 {
     readonly ReadModelMigrator _migrator = new(
         new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
@@ -56,7 +56,10 @@ public class PostgreSqlSinkHarness : ISinkHarness
     public ISink CreateSink(ReadModelDefinition definition)
     {
         _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration());
-        ConnectionString = Fixture!.CreateDatabase().GetAwaiter().GetResult();
+        if (ConnectionString.Length == 0)
+        {
+            ConnectionString = Fixture!.CreateDatabase().GetAwaiter().GetResult();
+        }
 
         var database = Substitute.For<IDatabase>();
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));

@@ -19,13 +19,15 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// <summary>
 /// Runs SQL sink specs with SQL Server's production execution strategy and table migrator.
 /// </summary>
-public class SqlServerSinkHarness : ISinkHarness
+public class SqlServerSinkHarness : ISqlSinkHarness
 {
     readonly ReadModelMigrator _migrator = new(
         new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
         Substitute.For<ILogger<ReadModelMigrator>>());
     IReadOnlyList<ProjectedColumn> _columns = [];
-    string _connectionString = string.Empty;
+
+    /// <inheritdoc/>
+    public string ConnectionString { get; private set; } = string.Empty;
 
     /// <summary>
     /// Gets the container supplying isolated databases.
@@ -41,7 +43,10 @@ public class SqlServerSinkHarness : ISinkHarness
     public ISink CreateSink(ReadModelDefinition definition)
     {
         _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration());
-        _connectionString = Fixture!.CreateDatabase().GetAwaiter().GetResult();
+        if (ConnectionString.Length == 0)
+        {
+            ConnectionString = Fixture!.CreateDatabase().GetAwaiter().GetResult();
+        }
 
         var database = Substitute.For<IDatabase>();
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
@@ -59,9 +64,9 @@ public class SqlServerSinkHarness : ISinkHarness
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (Fixture is not null && _connectionString.Length > 0)
+        if (Fixture is not null && ConnectionString.Length > 0)
         {
-            Fixture.DropDatabase(_connectionString).GetAwaiter().GetResult();
+            Fixture.DropDatabase(ConnectionString).GetAwaiter().GetResult();
         }
 
         GC.SuppressFinalize(this);
@@ -70,7 +75,7 @@ public class SqlServerSinkHarness : ISinkHarness
     async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName)
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString);
+        builder.UseDatabaseFromConnectionString(ConnectionString);
         var options = builder.AddConceptAsSupport().AddInterceptors(Interceptors).Options;
 
 #pragma warning disable CA2000 // Disposed by the sink through the returned scope.

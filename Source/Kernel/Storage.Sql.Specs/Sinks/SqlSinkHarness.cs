@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// <summary>
 /// Runs the shared <see cref="ISink"/> contract against the SQL sink, backed by an in-memory SQLite database.
 /// </summary>
-public class SqlSinkHarness : ISinkHarness
+public class SqlSinkHarness : ISqlSinkHarness
 {
     readonly ReadModelMigrator _migrator = new(
         new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
