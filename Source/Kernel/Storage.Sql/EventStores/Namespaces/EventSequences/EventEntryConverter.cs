@@ -162,6 +162,13 @@ public static class EventEntryConverter
     }
 
     /// <summary>
+    /// Serializes one generation using the same options as append.
+    /// </summary>
+    /// <param name="content">The generation content.</param>
+    /// <returns>The stored JSON.</returns>
+    public static string SerializeContent(ExpandoObject content) => JsonSerializer.Serialize(content, _jsonSerializerOptions);
+
+    /// <summary>
     /// Serialize a collection of <see cref="Tag">tags</see> to the JSON array form stored on an <see cref="EventEntry"/>.
     /// </summary>
     /// <param name="tags">The tags to serialize.</param>

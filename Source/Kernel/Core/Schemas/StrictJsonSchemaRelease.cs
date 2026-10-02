@@ -25,6 +25,35 @@ internal sealed class StrictJsonSchemaRelease(IReadOnlyDictionary<(SchemaMetadat
     /// <param name="content">The stored document.</param>
     /// <returns>The complete released document, or null.</returns>
     internal async Task<JsonObject?> Release(EventStoreName eventStore, EventStoreNamespaceName @namespace, JsonSchema schema, string identifier, JsonObject content)
+        => await Transform(schema, content, async (current, handler, node) =>
+        {
+            var released = await handler.TryRelease(eventStore, @namespace, identifier, node);
+            var type = ProtectedType(current);
+            if (type != JsonObjectType.String && released is JsonValue scalar && scalar.TryGetValue<string>(out var text))
+            {
+                released = JsonNode.Parse(text);
+            }
+
+            var valid = type switch
+            {
+                JsonObjectType.String => released?.GetValueKind() == JsonValueKind.String,
+                JsonObjectType.Boolean => released?.GetValueKind() is JsonValueKind.True or JsonValueKind.False,
+                JsonObjectType.Integer or JsonObjectType.Number => released?.GetValueKind() == JsonValueKind.Number,
+                JsonObjectType.Array => released is JsonArray,
+                JsonObjectType.Object => released is JsonObject,
+                _ => false
+            };
+            return valid ? released : null;
+        });
+
+    /// <summary>
+    /// Walks exactly the protected boundaries used by apply, without descending into protected containers.
+    /// </summary>
+    /// <param name="schema">The generation schema.</param>
+    /// <param name="content">The document.</param>
+    /// <param name="transform">The operation on each protected value.</param>
+    /// <returns>The transformed document, or null for an unsupported boundary.</returns>
+    internal async Task<JsonObject?> Transform(JsonSchema schema, JsonObject content, Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>> transform)
     {
         var result = (JsonObject)content.DeepClone();
         return await ReleaseObject(schema, result) ? result : null;
@@ -55,7 +84,10 @@ internal sealed class StrictJsonSchemaRelease(IReadOnlyDictionary<(SchemaMetadat
                     return false;
                 }
 
-                value[name] = released;
+                if (!ReferenceEquals(node, released))
+                {
+                    value[name] = released;
+                }
             }
 
             return true;
@@ -86,27 +118,8 @@ internal sealed class StrictJsonSchemaRelease(IReadOnlyDictionary<(SchemaMetadat
                     return (false, null);
                 }
 
-                var released = await handler.TryRelease(eventStore, @namespace, identifier, node);
-                if (released is null)
-                {
-                    return (false, null);
-                }
-
-                if (type != JsonObjectType.String && released is JsonValue scalar && scalar.TryGetValue<string>(out var text))
-                {
-                    released = JsonNode.Parse(text);
-                }
-
-                var valid = type switch
-                {
-                    JsonObjectType.String => released?.GetValueKind() == JsonValueKind.String,
-                    JsonObjectType.Boolean => released?.GetValueKind() is JsonValueKind.True or JsonValueKind.False,
-                    JsonObjectType.Integer or JsonObjectType.Number => released?.GetValueKind() == JsonValueKind.Number,
-                    JsonObjectType.Array => released is JsonArray,
-                    JsonObjectType.Object => released is JsonObject,
-                    _ => false
-                };
-                return (valid, released);
+                var transformed = await transform(current, handler, node);
+                return (transformed is not null, transformed);
             }
 
             switch (node)
@@ -154,13 +167,16 @@ internal sealed class StrictJsonSchemaRelease(IReadOnlyDictionary<(SchemaMetadat
 
                         break;
                     default:
-                        var (success, released) = await ReleaseNode(current.Item!, element, []);
+                        var (success, released) = await ReleaseNode(item, element, []);
                         if (!success)
                         {
                             return false;
                         }
 
-                        array[index] = released;
+                        if (!ReferenceEquals(element, released))
+                        {
+                            array[index] = released;
+                        }
                         break;
                 }
             }

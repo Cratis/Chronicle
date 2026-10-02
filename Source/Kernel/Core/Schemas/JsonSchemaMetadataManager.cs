@@ -113,6 +113,36 @@ public class JsonSchemaMetadataManager(
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<JsonObject?> TryPrepareForComparison(JsonSchema schema, JsonObject json, Func<JsonObject, JsonObject?> convert)
+    {
+        if (!schema.HasSchemaMetadata())
+        {
+            return convert(json);
+        }
+
+        // Append encrypts BEFORE schema conversion. Use opaque markers, not encryption: verification
+        // must neither provision keys nor normalize the plaintext inside a protected container.
+        var values = new Dictionary<string, JsonNode>();
+        var walker = new StrictJsonSchemaRelease(_propertyValueHandlers);
+        var masked = await walker.Transform(schema, json, (_, _, node) =>
+        {
+            var marker = $"chronicle-verification:{values.Count}";
+            values.Add(marker, node.DeepClone());
+            return Task.FromResult<JsonNode?>(JsonValue.Create(marker));
+        });
+        var converted = masked is null ? null : convert(masked);
+        if (converted is null)
+        {
+            return null;
+        }
+
+        return await walker.Transform(schema, converted, (_, _, node) => Task.FromResult(
+            node is JsonValue scalar && scalar.TryGetValue<string>(out var marker) && values.TryGetValue(marker, out var value)
+                ? value.DeepClone()
+                : null));
+    }
+
     static JsonNode? RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
     {
         propertySchema = propertySchema.ActualTypeSchema;

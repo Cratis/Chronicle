@@ -2,101 +2,125 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Numerics;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Json;
 
 namespace Cratis.Chronicle.Sequences;
 
 /// <summary>
-/// Compares content in the schema-guided JSON representation used by event storage.
+/// Compares stored JSON without passing historical content through a lossy schema conversion.
 /// </summary>
 internal static class ContentComparison
 {
     /// <summary>
-    /// Compares strictly released stored content with the attempted append's storage representation.
+    /// Produces the backend's actual append representation only when conversion preserves its values.
     /// </summary>
-    /// <param name="stored">The complete released document.</param>
-    /// <param name="attempted">The prepared append.</param>
-    /// <param name="schema">The requested generation's schema.</param>
-    /// <param name="converter">The converter used by append and storage.</param>
-    /// <returns>Whether the canonical documents match.</returns>
-    internal static bool Equals(JsonObject stored, JsonObject attempted, JsonSchema schema, IExpandoObjectConverter converter)
+    /// <param name="attempted">The attempted document, with protected values masked.</param>
+    /// <param name="schema">The generation schema.</param>
+    /// <param name="converter">The append converter.</param>
+    /// <param name="storage">The selected backend.</param>
+    /// <returns>The stored representation, or null when conversion loses information.</returns>
+    internal static JsonObject? Prepare(JsonObject attempted, JsonSchema schema, IExpandoObjectConverter converter, IEventSequenceStorage storage)
     {
-        // Append first converts JSON to an expando using the generation schema. MongoDB then
-        // converts that expando back to JSON before BSON storage. Use that representation on
-        // every backend: enum names, formatted dates and floating-point storage precision.
-        var expected = converter.ToJsonObject(converter.ToExpandoObject(attempted, schema), schema);
-        var actual = converter.ToJsonObject(converter.ToExpandoObject(stored, schema), schema);
+        var content = converter.ToExpandoObject(attempted, schema);
+        var before = JsonSerializer.SerializeToNode(content, Globals.JsonSerializerOptions)!.AsObject();
+        if (!PreservesValues(attempted, before, schema))
+        {
+            return null;
+        }
 
-        // Only the attempted append may discard undeclared provider properties. A stored member
-        // must not disappear merely because today's schema cannot describe it.
-        PreserveStoredMembers(stored, actual);
-        NormalizeStoragePrecision(actual);
-        NormalizeStoragePrecision(expected);
-        return JsonNode.DeepEquals(actual, expected);
+        var serialized = storage.SerializeContentForVerification(content, schema);
+        if (serialized is null || JsonNode.Parse(serialized) is not JsonObject expected)
+        {
+            return null;
+        }
+
+        // A backend may encode enums as names, but it must round-trip the same value. This also
+        // detects MongoDB decimal -> double rounding and unknown enum -> default substitution.
+        var roundTripped = converter.ToExpandoObject(expected, schema);
+        var after = JsonSerializer.SerializeToNode(roundTripped, Globals.JsonSerializerOptions);
+        return Equals(before, after) ? expected : null;
     }
 
-    static void NormalizeStoragePrecision(JsonNode node)
+    /// <summary>
+    /// Compares JSON values exactly, including offsets in strings and every digit in numbers.
+    /// </summary>
+    /// <param name="left">The first value.</param>
+    /// <param name="right">The second value.</param>
+    /// <returns>Whether the JSON values are equal.</returns>
+    internal static bool Equals(JsonNode? left, JsonNode? right)
     {
-        // BSON stores JSON decimal fractions as doubles. Applying the same conversion to both
-        // documents makes equality backend-independent, but cannot detect sub-double differences.
-        // Parse the JSON text like the BSON reader: a decimal-to-double cast can round differently.
-        if (node is JsonObject document)
+        if (left is null || right is null)
         {
-            foreach (var (name, value) in document.ToArray())
-            {
-                if (value is JsonValue scalar && scalar.TryGetValue<decimal>(out _))
-                {
-                    document[name] = double.Parse(scalar.ToJsonString(), CultureInfo.InvariantCulture);
-                }
-                else if (value is not null)
-                {
-                    NormalizeStoragePrecision(value);
-                }
-            }
+            return left is null && right is null;
         }
-        else if (node is JsonArray array)
+
+        if (left.GetValueKind() != right.GetValueKind())
         {
-            for (var index = 0; index < array.Count; index++)
-            {
-                if (array[index] is JsonValue scalar && scalar.TryGetValue<decimal>(out _))
-                {
-                    array[index] = double.Parse(scalar.ToJsonString(), CultureInfo.InvariantCulture);
-                }
-                else if (array[index] is { } value)
-                {
-                    NormalizeStoragePrecision(value);
-                }
-            }
+            return false;
         }
+
+        return (left, right) switch
+        {
+            (JsonObject a, JsonObject b) => a.Count == b.Count && a.All(property => b.TryGetPropertyValue(property.Key, out var value) && Equals(property.Value, value)),
+            (JsonArray a, JsonArray b) => a.Count == b.Count && a.Zip(b).All(pair => Equals(pair.First, pair.Second)),
+            _ when left.GetValueKind() == JsonValueKind.Number => Number(left.ToJsonString()) == Number(right.ToJsonString()),
+
+            // Serialize first: JsonValue<DateTimeOffset>.Equals compares instants, losing offsets.
+            _ => JsonElement.DeepEquals(JsonSerializer.SerializeToElement(left), JsonSerializer.SerializeToElement(right))
+        };
     }
 
-    static void PreserveStoredMembers(JsonNode stored, JsonNode canonical)
+    static bool PreservesValues(JsonNode? source, JsonNode? converted, JsonSchema schema)
     {
-        if (stored is JsonObject document && canonical is JsonObject result)
+        if (source is JsonObject document && converted is JsonObject result)
         {
-            foreach (var (name, value) in document)
+            // Append intentionally ignores undeclared properties and substitutes schema defaults
+            // for nulls. A NON-null declared value disappearing is loss, not a default to compare.
+            var properties = schema.ActualTypeSchema.GetFlattenedProperties().ToArray();
+            return document.All(property =>
             {
-                if (!result.TryGetPropertyValue(name, out var normalized))
+                var definition = properties.FirstOrDefault(_ => _.Name == property.Key) ??
+                    properties.FirstOrDefault(_ => _.Name.Equals(property.Key, StringComparison.OrdinalIgnoreCase));
+                if (property.Value is null || (properties.Length > 0 && definition is null))
                 {
-                    result[name] = value?.DeepClone();
+                    return true;
                 }
-                else if (value is not null && normalized is not null)
-                {
-                    PreserveStoredMembers(value, normalized);
-                }
-            }
+
+                return result.TryGetPropertyValue(definition?.Name ?? property.Key, out var value) &&
+                    PreservesValues(property.Value, value, definition ?? new JsonSchema());
+            });
         }
-        else if (stored is JsonArray array && canonical is JsonArray normalizedArray)
+
+        if (source is JsonArray array && converted is JsonArray convertedArray)
         {
-            for (var index = 0; index < Math.Min(array.Count, normalizedArray.Count); index++)
-            {
-                if (array[index] is { } value && normalizedArray[index] is { } normalized)
-                {
-                    PreserveStoredMembers(value, normalized);
-                }
-            }
+            var item = schema.ActualTypeSchema.Item?.ActualSchema ?? new JsonSchema();
+            return array.Count == convertedArray.Count && array.Zip(convertedArray).All(pair => PreservesValues(pair.First, pair.Second, item));
         }
+
+        return Equals(source, converted);
+    }
+
+    static (BigInteger Significand, BigInteger Exponent) Number(string token)
+    {
+        var exponentIndex = token.IndexOfAny(['e', 'E']);
+        var mantissa = exponentIndex < 0 ? token : token[..exponentIndex];
+        var exponent = exponentIndex < 0 ? BigInteger.Zero : BigInteger.Parse(token[(exponentIndex + 1)..], CultureInfo.InvariantCulture);
+        var point = mantissa.IndexOf('.');
+        if (point >= 0)
+        {
+            exponent -= mantissa.Length - point - 1;
+            mantissa = mantissa.Remove(point, 1);
+        }
+
+        var trimmed = mantissa.TrimEnd('0');
+        exponent += mantissa.Length - trimmed.Length;
+        var significand = (trimmed.Length == 0 || trimmed == "-") ? BigInteger.Zero : BigInteger.Parse(trimmed, CultureInfo.InvariantCulture);
+        return (significand, significand.IsZero ? BigInteger.Zero : exponent);
     }
 }

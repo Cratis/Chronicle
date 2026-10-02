@@ -77,4 +77,13 @@ public interface IJsonSchemaMetadataManager
     /// <param name="json">The complete stored document.</param>
     /// <returns>The fully released document, or null if any part cannot be released.</returns>
     Task<JsonObject?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json) => Task.FromResult<JsonObject?>(null);
+
+    /// <summary>
+    /// Converts attempted content to its stored shape while keeping protected values opaque, as append does.
+    /// </summary>
+    /// <param name="schema">The generation schema.</param>
+    /// <param name="json">The attempted plaintext.</param>
+    /// <param name="convert">The loss-checked backend conversion.</param>
+    /// <returns>The plaintext storage shape, or null if it cannot be established without loss.</returns>
+    Task<JsonObject?> TryPrepareForComparison(JsonSchema schema, JsonObject json, Func<JsonObject, JsonObject?> convert) => Task.FromResult<JsonObject?>(null);
 }

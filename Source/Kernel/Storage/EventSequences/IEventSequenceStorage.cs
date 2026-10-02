@@ -6,6 +6,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Schemas;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.EventSequences;
@@ -15,6 +16,14 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// </summary>
 public interface IEventSequenceStorage
 {
+    /// <summary>
+    /// Renders content through this backend's append serialization without writing an event.
+    /// </summary>
+    /// <param name="content">The schema-converted, protected append content.</param>
+    /// <param name="schema">The generation schema.</param>
+    /// <returns>The JSON exposed by a storage read, or null if the backend cannot provide it.</returns>
+    string? SerializeContentForVerification(ExpandoObject content, JsonSchema schema) => null;
+
     /// <summary>
     /// Ensure any required indexes exist on the event sequence collection.
     /// </summary>

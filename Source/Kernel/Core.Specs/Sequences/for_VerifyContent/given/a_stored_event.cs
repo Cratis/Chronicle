@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Json;
@@ -34,6 +35,10 @@ public class a_stored_event : Specification
         };
         _storage.GetEventStore("store").GetNamespace("tenant").GetEventSequence("log")
             .GetRange(EventSequenceNumber.First, EventSequenceNumber.First).Returns(_cursor);
+        var serializer = new Storage.InMemory.EventSequences.EventSequenceStorage("store", "tenant", "log", new Storage.InMemory.Identities.IdentityStorage());
+        _storage.GetEventStore("store").GetNamespace("tenant").GetEventSequence("log")
+            .SerializeContentForVerification(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>())
+            .Returns(call => serializer.SerializeContentForVerification(call.Arg<ExpandoObject>(), call.Arg<JsonSchema>()));
         _cursor.MoveNext().Returns(true);
         _cursor.Current.Returns(_ => [_stored]);
         _storage.GetEventStore("store").EventTypes.HasFor("event", 1U).Returns(true);
