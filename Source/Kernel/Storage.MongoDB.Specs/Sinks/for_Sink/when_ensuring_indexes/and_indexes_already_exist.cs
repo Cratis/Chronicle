@@ -17,4 +17,6 @@ public class and_indexes_already_exist : given.a_sink_with_an_existing_index
             Arg.Any<CreateIndexModel<BsonDocument>>(),
             Arg.Any<CreateOneIndexOptions>(),
             Arg.Any<CancellationToken>());
+    [Fact] void should_not_fetch_the_collection_collation() =>
+        _database.DidNotReceive().ListCollectionsAsync(Arg.Any<ListCollectionsOptions>(), Arg.Any<CancellationToken>());
 }

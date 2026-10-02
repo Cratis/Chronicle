@@ -525,6 +525,11 @@ public class Sink(
             var indexName = $"chronicle_idx_{indexDefinition.PropertyPath.Path.Replace('.', '_')}";
 
             var candidates = existingIndexes.FindAll(index => HasMatchingKeyAndOptions(index, indexDefinition.PropertyPath.Path));
+            if (candidates.Exists(index => index.GetValue("name", BsonNull.Value) == indexName))
+            {
+                continue;
+            }
+
             if (candidates.Count > 0)
             {
                 collation ??= await GetCollectionCollation(collection);
