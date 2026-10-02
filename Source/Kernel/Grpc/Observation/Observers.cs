@@ -110,10 +110,10 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 var observer = undecidedObservers[index];
                 var subscription = subscriptions[index];
 
-                // System definitions are store-wide, but their subscriptions are namespace-local.
-                // An absent system subscription cannot handle this append. Application observers
+                // Kernel-owned definitions are store-wide, but their subscriptions are namespace-local.
+                // An absent kernel subscription cannot handle this append. Application observers
                 // must still be awaited when disconnected so consumer outages are not hidden.
-                if (observer.Id.StartsWith("$system.", StringComparison.Ordinal) && subscription is not { IsSubscribed: true })
+                if (observer.Owner == ObserverOwner.Kernel && subscription is not { IsSubscribed: true })
                 {
                     continue;
                 }
