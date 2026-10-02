@@ -110,10 +110,10 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 var observer = undecidedObservers[index];
                 var subscription = subscriptions[index];
 
-                // Kernel-owned definitions are store-wide, but their subscriptions are namespace-local.
-                // An absent kernel subscription cannot handle this append. Application observers
-                // must still be awaited when disconnected so consumer outages are not hidden.
-                if (observer.Owner == ObserverOwner.Kernel && subscription is not { IsSubscribed: true })
+                // Internal kernel reactors may intentionally have no subscription in this namespace.
+                // Kernel-owned projections and external observers still need to handle the append,
+                // even before they subscribe. Disconnected client observers must also be awaited.
+                if (observer is { Owner: ObserverOwner.Kernel, Type: ObserverType.Reactor } && subscription is not { IsSubscribed: true })
                 {
                     continue;
                 }
