@@ -25,5 +25,5 @@ public class and_read_model_has_pii_property : given.all_dependencies
 
     async Task Because() => _result = await _step.Perform(_projection, _context);
 
-    [Fact] void should_call_apply_with_event_source_id_as_identifier() => _complianceManager.Received(1).Apply(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
+    [Fact] void should_call_apply_with_event_source_id_as_identifier() => _complianceManager.Received(1).ApplyToReadModel(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
 }

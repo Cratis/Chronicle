@@ -18,7 +18,7 @@ public class and_schema_has_pii_property : given.all_dependencies
         Identifier,
         _instance);
 
-    [Fact] void should_call_compliance_manager_apply() => _complianceManager.Received(1).Apply(EventStore, EventStoreNamespace, _schemaWithPii, Identifier, Arg.Any<JsonObject>());
+    [Fact] void should_call_compliance_manager_apply() => _complianceManager.Received(1).ApplyToReadModel(EventStore, EventStoreNamespace, _schemaWithPii, Identifier, Arg.Any<JsonObject>());
     [Fact] void should_write_subject_to_result() => ((IDictionary<string, object?>)_result).ContainsKey(WellKnownProperties.Subject).ShouldBeTrue();
     [Fact] void should_write_correct_subject_value() => ((IDictionary<string, object?>)_result)[WellKnownProperties.Subject].ShouldEqual(Identifier);
 }
