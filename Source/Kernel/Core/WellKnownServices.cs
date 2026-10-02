@@ -4,10 +4,15 @@
 namespace Cratis.Chronicle;
 
 /// <summary>
-/// Defines the well-known gRPC service names used with the <see cref="Cratis.Chronicle.Grpc.BelongsToAttribute"/>.
+/// Defines the well-known gRPC service names used with the <see cref="Grpc.BelongsToAttribute"/>.
 /// </summary>
 public static class WellKnownServices
 {
+    /// <summary>
+    /// The name of the scoped alert incident query service.
+    /// </summary>
+    public const string Alerts = "Alerts";
+
     /// <summary>
     /// The name of the Users security service.
     /// </summary>
