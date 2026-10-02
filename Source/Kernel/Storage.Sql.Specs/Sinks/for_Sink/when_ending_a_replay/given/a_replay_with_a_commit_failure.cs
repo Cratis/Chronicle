@@ -4,6 +4,7 @@
 using System.Data.Common;
 using System.Globalization;
 using Cratis.Chronicle.Storage.Sinks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.given;
@@ -14,7 +15,7 @@ public abstract class a_replay_with_a_commit_failure<THarness> : Contract.an_acc
     where THarness : ISinkHarness, new()
 {
     protected Exception? _error;
-    protected int _primaryCount;
+    protected int? _primaryCount;
     protected int _revertCount;
     protected abstract bool FailAfterCommit { get; }
     protected int CommitAttempts => _failure.Attempts;
@@ -33,26 +34,47 @@ public abstract class a_replay_with_a_commit_failure<THarness> : Contract.an_acc
 
     protected override THarness CreateHarness()
     {
-        _failure = new commit_failure(FailAfterCommit);
+        _failure = new commit_failure(FailAfterCommit, AfterCommit, BeforeRetry);
         return CreateHarnessWithInterceptor(_failure);
     }
+
+    protected virtual Task AfterCommit() => Task.CompletedTask;
+
+    protected virtual Task BeforeRetry() => Task.CompletedTask;
 
     protected async Task PromoteReplay()
     {
         _error = await Catch.Exception(() => _sink.EndReplay(ReplayContext()));
-        _primaryCount = await CurrentCount();
+        _primaryCount = await CurrentCountOrNull();
         var revert = await _sink.GetInstances(ReplayContext().RevertContainerName);
         _revertCount = Convert.ToInt32(((IDictionary<string, object?>)revert.Instances.Single())["count"], CultureInfo.InvariantCulture);
     }
 
-    sealed class commit_failure(bool afterCommit) : DbTransactionInterceptor
+    sealed class commit_failure(bool afterCommit, Func<Task> afterFirstCommit, Func<Task> beforeRetry) : DbTransactionInterceptor
     {
+        DbContext? _promotionContext;
+        int _starts;
+
         public bool Armed { get; set; }
         public int Attempts { get; private set; }
 
-        public override ValueTask<InterceptionResult> TransactionCommittingAsync(DbTransaction transaction, TransactionEventData eventData, InterceptionResult result, CancellationToken cancellationToken = default)
+        public override async ValueTask<DbTransaction> TransactionStartedAsync(DbConnection connection, TransactionEndEventData eventData, DbTransaction result, CancellationToken cancellationToken = default)
         {
             if (Armed)
+            {
+                _promotionContext ??= eventData.Context;
+                if (eventData.Context == _promotionContext && ++_starts > 1)
+                {
+                    await beforeRetry().WaitAsync(TimeSpan.FromSeconds(10));
+                }
+            }
+
+            return result;
+        }
+
+        public override ValueTask<InterceptionResult> TransactionCommittingAsync(DbTransaction transaction, TransactionEventData eventData, InterceptionResult result, CancellationToken cancellationToken = default)
+        {
+            if (Armed && eventData.Context == _promotionContext)
             {
                 Attempts++;
                 if (!afterCommit && Attempts == 1)
@@ -65,15 +87,14 @@ public abstract class a_replay_with_a_commit_failure<THarness> : Contract.an_acc
             return ValueTask.FromResult(result);
         }
 
-        public override Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default)
+        public override async Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default)
         {
-            if (Armed && afterCommit && Attempts == 1)
+            if (Armed && eventData.Context == _promotionContext && afterCommit && Attempts == 1)
             {
-                // The server committed, but the caller did not receive its acknowledgment.
+                // Interleave another scope after the server commits, before EF can verify the outcome.
+                await afterFirstCommit().WaitAsync(TimeSpan.FromSeconds(10));
                 throw new TimeoutException("Simulated lost replay commit acknowledgment");
             }
-
-            return Task.CompletedTask;
         }
     }
 }

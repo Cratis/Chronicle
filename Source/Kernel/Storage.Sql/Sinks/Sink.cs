@@ -267,6 +267,7 @@ public class Sink : ISink
     }
 
     /// <inheritdoc/>
+    /// <exception cref="ReplayTableBecameEmpty">The rebuilt table lost its rows before a promotion attempt.</exception>
     public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
         var failedPartitions = await EndBulk();
@@ -348,6 +349,13 @@ public class Sink : ISink
         await strategy.ExecuteInTransactionAsync(
             async () =>
             {
+                // Re-check on every attempt before touching the backup. A reader can recreate an empty
+                // replay table after a committed swap; it must never replace the rebuilt primary.
+                if (!await scope.DbContext.Entries.AsNoTracking().AnyAsync())
+                {
+                    throw new ReplayTableBecameEmpty(replayName);
+                }
+
                 // Drop any stale backup, then preserve primary -> revert and promote replay -> primary.
                 await ExecuteDdl(scope, BuildDropSql(scope, revertName));
                 await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, _tableName, revertName));
@@ -358,9 +366,14 @@ public class Sink : ISink
                 await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
             },
 
-            // A lost commit acknowledgment must not repeat the swap and destroy the revert backup.
-            // Inspect the catalog directly: ReadModelTable would recreate the missing replay table.
-            async () => !await TableExists(database, databaseType, replayName) && await TableExists(database, databaseType, _tableName));
+            // The revert name is unique to this replay, so its presence with the primary identifies
+            // the committed swap. Until EndReplay clears replay routing, a reader can recreate an empty
+            // replay table. That must not cause a second swap to destroy both the data and its backup.
+            // Inspect directly: ReadModelTable would itself recreate a missing table.
+            async () => await TableExists(database, databaseType, revertName)
+                && await TableExists(database, databaseType, _tableName)
+                && (!await TableExists(database, databaseType, replayName)
+                    || !await scope.DbContext.Entries.AsNoTracking().AnyAsync()));
     }
 
     static Task<bool> TableExists(DatabaseFacade database, DatabaseType databaseType, string table)
