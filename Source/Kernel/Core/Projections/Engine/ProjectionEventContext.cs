@@ -92,6 +92,16 @@ public record ProjectionEventContext(
     public bool ChildrenAffected => OperationType.HasFlag(ProjectionOperationType.ChildrenAffected);
 
     /// <summary>
+    /// Whether the event creates the read model instance for its key when there is none yet, whether or not it changes any property.
+    /// </summary>
+    /// <remarks>
+    /// A join only enriches an instance that already exists, and an event for a child collection only reaches the root
+    /// through its children. Every other event the projection handles creates the instance, so an event without
+    /// properties - or one whose values all match the initial state - still brings its read model into existence.
+    /// </remarks>
+    public bool CreatesInstance => !IsJoin && !ChildrenAffected;
+
+    /// <summary>
     /// Adds a deferred future to the context.
     /// </summary>
     /// <param name="future">The <see cref="ProjectionFuture"/> to add.</param>

@@ -245,7 +245,7 @@ public class Projection(
 
                 await HandleEventFor(projection!, context, eventSequenceStorage);
 
-                var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, changeset);
+                var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, changeset, CreatesInstance(projection!, context));
                 if (changeset.HasBeenRemoved())
                 {
                     state = new ExpandoObject();
@@ -279,10 +279,14 @@ public class Projection(
         return results;
     }
 
+    static bool CreatesInstance(EngineProjection projection, ProjectionEventContext context) =>
+        projection.Accepts(context.Event.Context.EventType) && context.CreatesInstance;
+
     static bool ShouldMaterializeReadModel(
         bool isMaterialized,
         Key key,
-        Changeset<AppendedEvent, ExpandoObject> changeset)
+        Changeset<AppendedEvent, ExpandoObject> changeset,
+        bool createsInstance)
     {
         if (changeset.HasBeenRemoved())
         {
@@ -294,9 +298,11 @@ public class Projection(
             return true;
         }
 
+        // The materializing pipeline writes the instance for an event that creates it even when the event changes
+        // nothing, so an event without properties still brings its read model into existence.
         if (!changeset.HasChanges)
         {
-            return false;
+            return createsInstance;
         }
 
         var hasDirectKeyScopedChanges = changeset.Changes.Any(change =>
@@ -343,15 +349,19 @@ public class Projection(
 
             await HandleEventFor(projection!, context, eventSequenceStorage);
 
-            var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, changeset);
+            var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, changeset, CreatesInstance(projection!, context));
             if (changeset.HasBeenRemoved())
             {
                 state = new ExpandoObject();
                 lastKey = null;
             }
-            else if (shouldMaterialize && changeset.HasChanges)
+            else if (shouldMaterialize)
             {
-                state = ApplyActualChanges(key, changeset.Changes, state);
+                if (changeset.HasChanges)
+                {
+                    state = ApplyActualChanges(key, changeset.Changes, state);
+                }
+
                 lastKey = key;
             }
 
@@ -426,13 +436,13 @@ public class Projection(
 
                 await HandleEventFor(projection!, context, eventSequenceStorage);
 
-                var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, changeset);
+                var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, changeset, CreatesInstance(projection!, context));
                 if (changeset.HasBeenRemoved())
                 {
                     state = new ExpandoObject();
                     lastSequenceByKeyValue.Remove(keyValue);
                 }
-                else if (shouldMaterialize && changeset.HasChanges)
+                else if (shouldMaterialize && (changeset.HasChanges || !hasReadModel))
                 {
                     state = ApplyActualChanges(key, changeset.Changes, state);
                     lastSequenceByKeyValue[keyValue] = @event.Context.SequenceNumber;
