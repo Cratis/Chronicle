@@ -321,11 +321,8 @@ public class Sink : ISink
     {
         var replayName = ReplayTableNameFor(_tableName);
 
-        // Open the scope on the replay table so the DbContext we use for DDL is bound to a
-        // connection that definitely exists post-replay. Any access through the standard
-        // ReadModelTable path goes through EnsureTableExists, which would recreate the
-        // primary table if it had already been renamed away — using the replay table avoids
-        // that race.
+        // Open the scope on the replay table so the DbContext we use for DDL is bound to
+        // the rebuilt table. Other scopes may still be reading the primary table.
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, replayName, _columns);
 
         var replayHasRows = await scope.DbContext.Entries.AsNoTracking().AnyAsync();
@@ -342,6 +339,12 @@ public class Sink : ISink
         var databaseType = scope.DbContext.Database.GetDatabaseType();
         var revertName = context.RevertContainerName.Value;
 
+        // Publish both renames and their constraint names in one transaction. Otherwise a concurrent
+        // read can see the primary table missing and recreate it through EnsureTableExists, making
+        // replay -> primary collide. A database transaction also protects readers on other silos
+        // and restores the previous tables if any step of the promotion fails.
+        await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
+
         // Drop any stale backup with the same revert name first (a previous EndReplay may have
         // left one behind), then rename primary -> revert (preserved for downgrade) and
         // replay -> primary.
@@ -353,6 +356,7 @@ public class Sink : ISink
         // next replay creates its shadow table with the replay table's primary key name again.
         await PrimaryKeyConstraints.NameAfterTable(scope, revertName);
         await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
+        await transaction.CommitAsync();
     }
 
     /// <summary>
