@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -25,12 +26,14 @@ public class when_reducing_the_same_key_twice : Specification
     ReducerPipeline _pipeline;
     Key _key;
     IDictionary<string, object?> _stored;
+    JsonObject _clientRead;
+    JsonSchema _schema;
 
     void Establish()
     {
         _harness = new SqlSinkHarness();
         _key = new Key("counter-1", ArrayIndexers.NoIndexers);
-        var schema = JsonSchema.FromJson("""
+        _schema = JsonSchema.FromJson("""
             {"type":"object","properties":{"id":{"type":"string"},"count":{"type":"integer"},"note":{"type":["string","null"]},"score":{"type":["integer","null"]}}}
             """);
         var definition = new ReadModelDefinition(
@@ -42,7 +45,7 @@ public class when_reducing_the_same_key_twice : Specification
             ReadModelObserverType.Reducer,
             "counter-reducer",
             SinkDefinition.None,
-            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema },
+            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = _schema },
             []);
         _sink = _harness.CreateSink(definition);
         _pipeline = new ReducerPipeline(
@@ -58,16 +61,19 @@ public class when_reducing_the_same_key_twice : Specification
     {
         await _pipeline.Reduce(Context(0UL), Reduce);
         await _pipeline.Reduce(Context(1UL), Reduce);
-        _stored = (await _sink.FindOrDefault(_key))!;
+        _stored = (await _harness.ReadStoredRows()).Single();
+        _clientRead = new ExpandoObjectConverter(new TypeFormats()).ToJsonObject((await _sink.FindOrDefault(_key))!, _schema);
     }
 
     void Destroy() => _harness.Dispose();
 
     [Fact] void should_stay_initialized() => _stored[WellKnownProperties.ReadModelInstanceInitialized].ShouldEqual(true);
-    [Fact] void should_accumulate_both_events() => _stored["count"].ShouldEqual(2);
-    [Fact] void should_materialize_the_null_property() => _stored.ContainsKey("note").ShouldBeTrue();
-    [Fact] void should_preserve_the_null_value() => _stored["note"].ShouldBeNull();
+    [Fact] void should_accumulate_both_events() => _clientRead["count"]!.GetValue<int>().ShouldEqual(2);
+    [Fact] void should_preserve_the_null_column() => _stored["note"].ShouldBeNull();
     [Fact] void should_not_replace_a_null_number_with_zero() => _stored["score"].ShouldBeNull();
+    [Fact] void should_leave_the_nullable_string_unset_in_client_reads() => _clientRead.ContainsKey("note").ShouldBeFalse();
+    [Fact] void should_leave_the_nullable_number_unset_in_client_reads() => _clientRead.ContainsKey("score").ShouldBeFalse();
+    [Fact] void should_not_expose_initialization_in_client_reads() => _clientRead.ContainsKey(WellKnownProperties.ReadModelInstanceInitialized).ShouldBeFalse();
 
     ReducerContext Context(EventSequenceNumber sequenceNumber) => new(
         [new AppendedEvent(EventContext.From("store", "namespace", EventType.Unknown, EventSourceType.Default, "counter-1", EventStreamType.All, EventStreamId.Default, sequenceNumber, CorrelationId.NotSet), new ExpandoObject())], _key);
