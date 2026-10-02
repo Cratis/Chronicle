@@ -27,7 +27,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     {
         var jsonObject = new JsonObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
-        var schemaProperties = schema.ResolveComposition().GetFlattenedProperties().ToList();
+        var schemaProperties = ResolveForConversion(schema).GetFlattenedProperties().ToList();
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the expando object is preserved.
@@ -60,7 +60,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
             if (value is null)
             {
-                var defaultValue = property.ResolveComposition().GetDefaultValueForSchema(typeFormats);
+                var defaultValue = ResolveForConversion(property).GetDefaultValueForSchema(typeFormats);
                 if (defaultValue is not null)
                 {
                     value = ConvertToJsonNode(defaultValue, property);
@@ -82,7 +82,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         var expandoObject = new ExpandoObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
 
-        var schemaProperties = schema.ResolveComposition().GetFlattenedProperties().ToList();
+        var schemaProperties = ResolveForConversion(schema).GetFlattenedProperties().ToList();
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the document is preserved.
@@ -113,7 +113,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 value = ConvertFromJsonNode(sourceValue, property);
             }
 
-            value ??= property.ResolveComposition().GetDefaultValueForSchema(typeFormats);
+            value ??= ResolveForConversion(property).GetDefaultValueForSchema(typeFormats);
             if (value is not null)
             {
                 expandoObjectAsDictionary[name] = value;
@@ -123,9 +123,23 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return expandoObject;
     }
 
+    static JsonSchema ResolveForConversion(JsonSchema schema)
+    {
+        try
+        {
+            return schema.ResolveComposition();
+        }
+        catch (UnresolvedSchemaProtection) when (!schema.HasSchemaMetadata())
+        {
+            // Plain conversion is not a protection boundary. Retain the pre-composition conversion of
+            // unsupported schemas only when no protection declaration can be lost by that fallback.
+            return schema;
+        }
+    }
+
     JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty)
     {
-        schemaProperty = schemaProperty.ResolveComposition();
+        schemaProperty = ResolveForConversion(schemaProperty);
 
         // Compliance handlers replace protected scalar values with opaque strings while the registered schema
         // intentionally remains the schema of the plaintext event. Keep those strings opaque until the
@@ -195,7 +209,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
     object? ConvertFromJsonNode(JsonNode? jsonNode, JsonSchema schemaProperty)
     {
-        schemaProperty = schemaProperty.ResolveComposition();
+        schemaProperty = ResolveForConversion(schemaProperty);
         if (jsonNode is null)
         {
             return null;

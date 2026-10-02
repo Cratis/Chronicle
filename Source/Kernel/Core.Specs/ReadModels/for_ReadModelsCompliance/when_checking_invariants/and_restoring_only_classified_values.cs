@@ -19,7 +19,7 @@ public class and_restoring_only_classified_values
         get
         {
             var cells = new TheoryData<string, bool>();
-            foreach (var kind in new[] { "unprotected", "member", "reference", "composition", "container", "unresolved", "duplicate" })
+            foreach (var kind in new[] { "unprotected", "member", "reference", "composition", "container", "container_undeclared", "unresolved", "duplicate" })
             {
                 cells.Add(kind, false);
                 cells.Add(kind, true);
@@ -44,7 +44,7 @@ public class and_restoring_only_classified_values
         };
         var composition = kind switch
         {
-            "container" => $$""", "allOf":[{ {{Marker}} }]""",
+            "container" or "container_undeclared" => $$""", "allOf":[{ {{Marker}} }]""",
             "duplicate" => $$""", "allOf":[{"properties":{"value":{"allOf":[{"type":"integer"}],{{Marker}} } } }]""",
             _ => string.Empty
         };
@@ -59,10 +59,12 @@ public class and_restoring_only_classified_values
         if (erased) await keys.RecordErasureFor("store", "Default", "subject");
         object original = kind == "duplicate" ? 123 : "original";
         ExpandoObject? stored = null;
-        var error = await Catch.Exception(async () => stored = await compliance.Apply("store", "Default", schema, "subject", given.compliance_matrix.State(("value", original), ("guard", "guard"))));
-        if (kind == "unresolved")
+        var input = given.compliance_matrix.State(("value", original), ("guard", "guard"));
+        if (kind == "container_undeclared") ((IDictionary<string, object?>)input)["extra"] = "personal-value";
+        var error = await Catch.Exception(async () => stored = await compliance.Apply("store", "Default", schema, "subject", input));
+        if (kind == "unresolved" || kind == "container_undeclared")
         {
-            // Main also rejects this unresolved schema. A failed operation is closed, not a restored value.
+            // A failed operation is closed, not permission to restore an unclassified value.
             error.ShouldBeOfExactType<UnresolvedSchemaProtection>();
             stored.ShouldBeNull();
             return;

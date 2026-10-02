@@ -55,16 +55,18 @@ public static class SchemaCompositionExtensions
         foreach (var alternatives in new[] { schema.AnyOf, schema.OneOf }.Where(_ => _.Count > 0))
         {
             var nonNull = alternatives.Where(_ => _.Type != JsonObjectType.Null).ToArray();
-            if (nonNull.Length != 1)
+            if (nonNull.Length != 1 || alternatives.Any(_ => _.Type == JsonObjectType.Null && _.HasSchemaMetadata()))
             {
                 throw new UnresolvedSchemaProtection("ambiguous union");
             }
-            Merge(nonNull[0], result, references);
+            var alternative = new JsonObject();
+            Merge(nonNull[0], alternative, references);
             if (alternatives.Any(_ => _.Type == JsonObjectType.Null))
             {
-                var nullable = new JsonSchema(result);
+                var nullable = new JsonSchema(alternative);
                 nullable.Type |= JsonObjectType.Null;
             }
+            Merge(new JsonSchema(alternative, schema.Root), result, references);
         }
 
         foreach (var (key, value) in schema.Node.Where(_ => _.Key is not "$ref" and not "allOf" and not "anyOf" and not "oneOf"))

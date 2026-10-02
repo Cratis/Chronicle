@@ -10,8 +10,8 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModelsCompliance.when_checking_inv
 
 public static class compliance_matrix
 {
-    public static readonly string[] Shapes = ["flat", "own_and_referenced_base", "inline_allOf", "multiple_inline_groups", "reference_siblings", "nested_object", "object_array", "scalar_array", "recursive", "undeclared_key", "undeclared_pascal_key", "declared_key", "case_distinct", "referenced_member", "composed_member", "duplicate_member"];
-    public static readonly string[] Members = ["string", "empty_string", "nullable_string", "nullable_empty_string", "nullable_null", "integer", "boolean", "guid", "date", "decimal", "referenced_enum", "value_object", "null"];
+    public static readonly string[] Shapes = ["flat", "own_and_referenced_base", "inline_allOf", "multiple_inline_groups", "reference_siblings", "nested_object", "object_array", "scalar_array", "recursive", "undeclared_key", "undeclared_pascal_key", "declared_key", "case_distinct", "referenced_member", "composed_member", "duplicate_member", "reference_chain", "referenced_scalar_array"];
+    public static readonly string[] Members = ["string", "empty_string", "nullable_string", "nullable_empty_string", "nullable_null", "integer", "boolean", "guid", "date", "decimal", "referenced_enum", "value_object", "nullable_value_object", "null_value_object", "null"];
     public static readonly string[] Protections = ["pii", "non_pii", "undeclared"];
 
     public static TheoryData<string, bool, string, string, bool> Cells
@@ -111,11 +111,20 @@ public static class compliance_matrix
                 values.Add(("Value", value));
                 paths.Add("value");
                 break;
+            case "referenced_scalar_array":
+                root["$defs"]!["member"] = leaf;
+                root["$defs"]!["alias"] = new JsonObject { ["$ref"] = "#/$defs/member" };
+                AddMember(root, "items", new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["$ref"] = "#/$defs/alias" } }, protection);
+                values.Add(("items", new object?[] { value, value, null }));
+                paths.AddRange(["items.0", "items.1"]);
+                break;
+            case "reference_chain":
             case "referenced_member":
             case "composed_member":
                 root["$defs"]!["member"] = leaf;
-                var reference = new JsonObject { ["$ref"] = "#/$defs/member" };
-                AddMember(root, "value", shape == "referenced_member" ? reference : new JsonObject { ["allOf"] = new JsonArray(reference) }, protection);
+                root["$defs"]!["alias"] = new JsonObject { ["$ref"] = "#/$defs/member" };
+                var reference = new JsonObject { ["$ref"] = shape == "reference_chain" ? "#/$defs/alias" : "#/$defs/member" };
+                AddMember(root, "value", shape != "composed_member" ? reference : new JsonObject { ["allOf"] = new JsonArray(reference) }, protection);
                 values.Add(("value", value));
                 paths.Add("value");
                 break;
@@ -150,27 +159,27 @@ public static class compliance_matrix
     {
         "string" or "nullable_string" => "personal-value",
         "empty_string" or "nullable_empty_string" => string.Empty,
-        "nullable_null" or "null" => null,
+        "nullable_null" or "null_value_object" or "null" => null,
         "integer" => 123,
         "boolean" => true,
         "guid" => Guid.Parse("756848d4-fbe1-4bb9-ad3b-c11c4aa0c9b6"),
         "date" => new DateTime(2025, 1, 2, 3, 4, 5, DateTimeKind.Utc),
         "decimal" => 12345.67890123456789m,
         "referenced_enum" => kind.Known,
-        "value_object" => State(("count", 123), ("flag", true), ("identifier", MemberValue("guid")), ("date", MemberValue("date"))),
+        "value_object" or "nullable_value_object" => State(("count", 123), ("flag", true), ("identifier", MemberValue("guid")), ("date", MemberValue("date"))),
         _ => throw new ArgumentOutOfRangeException(nameof(member))
     };
 
     public static object? ErasedValue(string member) => member switch
     {
         "string" or "empty_string" => string.Empty,
-        "nullable_string" or "nullable_empty_string" or "nullable_null" or "null" => null,
+        "nullable_string" or "nullable_empty_string" or "nullable_null" or "null_value_object" or "null" => null,
         "integer" or "referenced_enum" => 0,
         "boolean" => false,
         "guid" => Guid.Empty,
         "date" => default(DateTime),
         "decimal" => 0m,
-        "value_object" => State(("count", 0), ("flag", false), ("identifier", Guid.Empty), ("date", default(DateTime))),
+        "value_object" or "nullable_value_object" => State(("count", 0), ("flag", false), ("identifier", Guid.Empty), ("date", default(DateTime))),
         _ => throw new ArgumentOutOfRangeException(nameof(member))
     };
 
@@ -209,6 +218,7 @@ public static class compliance_matrix
         "decimal" => """{"type":"number","format":"decimal"}""",
         "referenced_enum" => """{"$ref":"#/$defs/kind"}""",
         "value_object" => """{"type":"object","properties":{"count":{"type":"integer","format":"int32"},"flag":{"type":"boolean"},"identifier":{"type":"string","format":"guid"},"date":{"type":"string","format":"date-time"}}}""",
+        "nullable_value_object" or "null_value_object" => """{"anyOf":[{"type":"object","properties":{"count":{"type":"integer","format":"int32"},"flag":{"type":"boolean"},"identifier":{"type":"string","format":"guid"},"date":{"type":"string","format":"date-time"}}},{"type":"null"}]}""",
         "null" => """{"type":["integer","null"]}""",
         _ => throw new ArgumentOutOfRangeException(nameof(member))
     })!.AsObject();

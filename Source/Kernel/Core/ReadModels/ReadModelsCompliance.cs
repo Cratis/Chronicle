@@ -30,12 +30,12 @@ public class ReadModelsCompliance(
         string identifier,
         ExpandoObject instance)
     {
-        schema.EnsureProtectionCanBeResolved();
         if (!schema.HasSchemaMetadata())
         {
             ((IDictionary<string, object?>)instance)[WellKnownProperties.Subject] = identifier;
             return instance;
         }
+        schema.EnsureProtectionCanBeResolved();
 
         var instanceAsDictionary = (IDictionary<string, object?>)instance;
         var defaultSubject = instanceAsDictionary.TryGetValue(WellKnownProperties.Subject, out var storedSubject) &&
@@ -56,6 +56,7 @@ public class ReadModelsCompliance(
                 .ToDictionary(group => group.Key, group => instanceAsDictionary[group.Key], StringComparer.Ordinal)
             : [];
         var applied = await HandleBySubject(
+            schema,
             json,
             defaultSubject,
             subjects,
@@ -75,6 +76,10 @@ public class ReadModelsCompliance(
         {
             // The sink key and other undeclared state must survive the conversion, but an alternate casing of
             // a declared member is not undeclared state and must never bypass that member's protection.
+            if (!schema.IsUnprotectedSchemaValue(includeMembers: false) && !WellKnownProperties.All.Contains(property, StringComparer.Ordinal))
+            {
+                throw new UnresolvedSchemaProtection($"undeclared member of a protected container: {property}");
+            }
             resultAsDictionary[property] = value;
         }
 
@@ -89,18 +94,14 @@ public class ReadModelsCompliance(
         JsonSchema schema,
         JsonObject instance)
     {
-        schema.EnsureProtectionCanBeResolved();
         if (!schema.HasSchemaMetadata())
         {
             return instance;
         }
+        schema.EnsureProtectionCanBeResolved();
 
         var identifier = instance[WellKnownProperties.Subject]?.GetValue<string>();
         var subjects = ReadModelSubjects.From(instance[WellKnownProperties.Subjects]);
-        if (identifier is null && subjects.Count == 0)
-        {
-            return instance;
-        }
 
         // Kernel bookkeeping is stamped onto the document by the kernel itself — the identity marker read above,
         // the sink's last-handled watermark, the projection engine's initialization flag. The compliance manager
@@ -123,6 +124,7 @@ public class ReadModelsCompliance(
         }
 
         return await HandleBySubject(
+            schema,
             withoutBookkeeping,
             identifier,
             subjects,
@@ -136,11 +138,11 @@ public class ReadModelsCompliance(
         JsonSchema schema,
         ExpandoObject instance)
     {
-        schema.EnsureProtectionCanBeResolved();
         if (!schema.HasSchemaMetadata())
         {
             return instance;
         }
+        schema.EnsureProtectionCanBeResolved();
 
         var dict = (IDictionary<string, object?>)instance;
         var identifier = dict.TryGetValue(WellKnownProperties.Subject, out var subjectObj)
@@ -149,14 +151,11 @@ public class ReadModelsCompliance(
         var subjects = dict.TryGetValue(WellKnownProperties.Subjects, out var subjectsObj)
             ? ReadModelSubjects.From(subjectsObj)
             : [];
-        if (string.IsNullOrEmpty(identifier) && subjects.Count == 0)
-        {
-            return instance;
-        }
 
         var json = expandoObjectConverter.ToJsonObject(instance, schema);
         PreserveInputNulls(instance, json, schema);
         var released = await HandleBySubject(
+            schema,
             json,
             identifier,
             subjects,
@@ -244,11 +243,22 @@ public class ReadModelsCompliance(
     }
 
     static async Task<JsonObject> HandleBySubject(
+        JsonSchema schema,
         JsonObject json,
         string? defaultSubject,
         Dictionary<string, string> subjects,
         Func<string, JsonObject, Task<JsonObject>> action)
     {
+        var resolved = schema.ResolveComposition();
+        var protectsContainer = !resolved.IsUnprotectedSchemaValue(includeMembers: false);
+        foreach (var property in json.Where(property => string.IsNullOrEmpty(subjects.TryGetValue(property.Key, out var subject) ? subject : defaultSubject)))
+        {
+            if (protectsContainer || resolved.Properties.Any(member => member.Key.Equals(property.Key, StringComparison.OrdinalIgnoreCase) && !member.Value.IsUnprotectedSchemaValue()))
+            {
+                throw new UnresolvedSchemaProtection($"missing subject for {property.Key}");
+            }
+        }
+
         if (subjects.Count == 0)
         {
             return string.IsNullOrEmpty(defaultSubject)

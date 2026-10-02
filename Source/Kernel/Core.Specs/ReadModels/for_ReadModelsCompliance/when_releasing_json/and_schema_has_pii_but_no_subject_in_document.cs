@@ -10,16 +10,16 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModelsCompliance.when_releasing_js
 public class and_schema_has_pii_but_no_subject_in_document : given.all_dependencies
 {
     JsonObject _instance;
-    JsonObject _result;
+    Exception _error;
 
     void Establish() => _instance = new JsonObject { ["name"] = "encrypted-name" };
 
-    async Task Because() => _result = await _compliance.ReleaseJson(
+    async Task Because() => _error = await Catch.Exception(() => _compliance.ReleaseJson(
         EventStore,
         EventStoreNamespace,
         _schemaWithPii,
-        _instance);
+        _instance));
 
-    [Fact] void should_return_original_instance() => _result.ShouldEqual(_instance);
+    [Fact] void should_refuse_unattributed_personal_data() => _error.ShouldBeOfExactType<UnresolvedSchemaProtection>();
     [Fact] void should_not_call_compliance_manager() => _complianceManager.DidNotReceive().Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>());
 }

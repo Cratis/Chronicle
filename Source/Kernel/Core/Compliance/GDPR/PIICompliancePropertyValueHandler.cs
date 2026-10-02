@@ -43,21 +43,14 @@ public class PIICompliancePropertyValueHandler(
     /// <inheritdoc/>
     public async Task<ReleasedSchemaMetadataValue> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
-        // Only a value this encryption produced can be released. One that carries none of its shape was never
-        // encrypted under this subject — it is resolved in memory at the query edge for display, or it predates
-        // the property being marked [PII]. Releasing it is a no-op, so pass it through: blanking it would be
-        // silent data loss indistinguishable from erasure, and throwing would fail an entire query over a
-        // single property.
-        //
-        // Asked before the key, because whether the subject holds a key answers "can this be decrypted" and the
-        // question here is "was this ever encrypted". A key is only ever minted for a subject that encrypts
-        // something at rest, so a read model keyed by a hash, a cluster identifier or any other computed identity
-        // has none — and its display-only values were being emptied on every read. Erasure is unaffected:
-        // IsEncrypted takes no key, so a genuinely encrypted value whose key has been shredded still answers yes
-        // here, still falls through to the key lookup, and still blanks.
         if (!ProtectedValueCodec.TryDecodeCipherText(encryption, value.ToString(), out var encrypted))
         {
-            return new(value);
+            // Legacy and display-only plaintext can survive for a live subject, but absence of ciphertext
+            // is not permission to release erased PII. Even a later authorized key cannot date plaintext
+            // to the new lifecycle, so only encrypted values can establish that distinction.
+            return await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is not null
+                ? new(JsonValue.Create(string.Empty), IsUnreadable: true)
+                : new(value);
         }
 
         var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier);

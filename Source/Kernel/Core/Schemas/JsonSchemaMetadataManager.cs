@@ -33,11 +33,11 @@ public class JsonSchemaMetadataManager(
     /// <inheritdoc/>
     public async Task<JsonObject> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
-        schema.EnsureProtectionCanBeResolved();
         if (!schema.HasSchemaMetadata())
         {
             return json;
         }
+        schema.EnsureProtectionCanBeResolved();
 
         var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, async (h, id, token) => new(await h.Apply(eventStore, eventStoreNamespace, id, token)));
@@ -47,11 +47,11 @@ public class JsonSchemaMetadataManager(
     /// <inheritdoc/>
     public async Task<JsonObject> ApplyToReadModel(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
-        schema.EnsureProtectionCanBeResolved();
         if (!schema.HasSchemaMetadata())
         {
             return json;
         }
+        schema.EnsureProtectionCanBeResolved();
 
         var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, async (h, id, token) => new(await h.Apply(eventStore, eventStoreNamespace, id, token)), erasedValuesBecomePlaceholders: true);
@@ -65,12 +65,12 @@ public class JsonSchemaMetadataManager(
     /// <inheritdoc/>
     public async Task<ReleasedSchemaMetadata> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
-        schema.EnsureProtectionCanBeResolved();
         var unreadablePaths = new HashSet<string>(StringComparer.Ordinal);
         if (!schema.HasSchemaMetadata())
         {
             return new(json, unreadablePaths);
         }
+        schema.EnsureProtectionCanBeResolved();
 
         var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ReleaseAction, async (h, id, token) => await h.ReleaseWithStatus(eventStore, eventStoreNamespace, id, token), unreadablePaths: unreadablePaths);
@@ -203,8 +203,10 @@ public class JsonSchemaMetadataManager(
                 var propertyPath = string.IsNullOrEmpty(path) ? property : $"{path}.{property}";
                 var flattenedProperties = schema.GetFlattenedProperties();
 
-                var propertySchema = (flattenedProperties.SingleOrDefault(_ => _.Name == property) ??
-                    throw new SchemaPropertyNotFoundInSchema(actionName, propertyPath, identifier, flattenedProperties.Select(_ => _.Name))).ResolveComposition();
+                JsonSchema propertySchema = flattenedProperties.SingleOrDefault(_ => _.Name == property) ??
+                    throw new SchemaPropertyNotFoundInSchema(actionName, propertyPath, identifier, flattenedProperties.Select(_ => _.Name));
+                if (metadataForContainer.Length == 0 && propertySchema.IsUnprotectedSchemaValue()) continue;
+                propertySchema = propertySchema.ResolveComposition();
 
                 var handlerApplied = false;
                 var protection = MetadataAcrossCategories(propertySchema).Concat(metadataForContainer).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();

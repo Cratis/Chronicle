@@ -66,6 +66,21 @@ public class and_round_tripping_the_matrix(ITestOutputHelper output)
                     CheckReleased(released, true);
                 });
             }
+            stage = "plaintext_erased";
+            if (protection == "pii")
+            {
+                await Observe(async () =>
+                {
+                    var plaintext = given.compliance_matrix.Create(shape, member, protection).State;
+                    ((IDictionary<string, object?>)plaintext)["__subject"] = "matrix-subject";
+                    CheckReleased(await compliance.Release("store", "Default", specimen.Schema, plaintext), true);
+                    var converter = new ExpandoObjectConverter(new TypeFormats());
+                    var json = converter.ToJsonObject(plaintext, specimen.Schema);
+                    json["__subject"] = "matrix-subject";
+                    var releasedJson = await compliance.ReleaseJson("store", "Default", specimen.Schema, json);
+                    CheckReleased(converter.ToExpandoObject(releasedJson, specimen.Schema), true);
+                });
+            }
             stage = "fresh_erased";
             await Observe(async () =>
             {
@@ -125,7 +140,7 @@ public class and_round_tripping_the_matrix(ITestOutputHelper output)
                 if (protection == "pii")
                 {
                     var encrypted = actual is JsonValue scalar && scalar.TryGetValue<string>(out var text) && ProtectedValueCodec.TryDecodeCipherText(encryption, text, out _);
-                    var placeholder = JsonSerializer.SerializeToNode(member == "value_object" ? string.Empty : given.compliance_matrix.ErasedValue(member));
+                    var placeholder = JsonSerializer.SerializeToNode(member == "value_object" || member == "nullable_value_object" ? string.Empty : given.compliance_matrix.ErasedValue(member));
                     var protectedOrAbsent = expected is null ? actual is null : encrypted;
                     Check(isErased ? JsonNode.DeepEquals(actual, placeholder) : protectedOrAbsent, "I1", $"{path}: stored {actual?.ToJsonString() ?? "null"}");
                 }
