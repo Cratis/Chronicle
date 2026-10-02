@@ -119,6 +119,18 @@ public class a_projection_grain_with_a_child_projection : Specification
     protected Task<IEnumerable<ExpandoObject>> ProcessForMultipleReadModels(params AppendedEvent[] events) =>
         _grain.Process(EventStoreNamespaceName.Default, events);
 
+    /// <summary>
+    /// Makes the projections report the operation types of a real projection, built from a definition, for the event handled.
+    /// </summary>
+    /// <param name="realProjection">The <see cref="EngineProjection"/> built by the <see cref="ProjectionFactory"/>.</param>
+    /// <param name="eventType">The <see cref="EventType"/> of the event to handle.</param>
+    protected void ReportOperationTypesOf(EngineProjection realProjection, EventType eventType)
+    {
+        _event = AppendedEvent.EmptyWithEventType(eventType);
+        _rootProjection.GetOperationTypeFor(Arg.Any<EventType>()).Returns(call => realProjection.GetOperationTypeFor(call.Arg<EventType>()));
+        _childProjection.GetOperationTypeFor(Arg.Any<EventType>()).Returns(call => realProjection.ChildProjections.Single().GetOperationTypeFor(call.Arg<EventType>()));
+    }
+
     protected void ProjectRootWith(Action<ProjectionEventContext> projector) =>
         _rootProjection
             .When(_ => _.OnNext(Arg.Any<ProjectionEventContext>()))

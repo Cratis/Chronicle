@@ -62,6 +62,16 @@ public class SqlSinkHarness : ISinkHarness
     /// </remarks>
     public ISink CreateSinkForTheSameReadModel() => CreateSink(_definition!);
 
+    /// <summary>
+    /// Reads the stored columns without schema conversion.
+    /// </summary>
+    /// <returns>The rows in the read model's primary table.</returns>
+    public async Task<DynamicReadModelEntity[]> ReadStoredRows()
+    {
+        await using var context = CreateContext(_definition!.ContainerName.Value);
+        return await context.Entries.AsNoTracking().ToArrayAsync();
+    }
+
     /// <inheritdoc/>
     public void Dispose() => _connection.Dispose();
 

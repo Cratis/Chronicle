@@ -1,6 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
+using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.ReadModels;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -24,6 +28,8 @@ namespace Cratis.Chronicle.Integration.for_ReadModels;
 /// </remarks>
 public static class StoredReadModelDocument
 {
+    static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+
     /// <summary>
     /// Gets whether the current run stores read models where this helper can read them.
     /// </summary>
@@ -50,4 +56,36 @@ public static class StoredReadModelDocument
             .Find(Builders<BsonDocument>.Filter.Empty)
             .FirstOrDefaultAsync();
     }
+
+    /// <summary>
+    /// Reads a typed instance through the kernel for a directly registered projection on any backend.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="eventStore">The event store to query.</param>
+    /// <param name="key">The instance key.</param>
+    /// <returns>The typed stored instance.</returns>
+    public static async Task<TReadModel> ReadInstance<TReadModel>(IEventStore eventStore, ReadModelKey key)
+    {
+        // Direct contract registration bypasses the client's projection discovery catalog. Query the same
+        // kernel read path as GetInstanceById without requiring a second, different client-side definition.
+        var services = ((IChronicleServicesAccessor)eventStore.Connection).Services;
+        var response = await services.ReadModels.GetInstanceByKey(new()
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            ReadModelIdentifier = typeof(TReadModel).GetReadModelIdentifier(),
+            EventSequenceId = EventSequenceId.Log,
+            ReadModelKey = key
+        });
+        return JsonSerializer.Deserialize<TReadModel>(response.ReadModel, _jsonOptions)!;
+    }
+
+    /// <summary>
+    /// Gets a field of a stored document by name, ignoring the casing the sink stores it with.
+    /// </summary>
+    /// <param name="document">The stored <see cref="BsonDocument"/>, or null.</param>
+    /// <param name="name">The name of the field.</param>
+    /// <returns>The <see cref="BsonValue"/>, or null when there is no document or no such field.</returns>
+    public static BsonValue? Field(BsonDocument? document, string name) =>
+        document?.Elements.FirstOrDefault(element => string.Equals(element.Name, name, StringComparison.OrdinalIgnoreCase)).Value;
 }
