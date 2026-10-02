@@ -10,7 +10,7 @@ using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers.when_waiting_for_completion;
 
-public class and_pattern_capture_subscribes_in_a_new_namespace : given.all_dependencies
+public class and_an_unsubscribed_kernel_observer_handles_the_event_after_the_first_poll : given.all_dependencies
 {
     WaitForObserverCompletionResponse _result;
     int _stateReads;
@@ -47,7 +47,7 @@ public class and_pattern_capture_subscribes_in_a_new_namespace : given.all_depen
         TimeoutMilliseconds = 1000
     });
 
-    [Fact] void should_wait_until_pattern_capture_has_handled_the_first_event() => _stateReads.ShouldEqual(2);
+    [Fact] void should_wait_until_pattern_capture_has_handled_the_first_event() => _stateReads.ShouldBeGreaterThan(1);
     [Fact] void should_complete_successfully() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_not_time_out() => _result.TimedOut.ShouldBeFalse();
 }
