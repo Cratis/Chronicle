@@ -19,6 +19,14 @@ on:
       - "Documentation/client-snippets/**"
       - "Documentation/validate-client-snippets.py"
       - "Source/**"
+      - "Directory.Packages.props"
+      - "Directory.Packages.NET8.props"
+      - "Directory.Packages.NET9.props"
+      - "Directory.Build.props"
+      - "Directory.Build.targets"
+      - "global.json"
+      - ".globalconfig"
+      - ".editorconfig"
       - ".github/workflows/client-snippets.yml"
 
   push:
@@ -27,6 +35,14 @@ on:
       - "Documentation/client-snippets/**"
       - "Documentation/validate-client-snippets.py"
       - "Source/**"
+      - "Directory.Packages.props"
+      - "Directory.Packages.NET8.props"
+      - "Directory.Packages.NET9.props"
+      - "Directory.Build.props"
+      - "Directory.Build.targets"
+      - "global.json"
+      - ".globalconfig"
+      - ".editorconfig"
       - ".github/workflows/client-snippets.yml"
 
 permissions:
