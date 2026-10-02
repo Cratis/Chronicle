@@ -128,6 +128,9 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     /// <returns>The generated C# source code.</returns>
     public string GenerateSharedType(Type type, string outputDirectory)
     {
+        SharedTypeRegistry.QualifiedNameFor(type);
+        SharedTypeRegistry.CompleteDiscovery();
+
         // Namespace mapping goes through the registry, not BuildTargetNamespace/BuildFolderPath below - a shared
         // type reused from a project Core depends on (Cratis.Orleans.Jobs.JobStatus, say) does not necessarily sit at
         // the same relative namespace depth a service's own artifacts do, and the registry is what already
@@ -222,7 +225,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         var sharedNames = SharedTypeRegistry.Discovered.ToDictionary(pair => pair.Key.FullName!, pair => pair.Value["global::".Length..]);
         sharedNames[type.FullName!] = SharedTypeRegistry.QualifiedNameFor(type)!["global::".Length..];
 
-        foreach (var element in copy.Descendants().Where(element => element.Attribute("cref") is not null).ToList())
+        foreach (var element in copy.Descendants().Reverse().Where(element => element.Attribute("cref") is not null).ToList())
         {
             var cref = element.Attribute("cref")!;
             var token = $"cref=\"{cref.Value}\"";
@@ -244,8 +247,30 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
             if (!resolved && !IsBclDocumentationReference(cref.Value))
             {
-                var name = cref.Value[2..].Split('(')[0];
-                element.ReplaceWith(new XElement("c", name[(name.LastIndexOf('.') + 1)..]));
+                switch (element.Name.LocalName)
+                {
+                    case "see":
+                        var name = cref.Value[2..].Split('(')[0];
+                        element.ReplaceWith(element.Nodes().Any()
+                            ? new XElement("c", element.Nodes())
+                            : new XElement("c", name[(name.LastIndexOf('.') + 1)..]));
+                        break;
+                    case "seealso":
+                    case "exception":
+                        if (element.Nodes().Any())
+                        {
+                            var description = new XElement("para", element.Nodes());
+                            element.ReplaceWith(element.Parent == copy ? new XElement("remarks", description) : description);
+                        }
+                        else
+                        {
+                            element.Remove();
+                        }
+                        break;
+                    default:
+                        cref.Remove();
+                        break;
+                }
             }
         }
 
@@ -254,25 +279,9 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         return SyntaxFactory.ParseLeadingTrivia(string.Join('\n', text.Split('\n').Select(line => $"/// {line.Trim()}")) + "\n");
     }
 
-    static bool IsBclDocumentationReference(string documentationId)
-    {
-        var name = documentationId[2..].Split('(')[0];
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
-            .Where(assembly => assembly == typeof(object).Assembly ||
-                assembly.GetName().Name?.StartsWith("System.", StringComparison.Ordinal) == true)
-            .ToList();
-        while (name.Contains('.'))
-        {
-            if (assemblies.Exists(assembly => assembly.GetType(name) is not null))
-            {
-                return true;
-            }
-
-            name = name[..name.LastIndexOf('.')];
-        }
-
-        return false;
-    }
+    static bool IsBclDocumentationReference(string documentationId) =>
+        documentationId[2..].StartsWith("System.", StringComparison.Ordinal) ||
+        documentationId[2..].StartsWith("Microsoft.", StringComparison.Ordinal);
 
     static MethodDeclarationSyntax BuildCommandMethod(CommandDefinition command, string? requestTypeName, string? responseTypeName)
     {
