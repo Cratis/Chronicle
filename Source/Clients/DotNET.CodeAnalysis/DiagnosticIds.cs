@@ -273,4 +273,14 @@ public static class DiagnosticIds
     /// A reactor method has a return type that the runtime cannot discover as a handler.
     /// </summary>
     public const string ReactorMethodReturnTypeMustBeSupported = "CHR0054";
+
+    /// <summary>
+    /// A typed event-source filter references a stream that its event source does not declare.
+    /// </summary>
+    public const string UnknownEventStreamOnTypedEventSourceFilter = "CHR0055";
+
+    /// <summary>
+    /// Explicit event metadata routing contradicts a typed event-source filter.
+    /// </summary>
+    public const string ExplicitRoutingContradictsTypedEventSourceFilter = "CHR0056";
 }

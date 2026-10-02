@@ -400,13 +400,14 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             reactorType.GetEventSequenceId(_eventStore.Name?.Value),
             ReactorInvoker.GetEventTypesFor(_eventStore.EventTypes, reactorType, _sideEffectHandlers));
 #pragma warning restore CA2000
+        var eventSourceFilter = reactorType.GetEventSourceFilter(_eventStore.EventSources);
         return new(
             handler,
             !reactorType.IsDefined(typeof(OnceOnlyAttribute), inherit: false),
             [.. reactorType.GetTags()],
             [.. reactorType.GetFilterTags()],
-            reactorType.GetEventSourceType(),
-            reactorType.GetEventStreamType(),
+            eventSourceFilter.EventSourceType,
+            eventSourceFilter.EventStreamType,
             null);
     }
 

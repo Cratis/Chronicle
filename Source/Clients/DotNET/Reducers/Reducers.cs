@@ -408,6 +408,7 @@ public class Reducers : IReducers
             handler.Id,
             handler.EventSequenceId);
 
+        var eventSourceFilter = handler.ReducerType.GetEventSourceFilter(_eventStore.EventSources);
         var registration = new RegisterReducer
         {
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
@@ -424,8 +425,8 @@ public class Reducers : IReducers
                 Filters = new()
                 {
                     FilterTags = handler.ReducerType.GetFilterTags().ToArray(),
-                    EventSourceType = handler.ReducerType.GetEventSourceType().Value,
-                    EventStreamType = handler.ReducerType.GetEventStreamType().Value
+                    EventSourceType = eventSourceFilter.EventSourceType.Value,
+                    EventStreamType = eventSourceFilter.EventStreamType.Value
                 },
                 Hash = ReducerFingerprint.Create(handler.ReducerType)
             }

@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSources;
 
 namespace Cratis.Chronicle;
 
@@ -47,6 +48,31 @@ public static class TagExtensions
     {
         var attribute = type.GetCustomAttribute<EventSourceTypeAttribute>();
         return attribute?.EventSourceType ?? EventSourceType.Unspecified;
+    }
+
+    /// <summary>
+    /// Gets the event source and stream filters from a type, resolving typed filters against registered definitions.
+    /// </summary>
+    /// <param name="type">The observer type to inspect.</param>
+    /// <param name="eventSources">The registered event source definitions.</param>
+    /// <returns>The event source and event stream filters.</returns>
+    /// <exception cref="UnknownEventSource">Thrown when the typed filter's event source is not registered.</exception>
+    /// <exception cref="EventStreamDoesNotBelongToEventSource">Thrown when the typed filter's stream is not declared by its event source.</exception>
+    public static (EventSourceType EventSourceType, EventStreamType EventStreamType) GetEventSourceFilter(this Type type, IEventSources eventSources)
+    {
+        var attribute = type.GetCustomAttributes()
+            .FirstOrDefault(attribute => attribute.GetType().IsGenericType && attribute.GetType().GetGenericTypeDefinition() == typeof(FromEventSourceAttribute<>));
+        if (attribute is null)
+        {
+            return (type.GetEventSourceType(), type.GetEventStreamType());
+        }
+
+        var eventSourceType = attribute.GetType().GetGenericArguments()[0];
+        var stream = (string)attribute.GetType().GetProperty(nameof(FromEventSourceAttribute<IEventSource>.Stream))!.GetValue(attribute)!;
+        var definition = eventSources.GetFor(eventSourceType);
+        var eventStream = definition.FindStream(stream) ?? throw new EventStreamDoesNotBelongToEventSource(definition.Name, stream);
+
+        return (definition.EventSourceType, eventStream.EventStreamType);
     }
 
     /// <summary>
