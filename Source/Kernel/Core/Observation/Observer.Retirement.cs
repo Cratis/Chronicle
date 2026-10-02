@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Alerts;
-using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -11,27 +10,18 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task Retire()
     {
-        ThrowIfRemoving();
+        ThrowIfSealed();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.RetiringObserver();
 
-        await _alertMutationLock.WaitAsync();
-        try
-        {
-            await EnsureAlertState();
-            _alertDisposition = AlertDisposition.Retired;
-            ChangeAlertState();
-            await WriteStateAsync();
-        }
-        finally
-        {
-            _alertMutationLock.Release();
-        }
-
+        // Detach delivery before fallible job cleanup. Probing an absent namespace must not create state
+        // or alert work, even when the shared projection definition exists elsewhere.
         await Unsubscribe();
         _isPreparingCatchup = false;
+        if (!_observerExists) return;
 
-        // Operational quarantine and replay stay retained, but the durable disposition no longer desires alerts.
+        // Desired inactivity is forward-only: reconciliation or cleanup failure never restores Active.
+        await CommitRetired();
         await RequireAlertReconciliation();
         await DiscardFailedPartitions(AlertClearedReason.Removed);
     }

@@ -13,7 +13,8 @@ public class and_a_replaying_projection_is_being_removed : given.a_replaying_pro
 {
     async Task Establish()
     {
-        await _observer.Remove();
+        _eventStoreNamespaceStorage.FailedPartitions.RemoveAllFor(_observerId).Returns(Task.FromException(new Exception("Cleanup failed")));
+        await Catch.Exception(_observer.Remove);
         _jobsManager.ClearReceivedCalls();
         _observerHandledCountsStorage.ClearReceivedCalls();
         _observerAlerts.ClearReceivedCalls();
@@ -32,5 +33,5 @@ public class and_a_replaying_projection_is_being_removed : given.a_replaying_pro
     [Fact] async Task should_not_start_replay() => await _jobsManager.DidNotReceive().Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<ReplayObserverRequest>());
     [Fact] async Task should_not_resume_replay() => await _jobsManager.DidNotReceive().Resume(_replayJob);
     [Fact] async Task should_not_remove_counts() => await _observerHandledCountsStorage.DidNotReceive().RemoveAllFor(Arg.Any<ObserverId>());
-    [Fact] async Task should_report_removal() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.Disposition == AlertDisposition.Removing));
+    [Fact] async Task should_report_removal() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.Disposition == AlertDisposition.Retired));
 }

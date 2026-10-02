@@ -36,7 +36,7 @@ public class with_alert_lifecycle : Specification
             Identifier = "observer",
             AlertLifecycleId = Guid.NewGuid(),
             AlertRevision = 42,
-            AlertDisposition = AlertDisposition.Removing,
+            AlertDisposition = AlertDisposition.Retired,
             QuarantineEpisodeId = Guid.NewGuid()
         };
         _expected = _state.ToMongoDB().ToBsonDocument();

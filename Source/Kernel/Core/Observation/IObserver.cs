@@ -94,6 +94,7 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="subscriberArgs">Optional arguments associated with the subscription.</param>
     /// <param name="isReplayable">Whether the observer supports replay scenarios. Defaults to true.</param>
     /// <param name="filters">Optional <see cref="ObserverFilters"/> to apply when observing events.</param>
+    /// <param name="reactivateRetired">Whether explicit registration may start a fresh lifecycle for a retired observer. Automatic recovery must pass false.</param>
     /// <returns>Awaitable task.</returns>
     Task Subscribe<TObserverSubscriber>(
         ObserverType type,
@@ -101,23 +102,26 @@ public interface IObserver : IGrainWithStringKey
         SiloAddress siloAddress,
         object? subscriberArgs = default,
         bool isReplayable = true,
-        ObserverFilters? filters = default)
+        ObserverFilters? filters = default,
+        bool reactivateRetired = true)
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
-    /// Subscribe to all event types in the observer.
+    /// Subscribe to all event types in the observer, respecting retirement during automatic recovery.
     /// </summary>
     /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>
     /// <param name="type"><see cref="ObserverType"/>.</param>
     /// <param name="siloAddress"><see cref="SiloAddress"/> the subscriber is connected to.</param>
     /// <param name="subscriberArgs">Optional arguments associated with the subscription.</param>
     /// <param name="isReplayable">Whether the observer supports replay scenarios. Defaults to true.</param>
-    /// <returns>Awaitable task.</returns>
+    /// <param name="reactivateRetired">Whether explicit registration may start a fresh lifecycle for a retired observer. Automatic recovery must pass false.</param>
+    /// <returns>Awaitable task. A retired observer is left unsubscribed during automatic recovery.</returns>
     Task SubscribeToAllEvents<TObserverSubscriber>(
         ObserverType type,
         SiloAddress siloAddress,
         object? subscriberArgs = default,
-        bool isReplayable = true)
+        bool isReplayable = true,
+        bool reactivateRetired = true)
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
@@ -284,29 +288,15 @@ public interface IObserver : IGrainWithStringKey
     Task ClearObserverQuarantine();
 
     /// <summary>
-    /// Fence removal durably and require current alert clears to be applied before cleanup.
+    /// Retire and remove this namespace's observer after its operational incidents have been cleared.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// Rechecks subscription and activity at the mutation boundary. Removing remains durable across activation
-    /// until CompleteRemoval or CancelRemoval, and both subscription paths reject it. An unsuccessful reconciliation fails the
-    /// management call; the caller must not proceed with destructive cleanup.
+    /// Rechecks subscription and activity inside the non-interleaved call. Removal is forward-only and
+    /// nontransactional: failure may leave committed retirement or partially deleted resources. Retry continues
+    /// cleanup without restoring Active. The source record is deleted last; absent sources are never created.
     /// </remarks>
     Task Remove();
-
-    /// <summary>
-    /// Cancels a removal fence with a fresh active lifecycle before destructive cleanup begins.
-    /// Does nothing if removal has already completed or no fence exists.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    /// <remarks>Only the kernel removal coordinator may call this during its fencing phase.</remarks>
-    Task CancelRemoval();
-
-    /// <summary>
-    /// Deletes the removal marker and alert reminder after all namespace and shared cleanup completes.
-    /// </summary>
-    /// <returns>Awaitable completion task.</returns>
-    Task CompleteRemoval();
 
     /// <summary>
     /// Retire the observer: stop it consuming events and end its failures, keeping its records in place.
@@ -318,7 +308,8 @@ public interface IObserver : IGrainWithStringKey
     /// stays quarantined without routing or changing replay progress or handled counts.
     /// The durable Retired disposition suppresses retained quarantine across crashes. A failed reconciliation
     /// fails this call and is retried by the lifetime alert reminder; the manager retains the orphan for retry.
-    /// A fresh subscription establishes a new alert lifecycle and supersedes any old retirement report.
+    /// Failure does not undo committed retirement. Automatic subscription recovery leaves it retired.
+    /// Explicit registration discards retained episodes before establishing a fresh active lifecycle.
     /// </remarks>
     Task Retire();
 

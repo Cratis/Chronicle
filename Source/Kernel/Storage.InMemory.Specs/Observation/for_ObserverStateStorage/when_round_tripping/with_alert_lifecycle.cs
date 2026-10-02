@@ -21,7 +21,7 @@ public class with_alert_lifecycle : Specification
             Identifier = "observer",
             AlertLifecycleId = Guid.NewGuid(),
             AlertRevision = 42,
-            AlertDisposition = AlertDisposition.Removing,
+            AlertDisposition = AlertDisposition.Retired,
             QuarantineEpisodeId = Guid.NewGuid()
         };
     }
@@ -41,7 +41,7 @@ public class with_alert_lifecycle : Specification
     [Fact] void should_keep_the_saved_quarantine() => _saved.QuarantineEpisodeId.ShouldEqual(_original.QuarantineEpisodeId);
     [Fact] void should_preserve_the_lifecycle_on_rename() => _renamed.AlertLifecycleId.ShouldEqual(_original.AlertLifecycleId);
     [Fact] void should_preserve_the_revision_on_rename() => _renamed.AlertRevision.ShouldEqual(42);
-    [Fact] void should_preserve_the_disposition_on_rename() => _renamed.AlertDisposition.ShouldEqual(AlertDisposition.Removing);
+    [Fact] void should_preserve_the_disposition_on_rename() => _renamed.AlertDisposition.ShouldEqual(AlertDisposition.Retired);
     [Fact] void should_preserve_the_quarantine_on_rename() => _renamed.QuarantineEpisodeId.ShouldEqual(_original.QuarantineEpisodeId);
 
     void Destroy() => _storage.Dispose();

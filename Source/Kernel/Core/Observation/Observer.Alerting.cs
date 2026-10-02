@@ -32,7 +32,6 @@ public partial class Observer
     bool _observerExists;
 
     bool IsRetired => _alertDisposition == AlertDisposition.Retired;
-    bool IsRemoving => _alertDisposition == AlertDisposition.Removing;
 
     /// <inheritdoc/>
     public void Dispose()
@@ -232,10 +231,22 @@ public partial class Observer
 
     async Task BeginAlertLifecycle()
     {
+        // Subscribe re-reads storage; do not publish Active until every retained, possibly already-ended
+        // episode is discarded. A failure in preparation leaves the committed level Retired.
+        _alertDisposition = State.AlertDisposition;
+        _alertLifecycleId = State.AlertLifecycleId;
+        _alertRevision = State.AlertRevision;
+        _quarantineEpisodeId = State.QuarantineEpisodeId;
+        if (IsRetired)
+        {
+            await DiscardFailedPartitions(AlertClearedReason.Removed);
+            await LeaveQuarantineForSubscription();
+        }
+
         await _alertMutationLock.WaitAsync();
         try
         {
-            ThrowIfRemoving();
+            ThrowIfSealed();
             await EnsureAlertState();
             _alertLifecycleId = Guid.NewGuid();
             _alertRevision = 0;
@@ -258,21 +269,46 @@ public partial class Observer
         }
     }
 
-    void ThrowIfRemoving()
+    async Task CommitRetired()
     {
-        if (IsRemoving || _removed || State.AlertDisposition == AlertDisposition.Removing)
+        await _alertMutationLock.WaitAsync();
+        try
         {
-            throw new ObserverRemovalInProgress(_observerKey);
+            if (!_observerExists) return;
+            if (!IsRetired)
+            {
+                _alertDisposition = AlertDisposition.Retired;
+                ChangeAlertState();
+            }
+
+            // A previous persistence failure may have changed memory without committing the desired level.
+            await WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+    }
+
+    void ThrowIfSealed()
+    {
+        if (_removed)
+        {
+            throw new ObserverActivationSealed(_observerKey);
         }
     }
 
     async Task ReconcileAlertsIfNeeded()
     {
-        if (!_observerExists || _removed)
+        if (!_observerExists)
         {
             await UnregisterReminderNamed(AlertReminderName);
             return;
         }
+
+        // A sealed activation may have observed an ambiguous deletion failure. Keep its wakeup until
+        // reactivation can determine whether the source still exists.
+        if (_removed) return;
 
         if (_alertReconciliationPending || Failures.HasFailedPartitions ||
             (_alertDisposition == AlertDisposition.Active && State.RunningState == ObserverRunningState.Quarantined))

@@ -25,7 +25,7 @@ public partial class Observer
         string exceptionStackTrace,
         FailureKind kind = FailureKind.Unknown)
     {
-        if (IsRetired || IsRemoving || _removed)
+        if (IsRetired || _removed)
         {
             return;
         }
@@ -54,7 +54,7 @@ public partial class Observer
                     if (config.MaxRetryAttempts == 0 || failure.Attempts.Count() <= config.MaxRetryAttempts)
                     {
                         var retryDelay = GetNextRetryDelay(failure, config);
-                        await this.RegisterOrUpdateReminder(PartitionReminderName(partition), retryDelay, GetRetryReminderPeriod(retryDelay));
+                        await this.RegisterOrUpdateReminder(PartitionReminderName(failure.Id), retryDelay, GetRetryReminderPeriod(retryDelay));
                     }
                     else
                     {
@@ -87,7 +87,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
-        if (IsRemoving || _removed) return;
+        if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FailingPartitionRecovered(partition);
         await ResolveFailedPartition(partition, lastHandledEventSequenceNumber);
@@ -97,10 +97,11 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
-        if (IsRemoving || _removed) return;
+        if (IsRetired || _removed) return;
         await _alertMutationLock.WaitAsync();
         try
         {
+            if (IsRetired || _removed) return;
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
             HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
@@ -115,7 +116,8 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
-        ThrowIfRemoving();
+        ThrowIfSealed();
+        if (IsRetired) return PartitionRecoveryOutcome.PartitionNotFound;
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
@@ -141,7 +143,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task ClearFailedPartitions()
     {
-        ThrowIfRemoving();
+        ThrowIfSealed();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         if (Failures.HasFailedPartitions)
         {
@@ -155,7 +157,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task TryRecoverAllFailedPartitions()
     {
-        if (IsRetired || IsRemoving || _removed) return;
+        if (IsRetired || _removed) return;
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
@@ -229,7 +231,7 @@ public partial class Observer
             foreach (var partition in Failures.Partitions.ToArray())
             {
                 _alertEndings[partition.Id] = reason;
-                await RemoveReminder(partition.Partition);
+                await RemoveReminder(partition);
                 failures.State.Remove(partition.Partition);
             }
 
@@ -249,7 +251,7 @@ public partial class Observer
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (IsRemoving || _removed) return;
+            if (IsRetired || _removed) return;
             if (lastHandled is not null)
             {
                 HandleNewLastHandledEvent(lastHandled);
@@ -274,7 +276,7 @@ public partial class Observer
 
     async Task StartRecoverJobForFailedPartition(FailedPartition failedPartition)
     {
-        if (IsRemoving || _removed) return;
+        if (IsRetired || _removed) return;
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();

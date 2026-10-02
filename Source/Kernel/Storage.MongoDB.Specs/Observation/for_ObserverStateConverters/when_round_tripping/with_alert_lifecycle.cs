@@ -19,7 +19,7 @@ public class with_alert_lifecycle : Specification
         Identifier = "observer",
         AlertLifecycleId = Guid.NewGuid(),
         AlertRevision = 42,
-        AlertDisposition = AlertDisposition.Removing,
+        AlertDisposition = AlertDisposition.Retired,
         QuarantineEpisodeId = Guid.NewGuid()
     };
 
@@ -32,10 +32,10 @@ public class with_alert_lifecycle : Specification
 
     [Fact] void should_round_trip_the_lifecycle() => _ordinary.AlertLifecycleId.ShouldEqual(_original.AlertLifecycleId);
     [Fact] void should_round_trip_the_revision() => _ordinary.AlertRevision.ShouldEqual(42);
-    [Fact] void should_round_trip_the_disposition() => _ordinary.AlertDisposition.ShouldEqual(AlertDisposition.Removing);
+    [Fact] void should_round_trip_the_disposition() => _ordinary.AlertDisposition.ShouldEqual(AlertDisposition.Retired);
     [Fact] void should_round_trip_the_quarantine() => _ordinary.QuarantineEpisodeId.ShouldEqual(_original.QuarantineEpisodeId);
     [Fact] void should_preserve_the_joined_lifecycle() => _joined.AlertLifecycleId.ShouldEqual(_original.AlertLifecycleId);
     [Fact] void should_preserve_the_joined_revision() => _joined.AlertRevision.ShouldEqual(42);
-    [Fact] void should_preserve_the_joined_disposition() => _joined.AlertDisposition.ShouldEqual(AlertDisposition.Removing);
+    [Fact] void should_preserve_the_joined_disposition() => _joined.AlertDisposition.ShouldEqual(AlertDisposition.Retired);
     [Fact] void should_preserve_the_joined_quarantine() => _joined.QuarantineEpisodeId.ShouldEqual(_original.QuarantineEpisodeId);
 }

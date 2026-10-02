@@ -122,7 +122,7 @@ public class an_alert_tracker : Specification
 
     protected Task<ObserverAlertReceipt> ReconcileRemoval()
     {
-        _snapshot = _snapshot with { Disposition = AlertDisposition.Removing };
+        _snapshot = _snapshot with { Disposition = AlertDisposition.Retired };
         return _tracker.Reconcile(_snapshot);
     }
 

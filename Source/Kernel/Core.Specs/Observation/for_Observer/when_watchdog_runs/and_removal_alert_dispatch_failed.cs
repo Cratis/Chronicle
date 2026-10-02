@@ -25,6 +25,6 @@ public class and_removal_alert_dispatch_failed : for_Observer.given.an_observer
     }
 
     [Fact] void should_fail_the_original_management_call() => _error.ShouldBeOfExactType<ObserverAlertsNotReconciled>();
-    [Fact] async Task should_retry_the_removal_level_once() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.Disposition == AlertDisposition.Removing));
-    [Fact] void should_retain_the_cleanup_fence() => _stateStorage.State.AlertDisposition.ShouldEqual(AlertDisposition.Removing);
+    [Fact] async Task should_retry_the_removal_level_once() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.Disposition == AlertDisposition.Retired));
+    [Fact] void should_retain_committed_retirement() => _stateStorage.State.AlertDisposition.ShouldEqual(AlertDisposition.Retired);
 }

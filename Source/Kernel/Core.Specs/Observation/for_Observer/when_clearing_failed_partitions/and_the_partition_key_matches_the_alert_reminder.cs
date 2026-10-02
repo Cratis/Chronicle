@@ -14,7 +14,7 @@ public class and_the_partition_key_matches_the_alert_reminder : given.an_observe
     {
         await _observer.PartitionFailed(Observer.AlertReminderName, 12UL, ["Failure"], "Stack");
         _alertReminder = await _observer.GetReminder(Observer.AlertReminderName);
-        _partitionReminder = await _observer.GetReminder(Observer.PartitionReminderName(Observer.AlertReminderName));
+        _partitionReminder = await _observer.GetReminder(Observer.PartitionReminderName(_failedPartitionsState.Partitions.Single().Id));
     }
 
     async Task Because() => await _observer.ClearFailedPartitions();

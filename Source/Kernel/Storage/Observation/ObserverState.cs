@@ -66,7 +66,7 @@ public record ObserverState(
     public long AlertRevision { get; init; }
 
     /// <summary>
-    /// Gets the durable lifecycle disposition used to fence alert reports and removal.
+    /// Gets the durable desired activity level used to validate alert reports.
     /// </summary>
     public AlertDisposition AlertDisposition { get; init; }
 

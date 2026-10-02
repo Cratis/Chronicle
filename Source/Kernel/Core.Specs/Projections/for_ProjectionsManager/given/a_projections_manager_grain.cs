@@ -35,6 +35,7 @@ public class a_projections_manager_grain : Specification
     protected Recommendations.IRecommendationsManager _recommendationsManager;
     protected Storage.Observation.IFailedPartitionsStorage _failedPartitionsStorage;
     protected ProjectionsManagerState _state;
+    protected Storage.Observation.IObserverStateStorage _observerStates;
     protected IEnumerable<ReadModelDefinition> _readModelDefinitions = [];
 
     async Task Establish()
@@ -74,6 +75,7 @@ public class a_projections_manager_grain : Specification
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(namespaceStorage);
         _failedPartitionsStorage = Substitute.For<Storage.Observation.IFailedPartitionsStorage>();
         namespaceStorage.FailedPartitions.Returns(_failedPartitionsStorage);
+        _observerStates = namespaceStorage.Observers;
         _silo.AddService(storage);
 
         _silo.AddService(Substitute.For<ILocalSiloDetails>());
@@ -90,6 +92,7 @@ public class a_projections_manager_grain : Specification
         _silo.AddProbe(_ => _projectionGrain);
 
         _observerGrain = Substitute.For<Observation.IObserver>();
+        _observerGrain.IsSubscribed().Returns(true);
         _silo.AddProbe(_ => _observerGrain);
 
         _jobsManager = Substitute.For<Cratis.Orleans.Jobs.IJobsManager>();
@@ -107,7 +110,7 @@ public class a_projections_manager_grain : Specification
         _grain = await _silo.CreateGrainAsync<ProjectionsManager>(EventStore);
     }
 
-    protected static ProjectionDefinition CreateDefinition(ProjectionId identifier, ReadModelIdentifier readModel) => new(
+    internal static ProjectionDefinition CreateDefinition(ProjectionId identifier, ReadModelIdentifier readModel) => new(
         ProjectionOwner.Client,
         EventSequenceId.Log,
         identifier,
@@ -123,7 +126,7 @@ public class a_projections_manager_grain : Specification
         new Dictionary<EventType, RemovedWithDefinition>(),
         new Dictionary<EventType, RemovedWithJoinDefinition>());
 
-    protected static ReadModelDefinition CreateReadModelDefinition(ReadModelIdentifier identifier, string? containerName = null) => new(
+    internal static ReadModelDefinition CreateReadModelDefinition(ReadModelIdentifier identifier, string? containerName = null) => new(
         identifier,
         containerName ?? "TheReadModel",
         "TheReadModel",

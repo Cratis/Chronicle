@@ -4,20 +4,20 @@
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 
-namespace Cratis.Chronicle.Observation.for_ObserverRemover.when_removing;
+namespace Cratis.Chronicle.Observation.for_Observer.when_removing;
 
-public class and_there_are_in_flight_events : given.all_dependencies
+public class and_there_are_in_flight_events : given.an_observer
 {
     static readonly Key _partition = "some-partition";
 
     void Establish() =>
-        _firstNamespaceStorage.InFlightEvents.GetFor(_observerId).Returns(
+        _inFlightEventsStorage.GetFor(_observerId).Returns(
         [
             new InFlightEvent { ObserverId = _observerId, Partition = _partition, EventSequenceNumber = 42 }
         ]);
 
-    async Task Because() => await Remove();
+    async Task Because() => await _observer.Remove();
 
     [Fact] async Task should_remove_the_in_flight_entry() =>
-        await _firstNamespaceStorage.InFlightEvents.Received(1).Remove(_observerId, _partition, 42);
+        await _inFlightEventsStorage.Received(1).Remove(_observerId, _partition, 42);
 }

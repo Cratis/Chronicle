@@ -6,16 +6,13 @@ namespace Cratis.Chronicle.Observation.for_ObserverRemover.when_removing;
 public class and_cleanup_fails_after_alerts_are_cleared : given.all_dependencies
 {
     Exception _error;
+    readonly Exception _failure = new("Shared cleanup failed");
 
-    void Establish() => _observerDefinitions.Delete(_observerId).Returns(Task.FromException(new InvalidOperationException("Shared cleanup failed")));
+    void Establish() => _observerDefinitions.Delete(_observerId).Returns(Task.FromException(_failure));
 
     async Task Because() => _error = await Catch.Exception(Remove);
 
-    [Fact] void should_propagate_the_failure() => _error.ShouldNotBeNull();
-    [Fact] async Task should_have_applied_the_first_namespace_removal() => await _observerInFirstNamespace.Received(1).Remove();
-    [Fact] async Task should_have_applied_the_second_namespace_removal() => await _observerInSecondNamespace.Received(1).Remove();
-    [Fact] async Task should_not_cancel_the_first_fence() => await _observerInFirstNamespace.DidNotReceive().CancelRemoval();
-    [Fact] async Task should_not_cancel_the_second_fence() => await _observerInSecondNamespace.DidNotReceive().CancelRemoval();
-    [Fact] async Task should_keep_the_first_removal_fence() => await _observerInFirstNamespace.DidNotReceive().CompleteRemoval();
-    [Fact] async Task should_keep_the_second_removal_fence() => await _observerInSecondNamespace.DidNotReceive().CompleteRemoval();
+    [Fact] void should_propagate_the_original_failure() => _error.ShouldEqual(_failure);
+    [Fact] async Task should_have_removed_the_first_namespace() => await _observerInFirstNamespace.Received(1).Remove();
+    [Fact] async Task should_have_removed_the_second_namespace() => await _observerInSecondNamespace.Received(1).Remove();
 }

@@ -13,7 +13,7 @@ public class and_a_stale_removal_arrives_after_resubscription : given.an_alert_t
     void Establish()
     {
         GivenHistory(RaisedForSnapshot());
-        _stale = _snapshot with { Disposition = AlertDisposition.Removing };
+        _stale = _snapshot with { Disposition = AlertDisposition.Retired };
         _snapshot = _snapshot with { LifecycleId = Guid.NewGuid() };
     }
 

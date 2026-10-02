@@ -6,16 +6,17 @@ namespace Cratis.Chronicle.Observation.for_ObserverRemover.when_removing;
 public class and_alert_reconciliation_fails : given.all_dependencies
 {
     Exception _error;
+    ObserverAlertsNotReconciled _failure;
 
-    void Establish() => _observerInSecondNamespace.Remove().Returns(Task.FromException(new ObserverAlertsNotReconciled(new(_observerId, _eventStore, _secondNamespace, Concepts.EventSequences.EventSequenceId.Log))));
+    void Establish()
+    {
+        _failure = new(new(_observerId, _eventStore, _secondNamespace, Concepts.EventSequences.EventSequenceId.Log));
+        _observerInSecondNamespace.Remove().Returns(Task.FromException(_failure));
+    }
 
     async Task Because() => _error = await Catch.Exception(Remove);
 
-    [Fact] void should_fail_management() => _error.ShouldBeOfExactType<ObserverAlertsNotReconciled>();
-    [Fact] void should_not_delete_jobs_in_any_namespace() => _firstNamespaceJobs.ReceivedCalls().ShouldBeEmpty();
-    [Fact] async Task should_not_delete_failed_partitions() => await _firstNamespaceStorage.FailedPartitions.DidNotReceive().RemoveAllFor(_observerId);
+    [Fact] void should_propagate_the_original_failure() => _error.ShouldEqual(_failure);
+    [Fact] async Task should_have_removed_the_earlier_namespace() => await _observerInFirstNamespace.Received(1).Remove();
     [Fact] async Task should_not_delete_the_shared_definition() => await _observerDefinitions.DidNotReceive().Delete(_observerId);
-    [Fact] async Task should_cancel_the_first_namespace_fence() => await _observerInFirstNamespace.Received(1).CancelRemoval();
-    [Fact] async Task should_cancel_the_potentially_persisted_failing_fence() => await _observerInSecondNamespace.Received(1).CancelRemoval();
-    [Fact] async Task should_not_release_any_removal_fence() => await _observerInFirstNamespace.DidNotReceive().CompleteRemoval();
 }

@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_subscribing;
 
-public class and_removal_is_in_progress : given.an_observer
+public class and_the_activation_has_removed_its_source : given.an_observer
 {
     Exception _error;
     Exception _allEventsError;
@@ -23,8 +23,8 @@ public class and_removal_is_in_progress : given.an_observer
         _allEventsError = await Catch.Exception(() => _observer.SubscribeToAllEvents<ObserverSubscriber>(ObserverType.Reactor, SiloAddress.Zero));
     }
 
-    [Fact] void should_reject_subscription() => _error.ShouldBeOfExactType<ObserverRemovalInProgress>();
-    [Fact] void should_reject_all_event_subscription() => _allEventsError.ShouldBeOfExactType<ObserverRemovalInProgress>();
+    [Fact] void should_reject_subscription() => _error.ShouldBeOfExactType<ObserverActivationSealed>();
+    [Fact] void should_reject_all_event_subscription() => _allEventsError.ShouldBeOfExactType<ObserverActivationSealed>();
     [Fact] void should_not_write_subscription_state() => _storageStats.Writes.ShouldEqual(0);
     [Fact] void should_not_begin_schema_work() => _eventTypesStorage.ReceivedCalls().ShouldBeEmpty();
 }

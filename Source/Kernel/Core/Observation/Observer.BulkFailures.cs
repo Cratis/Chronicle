@@ -13,7 +13,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task PartitionsFailed(IReadOnlyCollection<SinkFailedPartition> failedPartitions)
     {
-        if (IsRetired || IsRemoving || _removed || failedPartitions.Count == 0)
+        if (IsRetired || _removed || failedPartitions.Count == 0)
         {
             return;
         }

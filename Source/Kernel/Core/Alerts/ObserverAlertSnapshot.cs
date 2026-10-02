@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Alerts;
 /// <remarks>
 /// Open incidents converge to this level. Unobserved intermediate episodes may be omitted. Ending hints are
 /// activation-local: after a crash an unknown partition ending defaults to Recovered and quarantine to Cleared.
-/// Retired and Removing dispositions always clear as Removed.
+/// The Retired desired level always clears as Removed, whether or not resource cleanup has completed.
 /// </remarks>
 /// <param name="Observer">The observer key.</param>
 /// <param name="FailedPartitions">Current partition episodes.</param>

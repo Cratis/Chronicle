@@ -36,8 +36,7 @@ public class ReminderTable(IDbContextFactory<ClusterDbContext> dbContextFactory)
     public async Task<ReminderEntry?> ReadRow(GrainId grainId, string reminderName)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        var rowKey = ReminderEntryConverters.GetRowKey(grainId, reminderName);
-        var reminder = await dbContext.Reminders.FindAsync(rowKey);
+        var reminder = await FindReminder(dbContext, grainId, reminderName);
         return reminder?.ToOrleans();
     }
 
@@ -73,9 +72,8 @@ public class ReminderTable(IDbContextFactory<ClusterDbContext> dbContextFactory)
     public async Task<bool> RemoveRow(GrainId grainId, string reminderName, string eTag)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        var rowKey = ReminderEntryConverters.GetRowKey(grainId, reminderName);
-        var reminder = await dbContext.Reminders.FindAsync(rowKey);
-        if (reminder == null || reminder.ETag != eTag)
+        var reminder = await FindReminder(dbContext, grainId, reminderName);
+        if (reminder is null || reminder.ETag != eTag)
         {
             return false;
         }
@@ -98,8 +96,28 @@ public class ReminderTable(IDbContextFactory<ClusterDbContext> dbContextFactory)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var entity = entry.ToSql();
+        var existing = await FindReminder(dbContext, entry.GrainId, entry.ReminderName);
+        if (existing is not null)
+        {
+            // Retain readable legacy rows rather than duplicating them under the bounded key. No schema
+            // migration is necessary; only new oversized composite identities use a hash.
+            entity.Id = existing.Id;
+        }
         await dbContext.Reminders.Upsert(entity);
         await dbContext.SaveChangesAsync();
         return entity.ETag;
+    }
+
+    static async Task<Reminder?> FindReminder(ClusterDbContext dbContext, GrainId grainId, string reminderName)
+    {
+        var key = ReminderEntryConverters.GetRowKey(grainId, reminderName);
+        var reminder = await dbContext.Reminders.FindAsync(key);
+        var legacyKey = ReminderEntryConverters.GetLegacyRowKey(grainId, reminderName);
+        if (reminder is null && key != legacyKey)
+        {
+            reminder = await dbContext.Reminders.FindAsync(legacyKey);
+        }
+
+        return reminder;
     }
 }

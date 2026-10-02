@@ -14,8 +14,8 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task<JobId> Replay()
     {
-        ThrowIfRemoving();
-        if (!Definition.IsReplayable)
+        ThrowIfSealed();
+        if (IsRetired || !Definition.IsReplayable)
         {
             return JobId.NotSet;
         }
@@ -60,7 +60,7 @@ public partial class Observer
 
     async Task CompleteReplay(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt)
     {
-        if (IsRetired || IsRemoving || _removed) return;
+        if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         var eventTypeIds = replayedEventTypes.Select(_ => _.Id).ToHashSet();
@@ -110,7 +110,7 @@ public partial class Observer
 
     async Task CompletePartitionReplay(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes)
     {
-        if (IsRetired || IsRemoving || _removed) return;
+        if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FinishedReplayForPartition(partition);
         State.ReplayingPartitions.Remove(partition);
@@ -142,8 +142,8 @@ public partial class Observer
 
     async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, bool retainOtherCounts)
     {
-        ThrowIfRemoving();
-        if (!Definition.IsReplayable)
+        ThrowIfSealed();
+        if (IsRetired || !Definition.IsReplayable)
         {
             return;
         }

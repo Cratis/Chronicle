@@ -16,7 +16,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task CatchUp()
     {
-        if (IsRetired || IsRemoving || _removed) return;
+        if (IsRetired || _removed) return;
         _isPreparingCatchup = true;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
@@ -64,7 +64,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task RegisterCatchingUpPartitions(IEnumerable<Key> partitions)
     {
-        if (IsRetired || IsRemoving || _removed) return;
+        if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
         logger.RegisteringCatchingUpPartitions();
         foreach (var partition in partitions)
@@ -95,7 +95,7 @@ public partial class Observer
     /// </remarks>
     public async Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber)
     {
-        if (IsRetired || IsRemoving || _removed) return;
+        if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
@@ -103,14 +103,14 @@ public partial class Observer
         _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
 
-        if (IsRetired || IsRemoving || _removed) return;
+        if (IsRetired || _removed) return;
         await TransitionTo<Routing>();
     }
 
     /// <inheritdoc/>
     public async Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
-        if (IsRetired || IsRemoving || _removed) return;
+        if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.Remove(partition);
@@ -156,7 +156,7 @@ public partial class Observer
 
     async Task StartCatchupJob(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
-        if (IsRetired || IsRemoving || _removed) return;
+        if (IsRetired || _removed) return;
         var nextEventSequenceNumber = lastHandledEventSequenceNumber.Next();
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);

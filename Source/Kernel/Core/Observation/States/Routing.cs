@@ -61,7 +61,7 @@ public class Routing(
 
         logger.Entering();
 
-        if (state.AlertDisposition is AlertDisposition.Retired or AlertDisposition.Removing)
+        if (state.AlertDisposition == AlertDisposition.Retired)
         {
             await StateMachine.TransitionTo<Disconnected>();
             return state;

@@ -17,7 +17,7 @@ public class and_observer_is_removed : given.an_evaluator
     ObserverAlertEvaluation _result;
 
     void Because() => _result = Evaluate(
-        SnapshotOf(FailedPartition(FailedPartitionId.New(), TimeSpan.FromHours(1))) with { IsQuarantined = true, Disposition = AlertDisposition.Removing },
+        SnapshotOf(FailedPartition(FailedPartitionId.New(), TimeSpan.FromHours(1))) with { IsQuarantined = true, Disposition = AlertDisposition.Retired },
         OpenPartitionIncident(_id),
         OpenQuarantineIncident(_quarantineId));
 

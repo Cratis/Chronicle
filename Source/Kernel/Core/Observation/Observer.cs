@@ -178,7 +178,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task ClearObserverQuarantine()
     {
-        ThrowIfRemoving();
+        ThrowIfSealed();
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             // With nobody subscribed this is the routing pass every activation of an unsubscribed observer already runs, so it drops nothing a plain reactivation would not.
@@ -192,85 +192,55 @@ public partial class Observer(
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.RemovingObserver();
 
-        await _alertMutationLock.WaitAsync();
-        try
-        {
-            // Recheck at the mutation boundary: the earlier management guard may have raced a subscription.
-            if (!IsRemoving && (_subscription.IsSubscribed || State.RunningState == ObserverRunningState.Active))
-            {
-                throw new ObserverRemovalNotAllowed(_observerKey);
-            }
+        ThrowIfSealed();
 
-            await EnsureAlertState();
-            _alertDisposition = AlertDisposition.Removing;
-            ChangeAlertState();
-            await WriteStateAsync();
-        }
-        finally
-        {
-            _alertMutationLock.Release();
-        }
-
-        await RequireAlertReconciliation();
-        await PauseJobs();
-        await RemoveFailedPartitionReminders();
-    }
-
-    /// <inheritdoc/>
-    public async Task CancelRemoval()
-    {
-        await _alertMutationLock.WaitAsync();
-        try
-        {
-            if (_removed || !IsRemoving) return;
-
-            // Replacing the lifecycle also supersedes removal reports still in flight at the tracker.
-            _alertLifecycleId = Guid.NewGuid();
-            _alertRevision = 0;
-            _alertDisposition = AlertDisposition.Active;
-            _projectionDefinitionExists = null;
-            ChangeAlertState();
-            await WriteStateAsync();
-        }
-        finally
-        {
-            _alertMutationLock.Release();
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task CompleteRemoval()
-    {
-        if (_removed) return;
-        if (!IsRemoving)
+        // Normal subscription calls cannot interleave this namespace-local operation. The store-wide guard
+        // is only a preflight check; earlier namespaces may already be removed if this recheck fails.
+        if (_subscription.IsSubscribed || State.RunningState == ObserverRunningState.Active)
         {
             throw new ObserverRemovalNotAllowed(_observerKey);
         }
 
-        await RequireAlertReconciliation();
+        if (_observerExists)
+        {
+            await CommitRetired();
+            await RequireAlertReconciliation();
+        }
+
+        // Jobs may call interleaved recovery methods while stopping. Do not hold their mutation lock here.
+        var jobs = await _jobsManager.GetAllJobs();
+        foreach (var job in jobs.Where(job => job.Request is IObserverJobRequest request && request.ObserverKey.ObserverId == _observerId))
+        {
+            await _jobsManager.Delete(job.Id);
+        }
+
         await _alertMutationLock.WaitAsync();
         await _stateWriteLock.WaitAsync();
         try
         {
-            // Drain interleaved writes before deleting the marker, then fence both queued and future writes.
-            _stateWritingSuspended = true;
-            var reminder = await this.GetReminder(AlertReminderName);
-            if (reminder is not null)
+            await RemoveFailedPartitionReminders();
+            var namespaceStorage = storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace);
+            await namespaceStorage.FailedPartitions.RemoveAllFor(_observerId);
+            await namespaceStorage.ObserverHandledCounts.RemoveAllFor(_observerId);
+            foreach (var inFlight in await namespaceStorage.InFlightEvents.GetFor(_observerId))
             {
-                await this.UnregisterReminder(reminder);
+                await namespaceStorage.InFlightEvents.Remove(_observerId, inFlight.Partition, inFlight.EventSequenceNumber);
             }
 
-            await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Observers.Delete(_observerId);
+            // The deletion can commit and then throw. Seal this activation before attempting it so neither
+            // callbacks nor deactivation can recreate the record. Reactivation consults authoritative storage.
             _removed = true;
-            DeactivateOnIdle();
-        }
-        catch
-        {
-            _stateWritingSuspended = false;
-            _alertStateNeedsPersistence = true;
-            ScheduleAlertReport();
-            await this.RegisterOrUpdateReminder(AlertReminderName, _minimumRetryReminderPeriod, _minimumRetryReminderPeriod);
-            throw;
+            _stateWritingSuspended = true;
+            try
+            {
+                await namespaceStorage.Observers.Delete(_observerId);
+                _observerExists = false;
+                await UnregisterReminderNamed(AlertReminderName);
+            }
+            finally
+            {
+                DeactivateOnIdle();
+            }
         }
         finally
         {
@@ -301,10 +271,11 @@ public partial class Observer(
         SiloAddress siloAddress,
         object? subscriberArgs = null,
         bool isReplayable = true,
-        ObserverFilters? filters = null)
+        ObserverFilters? filters = null,
+        bool reactivateRetired = true)
         where TObserverSubscriber : IObserverSubscriber
     {
-        ThrowIfRemoving();
+        ThrowIfSealed();
         var owner = GetOwner<TObserverSubscriber>();
 
         var eventTypeSchemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(eventTypes);
@@ -320,7 +291,7 @@ public partial class Observer(
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
 
-        ThrowIfRemoving();
+        if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
         await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
 
@@ -409,10 +380,11 @@ public partial class Observer(
         ObserverType type,
         SiloAddress siloAddress,
         object? subscriberArgs = null,
-        bool isReplayable = true)
+        bool isReplayable = true,
+        bool reactivateRetired = true)
         where TObserverSubscriber : IObserverSubscriber
     {
-        ThrowIfRemoving();
+        ThrowIfSealed();
         var owner = GetOwner<TObserverSubscriber>();
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -421,7 +393,9 @@ public partial class Observer(
         logger.SubscribingToAllEvents();
 
         await ReadStateAsync();
-        ThrowIfRemoving();
+        await observerDefinition.ReadStateAsync();
+        await failures.ReadStateAsync();
+        if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
         await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
 
@@ -504,8 +478,8 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
-        await PauseJobs();
         _subscription = ObserverSubscription.Unsubscribed;
+        await PauseJobs();
         await TransitionTo<Disconnected>();
     }
 
@@ -559,7 +533,7 @@ public partial class Observer(
         }
 
         await UnregisterReminderNamed(reminderName);
-        if (IsRetired || IsRemoving || _removed || State.RunningState == ObserverRunningState.Quarantined)
+        if (IsRetired || _removed || State.RunningState == ObserverRunningState.Quarantined)
         {
             return;
         }
@@ -569,9 +543,9 @@ public partial class Observer(
             return;
         }
 
-        // Accept raw names registered by earlier versions as well as the disjoint encoded retry names.
+        // Accept raw names registered by main as well as bounded episode-specific retry names.
         foreach (var partition in Failures.Partitions.Where(partition => !partition.IsQuarantined &&
-            (PartitionReminderName(partition.Partition) == reminderName || partition.Partition.ToString() == reminderName)))
+            (PartitionReminderName(partition.Id) == reminderName || partition.Partition.ToString() == reminderName)))
         {
             await StartRecoverJobForFailedPartition(partition);
         }
@@ -580,9 +554,9 @@ public partial class Observer(
     /// <summary>
     /// Gets a retry reminder name in a namespace disjoint from the alert reminder, regardless of the partition key.
     /// </summary>
-    /// <param name="partition">The partition to retry.</param>
-    /// <returns>The encoded retry reminder name.</returns>
-    internal static string PartitionReminderName(Key partition) => $"chronicle-observer:partition:{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(partition.ToString()))}";
+    /// <param name="failureId">The failure episode to retry.</param>
+    /// <returns>The bounded retry reminder name.</returns>
+    internal static string PartitionReminderName(FailedPartitionId failureId) => $"cp:{failureId.Value:N}";
 
     /// <summary>
     /// Set subscription explicitly, without subscribing. This method is internal and visible to the test suite and only meant to be used with testing.
@@ -617,7 +591,7 @@ public partial class Observer(
     /// <returns>Awaitable task.</returns>
     internal async Task RemoveFailedPartitionReminders()
     {
-        foreach (var partition in Failures.Partitions.Select(_ => _.Partition))
+        foreach (var partition in Failures.Partitions)
         {
             await RemoveReminder(partition);
         }
@@ -637,7 +611,7 @@ public partial class Observer(
     }
 
     /// <summary>
-    /// Resolves the state to enter on activation, retaining quarantine and keeping retired or removing observers
+    /// Resolves the state to enter on activation, retaining quarantine and keeping retired observers
     /// disconnected. Their replay metadata is retained for a fresh subscription, not a reason to start work.
     /// </summary>
     /// <returns>The type of the state to enter.</returns>
@@ -645,7 +619,7 @@ public partial class Observer(
     {
         if (State.RunningState != ObserverRunningState.Quarantined)
         {
-            return !_observerExists || IsRetired || IsRemoving ? typeof(Disconnected) : base.ResolveActivationState();
+            return !_observerExists || IsRetired ? typeof(Disconnected) : base.ResolveActivationState();
         }
 
         _resumingQuarantine = true;
@@ -805,12 +779,12 @@ public partial class Observer(
             and not JobStatus.CompletedWithFailures and not JobStatus.Removing;
     }
 
-    async Task RemoveReminder(Key partition)
+    async Task RemoveReminder(FailedPartition partition)
     {
-        await UnregisterReminderNamed(PartitionReminderName(partition));
-        if (partition.ToString() != AlertReminderName)
+        await UnregisterReminderNamed(PartitionReminderName(partition.Id));
+        if (partition.Partition.ToString() != AlertReminderName)
         {
-            await UnregisterReminderNamed(partition.ToString());
+            await UnregisterReminderNamed(partition.Partition.ToString());
         }
     }
 
