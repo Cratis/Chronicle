@@ -35,7 +35,7 @@ public record AlertIncidentPage(
     /// <param name="observerId">Optional observer filter.</param>
     /// <param name="condition">Optional condition filter.</param>
     /// <param name="minimumSeverity">Optional minimum severity.</param>
-    /// <param name="limit">Requested limit, bounded to 1–500.</param>
+    /// <param name="limit">Requested limit, defaulting to 100 when absent and bounded to 1–500.</param>
     /// <param name="afterRaisedSequenceNumber">Exclusive raise position paired with identity.</param>
     /// <param name="afterIncidentId">Exclusive identity paired with raise position.</param>
     /// <returns>The page with its sampled health.</returns>
@@ -47,14 +47,14 @@ public record AlertIncidentPage(
         ObserverId? observerId = null,
         AlertConditionKind? condition = null,
         AlertSeverity? minimumSeverity = null,
-        int limit = 100,
+        int? limit = null,
         EventSequenceNumber? afterRaisedSequenceNumber = null,
         IncidentId? afterIncidentId = null)
     {
         var scope = AlertIncidentQueryArguments.Scope(eventStore, @namespace);
         var after = AlertIncidentQueryArguments.Cursor(afterRaisedSequenceNumber, afterIncidentId);
         var page = await storage.GetEventStore(EventStoreName.System).GetNamespace(EventStoreNamespaceName.Default).AlertIncidents
-            .GetOpenPage(new(scope, observerId, condition, minimumSeverity), after, AlertIncidentStorageRules.Limit(limit));
+            .GetOpenPage(new(scope, observerId, condition, minimumSeverity), after, AlertIncidentStorageRules.Limit(limit ?? 100));
         var status = await readiness.Get();
 
         return new(status, page.Items.Select(row => row.ToDetails()).ToArray(), page.Next?.ToContinuation());

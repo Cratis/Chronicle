@@ -80,11 +80,14 @@ public class AlertIncidentsStorage(EventStoreName eventStore, EventStoreNamespac
     public async Task<IEnumerable<AlertIncidentCount>> GetOpenCounts(AlertIncidentScope scope, CancellationToken cancellationToken = default)
     {
         await using var databaseScope = await database.Namespace(eventStore, @namespace);
-        var counts = await Scoped(databaseScope.DbContext, scope).GroupBy(_ => new { _.Namespace, _.Condition, _.Severity })
+
+        // Terminated grouping keys prevent SQL Server from merging names that differ by trailing spaces.
+        var counts = await Scoped(databaseScope.DbContext, scope)
+            .GroupBy(_ => new { Namespace = _.Namespace + "\u0001", Condition = _.Condition + "\u0001", _.Severity })
             .Select(group => new { group.Key.Namespace, group.Key.Condition, group.Key.Severity, Count = group.LongCount() })
             .ToListAsync(cancellationToken);
 
-        return counts.Select(_ => new AlertIncidentCount(_.Namespace, _.Condition, (AlertSeverity)_.Severity!.Value, _.Count)).ToArray();
+        return counts.Select(_ => new AlertIncidentCount(_.Namespace[..^1], _.Condition[..^1], (AlertSeverity)_.Severity!.Value, _.Count)).ToArray();
     }
 
     /// <inheritdoc/>

@@ -154,7 +154,7 @@ public class GetOpenIncidentsRequest
     /// Gets or sets the limit.
     /// </summary>
     [ProtoMember(6)]
-    public int Limit { get; set; }
+    public int? Limit { get; set; }
 
     /// <summary>
     /// Gets or sets the afterRaisedSequenceNumber.
