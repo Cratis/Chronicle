@@ -473,6 +473,14 @@ public static class EventEntryConverter
         JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions);
 
     /// <summary>
+    /// Gets the <see cref="EventSourceName"/> of a stored event.
+    /// </summary>
+    /// <param name="entry">The stored <see cref="EventEntry"/>.</param>
+    /// <returns>The stored name, or <see cref="EventSourceName.NotSet"/> for an event not appended through an event source, including events stored before event sources existed.</returns>
+    public static EventSourceName ToEventSourceName(EventEntry entry) =>
+        string.IsNullOrEmpty(entry.EventSource) ? EventSourceName.NotSet : new EventSourceName(entry.EventSource);
+
+    /// <summary>
     /// Get the <see cref="Subject"/> from an event entry, falling back to the event source id when no explicit subject was stored.
     /// </summary>
     /// <param name="entry">The event entry.</param>
@@ -523,7 +531,7 @@ public static class EventEntryConverter
             Subject: GetSubject(entry))
         {
             NamedTags = namedTags ?? [],
-            EventSource = string.IsNullOrEmpty(entry.EventSource) ? EventSourceName.NotSet : new EventSourceName(entry.EventSource)
+            EventSource = ToEventSourceName(entry)
         };
 
         return new AppendedEvent(eventContext, content) { GenerationalContent = GetAllGenerationalContent(entry) };

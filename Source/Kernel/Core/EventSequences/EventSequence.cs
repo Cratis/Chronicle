@@ -836,7 +836,9 @@ public class EventSequence(
     /// </remarks>
     async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> AppendThroughEventSource(EventToAppendToStorage eventToAppend)
     {
-        var result = await EventSequenceStorage.AppendMany([eventToAppend]);
+        var result = eventToAppend.NamedTags.Count > 0
+            ? await EventSequenceStorage.AppendManyWithNamedTags([eventToAppend])
+            : await EventSequenceStorage.AppendMany([eventToAppend]);
         return result.TryGetResult(out var appended)
             ? Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(appended.Single())
             : result.AsT1;
