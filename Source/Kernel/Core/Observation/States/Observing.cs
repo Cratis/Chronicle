@@ -69,10 +69,6 @@ public class Observing(
         _subscription = state.SubscribesToAllEvents
             ? await appendedEventsQueues.SubscribeToAllEventTypes(key, subscription.Filters)
             : await appendedEventsQueues.Subscribe(key, definitionState.State.EventTypes, subscription.Filters);
-        if (await Observer.IsObserverQuarantined())
-        {
-            return await Observer.GetState();
-        }
 
         // Only check for missed events when there is no active catch-up in progress and no failed partitions.
         // When partitions are being caught up, the catch-up job handles historical events
@@ -84,10 +80,6 @@ public class Observing(
             if (tailSequenceNumber.IsActualValue && state.NextEventSequenceNumber.IsActualValue && state.NextEventSequenceNumber <= tailSequenceNumber)
             {
                 var nextUnhandled = await eventSequence.GetNextSequenceNumberGreaterOrEqualTo(state.NextEventSequenceNumber, definitionState.State.EventTypes);
-                if (await Observer.IsObserverQuarantined())
-                {
-                    return await Observer.GetState();
-                }
                 if (nextUnhandled.Match(n => n.IsActualValue, _ => false))
                 {
                     logger.EventsMissedAfterSubscription(state.NextEventSequenceNumber, tailSequenceNumber);
