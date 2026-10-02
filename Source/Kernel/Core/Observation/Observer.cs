@@ -307,6 +307,7 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
+        var previousSubscription = _subscription;
         if (subscriberArgs is ConnectedClient connectedClient)
         {
             var target = new ObserverSubscriberTarget(siloAddress, connectedClient);
@@ -356,23 +357,33 @@ public partial class Observer(
                 filters);
         }
 
-        State = State with { SubscribesToAllEvents = false };
-        await WriteStateAsync();
-
-        if (await TransitionToReplayIfNeeded())
+        try
         {
-            return;
-        }
-        await ResumeJobs();
+            State = State with { SubscribesToAllEvents = false };
+            await WriteStateAsync();
 
-        // Recovering failed partitions starts one job per partition through the jobs manager. An observer
-        // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
-        // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
-        // returned: the client timed out, retried, and the observer was recorded as never subscribed.
-        // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards,
-        // in a turn of its own.
-        this.ScheduleInSeparateTurn(TryRecoverAllFailedPartitions);
-        await TransitionTo<CatchingUpInFlight>();
+            if (await TransitionToReplayIfNeeded())
+            {
+                return;
+            }
+            await ResumeJobs();
+
+            // Recovering failed partitions starts one job per partition through the jobs manager. An observer
+            // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
+            // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
+            // returned: the client timed out, retried, and the observer was recorded as never subscribed.
+            // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards,
+            // in a turn of its own.
+            this.ScheduleInSeparateTurn(TryRecoverAllFailedPartitions);
+            await TransitionTo<CatchingUpInFlight>();
+        }
+        catch
+        {
+            // Publishing a subscription before initialization finishes must not make a failed first
+            // attempt look ready. Pattern capture's background retry relies on this readiness check.
+            _subscription = previousSubscription;
+            throw;
+        }
     }
 
     /// <inheritdoc/>
