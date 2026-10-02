@@ -83,7 +83,9 @@ jobs:
       # above is invisible by construction - the run that would have caught the change never starts - so
       # the only place to catch it is a run that did start, comparing the filter against the contract.
       - name: Assert the build-affecting path contract
-        run: python3 .github/scripts/assert-build-affecting-paths.py
+        run: |
+          python3 .github/scripts/assert-build-affecting-paths.py
+          python3 -B .github/scripts/test-assert-build-affecting-paths.py
 
       # Runs before anything is compiled because it needs nothing but the checkout, and because a spec
       # project missing from the solution is invisible to every later step: it is never built, never
