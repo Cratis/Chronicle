@@ -349,6 +349,14 @@ public class Sink : ISink
         await strategy.ExecuteInTransactionAsync(
             async () =>
             {
+                // Verification can fail to observe a commit after its acknowledgment is lost. Every attempt must
+                // independently recognize that this replay already published, even if a late writer
+                // has recreated and populated the replay table.
+                if (await SwapHasCommitted(database, databaseType, revertName, _tableName))
+                {
+                    return;
+                }
+
                 // Re-check on every attempt before touching the backup. A reader can recreate an empty
                 // replay table after a committed swap; it must never replace the rebuilt primary.
                 if (!await scope.DbContext.Entries.AsNoTracking().AnyAsync())
@@ -366,14 +374,16 @@ public class Sink : ISink
                 await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
             },
 
-            // The revert name is unique to this replay, so its presence with the primary identifies
-            // the committed swap. Until EndReplay clears replay routing, a reader can recreate an empty
-            // replay table. That must not cause a second swap to destroy both the data and its backup.
-            // Inspect directly: ReadModelTable would itself recreate a missing table.
-            async () => await TableExists(database, databaseType, revertName)
-                && await TableExists(database, databaseType, _tableName)
-                && (!await TableExists(database, databaseType, replayName)
-                    || !await scope.DbContext.Entries.AsNoTracking().AnyAsync()));
+            () => SwapHasCommitted(database, databaseType, revertName, _tableName));
+    }
+
+    static async Task<bool> SwapHasCommitted(DatabaseFacade database, DatabaseType databaseType, string revertName, string tableName)
+    {
+        // ReplayContexts gives each replay its own revert name. All supported providers roll back the
+        // rename with the transaction, so an aborted attempt cannot leave this marker behind. Readers
+        // and writers may recreate the replay table, but its contents cannot invalidate a committed swap.
+        // Inspect directly: ReadModelTable would itself recreate a missing table.
+        return await TableExists(database, databaseType, revertName) && await TableExists(database, databaseType, tableName);
     }
 
     static Task<bool> TableExists(DatabaseFacade database, DatabaseType databaseType, string table)

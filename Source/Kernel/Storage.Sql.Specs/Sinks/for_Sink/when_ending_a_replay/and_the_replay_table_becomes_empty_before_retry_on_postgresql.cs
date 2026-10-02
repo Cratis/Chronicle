@@ -10,19 +10,13 @@ public class and_the_replay_table_becomes_empty_before_retry_on_postgresql(Postg
 {
     bool _replayEmptied;
 
-    protected override bool FailAfterCommit => true;
+    protected override bool FailAfterCommit => false;
 
     protected override PostgreSqlSinkHarness CreateHarnessWithInterceptor(IInterceptor interceptor) => new() { Fixture = fixture, Interceptors = [interceptor] };
 
-    protected override async Task AfterCommit()
-    {
-        // A late write recreates a nonempty replay table, making verification inconclusive.
-        await _sink.ApplyChanges(_key, ChangesetSettingCountTo(3), 43UL);
-    }
-
     protected override async Task BeforeRetry()
     {
-        // Remove those rows after verification but before the retried body inspects the replay table.
+        // The first attempt rolled back. Remove the replay rows before the retried body inspects them.
         await _sink.PrepareInitialRun();
         _replayEmptied = true;
     }
@@ -32,6 +26,6 @@ public class and_the_replay_table_becomes_empty_before_retry_on_postgresql(Postg
     [Fact] void should_recheck_the_replay_table_inside_the_retry() => _replayEmptied.ShouldBeTrue();
     [Fact] void should_report_the_unexpectedly_empty_replay() => _error.ShouldBeOfExactType<ReplayTableBecameEmpty>();
     [Fact] void should_not_commit_another_swap() => CommitAttempts.ShouldEqual(1);
-    [Fact] void should_leave_the_rebuilt_primary_untouched() => _primaryCount.ShouldEqual(2);
-    [Fact] void should_leave_the_original_backup_untouched() => _revertCount.ShouldEqual(1);
+    [Fact] void should_leave_the_original_primary_untouched() => _primaryCount.ShouldEqual(1);
+    [Fact] void should_not_publish_a_backup() => _revertCount.ShouldBeNull();
 }

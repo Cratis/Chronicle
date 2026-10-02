@@ -16,7 +16,7 @@ public abstract class a_replay_with_a_commit_failure<THarness> : Contract.an_acc
 {
     protected Exception? _error;
     protected int? _primaryCount;
-    protected int _revertCount;
+    protected int? _revertCount;
     protected abstract bool FailAfterCommit { get; }
     protected int CommitAttempts => _failure.Attempts;
 
@@ -47,7 +47,8 @@ public abstract class a_replay_with_a_commit_failure<THarness> : Contract.an_acc
         _error = await Catch.Exception(() => _sink.EndReplay(ReplayContext()));
         _primaryCount = await CurrentCountOrNull();
         var revert = await _sink.GetInstances(ReplayContext().RevertContainerName);
-        _revertCount = Convert.ToInt32(((IDictionary<string, object?>)revert.Instances.Single())["count"], CultureInfo.InvariantCulture);
+        var previous = revert.Instances.SingleOrDefault();
+        _revertCount = previous is null ? null : Convert.ToInt32(((IDictionary<string, object?>)previous)["count"], CultureInfo.InvariantCulture);
     }
 
     sealed class commit_failure(bool afterCommit, Func<Task> afterFirstCommit, Func<Task> beforeRetry) : DbTransactionInterceptor
