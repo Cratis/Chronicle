@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +12,9 @@ namespace Orleans.Hosting;
 /// </summary>
 internal static partial class ChronicleServerStartupTaskLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Failed subscribing pattern capture for event store {EventStore} in namespace {Namespace}. Startup will continue; the event log will reconcile the subscription when active")]
+    internal static partial void FailedSubscribingPatternCapture(this ILogger<ChronicleServerStartupTask> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Warning, "Skipping persisted projection definition '{Identifier}' during startup because the current engine rejected it. Chronicle will continue starting so a client can re-register the projection with its current definition")]
     internal static partial void FailedRegisteringPersistedProjectionDefinition(this ILogger<ChronicleServerStartupTask> logger, Exception exception, ProjectionId identifier);
 

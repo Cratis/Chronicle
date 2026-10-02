@@ -67,7 +67,7 @@ internal sealed class ChronicleServerStartupTask(
     /// Each attempt already absorbs Orleans' own 30 second response timeout, and the backoff adds
     /// half a minute on top, so the budget spans several minutes of cluster formation - longer than
     /// membership normally takes to settle. A step still failing after that is not waiting on a
-    /// sibling silo, so it is allowed to fail the host exactly as it did before.
+    /// sibling silo. Required steps fail the host; optional pattern capture is logged and reconciled later.
     /// </remarks>
     const int MaxAttempts = 5;
 
@@ -124,14 +124,24 @@ internal sealed class ChronicleServerStartupTask(
             var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
             await Step("RegisterPersistedProjectionDefinitions", () => RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions));
 
-            var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
+            // Bound the namespace fan-out so starting a store with many tenants does not flood the cluster.
+            await Parallel.ForEachAsync(await namespaces.GetAll(), new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancellationToken }, async (namespaceName, _) =>
             {
                 var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(namespaceName);
                 var hasData = await namespaceStorage.HasData();
 
                 // Capture must be ready for the first append even in a namespace created before this restart.
                 // There will be no new NamespaceAdded broadcast for an already registered namespace.
-                await Step("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName));
+                try
+                {
+                    await Step("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName));
+                }
+                catch (Exception exception)
+                {
+                    // Analytics must not fail the Active lifecycle stage. The event log reconciles a missed
+                    // subscription on its timer, including namespaces whose first append happens after startup.
+                    logger.FailedSubscribingPatternCapture(exception, eventStore, namespaceName);
+                }
 
                 if (!hasData)
                 {
@@ -146,7 +156,6 @@ internal sealed class ChronicleServerStartupTask(
                 await Step("RehydrateEventSequences", grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate);
                 await Step("RehydrateObservers", () => RehydrateReducerAndReactorObservers(eventStore, namespaceName));
             });
-            await Task.WhenAll(rehydrateAll);
         }
 
         await authenticationService.EnsureDefaultAdminUser();
