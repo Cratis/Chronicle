@@ -53,11 +53,7 @@ public class SqlAlertIncidentsHarness : IAlertIncidentsStorageHarness
     /// <returns>The provider connection string.</returns>
     protected virtual Task<string> ConnectionString()
     {
-        var root = new DirectoryInfo(AppContext.BaseDirectory);
-        while (root is not null && !Directory.Exists(Path.Combine(root.FullName, ".ai-work"))) root = root.Parent;
-        var directory = Path.Combine(root.FullName, ".ai-work", "alert-storage-specs");
-        Directory.CreateDirectory(directory);
-        _path = Path.Combine(directory, $"{Guid.NewGuid():N}.db");
+        _path = Path.Combine(Path.GetTempPath(), $"chronicle-alert-incidents-{Guid.NewGuid():N}.db");
 
         return Task.FromResult($"DataSource={_path};Pooling=False;Default Timeout=30");
     }
