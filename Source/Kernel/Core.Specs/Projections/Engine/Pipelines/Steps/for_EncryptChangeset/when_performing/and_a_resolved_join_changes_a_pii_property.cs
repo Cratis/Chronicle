@@ -63,7 +63,7 @@ public class and_a_resolved_join_changes_a_pii_property : given.all_dependencies
     async Task Because() => await _step.Perform(_projection, _context);
 
     [Fact] void should_encrypt_the_property_under_the_resolved_events_subject() =>
-        _complianceManager.Received().Apply(EventStore, EventStoreNamespace, _schema, ResolvedSubject, Arg.Is<JsonObject>(_ => _.ContainsKey("name")));
+        _complianceManager.Received().ApplyToReadModel(EventStore, EventStoreNamespace, _schema, ResolvedSubject, Arg.Is<JsonObject>(_ => _.ContainsKey("name")));
 
     [Fact]
     void should_track_the_resolved_property_subject()
