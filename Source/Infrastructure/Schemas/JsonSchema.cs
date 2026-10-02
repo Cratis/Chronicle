@@ -874,6 +874,21 @@ public class JsonSchema
 
     static string CombinePath(string? path, string name) => path is null ? name : $"{path}.{name}";
 
+    static JsonObject? FindAnchor(JsonObject schema, string anchor)
+    {
+        if (schema["$anchor"]?.GetValue<string>() == anchor) return schema;
+        foreach (var key in new[] { "$defs", "definitions" })
+        {
+            if (schema[key] is not JsonObject definitions) continue;
+            foreach (var definition in definitions.Select(_ => _.Value).OfType<JsonObject>())
+            {
+                if (FindAnchor(definition, anchor) is { } target) return target;
+            }
+        }
+
+        return null;
+    }
+
     List<JsonSchema> BuildSchemaList(string key)
     {
         var list = new List<JsonSchema>();
@@ -914,10 +929,11 @@ public class JsonSchema
             allOfSchema.CollectPropertiesInto(properties, references);
         }
 
-        // Preserve the existing nullable-object union resolution without narrowing allOf compositions.
-        if (!HasReference && Properties.Count == 0 && AllOf.Count == 0 && AnyOf.Count > 0)
+        // Only protection resolution may collapse a union: plain root unions previously preserved the
+        // complete document rather than selecting one branch and dropping other members.
+        if (!HasReference && Properties.Count == 0 && AllOf.Count == 0 && (AnyOf.Count > 0 || OneOf.Count > 0) && this.HasSchemaMetadata())
         {
-            var actual = ActualTypeSchema;
+            var actual = this.ResolveComposition();
             if (!ReferenceEquals(actual, this))
             {
                 actual.CollectPropertiesInto(properties, references);
@@ -940,6 +956,12 @@ public class JsonSchema
         if (fragment.Length == 0 || fragment == "/")
         {
             return root;
+        }
+
+        if (!fragment.StartsWith('/'))
+        {
+            var anchor = FindAnchor(root.Node, Uri.UnescapeDataString(fragment));
+            return anchor is null ? null : new JsonSchema((JsonObject)anchor.DeepClone(), root);
         }
 
         // Resolve the fragment as a JSON Pointer (RFC 6901) into the root document. This covers both

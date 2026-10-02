@@ -20,7 +20,7 @@ public class and_scoping_unresolved_protection
         get
         {
             var cells = new TheoryData<string, string, bool, bool>();
-            string[] shapes = ["dictionary", "referenced_dictionary", "oneOf", "anyOf", "if", "then", "else", "not", "patternProperties", "dependentSchemas", "dependencies", "tuple", "prefixItems", "contains", "conflict", "null_branch", "dynamic_reference", "nested_dynamic_reference"];
+            string[] shapes = ["dictionary", "referenced_dictionary", "oneOf", "anyOf", "if", "then", "else", "not", "patternProperties", "dependentSchemas", "dependencies", "tuple", "prefixItems", "contains", "conflict", "null_branch", "dynamic_reference", "nested_dynamic_reference", "anchored_dictionary", "anchored_anyOf", "anchored_oneOf", "legacy_anchored_dictionary"];
             var combinations = from shape in shapes
                                from category in new[] { "compliance", "security" }
                                from protectedValue in new[] { false, true }
@@ -43,6 +43,8 @@ public class and_scoping_unresolved_protection
         {
             "dictionary" => $$"""{"type":"object","additionalProperties":{{leaf}}} """,
             "referenced_dictionary" => $$"""{"type":"object","additionalProperties":{"$ref":"#/$defs/alias"},"$defs":{"alias":{"$ref":"#/$defs/leaf"},"leaf":{{leaf}} } }""",
+            "anchored_dictionary" or "legacy_anchored_dictionary" => $$"""{"type":"object","additionalProperties":{"$ref":"#personal"},"{{(shape == "legacy_anchored_dictionary" ? "definitions" : "$defs")}}":{"member":{"$anchor":"personal","type":"string"{{marker}} } } }""",
+            "anchored_anyOf" or "anchored_oneOf" => $$"""{"{{(shape == "anchored_anyOf" ? "anyOf" : "oneOf")}}":[{{Plain}},{"type":"object","properties":{"value":{"$ref":"#personal"} } }],"$defs":{"member":{"$anchor":"personal","type":"string"{{marker}} } } }""",
             "oneOf" or "anyOf" => $$"""{"{{shape}}":[{{Plain}},{{member}}]}""",
             "if" or "then" or "else" or "not" => $$"""{"type":"object","properties":{"value":{"type":"string"} },"{{shape}}":{{member}} }""",
             "patternProperties" => $$"""{"type":"object","patternProperties":{"^value$":{{leaf}} } }""",

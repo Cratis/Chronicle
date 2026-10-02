@@ -52,16 +52,32 @@ public static class SchemaCompositionExtensions
             Merge(declaration, result, references);
         }
 
-        foreach (var alternatives in new[] { schema.AnyOf, schema.OneOf }.Where(_ => _.Count > 0))
+        foreach (var (keyword, alternatives) in new[] { ("anyOf", schema.AnyOf), ("oneOf", schema.OneOf) }.Where(_ => _.Item2.Count > 0))
         {
-            var nonNull = alternatives.Where(_ => _.Type != JsonObjectType.Null).ToArray();
-            if (nonNull.Length != 1 || alternatives.Any(_ => _.Type == JsonObjectType.Null && _.HasSchemaMetadata()))
+            var scalarAlternative = alternatives.Where(_ => _.ActualTypeSchema.Type != JsonObjectType.Null).ToArray();
+            var isScalarUnion = scalarAlternative.Length == 1 && scalarAlternative[0].ActualTypeSchema.Type is JsonObjectType.String or JsonObjectType.Integer or JsonObjectType.Number or JsonObjectType.Boolean;
+            if (!isScalarUnion && !schema.GetComplianceMetadata().Any() && !schema.GetSecurityMetadata().Any() && alternatives.All(_ => _.IsUnprotectedSchemaValue()))
+            {
+                // A union without protection does not select one shape for conversion. Keep its existing
+                // conversion behavior, including when a sibling property carries protection.
+                result[keyword] = schema.Node[keyword]!.DeepClone();
+                continue;
+            }
+
+            var resolvedAlternatives = alternatives.Select(candidate =>
+            {
+                var resolved = new JsonObject();
+                Merge(candidate, resolved, references);
+                return new JsonSchema(resolved, schema.Root);
+            }).ToArray();
+            var nonNull = resolvedAlternatives.Where(_ => _.Type != JsonObjectType.Null).ToArray();
+            if (nonNull.Length != 1 || resolvedAlternatives.Any(_ => _.Type == JsonObjectType.Null && _.HasSchemaMetadata()))
             {
                 throw new UnresolvedSchemaProtection("ambiguous union");
             }
             var alternative = new JsonObject();
             Merge(nonNull[0], alternative, references);
-            if (alternatives.Any(_ => _.Type == JsonObjectType.Null))
+            if (resolvedAlternatives.Any(_ => _.Type == JsonObjectType.Null))
             {
                 var nullable = new JsonSchema(alternative);
                 nullable.Type |= JsonObjectType.Null;

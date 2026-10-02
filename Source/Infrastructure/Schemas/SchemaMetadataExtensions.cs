@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 
 namespace Cratis.Chronicle.Schemas;
@@ -21,6 +22,9 @@ namespace Cratis.Chronicle.Schemas;
 /// </remarks>
 public static class SchemaMetadataExtensions
 {
+    static readonly ConditionalWeakTable<JsonSchema, Lazy<bool>> _protectionValidation = new();
+    static readonly ConditionalWeakTable<JsonSchema, Lazy<bool>> _unprotectedValues = new();
+    static readonly ConditionalWeakTable<JsonSchema, Lazy<bool>> _unprotectedContainers = new();
     static readonly SchemaMetadataCategory[] _categories = [SchemaMetadataCategory.Compliance, SchemaMetadataCategory.Security];
     static readonly string[] _dynamicSchemas = ["if", "then", "else", "not", "additionalProperties", "additionalItems", "contains", "unevaluatedProperties", "unevaluatedItems", "propertyNames", "contentSchema"];
     static readonly string[] _schemaMaps = ["patternProperties", "dependentSchemas", "dependencies"];
@@ -158,20 +162,35 @@ public static class SchemaMetadataExtensions
     /// <param name="includeMembers">Whether nested properties and collection elements are part of the value being restored.</param>
     /// <returns>True only when restoring the value cannot bypass declared or unresolved protection.</returns>
     public static bool IsUnprotectedSchemaValue(this JsonSchema schema, bool includeMembers = true) =>
-        NestedSchemasAndSelf(schema, includeMembers).All(node =>
-            !node.Node.ContainsKey(ComplianceJsonSchemaExtensions.ComplianceKey) &&
-            !node.Node.ContainsKey(SecurityJsonSchemaExtensions.SecurityKey) &&
-            (!node.HasReference || node.Reference is not null) &&
-            !node.Node.ContainsKey("$dynamicRef") && !node.Node.ContainsKey("$recursiveRef"));
+        (includeMembers ? _unprotectedValues : _unprotectedContainers)
+            .GetValue(schema, value => new Lazy<bool>(() => IsUnprotected(value, includeMembers))).Value;
 
     /// <summary>
     /// Rejects schema shapes whose protection cannot be completely resolved before a write or release.
     /// </summary>
     /// <param name="schema">The document schema.</param>
     /// <exception cref="UnresolvedSchemaProtection">A declaration cannot be resolved safely.</exception>
-    public static void EnsureProtectionCanBeResolved(this JsonSchema schema)
+    public static void EnsureProtectionCanBeResolved(this JsonSchema schema) =>
+        _ = _protectionValidation.GetValue(schema, value => new Lazy<bool>(() => ValidateProtection(value))).Value;
+
+    /// <summary>
+    /// Gets the schema key a category is stored under.
+    /// </summary>
+    /// <param name="category">The metadata category.</param>
+    /// <returns>The extension data key.</returns>
+    internal static string KeyFor(SchemaMetadataCategory category) =>
+        category == SchemaMetadataCategory.Compliance ? ComplianceJsonSchemaExtensions.ComplianceKey : SecurityJsonSchemaExtensions.SecurityKey;
+
+    static bool IsUnprotected(JsonSchema schema, bool includeMembers) =>
+        NestedSchemasAndSelf(schema, includeMembers).All(node =>
+            !node.Node.ContainsKey(ComplianceJsonSchemaExtensions.ComplianceKey) &&
+            !node.Node.ContainsKey(SecurityJsonSchemaExtensions.SecurityKey) &&
+            (!node.HasReference || node.Reference is not null) &&
+            !node.Node.ContainsKey("$dynamicRef") && !node.Node.ContainsKey("$recursiveRef"));
+
+    static bool ValidateProtection(JsonSchema schema)
     {
-        if (!schema.HasSchemaMetadata()) return;
+        if (!schema.HasSchemaMetadata()) return true;
 
         foreach (var declaration in NestedSchemasAndSelf(schema))
         {
@@ -192,15 +211,9 @@ public static class SchemaMetadataExtensions
                 }
             }
         }
-    }
 
-    /// <summary>
-    /// Gets the schema key a category is stored under.
-    /// </summary>
-    /// <param name="category">The metadata category.</param>
-    /// <returns>The extension data key.</returns>
-    internal static string KeyFor(SchemaMetadataCategory category) =>
-        category == SchemaMetadataCategory.Compliance ? ComplianceJsonSchemaExtensions.ComplianceKey : SecurityJsonSchemaExtensions.SecurityKey;
+        return true;
+    }
 
     static IEnumerable<JsonSchema> NestedSchemasAndSelf(JsonSchema schema, bool includeMembers = true)
     {

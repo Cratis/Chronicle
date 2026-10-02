@@ -23,11 +23,31 @@ namespace Cratis.Chronicle.Json;
 public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectConverter
 {
     /// <inheritdoc/>
-    public JsonObject ToJsonObject(ExpandoObject expandoObject, JsonSchema schema)
+    public JsonObject ToJsonObject(ExpandoObject expandoObject, JsonSchema schema) => ConvertToJsonObject(expandoObject, schema, false);
+
+    /// <inheritdoc/>
+    public ExpandoObject ToExpandoObject(JsonObject document, JsonSchema schema) => ConvertToExpandoObject(document, schema, false);
+
+    static JsonSchema ResolveForConversion(JsonSchema schema)
+    {
+        try
+        {
+            return schema.ResolveComposition();
+        }
+        catch (UnresolvedSchemaProtection) when (!schema.HasSchemaMetadata())
+        {
+            // Plain conversion is not a protection boundary. Retain the pre-composition conversion of
+            // unsupported schemas only when no protection declaration can be lost by that fallback.
+            return schema;
+        }
+    }
+
+    JsonObject ConvertToJsonObject(ExpandoObject expandoObject, JsonSchema schema, bool preserveWholeValueMembers)
     {
         var jsonObject = new JsonObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
-        var schemaProperties = ResolveForConversion(schema).GetFlattenedProperties().ToList();
+        schema = ResolveForConversion(schema);
+        var schemaProperties = schema.GetFlattenedProperties().ToList();
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the expando object is preserved.
@@ -73,16 +93,25 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             }
         }
 
+        if (preserveWholeValueMembers && (schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any()))
+        {
+            var declared = schemaProperties.Select(_ => _.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var (name, value) in expandoObjectAsDictionary.Where(_ => !declared.Contains(_.Key)))
+            {
+                jsonObject[name] = ConvertUnknownSchemaTypeToJsonValue(value);
+            }
+        }
+
         return jsonObject;
     }
 
-    /// <inheritdoc/>
-    public ExpandoObject ToExpandoObject(JsonObject document, JsonSchema schema)
+    ExpandoObject ConvertToExpandoObject(JsonObject document, JsonSchema schema, bool preserveWholeValueMembers)
     {
         var expandoObject = new ExpandoObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
 
-        var schemaProperties = ResolveForConversion(schema).GetFlattenedProperties().ToList();
+        schema = ResolveForConversion(schema);
+        var schemaProperties = schema.GetFlattenedProperties().ToList();
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the document is preserved.
@@ -120,21 +149,17 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             }
         }
 
-        return expandoObject;
-    }
+        if (preserveWholeValueMembers && (schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any()))
+        {
+            // A whole-value marker protects the complete payload, not just the declared members.
+            var declared = schemaProperties.Select(_ => _.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var (name, value) in document.Where(_ => !declared.Contains(_.Key)))
+            {
+                expandoObjectAsDictionary[name] = ConvertUnknownSchemaTypeToClrType(value);
+            }
+        }
 
-    static JsonSchema ResolveForConversion(JsonSchema schema)
-    {
-        try
-        {
-            return schema.ResolveComposition();
-        }
-        catch (UnresolvedSchemaProtection) when (!schema.HasSchemaMetadata())
-        {
-            // Plain conversion is not a protection boundary. Retain the pre-composition conversion of
-            // unsupported schemas only when no protection declaration can be lost by that fallback.
-            return schema;
-        }
+        return expandoObject;
     }
 
     JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty)
@@ -156,9 +181,10 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         if (value is ExpandoObject expando)
         {
-            return ToJsonObject(
+            return ConvertToJsonObject(
                 expando,
-                schemaProperty.IsArray ? schemaProperty.Item! : schemaProperty);
+                schemaProperty.IsArray ? schemaProperty.Item! : schemaProperty.ActualTypeSchema,
+                true);
         }
 
         // A coarse [PII] value on a whole list/array is blob-encrypted to a single ciphertext string,
@@ -232,9 +258,10 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                     Globals.JsonSerializerOptions);
             }
 
-            return ToExpandoObject(
+            return ConvertToExpandoObject(
                 childObject,
-                schemaProperty.IsArray ? schemaProperty.Item! : schemaProperty);
+                schemaProperty.IsArray ? schemaProperty.Item! : schemaProperty.ActualTypeSchema,
+                true);
         }
 
         if (jsonNode is JsonArray array)
