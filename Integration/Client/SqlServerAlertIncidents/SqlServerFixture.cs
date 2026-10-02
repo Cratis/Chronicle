@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Integration;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Data.SqlClient;
@@ -63,7 +64,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
-        _container = new ContainerBuilder("mcr.microsoft.com/mssql/server:2022-latest")
+        _container = new ContainerBuilder(SqlServerContainerImage.Name)
             .WithEnvironment("ACCEPT_EULA", "Y").WithEnvironment("MSSQL_SA_PASSWORD", Password)
             .WithPortBinding(1433, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted(
