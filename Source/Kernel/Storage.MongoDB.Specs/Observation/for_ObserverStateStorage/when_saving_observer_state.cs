@@ -37,7 +37,7 @@ public class when_saving_observer_state(MongoDBFixture fixture) : Specification
 
     async Task Establish()
     {
-        _databaseName = $"chronicle_observer_save_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
         _database = _client.GetDatabase(_databaseName);
 

@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.ReadModels.for_ReplayContextsStorage;
 [Collection(MongoDBCollection.Name)]
 public class when_every_silo_saves_the_same_context_at_once(MongoDBFixture fixture) : IAsyncLifetime
 {
-    readonly string _databaseName = $"replay_contexts_{Guid.NewGuid():N}";
+    readonly string _databaseName = MongoDBSpecDatabaseNames.New();
     IMongoClient _client = default!;
     Exception? _error;
     long _stored;

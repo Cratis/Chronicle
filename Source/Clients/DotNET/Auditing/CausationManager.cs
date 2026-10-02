@@ -10,41 +10,26 @@ namespace Cratis.Chronicle.Auditing;
 /// </summary>
 public class CausationManager : ICausationManager
 {
-    static readonly AsyncLocal<List<Causation>> _current = new();
+    static readonly AsyncLocal<List<Entry>> _current = new();
 
     /// <inheritdoc/>
     public Causation Root { get; private set; } = new(DateTimeOffset.UtcNow, CausationType.Unknown, ImmutableDictionary<string, string>.Empty);
 
     /// <inheritdoc/>
-    public IImmutableList<Causation> GetCurrentChain()
-    {
-        _current.Value ??= [];
-        if (_current.Value.Count == 0)
-        {
-            _current.Value.Add(Root);
-        }
-
-        return _current.Value.ToImmutableList();
-    }
+    public IImmutableList<Causation> GetCurrentChain() => GetCurrentEntries().Select(_ => _.Causation).ToImmutableList();
 
     /// <inheritdoc/>
     public void Add(CausationType type, IDictionary<string, string> properties)
     {
-        _current.Value ??= [];
-        if (_current.Value.Count == 0)
-        {
-            _current.Value.Add(Root);
-        }
-
-        _current.Value.Add(new Causation(DateTimeOffset.UtcNow, type, properties.ToImmutableDictionary()));
+        _current.Value = [.. GetCurrentEntries(), new(new Causation(DateTimeOffset.UtcNow, type, properties.ToImmutableDictionary()))];
     }
 
     /// <inheritdoc/>
     public IDisposable BeginScope(CausationType type, IDictionary<string, string> properties)
     {
         Add(type, properties);
-        var chain = _current.Value!;
-        return new Scope(chain, chain.Count - 1);
+
+        return new Scope(_current.Value![^1]);
     }
 
     /// <summary>
@@ -56,35 +41,59 @@ public class CausationManager : ICausationManager
         Root = new Causation(DateTimeOffset.UtcNow, CausationType.Root, properties.ToImmutableDictionary());
     }
 
-    /// <summary>
-    /// Removes a causation and everything added after it when disposed.
-    /// </summary>
-    /// <param name="chain">The chain the causation was added to.</param>
-    /// <param name="index">The position the causation was added at.</param>
-    /// <remarks>
-    /// The chain is held by reference rather than read back off the ambient value, because the scope can be
-    /// disposed from a different async branch than the one it was created on - which is exactly what happens when a
-    /// command completes after awaiting. Truncating removes anything added after the causation too, which is what
-    /// last-in first-out means and is the only interpretation that leaves the chain consistent when scopes are
-    /// disposed out of order.
-    /// </remarks>
-    sealed class Scope(List<Causation> chain, int index) : IDisposable
+    List<Entry> GetCurrentEntries()
     {
-        bool _disposed;
-
-        public void Dispose()
+        _current.Value ??= [];
+        var disposedIndex = _current.Value.FindIndex(_ => _.IsDisposed);
+        if (disposedIndex >= 0)
         {
-            if (_disposed)
-            {
-                return;
-            }
-
-            _disposed = true;
-
-            if (index < chain.Count)
-            {
-                chain.RemoveRange(index, chain.Count - index);
-            }
+            _current.Value = _current.Value.Take(disposedIndex).ToList();
         }
+
+        if (_current.Value.Count == 0)
+        {
+            _current.Value = [new(Root)];
+        }
+
+        return _current.Value;
+    }
+
+    /// <summary>
+    /// Represents a causation whose lifetime can be bounded by a scope.
+    /// </summary>
+    /// <param name="causation">The causation represented by the entry.</param>
+    /// <remarks>
+    /// Only the scope lifetime is shared across async branches, so disposal after awaiting still removes the
+    /// scoped causation. Each flow truncates its own chain at the first disposed entry without mutating a list
+    /// inherited by another flow.
+    /// </remarks>
+    sealed class Entry(Causation causation)
+    {
+        volatile bool _disposed;
+
+        /// <summary>
+        /// Gets the causation represented by the entry.
+        /// </summary>
+        public Causation Causation { get; } = causation;
+
+        /// <summary>
+        /// Gets whether the scope has been disposed.
+        /// </summary>
+        public bool IsDisposed => _disposed;
+
+        /// <summary>
+        /// Ends the scope represented by the entry.
+        /// </summary>
+        public void EndScope() => _disposed = true;
+    }
+
+    /// <summary>
+    /// Represents the lifetime of a scoped causation.
+    /// </summary>
+    /// <param name="entry">The entry whose scope ends on disposal.</param>
+    sealed class Scope(Entry entry) : IDisposable
+    {
+        /// <inheritdoc/>
+        public void Dispose() => entry.EndScope();
     }
 }

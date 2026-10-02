@@ -28,36 +28,48 @@ public static class DatabaseNames
     static readonly SearchValues<char> _invalidCharacters = SearchValues.Create(['/', '\\', '.', ' ', '"', '$', '*', '<', '>', ':', '|', '?', '\0']);
 
     /// <summary>
+    /// Prepend the configured prefix and validate the complete database name.
+    /// </summary>
+    /// <param name="databaseName">The unprefixed database name.</param>
+    /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <returns>The validated database name.</returns>
+    public static string WithPrefix(string databaseName, string prefix = "") =>
+        Validated($"{prefix}{databaseName}", new EventStoreName(databaseName), null);
+
+    /// <summary>
     /// Get the name of the database holding an event store's cross-namespace state.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get the database name for.</param>
+    /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
     /// <returns>The database name.</returns>
-    public static string ForEventStore(EventStoreName eventStore) =>
-        Validated($"{eventStore}+es", eventStore, null);
+    public static string ForEventStore(EventStoreName eventStore, string prefix = "") =>
+        Validated($"{prefix}{eventStore}+es", eventStore, null);
 
     /// <summary>
     /// Get the name of the database holding the event sequences of a namespace within an event store.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get the database name for.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get the database name for.</param>
+    /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
     /// <returns>The database name.</returns>
-    public static string ForEventStoreNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
-        Validated($"{eventStore}+es+{@namespace}", eventStore, @namespace);
+    public static string ForEventStoreNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "") =>
+        Validated($"{prefix}{eventStore}+es+{@namespace}", eventStore, @namespace);
 
     /// <summary>
     /// Get the name of the database read models of a namespace within an event store are materialized into.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get the database name for.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get the database name for.</param>
+    /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
     /// <returns>The database name.</returns>
     /// <remarks>
     /// Unlike the event sequence databases, the default namespace is not suffixed — its read models live in the
     /// bare event store name. A reader that suffixes unconditionally therefore resolves a database that simply
     /// does not exist for the default namespace, and reads come back empty rather than failing.
     /// </remarks>
-    public static string ForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+    public static string ForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "") =>
         Validated(
-            @namespace == EventStoreNamespaceName.Default ? $"{eventStore}" : $"{eventStore}+{@namespace}",
+            @namespace == EventStoreNamespaceName.Default ? $"{prefix}{eventStore}" : $"{prefix}{eventStore}+{@namespace}",
             eventStore,
             @namespace);
 

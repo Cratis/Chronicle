@@ -70,7 +70,7 @@ public abstract class a_sink_for_a_joined_read_model<TReadModel>(MongoDBFixture 
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
-        _databaseName = $"chronicle_root_join_specs_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
         _schema = JsonSchema.FromType<TReadModel>();
 

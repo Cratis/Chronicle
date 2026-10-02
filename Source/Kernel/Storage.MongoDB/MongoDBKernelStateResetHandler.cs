@@ -17,10 +17,12 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="chronicleOptions"><see cref="ChronicleOptions"/> describing the active storage backend.</param>
 /// <param name="mongoDBOptions"><see cref="MongoDBOptions"/> with the connection details.</param>
 /// <param name="clientManager"><see cref="IMongoDBClientManager"/> used to obtain a client.</param>
+/// <param name="storageOptions">Chronicle-specific database naming options.</param>
 public class MongoDBKernelStateResetHandler(
     IOptions<ChronicleOptions> chronicleOptions,
     IOptions<MongoDBOptions> mongoDBOptions,
-    IMongoDBClientManager clientManager) : ICanPerformKernelStateReset
+    IMongoDBClientManager clientManager,
+    IOptions<MongoDBStorageOptions>? storageOptions = null) : ICanPerformKernelStateReset
 {
     static readonly FrozenSet<string> _preservedDatabases = new[]
     {
@@ -59,7 +61,12 @@ public class MongoDBKernelStateResetHandler(
         var client = clientManager.GetClientFor(settings);
 
         using var cursor = await client.ListDatabaseNamesAsync();
-        var droppedNames = (await cursor.ToListAsync()).Where(n => !_preservedDatabases.Contains(n)).ToList();
+        var prefix = storageOptions?.Value.DatabaseNamePrefix ?? chronicleOptions.Value.Storage.DatabaseNamePrefix;
+        var clusterDatabase = DatabaseNames.WithPrefix(WellKnownDatabaseNames.Chronicle, prefix);
+        var droppedNames = (await cursor.ToListAsync()).Where(n =>
+            !_preservedDatabases.Contains(n)
+            && !string.Equals(n, clusterDatabase, StringComparison.OrdinalIgnoreCase)
+            && (string.IsNullOrEmpty(prefix) || n.StartsWith(prefix, StringComparison.Ordinal))).ToList();
         foreach (var name in droppedNames)
         {
             await DropDatabaseWithRetry(client, name);
