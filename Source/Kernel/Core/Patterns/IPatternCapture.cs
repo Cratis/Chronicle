@@ -19,6 +19,14 @@ public interface IPatternCapture
     Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     /// <summary>
+    /// Ask the observer to recover a missing or stalled capture subscription without releasing quarantine.
+    /// </summary>
+    /// <param name="eventStore">The event store to capture within.</param>
+    /// <param name="namespace">The namespace to capture within.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RecoverSubscription(EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
+    /// <summary>
     /// Subscribe pattern capture across every namespace of an event store.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> to capture within.</param>
