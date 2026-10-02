@@ -129,6 +129,11 @@ public static class WellKnownTableNames
     public const string ReplayedReadModels = "ReplayedReadModels";
 
     /// <summary>
+    /// The read-model database table that records atomically committed SQL replay promotions.
+    /// </summary>
+    public const string ReplayPromotions = "chronicle_replay_promotions";
+
+    /// <summary>
     /// The table that holds read model definitions.
     /// </summary>
     public const string ReadModelDefinitions = "ReadModelDefinitions";

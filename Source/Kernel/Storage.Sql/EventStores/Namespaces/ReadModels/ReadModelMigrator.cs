@@ -39,6 +39,21 @@ public class ReadModelMigrator(
     }
 
     /// <inheritdoc/>
+    public async Task EnsureReplayPromotions(ReadModelDbContext context)
+    {
+        try
+        {
+            await tableMigrator.EnsureTableMigrated(WellKnownTableNames.ReplayPromotions, context, CreateReplayPromotions);
+        }
+        catch (Exception exception) when (IsDuplicateTable(exception))
+        {
+            // Another silo may have created the shared marker table. Recheck through the migrator;
+            // do not cache success merely because a CREATE failed.
+            await tableMigrator.EnsureTableMigrated(WellKnownTableNames.ReplayPromotions, context, CreateReplayPromotions);
+        }
+    }
+
+    /// <inheritdoc/>
     public void ClearMigrationCache(string connectionStringPrefix)
     {
         tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
@@ -46,6 +61,22 @@ public class ReadModelMigrator(
         {
             _columnMigrations.TryRemove(key, out _);
         }
+    }
+
+    async Task CreateReplayPromotions(ReadModelDbContext context, string tableName)
+    {
+        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+        migrationBuilder.CreateTable(
+            name: tableName,
+            columns: table => new
+            {
+                Id = table.StringColumn(migrationBuilder, maxLength: 64, nullable: false),
+                ContainerName = table.StringColumn(migrationBuilder, nullable: false),
+                RevertContainerName = table.StringColumn(migrationBuilder, nullable: false),
+                BackupTableName = table.StringColumn(migrationBuilder, nullable: true)
+            },
+            constraints: table => table.PrimaryKey($"PK_{tableName}", promotion => promotion.Id));
+        await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
     async Task EnsureMissingColumnsAdded(string tableName, ReadModelDbContext context)
@@ -98,6 +129,14 @@ public class ReadModelMigrator(
 
         _columnMigrations.TryAdd(cacheKey, true);
     }
+
+    static bool IsDuplicateTable(Exception exception) => exception switch
+    {
+        PostgresException postgres => postgres.SqlState == PostgresErrorCodes.DuplicateTable || postgres.SqlState == PostgresErrorCodes.UniqueViolation,
+        SqlException sql => sql.Number == 2714,
+        SqliteException sqlite => sqlite.SqliteErrorCode == 1 && sqlite.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase),
+        _ => false
+    };
 
     static bool IsDuplicateColumn(Exception exception) => exception switch
     {

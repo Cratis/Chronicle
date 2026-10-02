@@ -13,39 +13,26 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
-using SqlSink = Cratis.Chronicle.Storage.Sql.Sinks.Sink;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
 /// <summary>
-/// Runs the shared <see cref="ISink"/> contract against the SQL sink on PostgreSQL, where constraint names are
-/// unique across a schema rather than per table as they are on SQLite.
+/// Runs SQL sink specs with SQL Server's production execution strategy and table migrator.
 /// </summary>
-/// <remarks>
-/// The fixture is a property rather than a constructor argument because the contract creates the harness
-/// itself; a case needing the container overrides that and hands one over. Every harness gets a database of
-/// its own in the fixture's container, dropped again when the harness is disposed. Tables are created through
-/// the real <see cref="ReadModelMigrator"/>, as in production. Container names must keep their replay, backup
-/// and shadow table names within PostgreSQL's 63 bytes (48 bytes or less); longer ones fail in the migrator
-/// (issue #4340).
-/// </remarks>
-public class PostgreSqlSinkHarness : ISqlSinkHarness
+public class SqlServerSinkHarness : ISqlSinkHarness
 {
     readonly ReadModelMigrator _migrator = new(
         new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
         Substitute.For<ILogger<ReadModelMigrator>>());
-
     IReadOnlyList<ProjectedColumn> _columns = [];
 
-    /// <summary>
-    /// Gets or sets the <see cref="PostgreSqlFixture"/> supplying the container.
-    /// </summary>
-    public PostgreSqlFixture? Fixture { get; set; }
+    /// <inheritdoc/>
+    public string ConnectionString { get; private set; } = string.Empty;
 
     /// <summary>
-    /// Gets the connection string for the database the sink writes to.
+    /// Gets the container supplying isolated databases.
     /// </summary>
-    public string ConnectionString { get; private set; } = string.Empty;
+    public SqlServerFixture? Fixture { get; init; }
 
     /// <summary>
     /// Gets interceptors for deterministic faults during replay promotion.
@@ -62,11 +49,10 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
         }
 
         var database = Substitute.For<IDatabase>();
-        database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
             .Returns(callInfo => OpenTable(callInfo.ArgAt<string>(2)));
 
-        return new SqlSink(
+        return new Sink(
             "test-event-store",
             "test-namespace",
             definition,
@@ -86,11 +72,6 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Opens a container in the sink's database, migrating its table as the real database does on every use.
-    /// </summary>
-    /// <param name="containerName">The name of the container.</param>
-    /// <returns>A <see cref="DbContextScope{TDbContext}"/> for the container.</returns>
     async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName)
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
