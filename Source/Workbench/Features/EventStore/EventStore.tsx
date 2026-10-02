@@ -8,6 +8,7 @@ import * as mdIcons from 'react-icons/md';
 // import * as devIcons from 'react-icons/di';
 // import * as gameIcons from 'react-icons/gi';
 import { EventTypes } from "./General/EventTypes/EventTypes";
+import { EventSources } from './General/EventSources/EventSources';
 import { Observers } from "./Namespaces/Observers/Observers";
 import { Projections } from "./General/Projections/Projections";
 import { FailedPartitions } from "./Namespaces/FailedPartitions/FailedPartitions";
@@ -69,6 +70,7 @@ export const EventStore = () => {
             items: [
                 { label: strings.mainMenu.dashboard, url: 'dashboard', icon: mdIcons.MdDashboard },
                 { label: strings.mainMenu.general.eventTypes, url: 'event-types', icon: mdIcons.MdDataObject },
+                { label: strings.mainMenu.general.eventSources, url: 'event-sources', icon: mdIcons.MdSource },
                 { label: strings.mainMenu.general.readModelTypes, url: 'read-model-types', icon: mdIcons.MdTypeSpecimen },
                 { label: 'Webhooks', url: 'webhooks', icon: mdIcons.MdWebhook },
                 { label: 'External Services', url: 'external-services', icon: mdIcons.MdCloud },
@@ -108,6 +110,7 @@ export const EventStore = () => {
 
                 <Route path={'dashboard'} element={<Dashboard />} />
                 <Route path={'event-types'} element={<EventTypes />} />
+                <Route path={'event-sources'} element={<EventSources />} />
                 <Route path={'read-model-types'} element={<ReadModelTypes />} />
                 <Route path={'webhooks'} element={<Webhooks />} />
                 <Route path={'external-services'} element={<ExternalServices />} />

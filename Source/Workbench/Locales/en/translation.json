@@ -69,6 +69,7 @@
         "general": {
             "groupLabel": "General",
             "eventTypes": "Event Types",
+            "eventSources": "Event Sources",
             "readModelTypes": "Read Model Types",
             "readModels": "Read Models",
             "namespaces": "Namespaces",
@@ -92,6 +93,22 @@
     },
     "eventStore": {
         "general": {
+            "eventSources": {
+                "title": "Event Sources",
+                "empty": "No event sources found",
+                "columns": {
+                    "name": "Name",
+                    "description": "Description",
+                    "streams": "Streams"
+                },
+                "streams": {
+                    "empty": "No event streams declared",
+                    "columns": {
+                        "name": "Name",
+                        "description": "Description"
+                    }
+                }
+            },
             "eventTypes": {
                 "title": "Event Types",
                 "empty": "No types found",

@@ -10,6 +10,7 @@ import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { ObserveEventTypes } from 'Features/EventTypes';
 import { AllEventTypeGenerations } from 'Features/EventTypes';
 import { EventTypeDetails } from 'Features/EventTypes';
+import { ObserveEventSources } from 'Features/EventSources';
 import { ObjectContentEditor } from '@cratis/components/ObjectContentEditor';
 import type { Json } from '@cratis/components/types';
 import { useParams } from 'react-router-dom';
@@ -32,6 +33,7 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
     const params = useParams<EventStoreParams>();
     const [eventTypes] = ObserveEventTypes.use({ eventStore: params.eventStore! });
     const [allGenerations] = AllEventTypeGenerations.use({ eventStore: params.eventStore!, eventTypeId: item.context.eventType.id });
+    const [eventSources] = ObserveEventSources.use({ eventStore: params.eventStore! });
     const [selectedRevision, setSelectedRevision] = useState<number>(-1);
     const [selectedGeneration, setSelectedGeneration] = useState<number | null>(null);
 
@@ -154,14 +156,19 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         [currentContent, schema]
     );
 
+    const eventSource = eventSources.data.find(source => source.name === item.context.eventSourceType);
+    const eventStream = eventSource?.streams.find(stream => stream.name === item.context.eventStreamType);
+
     // Build context object for display - metadata reflects the current revision
     const contextObject = {
         eventType: item.context.eventType.id,
         generation: item.context.eventType.generation,
         eventSourceType: item.context.eventSourceType,
+        eventSourceDescription: eventSource?.description ?? '',
         eventSourceId: item.context.eventSourceId,
         sequenceNumber: item.context.sequenceNumber,
         eventStreamType: item.context.eventStreamType,
+        eventStreamDescription: eventStream?.description ?? '',
         eventStreamId: item.context.eventStreamId,
         occurred: currentMetadata.occurred instanceof Date
             ? (currentMetadata.occurred as Date).toISOString()
@@ -184,9 +191,11 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
             eventType: { type: 'string', title: 'Event Type' },
             generation: { type: 'number', title: 'Generation' },
             eventSourceType: { type: 'string', title: 'Event Source Type' },
+            eventSourceDescription: { type: 'string', title: 'Event Source Description' },
             eventSourceId: { type: 'string', title: 'Event Source ID' },
             sequenceNumber: { type: 'number', title: 'Sequence Number' },
             eventStreamType: { type: 'string', title: 'Event Stream Type' },
+            eventStreamDescription: { type: 'string', title: 'Event Stream Description' },
             eventStreamId: { type: 'string', title: 'Event Stream ID' },
             occurred: { type: 'string', title: 'Occurred', format: 'date-time' },
             correlationId: { type: 'string', title: 'Correlation ID' },
