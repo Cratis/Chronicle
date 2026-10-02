@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
 using Cratis.Chronicle.Storage.Namespaces;
@@ -40,6 +41,9 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
 
     /// <inheritdoc/>
     public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, database);
+
+    /// <inheritdoc/>
+    public IEventSourcesStorage EventSources { get; } = new EventSources.EventSourcesStorage(eventStore, database);
 
     /// <inheritdoc/>
     public IConstraintsStorage Constraints { get; } = new Constraints.ConstraintsStorage(eventStore, database);

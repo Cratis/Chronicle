@@ -520,7 +520,11 @@ public static class EventEntryConverter
             await identityStorage.GetFor(causedBy),
             GetTags(entry),
             GetHashForGeneration(entry, eventType.Generation),
-            Subject: GetSubject(entry)) { NamedTags = namedTags ?? [] };
+            Subject: GetSubject(entry))
+        {
+            NamedTags = namedTags ?? [],
+            EventSource = string.IsNullOrEmpty(entry.EventSource) ? EventSourceName.NotSet : new EventSourceName(entry.EventSource)
+        };
 
         return new AppendedEvent(eventContext, content) { GenerationalContent = GetAllGenerationalContent(entry) };
     }

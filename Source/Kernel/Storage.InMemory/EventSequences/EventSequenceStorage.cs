@@ -221,7 +221,8 @@ public class EventSequenceStorage(
                     e.GenerationalContent,
                     hash,
                     e.Subject,
-                    e.NamedTags);
+                    e.NamedTags,
+                    e.EventSource);
 
                 _events.Add(appendedEvent);
                 _originalCausedByChains[e.SequenceNumber] = e.CausedByChain.ToArray();
@@ -697,7 +698,8 @@ public class EventSequenceStorage(
         IDictionary<EventTypeGeneration, ExpandoObject> content,
         EventHash hash,
         Subject? subject = null,
-        IReadOnlyCollection<NamedTag>? namedTags = null)
+        IReadOnlyCollection<NamedTag>? namedTags = null,
+        EventSourceName? eventSource = null)
     {
         var eventContext = new EventContext(
             eventType,
@@ -716,7 +718,8 @@ public class EventSequenceStorage(
             hash,
             Subject: subject?.IsSet is true ? subject : new Subject(eventSourceId.Value))
         {
-            NamedTags = namedTags ?? []
+            NamedTags = namedTags ?? [],
+            EventSource = eventSource ?? EventSourceName.NotSet
         };
 
         var eventContent = content.TryGetValue(eventType.Generation, out var generationContent)

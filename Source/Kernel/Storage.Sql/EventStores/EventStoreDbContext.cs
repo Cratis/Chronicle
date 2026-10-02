@@ -4,6 +4,7 @@
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Captures;
 using Cratis.Chronicle.Storage.Sql.EventStores.Constraints;
+using Cratis.Chronicle.Storage.Sql.EventStores.EventSources;
 using Cratis.Chronicle.Storage.Sql.EventStores.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 using Cratis.Chronicle.Storage.Sql.EventStores.ExternalServices;
@@ -64,6 +65,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// Gets or sets the webhooks DbSet.
     /// </summary>
     public DbSet<WebhookDefinition> WebhookDefinitions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event source definitions DbSet.
+    /// </summary>
+    public DbSet<EventSourceDefinition> EventSourceDefinitions { get; set; }
 
     /// <summary>
     /// Gets or sets the external services DbSet.
