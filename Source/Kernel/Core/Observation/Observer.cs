@@ -124,7 +124,7 @@ public partial class Observer(
     {
         try
         {
-            if (_removed)
+            if (_removed || !_observerExists)
             {
                 await base.OnDeactivateAsync(reason, cancellationToken);
                 return;
@@ -201,6 +201,7 @@ public partial class Observer(
                 throw new ObserverRemovalNotAllowed(_observerKey);
             }
 
+            await EnsureAlertState();
             _alertDisposition = AlertDisposition.Removing;
             ChangeAlertState();
             await WriteStateAsync();
@@ -213,6 +214,28 @@ public partial class Observer(
         await RequireAlertReconciliation();
         await PauseJobs();
         await RemoveFailedPartitionReminders();
+    }
+
+    /// <inheritdoc/>
+    public async Task CancelRemoval()
+    {
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (_removed || !IsRemoving) return;
+
+            // Replacing the lifecycle also supersedes removal reports still in flight at the tracker.
+            _alertLifecycleId = Guid.NewGuid();
+            _alertRevision = 0;
+            _alertDisposition = AlertDisposition.Active;
+            _projectionDefinitionExists = null;
+            ChangeAlertState();
+            await WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
     }
 
     /// <inheritdoc/>
@@ -535,7 +558,7 @@ public partial class Observer(
             return;
         }
 
-        await RemoveReminder(reminderName);
+        await UnregisterReminderNamed(reminderName);
         if (IsRetired || IsRemoving || _removed || State.RunningState == ObserverRunningState.Quarantined)
         {
             return;
@@ -546,12 +569,20 @@ public partial class Observer(
             return;
         }
 
-        var partition = failures.State.Partitions.FirstOrDefault(_ => _.Partition.ToString() == reminderName);
-        if (partition is { IsQuarantined: false })
+        // Accept raw names registered by earlier versions as well as the disjoint encoded retry names.
+        foreach (var partition in Failures.Partitions.Where(partition => !partition.IsQuarantined &&
+            (PartitionReminderName(partition.Partition) == reminderName || partition.Partition.ToString() == reminderName)))
         {
             await StartRecoverJobForFailedPartition(partition);
         }
     }
+
+    /// <summary>
+    /// Gets a retry reminder name in a namespace disjoint from the alert reminder, regardless of the partition key.
+    /// </summary>
+    /// <param name="partition">The partition to retry.</param>
+    /// <returns>The encoded retry reminder name.</returns>
+    internal static string PartitionReminderName(Key partition) => $"chronicle-observer:partition:{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(partition.ToString()))}";
 
     /// <summary>
     /// Set subscription explicitly, without subscribing. This method is internal and visible to the test suite and only meant to be used with testing.
@@ -606,16 +637,15 @@ public partial class Observer(
     }
 
     /// <summary>
-    /// Resolves the state to enter on activation. A quarantined observer resumes in <see cref="QuarantinedObserver"/>
-    /// rather than being routed, because <see cref="Routing"/> would send an observer without a subscription to
-    /// <see cref="Disconnected"/> and entering either state replaces the persisted <see cref="ObserverRunningState.Quarantined"/>.
+    /// Resolves the state to enter on activation, retaining quarantine and keeping retired or removing observers
+    /// disconnected. Their replay metadata is retained for a fresh subscription, not a reason to start work.
     /// </summary>
     /// <returns>The type of the state to enter.</returns>
     protected override Type ResolveActivationState()
     {
         if (State.RunningState != ObserverRunningState.Quarantined)
         {
-            return base.ResolveActivationState();
+            return !_observerExists || IsRetired || IsRemoving ? typeof(Disconnected) : base.ResolveActivationState();
         }
 
         _resumingQuarantine = true;
@@ -660,11 +690,11 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override async Task WriteStateAsync()
     {
-        if (_stateWritingSuspended) return;
+        if (_stateWritingSuspended || !_observerExists) return;
         await _stateWriteLock.WaitAsync();
         try
         {
-            if (_removed || _stateWritingSuspended) return;
+            if (_removed || _stateWritingSuspended || !_observerExists) return;
 
             // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
             // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
@@ -777,7 +807,16 @@ public partial class Observer(
 
     async Task RemoveReminder(Key partition)
     {
-        var reminder = await this.GetReminder(partition.ToString());
+        await UnregisterReminderNamed(PartitionReminderName(partition));
+        if (partition.ToString() != AlertReminderName)
+        {
+            await UnregisterReminderNamed(partition.ToString());
+        }
+    }
+
+    async Task UnregisterReminderNamed(string reminderName)
+    {
+        var reminder = await this.GetReminder(reminderName);
         if (reminder is not null)
         {
             await this.UnregisterReminder(reminder);

@@ -15,5 +15,7 @@ public class and_alert_reconciliation_fails : given.all_dependencies
     [Fact] void should_not_delete_jobs_in_any_namespace() => _firstNamespaceJobs.ReceivedCalls().ShouldBeEmpty();
     [Fact] async Task should_not_delete_failed_partitions() => await _firstNamespaceStorage.FailedPartitions.DidNotReceive().RemoveAllFor(_observerId);
     [Fact] async Task should_not_delete_the_shared_definition() => await _observerDefinitions.DidNotReceive().Delete(_observerId);
+    [Fact] async Task should_cancel_the_first_namespace_fence() => await _observerInFirstNamespace.Received(1).CancelRemoval();
+    [Fact] async Task should_cancel_the_potentially_persisted_failing_fence() => await _observerInSecondNamespace.Received(1).CancelRemoval();
     [Fact] async Task should_not_release_any_removal_fence() => await _observerInFirstNamespace.DidNotReceive().CompleteRemoval();
 }

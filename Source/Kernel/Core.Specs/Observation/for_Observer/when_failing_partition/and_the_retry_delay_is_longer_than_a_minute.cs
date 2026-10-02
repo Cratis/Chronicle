@@ -18,5 +18,5 @@ public class and_the_retry_delay_is_longer_than_a_minute : given.an_observer
 
     async Task Because() => await _observer.PartitionFailed(Partition, 42UL, ["Something went wrong"], "This is the stack trace");
 
-    [Fact] void should_register_a_retry_reminder_due_after_the_backoff_delay_that_repeats_at_the_same_interval() => _silo.ReminderRegistry.Mock.Verify(_ => _.RegisterOrUpdateReminder(It.IsAny<GrainId>(), Partition, TimeSpan.FromSeconds(200), TimeSpan.FromSeconds(200)), Times.Once);
+    [Fact] void should_register_a_retry_reminder_due_after_the_backoff_delay_that_repeats_at_the_same_interval() => _silo.ReminderRegistry.Mock.Verify(_ => _.RegisterOrUpdateReminder(It.IsAny<GrainId>(), Observer.PartitionReminderName(Partition), TimeSpan.FromSeconds(200), TimeSpan.FromSeconds(200)), Times.Once);
 }

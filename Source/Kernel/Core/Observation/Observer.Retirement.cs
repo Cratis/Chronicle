@@ -18,6 +18,7 @@ public partial class Observer
         await _alertMutationLock.WaitAsync();
         try
         {
+            await EnsureAlertState();
             _alertDisposition = AlertDisposition.Retired;
             ChangeAlertState();
             await WriteStateAsync();

@@ -289,10 +289,18 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// Rechecks subscription and activity at the mutation boundary. Removing remains durable across activation
-    /// until CompleteRemoval, and both subscription paths reject it. An unsuccessful reconciliation fails the
+    /// until CompleteRemoval or CancelRemoval, and both subscription paths reject it. An unsuccessful reconciliation fails the
     /// management call; the caller must not proceed with destructive cleanup.
     /// </remarks>
     Task Remove();
+
+    /// <summary>
+    /// Cancels a removal fence with a fresh active lifecycle before destructive cleanup begins.
+    /// Does nothing if removal has already completed or no fence exists.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>Only the kernel removal coordinator may call this during its fencing phase.</remarks>
+    Task CancelRemoval();
 
     /// <summary>
     /// Deletes the removal marker and alert reminder after all namespace and shared cleanup completes.

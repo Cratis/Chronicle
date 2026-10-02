@@ -54,7 +54,7 @@ public partial class Observer
                     if (config.MaxRetryAttempts == 0 || failure.Attempts.Count() <= config.MaxRetryAttempts)
                     {
                         var retryDelay = GetNextRetryDelay(failure, config);
-                        await this.RegisterOrUpdateReminder(partition.ToString(), retryDelay, GetRetryReminderPeriod(retryDelay));
+                        await this.RegisterOrUpdateReminder(PartitionReminderName(partition), retryDelay, GetRetryReminderPeriod(retryDelay));
                     }
                     else
                     {

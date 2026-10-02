@@ -31,7 +31,7 @@ public partial class Observer
     async Task Watchdog(CancellationToken cancellationToken)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        if (_removed || IsRetired || IsRemoving)
+        if (!_observerExists || _removed || IsRetired || IsRemoving)
         {
             await ReconcileAlertsIfNeeded();
             return;

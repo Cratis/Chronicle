@@ -54,9 +54,27 @@ public class ObserverRemover(
         logger.RemovingObserver(observerId, eventStore);
 
         // Establish every durable fence and apply every clear before any destructive cleanup begins.
-        foreach (var @namespace in namespaces)
+        var attemptedFences = new List<IObserver>();
+        try
         {
-            await grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, eventSequenceId)).Remove();
+            foreach (var @namespace in namespaces)
+            {
+                var observer = grainFactory.GetGrain<IObserver>(new ObserverKey(observerId, eventStore, @namespace, eventSequenceId));
+
+                // A retained fence can belong to earlier destructive cleanup and must not be reversed.
+                // Remove can fail after persisting a new fence, so include the failing namespace as well.
+                if ((await observer.GetState()).AlertDisposition != AlertDisposition.Removing)
+                {
+                    attemptedFences.Add(observer);
+                }
+                await observer.Remove();
+            }
+        }
+        catch
+        {
+            // No destructive cleanup has run. Attempt every cancellation even if one of them fails.
+            await Task.WhenAll(attemptedFences.Select(async observer => await observer.CancelRemoval()));
+            throw;
         }
 
         foreach (var @namespace in namespaces)

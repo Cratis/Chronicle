@@ -4,9 +4,9 @@
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts.Alerts;
 
-namespace Cratis.Chronicle.Observation.for_Observer;
+namespace Cratis.Chronicle.Observation.for_Observer.when_clearing_failed_partitions;
 
-public class when_clearing_failed_partitions : given.an_observer
+public class and_failures_are_reported : given.an_observer
 {
     void Establish() => _failedPartitionsState.AddFailedPartition("partition", 12UL);
 

@@ -214,8 +214,9 @@ public class an_observer : Specification
     /// <summary>
     /// Discards activation memory without running OnDeactivateAsync or its flushes.
     /// </summary>
+    /// <param name="resetStorageStatistics">Whether to reset the write counts after activation.</param>
     /// <returns>The fresh activation backed by copies of the stored records.</returns>
-    protected async Task<Observer> Crash()
+    protected async Task<Observer> Crash(bool resetStorageStatistics = true)
     {
         var persistedState = _stateStorage.State with
         {
@@ -248,7 +249,10 @@ public class an_observer : Specification
         _failedPartitionsState = persistedFailures;
 
         _observer = await _silo.CreateGrainAsync<Observer>(_observerKey);
-        _storageStats.ResetCounts();
+        if (resetStorageStatistics)
+        {
+            _storageStats.ResetCounts();
+        }
         return _observer;
     }
 

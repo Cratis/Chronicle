@@ -15,7 +15,8 @@ public partial class Observer
     /// <summary>
     /// Identifies the durable wakeup dedicated to alert reconciliation.
     /// </summary>
-    internal const string AlertReminderName = "chronicle-observer-alert-reconciliation";
+    internal const string AlertReminderName = "chronicle-observer:alerts";
+    const string LegacyAlertReminderName = "chronicle-observer-alert-reconciliation";
     readonly SemaphoreSlim _alertMutationLock = new(1, 1);
     readonly SemaphoreSlim _stateWriteLock = new(1, 1);
     readonly Dictionary<IncidentId, AlertClearedReason> _alertEndings = [];
@@ -28,6 +29,7 @@ public partial class Observer
     bool _alertReportScheduled;
     bool _alertReportInProgress;
     bool? _projectionDefinitionExists;
+    bool _observerExists;
 
     bool IsRetired => _alertDisposition == AlertDisposition.Retired;
     bool IsRemoving => _alertDisposition == AlertDisposition.Removing;
@@ -47,7 +49,7 @@ public partial class Observer
     internal void ScheduleAlertReport()
     {
         _alertReconciliationPending = true;
-        if (_deferAlertReports || _alertReportScheduled || _removed)
+        if (_deferAlertReports || _alertReportScheduled || _removed || !_observerExists)
         {
             return;
         }
@@ -69,7 +71,7 @@ public partial class Observer
     /// <returns>Whether the still-current report was durably applied.</returns>
     internal async Task<bool> ReportAlertState()
     {
-        if (_alertReportInProgress || _removed || _deferAlertReports)
+        if (_alertReportInProgress || _removed || _deferAlertReports || !_observerExists)
         {
             return false;
         }
@@ -197,6 +199,27 @@ public partial class Observer
         _alertDisposition = State.AlertDisposition;
         _quarantineEpisodeId = State.QuarantineEpisodeId;
 
+        // The state provider supplies an identifier even for missing records. Consult storage rather than
+        // treating a management probe (or a shared definition in another namespace) as observer creation.
+        var source = await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Observers.Get(_observerId);
+        if (!Failures.Partitions.Any(partition => partition.Partition.ToString() == LegacyAlertReminderName))
+        {
+            await UnregisterReminderNamed(LegacyAlertReminderName);
+        }
+
+        if (source.Identifier != _observerId)
+        {
+            await UnregisterReminderNamed(AlertReminderName);
+            return;
+        }
+
+        await EnsureAlertState();
+    }
+
+    async Task EnsureAlertState()
+    {
+        _observerExists = true;
+
         // Retain this reminder even while healthy. Unregistering on an acknowledgment races interleaved recovery.
         await this.RegisterOrUpdateReminder(AlertReminderName, _minimumRetryReminderPeriod, _minimumRetryReminderPeriod);
         if (_alertLifecycleId == Guid.Empty)
@@ -213,6 +236,7 @@ public partial class Observer
         try
         {
             ThrowIfRemoving();
+            await EnsureAlertState();
             _alertLifecycleId = Guid.NewGuid();
             _alertRevision = 0;
             _alertDisposition = AlertDisposition.Active;
@@ -244,6 +268,12 @@ public partial class Observer
 
     async Task ReconcileAlertsIfNeeded()
     {
+        if (!_observerExists || _removed)
+        {
+            await UnregisterReminderNamed(AlertReminderName);
+            return;
+        }
+
         if (_alertReconciliationPending || Failures.HasFailedPartitions ||
             (_alertDisposition == AlertDisposition.Active && State.RunningState == ObserverRunningState.Quarantined))
         {
