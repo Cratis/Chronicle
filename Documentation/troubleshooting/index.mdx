@@ -59,14 +59,9 @@ A partition that ran out of retries before your fix was deployed is quarantined,
 
 ### Clear the quarantine of one reactor partition from a client
 
-```csharp
-var result = await reactors.ClearFailedPartitionQuarantineFor<MyReactor>(partition, retryImmediately: true);
+<ChronicleClientTabs snippet="troubleshooting/clear-reactor-partition-quarantine" />
 
-// result.Outcome:      Cleared, NotFound or NotQuarantined
-// result.RetryOutcome: Started, ObserverQuarantined, ... (only meaningful when retryImmediately is true)
-```
-
-Every refusal has its own outcome — nothing reports success when it changed nothing. The same operation is available on the `Observers` service as `ClearPartitionQuarantine`.
+Every refusal has its own outcome, so nothing reports success when it changed nothing. The same operation is available on the `Observers` service as `ClearPartitionQuarantine`.
 
 ## A constraint is rejecting an append I expected to succeed
 
