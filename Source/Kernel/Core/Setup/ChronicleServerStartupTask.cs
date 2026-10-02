@@ -239,8 +239,11 @@ internal sealed class ChronicleServerStartupTask(
         var reducerObserverKeys = reducerDefinitions
             .Where(_ => knownObserverIds.Contains(_.Identifier))
             .Select(_ => new ObserverKey(_.Identifier, eventStore, namespaceName, _.EventSequenceId));
+
+        // Pattern capture is optional and already handled by the best-effort subscription step. Its
+        // persisted definition must not turn a capture activation failure into a required startup failure.
         var reactorObserverKeys = reactorDefinitions
-            .Where(_ => knownObserverIds.Contains(_.Identifier))
+            .Where(_ => _.Identifier != PatternCapture.ObserverIdentifier && knownObserverIds.Contains(_.Identifier))
             .Select(_ => new ObserverKey(_.Identifier, eventStore, namespaceName, _.EventSequenceId));
         var observerKeys = reducerObserverKeys.Concat(reactorObserverKeys).Distinct().ToArray();
 
