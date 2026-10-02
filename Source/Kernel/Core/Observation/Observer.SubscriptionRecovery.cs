@@ -20,7 +20,14 @@ public partial class Observer
         var currentState = await GetCurrentState();
         if (currentState is Observing or States.Replay)
         {
-            return !_subscription.EventTypes.ToHashSet().SetEquals(eventTypes);
+            // Reconciliation can hold a registry snapshot older than a concurrent registration's subscription.
+            // Extra types and newer generations are already covered and must never trigger a narrowing refresh.
+            var subscribedGenerations = _subscription.EventTypes
+                .GroupBy(eventType => eventType.Id)
+                .ToDictionary(group => group.Key, group => group.Max(eventType => eventType.Generation.Value));
+
+            return eventTypes.Any(expected => !subscribedGenerations.TryGetValue(expected.Id, out var generation) ||
+                generation < expected.Generation.Value);
         }
 
         return currentState is Disconnected or Routing or CatchingUpInFlight &&
@@ -43,6 +50,13 @@ public partial class Observer
         {
             return;
         }
+
+        // Preserve registrations installed after the caller read the registry, even if another expected type
+        // is missing. Recovery is additive and keeps the highest generation for each event type.
+        eventTypes = eventTypes.Concat(_subscription.EventTypes)
+            .GroupBy(eventType => eventType.Id)
+            .Select(group => group.OrderByDescending(eventType => eventType.Generation.Value).First())
+            .ToArray();
 
         // Keep the failure indication until setup completes, including when refreshing a healthy observer's
         // event types. A failed refresh must remain repairable even after installing the new subscription.

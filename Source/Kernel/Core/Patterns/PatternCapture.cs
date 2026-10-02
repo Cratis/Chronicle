@@ -98,6 +98,17 @@ public class PatternCapture(
             return;
         }
 
+        if (recovering)
+        {
+            // A registry snapshot can predate registrations already installed on the observer. Keep those
+            // types and their latest generations in the stored definition as well as in the subscription.
+            var subscription = await observer.GetSubscription();
+            eventTypes = eventTypes.Concat(subscription.EventTypes)
+                .GroupBy(eventType => eventType.Id)
+                .Select(group => group.OrderByDescending(eventType => eventType.Generation.Value).First())
+                .ToArray();
+        }
+
         logger.SubscribingPatternCapture(eventStore, @namespace, eventTypes.Length);
 
         await storage.GetEventStore(eventStore).Reactors.Save(new ReactorDefinition(
