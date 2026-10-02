@@ -143,8 +143,10 @@ public partial class Observer
     {
         if (_subscription.IsSubscribed)
         {
+            // A leave requested during quarantine's OnEnter is only scheduled. Resume recovery from the
+            // Disconnected entry hook, not from the return of the transition request.
+            _recoverSubscriptionAfterQuarantine = true;
             await LeaveQuarantineForSubscription();
-            await RecoverSubscribedObserver();
             return;
         }
 

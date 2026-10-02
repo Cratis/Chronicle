@@ -77,6 +77,7 @@ public partial class Observer(
     bool _resumingQuarantine;
     bool _subscriptionSetupFailed;
     bool _isQuarantined;
+    bool _recoverSubscriptionAfterQuarantine;
 
     /// <summary>
     /// Set once the observer has been removed, so nothing this activation does afterwards writes it back.
@@ -577,6 +578,16 @@ public partial class Observer(
         finally
         {
             _alertMutationLock.Release();
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override async Task OnAfterEnteringState(IState<ObserverState> state)
+    {
+        if (state is Disconnected && _recoverSubscriptionAfterQuarantine)
+        {
+            _recoverSubscriptionAfterQuarantine = false;
+            await RecoverSubscribedObserver();
         }
     }
 
