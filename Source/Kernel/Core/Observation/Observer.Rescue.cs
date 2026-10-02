@@ -150,6 +150,7 @@ public partial class Observer
             return;
         }
 
+        _recoverSubscriptionAfterQuarantine = false;
         _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
         await TransitionTo<Routing>();
