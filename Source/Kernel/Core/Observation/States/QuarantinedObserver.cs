@@ -45,6 +45,10 @@ public class QuarantinedObserver(
         logger.ObserverQuarantined();
 
         var observer = (Observer)Observer;
+
+        // OnEnter also runs when a quarantined observer is activated again, which resumes the quarantine rather than
+        // starting one. The observer knows which of the two this is and only counts a quarantine that starts.
+        observer.RecordObserverQuarantined();
         await observer.RemoveFailedPartitionReminders();
         await observer.StopAllRetryFailedPartitionJobs();
 

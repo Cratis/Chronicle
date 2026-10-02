@@ -7,6 +7,7 @@ using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 using Cratis.Orleans.Storage.Sql;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -22,12 +23,20 @@ namespace Cratis.Chronicle.Storage.Sql.Jobs.for_jobs_storage;
 /// </summary>
 public class when_the_kernel_resolves_it_for_an_event_store_namespace : Specification, IDisposable
 {
+    string _databaseDirectory;
     string _databaseFile;
     Cratis.Orleans.Storage.JobsStorage _storage;
     Exception _error;
     IImmutableList<JobState> _jobs = [];
 
-    void Establish() => _databaseFile = Path.Combine(Path.GetTempPath(), $"chronicle-jobs-{Guid.NewGuid():N}.db");
+    void Establish()
+    {
+        // A directory of the spec's own, not a loose file in the temp folder: SQLite writes -wal, -shm and -journal
+        // files next to the database, and removing the directory is what removes every one of them.
+        _databaseDirectory = Path.Combine(Path.GetTempPath(), $"chronicle-jobs-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_databaseDirectory);
+        _databaseFile = Path.Combine(_databaseDirectory, "jobs.db");
+    }
 
     async Task Because()
     {
@@ -77,9 +86,21 @@ public class when_the_kernel_resolves_it_for_an_event_store_namespace : Specific
     public void Dispose()
     {
         GC.SuppressFinalize(this);
-        if (File.Exists(_databaseFile))
+
+        try
         {
-            File.Delete(_databaseFile);
+            // Pooled connections still point at the file and keep it open until its pool is cleared. Only this spec's
+            // pool is cleared: specs run in parallel in one process, and clearing every pool would pull the connection
+            // out from under any other spec using SQLite.
+            using var connection = new SqliteConnection($"Data Source={_databaseFile}");
+            SqliteConnection.ClearPool(connection);
+        }
+        finally
+        {
+            if (_databaseDirectory is not null && Directory.Exists(_databaseDirectory))
+            {
+                Directory.Delete(_databaseDirectory, recursive: true);
+            }
         }
     }
 }

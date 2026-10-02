@@ -23,7 +23,7 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
 {
     public class context(MongoDBFixture fixture) : IAsyncLifetime
     {
-        readonly string _databaseName = $"chronicle_sink_specs_{Guid.NewGuid():N}";
+        readonly string _databaseName = MongoDBSpecDatabaseNames.New();
         IMongoClient _client = default!;
         IMongoCollection<BsonDocument> _collection = default!;
         Sink _sink = default!;

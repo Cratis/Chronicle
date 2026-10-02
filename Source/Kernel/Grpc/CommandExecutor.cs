@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Setup;
 using ValidationResult = Cratis.Chronicle.Contracts.Validation.ValidationResult;
 using ValidationResultSeverity = Cratis.Chronicle.Contracts.Validation.ValidationResultSeverity;
 
@@ -16,7 +17,9 @@ namespace Cratis.Chronicle.Services;
 /// The pipeline owns validator discovery and resolution, so a <c language="csharp">CommandValidator&lt;T&gt;</c> with
 /// constructor dependencies behaves identically on both transports. Each execution uses the pipeline's
 /// scope-free form, which creates and disposes a dedicated service scope per invocation - the handler's
-/// parameters resolve from that scope exactly as they do for an HTTP request.
+/// parameters resolve from that scope exactly as they do for an HTTP request. Each execution is marked as a kernel
+/// command (see <see cref="KernelCommandExecution"/>), so a host the kernel shares with an application can keep the
+/// application's command extension points away from it.
 /// </remarks>
 internal static class CommandExecutor
 {
@@ -28,6 +31,7 @@ internal static class CommandExecutor
     /// <returns>The <see cref="Contracts.Commands.CommandResult"/> describing the outcome.</returns>
     internal static async Task<Contracts.Commands.CommandResult> Execute(ICommandPipeline pipeline, object command)
     {
+        using var kernelCommand = KernelCommandExecution.Begin();
         var result = await pipeline.Execute(command);
         return new Contracts.Commands.CommandResult
         {
@@ -54,6 +58,7 @@ internal static class CommandExecutor
         object command,
         Func<TDomainResponse, TResponse> mapResponse)
     {
+        using var kernelCommand = KernelCommandExecution.Begin();
         var result = await pipeline.Execute<TDomainResponse>(command);
         var contractResult = new Contracts.Commands.CommandResult<TResponse>
         {

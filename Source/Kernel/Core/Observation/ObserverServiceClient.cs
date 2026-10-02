@@ -38,9 +38,15 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
         }
 
         var hosts = await _managementGrain.GetHosts(true);
-        var results = await Task.WhenAll(hosts.Keys.Select(host => GetGrainService(host).TryFinalizeReplayFor(observerDetails)));
-        EnsureProjectionReplayFinalized(results);
-        return true;
+        return await FinalizeProjectionReplay([.. hosts.Keys.Select(GetGrainService)], observerDetails);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> FlushReplayFor(ObserverDetails observerDetails)
+    {
+        var hosts = await _managementGrain.GetHosts(true);
+        var flushed = await Task.WhenAll(hosts.Keys.Select(host => GetGrainService(host).FlushReplayFor(observerDetails)));
+        return flushed.All(cleanly => cleanly);
     }
 
     /// <inheritdoc/>
@@ -57,6 +63,35 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
 
     /// <inheritdoc/>
     public async Task EndCatchupFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.EndCatchupFor(observerDetails));
+
+    /// <summary>
+    /// Finalizes a projection replay across the silos of the cluster.
+    /// </summary>
+    /// <remarks>
+    /// Every silo holds its own sink, and only the silo the replay ran on holds back its last writes. Ending the replay
+    /// promotes the rebuilt read model, and the first silo to end it does the promoting - so if a silo with nothing held
+    /// back ended it first, the replaying silo's final writes would land in a replay container nothing reads, and the
+    /// promoted read model would be missing them. Every silo therefore flushes before any silo ends the replay.
+    /// </remarks>
+    /// <param name="silos">The <see cref="IObserverService"/> of every silo in the cluster.</param>
+    /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
+    /// <returns>True once the replay has been finalized.</returns>
+    /// <exception cref="ReplayFinalizationFailed">No silo finalized the replay, or a silo flushed with failed partitions.</exception>
+    internal static async Task<bool> FinalizeProjectionReplay(IReadOnlyCollection<IObserverService> silos, ObserverDetails observerDetails)
+    {
+        var flushed = await Task.WhenAll(silos.Select(silo => silo.FlushReplayFor(observerDetails)));
+        var results = await Task.WhenAll(silos.Select(silo => silo.TryFinalizeReplayFor(observerDetails)));
+        EnsureProjectionReplayFinalized(results);
+
+        // A final flush that left failed partitions has recorded them for retry, and the replay is still promoted, as
+        // it was when each silo flushed while ending. The replay is still not reported as cleanly finalized.
+        if (flushed.Any(cleanly => !cleanly))
+        {
+            throw new ReplayFinalizationFailed(ICanHandleReplayForObserver.Error.Unknown);
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// Ensure at least one silo finalized a projection replay.

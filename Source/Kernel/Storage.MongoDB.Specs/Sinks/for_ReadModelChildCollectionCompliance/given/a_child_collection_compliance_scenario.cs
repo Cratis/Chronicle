@@ -85,7 +85,7 @@ public abstract class a_child_collection_compliance_scenario(MongoDBFixture fixt
             NullLogger<JsonSchemaMetadataManager>.Instance);
         Compliance = new ReadModelsCompliance(ComplianceManager, complianceConverter);
 
-        _databaseName = $"chronicle_child_collection_pii_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
 

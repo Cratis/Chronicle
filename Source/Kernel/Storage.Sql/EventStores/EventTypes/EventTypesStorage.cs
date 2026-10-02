@@ -116,7 +116,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
                 []);
         }
 
-        return _definitionsByType.GetOrAdd(eventTypeId, eventType.ToDefinition());
+        return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
     }
 
     /// <inheritdoc/>

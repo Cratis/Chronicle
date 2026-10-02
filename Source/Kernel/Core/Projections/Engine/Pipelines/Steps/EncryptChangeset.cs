@@ -80,6 +80,19 @@ public class EncryptChangeset(
             identifier,
             currentState);
 
+        // Schema conversion supplies CLR defaults for absent properties. A placeholder must keep those
+        // properties absent until a root event initializes it. Filter only after protection has run, so
+        // every value that was actually present still comes from the encrypted result.
+        if (currentStateAsDictionary.TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) && initialized is false)
+        {
+            var present = currentStateAsDictionary.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var encryptedValues = (IDictionary<string, object?>)encrypted;
+            foreach (var property in encryptedValues.Keys.Where(property => !present.Contains(property) && !WellKnownProperties.All.Contains(property)).ToArray())
+            {
+                encryptedValues.Remove(property);
+            }
+        }
+
         var hasDifferences = !objectComparer.Compare(currentState, encrypted, out var differences);
 
         // Apply re-encrypts the whole snapshot, so the comparer reports a difference for every PII member —

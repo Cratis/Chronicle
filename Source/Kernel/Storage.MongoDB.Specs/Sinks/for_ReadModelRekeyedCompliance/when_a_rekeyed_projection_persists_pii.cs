@@ -82,7 +82,7 @@ public class when_a_rekeyed_projection_persists_pii(MongoDBFixture fixture) : Sp
             NullLogger<JsonSchemaMetadataManager>.Instance);
         _compliance = new ReadModelsCompliance(_complianceManager, complianceConverter);
 
-        _databaseName = $"chronicle_rekeyed_pii_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
 

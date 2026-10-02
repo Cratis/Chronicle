@@ -439,6 +439,15 @@ public class Sink(
     }
 
     /// <inheritdoc/>
+    public async Task LeaveReplay()
+    {
+        // Whatever is still held back belongs to a replay that has been promoted without it. Writing it to the replay
+        // collection would lose it, so it goes to the read model's own collection once replay mode is left.
+        collections.AbandonReplay();
+        await EndBulk();
+    }
+
+    /// <inheritdoc/>
     public Task Remove(ReadModelContainerName containerName) => collections.Remove(containerName);
 
     /// <inheritdoc/>
@@ -507,15 +516,27 @@ public class Sink(
     public async Task EnsureIndexes()
     {
         var collection = Collection;
-        var existingIndexes = await GetExistingIndexNamesAsync(collection);
+        using var cursor = await collection.Indexes.ListAsync();
+        var existingIndexes = await cursor.ToListAsync();
+        BsonValue? collation = null;
 
         foreach (var indexDefinition in readModel.Indexes)
         {
             var indexName = $"chronicle_idx_{indexDefinition.PropertyPath.Path.Replace('.', '_')}";
 
-            if (existingIndexes.Contains(indexName))
+            var candidates = existingIndexes.FindAll(index => HasMatchingKeyAndOptions(index, indexDefinition.PropertyPath.Path));
+            if (candidates.Exists(index => index.GetValue("name", BsonNull.Value) == indexName))
             {
                 continue;
+            }
+
+            if (candidates.Count > 0)
+            {
+                collation ??= await GetCollectionCollation(collection);
+                if (candidates.Exists(index => GetCollation(index).Equals(collation)))
+                {
+                    continue;
+                }
             }
 
             var indexModel = new CreateIndexModel<BsonDocument>(
@@ -657,18 +678,32 @@ public class Sink(
             static (_, current, incoming) => Math.Max(current, incoming),
             eventSequenceNumber);
 
-    async Task<HashSet<string>> GetExistingIndexNamesAsync(IMongoCollection<BsonDocument> collection)
+    static bool HasMatchingKeyAndOptions(BsonDocument index, string propertyPath) =>
+        index.GetValue("key", BsonNull.Value).Equals(new BsonDocument(propertyPath, 1)) &&
+        index.GetValue("unique", false) == false &&
+        index.GetValue("prepareUnique", false) == false &&
+        index.GetValue("sparse", false) == false &&
+        index.GetValue("hidden", false) == false &&
+        !index.Contains("partialFilterExpression") &&
+        !index.Contains("expireAfterSeconds");
+
+    static BsonValue GetCollation(BsonDocument definition)
     {
-        var indexNames = new HashSet<string>();
-        using var cursor = await collection.Indexes.ListAsync();
-        await cursor.ForEachAsync(index =>
+        // MongoDB 9 lists simple index collation explicitly; older servers omit it. Both mean binary comparison.
+        return definition.GetValue("collation", new BsonDocument("locale", "simple"));
+    }
+
+    async Task<BsonValue> GetCollectionCollation(IMongoCollection<BsonDocument> collection)
+    {
+        // An index without an explicit collation inherits the collection's default. Compare that effective
+        // collation as well as the key, so an index for different string comparisons is not mistaken for ours.
+        using var cursor = await collection.Database.ListCollectionsAsync(new ListCollectionsOptions
         {
-            if (index.TryGetValue("name", out var nameValue))
-            {
-                indexNames.Add(nameValue.AsString);
-            }
+            Filter = new BsonDocument("name", collection.CollectionNamespace.CollectionName)
         });
-        return indexNames;
+        var definitions = await cursor.ToListAsync();
+        var options = definitions.FirstOrDefault()?.GetValue("options", new BsonDocument()).AsBsonDocument ?? new BsonDocument();
+        return GetCollation(options);
     }
 
     void AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber)

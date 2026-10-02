@@ -43,7 +43,7 @@ public class MongoSinkHarness : ISinkHarness
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
-        _databaseName = $"chronicle_sink_contract_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(ConnectionString ?? Fixture!.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
         Database = database;

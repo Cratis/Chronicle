@@ -380,7 +380,7 @@ public class EventSequenceStorage(
             et => et,
             et =>
             {
-                var matching = snapshot.Where(_ => _.Context.EventType == et).ToList();
+                var matching = snapshot.Where(_ => _.Context.EventType.Id == et.Id).ToList();
                 return matching.Count == 0
                     ? EventSequenceNumber.Unavailable
                     : matching.Max(_ => _.Context.SequenceNumber)!;
@@ -667,10 +667,10 @@ public class EventSequenceStorage(
             events = events.Where(_ => _.Context.EventStreamId == eventStreamId);
         }
 
-        var typeSet = eventTypes?.ToHashSet();
+        var typeSet = eventTypes?.Select(_ => _.Id).ToHashSet();
         if (typeSet?.Count > 0)
         {
-            events = events.Where(_ => typeSet.Contains(_.Context.EventType));
+            events = events.Where(_ => typeSet.Contains(_.Context.EventType.Id));
         }
 
         var tagSet = tags?.ToHashSet();

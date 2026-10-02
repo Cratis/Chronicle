@@ -24,9 +24,9 @@ public abstract class a_real_namespace_database(MongoDBFixture fixture) : Specif
 
     void Establish()
     {
-        _eventStore = new EventStoreName($"idx_{Guid.NewGuid():N}");
+        _eventStore = new EventStoreName($"idx_{Guid.NewGuid().ToString("N")[..8]}");
         _namespace = new EventStoreNamespaceName("default");
-        _databaseName = $"{_eventStore}+es+{_namespace}";
+        _databaseName = DatabaseNames.ForEventStoreNamespace(_eventStore, _namespace, MongoDBSpecDatabaseNames.Prefix);
 
         var clientManager = Substitute.For<IMongoDBClientManager>();
         clientManager.GetClientFor(Arg.Any<MongoClientSettings>())
@@ -38,7 +38,7 @@ public abstract class a_real_namespace_database(MongoDBFixture fixture) : Specif
             Database = "chronicle"
         });
 
-        _database = new EventStoreNamespaceDatabase(_eventStore, _namespace, clientManager, options);
+        _database = new EventStoreNamespaceDatabase(_eventStore, _namespace, clientManager, options, Options.Create(new MongoDBStorageOptions { DatabaseNamePrefix = MongoDBSpecDatabaseNames.Prefix }));
         _rawDatabase = new MongoClient(fixture.ConnectionString).GetDatabase(_databaseName);
     }
 

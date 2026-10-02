@@ -86,7 +86,7 @@ public class when_a_projection_persists_a_child_collection_with_pii(when_a_proje
             var compliance = new ReadModelsCompliance(complianceManager, complianceConverter);
             var objectComparer = new ObjectComparer();
 
-            _databaseName = $"chronicle_child_pii_{Guid.NewGuid():N}";
+            _databaseName = MongoDBSpecDatabaseNames.New();
             _client = new MongoClient(fixture.ConnectionString);
             var database = _client.GetDatabase(_databaseName);
 

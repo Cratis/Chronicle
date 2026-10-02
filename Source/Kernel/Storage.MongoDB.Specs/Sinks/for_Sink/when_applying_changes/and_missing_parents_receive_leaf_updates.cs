@@ -35,7 +35,7 @@ public class and_missing_parents_receive_leaf_updates(context ctx) : IClassFixtu
 
         public async Task InitializeAsync()
         {
-            _databaseName = $"chronicle_sink_specs_{Guid.NewGuid():N}";
+            _databaseName = MongoDBSpecDatabaseNames.New();
             _client = new MongoClient(fixture.ConnectionString);
             var database = _client.GetDatabase(_databaseName);
             var schema = await JsonSchema.FromJsonAsync("""
