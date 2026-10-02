@@ -319,6 +319,23 @@ public class Reactors : IReactors, IReactorPartitionRecovery
     }
 
     /// <inheritdoc/>
+    public async Task<ReactorPartitionQuarantineClearResult> ClearFailedPartitionQuarantineFor(Type reactorType, Partition partition, bool retryImmediately = true)
+    {
+        var handler = _handlers[reactorType.GetReactorId()].Handler;
+        var response = await _servicesAccessor.Services.Observers.ClearPartitionQuarantine(new ClearPartitionQuarantine
+        {
+            EventStore = _eventStore.Name,
+            Namespace = _eventStore.Namespace,
+            ObserverId = handler.Id,
+            EventSequenceId = handler.EventSequenceId,
+            Partition = partition,
+            RetryImmediately = retryImmediately
+        });
+
+        return response.ToClient();
+    }
+
+    /// <inheritdoc/>
     public Task<ReactorState> GetStateFor<TReactor>()
         where TReactor : IReactor
     {

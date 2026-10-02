@@ -42,10 +42,11 @@ public class an_evaluator : Specification
         TimeSpan failingFor,
         bool isQuarantined = false,
         int attemptCount = 3,
+        int? attemptsInCurrentBudget = null,
         string partition = "partition",
         FailureKind failureKind = FailureKind.Handling,
         string message = "It failed") =>
-        new(id, partition, _now - failingFor, _now - TimeSpan.FromSeconds(10), attemptCount, isQuarantined, failureKind, message);
+        new(id, partition, _now - failingFor, _now - TimeSpan.FromSeconds(10), attemptCount, attemptsInCurrentBudget ?? attemptCount, isQuarantined, failureKind, message);
 
     protected ObserverAlertSnapshot SnapshotOf(params FailedPartitionSnapshot[] failedPartitions) =>
         new(_observer, failedPartitions, false, AlertDisposition.Active, 10) { QuarantineEpisodeId = _defaultQuarantineEpisodeId };

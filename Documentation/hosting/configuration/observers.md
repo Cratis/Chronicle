@@ -25,7 +25,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | subscriberTimeout | number | 30 | How many seconds an observer waits for its subscriber to answer a batch before giving up on it. `0` waits indefinitely. See [Subscriber timeout](#subscriber-timeout) |
-| maxRetryAttempts | number | 10 | Maximum retry attempts for failed partitions (0 = infinite) |
+| maxRetryAttempts | number | 10 | Maximum retry attempts for failed partitions (0 = infinite). The limit applies per retry budget: clearing the quarantine of a partition starts a new budget, so it gets this many attempts again |
 | quarantineOnFailedPartitionCount | number | 0 | Quarantine the observer once this many of its partitions have failed (0 = never) |
 | quarantineOnFailedPartitionPercentage | number | 0.0 | Quarantine the observer once this share of its observed partitions have failed (0.0 = never) |
 | backoffDelay | number | 1 | Initial backoff delay in seconds |

@@ -170,6 +170,15 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Skipping failed partition recovery for partition {Partition} because the partition itself is quarantined")]
     internal static partial void SkippingFailedPartitionRecoveryBecausePartitionIsQuarantined(this ILogger<Observer> logger, Key partition);
 
+    [LoggerMessage(LogLevel.Information, "Clearing quarantine of partition {Partition} and resetting its retry budget by operator request")]
+    internal static partial void ClearingPartitionQuarantine(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Not clearing quarantine of partition {Partition} because it is not a failed partition")]
+    internal static partial void SkippingClearPartitionQuarantineBecausePartitionNotFound(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Not clearing quarantine of partition {Partition} because it is not quarantined")]
+    internal static partial void SkippingClearPartitionQuarantineBecausePartitionNotQuarantined(this ILogger<Observer> logger, Key partition);
+
     [LoggerMessage(LogLevel.Information, "Clearing {Count} failed partition(s) for observer by operator request")]
     internal static partial void ClearingFailedPartitions(this ILogger<Observer> logger, int count);
 

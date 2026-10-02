@@ -23,6 +23,23 @@ message ClearObserverQuarantine {
    string ObserverId = 3;
    string EventSequenceId = 4;
 }
+message ClearPartitionQuarantine {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ObserverId = 3;
+   string EventSequenceId = 4;
+   string Partition = 5;
+   bool RetryImmediately = 6;
+}
+enum ClearPartitionQuarantineOutcome {
+   Cleared = 0;
+   NotFound = 1;
+   NotQuarantined = 2;
+}
+message ClearPartitionQuarantineResponse {
+   ClearPartitionQuarantineOutcome Outcome = 1;
+   PartitionRecoveryOutcome RetryOutcome = 2;
+}
 message ConnectedClient {
    string ConnectionId = 1;
    string Version = 2;
@@ -200,6 +217,7 @@ service FailedPartitions {
 service Observers {
    rpc ClearFailedPartitions (.Cratis.Chronicle.Contracts.Observation.ClearFailedPartitions) returns (.google.protobuf.Empty);
    rpc ClearObserverQuarantine (.Cratis.Chronicle.Contracts.Observation.ClearObserverQuarantine) returns (.google.protobuf.Empty);
+   rpc ClearPartitionQuarantine (.Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantine) returns (ClearPartitionQuarantineResponse);
    rpc GetConnectedClientsForObserver (GetConnectedClientsForObserverRequest) returns (IEnumerable_ConnectedClient);
    rpc GetObserverInformation (GetObserverInformationRequest) returns (ObserverInformation);
    rpc GetObservers (AllObserversRequest) returns (IEnumerable_ObserverInformation);
