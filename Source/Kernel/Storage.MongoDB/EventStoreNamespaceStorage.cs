@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.Alerts;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -64,7 +65,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="sinks"><see cref="ISinks"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-    /// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
+    /// <param name="jobsStorage">The <see cref="Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
     /// <param name="options"><see cref="ChronicleOptions"/>.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStoreNamespaceStorage(
@@ -76,7 +77,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         ISinks sinks,
-        Cratis.Orleans.Storage.IJobsStorage jobsStorage,
+        Orleans.Storage.IJobsStorage jobsStorage,
         IOptions<ChronicleOptions> options,
         ILoggerFactory loggerFactory)
     {
@@ -95,6 +96,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Jobs = jobsStorage.GetFor(eventStore, @namespace).Jobs;
         JobSteps = jobsStorage.GetFor(eventStore, @namespace).JobSteps;
         Observers = new ObserverStateStorage(eventStoreNamespaceDatabase);
+        AlertIncidents = new Alerts.AlertIncidentsStorage(eventStoreNamespaceDatabase);
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
         InFlightEvents = new InFlightEventsStorage(eventStoreNamespaceDatabase);
         ObserverHandledCounts = new ObserverHandledCountsStorage(eventStoreNamespaceDatabase);
@@ -129,6 +131,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IObserverStateStorage Observers { get; }
+
+    /// <inheritdoc/>
+    public IAlertIncidentsStorage AlertIncidents { get; }
 
     /// <inheritdoc/>
     public IFailedPartitionsStorage FailedPartitions { get; }
