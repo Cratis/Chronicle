@@ -22,3 +22,6 @@ public record BuildCompleted(string BuildStatus);
 
 [EventType]
 public record TitleChanged(string Title);
+
+[EventType]
+public record VariantJoinedEvent(string FromValue, string JoinValue);

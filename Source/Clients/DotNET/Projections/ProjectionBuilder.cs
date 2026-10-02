@@ -37,7 +37,13 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     protected readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = [];
     protected readonly Dictionary<PropertyPath, ChildrenDefinition> _nestedDefinitions = [];
     protected readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = [];
+
+    /// <summary>
+    /// Holds grouped registrations already expanded into <see cref="_fromDefinitions"/>.
+    /// Do not also emit these through <see cref="ProjectionDefinition.FromEvery"/>.
+    /// </summary>
     protected readonly List<FromDerivativesDefinition> _fromDerivativesDefinitions = [];
+
     protected readonly Dictionary<EventType, RemovedWithDefinition> _removedWithDefinitions = [];
     protected readonly Dictionary<EventType, RemovedWithJoinDefinition> _removedWithJoinDefinitions = [];
     protected readonly List<string> _observedEventStores = [];
@@ -48,6 +54,8 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         ? Chronicle.Projections.AutoMap.Disabled
         : autoMap;
     protected ReadModelIdentifier _readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
+
+    readonly Dictionary<Events.EventType, FromDefinition> _explicitFromDefinitions = [];
 
     internal bool SubscribesToAllEvents { get; private set; }
 
@@ -83,24 +91,33 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
             throw new TypeIsNotAnEventType(typeof(TEvent));
         }
 
-        var eventTypesInProjection = type.GetEventTypes(eventTypes.AllClrTypes).Select(eventTypes.GetEventTypeFor).ToArray();
+        var eventTypesInProjection = type.GetEventTypes(eventTypes.AllClrTypes).ToArray();
 
         var builder = new FromBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
 
         builderCallback?.Invoke(builder);
         var fromDefinition = builder.Build();
 
-        if (eventTypesInProjection.Length > 1)
+        // Retain inherited mappings separately so a later base registration cannot replace an explicit one.
+        // An interface or unregistered base can expand to just one event type and is still inherited.
+        if (eventTypesInProjection.Any(_ => _ != type))
         {
             _fromDerivativesDefinitions.Add(new FromDerivativesDefinition
             {
-                EventTypes = eventTypesInProjection.ToContract(),
+                EventTypes = eventTypesInProjection.Select(eventTypes.GetEventTypeFor).ToContract(),
                 From = fromDefinition
             });
         }
-        else
+
+        foreach (var eventClrType in eventTypesInProjection)
         {
-            _fromDefinitions[eventTypesInProjection[0].ToContract()] = fromDefinition;
+            var eventType = eventTypes.GetEventTypeFor(eventClrType);
+            if (eventClrType == type)
+            {
+                _explicitFromDefinitions[eventType] = fromDefinition;
+            }
+
+            _fromDefinitions[GetFromEventType(eventType)] = BuildFromDefinition(eventType);
         }
 
         CollectEventStore(type);
@@ -218,6 +235,14 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     }
 
     /// <summary>
+    /// Gets the existing contract key for a From registration, comparing event types by value.
+    /// </summary>
+    /// <param name="eventType">The event type being registered.</param>
+    /// <returns>The existing key, or a new contract key if the event has not been registered.</returns>
+    protected EventType GetFromEventType(Events.EventType eventType) =>
+        _fromDefinitions.Keys.FirstOrDefault(_ => _.ToClient() == eventType) ?? eventType.ToContract();
+
+    /// <summary>
     /// Records the event store an observed event type belongs to, so the event sequence can be inferred.
     /// </summary>
     /// <param name="eventType">The event type being observed.</param>
@@ -228,5 +253,42 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         {
             _observedEventStores.Add(eventStoreName);
         }
+    }
+
+    FromDefinition BuildFromDefinition(Events.EventType eventType)
+    {
+        var inherited = _fromDerivativesDefinitions
+            .Where(_ => _.EventTypes.Any(candidate => candidate.ToClient() == eventType))
+            .Select(_ => _.From)
+            .ToList();
+        _explicitFromDefinitions.TryGetValue(eventType, out var explicitDefinition);
+
+        // Match the kernel's routing: an explicit From supplies the key, otherwise the first derivative does.
+        var routing = explicitDefinition ?? inherited[0];
+        var properties = new Dictionary<string, string>();
+        foreach (var definition in inherited)
+        {
+            foreach (var (property, expression) in definition.Properties)
+            {
+                properties[property] = expression;
+            }
+        }
+
+        // Unlike separate kernel subscriptions, one From cannot apply two expressions to the same property.
+        // Prefer the explicit mapping regardless of call order, without losing unrelated inherited mappings.
+        if (explicitDefinition is not null)
+        {
+            foreach (var (property, expression) in explicitDefinition.Properties)
+            {
+                properties[property] = expression;
+            }
+        }
+
+        return new()
+        {
+            Key = routing.Key,
+            ParentKey = routing.ParentKey,
+            Properties = properties
+        };
     }
 }
