@@ -85,6 +85,10 @@ public class CatchingUpInFlight(
                 state.CatchingUpPartitions.Add(partition);
                 var startResult = await jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
                     new(observerKey, definitionState.State.Type, partition, startFrom, definitionState.State.EventTypes));
+                if (await Observer.IsObserverQuarantined())
+                {
+                    return await Observer.GetState();
+                }
                 if (startResult?.TryGetResult(out _) is not true)
                 {
                     var error = startResult?.TryGetError(out var startError) is true ? startError : default;
@@ -99,6 +103,11 @@ public class CatchingUpInFlight(
             logger.FailedToCatchUpInFlightPartitions(ex);
             await requestQuarantine();
             return state;
+        }
+
+        if (await Observer.IsObserverQuarantined())
+        {
+            return await Observer.GetState();
         }
 
         await StateMachine.TransitionTo<Routing>();
