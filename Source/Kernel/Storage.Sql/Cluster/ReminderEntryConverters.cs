@@ -29,14 +29,6 @@ public static class ReminderEntryConverters
     }
 
     /// <summary>
-    /// Gets the composite key used by earlier versions, including oversized keys accepted by SQLite.
-    /// </summary>
-    /// <param name="grainId">The grain identifier.</param>
-    /// <param name="reminderName">The reminder name.</param>
-    /// <returns>The legacy row key.</returns>
-    internal static string GetLegacyRowKey(GrainId grainId, string reminderName) => $"{grainId}-{reminderName}";
-
-    /// <summary>
     /// Gets the hash a reminder is stored under, which is what the reminder service reads ranges of reminders by.
     /// </summary>
     /// <param name="grainId">The grain identifier.</param>
@@ -80,4 +72,12 @@ public static class ReminderEntryConverters
             StartAt = entry.StartAt.ToBinary(),
             Period = (long)entry.Period.TotalMilliseconds
         };
+
+    /// <summary>
+    /// Gets the composite key used by earlier versions, including oversized keys accepted by SQLite.
+    /// </summary>
+    /// <param name="grainId">The grain identifier.</param>
+    /// <param name="reminderName">The reminder name.</param>
+    /// <returns>The legacy row key.</returns>
+    internal static string GetLegacyRowKey(GrainId grainId, string reminderName) => $"{grainId}-{reminderName}";
 }

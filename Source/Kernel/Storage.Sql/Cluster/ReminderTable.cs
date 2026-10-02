@@ -116,6 +116,11 @@ public class ReminderTable(IDbContextFactory<ClusterDbContext> dbContextFactory)
         if (reminder is null && key != legacyKey)
         {
             reminder = await dbContext.Reminders.FindAsync(legacyKey);
+            if (reminder is not null && (reminder.GrainId != grainId.ToString() || reminder.ReminderName != reminderName))
+            {
+                // The old delimiter-based key can belong to a different pair. Never adopt that row.
+                return null;
+            }
         }
 
         return reminder;
