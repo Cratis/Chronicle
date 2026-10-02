@@ -84,6 +84,17 @@ internal sealed class ChronicleServerStartupTask(
             Execute);
     }
 
+    /// <summary>
+    /// Determines whether an observer's activation is required for startup.
+    /// </summary>
+    /// <param name="identifier">The observer identifier.</param>
+    /// <returns>Whether the observer must activate successfully.</returns>
+    /// <remarks>
+    /// Pattern capture is optional. Its subscription/recovery path begins the alert lifecycle, so neither
+    /// rehydration nor alert bootstrap may turn capture activation into a required startup step.
+    /// </remarks>
+    static bool IsRequiredObserver(ObserverId identifier) => identifier != PatternCapture.ObserverIdentifier;
+
     async Task Execute(CancellationToken cancellationToken)
     {
         // Apply patches first before anything else starts
@@ -236,7 +247,7 @@ internal sealed class ChronicleServerStartupTask(
         var states = await eventStoreStorage.GetNamespace(namespaceName).Observers.GetAll();
         var alreadyRehydrated = (await eventStoreStorage.Reducers.GetAll()).Select(_ => (ObserverId)_.Identifier.Value)
             .Concat((await eventStoreStorage.Reactors.GetAll()).Select(_ => (ObserverId)_.Identifier.Value)).ToHashSet();
-        foreach (var state in states.Where(_ => !alreadyRehydrated.Contains(_.Identifier)))
+        foreach (var state in states.Where(_ => IsRequiredObserver(_.Identifier) && !alreadyRehydrated.Contains(_.Identifier)))
         {
             if (!definitions.TryGetValue(state.Identifier, out var definition))
             {
@@ -266,10 +277,8 @@ internal sealed class ChronicleServerStartupTask(
             .Where(_ => knownObserverIds.Contains(_.Identifier))
             .Select(_ => new ObserverKey(_.Identifier, eventStore, namespaceName, _.EventSequenceId));
 
-        // Pattern capture is optional and already handled by the best-effort subscription step. Its
-        // persisted definition must not turn a capture activation failure into a required startup failure.
         var reactorObserverKeys = reactorDefinitions
-            .Where(_ => _.Identifier != PatternCapture.ObserverIdentifier && knownObserverIds.Contains(_.Identifier))
+            .Where(_ => IsRequiredObserver(_.Identifier) && knownObserverIds.Contains(_.Identifier))
             .Select(_ => new ObserverKey(_.Identifier, eventStore, namespaceName, _.EventSequenceId));
         var observerKeys = reducerObserverKeys.Concat(reactorObserverKeys).Distinct().ToArray();
 
