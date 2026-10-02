@@ -236,6 +236,7 @@ public class EventScenario(
                     services.AddSingleton<IEventLog>(new NoOpEventLog());
                     services.AddSingleton(defaults.EventTypes);
                     services.AddSingleton<KernelCore::Cratis.Chronicle.Events.IEventCompliance>(eventCompliance);
+                    services.AddSingleton<KernelCore::Cratis.Chronicle.Schemas.IJsonSchemaMetadataManager>(compliance.Manager);
                 }),
             storage,
             eventCompliance,

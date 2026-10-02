@@ -100,6 +100,14 @@ public interface IEventSequences
     [Operation]
     Task<CommandResult> Revise(ReviseRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the VerifyContent command.
+    /// </summary>
+    /// <param name = "request">The VerifyContent request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<VerifyContentResponse>> VerifyContent(VerifyContentRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the QueryEvents query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -1038,6 +1046,68 @@ public class ReviseRequest
     /// </summary>
     [ProtoMember(8)]
     public global::Cratis.Chronicle.Contracts.Sequences.Identity? CausedBy { get; set; }
+}
+
+/// <summary>
+/// Represents the VerifyContentRequest message.
+/// </summary>
+[ProtoContract]
+public class VerifyContentRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the SequenceNumber.
+    /// </summary>
+    [ProtoMember(4)]
+    public global::System.UInt64 SequenceNumber { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the EventType.
+    /// </summary>
+    [ProtoMember(5)]
+    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Content.
+    /// </summary>
+    [ProtoMember(6)]
+    public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSourceId.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? EventSourceId { get; set; }
+}
+
+/// <summary>
+/// Represents the VerifyContentResponse message.
+/// </summary>
+[ProtoContract]
+public class VerifyContentResponse
+{
+    /// <summary>
+    /// Gets or sets the Result.
+    /// </summary>
+    [ProtoMember(1)]
+    public global::Cratis.Chronicle.Contracts.Sequences.ContentVerificationResult Result { get; set; }
 }
 
 /// <summary>

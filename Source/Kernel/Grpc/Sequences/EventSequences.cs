@@ -89,6 +89,13 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Sequences.Revise((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.SequenceNumber, request.EventType.ToApi(), request.Content, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse>> VerifyContent(global::Cratis.Chronicle.Contracts.Sequences.VerifyContentRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.Sequences.ContentVerification, global::Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Sequences.VerifyContent((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (global::Cratis.Chronicle.Concepts.Events.EventSequenceNumber)request.SequenceNumber, request.EventType.ToApi(), request.Content, request.EventSourceId),
+            response => ToVerifyContentResponse(response));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>> AppendedEvents(global::Cratis.Chronicle.Contracts.Sequences.AppendedEventsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>(
             async () =>
@@ -254,6 +261,12 @@ internal sealed class EventSequences(
             IsSuccess = source.IsSuccess,
             SequenceNumber = (ulong)source.SequenceNumber,
             Error = (global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamError)source.Error
+        };
+
+    static global::Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse ToVerifyContentResponse(global::Cratis.Chronicle.Sequences.ContentVerification source) =>
+        new()
+        {
+            Result = (global::Cratis.Chronicle.Contracts.Sequences.ContentVerificationResult)source.Result
         };
 
     static global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse ToAppendedEventResponse(global::Cratis.Chronicle.Sequences.AppendedEvent source) =>

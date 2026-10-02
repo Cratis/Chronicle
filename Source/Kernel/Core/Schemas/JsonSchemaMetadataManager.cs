@@ -52,6 +52,26 @@ public class JsonSchemaMetadataManager(
         return result;
     }
 
+    /// <inheritdoc/>
+    public async Task<JsonObject?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
+    {
+        if (!schema.HasSchemaMetadata())
+        {
+            return (JsonObject)json.DeepClone();
+        }
+
+        try
+        {
+            return await new StrictJsonSchemaRelease(_propertyValueHandlers).Release(eventStore, eventStoreNamespace, schema, identifier, json);
+        }
+        catch (Exception exception)
+        {
+            // A failed release is an explicit unavailable result, never a partially released document.
+            logger.FailedToReleaseProperty(string.Empty, identifier, exception);
+            return null;
+        }
+    }
+
     static JsonNode RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
     {
         // A coarse schema metadata marker on a whole container is blob-encrypted to a single ciphertext string,
