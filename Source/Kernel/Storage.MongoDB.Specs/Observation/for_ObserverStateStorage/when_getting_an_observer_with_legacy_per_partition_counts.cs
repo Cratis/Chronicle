@@ -40,7 +40,7 @@ public class when_getting_an_observer_with_legacy_per_partition_counts(MongoDBFi
 
     async Task Establish()
     {
-        _databaseName = $"chronicle_observer_migration_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
         _database = _client.GetDatabase(_databaseName);
 

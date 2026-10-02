@@ -32,7 +32,7 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
     void Establish()
     {
         _eventType = new EventType("some-event", EventTypeGeneration.First);
-        _databaseName = $"chronicle_event_sequence_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
         var collection = database.GetCollection<Event>("event-log");

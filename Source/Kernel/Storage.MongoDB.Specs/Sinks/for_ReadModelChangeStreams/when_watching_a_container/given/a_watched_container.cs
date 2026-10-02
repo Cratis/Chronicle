@@ -22,7 +22,7 @@ public abstract class a_watched_container(string connectionString) : Specificati
 
     async Task Establish()
     {
-        _databaseName = $"chronicle_change_streams_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(connectionString);
         _database = _client.GetDatabase(_databaseName);
         await _database.GetCollection<BsonDocument>(ContainerName).InsertOneAsync(new BsonDocument("_id", "existing"));

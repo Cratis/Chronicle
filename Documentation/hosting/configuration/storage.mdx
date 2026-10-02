@@ -27,6 +27,26 @@ Configure the storage backend for Chronicle Server.
 }
 ```
 
+### Database-name prefix
+
+Set `storage.databaseNamePrefix` to isolate Chronicle's databases on a shared MongoDB server:
+
+```json
+{
+  "storage": {
+    "type": "MongoDB",
+    "connectionDetails": "mongodb://localhost:27017",
+    "databaseNamePrefix": "staging_"
+  }
+}
+```
+
+The prefix is prepended verbatim to every database name, including the global `chronicle+main` database, event stores, namespaces, read models, Orleans reminders, cluster membership, and jobs. For example, `chronicle+main` becomes `staging_chronicle+main`, and `Orders+es+Default` becomes `staging_Orders+es+Default`. All nodes in a cluster must use the same prefix.
+
+The default is an empty string: existing database names remain unchanged. Changing the prefix selects different databases; it does not rename or migrate existing data. The complete name, including the prefix, must satisfy MongoDB's naming rules and 63-byte limit. Choose a short prefix without spaces or MongoDB's forbidden characters.
+
+For environment-variable configuration, use `Cratis__Chronicle__Storage__DatabaseNamePrefix`. The development-only kernel reset preserves the global cluster database and, when a prefix is set, drops only other databases starting with that exact, case-sensitive prefix. Use a unique prefix when sharing a server; a prefix is a naming boundary, not a substitute for database permissions.
+
 ## PostgreSQL
 
 ```json
@@ -83,4 +103,5 @@ When you host Chronicle programmatically, select the in-memory backend with the 
 | --- | --- | --- | --- |
 | type | string | Yes | Storage type: `MongoDB`, `PostgreSql`, `MsSql`, `Sqlite`, or `InMemory` |
 | connectionDetails | string | Conditional | Connection string for the chosen storage backend. Required for all backends except `InMemory`, which ignores it |
+| databaseNamePrefix | string | No | Prefix prepended to every MongoDB database name. Defaults to empty; ignored by other storage backends |
 

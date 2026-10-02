@@ -22,7 +22,7 @@ public class and_a_nested_object_is_recreated_in_a_bulk_window(context ctx) : IC
 {
     public class context(MongoDBFixture fixture) : IAsyncLifetime
     {
-        readonly string _databaseName = $"chronicle_bulk_nested_specs_{Guid.NewGuid():N}";
+        readonly string _databaseName = MongoDBSpecDatabaseNames.New();
         readonly ObjectComparer _comparer = new();
         IMongoClient _client = default!;
         IMongoCollection<BsonDocument> _collection = default!;

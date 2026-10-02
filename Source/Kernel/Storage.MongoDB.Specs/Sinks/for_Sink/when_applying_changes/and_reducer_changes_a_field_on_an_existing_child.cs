@@ -49,7 +49,7 @@ public class and_reducer_changes_a_field_on_an_existing_child(context ctx) : ICl
 
         public async Task InitializeAsync()
         {
-            _databaseName = $"chronicle_sink_specs_{Guid.NewGuid():N}";
+            _databaseName = MongoDBSpecDatabaseNames.New();
             _client = new MongoClient(fixture.ConnectionString);
             _database = _client.GetDatabase(_databaseName);
             _schema = JsonSchema.FromType<Team>();

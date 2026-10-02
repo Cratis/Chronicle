@@ -85,7 +85,7 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
 
     async Task Establish()
     {
-        _databaseName = $"chronicle_sink_parity_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
         _schema = CreateSchema();

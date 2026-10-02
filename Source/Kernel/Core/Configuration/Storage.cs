@@ -17,4 +17,9 @@ public class Storage
     /// Gets the connection details for the storage.
     /// </summary>
     public string ConnectionDetails { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the prefix prepended to every MongoDB database name. Empty preserves the default names.
+    /// </summary>
+    public string DatabaseNamePrefix { get; init; } = string.Empty;
 }
