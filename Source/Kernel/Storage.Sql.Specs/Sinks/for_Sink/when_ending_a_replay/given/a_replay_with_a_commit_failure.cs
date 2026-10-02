@@ -19,6 +19,7 @@ public abstract class a_replay_with_a_commit_failure<THarness> : Contract.an_acc
     protected int? _revertCount;
     protected abstract bool FailAfterCommit { get; }
     protected int CommitAttempts => _failure.Attempts;
+    protected int MarkerCountBeforeRetry => _failure.MarkerCountBeforeRetry;
 
     commit_failure _failure;
 
@@ -58,6 +59,7 @@ public abstract class a_replay_with_a_commit_failure<THarness> : Contract.an_acc
 
         public bool Armed { get; set; }
         public int Attempts { get; private set; }
+        public int MarkerCountBeforeRetry { get; private set; }
 
         public override async ValueTask<DbTransaction> TransactionStartedAsync(DbConnection connection, TransactionEndEventData eventData, DbTransaction result, CancellationToken cancellationToken = default)
         {
@@ -66,6 +68,10 @@ public abstract class a_replay_with_a_commit_failure<THarness> : Contract.an_acc
                 _promotionContext ??= eventData.Context;
                 if (eventData.Context == _promotionContext && ++_starts > 1)
                 {
+                    await using var command = connection.CreateCommand();
+                    command.Transaction = result;
+                    command.CommandText = "SELECT COUNT(*) FROM chronicle_replay_promotions";
+                    MarkerCountBeforeRetry = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken), CultureInfo.InvariantCulture);
                     await beforeRetry().WaitAsync(TimeSpan.FromSeconds(10));
                 }
             }

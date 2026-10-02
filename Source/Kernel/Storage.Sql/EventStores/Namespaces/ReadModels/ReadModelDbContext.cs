@@ -70,11 +70,22 @@ public class ReadModelDbContext(
     /// </summary>
     public DbSet<DynamicReadModelEntity> Entries => Set<DynamicReadModelEntity>(tableName);
 
+    /// <summary>
+    /// Gets the completion markers sharing this context's promotion transaction.
+    /// </summary>
+    internal DbSet<ReplayPromotion> ReplayPromotions => Set<ReplayPromotion>();
+
     /// <inheritdoc/>
     public async Task EnsureTableExists()
     {
         await migrator.EnsureTableMigrated(tableName, this);
     }
+
+    /// <summary>
+    /// Creates the shared marker table before starting a promotion transaction.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal Task EnsureReplayPromotions() => migrator.EnsureReplayPromotions(this);
 
     /// <inheritdoc/>
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -95,7 +106,13 @@ public class ReadModelDbContext(
 
         var databaseType = Database.GetDatabaseType();
 
-        modelBuilder.SharedTypeEntity<DynamicReadModelEntity>(tableName, entity =>
+        modelBuilder.Entity<ReplayPromotion>(entity =>
+        {
+            entity.ToTable(WellKnownTableNames.ReplayPromotions);
+            entity.HasKey(promotion => promotion.Id).HasName($"PK_{WellKnownTableNames.ReplayPromotions}");
+            entity.Property(promotion => promotion.Id).HasMaxLength(64);
+        })
+        .SharedTypeEntity<DynamicReadModelEntity>(tableName, entity =>
         {
             entity.ToTable(tableName);
 

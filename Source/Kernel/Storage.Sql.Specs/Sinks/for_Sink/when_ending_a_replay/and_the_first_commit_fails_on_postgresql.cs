@@ -28,6 +28,7 @@ public class and_the_first_commit_fails_on_postgresql(PostgreSqlFixture fixture)
 
     [Fact] void should_roll_back_the_primary_rename_before_retrying() => _primaryBeforeRetry.ShouldEqual(1);
     [Fact] void should_roll_back_the_replay_rename_before_retrying() => _replayBeforeRetry.ShouldEqual(2);
+    [Fact] void should_roll_back_the_completion_marker_before_retrying() => MarkerCountBeforeRetry.ShouldEqual(0);
     [Fact] void should_complete_the_promotion() => _error.ShouldBeNull();
     [Fact] void should_retry_the_entire_transaction() => CommitAttempts.ShouldEqual(2);
     [Fact] void should_publish_the_rebuilt_state() => _primaryCount.ShouldEqual(2);
