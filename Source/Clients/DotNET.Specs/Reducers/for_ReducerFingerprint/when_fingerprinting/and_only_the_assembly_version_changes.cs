@@ -12,8 +12,10 @@ public class and_only_the_assembly_version_changes : Specification
 
     void Establish()
     {
-        _first = given.CompiledReducer.Compile(given.CompiledReducer.Simple);
-        _second = given.CompiledReducer.Compile(given.CompiledReducer.Simple, version: "2.3.4.5");
+        const string Members = "public ReadModel Reduce(Event @event, ReadModel current) => new(Helper.Apply(@event.Value) + Helper<int>.Apply(current.Value));";
+        const string Helpers = "public static class Helper { public static int Apply(int value) => value; } public static class Helper<T> { public static int Apply(int value) => value; }";
+        _first = given.CompiledReducer.Compile(Members, before: Helpers);
+        _second = given.CompiledReducer.Compile(Members, version: "2.3.4.5", before: Helpers);
     }
 
     void Because()

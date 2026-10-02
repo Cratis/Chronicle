@@ -427,7 +427,7 @@ public class Reducers : IReducers
                     EventSourceType = handler.ReducerType.GetEventSourceType().Value,
                     EventStreamType = handler.ReducerType.GetEventStreamType().Value
                 },
-                Hash = ReducerFingerprint.Create(handler.ReducerType)
+                Hash = GetFingerprint(handler.ReducerType)
             }
         };
 
@@ -484,6 +484,19 @@ public class Reducers : IReducers
                         catch (OperationCanceledException) { }
                     });
                 });
+    }
+
+    string GetFingerprint(Type reducerType)
+    {
+        try
+        {
+            return ReducerFingerprint.Create(reducerType);
+        }
+        catch (Exception exception)
+        {
+            _logger.ReducerFingerprintFailed(reducerType, exception);
+            return ReducerFingerprint.CreateFallback(reducerType);
+        }
     }
 
     async Task ObserverMethod(BehaviorSubject<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation)

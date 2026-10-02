@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Buffers.Binary;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -13,10 +14,10 @@ namespace Cratis.Chronicle.Reducers;
 /// Produces a stable fingerprint for the executable parts of a reducer definition.
 /// </summary>
 /// <remarks>
-/// Assembly identities and metadata tokens are excluded, not executable instructions. Changing compiler
-/// versions or optimization settings can still change the fingerprint. Compiler-generated names are retained
-/// to distinguish closures and their captured fields; changes to their compiler-assigned ordinals can also
-/// change the fingerprint. Bodies of helpers outside the reducer and its generated nested types are not hashed.
+/// Assembly versions, culture, keys and metadata tokens are excluded, not executable instructions or assembly
+/// simple names. Anonymous types and delegates are identified structurally. Other compiler-generated names are
+/// retained to distinguish closures and their captured fields. Changing compiler versions, optimization settings
+/// or closure ordinals can still change the fingerprint. Bodies of external helpers are not hashed.
 /// </remarks>
 static class ReducerFingerprint
 {
@@ -52,7 +53,16 @@ static class ReducerFingerprint
     }
 
     /// <summary>
-    /// Gets a recursive type identity without assembly or build metadata.
+    /// Creates a conservative, build-specific fingerprint when IL normalization fails.
+    /// </summary>
+    /// <param name="reducerType">The reducer type.</param>
+    /// <returns>The SHA-256 fingerprint.</returns>
+    /// <remarks>The MVID identifies the entire built module, including IL and signatures we could not normalize.</remarks>
+    internal static string CreateFallback(Type reducerType) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{reducerType.AssemblyQualifiedName}:{reducerType.Module.ModuleVersionId:D}")));
+
+    /// <summary>
+    /// Gets a recursive type identity with assembly simple names but without version or build metadata.
     /// </summary>
     /// <param name="type">The type.</param>
     /// <returns>The namespace-qualified type identity.</returns>
@@ -71,12 +81,26 @@ static class ReducerFingerprint
         {
             return $"method:{(type.IsUnmanagedFunctionPointer ? "unmanaged" : "managed")}({string.Join(',', type.GetFunctionPointerCallingConventions().Select(GetTypeIdentity))})({string.Join(',', type.GetFunctionPointerParameterTypes().Select(GetTypeIdentity))}):{GetTypeIdentity(type.GetFunctionPointerReturnType())}";
         }
+        if (type.IsDefined(typeof(CompilerGeneratedAttribute), false))
+        {
+            if (type.Name.StartsWith("<>f__AnonymousType", StringComparison.Ordinal))
+            {
+                // Preserve declaration order: property names, order and types define the anonymous shape.
+                var properties = type.GetProperties(DeclaredMembers).OrderBy(_ => _.MetadataToken);
+                return $"{type.Assembly.GetName().Name}::anonymous{{{string.Join(';', properties.Select(_ => $"{_.Name}:{GetTypeIdentity(_.PropertyType)}"))}}}";
+            }
+            if (type.Name.StartsWith("<>f__AnonymousDelegate", StringComparison.Ordinal) && type.BaseType == typeof(MulticastDelegate))
+            {
+                var invoke = type.GetMethod("Invoke")!;
+                return $"{type.Assembly.GetName().Name}::anonymous-delegate({string.Join(',', invoke.GetParameters().Select(GetAnonymousDelegateParameterIdentity))}):{GetParameterIdentity(invoke.ReturnParameter)}:{invoke.CallingConvention}";
+            }
+        }
         if (type.IsGenericType)
         {
-            return $"{type.GetGenericTypeDefinition().FullName}<{string.Join(',', type.GetGenericArguments().Select(GetTypeIdentity))}>";
+            return $"{GetNamedTypeIdentity(type.GetGenericTypeDefinition())}<{string.Join(',', type.GetGenericArguments().Select(GetTypeIdentity))}>";
         }
 
-        return type.FullName ?? type.Name;
+        return GetNamedTypeIdentity(type);
     }
 
     /// <summary>
@@ -115,6 +139,19 @@ static class ReducerFingerprint
         BinaryPrimitives.WriteInt32LittleEndian(bytes, value);
         hash.AppendData(bytes);
     }
+
+    static string GetAnonymousDelegateParameterIdentity(ParameterInfo parameter)
+    {
+        var defaultValue = (parameter.HasDefaultValue, parameter.RawDefaultValue) switch
+        {
+            (false, _) => "none",
+            (true, null) => "null",
+            (_, var value) => $"value:{Convert.ToString(value, CultureInfo.InvariantCulture)}"
+        };
+        return $"{parameter.Name}:{parameter.Attributes}:{GetParameterIdentity(parameter)}:params({parameter.IsDefined(typeof(ParamArrayAttribute), false)}):default({defaultValue})";
+    }
+
+    static string GetNamedTypeIdentity(Type type) => $"{type.Assembly.GetName().Name}::{type.FullName ?? type.Name}";
 
     static string GetParameterIdentity(ParameterInfo parameter) =>
         $"{GetTypeIdentity(parameter.ParameterType)} modreq({string.Join(',', parameter.GetRequiredCustomModifiers().Select(GetTypeIdentity))}) modopt({string.Join(',', parameter.GetOptionalCustomModifiers().Select(GetTypeIdentity))})";
