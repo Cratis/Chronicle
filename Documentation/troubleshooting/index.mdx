@@ -53,7 +53,20 @@ A retry request is not proof that recovery finished. Inspect the partition befor
 
 To find out about a stuck partition when it happens rather than when someone notices, see [Get alerted when observers stop processing](/chronicle/hosting/alerting-on-observer-failures/).
 
-A partition that ran out of retries before your fix was deployed is quarantined, and does **not** resume on its own. Inspect it with `failed-partitions show` before choosing how to resume it: an ordinary retry is refused for a quarantined partition, and a quarantined *observer* needs `observers clear-quarantine` first. Remember that every retry and replay runs the handler again, so a side effect the handler completed before it failed happens again unless you guard it; see [Delivery identity](/chronicle/reactors/delivery-identity/).
+A partition that ran out of retries before your fix was deployed is quarantined, and does **not** resume on its own. Inspect it with `failed-partitions show` first. An ordinary retry is refused for a quarantined partition, so recover it by clearing the quarantine of that one partition. Clearing starts a new retry budget for the partition, keeps its attempt history, and — when you ask for it — retries it straight away. A quarantined *observer* is a different state: it needs `observers clear-quarantine` first, and clearing a partition while the observer is quarantined reports that the retry was not started.
+
+`replay-partition` is not a way out for a reactor handler marked [`[OnceOnly]`](/chronicle/reactors/once-only/): the client skips those handlers for replayed events, so a replay never runs the handler that failed. Remember that every retry runs the handler again, so a side effect the handler completed before it failed happens again unless you guard it; see [Delivery identity](/chronicle/reactors/delivery-identity/).
+
+### Clear the quarantine of one reactor partition from a client
+
+```csharp
+var result = await reactors.ClearFailedPartitionQuarantineFor<MyReactor>(partition, retryImmediately: true);
+
+// result.Outcome:      Cleared, NotFound or NotQuarantined
+// result.RetryOutcome: Started, ObserverQuarantined, ... (only meaningful when retryImmediately is true)
+```
+
+Every refusal has its own outcome — nothing reports success when it changed nothing. The same operation is available on the `Observers` service as `ClearPartitionQuarantine`.
 
 ## A constraint is rejecting an append I expected to succeed
 
