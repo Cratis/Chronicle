@@ -6,17 +6,16 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_ensuring_indexes;
 
-public class and_indexes_already_exist : given.a_sink_with_an_existing_index
+public class and_the_collection_has_explicit_simple_collation : given.a_sink_with_an_existing_index
 {
-    void Establish() => _existingIndex["name"] = $"chronicle_idx_{_indexedProperty.Path}";
+    void Establish() => _collectionOptions["collation"] = new BsonDocument("locale", "simple");
 
     async Task Because() => await _sink.EnsureIndexes();
 
-    [Fact] void should_not_create_the_index() =>
+    [Fact]
+    void should_not_create_the_index() =>
         _indexManager.DidNotReceive().CreateOneAsync(
             Arg.Any<CreateIndexModel<BsonDocument>>(),
             Arg.Any<CreateOneIndexOptions>(),
             Arg.Any<CancellationToken>());
-    [Fact] void should_not_fetch_the_collection_collation() =>
-        _database.DidNotReceive().ListCollectionsAsync(Arg.Any<ListCollectionsOptions>(), Arg.Any<CancellationToken>());
 }

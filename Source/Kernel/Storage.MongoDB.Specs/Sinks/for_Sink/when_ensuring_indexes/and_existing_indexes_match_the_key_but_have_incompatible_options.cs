@@ -6,14 +6,14 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_ensuring_indexes;
 
-public class and_indexes_already_exist : given.a_sink_with_an_existing_index
+public class and_existing_indexes_match_the_key_but_have_incompatible_options : given.a_sink_with_an_existing_index
 {
-    void Establish() => _existingIndex["name"] = $"chronicle_idx_{_indexedProperty.Path}";
+    void Establish() => _existingIndex["sparse"] = true;
 
     async Task Because() => await _sink.EnsureIndexes();
 
-    [Fact] void should_not_create_the_index() =>
-        _indexManager.DidNotReceive().CreateOneAsync(
+    [Fact] void should_create_the_requested_index() =>
+        _indexManager.Received(1).CreateOneAsync(
             Arg.Any<CreateIndexModel<BsonDocument>>(),
             Arg.Any<CreateOneIndexOptions>(),
             Arg.Any<CancellationToken>());
