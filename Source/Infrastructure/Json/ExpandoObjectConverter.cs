@@ -28,11 +28,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     /// <inheritdoc/>
     public ExpandoObject ToExpandoObject(JsonObject document, JsonSchema schema) => ConvertToExpandoObject(document, schema, false);
 
-    static JsonSchema ResolveForConversion(JsonSchema schema)
+    static JsonSchema ResolveForConversion(JsonSchema schema, bool protectsValue = false)
     {
         try
         {
-            return schema.ResolveComposition();
+            return schema.ResolveComposition(protectsValue);
         }
         catch (UnresolvedSchemaProtection) when (!schema.HasSchemaMetadata())
         {
@@ -48,6 +48,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
         schema = ResolveForConversion(schema);
         var schemaProperties = schema.GetFlattenedProperties().ToList();
+        var preservesMemberPayloads = preserveWholeValueMembers || schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any();
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the expando object is preserved.
@@ -76,7 +77,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 sourceValue = expandoObjectAsDictionary.FirstOrDefault(_ => _.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value;
             }
 
-            var value = ConvertToJsonNode(sourceValue, property);
+            var value = ConvertToJsonNode(sourceValue, property, preservesMemberPayloads);
 
             if (value is null)
             {
@@ -93,9 +94,9 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             }
         }
 
-        if (preserveWholeValueMembers && (schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any()))
+        if (preserveWholeValueMembers || (schema.HasSchemaMetadata() && schema.PreservesUnprotectedUnionMembers()))
         {
-            var declared = schemaProperties.Select(_ => _.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var declared = schemaProperties.Select(_ => _.Name).ToHashSet(preserveWholeValueMembers ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
             foreach (var (name, value) in expandoObjectAsDictionary.Where(_ => !declared.Contains(_.Key)))
             {
                 jsonObject[name] = ConvertUnknownSchemaTypeToJsonValue(value);
@@ -112,6 +113,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         schema = ResolveForConversion(schema);
         var schemaProperties = schema.GetFlattenedProperties().ToList();
+        var preservesMemberPayloads = preserveWholeValueMembers || schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any();
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the document is preserved.
@@ -139,7 +141,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             object? value = null;
             if (sourceValue is not null)
             {
-                value = ConvertFromJsonNode(sourceValue, property);
+                value = ConvertFromJsonNode(sourceValue, property, preservesMemberPayloads);
             }
 
             value ??= ResolveForConversion(property).GetDefaultValueForSchema(typeFormats);
@@ -149,10 +151,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             }
         }
 
-        if (preserveWholeValueMembers && (schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any()))
+        if (preserveWholeValueMembers || (schema.HasSchemaMetadata() && schema.PreservesUnprotectedUnionMembers()))
         {
-            // A whole-value marker protects the complete payload, not just the declared members.
-            var declared = schemaProperties.Select(_ => _.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            // Whole protection retains the payload; an unprotected union must not lose members merely
+            // because a sibling now needs protection.
+            var declared = schemaProperties.Select(_ => _.Name).ToHashSet(preserveWholeValueMembers ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
             foreach (var (name, value) in document.Where(_ => !declared.Contains(_.Key)))
             {
                 expandoObjectAsDictionary[name] = ConvertUnknownSchemaTypeToClrType(value);
@@ -162,14 +165,16 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return expandoObject;
     }
 
-    JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty)
+    JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty, bool preserveWholeValueMembers = false)
     {
-        schemaProperty = ResolveForConversion(schemaProperty);
+        var selectActualType = !schemaProperty.HasReference && schemaProperty.AllOf.Count == 0;
+        schemaProperty = ResolveForConversion(schemaProperty, preserveWholeValueMembers);
+        preserveWholeValueMembers |= schemaProperty.GetComplianceMetadata().Any() || schemaProperty.GetSecurityMetadata().Any();
 
         // Compliance handlers replace protected scalar values with opaque strings while the registered schema
         // intentionally remains the schema of the plaintext event. Keep those strings opaque until the
         // compliance manager releases them instead of coercing ciphertext through the plaintext scalar type.
-        if (value is string compliantValue && schemaProperty.GetComplianceMetadata().Any())
+        if (value is string compliantValue && preserveWholeValueMembers)
         {
             return JsonValue.Create(compliantValue);
         }
@@ -181,10 +186,13 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         if (value is ExpandoObject expando)
         {
+            // A reference already selected its target. Selecting that target's union branch again would
+            // narrow the payload where the original converter preserved the entire referenced union.
+            var objectSchema = selectActualType ? schemaProperty.ActualTypeSchema : schemaProperty;
             return ConvertToJsonObject(
                 expando,
-                schemaProperty.IsArray ? schemaProperty.Item! : schemaProperty.ActualTypeSchema,
-                true);
+                schemaProperty.IsArray ? schemaProperty.Item! : objectSchema,
+                preserveWholeValueMembers);
         }
 
         // A coarse [PII] value on a whole list/array is blob-encrypted to a single ciphertext string,
@@ -203,7 +211,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             foreach (var item in enumerable)
             {
                 items.Add(itemSchema is not null
-                    ? ConvertToJsonNode(item, itemSchema)
+                    ? ConvertToJsonNode(item, itemSchema, preserveWholeValueMembers)
                     : ConvertUnknownSchemaTypeToJsonValue(item));
             }
             return new JsonArray([.. items]);
@@ -233,9 +241,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return ConvertToJsonNodeFromUnknownFormat(value, schemaProperty);
     }
 
-    object? ConvertFromJsonNode(JsonNode? jsonNode, JsonSchema schemaProperty)
+    object? ConvertFromJsonNode(JsonNode? jsonNode, JsonSchema schemaProperty, bool preserveWholeValueMembers = false)
     {
-        schemaProperty = ResolveForConversion(schemaProperty);
+        var selectActualType = !schemaProperty.HasReference && schemaProperty.AllOf.Count == 0;
+        schemaProperty = ResolveForConversion(schemaProperty, preserveWholeValueMembers);
+        preserveWholeValueMembers |= schemaProperty.GetComplianceMetadata().Any() || schemaProperty.GetSecurityMetadata().Any();
         if (jsonNode is null)
         {
             return null;
@@ -258,10 +268,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                     Globals.JsonSerializerOptions);
             }
 
+            var objectSchema = selectActualType ? schemaProperty.ActualTypeSchema : schemaProperty;
             return ConvertToExpandoObject(
                 childObject,
-                schemaProperty.IsArray ? schemaProperty.Item! : schemaProperty.ActualTypeSchema,
-                true);
+                schemaProperty.IsArray ? schemaProperty.Item! : objectSchema,
+                preserveWholeValueMembers);
         }
 
         if (jsonNode is JsonArray array)
@@ -272,7 +283,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             {
                 return array.Select(ConvertUnknownSchemaTypeToClrType).ToArray();
             }
-            return array.Select(_ => ConvertFromJsonNode(_, schemaProperty.Item!)).ToArray();
+            return array.Select(_ => ConvertFromJsonNode(_, schemaProperty.Item!, preserveWholeValueMembers)).ToArray();
         }
 
         if (typeFormats.IsKnown(schemaProperty.Format!))

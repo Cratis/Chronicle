@@ -203,10 +203,15 @@ public class JsonSchemaMetadataManager(
                 var propertyPath = string.IsNullOrEmpty(path) ? property : $"{path}.{property}";
                 var flattenedProperties = schema.GetFlattenedProperties();
 
-                JsonSchema propertySchema = flattenedProperties.SingleOrDefault(_ => _.Name == property) ??
-                    throw new SchemaPropertyNotFoundInSchema(actionName, propertyPath, identifier, flattenedProperties.Select(_ => _.Name));
+                JsonSchema? propertySchema = flattenedProperties.SingleOrDefault(_ => _.Name == property);
+                if (propertySchema is null && schema.PreservesUnprotectedUnionMembers() &&
+                    !flattenedProperties.Any(_ => _.Name.Equals(property, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+                if (propertySchema is null) throw new SchemaPropertyNotFoundInSchema(actionName, propertyPath, identifier, flattenedProperties.Select(_ => _.Name));
                 if (metadataForContainer.Length == 0 && propertySchema.IsUnprotectedSchemaValue()) continue;
-                propertySchema = propertySchema.ResolveComposition();
+                propertySchema = propertySchema.ResolveComposition(protectsValue: metadataForContainer.Length > 0);
 
                 var handlerApplied = false;
                 var protection = MetadataAcrossCategories(propertySchema).Concat(metadataForContainer).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();

@@ -934,10 +934,10 @@ public class JsonSchema
         if (!HasReference && Properties.Count == 0 && AllOf.Count == 0 && (AnyOf.Count > 0 || OneOf.Count > 0) && this.HasSchemaMetadata())
         {
             var actual = this.ResolveComposition();
-            if (!ReferenceEquals(actual, this))
-            {
-                actual.CollectPropertiesInto(properties, references);
-            }
+
+            // Composition has already merged references and allOf. A preserved union may still carry
+            // metadata on items or dynamic members; resolving fresh wrappers again would never terminate.
+            properties.AddRange(actual.Properties.Values);
         }
     }
 
@@ -958,11 +958,16 @@ public class JsonSchema
             return root;
         }
 
-        if (!fragment.StartsWith('/'))
+        var anchorName = Uri.UnescapeDataString(fragment);
+        if ((char.IsAsciiLetter(anchorName[0]) || anchorName[0] == '_') &&
+            anchorName.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '.' or '_') &&
+            FindAnchor(root.Node, anchorName) is { } anchor)
         {
-            var anchor = FindAnchor(root.Node, Uri.UnescapeDataString(fragment));
-            return anchor is null ? null : new JsonSchema((JsonObject)anchor.DeepClone(), root);
+            return new JsonSchema((JsonObject)anchor.DeepClone(), root);
         }
+
+        // Keep the legacy pointer fallback, including fragments without a leading slash and plain-name
+        // root keys for which no anchor exists.
 
         // Resolve the fragment as a JSON Pointer (RFC 6901) into the root document. This covers both
         // definition references (#/$defs/<name>, #/definitions/<name>) and the in-document pointers that
