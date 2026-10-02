@@ -67,7 +67,12 @@ public class all_dependencies : Specification
         _identityProvider = Substitute.For<IIdentityProvider>();
         _reducerObservers = Substitute.For<IReducerObservers>();
 
-        _reducers = new Reducers(
+        _reducers = CreateReducers();
+    }
+
+    protected Reducers CreateReducers()
+    {
+        var reducers = new Reducers(
             _eventStore,
             _clientArtifacts,
             _serviceProvider,
@@ -83,9 +88,10 @@ public class all_dependencies : Specification
 
         // Use reflection to set the private handler fields
         var handlersByTypeField = typeof(Reducers).GetField("_handlersByType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        handlersByTypeField?.SetValue(_reducers, _handlersByType);
+        handlersByTypeField?.SetValue(reducers, _handlersByType);
 
         var handlersByModelTypeField = typeof(Reducers).GetField("_handlersByModelType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        handlersByModelTypeField?.SetValue(_reducers, _handlersByModelType);
+        handlersByModelTypeField?.SetValue(reducers, _handlersByModelType);
+        return reducers;
     }
 }
