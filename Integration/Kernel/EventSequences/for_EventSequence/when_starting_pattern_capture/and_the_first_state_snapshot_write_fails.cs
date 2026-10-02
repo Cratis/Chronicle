@@ -20,6 +20,7 @@ public class and_the_first_state_snapshot_write_fails(context context) : Given<c
         public bool AppendSucceeded;
         public bool CompletionSucceeded;
         public bool IsSubscribed;
+        public IEnumerable<string> OutstandingObservers;
         public int FailedStateWrites;
         public KernelEventSequenceNumber PersistedSequenceNumber;
 
@@ -30,13 +31,15 @@ public class and_the_first_state_snapshot_write_fails(context context) : Given<c
             var append = await _store.EventLog.Append("customer", new given.CustomerNamed("First"));
             AppendSucceeded = append.IsSuccess;
             await _control.SubscriptionCompleted.Task.WaitAsync(TimeSpan.FromSeconds(30));
-            CompletionSucceeded = (await append.WaitForCompletion(TimeSpan.FromSeconds(30))).IsSuccess;
             var grainFactory = Services.GetRequiredService<IGrainFactory>();
             var observer = grainFactory.GetGrain<KernelObserver>(new KernelObserverKey(PatternCapture.ObserverIdentifier, _key.EventStore, _key.Namespace, _key.EventSequenceId));
             IsSubscribed = (await observer.GetSubscription()).IsSubscribed;
             FailedStateWrites = _control.FailedStateWrites;
             var storage = Services.GetRequiredService<IStorage>();
             PersistedSequenceNumber = (await storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace).GetEventSequence(_key.EventSequenceId).GetState()).SequenceNumber;
+            var completion = await append.WaitForCompletion(TimeSpan.FromSeconds(30));
+            CompletionSucceeded = completion.IsSuccess;
+            OutstandingObservers = completion.OutstandingObservers;
         }
     }
 
@@ -45,4 +48,5 @@ public class and_the_first_state_snapshot_write_fails(context context) : Given<c
     [Fact] void should_not_require_a_persisted_snapshot() => Context.PersistedSequenceNumber.ShouldEqual(KernelEventSequenceNumber.First);
     [Fact] void should_subscribe_pattern_capture() => Context.IsSubscribed.ShouldBeTrue();
     [Fact] void should_complete_without_another_append() => Context.CompletionSucceeded.ShouldBeTrue();
+    [Fact] void should_leave_no_observers_outstanding() => Context.OutstandingObservers.ShouldBeEmpty();
 }

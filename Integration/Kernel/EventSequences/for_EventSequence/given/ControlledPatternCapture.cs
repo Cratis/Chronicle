@@ -19,7 +19,16 @@ public class ControlledPatternCapture(PatternCapture inner, PatternCaptureContro
         var isTarget = eventStore == control.Key.EventStore && @namespace == control.Key.Namespace;
         if (isTarget)
         {
+            control.SubscriptionAttempts++;
             control.SubscriptionStarted.TrySetResult();
+            if (control.SubscriptionAttempts >= 4)
+            {
+                control.RetriedBeyondCollectionAge.TrySetResult();
+            }
+            if (control.FailSubscription)
+            {
+                throw new IOException("Pattern capture dependencies are unavailable.");
+            }
             if (control.HoldSubscription)
             {
                 await control.SubscriptionReleased.Task;

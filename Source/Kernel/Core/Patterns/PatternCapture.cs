@@ -70,17 +70,8 @@ public class PatternCapture(
         await SubscribeToRegisteredEventTypes(eventStore, @namespace, hasDurableEvents: false);
 
     /// <inheritdoc/>
-    public async Task<bool> EnsureSubscribedForDurableAppend(EventStoreName eventStore, EventStoreNamespaceName @namespace)
-    {
-        var key = new ObserverKey(ObserverIdentifier, eventStore, @namespace, EventSequenceId.Log);
-        var subscription = await grainFactory.GetGrain<IObserver>(key).GetSubscription();
-        if (subscription.IsSubscribed)
-        {
-            return true;
-        }
-
-        return await SubscribeToRegisteredEventTypes(eventStore, @namespace, hasDurableEvents: true);
-    }
+    public async Task<bool> EnsureSubscribedForDurableAppend(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+        await SubscribeToRegisteredEventTypes(eventStore, @namespace, hasDurableEvents: true);
 
     async Task<bool> SubscribeToRegisteredEventTypes(EventStoreName eventStore, EventStoreNamespaceName @namespace, bool hasDurableEvents)
     {
@@ -112,12 +103,17 @@ public class PatternCapture(
             false));
 
         var observer = grainFactory.GetGrain<IObserver>(key);
-        await observer.Subscribe<IPatternCaptureSubscriber>(
-            ObserverType.Reactor,
-            eventTypes,
-            localSiloDetails.SiloAddress,
-            null,
-            false);
+        if (hasDurableEvents)
+        {
+            // Unlike GetSubscription (AlwaysInterleave), this queues behind any Subscribe already in
+            // progress and completes only once initialization succeeds. Queued ensures then become no-ops.
+            await observer.EnsureSubscribed<IPatternCaptureSubscriber>(ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, null, false);
+        }
+        else
+        {
+            // Explicit registration still replaces the definition when the store's event types change.
+            await observer.Subscribe<IPatternCaptureSubscriber>(ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, null, false);
+        }
 
         return true;
     }

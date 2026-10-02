@@ -64,5 +64,5 @@ public class and_pattern_capture_job_resumption_fails : given.an_observer
     [Fact] void should_retry_without_another_append() => _retrySucceeded.ShouldBeTrue();
     [Fact] void should_finish_initializing_the_subscription() => _subscribedAfterRetry.ShouldBeTrue();
     [Fact] void should_resume_jobs_on_the_retry() => _resumeAttempts.ShouldEqual(2);
-    [Fact] void should_not_initialize_a_completed_subscription_again() => _eventTypesStorage.Received(2).GetLatestForAllEventTypes();
+    [Fact] void should_not_initialize_a_completed_subscription_again() => _eventTypesStorage.Received(2).GetFor(Arg.Any<IEnumerable<EventType>>());
 }

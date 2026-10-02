@@ -20,5 +20,5 @@ public class and_the_state_snapshot_is_missing : given.a_pattern_capture
 
     [Fact] void should_report_a_subscription() => _subscribed.ShouldBeTrue();
     [Fact] async Task should_not_depend_on_the_state_snapshot() => await _namespaceStorage.DidNotReceive().HasData();
-    [Fact] async Task should_subscribe_the_observer() => await _observer.Received(1).Subscribe<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), false, Arg.Any<ObserverFilters?>());
+    [Fact] async Task should_subscribe_the_observer() => await _observer.Received(1).EnsureSubscribed<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), false);
 }

@@ -107,6 +107,28 @@ public interface IObserver : IGrainWithStringKey
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
+    /// Ensure a subscription is fully initialized, without replacing an existing subscription.
+    /// </summary>
+    /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>
+    /// <param name="type">The observer type.</param>
+    /// <param name="eventTypes">The event types to subscribe to when unsubscribed.</param>
+    /// <param name="siloAddress">The subscriber's silo address.</param>
+    /// <param name="subscriberArgs">Optional subscription arguments.</param>
+    /// <param name="isReplayable">Whether the observer supports replay.</param>
+    /// <returns>A task completed only after subscription initialization succeeds.</returns>
+    /// <remarks>
+    /// Deliberately not interleaving: concurrent calls queue behind Subscribe and one another. After a
+    /// successful initialization they are no-ops; after a failure the next call retries Subscribe.
+    /// </remarks>
+    Task EnsureSubscribed<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        object? subscriberArgs = default,
+        bool isReplayable = true)
+        where TObserverSubscriber : IObserverSubscriber;
+
+    /// <summary>
     /// Subscribe to all event types in the observer, respecting retirement during automatic recovery.
     /// </summary>
     /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>

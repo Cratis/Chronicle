@@ -5,6 +5,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Setup;
+using Orleans.Configuration;
 using Orleans.Storage;
 
 using KernelChronicleBuilder = Cratis.Chronicle.Configuration.IChronicleBuilder;
@@ -25,9 +26,15 @@ public class a_log_with_controlled_pattern_capture(PatternCaptureFixture fixture
     protected override Action<KernelChronicleBuilder> GetStorageConfigurator(string mongoServer) => builder =>
     {
         builder.WithMongoDB($"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true", Constants.EventStore);
+        builder.SiloBuilder.Configure<GrainCollectionOptions>(options =>
+        {
+            options.CollectionQuantum = TimeSpan.FromSeconds(1);
+            options.ClassSpecificCollectionAge[PatternCaptureControl.EventSequenceGrainType] = TimeSpan.FromSeconds(10);
+        });
         builder.SiloBuilder.ConfigureServices(services =>
         {
             services.AddSingleton<PatternCaptureControl>();
+            services.AddSingleton<IOutgoingGrainCallFilter, PatternCaptureCalls>();
             services.AddSingleton<IPatternCapture>(provider => new ControlledPatternCapture(
                 ActivatorUtilities.CreateInstance<PatternCapture>(provider), provider.GetRequiredService<PatternCaptureControl>()));
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.EventSequences, (provider, _) =>
@@ -45,5 +52,10 @@ public class a_log_with_controlled_pattern_capture(PatternCaptureFixture fixture
         _control = Services.GetRequiredService<PatternCaptureControl>();
     }
 
-    void Destroy() => _control?.SubscriptionReleased.TrySetResult();
+    void Destroy()
+    {
+        _control?.SubscriptionReleased.TrySetResult();
+        _control?.InitializationReleased.TrySetResult();
+        _control?.FailSubscription = false;
+    }
 }

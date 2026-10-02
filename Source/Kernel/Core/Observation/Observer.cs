@@ -379,11 +379,26 @@ public partial class Observer(
         }
         catch
         {
-            // Publishing a subscription before initialization finishes must not make a failed first
-            // attempt look ready. Pattern capture's background retry relies on this readiness check.
+            // The subscription is needed during initialization. Restore it on failure so a queued
+            // EnsureSubscribed retries instead of mistaking this attempt for a completed subscription.
             _subscription = previousSubscription;
             throw;
         }
+    }
+
+    /// <inheritdoc/>
+    public Task EnsureSubscribed<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        object? subscriberArgs = null,
+        bool isReplayable = true)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        ThrowIfSealed();
+        return _subscription.IsSubscribed
+            ? Task.CompletedTask
+            : Subscribe<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable);
     }
 
     /// <inheritdoc/>

@@ -131,6 +131,11 @@ public class EventSequence(
 
         await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
+
+        if (State.SequenceNumber > EventSequenceNumber.First)
+        {
+            SchedulePatternCaptureSubscription();
+        }
     }
 
     /// <inheritdoc/>
@@ -837,9 +842,10 @@ public class EventSequence(
             return;
         }
 
-        // Namespace registration happens before the first append, while HasData can still be false.
-        // Subscribe only after events are durable, in a separate turn so subscription/catch-up cannot
-        // delay or fail the append. A transient subscription failure must recover even if no more events arrive.
+        // A durable append (or an activation rebuilt from the event tail) arms this retry. Keep the
+        // activation alive until the serialized ensure completes initialization, then release the timer.
+        // Failures, including caller timeouts, leave it armed; a forced deactivation re-arms on activation.
+        // Interleaving lets subscription/catch-up call this grain without blocking subsequent appends.
         _patternCaptureSubscriptionTimer = this.RegisterGrainTimer(
             async _ =>
             {
@@ -857,7 +863,7 @@ public class EventSequence(
                     logger.FailedSubscribingPatternCapture(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, ex);
                 }
             },
-            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = TimeSpan.FromSeconds(5), Interleave = true });
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = TimeSpan.FromSeconds(5), Interleave = true, KeepAlive = true });
     }
 
     async Task SpillAppendedEventsQueuesToCatchup()
