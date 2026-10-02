@@ -40,6 +40,7 @@ public class when_reading_state : given.the_provider
     [Fact] void should_get_failed_partitions() => eventStoreNamespaceStorage.FailedPartitions.Received(1);
     [Fact] void should_get_actual_failed_partitions() => failedPartitionsStorage.Received(1).GetFor(_observerKey.ObserverId);
     [Fact] void should_set_identifier() => _state.State.Identifier.ShouldEqual(_observerKey.ObserverId);
+    [Fact] void should_report_that_the_record_exists() => _state.RecordExists.ShouldBeTrue();
     [Fact] void should_set_failed_partition_count_to_actual_count() => _state.State.FailedPartitionCount.ShouldEqual((FailedPartitionCount)2);
     [Fact] void should_set_failed_partitions_to_actual_partitions() => _state.State.FailedPartitions.Select(_ => _.Partition).ShouldContainOnly([(Key)"partition-1", (Key)"partition-2"]);
 }

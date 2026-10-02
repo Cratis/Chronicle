@@ -46,7 +46,7 @@ public partial class Observer
             }
 
             _metrics?.PartitionRetryAttempt();
-            if (State.RunningState != ObserverRunningState.Quarantined)
+            if (!IsQuarantined)
             {
                 quarantineObserver = ShouldQuarantineObserver(config);
                 if (!quarantineObserver)
@@ -118,7 +118,7 @@ public partial class Observer
     {
         ThrowIfSealed();
         if (IsRetired) return PartitionRecoveryOutcome.PartitionNotFound;
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
             return PartitionRecoveryOutcome.ObserverQuarantined;
@@ -302,7 +302,7 @@ public partial class Observer
     async Task StartRecoverJobForFailedPartition(FailedPartition failedPartition)
     {
         if (IsRetired || _removed) return;
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
             return;

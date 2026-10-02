@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Alerts;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
 
 namespace Cratis.Chronicle.Observation;
@@ -29,7 +28,7 @@ public partial class Observer
     /// </remarks>
     async Task CheckStrandedSubscription()
     {
-        if (State.RunningState == ObserverRunningState.Quarantined ||
+        if (IsQuarantined ||
             State.IsReplaying ||
             State.CatchingUpPartitions.Count > 0 ||
             _isPreparingCatchup ||
@@ -38,13 +37,12 @@ public partial class Observer
             return;
         }
 
-        if (await _appendedEventsQueues.IsSubscribed(_observerKey) ||
-            State.RunningState == ObserverRunningState.Quarantined)
+        if (await _appendedEventsQueues.IsSubscribed(_observerKey) || IsQuarantined)
         {
             return;
         }
 
-        if (await HasRunningCatchupJob() || State.RunningState == ObserverRunningState.Quarantined)
+        if (await HasRunningCatchupJob() || IsQuarantined)
         {
             return;
         }
@@ -89,10 +87,10 @@ public partial class Observer
     /// </remarks>
     async Task<bool> CheckStrandedCatchupPreparation()
     {
-        if (State.RunningState == ObserverRunningState.Quarantined ||
+        if (IsQuarantined ||
             !_isPreparingCatchup ||
             await HasRunningCatchupJob() ||
-            State.RunningState == ObserverRunningState.Quarantined)
+            IsQuarantined)
         {
             return false;
         }
@@ -109,7 +107,7 @@ public partial class Observer
         }
 
         var config = await configurationProvider.GetFor(_observerKey);
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             return false;
         }

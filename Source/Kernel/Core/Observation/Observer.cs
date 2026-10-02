@@ -76,6 +76,7 @@ public partial class Observer(
     bool _stateWritingSuspended;
     bool _resumingQuarantine;
     bool _subscriptionSetupFailed;
+    bool _isQuarantined;
 
     /// <summary>
     /// Set once the observer has been removed, so nothing this activation does afterwards writes it back.
@@ -108,6 +109,11 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override Type InitialState => typeof(Routing);
 
+    /// <summary>
+    /// Gets whether the activation is quarantined, independently of reloadable stored-state snapshots.
+    /// </summary>
+    bool IsQuarantined => _isQuarantined;
+
     ObserverDefinition Definition => observerDefinition.State;
 
     FailedPartitions Failures => failures.State;
@@ -124,6 +130,7 @@ public partial class Observer(
     {
         _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
         _observerId = _observerKey.ObserverId;
+        State = State with { Identifier = _observerId };
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
@@ -193,7 +200,7 @@ public partial class Observer(
     public Task<bool> HasFailedPartitions() => Task.FromResult(Failures.HasFailedPartitions);
 
     /// <inheritdoc/>
-    public Task<bool> IsObserverQuarantined() => Task.FromResult(State.RunningState == ObserverRunningState.Quarantined);
+    public Task<bool> IsObserverQuarantined() => Task.FromResult(IsQuarantined);
 
     /// <inheritdoc/>
     public Task<IEnumerable<Key>> GetFailedPartitionKeys() => Task.FromResult(Failures.Partitions.Select(p => p.Partition));
@@ -202,7 +209,7 @@ public partial class Observer(
     public async Task ClearObserverQuarantine()
     {
         ThrowIfSealed();
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             await ReviveFromQuarantine();
         }
@@ -444,7 +451,7 @@ public partial class Observer(
         }
 
         await UnregisterReminderNamed(reminderName);
-        if (IsRetired || _removed || State.RunningState == ObserverRunningState.Quarantined)
+        if (IsRetired || _removed || IsQuarantined)
         {
             return;
         }
@@ -540,6 +547,7 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override async Task OnBeforeEnteringState(IState<ObserverState> state)
     {
+        _isQuarantined = state is QuarantinedObserver;
         await _alertMutationLock.WaitAsync();
         try
         {
@@ -580,6 +588,13 @@ public partial class Observer(
         try
         {
             if (_removed || _stateWritingSuspended || !_observerExists) return;
+
+            // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
+            // so any write while quarantined persists the quarantine rather than a stale active snapshot.
+            if (IsQuarantined)
+            {
+                State = State with { RunningState = ObserverRunningState.Quarantined };
+            }
 
             // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
             // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
@@ -657,12 +672,28 @@ public partial class Observer(
             // Recovery retains live progress rather than reloading a stale persisted position.
             if (!recovering)
             {
+                var wasQuarantined = IsQuarantined;
                 await ReadStateAsync();
-                await observerDefinition.ReadStateAsync();
-                await failures.ReadStateAsync();
-                if (await GetCurrentState() is QuarantinedObserver)
+
+                // Missing records retain the unspecified identifier until the activation supplies its own identity.
+                // An existing record, even a stale Active snapshot, never invalidates activation-owned quarantine.
+                var storageWasReset = State.Identifier == ObserverId.Unspecified;
+                State = State with { Identifier = _observerId };
+                if (IsQuarantined)
                 {
                     State = State with { RunningState = ObserverRunningState.Quarantined };
+                }
+
+                await observerDefinition.ReadStateAsync();
+                await failures.ReadStateAsync();
+                if (storageWasReset && wasQuarantined && IsQuarantined)
+                {
+                    // The quarantine belonged to a wiped world. Discard it only after all state has been reloaded,
+                    // so routing cannot act on stale definitions or failures from that world.
+                    _isPreparingCatchup = false;
+                    _catchupRecoveryAttempts = 0;
+                    _subscription = ObserverSubscription.Unsubscribed;
+                    await TransitionTo<Routing>();
                 }
             }
 
@@ -829,7 +860,7 @@ public partial class Observer(
         }
 
         await ResumeJobs();
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             return;
         }
@@ -843,17 +874,16 @@ public partial class Observer(
 
     async Task ResumeJobs()
     {
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             return;
         }
 
         var unfilteredJobs = await _jobsManager.GetUnfinishedJobs();
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             return;
         }
-
 
         // Explicitly do not resume replay jobs.
         var resumeTasks = unfilteredJobs
@@ -861,7 +891,7 @@ public partial class Observer(
                           observerJobRequest is not ReplayObserverRequest &&
                           ShouldResumeJob(job.Status) &&
                           observerJobRequest.ObserverKey == _subscription.ObserverKey)
-            .Select(job => State.RunningState == ObserverRunningState.Quarantined
+            .Select(job => IsQuarantined
                 ? Task.CompletedTask
                 : _jobsManager.Resume(job.Id));
         await Task.WhenAll(resumeTasks);
