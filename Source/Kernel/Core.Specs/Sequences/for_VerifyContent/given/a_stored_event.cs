@@ -1,0 +1,39 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Cratis.Chronicle.Sequences.for_VerifyContent.given;
+
+public class a_stored_event : Specification
+{
+    protected IStorage _storage;
+    protected IEventCursor _cursor;
+    protected JsonSchemaMetadataManager _manager;
+    protected Concepts.Events.AppendedEvent _stored;
+    protected VerifyContent _command;
+    protected ContentVerification _result;
+
+    void Establish()
+    {
+        _storage = Substitute.For<IStorage>();
+        _cursor = Substitute.For<IEventCursor>();
+        _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(), NullLogger<JsonSchemaMetadataManager>.Instance);
+        _command = new("store", "tenant", "log", EventSequenceNumber.First, new("event", 1, false), "{\"value\":42}");
+        _stored = Concepts.Events.AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(new("event", 2), EventSequenceNumber.First) with
+        {
+            GenerationalContent = new Dictionary<int, string> { [1] = "{\"value\":42}", [2] = "{\"renamed\":42}" }
+        };
+        _storage.GetEventStore("store").GetNamespace("tenant").GetEventSequence("log")
+            .GetRange(EventSequenceNumber.First, EventSequenceNumber.First).Returns(_cursor);
+        _cursor.MoveNext().Returns(true);
+        _cursor.Current.Returns(_ => [_stored]);
+        _storage.GetEventStore("store").EventTypes.HasFor("event", 1U).Returns(true);
+        _storage.GetEventStore("store").EventTypes.GetFor("event", 1U).Returns(new EventTypeSchema(new("event", 1), EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema()));
+    }
+}

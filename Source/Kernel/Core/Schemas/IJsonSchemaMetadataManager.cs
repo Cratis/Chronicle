@@ -66,4 +66,15 @@ public interface IJsonSchemaMetadataManager
     /// <exception cref="StrictSchemaMetadataReleaseNotSupported">The implementation does not support strict release.</exception>
     Task<JsonObject> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json) =>
         throw new StrictSchemaMetadataReleaseNotSupported();
+
+    /// <summary>
+    /// Releases a document without substituting empty values for unavailable protected content.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="schema">The exact generation's schema.</param>
+    /// <param name="identifier">The protection key identifier.</param>
+    /// <param name="json">The complete stored document.</param>
+    /// <returns>The fully released document, or null if any part cannot be released.</returns>
+    Task<JsonObject?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json) => Task.FromResult<JsonObject?>(null);
 }

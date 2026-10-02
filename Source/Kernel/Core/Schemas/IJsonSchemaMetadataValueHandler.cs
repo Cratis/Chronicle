@@ -59,4 +59,14 @@ public interface IJsonSchemaMetadataValueHandler
     /// <returns>The released or confirmed erased value.</returns>
     Task<JsonNode> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
         Release(eventStore, eventStoreNamespace, identifier, value);
+
+    /// <summary>
+    /// Releases a value only when its complete original content can be recovered.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The protection key identifier.</param>
+    /// <param name="value">The protected value.</param>
+    /// <returns>The released value, or null when release cannot be proven. Unsupported handlers fail closed.</returns>
+    Task<JsonNode?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) => Task.FromResult<JsonNode?>(null);
 }

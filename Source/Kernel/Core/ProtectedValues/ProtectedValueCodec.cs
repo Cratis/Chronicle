@@ -4,6 +4,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 
@@ -54,6 +55,27 @@ public static class ProtectedValueCodec
         var decrypted = encryption.Decrypt(encrypted, key);
         var decryptedAsString = Encoding.UTF8.GetString(decrypted);
         return JsonValue.Create(decryptedAsString);
+    }
+
+    /// <summary>
+    /// Releases a protected value without substituting an empty value for a missing key.
+    /// </summary>
+    /// <param name="keyStorage">The key storage.</param>
+    /// <param name="encryption">The encryption implementation.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <param name="value">The protected value.</param>
+    /// <returns>The original value, or null if the key or ciphertext is unavailable.</returns>
+    public static async Task<JsonNode?> TryRelease(IEncryptionKeyStorage keyStorage, IEncryption encryption, EventStoreName eventStore, EventStoreNamespaceName @namespace, string identifier, JsonNode value)
+    {
+        if (!TryDecodeCipherText(encryption, value.ToString(), out var encrypted))
+        {
+            return null;
+        }
+
+        var key = await keyStorage.TryGetFor(eventStore, @namespace, identifier);
+        return key is null ? null : Decrypt(encryption, key, encrypted);
     }
 
     /// <summary>

@@ -474,6 +474,7 @@ public class EventStoreForTesting : IEventStore
                     services.AddSingleton<IEventLog>(new NoOpEventLog());
                     services.AddSingleton<IEventTypes>(_eventTypes);
                     services.AddSingleton<KernelCore::Cratis.Chronicle.Events.IEventCompliance>(eventCompliance);
+                    services.AddSingleton<KernelCore::Cratis.Chronicle.Schemas.IJsonSchemaMetadataManager>(_compliance.Manager);
                 }),
             storage,
             eventCompliance,

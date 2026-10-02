@@ -99,6 +99,10 @@ public class PIICompliancePropertyValueHandler(
     }
 
     /// <inheritdoc/>
+    public Task<JsonNode?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        ProtectedValueCodec.TryRelease(encryptionKeyStore, encryption, eventStore, eventStoreNamespace, identifier, value);
+
+    /// <inheritdoc/>
     public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
         // Only a value this encryption produced can be released. One that carries none of its shape was never
