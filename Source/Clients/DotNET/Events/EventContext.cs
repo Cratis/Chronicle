@@ -25,7 +25,6 @@ namespace Cratis.Chronicle.Events;
 /// <param name="Hash">The <see cref="EventHash"/> of the event content.</param>
 /// <param name="ObservationState">Holds the state relevant for the observer observing.</param>
 /// <param name="Subject">The <see cref="Subject"/> identifying the compliance target for this event. Always set — defaults to the <see cref="EventSourceId"/> value when no explicit subject is provided.</param>
-/// <param name="EventSource">The <see cref="EventSourceName"/> of the registered event source the event was appended through, if any.</param>
 public record EventContext(
     EventType EventType,
     EventSourceType EventSourceType,
@@ -42,8 +41,7 @@ public record EventContext(
     IEnumerable<Tag> Tags,
     EventHash Hash,
     EventObservationState ObservationState = EventObservationState.Initial,
-    Subject Subject = default!,
-    EventSourceName? EventSource = default)
+    Subject Subject = default!)
 {
     /// <summary>
     /// Creates an 'empty' <see cref="EventContext"/> with the event source id set to empty and all properties default.
@@ -59,6 +57,14 @@ public record EventContext(
         EventStreamId.Default,
         EventSequenceNumber.Unavailable,
         CorrelationId.NotSet);
+
+    /// <summary>
+    /// Gets the name of the registered event source definition the event was appended through, if any.
+    /// </summary>
+    /// <remarks>
+    /// Declared outside the primary constructor so existing positional construction and deconstruction shapes remain compatible.
+    /// </remarks>
+    public EventSourceName? EventSource { get; init; }
 
     /// <summary>
     /// Gets the structured named tags associated with the event.
