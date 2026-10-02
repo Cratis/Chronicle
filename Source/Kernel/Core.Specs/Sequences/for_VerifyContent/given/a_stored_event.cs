@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -12,6 +13,7 @@ namespace Cratis.Chronicle.Sequences.for_VerifyContent.given;
 
 public class a_stored_event : Specification
 {
+    protected ExpandoObjectConverter _converter;
     protected IStorage _storage;
     protected IEventCursor _cursor;
     protected JsonSchemaMetadataManager _manager;
@@ -21,6 +23,7 @@ public class a_stored_event : Specification
 
     void Establish()
     {
+        _converter = new(new TypeFormats());
         _storage = Substitute.For<IStorage>();
         _cursor = Substitute.For<IEventCursor>();
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(), NullLogger<JsonSchemaMetadataManager>.Instance);

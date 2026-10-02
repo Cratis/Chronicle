@@ -31,11 +31,15 @@ Call `eventSequence.VerifyContent(sequenceNumber, preparedEvent, eventSourceId)`
 
 | Result | Meaning |
 | --- | --- |
-| `Equal` | The event type and complete released content match. |
-| `Different` | The event type or complete released content differs. |
+| `Equal` | The event type and complete released content match in Chronicle's canonical storage representation. |
+| `Different` | The event type or canonical released content differs. |
 | `Unavailable` | Chronicle cannot establish equality or difference from complete content. Do not treat this as a duplicate. |
 
-Comparison runs in the kernel using JSON, not client CLR objects or encrypted event hashes. Object property order does not matter; array order, property presence, and string values do. It compares the stored representation for the prepared event's generation without running additional-information providers again or inventing a migration. Missing events, missing generations or schemas, erased keys, unsupported protection handlers, and failed releases produce `Unavailable`. A revision that cannot be represented consistently also produces `Unavailable`. Ordinary reads keep their existing empty-value behavior after erasure.
+Comparison runs in the kernel using the prepared event's generation schema, not client CLR objects or encrypted event hashes. The attempted content goes through the same schema-guided conversion as append, then both documents are compared in one canonical storage representation. This preserves the subtype discriminator and properties of open polymorphic schemas. Provider overwrites of declared properties participate in comparison; undeclared properties discarded by append do not. Providers never run again during verification, and verification does not invent a migration.
+
+Object property order does not matter; array order and string values do. Schema defaults, enum names, and date/time formats are normalized as they are for storage. Decimal values are compared at double precision, matching MongoDB's JSON-to-BSON conversion, on every backend. Differences below that storage precision are **not detectable**, even on backends that retain more decimal digits. `Equal` means equality of the stored representation, not byte-for-byte equality of the original client JSON.
+
+Missing events, missing generations or schemas, redacted events, erased keys, unsupported protection handlers, and failed releases produce `Unavailable`. Protected values also produce `Unavailable` when their schema does not identify a single non-null type, or when multiple protection handlers apply: Chronicle cannot safely recover the original value in those cases. A revision that cannot be represented consistently also produces `Unavailable`. Ordinary reads keep their existing empty-value behavior after erasure.
 
 Prepared content is plaintext, just like an ordinary append request. Verification sends it in a request body and returns only the verdict, never the released stored content. Retain the snapshot only as long as needed. This checks **content**, not causation, tags, routing metadata, or whether the event belongs to the same business operation; your idempotency mechanism must establish that identity. Transport and storage failures can still fail the call and must not be interpreted as equality.
 

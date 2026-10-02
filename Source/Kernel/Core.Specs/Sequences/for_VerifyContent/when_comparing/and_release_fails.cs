@@ -10,7 +10,7 @@ public class and_release_fails : given.a_protected_event
 {
     void Establish() => _keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(_encryption.GenerateKey());
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager);
+    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
 
     [Fact] void should_not_compare_a_fallback_empty_value() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }
