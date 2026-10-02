@@ -7,16 +7,16 @@
 
 namespace Cratis.Chronicle.Contracts.Alerts;
 /// <summary>
-/// Represents the AlertSeverity value.
+/// Represents how urgent an alert is.
 /// </summary>
 public enum AlertSeverity
 {
     /// <summary>
-    /// Represents the Warning value.
+    /// Something is wrong and worth looking at, but Chronicle is still working on it.
     /// </summary>
     Warning = 0,
     /// <summary>
-    /// Represents the Critical value.
+    /// Chronicle has stopped working on it and a person has to act.
     /// </summary>
     Critical = 1
 }

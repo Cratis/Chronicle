@@ -7,20 +7,20 @@
 
 namespace Cratis.Chronicle.Contracts.Alerts;
 /// <summary>
-/// Represents the AlertIncidentsReadinessState value.
+/// Represents sampled materialization health, not a contiguous checkpoint.
 /// </summary>
 public enum AlertIncidentsReadinessState
 {
     /// <summary>
-    /// Represents the CatchingUp value.
+    /// The reactor has outstanding catch-up or is not active.
     /// </summary>
     CatchingUp = 0,
     /// <summary>
-    /// Represents the Ready value.
+    /// The active reactor is past the sampled tail and has no catch-up, replay, or failures.
     /// </summary>
     Ready = 1,
     /// <summary>
-    /// Represents the Degraded value.
+    /// The reactor has failed or quarantined partitions.
     /// </summary>
     Degraded = 2
 }

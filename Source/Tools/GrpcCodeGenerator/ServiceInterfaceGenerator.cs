@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using System.Text;
+using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -187,6 +188,8 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         // shared enum. Rendered as an int literal to match every hand-written enum in this codebase (the
         // underlying type of a C# enum defaults to int, and nothing here declares otherwise); Convert.ToInt64
         // would compile too, but as a spurious "0L" no hand-written enum in the codebase ever writes.
+        var documentationPath = Path.ChangeExtension(type.Assembly.Location, ".xml");
+        var documentation = File.Exists(documentationPath) ? XDocument.Load(documentationPath) : null;
         var members = Enum.GetValues(type)
             .Cast<object>()
             .Select(value =>
@@ -197,13 +200,27 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
                         SyntaxFactory.LiteralExpression(
                             SyntaxKind.NumericLiteralExpression,
                             SyntaxFactory.Literal(Convert.ToInt32(value)))))
-                    .WithLeadingTrivia(BuildXmlDoc($"Represents the {name} value."));
+                    .WithLeadingTrivia(EnumDocumentation(documentation, type, $"F:{type.FullName}.{name}", $"Represents the {name} value."));
             });
 
         return SyntaxFactory.EnumDeclaration(type.Name)
             .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
-            .WithLeadingTrivia(BuildXmlDoc($"Represents the {type.Name} value."))
+            .WithLeadingTrivia(EnumDocumentation(documentation, type, $"T:{type.FullName}", $"Represents the {type.Name} value."))
             .AddMembers([.. members]);
+    }
+
+    static SyntaxTriviaList EnumDocumentation(XDocument? documentation, Type type, string memberName, string fallback)
+    {
+        var member = documentation?.Root?.Element("members")?.Elements("member")
+            .FirstOrDefault(element => (string?)element.Attribute("name") == memberName);
+        if (member is null)
+        {
+            return BuildXmlDoc(fallback);
+        }
+        var text = string.Join('\n', member.Elements().Select(element => element.ToString()))
+            .Replace(type.FullName!, SharedTypeRegistry.QualifiedNameFor(type), StringComparison.Ordinal);
+
+        return SyntaxFactory.ParseLeadingTrivia(string.Join('\n', text.Split('\n').Select(line => $"/// {line.Trim()}")) + "\n");
     }
 
     static MethodDeclarationSyntax BuildCommandMethod(CommandDefinition command, string? requestTypeName, string? responseTypeName)
