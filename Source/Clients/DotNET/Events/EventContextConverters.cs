@@ -59,10 +59,10 @@ internal static class EventContextConverters
         context.Tags.Select(_ => (Tag)_).ToArray(),
         context.Hash,
         context.ObservationState.ToClient(),
-        Subject: ResolveSubject(context.Subject, context.EventSourceId),
-        EventSource: ResolveEventSource(context.EventSource))
+        Subject: ResolveSubject(context.Subject, context.EventSourceId))
     {
-        NamedTags = (context.NamedTags ?? []).Select(tag => new NamedTag(tag.Name, tag.Value)).ToArray()
+        NamedTags = (context.NamedTags ?? []).Select(tag => new NamedTag(tag.Name, tag.Value)).ToArray(),
+        EventSource = ResolveEventSource(context.EventSource)
     };
 
     /// <summary>
@@ -92,10 +92,10 @@ internal static class EventContextConverters
         context.Tags.Select(_ => (Tag)_).ToArray(),
         context.Hash ?? EventHash.NotSet,
         context.ObservationState.ToClient(),
-        Subject: ResolveSubject(context.Subject, context.EventSourceId),
-        EventSource: ResolveEventSource(context.EventSource))
+        Subject: ResolveSubject(context.Subject, context.EventSourceId))
     {
-        NamedTags = (context.NamedTags ?? []).Select(tag => tag.ToClient()).ToArray()
+        NamedTags = (context.NamedTags ?? []).Select(tag => tag.ToClient()).ToArray(),
+        EventSource = ResolveEventSource(context.EventSource)
     };
 
     /// <summary>

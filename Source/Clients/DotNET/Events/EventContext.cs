@@ -42,9 +42,16 @@ public record EventContext(
     IEnumerable<Tag> Tags,
     EventHash Hash,
     EventObservationState ObservationState = EventObservationState.Initial,
-    Subject Subject = default!,
-    EventSourceName? EventSource = default)
+    Subject Subject = default!)
 {
+    /// <summary>
+    /// Gets the name of the registered event source definition the event was appended through, if any.
+    /// </summary>
+    /// <remarks>
+    /// Declared outside the primary constructor so existing positional construction and deconstruction shapes remain compatible.
+    /// </remarks>
+    public EventSourceName? EventSource { get; init; }
+
     /// <summary>
     /// Creates an 'empty' <see cref="EventContext"/> with the event source id set to empty and all properties default.
     /// </summary>
