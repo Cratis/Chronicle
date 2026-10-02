@@ -1,13 +1,19 @@
 <RunSettings>
   <RunConfiguration>
     <!--
-      Guard against a hung spec consuming the entire CI budget. The specs run in
-      well under a minute; a rare deadlock (an observer/grain concurrency spec
-      starving the thread pool on a constrained CI runner) previously ran until
-      GitHub's 6-hour job limit killed it. Abort the session long before that so
-      a hang fails fast and visibly instead of silently burning CI time.
+      Guard against a hung spec consuming the entire CI budget. A rare deadlock (an
+      observer/grain concurrency spec starving the thread pool on a constrained CI
+      runner) previously ran until GitHub's 6-hour job limit killed it. Abort the
+      session long before that so a hang fails fast and visibly instead of silently
+      burning CI time.
+
+      The non-integration suite has grown past the 20-minute ceiling this guard
+      originally used purely from legitimate new specs (Cratis.Chronicle.Core.Specs.dll
+      alone now runs ~20 minutes), which started aborting healthy runs with zero
+      failing tests. 50 minutes keeps multiples of headroom over the current run time
+      while still failing well inside the job's 120-minute timeout.
     -->
-    <TestSessionTimeout>1200000</TestSessionTimeout>
+    <TestSessionTimeout>3000000</TestSessionTimeout>
     <TestCaseFilter>FullyQualifiedName!~Cratis.Chronicle.InProcess.Integration&amp;FullyQualifiedName!~Cratis.Chronicle.Integration.Api&amp;FullyQualifiedName!~Cratis.Chronicle.MongoDB.Integration</TestCaseFilter>
   </RunConfiguration>
 </RunSettings>
