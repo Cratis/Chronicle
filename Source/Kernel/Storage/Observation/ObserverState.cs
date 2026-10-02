@@ -56,6 +56,26 @@ public record ObserverState(
     }
 
     /// <summary>
+    /// Gets the source-owned lifecycle token, replaced on subscription but not activation.
+    /// </summary>
+    public Guid AlertLifecycleId { get; init; }
+
+    /// <summary>
+    /// Gets the revision of committed alert-relevant state in this lifecycle.
+    /// </summary>
+    public long AlertRevision { get; init; }
+
+    /// <summary>
+    /// Gets the durable desired activity level used to validate alert reports.
+    /// </summary>
+    public AlertDisposition AlertDisposition { get; init; }
+
+    /// <summary>
+    /// Gets the current quarantine episode identity, or null outside quarantine.
+    /// </summary>
+    public Guid? QuarantineEpisodeId { get; init; }
+
+    /// <summary>
     /// Gets or inits the next <see cref="EventSequenceNumber"/> that the observer is expecting to be handling.
     /// </summary>
     public EventSequenceNumber NextEventSequenceNumber

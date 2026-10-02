@@ -13,7 +13,7 @@ public class and_failed_partitions_are_cleared : given.an_evaluator
     ObserverAlertEvaluation _result;
 
     void Because() => _result = Evaluate(
-        SnapshotOf() with { PartitionsEndedAs = AlertClearedReason.Cleared },
+        SnapshotOf() with { Endings = new Dictionary<Guid, AlertClearedReason> { [_failingId.Value] = AlertClearedReason.Cleared, [_exhaustedId.Value] = AlertClearedReason.Cleared } },
         OpenPartitionIncident(_failingId),
         OpenPartitionIncident(_exhaustedId, AlertConditionKind.PartitionRetriesExhausted, AlertSeverity.Critical, "other"));
 

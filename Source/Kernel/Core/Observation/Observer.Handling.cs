@@ -16,6 +16,7 @@ public partial class Observer
     /// <inheritdoc/>
     public Task SetHandledStats(EventSequenceNumber lastHandledEventSequenceNumber)
     {
+        if (IsRetired || _removed || !_observerExists) return Task.CompletedTask;
         State = State with
         {
             LastHandledEventSequenceNumber = lastHandledEventSequenceNumber
@@ -27,13 +28,23 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
     {
-        if (countsPerEventType.Count > 0)
+        // Serialize independent handled-count writes with namespace resource deletion as well as source writes.
+        await _alertMutationLock.WaitAsync();
+        try
         {
-            await GetObserverHandledCountsStorage().Increment(_observerId, partition, countsPerEventType);
-            State = WithIncrementedRunningTotals(State, countsPerEventType);
-        }
+            if (IsRetired || _removed || !_observerExists) return;
+            if (countsPerEventType.Count > 0)
+            {
+                await GetObserverHandledCountsStorage().Increment(_observerId, partition, countsPerEventType);
+                State = WithIncrementedRunningTotals(State, countsPerEventType);
+            }
 
-        await WriteStateAsync();
+            await WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
     }
 
     /// <inheritdoc/>
@@ -346,6 +357,7 @@ public partial class Observer
 
     bool ShouldHandleEvent(Key partition)
     {
+        if (IsRetired || _removed || !_observerExists) return false;
         if (!_subscription.IsSubscribed)
         {
             logger.ObserverIsNotSubscribed();
