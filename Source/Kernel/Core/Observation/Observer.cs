@@ -490,23 +490,11 @@ public partial class Observer(
     /// Requests quarantine, stopping automatic recovery even while the state transition is pending.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    internal async Task RequestQuarantine()
+    internal Task RequestQuarantine()
     {
-        if (!await CanTransitionTo<QuarantinedObserver>())
-        {
-            return;
-        }
-
         _quarantinePending = true;
-        try
-        {
-            await TransitionTo<QuarantinedObserver>();
-        }
-        catch
-        {
-            _quarantinePending = false;
-            throw;
-        }
+
+        return TransitionTo<QuarantinedObserver>();
     }
 
     /// <summary>
