@@ -28,4 +28,24 @@ public static class ReactorPartitionRecoveryExtensions
 
         return recovery.RetryFailedPartitionFor(typeof(TReactor), partition);
     }
+
+    /// <summary>
+    /// Clear the quarantine of a failed partition for a registered reactor and reset its retry budget.
+    /// </summary>
+    /// <typeparam name="TReactor">The reactor type.</typeparam>
+    /// <param name="reactors">The reactor registry.</param>
+    /// <param name="partition">The quarantined partition.</param>
+    /// <param name="retryImmediately">Whether to start recovering the partition right away.</param>
+    /// <returns>The bounded outcome of the request.</returns>
+    /// <exception cref="ReactorPartitionRecoveryNotSupported">The reactor registry does not support partition recovery.</exception>
+    public static Task<ReactorPartitionQuarantineClearResult> ClearFailedPartitionQuarantineFor<TReactor>(this IReactors reactors, Partition partition, bool retryImmediately = true)
+        where TReactor : IReactor
+    {
+        if (reactors is not IReactorPartitionRecovery recovery)
+        {
+            throw new ReactorPartitionRecoveryNotSupported();
+        }
+
+        return recovery.ClearFailedPartitionQuarantineFor(typeof(TReactor), partition, retryImmediately);
+    }
 }
