@@ -48,7 +48,6 @@ public class a_catching_up_in_flight_state : Specification
             _definitionState,
             _failuresState,
             _jobsManager,
-            () => _stateMachine.TransitionTo<QuarantinedObserver>(),
             Substitute.For<ILogger<CatchingUpInFlight>>());
         _state.SetStateMachine(_stateMachine);
 

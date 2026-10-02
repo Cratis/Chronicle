@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Observation.States;
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
@@ -43,7 +44,7 @@ public partial class Observer
 
         if (ShouldQuarantineObserver(config))
         {
-            await RequestQuarantine();
+            await TransitionTo<QuarantinedObserver>();
         }
 
         var attemptCount = failure.Attempts.Count();
