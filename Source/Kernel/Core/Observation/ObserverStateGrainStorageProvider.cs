@@ -31,6 +31,11 @@ public class ObserverStateGrainStorageProvider(IStorage storage) : IGrainStorage
         var storedState = await observers.Get(observerKey.ObserverId);
         var recordExists = !ReferenceEquals(storedState, ObserverState.Empty);
         actualGrainState.RecordExists = recordExists;
+        if (!recordExists)
+        {
+            // Empty is a shared sentinel. Start fresh rather than sharing its mutable partition collections.
+            storedState = new();
+        }
         actualGrainState.State = storedState with
         {
             // Preserve a missing record's sentinel until the observer activation supplies its identity.
