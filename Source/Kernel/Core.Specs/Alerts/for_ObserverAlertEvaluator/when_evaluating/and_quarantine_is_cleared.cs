@@ -13,7 +13,7 @@ public class and_quarantine_is_cleared : given.an_evaluator
     readonly IncidentId _id = IncidentId.New();
     ObserverAlertEvaluation _result;
 
-    void Because() => _result = Evaluate(SnapshotOf() with { QuarantineEndedAs = AlertClearedReason.Cleared }, OpenQuarantineIncident(_id));
+    void Because() => _result = Evaluate(SnapshotOf() with { Endings = new Dictionary<Guid, AlertClearedReason> { [_id.Value] = AlertClearedReason.Cleared } }, OpenQuarantineIncident(_id));
 
     [Fact] void should_only_clear() => _result.Transitions.Count.ShouldEqual(1);
     [Fact] void should_clear_the_incident() => _result.Transitions.OfType<AlertCleared>().Single().IncidentId.ShouldEqual(_id);

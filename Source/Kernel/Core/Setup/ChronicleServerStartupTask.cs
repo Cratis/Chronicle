@@ -144,6 +144,7 @@ internal sealed class ChronicleServerStartupTask(
                 await Step("RehydrateJobs", jobsManager.Rehydrate);
                 await Step("RehydrateEventSequences", grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate);
                 await Step("RehydrateObservers", () => RehydrateReducerAndReactorObservers(eventStore, namespaceName));
+                await Step("BootstrapObserverAlerts", () => BootstrapObserverAlerts(eventStore, namespaceName));
             });
             await Task.WhenAll(rehydrateAll);
         }
@@ -215,6 +216,31 @@ internal sealed class ChronicleServerStartupTask(
             {
                 logger.FailedRegisteringPersistedProjectionDefinition(failure, identifier);
             }
+        }
+    }
+
+    async Task BootstrapObserverAlerts(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
+    {
+        var eventStoreStorage = storage.GetEventStore(eventStore);
+        var definitions = (await eventStoreStorage.Observers.GetAll()).ToDictionary(_ => _.Identifier);
+        var states = await eventStoreStorage.GetNamespace(namespaceName).Observers.GetAll();
+        var alreadyRehydrated = (await eventStoreStorage.Reducers.GetAll()).Select(_ => (ObserverId)_.Identifier.Value)
+            .Concat((await eventStoreStorage.Reactors.GetAll()).Select(_ => (ObserverId)_.Identifier.Value)).ToHashSet();
+        foreach (var state in states.Where(_ => !alreadyRehydrated.Contains(_.Identifier)))
+        {
+            if (!definitions.TryGetValue(state.Identifier, out var definition))
+            {
+                // Initialized orphans already have key-specific reminders. A legacy record without any definition
+                // has no trustworthy event-sequence identity; guessing Log could activate a second writer of it.
+                if (state.AlertLifecycleId == Guid.Empty)
+                {
+                    logger.CannotBootstrapObserverAlerts(state.Identifier, eventStore, namespaceName);
+                }
+
+                continue;
+            }
+
+            await grainFactory.GetGrain<IObserver>(new ObserverKey(state.Identifier, eventStore, namespaceName, definition.EventSequenceId)).Ensure();
         }
     }
 

@@ -18,7 +18,7 @@ public class and_raised_partition_recovers : given.an_evaluator
 
     void Because()
     {
-        _result = Evaluate(SnapshotOf() with { PartitionsEndedAs = AlertClearedReason.Recovered }, OpenPartitionIncident(_id));
+        _result = Evaluate(SnapshotOf() with { Endings = new Dictionary<Guid, AlertClearedReason> { [_id.Value] = AlertClearedReason.Recovered } }, OpenPartitionIncident(_id));
         _cleared = _result.Transitions.OfType<AlertCleared>().Single();
     }
 

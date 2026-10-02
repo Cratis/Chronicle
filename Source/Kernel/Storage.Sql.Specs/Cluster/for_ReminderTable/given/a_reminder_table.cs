@@ -2,8 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.EntityFrameworkCore.Concepts;
+using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster.for_ReminderTable.given;
 
@@ -14,27 +20,35 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster.for_ReminderTable.given;
 public class a_reminder_table : Specification
 {
     protected SqliteConnection _connection;
-    protected IDbContextFactory<ClusterDbContext> _dbContextFactory;
     protected IReminderTable _table;
+    protected IDatabase _database;
+    ServiceProvider _serviceProvider;
 
-    void Establish()
+    async Task Establish()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
-
-        using (var context = CreateContext())
+        _connection = new SqliteConnection($"Data Source=reminders-{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
+        await _connection.OpenAsync();
+        _serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var options = new ChronicleOptions
         {
-            context.Database.EnsureCreated();
-        }
+            Storage = new() { Type = StorageType.Sqlite, ConnectionDetails = _connection.ConnectionString }
+        };
+        _database = new Database(
+            _serviceProvider,
+            Options.Create(options),
+            Substitute.For<IEventSequenceMigrator>(),
+            Substitute.For<IUniqueConstraintMigrator>(),
+            Substitute.For<IReadModelMigrator>());
+        await using var scope = await _database.Cluster();
 
-        _dbContextFactory = Substitute.For<IDbContextFactory<ClusterDbContext>>();
-        _dbContextFactory.CreateDbContext().Returns(_ => CreateContext());
-        _dbContextFactory.CreateDbContextAsync(Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult(CreateContext()));
-
-        _table = new ReminderTable(_dbContextFactory);
+        _table = new ReminderTable(_database);
     }
 
-    void Destroy() => _connection.Dispose();
+    void Destroy()
+    {
+        _connection.Dispose();
+        _serviceProvider.Dispose();
+    }
 
     protected static ReminderEntry CreateEntry(GrainId grainId, string reminderName = "retry") => new()
     {

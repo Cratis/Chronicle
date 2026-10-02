@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.Engine;
@@ -19,12 +20,16 @@ public class and_all_definitions_are_unchanged : given.a_projections_manager_gra
 {
     ProjectionDefinition _existing;
     ProjectionDefinition _incoming;
+    ProjectionDefinition _otherIncoming;
+    ProjectionDefinition _unsubmitted;
 
     void Establish()
     {
         _existing = CreateDefinition("the-projection", "the-read-model");
         _incoming = CreateDefinition("the-projection", "the-read-model");
-        _state.Projections = [_existing];
+        _otherIncoming = CreateDefinition("other-projection", "the-read-model");
+        _unsubmitted = CreateDefinition("unsubmitted-projection", "the-read-model");
+        _state.Projections = [_existing, _otherIncoming, _unsubmitted];
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
 
         _definitionComparer
@@ -32,8 +37,10 @@ public class and_all_definitions_are_unchanged : given.a_projections_manager_gra
             .Returns(ProjectionDefinitionCompareResult.Same);
     }
 
-    async Task Because() => await _grain.Register([_incoming]);
+    async Task Because() => await _grain.Register([_incoming, _otherIncoming]);
 
     [Fact] void should_not_register_with_the_engine() => _projectionsServiceClient.DidNotReceiveWithAnyArgs().Register(default!, default!);
-    [Fact] void should_leave_the_registered_definitions_untouched() => _state.Projections.ShouldContainOnly(_existing);
+    [Fact] void should_leave_the_registered_definitions_untouched() => _state.Projections.ShouldContainOnly(_existing, _otherIncoming, _unsubmitted);
+    [Fact] async Task should_only_query_the_submitted_identifiers() => await _observerStates.Received(1).GetRetired(Arg.Is<IEnumerable<ObserverId>>(ids => ids.SequenceEqual(new ObserverId[] { _incoming.Identifier, _otherIncoming.Identifier })));
+    [Fact] async Task should_not_load_all_observer_states() => await _observerStates.DidNotReceive().GetAll();
 }
