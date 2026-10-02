@@ -6,6 +6,7 @@ extern alias KernelConcepts;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
 using Cratis.Chronicle.Storage.Namespaces;
@@ -47,7 +48,8 @@ internal sealed class InMemoryEventStoreStorage(
     InMemoryConstraintsStorage? constraintsStorage = null,
     InMemoryClosedStreamsConstraintStorage? closedStreamsStorage = null,
     InMemoryIdentityStorage? identityStorage = null,
-    InMemoryEventTypesStorage? eventTypesStorage = null) : IEventStoreStorage
+    InMemoryEventTypesStorage? eventTypesStorage = null,
+    IEventSourcesStorage? eventSourcesStorage = null) : IEventStoreStorage
 {
     /// <inheritdoc/>
     public KernelConcept::EventStoreName EventStore => eventStore;
@@ -57,6 +59,9 @@ internal sealed class InMemoryEventStoreStorage(
 
     /// <inheritdoc/>
     public IEventTypesStorage EventTypes => eventTypesStorage ?? throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    public IEventSourcesStorage EventSources => eventSourcesStorage ?? throw new NotSupportedException();
 
     /// <inheritdoc/>
     public IConstraintsStorage Constraints => constraintsStorage ?? throw new NotSupportedException();
