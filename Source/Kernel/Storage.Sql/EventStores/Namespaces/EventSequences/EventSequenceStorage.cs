@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Monads;
@@ -48,6 +49,9 @@ public class EventSequenceStorage(
     /// </remarks>
     public static DateTimeOffset TruncateToMicrosecond(DateTimeOffset value) =>
         new(value.Ticks - (value.Ticks % (TimeSpan.TicksPerMillisecond / 1000)), value.Offset);
+
+    /// <inheritdoc/>
+    public string SerializeContentForVerification(ExpandoObject content, JsonSchema schema) => EventEntryConverter.SerializeContent(content);
 
     /// <inheritdoc/>
     public Task EnsureIndexes() => Task.CompletedTask;

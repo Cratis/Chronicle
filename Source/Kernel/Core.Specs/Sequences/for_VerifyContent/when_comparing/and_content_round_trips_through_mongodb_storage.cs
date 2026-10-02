@@ -1,10 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.MongoDB;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 
@@ -14,6 +17,11 @@ public class and_content_round_trips_through_mongodb_storage : given.content_wit
 {
     async Task Establish()
     {
+        var sequence = new Storage.MongoDB.EventSequences.EventSequenceStorage("store", "tenant", "log", Substitute.For<IEventStoreNamespaceDatabase>(), Substitute.For<IEventConverter>(), _storage.GetEventStore("store").EventTypes, Substitute.For<IIdentityStorage>(), _converter, new JsonSerializerOptions(), NullLogger<Storage.MongoDB.EventSequences.EventSequenceStorage>.Instance);
+        _storage.GetEventStore("store").GetNamespace("tenant").GetEventSequence("log")
+            .SerializeContentForVerification(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>())
+            .Returns(call => sequence.SerializeContentForVerification(call.Arg<ExpandoObject>(), call.Arg<JsonSchema>()));
+
         // This is the write pipeline in MongoDB EventSequenceStorage, including BSON encoding
         // and decoding, followed by its real read converter. No database server is necessary.
         var json = _converter.ToJsonObject(_content, _schema);
@@ -26,5 +34,5 @@ public class and_content_round_trips_through_mongodb_storage : given.content_wit
 
     async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
 
-    [Fact] void should_recognize_the_duplicate_after_storage_conversion() => _result.Result.ShouldEqual(ContentVerificationResult.Equal);
+    [Fact] void should_refuse_equality_after_storage_loses_decimal_precision() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }

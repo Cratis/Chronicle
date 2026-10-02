@@ -61,7 +61,7 @@ public record VerifyContent(
             return new(ContentVerificationResult.Unavailable);
         }
 
-        if (stored.Context.EventType.Id == GlobalEventTypes.Redaction)
+        if (stored.IsRevised || stored.Context.EventType.Id == GlobalEventTypes.Redaction)
         {
             return new(ContentVerificationResult.Unavailable);
         }
@@ -73,8 +73,7 @@ public record VerifyContent(
 
         // Revisions are not represented consistently across storage backends. Never compare stale
         // original content as if it were the current revision, or silently upcast another generation.
-        if (stored.IsRevised ||
-            !stored.GenerationalContent.TryGetValue((int)EventType.Generation, out var content) ||
+        if (!stored.GenerationalContent.TryGetValue((int)EventType.Generation, out var content) ||
             !await eventStore.EventTypes.HasFor(EventType.Id, EventType.Generation))
         {
             return new(ContentVerificationResult.Unavailable);
@@ -94,7 +93,13 @@ public record VerifyContent(
                 return new(ContentVerificationResult.Unavailable);
             }
 
-            return new(ContentComparison.Equals(released, attempted, schema.Schema, expandoObjectConverter) ? ContentVerificationResult.Equal : ContentVerificationResult.Different);
+            var expected = await metadataManager.TryPrepareForComparison(schema.Schema, attempted, document => ContentComparison.Prepare(document, schema.Schema, expandoObjectConverter, sequence));
+            if (expected is null)
+            {
+                return new(ContentVerificationResult.Unavailable);
+            }
+
+            return new(ContentComparison.Equals(released, expected) ? ContentVerificationResult.Equal : ContentVerificationResult.Different);
         }
         catch (Exception exception) when (exception is JsonException or FormatException or InvalidCastException or InvalidOperationException or OverflowException)
         {
