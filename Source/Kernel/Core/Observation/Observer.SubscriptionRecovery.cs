@@ -20,7 +20,7 @@ public partial class Observer
         where TObserverSubscriber : IObserverSubscriber
     {
         // This is a non-interleaved grain request, not a check followed by a queued Subscribe. In particular,
-        // a Subscribe that was still running at the caller's pre-check has finished before this decision.
+        // a Subscribe that was still running when reconciliation requested recovery finishes before this decision.
         var currentState = await GetCurrentState();
         if (_removed || State.RunningState == ObserverRunningState.Quarantined ||
             currentState is not (Disconnected or Routing or CatchingUpInFlight) ||
@@ -40,6 +40,6 @@ public partial class Observer
         // Do not reload stale progress or call LeaveQuarantineForSubscription. Reconciliation has no authority
         // to release quarantine; ordinary application Subscribe retains its existing behavior.
         await SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, recovering: true);
-        _subscriptionSetupFailed = State.RunningState is ObserverRunningState.Disconnected or ObserverRunningState.Unknown;
+        _subscriptionSetupFailed = await GetCurrentState() is not (Observing or States.Replay);
     }
 }

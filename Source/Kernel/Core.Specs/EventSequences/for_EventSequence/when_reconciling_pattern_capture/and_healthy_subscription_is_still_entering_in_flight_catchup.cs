@@ -34,7 +34,7 @@ public class and_healthy_subscription_is_still_entering_in_flight_catchup : give
             _recoveryQueued.TrySetResult();
 
             // TestKit calls methods directly. Model Orleans' non-interleaved request ordering explicitly:
-            // the recovery turn waits for the Subscribe turn, unlike the AlwaysInterleave pre-checks.
+            // the recovery turn waits for the Subscribe turn before checking the actual state machine.
             await _subscription;
             await RecoverCapture();
         });

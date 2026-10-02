@@ -8,7 +8,7 @@ using NSubstitute.Extensions;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_reconciling_pattern_capture;
 
-public class and_capture_is_quarantined_after_the_precheck : given.an_event_sequence_with_a_capture_observer
+public class and_capture_is_quarantined_before_recovery_runs : given.an_event_sequence_with_a_capture_observer
 {
     bool _failedWrite;
     bool _recoveryWasRequested;
@@ -28,7 +28,7 @@ public class and_capture_is_quarantined_after_the_precheck : given.an_event_sequ
         (await Catch.Exception(SubscribeCapture)).ShouldBeOfExactType<TimeoutException>();
         _patternCapture.Configure().RecoverSubscription(EventStore, EventStoreNamespace).Returns(async _ =>
         {
-            // Reconciliation has read Unknown, but another observer turn quarantines it before recovery runs.
+            // Another observer turn quarantines it after reconciliation requests recovery, before that turn runs.
             _recoveryWasRequested = true;
             await _captureObserver.TransitionTo<QuarantinedObserver>();
             _captureState.ClearReceivedCalls();
@@ -38,7 +38,7 @@ public class and_capture_is_quarantined_after_the_precheck : given.an_event_sequ
 
     Task Because() => _silo.TimerRegistry.FireAllAsync();
 
-    [Fact] void should_have_passed_the_external_precheck() => _recoveryWasRequested.ShouldBeTrue();
+    [Fact] void should_have_requested_recovery() => _recoveryWasRequested.ShouldBeTrue();
     [Fact] async Task should_keep_the_quarantined_state_machine() => (await _captureObserver.GetCurrentState()).ShouldBeOfExactType<QuarantinedObserver>();
     [Fact] async Task should_keep_the_quarantine_marker() => (await _captureObserver.GetState()).RunningState.ShouldEqual(ObserverRunningState.Quarantined);
     [Fact] async Task should_preserve_progress() => (await _captureObserver.GetState()).NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);

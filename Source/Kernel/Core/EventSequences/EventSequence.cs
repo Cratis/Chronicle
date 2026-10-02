@@ -1165,17 +1165,10 @@ public class EventSequence(
     {
         try
         {
-            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(
-                PatternCapture.ObserverIdentifier, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventSequenceId.Log));
-            var isSubscribed = await observer.IsSubscribed();
-            var state = await observer.GetState();
-            if (state.RunningState != ObserverRunningState.Quarantined &&
-                (!isSubscribed || state.RunningState is ObserverRunningState.Disconnected or ObserverRunningState.Unknown))
-            {
-                // These interleaved reads are only a cheap hint. The observer makes the authoritative
-                // decision in a serialized turn, after any in-flight subscription or quarantine transition.
-                await patternCapture.RecoverSubscription(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-            }
+            // A persisted Active marker can outlive failed setup and be reloaded by an ordinary retry.
+            // Always let the observer decide from its actual state machine and setup outcome, in the same
+            // serialized turn that guards quarantine and performs recovery. This stays off the append path.
+            await patternCapture.RecoverSubscription(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
         }
         catch (Exception exception)
         {

@@ -218,7 +218,10 @@ public partial class Observer(
         try
         {
             await SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, recovering: false);
-            _subscriptionSetupFailed = State.RunningState is ObserverRunningState.Disconnected or ObserverRunningState.Unknown;
+
+            // A retry can reload a persisted Active marker while the machine is still stranded in
+            // CatchingUpInFlight. Only a completed transition into observation or replay proves setup finished.
+            _subscriptionSetupFailed = await GetCurrentState() is not (Observing or States.Replay);
         }
         catch
         {

@@ -24,6 +24,7 @@ public class an_event_sequence_with_a_capture_observer : an_event_sequence
     protected Observer _captureObserver;
     protected IStorage<ObserverState> _captureState;
     protected IPatternCaptureSubscriber _captureSubscriber;
+    protected FailedPartitions _captureFailures;
 
     async Task Establish()
     {
@@ -63,7 +64,8 @@ public class an_event_sequence_with_a_capture_observer : an_event_sequence
         var definition = observerSilo.StorageManager.GetStorage<ObserverDefinition>(nameof(ObserverDefinition));
         definition.State = new ObserverDefinition { Identifier = PatternCapture.ObserverIdentifier, IsReplayable = false };
         var failures = observerSilo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
-        failures.State = new FailedPartitions();
+        _captureFailures = new FailedPartitions();
+        failures.State = _captureFailures;
         var key = new ObserverKey(PatternCapture.ObserverIdentifier, EventStore, EventStoreNamespace, _eventSequenceKey.EventSequenceId);
         _captureObserver = await observerSilo.CreateGrainAsync<Observer>(key);
         _silo.AddProbe<IObserver>(_ => _captureObserver);
