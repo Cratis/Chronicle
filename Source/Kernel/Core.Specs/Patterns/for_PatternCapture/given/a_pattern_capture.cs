@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Schemas;
@@ -17,6 +18,8 @@ namespace Cratis.Chronicle.Patterns.for_PatternCapture.given;
 public class a_pattern_capture : Specification
 {
     protected PatternCapture _capture;
+    protected IStorage _storage;
+    protected IGrainFactory _grainFactory;
     protected IEventTypesStorage _eventTypes;
     protected IReactorDefinitionsStorage _reactors;
     protected IObserver _observer;
@@ -34,12 +37,16 @@ public class a_pattern_capture : Specification
         _reactors = Substitute.For<IReactorDefinitionsStorage>();
         _observer = Substitute.For<IObserver>();
         _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
+        _observer.SubscribeAdditively<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
+            .Returns(call => call.Arg<IEnumerable<EventType>>());
+        _observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
+            .Returns(call => call.Arg<IEnumerable<EventType>>());
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _namespaceStorage.HasData().Returns(Task.FromResult(true));
 
-        var storage = Substitute.For<IStorage>();
+        _storage = Substitute.For<IStorage>();
         var eventStoreStorage = Substitute.For<IEventStoreStorage>();
-        storage.GetEventStore(_eventStore).Returns(eventStoreStorage);
+        _storage.GetEventStore(_eventStore).Returns(eventStoreStorage);
         eventStoreStorage.EventTypes.Returns(_eventTypes);
         eventStoreStorage.Reactors.Returns(_reactors);
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);
@@ -49,11 +56,11 @@ public class a_pattern_capture : Specification
 
         _namespaces = Substitute.For<INamespaces>();
 
-        var grainFactory = Substitute.For<IGrainFactory>();
-        grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_observer);
-        grainFactory.GetGrain<INamespaces>(Arg.Any<string>(), Arg.Any<string>()).Returns(_namespaces);
+        _grainFactory = Substitute.For<IGrainFactory>();
+        _grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_observer);
+        _grainFactory.GetGrain<INamespaces>(Arg.Any<string>(), Arg.Any<string>()).Returns(_namespaces);
 
-        _capture = new(storage, localSiloDetails, grainFactory, NullLogger<PatternCapture>.Instance);
+        _capture = new(_storage, localSiloDetails, _grainFactory, NullLogger<PatternCapture>.Instance);
     }
 
     protected void EventTypesAre(params string[] identifiers) =>

@@ -29,12 +29,9 @@ namespace Cratis.Chronicle.Patterns;
 /// registration does as types arrive.
 /// </para>
 /// <para>
-/// Event types being registered somewhere in the store does not mean any particular namespace has ever been used,
-/// though - a namespace can be registered long before (or without ever) receiving a single event. Subscribing
-/// there anyway would materialize that namespace's storage for nothing, so <see cref="Subscribe"/> also checks
-/// whether the namespace itself already holds data and skips it when it does not. The event log schedules a
-/// subscription after its first durable append, so a newly used namespace starts capturing without a restart
-/// or a change to the store-wide event types.
+/// Capture subscribes even before the namespace holds data. Namespace creation precedes the first append, and
+/// waiting for data here would leave the observer unsubscribed until another event type is registered or the
+/// server restarts. <see cref="PatternCaptureSubscriptions"/> handles namespaces added after registration.
 /// </para>
 /// <para>
 /// The observer is not replayable. Replaying it would re-mine history that is already reflected in the sketch, and
@@ -61,60 +58,81 @@ public class PatternCapture(
 
         foreach (var @namespace in namespaces)
         {
-            await Subscribe(eventStore, @namespace);
+            try
+            {
+                await Subscribe(eventStore, @namespace);
+            }
+            catch (Exception exception)
+            {
+                // Registration has already persisted the types. Capture is best-effort in each namespace;
+                // its event-log timer repairs missing subscriptions and type drift independently.
+                logger.FailedSubscribingPatternCapture(exception, eventStore, @namespace);
+            }
         }
     }
 
     /// <inheritdoc/>
-    public async Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
-        await SubscribeToRegisteredEventTypes(eventStore, @namespace, hasDurableEvents: false);
+    public Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace) => Subscribe(eventStore, @namespace, recovering: false);
 
     /// <inheritdoc/>
-    public async Task<bool> EnsureSubscribedForDurableAppend(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
-        await SubscribeToRegisteredEventTypes(eventStore, @namespace, hasDurableEvents: true);
+    public Task RecoverSubscription(EventStoreName eventStore, EventStoreNamespaceName @namespace) => Subscribe(eventStore, @namespace, recovering: true);
 
-    async Task<bool> SubscribeToRegisteredEventTypes(EventStoreName eventStore, EventStoreNamespaceName @namespace, bool hasDurableEvents)
+    async Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace, bool recovering)
     {
+        // The per-type storage caches are not a complete registry. Read the authoritative set to detect
+        // registrations missed by this namespace, including types it has never observed. No schemas are
+        // otherwise needed here; a healthy matching subscription must not rewrite its reactor definition.
         var schemas = await storage.GetEventStore(eventStore).EventTypes.GetLatestForAllEventTypes();
         var eventTypes = schemas.Select(schema => schema.Type).ToArray();
 
         if (eventTypes.Length == 0)
         {
             logger.NoEventTypesToCapture(eventStore);
-            return false;
+            return;
         }
-
-        // HasData can depend on the warm-start snapshot, whose write may fail after a durable append.
-        if (!hasDurableEvents && !await storage.GetEventStore(eventStore).GetNamespace(@namespace).HasData())
-        {
-            logger.NamespaceHasNoDataToCapture(eventStore, @namespace);
-            return false;
-        }
-
-        logger.SubscribingPatternCapture(eventStore, @namespace, eventTypes.Length);
 
         var key = new ObserverKey(ObserverIdentifier, eventStore, @namespace, EventSequenceId.Log);
+        var observer = grainFactory.GetGrain<IObserver>(key);
+        if (recovering && !await observer.NeedsSubscriptionRecovery(eventTypes))
+        {
+            eventTypes = (await observer.GetSubscription()).EventTypes.ToArray();
+        }
+        else
+        {
+            logger.SubscribingPatternCapture(eventStore, @namespace, eventTypes.Length);
+            eventTypes = (recovering
+                ? await observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(
+                    ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, isReplayable: false)
+                : await observer.SubscribeAdditively<IPatternCaptureSubscriber>(
+                    ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, isReplayable: false)).ToArray();
+        }
 
-        await storage.GetEventStore(eventStore).Reactors.Save(new ReactorDefinition(
+        if (eventTypes.Length == 0)
+        {
+            return;
+        }
+
+        var reactors = storage.GetEventStore(eventStore).Reactors;
+        if (recovering && await reactors.Has(key.ObserverId))
+        {
+            var definition = await reactors.Get(key.ObserverId);
+            var storedGenerations = definition.EventTypes.GroupBy(eventType => eventType.EventType.Id)
+                .ToDictionary(group => group.Key, group => group.Max(eventType => eventType.EventType.Generation.Value));
+            if (eventTypes.All(eventType => storedGenerations.TryGetValue(eventType.Id, out var generation) &&
+                generation >= eventType.Generation.Value))
+            {
+                return;
+            }
+        }
+
+        // The effective set is merged inside the observer turn, but this store-wide definition write is
+        // outside it. Concurrent saves remain best-effort: reconciliation self-heals a narrower stored
+        // definition even when the subscription itself needs no recovery, without writing when covered.
+        await reactors.Save(new ReactorDefinition(
             key.ObserverId,
             ReactorOwner.Kernel,
             EventSequenceId.Log,
             [.. eventTypes.Select(eventType => new EventTypeWithKeyExpression(eventType, WellKnownExpressions.EventSourceId))],
             false));
-
-        var observer = grainFactory.GetGrain<IObserver>(key);
-        if (hasDurableEvents)
-        {
-            // Unlike GetSubscription (AlwaysInterleave), this queues behind any Subscribe already in
-            // progress and completes only once initialization succeeds. Queued ensures then become no-ops.
-            await observer.EnsureSubscribed<IPatternCaptureSubscriber>(ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, null, false);
-        }
-        else
-        {
-            // Explicit registration still replaces the definition when the store's event types change.
-            await observer.Subscribe<IPatternCaptureSubscriber>(ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, null, false);
-        }
-
-        return true;
     }
 }

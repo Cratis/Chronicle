@@ -67,7 +67,7 @@ internal sealed class ChronicleServerStartupTask(
     /// Each attempt already absorbs Orleans' own 30 second response timeout, and the backoff adds
     /// half a minute on top, so the budget spans several minutes of cluster formation - longer than
     /// membership normally takes to settle. A step still failing after that is not waiting on a
-    /// sibling silo, so it is allowed to fail the host exactly as it did before.
+    /// sibling silo. Required steps fail the host; optional pattern capture is logged and reconciled later.
     /// </remarks>
     const int MaxAttempts = 5;
 
@@ -83,6 +83,17 @@ internal sealed class ChronicleServerStartupTask(
             ServiceLifecycleStage.Active,
             Execute);
     }
+
+    /// <summary>
+    /// Determines whether an observer's activation is required for startup.
+    /// </summary>
+    /// <param name="identifier">The observer identifier.</param>
+    /// <returns>Whether the observer must activate successfully.</returns>
+    /// <remarks>
+    /// Pattern capture is optional. Its subscription/recovery path begins the alert lifecycle, so neither
+    /// rehydration nor alert bootstrap may turn capture activation into a required startup step.
+    /// </remarks>
+    static bool IsRequiredObserver(ObserverId identifier) => identifier != PatternCapture.ObserverIdentifier;
 
     async Task Execute(CancellationToken cancellationToken)
     {
@@ -124,21 +135,32 @@ internal sealed class ChronicleServerStartupTask(
             var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
             await Step("RegisterPersistedProjectionDefinitions", () => RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions));
 
-            var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
+            // Bound the namespace fan-out so starting a store with many tenants does not flood the cluster.
+            await Parallel.ForEachAsync(await namespaces.GetAll(), new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancellationToken }, async (namespaceName, _) =>
             {
                 var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(namespaceName);
-                if (!await namespaceStorage.HasData())
+                var hasData = await namespaceStorage.HasData();
+
+                // Capture must be ready for the first append even in a namespace created before this restart.
+                // There will be no new NamespaceAdded broadcast for an already registered namespace.
+                try
                 {
-                    // Nothing has ever been written to this namespace - there is no jobs, reactor subscriptions,
-                    // event sequence state or observer to rehydrate. Skipping it avoids materializing its storage
-                    // (for example creating a MongoDB database) for a namespace that has only ever been registered,
-                    // never used. The moment it receives its first genuine write, that write lazily materializes
-                    // whatever storage it needs on its own.
+                    await Step("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName));
+                }
+                catch (Exception exception)
+                {
+                    // Analytics must not fail the Active lifecycle stage. The event log reconciles a missed
+                    // subscription on its timer, including namespaces whose first append happens after startup.
+                    logger.FailedSubscribingPatternCapture(exception, eventStore, namespaceName);
+                }
+
+                if (!hasData)
+                {
+                    // There are no persisted jobs, application observers or event sequences to rehydrate.
                     return;
                 }
 
                 await Step("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName));
-                await Step("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName));
 
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
                 await Step("RehydrateJobs", jobsManager.Rehydrate);
@@ -146,7 +168,6 @@ internal sealed class ChronicleServerStartupTask(
                 await Step("RehydrateObservers", () => RehydrateReducerAndReactorObservers(eventStore, namespaceName));
                 await Step("BootstrapObserverAlerts", () => BootstrapObserverAlerts(eventStore, namespaceName));
             });
-            await Task.WhenAll(rehydrateAll);
         }
 
         await authenticationService.EnsureDefaultAdminUser();
@@ -226,7 +247,7 @@ internal sealed class ChronicleServerStartupTask(
         var states = await eventStoreStorage.GetNamespace(namespaceName).Observers.GetAll();
         var alreadyRehydrated = (await eventStoreStorage.Reducers.GetAll()).Select(_ => (ObserverId)_.Identifier.Value)
             .Concat((await eventStoreStorage.Reactors.GetAll()).Select(_ => (ObserverId)_.Identifier.Value)).ToHashSet();
-        foreach (var state in states.Where(_ => !alreadyRehydrated.Contains(_.Identifier)))
+        foreach (var state in states.Where(_ => IsRequiredObserver(_.Identifier) && !alreadyRehydrated.Contains(_.Identifier)))
         {
             if (!definitions.TryGetValue(state.Identifier, out var definition))
             {
@@ -255,8 +276,9 @@ internal sealed class ChronicleServerStartupTask(
         var reducerObserverKeys = reducerDefinitions
             .Where(_ => knownObserverIds.Contains(_.Identifier))
             .Select(_ => new ObserverKey(_.Identifier, eventStore, namespaceName, _.EventSequenceId));
+
         var reactorObserverKeys = reactorDefinitions
-            .Where(_ => knownObserverIds.Contains(_.Identifier))
+            .Where(_ => IsRequiredObserver(_.Identifier) && knownObserverIds.Contains(_.Identifier))
             .Select(_ => new ObserverKey(_.Identifier, eventStore, namespaceName, _.EventSequenceId));
         var observerKeys = reducerObserverKeys.Concat(reactorObserverKeys).Distinct().ToArray();
 

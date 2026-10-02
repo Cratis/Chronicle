@@ -6,4 +6,4 @@ using Cratis.Chronicle.Projections.ModelBound;
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_waiting_for_completion;
 
 [FromEvent<CustomerNamed>]
-public record CustomerSnapshot(string Id, string CustomerName);
+public record CustomerSnapshot(Guid Id, string CustomerName);

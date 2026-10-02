@@ -36,7 +36,7 @@ public class PatternCaptureCalls(PatternCaptureControl control) : IOutgoingGrain
         }
 
         var invocation = context.Invoke();
-        if (context.TargetId.Key.ToString() == observerKey.ToString() && context.InterfaceMethod.Name == nameof(KernelObserver.EnsureSubscribed))
+        if (context.TargetId.Key.ToString() == observerKey.ToString() && context.InterfaceMethod.Name == nameof(KernelObserver.RecoverStalledSubscription))
         {
             control.EnsureRequested.TrySetResult();
         }

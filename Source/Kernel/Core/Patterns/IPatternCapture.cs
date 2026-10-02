@@ -19,13 +19,12 @@ public interface IPatternCapture
     Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     /// <summary>
-    /// Ensure pattern capture is subscribed after events are durably appended, without relying on a state snapshot.
-    /// An existing subscription is left unchanged.
+    /// Ask the observer to recover a missing or stalled capture subscription without releasing quarantine.
     /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> to capture within.</param>
-    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to capture within.</param>
-    /// <returns>Whether pattern capture is subscribed; false if no event types are registered yet.</returns>
-    Task<bool> EnsureSubscribedForDurableAppend(EventStoreName eventStore, EventStoreNamespaceName @namespace);
+    /// <param name="eventStore">The event store to capture within.</param>
+    /// <param name="namespace">The namespace to capture within.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RecoverSubscription(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     /// <summary>
     /// Subscribe pattern capture across every namespace of an event store.

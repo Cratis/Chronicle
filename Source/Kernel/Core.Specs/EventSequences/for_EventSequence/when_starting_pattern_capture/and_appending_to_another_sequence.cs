@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_starting_patter
 
 public class and_appending_to_another_sequence : given.an_event_sequence
 {
-    protected override EventSequenceId EventSequenceId => "another-sequence";
+    protected override EventSequenceId SequenceId => "another-sequence";
 
     async Task Because()
     {
@@ -15,6 +15,6 @@ public class and_appending_to_another_sequence : given.an_event_sequence
         await _silo.TimerRegistry.FireAllAsync();
     }
 
-    [Fact] void should_not_subscribe_the_event_log() => _patternCapture.DidNotReceive().EnsureSubscribedForDurableAppend(EventStore, EventStoreNamespace);
+    [Fact] void should_not_subscribe_the_event_log() => _patternCapture.DidNotReceive().RecoverSubscription(EventStore, EventStoreNamespace);
     [Fact] void should_not_schedule_a_subscription() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
 }

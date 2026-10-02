@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 internal static partial class EventSequenceLogMessages
 {
-    [LoggerMessage(LogLevel.Error, "Failed subscribing pattern capture for event store '{EventStore}' on namespace {Namespace}; subscription will be retried")]
-    internal static partial void FailedSubscribingPatternCapture(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, Exception exception);
+    [LoggerMessage(LogLevel.Warning, "Failed reconciling pattern capture for event store {EventStore} in namespace {Namespace}. The next event-log timer tick will retry")]
+    internal static partial void FailedReconcilingPatternCapture(this ILogger<EventSequence> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     [LoggerMessage(LogLevel.Debug, "Appending '{EventType}' for EventSourceId {EventSourceId} with sequence number {SequenceNumber} to event sequence '{EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
     internal static partial void Appending(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType, EventSourceId eventSourceId, EventSequenceNumber sequenceNumber);

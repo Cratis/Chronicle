@@ -14,7 +14,7 @@ public class ControlledPatternCapture(PatternCapture inner, PatternCaptureContro
 
     public Task SubscribeAcrossNamespaces(KernelEventStoreName eventStore) => inner.SubscribeAcrossNamespaces(eventStore);
 
-    public async Task<bool> EnsureSubscribedForDurableAppend(KernelEventStoreName eventStore, KernelEventStoreNamespaceName @namespace)
+    public async Task RecoverSubscription(KernelEventStoreName eventStore, KernelEventStoreNamespaceName @namespace)
     {
         var isTarget = eventStore == control.Key.EventStore && @namespace == control.Key.Namespace;
         if (isTarget)
@@ -35,12 +35,10 @@ public class ControlledPatternCapture(PatternCapture inner, PatternCaptureContro
             }
         }
 
-        var subscribed = await inner.EnsureSubscribedForDurableAppend(eventStore, @namespace);
-        if (isTarget && subscribed)
+        await inner.RecoverSubscription(eventStore, @namespace);
+        if (isTarget)
         {
             control.SubscriptionCompleted.TrySetResult();
         }
-
-        return subscribed;
     }
 }

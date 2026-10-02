@@ -17,6 +17,8 @@ public class PatternCaptureControl
     public int FailedStateWrites { get; private set; }
     public bool FailSubscription { get; set; }
     public bool FailInitialization { get; set; }
+    public bool FailObserverStateWrite { get; set; }
+    public int FailedObserverStateWrites { get; set; }
     public int SubscriptionAttempts { get; set; }
     public int InitializationAttempts { get; set; }
     public IGrainContext? EventSequenceContext { get; set; }
@@ -36,6 +38,8 @@ public class PatternCaptureControl
         FailedStateWrites = 0;
         FailSubscription = false;
         FailInitialization = false;
+        FailObserverStateWrite = false;
+        FailedObserverStateWrites = 0;
         SubscriptionAttempts = 0;
         InitializationAttempts = 0;
         EventSequenceContext = null;

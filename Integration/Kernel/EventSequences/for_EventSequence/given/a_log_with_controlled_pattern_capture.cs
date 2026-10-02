@@ -23,6 +23,9 @@ public class a_log_with_controlled_pattern_capture(PatternCaptureFixture fixture
     public override bool AutoDiscoverArtifacts => false;
     public override IEnumerable<Type> EventTypes => [typeof(CustomerNamed)];
 
+    protected override IReadOnlyDictionary<string, string?> GetStorageHostConfiguration(string mongoServer) =>
+        new Dictionary<string, string?> { ["Cratis:Chronicle:Observers:WatchdogInterval"] = "5" };
+
     protected override Action<KernelChronicleBuilder> GetStorageConfigurator(string mongoServer) => builder =>
     {
         builder.WithMongoDB($"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true", Constants.EventStore);
@@ -37,6 +40,8 @@ public class a_log_with_controlled_pattern_capture(PatternCaptureFixture fixture
             services.AddSingleton<IOutgoingGrainCallFilter, PatternCaptureCalls>();
             services.AddSingleton<IPatternCapture>(provider => new ControlledPatternCapture(
                 ActivatorUtilities.CreateInstance<PatternCapture>(provider), provider.GetRequiredService<PatternCaptureControl>()));
+            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.ObserverState, (provider, _) =>
+                ActivatorUtilities.CreateInstance<FailingObserverStateStorage>(provider));
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.EventSequences, (provider, _) =>
                 new FailingEventSequenceStateStorage(ActivatorUtilities.CreateInstance<EventSequencesStorageProvider>(provider), provider.GetRequiredService<PatternCaptureControl>()));
         });
@@ -57,5 +62,6 @@ public class a_log_with_controlled_pattern_capture(PatternCaptureFixture fixture
         _control?.SubscriptionReleased.TrySetResult();
         _control?.InitializationReleased.TrySetResult();
         _control?.FailSubscription = false;
+        _control?.FailObserverStateWrite = false;
     }
 }

@@ -53,8 +53,8 @@ public class and_an_in_flight_subscription_fails_after_assignment(context contex
                 // Further ensures coalesce into the completed subscription, rather than restarting it.
                 var capture = Services.GetRequiredService<IPatternCapture>();
                 await Task.WhenAll(
-                    capture.EnsureSubscribedForDurableAppend(_key.EventStore, _key.Namespace),
-                    capture.EnsureSubscribedForDurableAppend(_key.EventStore, _key.Namespace));
+                    capture.RecoverSubscription(_key.EventStore, _key.Namespace),
+                    capture.RecoverSubscription(_key.EventStore, _key.Namespace));
                 InitializationAttempts = _control.InitializationAttempts;
             }
             finally

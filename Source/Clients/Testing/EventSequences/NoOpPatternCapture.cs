@@ -25,9 +25,9 @@ internal sealed class NoOpPatternCapture : IPatternCapture
         KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName @namespace) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task<bool> EnsureSubscribedForDurableAppend(
+    public Task RecoverSubscription(
         KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName eventStore,
-        KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName @namespace) => Task.FromResult(true);
+        KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName @namespace) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task SubscribeAcrossNamespaces(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName eventStore) => Task.CompletedTask;

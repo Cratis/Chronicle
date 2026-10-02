@@ -48,6 +48,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
 /// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
 /// <param name="eventTypeMigrations"><see cref="IEventTypeMigrations"/> for migrating events between generations.</param>
+/// <param name="patternCapture">The pattern capture subscriptions to reconcile.</param>
 /// <param name="meter">The meter to use for metrics.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="jsonComplianceManagerProvider"><see cref="IJsonSchemaMetadataManager"/> for handling compliance on events.</param>
@@ -55,7 +56,6 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
 /// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
 /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
-/// <param name="patternCapture">The pattern capture subscription for namespaces receiving events.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the <see cref="ConcurrencyValidator"/> created per append.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
@@ -64,6 +64,7 @@ public class EventSequence(
     IStorage storage,
     IConstraintValidationFactory constraintValidatorSetFactory,
     IEventTypeMigrations eventTypeMigrations,
+    IPatternCapture patternCapture,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<EventSequence> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<EventSequence> activitySource,
     IJsonSchemaMetadataManager jsonComplianceManagerProvider,
@@ -71,7 +72,6 @@ public class EventSequence(
     IEventSerializer eventSerializer,
     IEventHashCalculator eventHashCalculator,
     IOptions<ChronicleOptions> options,
-    IPatternCapture patternCapture,
     ILogger<EventSequence> logger,
     ILogger<ConcurrencyValidator> concurrencyValidatorLogger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
@@ -91,8 +91,9 @@ public class EventSequence(
     int _statePersistenceInterval = 1;
     int _appendsSinceStateWrite;
     bool _stateWrittenSinceActivation;
+    IGrainTimer? _patternCaptureTimer;
+    bool _patternCaptureSubscriptionPending;
     bool _patternCaptureSubscribed;
-    IGrainTimer? _patternCaptureSubscriptionTimer;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
@@ -132,9 +133,10 @@ public class EventSequence(
         await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
 
-        if (State.SequenceNumber > EventSequenceNumber.First)
+        if (_eventSequenceId == EventSequenceId.Log)
         {
-            SchedulePatternCaptureSubscription();
+            _patternCaptureSubscriptionPending = State.SequenceNumber > EventSequenceNumber.First;
+            RegisterPatternCaptureTimer(TimeSpan.Zero);
         }
     }
 
@@ -152,7 +154,6 @@ public class EventSequence(
             _appendsSinceStateWrite = 0;
         }
 
-        _patternCaptureSubscriptionTimer?.Dispose();
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
@@ -794,6 +795,14 @@ public class EventSequence(
         List<AppendedEvent> appendedEvents,
         IEnumerable<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)> constraintUpdates)
     {
+        if (_eventSequenceId == EventSequenceId.Log && _appendedEventsQueues is not null &&
+            !_patternCaptureSubscribed && !_patternCaptureSubscriptionPending)
+        {
+            // Keep retrying initialization even if no further append arrives and idle collection runs.
+            _patternCaptureSubscriptionPending = true;
+            RegisterPatternCaptureTimer(TimeSpan.Zero);
+        }
+
         try
         {
             await PersistStateAfterAppends(appendedEvents.Count);
@@ -813,15 +822,6 @@ public class EventSequence(
             await SpillAppendedEventsQueuesToCatchup();
         }
 
-        try
-        {
-            SchedulePatternCaptureSubscription();
-        }
-        catch (Exception ex)
-        {
-            logger.FailedSubscribingPatternCapture(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, ex);
-        }
-
         foreach (var (context, sequenceNumber) in constraintUpdates)
         {
             try
@@ -833,37 +833,6 @@ public class EventSequence(
                 logger.FailedUpdatingConstraintIndex(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, ex);
             }
         }
-    }
-
-    void SchedulePatternCaptureSubscription()
-    {
-        if (_appendedEventsQueues is null || _eventSequenceId != EventSequenceId.Log || _patternCaptureSubscribed || _patternCaptureSubscriptionTimer is not null)
-        {
-            return;
-        }
-
-        // A durable append (or an activation rebuilt from the event tail) arms this retry. Keep the
-        // activation alive until the serialized ensure completes initialization, then release the timer.
-        // Failures, including caller timeouts, leave it armed; a forced deactivation re-arms on activation.
-        // Interleaving lets subscription/catch-up call this grain without blocking subsequent appends.
-        _patternCaptureSubscriptionTimer = this.RegisterGrainTimer(
-            async _ =>
-            {
-                try
-                {
-                    _patternCaptureSubscribed = await patternCapture.EnsureSubscribedForDurableAppend(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-                    if (_patternCaptureSubscribed)
-                    {
-                        _patternCaptureSubscriptionTimer?.Dispose();
-                        _patternCaptureSubscriptionTimer = null;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.FailedSubscribingPatternCapture(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, ex);
-                }
-            },
-            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = TimeSpan.FromSeconds(5), Interleave = true, KeepAlive = true });
     }
 
     async Task SpillAppendedEventsQueuesToCatchup()
@@ -1197,6 +1166,45 @@ public class EventSequence(
 
         _lastConstraintsVersionCheck = now;
         return true;
+    }
+
+    void RegisterPatternCaptureTimer(TimeSpan dueTime)
+    {
+        _patternCaptureTimer?.Dispose();
+        _patternCaptureTimer = this.RegisterGrainTimer(ReconcilePatternCapture, new GrainTimerCreationOptions
+        {
+            DueTime = dueTime,
+            Period = TimeSpan.FromSeconds(Math.Max(1, options.Value.Observers.WatchdogInterval)),
+            KeepAlive = _patternCaptureSubscriptionPending,
+
+            // Subscription reads this sequence's tail; neither activation nor append waits on it.
+            Interleave = true
+        });
+    }
+
+    async Task ReconcilePatternCapture(CancellationToken cancellationToken)
+    {
+        try
+        {
+            // A persisted Active marker can outlive failed setup and be reloaded by an ordinary retry.
+            // Always let the observer decide from its actual state machine and setup outcome, in the same
+            // serialized turn that guards quarantine and performs recovery. This stays off the append path.
+            await patternCapture.RecoverSubscription(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+            if (State.SequenceNumber > EventSequenceNumber.First)
+            {
+                _patternCaptureSubscribed = true;
+                if (_patternCaptureSubscriptionPending)
+                {
+                    // Healthy periodic reconciliation must not keep an otherwise idle log alive forever.
+                    _patternCaptureSubscriptionPending = false;
+                    RegisterPatternCaptureTimer(TimeSpan.FromSeconds(Math.Max(1, options.Value.Observers.WatchdogInterval)));
+                }
+            }
+        }
+        catch (Exception exception)
+        {
+            logger.FailedReconcilingPatternCapture(exception, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+        }
     }
 
     async Task RewindPartitionForAffectedObservers(

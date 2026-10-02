@@ -7,7 +7,7 @@ public class and_subscription_is_skipped : given.an_event_sequence
 {
     int _timersAfterSkipping;
 
-    void Establish() => _patternCapture.EnsureSubscribedForDurableAppend(EventStore, EventStoreNamespace).Returns(false, true);
+    void Establish() => _patternCapture.RecoverSubscription(EventStore, EventStoreNamespace).Returns(Task.CompletedTask);
 
     async Task Because()
     {
@@ -18,6 +18,6 @@ public class and_subscription_is_skipped : given.an_event_sequence
     }
 
     [Fact] void should_keep_retrying_a_skipped_subscription() => _timersAfterSkipping.ShouldEqual(1);
-    [Fact] void should_retry_without_another_append() => _patternCapture.Received(2).EnsureSubscribedForDurableAppend(EventStore, EventStoreNamespace);
-    [Fact] void should_release_the_timer_only_after_subscribing() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
+    [Fact] void should_retry_without_another_append() => _patternCapture.Received(2).RecoverSubscription(EventStore, EventStoreNamespace);
+    [Fact] void should_keep_reconciling() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(1);
 }

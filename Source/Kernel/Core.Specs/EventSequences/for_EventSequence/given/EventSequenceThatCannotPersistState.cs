@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
 /// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
 /// <param name="eventTypeMigrations"><see cref="IEventTypeMigrations"/> for migrating events between generations.</param>
+/// <param name="patternCapture">The pattern capture subscriptions.</param>
 /// <param name="meter">The meter to use for metrics.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="jsonComplianceManagerProvider"><see cref="IJsonSchemaMetadataManager"/> for handling compliance on events.</param>
@@ -31,13 +32,13 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
 /// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
 /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
-/// <param name="patternCapture">The pattern capture subscription.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the concurrency validator.</param>
 public class EventSequenceThatCannotPersistState(
     IStorage storage,
     IConstraintValidationFactory constraintValidatorSetFactory,
     IEventTypeMigrations eventTypeMigrations,
+    IPatternCapture patternCapture,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<EventSequence> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<EventSequence> activitySource,
     IJsonSchemaMetadataManager jsonComplianceManagerProvider,
@@ -45,12 +46,12 @@ public class EventSequenceThatCannotPersistState(
     IEventSerializer eventSerializer,
     IEventHashCalculator eventHashCalculator,
     IOptions<ChronicleOptions> options,
-    IPatternCapture patternCapture,
     ILogger<EventSequence> logger,
     ILogger<Concurrency.ConcurrencyValidator> concurrencyValidatorLogger) : EventSequence(
         storage,
         constraintValidatorSetFactory,
         eventTypeMigrations,
+        patternCapture,
         meter,
         activitySource,
         jsonComplianceManagerProvider,
@@ -58,7 +59,6 @@ public class EventSequenceThatCannotPersistState(
         eventSerializer,
         eventHashCalculator,
         options,
-        patternCapture,
         logger,
         concurrencyValidatorLogger)
 {

@@ -33,7 +33,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// <para>
 /// <b>What it deliberately does not run: observers.</b> The grain is constructed directly and its
 /// <c language="csharp">OnActivateAsync</c> - which is what an Orleans silo would call - never runs, so the appended-events queue it
-/// would resolve there stays unset, so live delivery and scheduling pattern capture after appends are no-ops. No projection, reducer or reactor
+/// would resolve there stays unset and the enqueue after each append is a no-op. No projection, reducer or reactor
 /// is ever driven by an append made here. Waiting for observer completion on the resulting append result therefore
 /// throws <see cref="Observation.CannotWaitForObserverCompletion"/> rather than reporting that everything completed.
 /// </para>
@@ -122,6 +122,7 @@ internal static class InProcessEventSequence
                 storage,
                 new KernelConstraints::ConstraintValidationFactory(storage),
                 eventTypeMigrations,
+                new NoOpPatternCapture(),
                 null!,
                 new ActivitySource<KernelEventSequences::EventSequence>(),
                 compliance.Manager,
@@ -129,7 +130,6 @@ internal static class InProcessEventSequence
                 eventSerializer,
                 new KernelEventSequences::EventHashCalculator(),
                 Options.Create(new KernelConfiguration::ChronicleOptions()),
-                new NoOpPatternCapture(),
                 NullLogger<KernelEventSequences::EventSequence>.Instance,
                 NullLogger<KernelEventSequences::Concurrency.ConcurrencyValidator>.Instance);
         }

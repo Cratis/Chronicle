@@ -8,17 +8,16 @@ namespace Cratis.Chronicle.Patterns.for_PatternCapture.when_ensuring_subscriptio
 
 public class and_the_state_snapshot_is_missing : given.a_pattern_capture
 {
-    bool _subscribed;
-
     void Establish()
     {
         EventTypesAre("CustomerNamed");
         _namespaceStorage.HasData().Returns(false);
+        _observer.NeedsSubscriptionRecovery(Arg.Any<IEnumerable<EventType>>()).Returns(true);
     }
 
-    async Task Because() => _subscribed = await _capture.EnsureSubscribedForDurableAppend(_eventStore, _namespace);
+    async Task Because() => await _capture.RecoverSubscription(_eventStore, _namespace);
 
-    [Fact] void should_report_a_subscription() => _subscribed.ShouldBeTrue();
+    [Fact] async Task should_check_readiness() => await _observer.Received(1).NeedsSubscriptionRecovery(Arg.Any<IEnumerable<EventType>>());
     [Fact] async Task should_not_depend_on_the_state_snapshot() => await _namespaceStorage.DidNotReceive().HasData();
-    [Fact] async Task should_subscribe_the_observer() => await _observer.Received(1).EnsureSubscribed<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), false);
+    [Fact] async Task should_subscribe_the_observer() => await _observer.Received(1).RecoverStalledSubscription<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), false, Arg.Any<ObserverFilters?>());
 }

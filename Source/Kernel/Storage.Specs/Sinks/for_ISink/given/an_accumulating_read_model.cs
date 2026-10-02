@@ -107,7 +107,11 @@ public abstract class an_accumulating_read_model<THarness> : Specification
         $"{ContainerName}-revert",
         DateTimeOffset.UtcNow);
 
-    static ReadModelDefinition CreateReadModelDefinition() =>
+    /// <summary>
+    /// Builds the read model definition, allowing provider specs to exercise container naming limits.
+    /// </summary>
+    /// <returns>The accumulating read model definition.</returns>
+    protected virtual ReadModelDefinition CreateReadModelDefinition() =>
         new(
             "test-read-model",
             ContainerName,

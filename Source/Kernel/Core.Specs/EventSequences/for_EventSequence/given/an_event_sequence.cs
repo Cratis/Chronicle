@@ -57,17 +57,17 @@ public class an_event_sequence : Specification
     protected IConstraintValidation _constraintValidation;
     protected IConstraintValidation _currentValidation;
     protected IEventTypeMigrations _eventTypeMigrations;
+    protected IPatternCapture _patternCapture;
     protected IJsonSchemaMetadataManager _complianceManager;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected RecordingConstraintValidator _recordingValidator;
     protected INamespaces _namespaces;
     protected IAppendedEventsQueues _appendedEventsQueues;
-    protected IPatternCapture _patternCapture;
     protected IConstraints _constraintsGrain;
     protected IJobsManager _jobsManager;
     protected List<IConstraintDefinition> _registeredConstraints;
 
-    protected virtual EventSequenceId EventSequenceId => EventSequenceId.Log;
+    protected virtual EventSequenceId SequenceId => EventSequenceId.Log;
     protected virtual int StatePersistenceInterval => 1000;
     protected virtual CausationPropertyRetention CausationPropertyRetention => CausationPropertyRetention.Retain;
 
@@ -79,7 +79,7 @@ public class an_event_sequence : Specification
 
     async Task Establish()
     {
-        _eventSequenceKey = new EventSequenceKey(EventSequenceId, EventStore, EventStoreNamespace);
+        _eventSequenceKey = new EventSequenceKey(SequenceId, EventStore, EventStoreNamespace);
         _eventSourceId = "some-event-source";
         _eventType = new EventType("some-event", EventTypeGeneration.First);
         _appendedSequenceNumber = EventSequenceNumber.Unavailable;
@@ -95,6 +95,7 @@ public class an_event_sequence : Specification
         _constraintValidationFactory = Substitute.For<IConstraintValidationFactory>();
         _constraintValidation = Substitute.For<IConstraintValidation>();
         _eventTypeMigrations = Substitute.For<IEventTypeMigrations>();
+        _patternCapture = Substitute.For<IPatternCapture>();
         _complianceManager = Substitute.For<IJsonSchemaMetadataManager>();
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
 
@@ -178,12 +179,10 @@ public class an_event_sequence : Specification
         _constraintsGrain.GetVersion().Returns(_ => ConstraintDefinitionComparison.ComputeVersion(_registeredConstraints));
         _jobsManager = Substitute.For<IJobsManager>();
 
-        _patternCapture = Substitute.For<IPatternCapture>();
-        _patternCapture.EnsureSubscribedForDurableAppend(EventStore, EventStoreNamespace).Returns(true);
-        _silo.AddService(_patternCapture);
         _silo.AddService(_storage);
         _silo.AddService(_constraintValidationFactory);
         _silo.AddService(_eventTypeMigrations);
+        _silo.AddService(_patternCapture);
         _silo.AddService(_complianceManager);
         _silo.AddService(_expandoObjectConverter);
         _silo.AddService(Substitute.For<IEventSerializer>());

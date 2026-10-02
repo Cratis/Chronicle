@@ -9,10 +9,10 @@ public class after_the_first_durable_append : given.an_event_sequence
     bool _subscribedBeforeTheAppendReturned;
     bool _eventWasDurableWhenSubscribing;
 
-    void Establish() => _patternCapture.EnsureSubscribedForDurableAppend(EventStore, EventStoreNamespace).Returns(_ =>
+    void Establish() => _patternCapture.RecoverSubscription(EventStore, EventStoreNamespace).Returns(_ =>
     {
         _eventWasDurableWhenSubscribing = _appendedSequenceNumber.IsActualValue;
-        return Task.FromResult(true);
+        return Task.CompletedTask;
     });
 
     async Task Because()
@@ -27,6 +27,6 @@ public class after_the_first_durable_append : given.an_event_sequence
     [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_not_wait_for_subscription_in_the_append() => _subscribedBeforeTheAppendReturned.ShouldBeFalse();
     [Fact] void should_subscribe_after_the_event_is_durable() => _eventWasDurableWhenSubscribing.ShouldBeTrue();
-    [Fact] void should_subscribe_only_once_per_activation() => _patternCapture.Received(1).EnsureSubscribedForDurableAppend(EventStore, EventStoreNamespace);
-    [Fact] void should_release_the_timer_after_subscribing() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
+    [Fact] void should_reconcile_after_each_tick() => _patternCapture.Received(2).RecoverSubscription(EventStore, EventStoreNamespace);
+    [Fact] void should_keep_the_reconciliation_timer() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(1);
 }
