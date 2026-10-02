@@ -7,20 +7,20 @@
 
 namespace Cratis.Chronicle.Contracts.Events;
 /// <summary>
-/// Represents the EventObservationState value.
+/// Represents the observation state for an event.
 /// </summary>
 public enum EventObservationState
 {
     /// <summary>
-    /// Represents the None value.
+    /// No flags set.
     /// </summary>
     None = 0,
     /// <summary>
-    /// Represents the Initial value.
+    /// The initial observation, first time being observed.
     /// </summary>
     Initial = 1,
     /// <summary>
-    /// Represents the Replay value.
+    /// Replay observation, this is not the first time its observed for the observer.
     /// </summary>
     Replay = 2
 }

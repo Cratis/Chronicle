@@ -458,10 +458,8 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             return envConnectionString;
         }
 
-        // The 2025-latest image crashed during startup in CI. Pin the stable 2022 CU20 image.
-        const string image = "mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04";
-        var builder = new ContainerBuilder(image)
-            .WithImage(image)
+        var builder = new ContainerBuilder(SqlServerContainerImage.Name)
+            .WithImage(SqlServerContainerImage.Name)
             .WithHostname(MsSqlHostName)
             .WithPortBinding(1433, assignRandomHostPort: true)
             .WithNetwork(network)

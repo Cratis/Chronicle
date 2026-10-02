@@ -29,4 +29,6 @@ public class and_the_type_is_an_enum : given.a_shared_type_generator
     [Fact] void should_carry_no_proto_member_attributes() => _code.ShouldNotContain("[ProtoMember");
     [Fact] void should_preserve_the_first_value() => _code.ShouldContain("First = 0");
     [Fact] void should_preserve_the_second_value() => _code.ShouldContain("Second = 1");
+    [Fact] void should_preserve_the_original_enum_documentation() => _code.ShouldContain("Stands in for a Core-owned enum");
+    [Fact] void should_preserve_the_original_member_documentation() => _code.ShouldContain("Represents the first value.");
 }
