@@ -10,6 +10,6 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </summary>
 internal static partial class SinkLogging
 {
-    [LoggerMessage(LogLevel.Warning, "SQL replay for {EventStore}/{Namespace}/{ReadModel} preserved markerless backup {OriginalTable} as {RecoveryTable} because the revert identifier was truncated. The recovery table is not subject to replay retention; inspect it and remove it manually only after confirming it is no longer needed.")]
+    [LoggerMessage(LogLevel.Warning, "SQL replay for {EventStore}/{Namespace}/{ReadModel} preserved markerless backup {OriginalTable} as {RecoveryTable} because the revert identifier was truncated. The recovery table may hold an older backup or the previous read-model state from an interrupted pre-upgrade promotion. It is not subject to replay retention; inspect it before removing it manually.")]
     internal static partial void PreservedLegacyReplayBackup(this ILogger<Sink> logger, string eventStore, string @namespace, string readModel, string originalTable, string recoveryTable);
 }

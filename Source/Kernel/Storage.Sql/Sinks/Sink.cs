@@ -427,8 +427,9 @@ public class Sink : ISink
                     // On upgrade a truncated name can collide with an old, markerless backup. Its
                     // identity is unknowable, so preserve it, never drop it or invent a completion marker.
                     // Exact-name half-swaps and tables owned by another read model still need recovery.
-                    if (physicalRevert == revertName || await scope.DbContext.ReplayPromotions.AnyAsync(promotion =>
-                        promotion.BackupTableName == physicalRevert || promotion.RevertContainerName == revertName))
+                    if (physicalRevert == revertName || !await TableExists(database, databaseType, _tableName)
+                        || await scope.DbContext.ReplayPromotions.AnyAsync(promotion =>
+                            promotion.BackupTableName == physicalRevert || promotion.RevertContainerName == revertName))
                     {
                         throw new UnverifiedReplayBackup(_tableName, physicalRevert);
                     }
