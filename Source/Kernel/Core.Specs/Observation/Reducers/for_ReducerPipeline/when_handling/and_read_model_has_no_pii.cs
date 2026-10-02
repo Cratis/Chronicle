@@ -22,5 +22,5 @@ public class and_read_model_has_no_pii : given.all_dependencies
         CreateReducer(_returnedState));
 
     [Fact] void should_not_call_release() => _complianceManager.DidNotReceive().Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Schemas.JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>());
-    [Fact] void should_not_call_apply() => _complianceManager.DidNotReceive().Apply(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Schemas.JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>());
+    [Fact] void should_not_call_apply() => _complianceManager.DidNotReceive().ApplyToReadModel(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Schemas.JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>());
 }

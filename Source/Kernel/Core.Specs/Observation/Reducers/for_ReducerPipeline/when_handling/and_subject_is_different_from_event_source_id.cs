@@ -33,6 +33,6 @@ public class and_subject_is_different_from_event_source_id : given.all_dependenc
         CreateContext(EventSourceIdValue, (Subject)SubjectValue),
         CreateReducer(_returnedState));
 
-    [Fact] void should_call_apply_with_subject_as_identifier() => _complianceManager.Received(1).Apply(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), SubjectValue, Arg.Any<JsonObject>());
-    [Fact] void should_not_use_event_source_id_as_identifier() => _complianceManager.DidNotReceive().Apply(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
+    [Fact] void should_call_apply_with_subject_as_identifier() => _complianceManager.Received(1).ApplyToReadModel(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), SubjectValue, Arg.Any<JsonObject>());
+    [Fact] void should_not_use_event_source_id_as_identifier() => _complianceManager.DidNotReceive().ApplyToReadModel(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
 }
