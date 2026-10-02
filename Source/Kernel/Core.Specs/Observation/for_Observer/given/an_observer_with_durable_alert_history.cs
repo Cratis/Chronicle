@@ -30,9 +30,11 @@ public class an_observer_with_durable_alert_history : an_observer
     protected ObserverAlerts _tracker;
     protected ObserverRemover _remover;
     protected bool _loseNextClearResponse;
+    protected bool _delayNextRaise;
+    protected AlertRaised _pendingRaise;
+    protected EventSequences.IEventSequence _systemSequence;
     IStorage _trackerStorage;
     IEventSerializer _serializer;
-    EventSequences.IEventSequence _systemSequence;
     object _serialized;
 
     async Task Establish()
@@ -61,6 +63,13 @@ public class an_observer_with_durable_alert_history : an_observer
         _systemSequence = Substitute.For<EventSequences.IEventSequence>();
         _systemSequence.Append(Arg.Any<EventSourceType>(), Arg.Any<EventSourceId>(), Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<CorrelationId>(), Arg.Any<IEnumerable<Causation>>(), Arg.Any<Identity>(), Arg.Any<IEnumerable<Tag>>(), Arg.Any<ConcurrencyScope>()).Returns(_ =>
         {
+            if (_delayNextRaise && _serialized is AlertRaised raised)
+            {
+                _delayNextRaise = false;
+                _pendingRaise = raised;
+                return Task.FromException<AppendResult>(new TimeoutException("Append still executing on the sequence"));
+            }
+
             _history.Add(_serialized);
             if (_loseNextClearResponse && _serialized is AlertCleared)
             {
@@ -98,6 +107,14 @@ public class an_observer_with_durable_alert_history : an_observer
 
     protected async Task GivenFailingPartitions(int count)
     {
+        await PersistFailingPartitions(count);
+        await ReportAlerts();
+        await ReportAlerts();
+        _history.OfType<AlertRaised>().Count().ShouldEqual(count);
+    }
+
+    protected async Task PersistFailingPartitions(int count)
+    {
         var occurred = DateTimeOffset.UtcNow - TimeSpan.FromHours(1);
         _failedPartitionsState.Partitions = Enumerable.Range(0, count).Select(index => new FailedPartition
         {
@@ -108,9 +125,6 @@ public class an_observer_with_durable_alert_history : an_observer
         }).ToArray();
         await _failedPartitionsStorage.WriteStateAsync();
         _stateStorage.State = _stateStorage.State with { FailedPartitionCount = count };
-        await ReportAlerts();
-        await ReportAlerts();
-        _history.OfType<AlertRaised>().Count().ShouldEqual(count);
     }
 
     protected Task<ObserverRemovalResult> RemoveThroughCoordinator() => _remover.Remove(_observerKey.EventStore, _observerId, _observerKey.EventSequenceId);

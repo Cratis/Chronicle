@@ -23,8 +23,9 @@ namespace Cratis.Chronicle.Observation.Alerts;
 /// <remarks>
 /// There is no transition queue or tracker-owned retry work. The observer's durable reminder retries uncertain
 /// application and revisits grace deadlines. History is fully folded on first use and refreshed from its tail
-/// thereafter; an ambiguous append invalidates the fold. Source authority is read from storage, never by calling
-/// the observer (which may be awaiting this grain).
+/// thereafter; an ambiguous append invalidates the fold. Every report drains preceding sequence appends before
+/// reading history, including on a fresh activation that cannot know whether an earlier append timed out.
+/// Source authority is read from storage, never by calling the observer (which may be awaiting this grain).
 /// </remarks>
 /// <param name="storage">The source state and history storage.</param>
 /// <param name="eventSerializer">The transition serializer.</param>
@@ -66,6 +67,11 @@ public class ObserverAlerts(
                 return Receipt(ObserverAlertReconciliation.Superseded);
             }
 
+            // Orleans response timeouts do not cancel the callee. A storage read alone can miss an append
+            // that is still executing. Drain on every report, not just after a locally observed timeout:
+            // a previous tracker activation may have left an append running too. Never acknowledge or
+            // authorize removal unless this non-interleaved barrier and the subsequent history read succeed.
+            await GrainFactory.GetSystemEventSequence().DrainAppends();
             await RefreshHistory();
             if (snapshot.IsQuarantined && snapshot.QuarantineEpisodeId is null && snapshot.Disposition == AlertDisposition.Active)
             {
