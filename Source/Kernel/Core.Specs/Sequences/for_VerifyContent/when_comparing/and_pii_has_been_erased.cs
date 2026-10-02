@@ -11,7 +11,7 @@ public class and_pii_has_been_erased : given.a_protected_event
 {
     void Establish() => _keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns((EncryptionKey?)null);
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager);
+    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
 
     [Fact] void should_not_mistake_erasure_for_empty_content() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }

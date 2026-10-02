@@ -7,6 +7,7 @@ using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 
@@ -41,8 +42,9 @@ public record VerifyContent(
     /// </summary>
     /// <param name="storage">The storage to read.</param>
     /// <param name="metadataManager">The strict release implementation.</param>
+    /// <param name="expandoObjectConverter">The schema-guided append and storage converter.</param>
     /// <returns>Equal, different, or unavailable; partial release never produces equality.</returns>
-    public async Task<ContentVerification> Handle(IStorage storage, IJsonSchemaMetadataManager metadataManager)
+    public async Task<ContentVerification> Handle(IStorage storage, IJsonSchemaMetadataManager metadataManager, IExpandoObjectConverter expandoObjectConverter)
     {
         var eventStore = storage.GetEventStore(EventStore);
         var sequence = eventStore.GetNamespace(Namespace).GetEventSequence(EventSequenceId);
@@ -55,6 +57,11 @@ public record VerifyContent(
         var stored = cursor.Current.SingleOrDefault();
         if (stored is null || stored.Context.SequenceNumber != SequenceNumber ||
             (EventSourceId is not null && stored.Context.EventSourceId.Value != EventSourceId))
+        {
+            return new(ContentVerificationResult.Unavailable);
+        }
+
+        if (stored.Context.EventType.Id == GlobalEventTypes.Redaction)
         {
             return new(ContentVerificationResult.Unavailable);
         }
@@ -87,11 +94,11 @@ public record VerifyContent(
                 return new(ContentVerificationResult.Unavailable);
             }
 
-            return new(JsonNode.DeepEquals(released, attempted) ? ContentVerificationResult.Equal : ContentVerificationResult.Different);
+            return new(ContentComparison.Equals(released, attempted, schema.Schema, expandoObjectConverter) ? ContentVerificationResult.Equal : ContentVerificationResult.Different);
         }
-        catch (JsonException)
+        catch (Exception exception) when (exception is JsonException or FormatException or InvalidCastException or InvalidOperationException or OverflowException)
         {
-            // Malformed stored or attempted content is not evidence of equality.
+            // Content that cannot be represented by the generation schema is not evidence of equality.
             return new(ContentVerificationResult.Unavailable);
         }
     }
