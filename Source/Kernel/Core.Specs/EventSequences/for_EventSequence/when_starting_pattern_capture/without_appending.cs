@@ -7,6 +7,6 @@ public class without_appending : given.an_event_sequence
 {
     async Task Because() => await _silo.TimerRegistry.FireAllAsync();
 
-    [Fact] void should_not_subscribe_an_empty_namespace() => _patternCapture.DidNotReceive().Subscribe(EventStore, EventStoreNamespace);
+    [Fact] void should_not_subscribe_an_empty_namespace() => _patternCapture.DidNotReceive().EnsureSubscribedForDurableAppend(EventStore, EventStoreNamespace);
     [Fact] void should_not_schedule_a_subscription() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
 }

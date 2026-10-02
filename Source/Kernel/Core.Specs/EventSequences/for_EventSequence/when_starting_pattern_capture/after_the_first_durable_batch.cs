@@ -29,6 +29,6 @@ public class after_the_first_durable_batch : given.appending_many_events
     }
 
     [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
-    [Fact] void should_subscribe_pattern_capture() => _patternCapture.Received(1).Subscribe(EventStore, EventStoreNamespace);
+    [Fact] void should_subscribe_pattern_capture() => _patternCapture.Received(1).EnsureSubscribedForDurableAppend(EventStore, EventStoreNamespace);
     [Fact] void should_release_the_timer() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
 }

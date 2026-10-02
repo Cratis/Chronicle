@@ -8,9 +8,9 @@ public class and_subscription_fails : given.an_event_sequence
     AppendResult _result;
     int _timersAfterFailure;
 
-    void Establish() => _patternCapture.Subscribe(EventStore, EventStoreNamespace).Returns(
-        _ => Task.FromException(new given.SimulatedStorageError()),
-        _ => Task.CompletedTask);
+    void Establish() => _patternCapture.EnsureSubscribedForDurableAppend(EventStore, EventStoreNamespace).Returns(
+        _ => Task.FromException<bool>(new given.SimulatedStorageError()),
+        _ => Task.FromResult(true));
 
     async Task Because()
     {
@@ -22,6 +22,6 @@ public class and_subscription_fails : given.an_event_sequence
 
     [Fact] void should_not_fail_the_durable_append() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_keep_the_retry_timer() => _timersAfterFailure.ShouldEqual(1);
-    [Fact] void should_retry_without_another_append() => _patternCapture.Received(2).Subscribe(EventStore, EventStoreNamespace);
+    [Fact] void should_retry_without_another_append() => _patternCapture.Received(2).EnsureSubscribedForDurableAppend(EventStore, EventStoreNamespace);
     [Fact] void should_release_the_timer_after_recovery() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
 }

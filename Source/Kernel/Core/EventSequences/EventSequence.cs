@@ -845,17 +845,19 @@ public class EventSequence(
             {
                 try
                 {
-                    await patternCapture.Subscribe(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-                    _patternCaptureSubscribed = true;
-                    _patternCaptureSubscriptionTimer?.Dispose();
-                    _patternCaptureSubscriptionTimer = null;
+                    _patternCaptureSubscribed = await patternCapture.EnsureSubscribedForDurableAppend(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+                    if (_patternCaptureSubscribed)
+                    {
+                        _patternCaptureSubscriptionTimer?.Dispose();
+                        _patternCaptureSubscriptionTimer = null;
+                    }
                 }
                 catch (Exception ex)
                 {
                     logger.FailedSubscribingPatternCapture(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, ex);
                 }
             },
-            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = TimeSpan.FromSeconds(5) });
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = TimeSpan.FromSeconds(5), Interleave = true });
     }
 
     async Task SpillAppendedEventsQueuesToCatchup()

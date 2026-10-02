@@ -179,6 +179,7 @@ public class an_event_sequence : Specification
         _jobsManager = Substitute.For<IJobsManager>();
 
         _patternCapture = Substitute.For<IPatternCapture>();
+        _patternCapture.EnsureSubscribedForDurableAppend(EventStore, EventStoreNamespace).Returns(true);
         _silo.AddService(_patternCapture);
         _silo.AddService(_storage);
         _silo.AddService(_constraintValidationFactory);

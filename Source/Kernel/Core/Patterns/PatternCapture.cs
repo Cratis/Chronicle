@@ -66,7 +66,23 @@ public class PatternCapture(
     }
 
     /// <inheritdoc/>
-    public async Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    public async Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+        await SubscribeToRegisteredEventTypes(eventStore, @namespace, hasDurableEvents: false);
+
+    /// <inheritdoc/>
+    public async Task<bool> EnsureSubscribedForDurableAppend(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        var key = new ObserverKey(ObserverIdentifier, eventStore, @namespace, EventSequenceId.Log);
+        var subscription = await grainFactory.GetGrain<IObserver>(key).GetSubscription();
+        if (subscription.IsSubscribed)
+        {
+            return true;
+        }
+
+        return await SubscribeToRegisteredEventTypes(eventStore, @namespace, hasDurableEvents: true);
+    }
+
+    async Task<bool> SubscribeToRegisteredEventTypes(EventStoreName eventStore, EventStoreNamespaceName @namespace, bool hasDurableEvents)
     {
         var schemas = await storage.GetEventStore(eventStore).EventTypes.GetLatestForAllEventTypes();
         var eventTypes = schemas.Select(schema => schema.Type).ToArray();
@@ -74,13 +90,14 @@ public class PatternCapture(
         if (eventTypes.Length == 0)
         {
             logger.NoEventTypesToCapture(eventStore);
-            return;
+            return false;
         }
 
-        if (!await storage.GetEventStore(eventStore).GetNamespace(@namespace).HasData())
+        // HasData can depend on the warm-start snapshot, whose write may fail after a durable append.
+        if (!hasDurableEvents && !await storage.GetEventStore(eventStore).GetNamespace(@namespace).HasData())
         {
             logger.NamespaceHasNoDataToCapture(eventStore, @namespace);
-            return;
+            return false;
         }
 
         logger.SubscribingPatternCapture(eventStore, @namespace, eventTypes.Length);
@@ -101,5 +118,7 @@ public class PatternCapture(
             localSiloDetails.SiloAddress,
             null,
             false);
+
+        return true;
     }
 }
