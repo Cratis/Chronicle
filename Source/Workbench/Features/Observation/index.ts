@@ -4,6 +4,7 @@ export * from './AllFailedPartitions';
 export * from './AllObservers';
 export * from './ClearFailedPartitions';
 export * from './ClearObserverQuarantine';
+export * from './ClearPartitionQuarantine';
 export * from './FailedPartitionAttemptDetails';
 export * from './FailedPartitionDetails';
 export * from './GetFailedPartitions';

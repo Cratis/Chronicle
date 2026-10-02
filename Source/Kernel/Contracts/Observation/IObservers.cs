@@ -37,6 +37,18 @@ public interface IObservers
     Task<RetryPartitionResponse> RetryPartition(RetryPartition command, CallContext context = default);
 
     /// <summary>
+    /// Clear the quarantine of a single failed partition, reset its retry budget and optionally retry it.
+    /// </summary>
+    /// <param name="command">The clear partition quarantine command.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A <see cref="ClearPartitionQuarantineResponse"/> describing what happened.</returns>
+    /// <remarks>
+    /// The attempt history of the partition is kept. Every refusal has its own outcome rather than succeeding silently.
+    /// </remarks>
+    [Operation]
+    Task<ClearPartitionQuarantineResponse> ClearPartitionQuarantine(ClearPartitionQuarantine command, CallContext context = default);
+
+    /// <summary>
     /// Clear quarantine for an observer.
     /// </summary>
     /// <param name="command">The clear quarantine command.</param>

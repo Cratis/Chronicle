@@ -36,6 +36,17 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     }
 
     /// <inheritdoc/>
+    public async Task<ClearPartitionQuarantineResponse> ClearPartitionQuarantine(ClearPartitionQuarantine command, CallContext context = default)
+    {
+        var result = await grainFactory.GetObserver(command).ClearPartitionQuarantine(command.Partition, command.RetryImmediately);
+        return new ClearPartitionQuarantineResponse
+        {
+            Outcome = (ClearPartitionQuarantineOutcome)(int)result.Outcome,
+            RetryOutcome = (PartitionRecoveryOutcome)(int)result.RetryOutcome
+        };
+    }
+
+    /// <inheritdoc/>
     public async Task<ReplayResponse> Replay(Replay command, CallContext context = default)
     {
         var jobId = await grainFactory.GetObserver(command).Replay();
