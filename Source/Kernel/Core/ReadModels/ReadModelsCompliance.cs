@@ -46,6 +46,14 @@ public class ReadModelsCompliance(
             : [];
 
         var json = expandoObjectConverter.ToJsonObject(instance, schema);
+        PreserveInputNulls(instance, json, schema);
+        var unprotectedConversionLosses = schema.IsUnprotectedSchemaValue(includeMembers: false)
+            ? schema.GetFlattenedProperties()
+                .GroupBy(property => property.Name, StringComparer.Ordinal)
+                .Where(group => !json.ContainsKey(group.Key) && instanceAsDictionary.ContainsKey(group.Key) &&
+                    group.All(property => property.IsUnprotectedSchemaValue()))
+                .ToDictionary(group => group.Key, group => instanceAsDictionary[group.Key], StringComparer.Ordinal)
+            : [];
         var applied = await HandleBySubject(
             json,
             defaultSubject,
@@ -54,16 +62,19 @@ public class ReadModelsCompliance(
         var result = expandoObjectConverter.ToExpandoObject(applied, schema);
         var resultAsDictionary = (IDictionary<string, object?>)result;
 
-        // Never restore original non-null application values after protection. Besides bypassing encryption,
-        // doing so would undo schema conversion (for example, converting CLR enums to their stored integers).
-        PreserveUnprotectedNulls(instance, result, schema);
-        var declaredProperties = schema.GetFlattenedProperties().Select(_ => _.Name).ToHashSet(StringComparer.Ordinal);
-        foreach (var property in WellKnownProperties.All.Where(_ => !declaredProperties.Contains(_)))
+        // The compliance result is authoritative, including null erasure placeholders. Only losses classified
+        // as unprotected before the walk may use the original; never overwrite a converted or protected value.
+        PreserveOutputNulls(applied, result);
+        foreach (var (property, value) in unprotectedConversionLosses.Where(_ => !resultAsDictionary.ContainsKey(_.Key)))
         {
-            if (instanceAsDictionary.TryGetValue(property, out var value))
-            {
-                resultAsDictionary[property] = value;
-            }
+            resultAsDictionary[property] = value;
+        }
+        var declaredProperties = schema.GetFlattenedProperties().Select(_ => _.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var (property, value) in instanceAsDictionary.Where(_ => !declaredProperties.Contains(_.Key) && !resultAsDictionary.ContainsKey(_.Key)))
+        {
+            // The sink key and other undeclared state must survive the conversion, but an alternate casing of
+            // a declared member is not undeclared state and must never bypass that member's protection.
+            resultAsDictionary[property] = value;
         }
 
         resultAsDictionary[WellKnownProperties.Subject] = defaultSubject;
@@ -141,12 +152,15 @@ public class ReadModelsCompliance(
         }
 
         var json = expandoObjectConverter.ToJsonObject(instance, schema);
+        PreserveInputNulls(instance, json, schema);
         var released = await HandleBySubject(
             json,
             identifier,
             subjects,
             (subject, slice) => complianceManager.Release(eventStore, eventStoreNamespace, schema, subject, slice));
-        return expandoObjectConverter.ToExpandoObject(released, schema);
+        var result = expandoObjectConverter.ToExpandoObject(released, schema);
+        PreserveOutputNulls(released, result);
+        return result;
     }
 
     /// <inheritdoc/>
@@ -165,50 +179,63 @@ public class ReadModelsCompliance(
         return result;
     }
 
-    static void PreserveUnprotectedNulls(object? original, object? protectedValue, JsonSchema schema)
+    static void PreserveInputNulls(object? original, JsonNode? converted, JsonSchema schema)
     {
-        if (schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any() ||
-            schema.ActualTypeSchema.GetComplianceMetadata().Any() || schema.ActualTypeSchema.GetSecurityMetadata().Any())
+        if (original is ExpandoObject source && converted is JsonObject result)
         {
-            return;
-        }
-
-        if (original is ExpandoObject originalObject && protectedValue is ExpandoObject protectedObject)
-        {
-            var source = (IDictionary<string, object?>)originalObject;
-            var result = (IDictionary<string, object?>)protectedObject;
-
-            // Match the compliance walk's complete property set and first declaration, not one allOf member.
-            // Unknown properties are deliberately not restored: their protection cannot be established.
+            var values = (IDictionary<string, object?>)source;
             foreach (var property in schema.GetFlattenedProperties().DistinctBy(_ => _.Name))
             {
-                if (!source.TryGetValue(property.Name, out var value))
+                if (!values.TryGetValue(property.Name, out var value))
                 {
-                    var matching = source.FirstOrDefault(_ => _.Key.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
-                    if (matching.Key is null)
-                    {
-                        continue;
-                    }
+                    var matching = values.FirstOrDefault(_ => _.Key.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
+                    if (matching.Key is null) continue;
                     value = matching.Value;
                 }
 
-                if (value is null && !result.ContainsKey(property.Name) && !property.HasSchemaMetadata())
+                if (value is null && !result.ContainsKey(property.Name))
                 {
                     result[property.Name] = null;
                 }
-                else if (result.TryGetValue(property.Name, out var currentValue))
+                else
                 {
-                    PreserveUnprotectedNulls(value, currentValue, property);
+                    PreserveInputNulls(value, result[property.Name], property);
                 }
             }
         }
-        else if (original is IEnumerable originalItems and not string && protectedValue is object?[] protectedItems &&
+        else if (original is IEnumerable sourceItems and not string && converted is JsonArray resultItems &&
                  (schema.Item ?? schema.ActualTypeSchema.Item) is { } itemSchema)
         {
-            var items = originalItems.Cast<object?>().ToArray();
-            for (var index = 0; index < Math.Min(items.Length, protectedItems.Length); index++)
+            var items = sourceItems.Cast<object?>().ToArray();
+            for (var index = 0; index < Math.Min(items.Length, resultItems.Count); index++)
             {
-                PreserveUnprotectedNulls(items[index], protectedItems[index], itemSchema);
+                PreserveInputNulls(items[index], resultItems[index], itemSchema);
+            }
+        }
+    }
+
+    static void PreserveOutputNulls(JsonNode? handled, object? converted)
+    {
+        if (handled is JsonObject source && converted is ExpandoObject result)
+        {
+            var values = (IDictionary<string, object?>)result;
+            foreach (var (name, value) in source)
+            {
+                if (value is null)
+                {
+                    values[name] = null;
+                }
+                else if (values.TryGetValue(name, out var current))
+                {
+                    PreserveOutputNulls(value, current);
+                }
+            }
+        }
+        else if (handled is JsonArray sourceItems && converted is object?[] resultItems)
+        {
+            for (var index = 0; index < Math.Min(sourceItems.Count, resultItems.Length); index++)
+            {
+                PreserveOutputNulls(sourceItems[index], resultItems[index]);
             }
         }
     }

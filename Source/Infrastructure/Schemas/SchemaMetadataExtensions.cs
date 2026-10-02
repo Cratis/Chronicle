@@ -15,14 +15,12 @@ namespace Cratis.Chronicle.Schemas;
 /// for why compliance and security are kept apart rather than sharing one bucket. Each category is stored under
 /// its own key in the schema's extension data, so a schema can carry both without either reader having to
 /// disambiguate entries that were never theirs. What is shared is the mechanics: normalizing raw JSON into typed
-/// <see cref="ComplianceSchemaMetadata"/> entries, the recursive has-metadata walk with its cycle and depth guards,
+/// <see cref="ComplianceSchemaMetadata"/> entries, the graph walk with reference-cycle detection,
 /// and the per-category memoization. None of that is specific to compliance or to security - it is generic JSON
 /// schema metadata handling, which is why it lives here rather than duplicated once per category.
 /// </remarks>
 public static class SchemaMetadataExtensions
 {
-    const int MaxSchemaMetadataTraversalDepth = 64;
-
     /// <summary>
     /// Ensure the schema metadata for a given category on the schema node itself is typed rather than raw JSON.
     /// </summary>
@@ -96,7 +94,7 @@ public static class SchemaMetadataExtensions
             return value;
         }
 
-        var result = HasSchemaMetadata(schema, KeyFor(category), [], 0);
+        var result = NestedSchemasAndSelf(schema).Any(node => node.ExtensionData?.ContainsKey(KeyFor(category)) == true);
         if (category == SchemaMetadataCategory.Compliance)
         {
             schema.CachedHasComplianceMetadata = result;
@@ -134,7 +132,7 @@ public static class SchemaMetadataExtensions
     /// present at all.
     /// </remarks>
     public static bool HasSchemaMetadata(this JsonSchema schema, SchemaMetadataCategory category, Func<string, bool> predicate) =>
-        HasMatchingSchemaMetadata(schema, category, predicate, [], 0);
+        NestedSchemasAndSelf(schema).Any(node => node.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType)));
 
     /// <summary>
     /// Check recursively whether the schema has metadata for any known category.
@@ -150,6 +148,18 @@ public static class SchemaMetadataExtensions
         schema.HasSchemaMetadata(SchemaMetadataCategory.Compliance) || schema.HasSchemaMetadata(SchemaMetadataCategory.Security);
 
     /// <summary>
+    /// Determines whether a schema is fully resolved and declares no protection on this value.
+    /// </summary>
+    /// <param name="schema">The schema to inspect.</param>
+    /// <param name="includeMembers">Whether nested properties and collection elements are part of the value being restored.</param>
+    /// <returns>True only when restoring the value cannot bypass declared or unresolved protection.</returns>
+    public static bool IsUnprotectedSchemaValue(this JsonSchema schema, bool includeMembers = true) =>
+        NestedSchemasAndSelf(schema, includeMembers).All(node =>
+            node.ExtensionData?.ContainsKey(ComplianceJsonSchemaExtensions.ComplianceKey) != true &&
+            node.ExtensionData?.ContainsKey(SecurityJsonSchemaExtensions.SecurityKey) != true &&
+            (!node.HasReference || node.Reference is not null));
+
+    /// <summary>
     /// Gets the schema key a given <see cref="SchemaMetadataCategory"/> is stored under.
     /// </summary>
     /// <param name="category">The <see cref="SchemaMetadataCategory"/> to get the key for.</param>
@@ -157,52 +167,31 @@ public static class SchemaMetadataExtensions
     internal static string KeyFor(SchemaMetadataCategory category) =>
         category == SchemaMetadataCategory.Compliance ? ComplianceJsonSchemaExtensions.ComplianceKey : SecurityJsonSchemaExtensions.SecurityKey;
 
-    static bool HasMatchingSchemaMetadata(JsonSchema schema, SchemaMetadataCategory category, Func<string, bool> predicate, HashSet<JsonSchema> visited, int depth)
+    static IEnumerable<JsonSchema> NestedSchemasAndSelf(JsonSchema schema, bool includeMembers = true)
     {
-        // Same traversal shape and termination guards as HasSchemaMetadata(JsonSchema, string, HashSet, int)
-        // below - see its remarks - but this walk has to read and test each entry's metadata type rather than
-        // stop at "the key exists", so it cannot share that method's cheap ContainsKey check or its cache.
-        if (depth > MaxSchemaMetadataTraversalDepth || !visited.Add(schema))
+        var pending = new Stack<JsonSchema>();
+        var references = new HashSet<(JsonSchema Root, string Reference)>();
+        pending.Push(schema);
+        while (pending.TryPop(out var current))
         {
-            return false;
-        }
+            yield return current;
+            var members = includeMembers ? current.Properties.Values.Cast<JsonSchema>() : [];
+            foreach (var child in members.Concat(current.AllOf).Concat(current.AnyOf).Concat(current.OneOf))
+            {
+                pending.Push(child);
+            }
 
-        return schema.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType)) ||
-            NestedSchemas(schema).Any(child => HasMatchingSchemaMetadata(child, category, predicate, visited, depth + 1));
-    }
-
-    static bool HasSchemaMetadata(JsonSchema schema, string key, HashSet<JsonSchema> visited, int depth)
-    {
-        // References can create fresh wrappers at each level. At the depth limit protection is unknown,
-        // not absent: keep the compliance walk enabled rather than allowing unexamined plaintext through.
-        if (depth > MaxSchemaMetadataTraversalDepth)
-        {
-            return true;
-        }
-        if (!visited.Add(schema))
-        {
-            return false;
-        }
-
-        return (schema.ExtensionData?.ContainsKey(key) ?? false) ||
-            NestedSchemas(schema).Any(child => HasSchemaMetadata(child, key, visited, depth + 1));
-    }
-
-    static IEnumerable<JsonSchema> NestedSchemas(JsonSchema schema)
-    {
-        // Resolving ActualTypeSchema first loses metadata on the wrapper, its local properties, or another
-        // allOf member. Inspect the whole graph, including array items and nullable alternatives.
-        foreach (var child in schema.Properties.Values.Cast<JsonSchema>().Concat(schema.AllOf).Concat(schema.AnyOf).Concat(schema.OneOf))
-        {
-            yield return child;
-        }
-        if (schema.Reference is { } reference)
-        {
-            yield return reference;
-        }
-        if (schema.Item is { } item)
-        {
-            yield return item;
+            // Resolving a reference creates a fresh wrapper. Track the reference in its owning document,
+            // not wrapper identity or depth: a cycle says nothing about whether metadata exists.
+            if (current.Node["$ref"]?.GetValue<string>() is { } reference &&
+                references.Add((current.Root, reference)) && current.Reference is { } target)
+            {
+                pending.Push(target);
+            }
+            if (includeMembers && current.Item is { } item)
+            {
+                pending.Push(item);
+            }
         }
     }
 
