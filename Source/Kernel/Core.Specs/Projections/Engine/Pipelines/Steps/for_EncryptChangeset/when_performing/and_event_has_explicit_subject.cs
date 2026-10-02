@@ -26,6 +26,6 @@ public class and_event_has_explicit_subject : given.all_dependencies
 
     async Task Because() => _result = await _step.Perform(_projection, _context);
 
-    [Fact] void should_use_subject_as_identifier() => _complianceManager.Received(1).Apply(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), SubjectValue, Arg.Any<JsonObject>());
-    [Fact] void should_not_use_event_source_id() => _complianceManager.DidNotReceive().Apply(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
+    [Fact] void should_use_subject_as_identifier() => _complianceManager.Received(1).ApplyToReadModel(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), SubjectValue, Arg.Any<JsonObject>());
+    [Fact] void should_not_use_event_source_id() => _complianceManager.DidNotReceive().ApplyToReadModel(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
 }

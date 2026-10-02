@@ -107,6 +107,64 @@ public interface IObserver : IGrainWithStringKey
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
+    /// Subscribe a kernel observer additively, retaining the highest generation of every already subscribed type.
+    /// </summary>
+    /// <typeparam name="TObserverSubscriber">The kernel-owned subscriber type.</typeparam>
+    /// <param name="type">The observer type.</param>
+    /// <param name="eventTypes">The event types to observe.</param>
+    /// <param name="siloAddress">The subscriber's silo address.</param>
+    /// <param name="subscriberArgs">Optional subscriber arguments.</param>
+    /// <param name="isReplayable">Whether the observer supports replay.</param>
+    /// <param name="filters">Optional event filters.</param>
+    /// <returns>The effective merged event types from this non-interleaved grain request. Retired or sealed observers are left unchanged.</returns>
+    Task<IEnumerable<EventType>> SubscribeAdditively<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        object? subscriberArgs = default,
+        bool isReplayable = true,
+        ObserverFilters? filters = default)
+        where TObserverSubscriber : IObserverSubscriber;
+
+    /// <summary>
+    /// Check whether a kernel subscription is missing, has failed setup, or observes a different event-type set.
+    /// </summary>
+    /// <remarks>
+    /// This interleaved, read-only hint avoids unnecessary definition writes. Recovery must recheck in its own
+    /// serialized request because setup or quarantine can change before it runs. Retired or sealed observers never need recovery.
+    /// </remarks>
+    /// <param name="eventTypes">The expected event types.</param>
+    /// <returns>Whether subscription recovery may be needed.</returns>
+    [AlwaysInterleave]
+    Task<bool> NeedsSubscriptionRecovery(IEnumerable<EventType> eventTypes);
+
+    /// <summary>
+    /// Recover a missing, failed, or outdated explicitly typed kernel subscription without releasing quarantine or resetting progress.
+    /// </summary>
+    /// <remarks>
+    /// The decision and recovery run in one non-interleaved grain request. A subscribed observer is retried after
+    /// setup has failed and left it stalled, or after healthy setup if its event types have changed. Recovery
+    /// waits for any running setup request before making this decision. Retired or sealed observers are left unchanged.
+    /// This kernel-only operation is not exposed through the client contracts.
+    /// </remarks>
+    /// <typeparam name="TObserverSubscriber">The kernel-owned subscriber type.</typeparam>
+    /// <param name="type">The observer type.</param>
+    /// <param name="eventTypes">The event types to observe.</param>
+    /// <param name="siloAddress">The subscriber's silo address.</param>
+    /// <param name="subscriberArgs">Optional subscriber arguments.</param>
+    /// <param name="isReplayable">Whether the observer supports replay.</param>
+    /// <param name="filters">Optional event filters.</param>
+    /// <returns>The effective event types, including registrations merged in this grain request.</returns>
+    Task<IEnumerable<EventType>> RecoverStalledSubscription<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        object? subscriberArgs = default,
+        bool isReplayable = true,
+        ObserverFilters? filters = default)
+        where TObserverSubscriber : IObserverSubscriber;
+
+    /// <summary>
     /// Subscribe to all event types in the observer, respecting retirement during automatic recovery.
     /// </summary>
     /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>
@@ -349,6 +407,14 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="partition">The partition that is failed.</param>
     /// <returns>The <see cref="PartitionRecoveryOutcome"/> describing what happened.</returns>
     Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition);
+
+    /// <summary>
+    /// Clear the quarantine of a single failed partition and reset its retry budget, keeping its attempt history.
+    /// </summary>
+    /// <param name="partition">The quarantined partition.</param>
+    /// <param name="retry">Whether to start recovering the partition immediately.</param>
+    /// <returns>The <see cref="ClearPartitionQuarantineResult"/> describing what happened.</returns>
+    Task<ClearPartitionQuarantineResult> ClearPartitionQuarantine(Key partition, bool retry);
 
     /// <summary>
     /// Clear all failed partition records for the observer, giving an operator a supported way to recover a wedged

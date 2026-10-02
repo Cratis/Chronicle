@@ -48,6 +48,7 @@ public class a_startup_task : Specification
     protected IKernelProjections _kernelProjections = null!;
     protected IGrainFactory _grainFactory = null!;
     IAuthenticationService _authenticationService = null!;
+    protected bool _bootstrapClientsEnsured;
     protected IEventStoreStorage _eventStoreStorage = null!;
     protected IEventStoreNamespaceStorage _namespaceStorage = null!;
     protected IObserverStateStorage _observerStateStorage = null!;
@@ -79,7 +80,7 @@ public class a_startup_task : Specification
         _projectionsServiceClient = Substitute.For<IProjectionsServiceClient>();
         _kernelProjections = Substitute.For<IKernelProjections>();
         _grainFactory = Substitute.For<IGrainFactory>();
-        _authenticationService = new TestAuthenticationService();
+        _authenticationService = new TestAuthenticationService(() => _bootstrapClientsEnsured = true);
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _observerStateStorage = Substitute.For<IObserverStateStorage>();
@@ -182,7 +183,7 @@ public class a_startup_task : Specification
         new Dictionary<EventType, RemovedWithDefinition>(),
         new Dictionary<EventType, RemovedWithJoinDefinition>());
 
-    class TestAuthenticationService : IAuthenticationService
+    class TestAuthenticationService(Action onBootstrapClientsEnsured) : IAuthenticationService
     {
         public Task<Cratis.Chronicle.Storage.Security.User?> AuthenticateUser(
             Cratis.Chronicle.Concepts.Security.Username username,
@@ -190,7 +191,11 @@ public class a_startup_task : Specification
 
         public Task EnsureDefaultAdminUser() => Task.CompletedTask;
 
-        public Task EnsureBootstrapClients() => Task.CompletedTask;
+        public Task EnsureBootstrapClients()
+        {
+            onBootstrapClientsEnsured();
+            return Task.CompletedTask;
+        }
 #if DEVELOPMENT
         public Task EnsureDefaultClientCredentials() => Task.CompletedTask;
 #endif

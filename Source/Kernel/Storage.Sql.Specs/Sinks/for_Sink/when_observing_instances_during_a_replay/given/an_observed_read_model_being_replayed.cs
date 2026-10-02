@@ -20,6 +20,7 @@ public class an_observed_read_model_being_replayed : for_Sink.given.two_sinks_fo
 
     readonly Lock _lock = new();
     readonly List<(Func<int[], bool> Condition, TaskCompletionSource<int[]> Completion)> _waiters = [];
+    Exception? _observationError;
 
     async Task Establish()
     {
@@ -34,7 +35,7 @@ public class an_observed_read_model_being_replayed : for_Sink.given.two_sinks_fo
     /// <summary>
     /// Starts observing the read model through the sink queries use.
     /// </summary>
-    protected void Observe() => _subscription = _sink.ObserveInstances().Subscribe(OnPage);
+    protected void Observe() => _subscription = _sink.ObserveInstances().Subscribe(OnPage, OnError);
 
     /// <summary>
     /// Waits for the first page whose counts satisfy a condition.
@@ -52,7 +53,14 @@ public class an_observed_read_model_being_replayed : for_Sink.given.two_sinks_fo
                 return existing;
             }
 
-            _waiters.Add((condition, completion));
+            if (_observationError is not null)
+            {
+                completion.TrySetException(_observationError);
+            }
+            else
+            {
+                _waiters.Add((condition, completion));
+            }
         }
 
         try
@@ -67,6 +75,19 @@ public class an_observed_read_model_being_replayed : for_Sink.given.two_sinks_fo
 
     static int CountOf(ExpandoObject instance) =>
         Convert.ToInt32(((IDictionary<string, object?>)instance)["count"], CultureInfo.InvariantCulture);
+
+    void OnError(Exception error)
+    {
+        lock (_lock)
+        {
+            _observationError = error;
+            foreach (var waiter in _waiters)
+            {
+                waiter.Completion.TrySetException(error);
+            }
+            _waiters.Clear();
+        }
+    }
 
     void OnPage(IEnumerable<ExpandoObject> page)
     {

@@ -13,6 +13,9 @@ namespace Orleans.Hosting;
 /// </summary>
 internal static partial class ChronicleServerStartupTaskLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Failed subscribing pattern capture for event store {EventStore} in namespace {Namespace}. Startup will continue; the event log will reconcile the subscription when active")]
+    internal static partial void FailedSubscribingPatternCapture(this ILogger<ChronicleServerStartupTask> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Warning, "Cannot bootstrap alerts for legacy observer '{ObserverId}' in '{EventStore}/{Namespace}': its shared definition is missing and the observed event sequence is unknown. Restore the definition or manage the observer using its original event-sequence key")]
     internal static partial void CannotBootstrapObserverAlerts(this ILogger<ChronicleServerStartupTask> logger, ObserverId observerId, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 

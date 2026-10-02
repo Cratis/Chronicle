@@ -17,4 +17,13 @@ public interface IReactorPartitionRecovery
     /// <param name="partition">The failed partition.</param>
     /// <returns>The bounded outcome of the retry request.</returns>
     Task<ReactorPartitionRetryOutcome> RetryFailedPartitionFor(Type reactorType, Partition partition);
+
+    /// <summary>
+    /// Clear the quarantine of a failed partition for a registered reactor and reset its retry budget, keeping its attempt history.
+    /// </summary>
+    /// <param name="reactorType">The registered reactor type.</param>
+    /// <param name="partition">The quarantined partition.</param>
+    /// <param name="retryImmediately">Whether to start recovering the partition right away.</param>
+    /// <returns>The bounded outcome of the request.</returns>
+    Task<ReactorPartitionQuarantineClearResult> ClearFailedPartitionQuarantineFor(Type reactorType, Partition partition, bool retryImmediately = true);
 }

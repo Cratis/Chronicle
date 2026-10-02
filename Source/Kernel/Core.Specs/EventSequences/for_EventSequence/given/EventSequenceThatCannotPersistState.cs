@@ -6,6 +6,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
@@ -23,6 +24,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
 /// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
 /// <param name="eventTypeMigrations"><see cref="IEventTypeMigrations"/> for migrating events between generations.</param>
+/// <param name="patternCapture">The pattern capture subscriptions.</param>
 /// <param name="meter">The meter to use for metrics.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="jsonComplianceManagerProvider"><see cref="IJsonSchemaMetadataManager"/> for handling compliance on events.</param>
@@ -36,6 +38,7 @@ public class EventSequenceThatCannotPersistState(
     IStorage storage,
     IConstraintValidationFactory constraintValidatorSetFactory,
     IEventTypeMigrations eventTypeMigrations,
+    IPatternCapture patternCapture,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<EventSequence> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<EventSequence> activitySource,
     IJsonSchemaMetadataManager jsonComplianceManagerProvider,
@@ -48,6 +51,7 @@ public class EventSequenceThatCannotPersistState(
         storage,
         constraintValidatorSetFactory,
         eventTypeMigrations,
+        patternCapture,
         meter,
         activitySource,
         jsonComplianceManagerProvider,

@@ -16,6 +16,9 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Trace, "Registering reducer with id '{ReducerId}', for event sequence '{EventSequenceId}'")]
     internal static partial void RegisterReducer(this ILogger<Reducers> logger, ReducerId reducerId, EventSequenceId eventSequenceId);
 
+    [LoggerMessage(LogLevel.Warning, "Could not fingerprint reducer '{ReducerType}'; using a conservative fingerprint that replays when the reducer's assembly changes")]
+    internal static partial void ReducerFingerprintFailed(this ILogger<Reducers> logger, Type reducerType, Exception exception);
+
     [LoggerMessage(LogLevel.Warning, "An error occurred while handling events with sequence number {StartSequenceNumber} to {EndSequenceNumber} was for Reducer {ReducerId}")]
     internal static partial void ErrorWhileHandlingEvents(this ILogger<Reducers> logger, Exception ex, EventSequenceNumber startSequenceNumber, EventSequenceNumber endSequenceNumber, ReducerId reducerId);
 

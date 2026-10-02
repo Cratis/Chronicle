@@ -14,12 +14,12 @@ public class and_a_sibling_silo_never_becomes_reachable : given.a_startup_task
     Exception _error;
 
     void Establish() =>
-        _patternCapture.Subscribe(_eventStore, _namespace)
+        _jobsManager.Rehydrate()
             .Returns(_ => Task.FromException(new TimeoutException("Response did not arrive on time")));
 
     async Task Because() => _error = await Catch.Exception(Execute);
 
     [Fact] void should_fail() => _error.ShouldNotBeNull();
     [Fact] void should_fail_with_the_underlying_timeout() => _error.ShouldBeOfExactType<TimeoutException>();
-    [Fact] async Task should_have_exhausted_its_attempts_first() => await _patternCapture.Received(5).Subscribe(_eventStore, _namespace);
+    [Fact] async Task should_have_exhausted_its_attempts_first() => await _jobsManager.Received(5).Rehydrate();
 }

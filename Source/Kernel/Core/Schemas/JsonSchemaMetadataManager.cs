@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.Compliance;
 using Cratis.DependencyInjection;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -36,6 +38,31 @@ public class JsonSchemaMetadataManager(
 
         var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token));
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<JsonObject> ApplyToReadModel(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
+    {
+        if (!schema.HasSchemaMetadata())
+        {
+            return json;
+        }
+
+        var result = (json.DeepClone() as JsonObject)!;
+        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, async (handler, subject, value) =>
+        {
+            try
+            {
+                return await handler.Apply(eventStore, eventStoreNamespace, subject, value);
+            }
+            catch (EncryptionKeyErased) when (handler.Category == SchemaMetadataCategory.Compliance && handler.Type == ComplianceMetadataType.PII.Value)
+            {
+                // Match PII release after key deletion without reviving the key or retaining plaintext.
+                // Event apply still refuses new personal data for an erased subject.
+                return JsonValue.Create(string.Empty);
+            }
+        });
         return result;
     }
 
