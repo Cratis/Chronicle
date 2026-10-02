@@ -5,6 +5,7 @@ import { Column, DataTableCore } from '@cratis/components/DataTables';
 import { Page } from 'Components/Common/Page';
 import { EventSourceDetails, ObserveEventSources } from 'Features/EventSources';
 import strings from 'Strings';
+import { formatConcurrency, formatOwner } from './Formatting';
 import { Allotment } from 'allotment';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -13,6 +14,10 @@ import { Details } from './Details';
 
 const renderStreams = (eventSource: EventSourceDetails) =>
     eventSource.streams.map(stream => stream.name).join(', ');
+
+const renderOwner = (eventSource: EventSourceDetails) => formatOwner(eventSource.owner);
+
+const renderConcurrency = (eventSource: EventSourceDetails) => formatConcurrency(eventSource.concurrency);
 
 export const EventSources = () => {
     const params = useParams<EventStoreParams>();
@@ -35,6 +40,8 @@ export const EventSources = () => {
                             emptyMessage={strings.eventStore.general.eventSources.empty}>
                             <Column field='name' header={strings.eventStore.general.eventSources.columns.name} sortable />
                             <Column field='description' header={strings.eventStore.general.eventSources.columns.description} sortable />
+                            <Column header={strings.eventStore.general.eventSources.columns.owner} body={renderOwner} />
+                            <Column header={strings.eventStore.general.eventSources.columns.concurrency} body={renderConcurrency} />
                             <Column header={strings.eventStore.general.eventSources.columns.streams} body={renderStreams} />
                         </DataTableCore>
                     </div>

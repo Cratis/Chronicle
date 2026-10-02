@@ -99,13 +99,28 @@
                 "columns": {
                     "name": "Name",
                     "description": "Description",
+                    "owner": "Owner",
+                    "concurrency": "Default concurrency",
                     "streams": "Streams"
+                },
+                "owners": {
+                    "none": "Unknown",
+                    "client": "Client",
+                    "kernel": "Kernel"
+                },
+                "concurrencyDimensions": {
+                    "none": "None",
+                    "eventSourceId": "Event source ID",
+                    "eventSourceType": "Event source type",
+                    "eventStreamType": "Event stream type",
+                    "eventStreamId": "Event stream ID"
                 },
                 "streams": {
                     "empty": "No event streams declared",
                     "columns": {
                         "name": "Name",
-                        "description": "Description"
+                        "description": "Description",
+                        "concurrency": "Concurrency"
                     }
                 }
             },

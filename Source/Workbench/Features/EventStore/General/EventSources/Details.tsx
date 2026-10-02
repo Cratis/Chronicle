@@ -3,8 +3,12 @@
 
 import { Column, DataTableCore } from '@cratis/components/DataTables';
 import type { IDetailsComponentProps } from '@cratis/components/DataPage';
+import { EventStreamDefinition } from 'Features/Contracts/EventSources';
 import { EventSourceDetails } from 'Features/EventSources';
 import strings from 'Strings';
+import { formatConcurrency } from './Formatting';
+
+const renderConcurrency = (stream: EventStreamDefinition) => formatConcurrency(stream.concurrency);
 
 export const Details = ({ item }: IDetailsComponentProps<EventSourceDetails>) => (
     <div className='flex flex-col h-full p-4 gap-4'>
@@ -18,6 +22,7 @@ export const Details = ({ item }: IDetailsComponentProps<EventSourceDetails>) =>
             emptyMessage={strings.eventStore.general.eventSources.streams.empty}>
             <Column field='name' header={strings.eventStore.general.eventSources.streams.columns.name} />
             <Column field='description' header={strings.eventStore.general.eventSources.streams.columns.description} />
+            <Column header={strings.eventStore.general.eventSources.streams.columns.concurrency} body={renderConcurrency} />
         </DataTableCore>
     </div>
 );
