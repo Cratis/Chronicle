@@ -127,18 +127,19 @@ internal sealed class ChronicleServerStartupTask(
             var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
             {
                 var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(namespaceName);
-                if (!await namespaceStorage.HasData())
+                var hasData = await namespaceStorage.HasData();
+
+                // Capture must be ready for the first append even in a namespace created before this restart.
+                // There will be no new NamespaceAdded broadcast for an already registered namespace.
+                await Step("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName));
+
+                if (!hasData)
                 {
-                    // Nothing has ever been written to this namespace - there is no jobs, reactor subscriptions,
-                    // event sequence state or observer to rehydrate. Skipping it avoids materializing its storage
-                    // (for example creating a MongoDB database) for a namespace that has only ever been registered,
-                    // never used. The moment it receives its first genuine write, that write lazily materializes
-                    // whatever storage it needs on its own.
+                    // There are no persisted jobs, application observers or event sequences to rehydrate.
                     return;
                 }
 
                 await Step("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName));
-                await Step("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName));
 
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
                 await Step("RehydrateJobs", jobsManager.Rehydrate);

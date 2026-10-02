@@ -29,10 +29,9 @@ namespace Cratis.Chronicle.Patterns;
 /// registration does as types arrive.
 /// </para>
 /// <para>
-/// Event types being registered somewhere in the store does not mean any particular namespace has ever been used,
-/// though - a namespace can be registered long before (or without ever) receiving a single event. Subscribing
-/// there anyway would materialize that namespace's storage for nothing, so <see cref="Subscribe"/> also checks
-/// whether the namespace itself already holds data and skips it when it does not.
+/// Capture subscribes even before the namespace holds data. Namespace creation precedes the first append, and
+/// waiting for data here would leave the observer unsubscribed until another event type is registered or the
+/// server restarts. <see cref="PatternCaptureSubscriptions"/> handles namespaces added after registration.
 /// </para>
 /// <para>
 /// The observer is not replayable. Replaying it would re-mine history that is already reflected in the sketch, and
@@ -72,12 +71,6 @@ public class PatternCapture(
         if (eventTypes.Length == 0)
         {
             logger.NoEventTypesToCapture(eventStore);
-            return;
-        }
-
-        if (!await storage.GetEventStore(eventStore).GetNamespace(@namespace).HasData())
-        {
-            logger.NamespaceHasNoDataToCapture(eventStore, @namespace);
             return;
         }
 
