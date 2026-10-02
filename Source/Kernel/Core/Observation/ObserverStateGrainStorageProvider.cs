@@ -29,16 +29,9 @@ public class ObserverStateGrainStorageProvider(IStorage storage) : IGrainStorage
         var failedPartitions = await failedPartitionsStorage.GetFor(observerKey.ObserverId);
         var actualFailedPartitions = failedPartitions.Partitions.ToArray();
         actualGrainState.State = await observers.Get(observerKey.ObserverId);
-
-        // Storage can return the shared Empty sentinel (or an in-memory snapshot). A record's with
-        // expression is shallow: give this activation its own mutable partition sets before routing
-        // or catch-up mutates them, otherwise different observer grains corrupt the same HashSet.
         actualGrainState.State = actualGrainState.State with
         {
             Identifier = observerKey.ObserverId,
-            ReplayingPartitions = actualGrainState.State.ReplayingPartitions.ToHashSet(),
-            CatchingUpPartitions = actualGrainState.State.CatchingUpPartitions.ToHashSet(),
-            InFlightPartitions = actualGrainState.State.InFlightPartitions.ToHashSet(),
             FailedPartitions = actualFailedPartitions,
             FailedPartitionCount = actualFailedPartitions.Length
         };

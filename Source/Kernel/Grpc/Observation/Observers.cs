@@ -109,6 +109,15 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             {
                 var observer = undecidedObservers[index];
                 var subscription = subscriptions[index];
+
+                // System definitions are store-wide, but their subscriptions are namespace-local.
+                // An absent system subscription cannot handle this append. Application observers
+                // must still be awaited when disconnected so consumer outages are not hidden.
+                if (observer.Id.StartsWith("$system.", StringComparison.Ordinal) && subscription is not { IsSubscribed: true })
+                {
+                    continue;
+                }
+
                 var subscribedEventTypes = subscription is { IsSubscribed: true }
                     ? subscription.EventTypes.Select(_ => _.Id.Value).ToArray()
                     : observer.EventTypes.Select(_ => _.Id).ToArray();

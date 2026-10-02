@@ -91,9 +91,6 @@ public class EventSequence(
     int _statePersistenceInterval = 1;
     int _appendsSinceStateWrite;
     bool _stateWrittenSinceActivation;
-    IGrainTimer? _patternCaptureTimer;
-    bool _patternCaptureSubscriptionPending;
-    bool _patternCaptureSubscribed;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
@@ -135,8 +132,15 @@ public class EventSequence(
 
         if (_eventSequenceId == EventSequenceId.Log)
         {
-            _patternCaptureSubscriptionPending = State.SequenceNumber > EventSequenceNumber.First;
-            RegisterPatternCaptureTimer(TimeSpan.Zero);
+            this.RegisterGrainTimer(ReconcilePatternCapture, new GrainTimerCreationOptions
+            {
+                DueTime = TimeSpan.Zero,
+                Period = TimeSpan.FromSeconds(Math.Max(1, options.Value.Observers.WatchdogInterval)),
+
+                // Subscribing the observer reads this sequence's tail. Let that call run while the timer
+                // awaits Subscribe; neither activation nor an append may wait on this analytics work.
+                Interleave = true
+            });
         }
     }
 
@@ -795,14 +799,6 @@ public class EventSequence(
         List<AppendedEvent> appendedEvents,
         IEnumerable<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)> constraintUpdates)
     {
-        if (_eventSequenceId == EventSequenceId.Log && _appendedEventsQueues is not null &&
-            !_patternCaptureSubscribed && !_patternCaptureSubscriptionPending)
-        {
-            // Keep retrying initialization even if no further append arrives and idle collection runs.
-            _patternCaptureSubscriptionPending = true;
-            RegisterPatternCaptureTimer(TimeSpan.Zero);
-        }
-
         try
         {
             await PersistStateAfterAppends(appendedEvents.Count);
@@ -1168,20 +1164,6 @@ public class EventSequence(
         return true;
     }
 
-    void RegisterPatternCaptureTimer(TimeSpan dueTime)
-    {
-        _patternCaptureTimer?.Dispose();
-        _patternCaptureTimer = this.RegisterGrainTimer(ReconcilePatternCapture, new GrainTimerCreationOptions
-        {
-            DueTime = dueTime,
-            Period = TimeSpan.FromSeconds(Math.Max(1, options.Value.Observers.WatchdogInterval)),
-            KeepAlive = _patternCaptureSubscriptionPending,
-
-            // Subscription reads this sequence's tail; neither activation nor append waits on it.
-            Interleave = true
-        });
-    }
-
     async Task ReconcilePatternCapture(CancellationToken cancellationToken)
     {
         try
@@ -1190,16 +1172,6 @@ public class EventSequence(
             // Always let the observer decide from its actual state machine and setup outcome, in the same
             // serialized turn that guards quarantine and performs recovery. This stays off the append path.
             await patternCapture.RecoverSubscription(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-            if (State.SequenceNumber > EventSequenceNumber.First)
-            {
-                _patternCaptureSubscribed = true;
-                if (_patternCaptureSubscriptionPending)
-                {
-                    // Healthy periodic reconciliation must not keep an otherwise idle log alive forever.
-                    _patternCaptureSubscriptionPending = false;
-                    RegisterPatternCaptureTimer(TimeSpan.FromSeconds(Math.Max(1, options.Value.Observers.WatchdogInterval)));
-                }
-            }
         }
         catch (Exception exception)
         {
