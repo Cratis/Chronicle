@@ -132,7 +132,7 @@ public class EventTypesStorage(
                 generation);
         }
 
-        return _schemasByTypeAndGeneration.GetOrAdd(key, schemas[0].ToKernel(generation));
+        return _schemasByTypeAndGeneration.GetOrAdd(key, static (key, document) => document.ToKernel(key.Generation), schemas[0]);
     }
 
     /// <inheritdoc/>
@@ -262,7 +262,7 @@ public class EventTypesStorage(
                 []);
         }
 
-        return _definitionsByType.GetOrAdd(eventTypeId, eventType.ToDefinition());
+        return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
     }
 
     /// <inheritdoc/>
@@ -277,7 +277,7 @@ public class EventTypesStorage(
             using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
             foreach (var document in await result.ToListAsync())
             {
-                _schemasByTypeAndGeneration.GetOrAdd((document.Id, EventTypeGeneration.First), document.ToKernel());
+                _schemasByTypeAndGeneration.GetOrAdd((document.Id, EventTypeGeneration.First), static (key, document) => document.ToKernel(key.Generation), document);
             }
         }
 
@@ -304,7 +304,7 @@ public class EventTypesStorage(
             {
                 if (mongoTypeMap.TryGetValue(eventType.Id, out var document))
                 {
-                    _schemasByTypeAndGeneration.GetOrAdd((eventType.Id, eventType.Generation), document.ToKernel(eventType.Generation));
+                    _schemasByTypeAndGeneration.GetOrAdd((eventType.Id, eventType.Generation), static (key, document) => document.ToKernel(key.Generation), document);
                 }
             }
         }

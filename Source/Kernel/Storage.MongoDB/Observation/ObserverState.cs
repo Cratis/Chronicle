@@ -19,6 +19,26 @@ public class ObserverState
     public ObserverId Id { get; set; } = ObserverId.Unspecified;
 
     /// <summary>
+    /// Gets or sets the source-owned alert lifecycle token.
+    /// </summary>
+    public Guid AlertLifecycleId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the committed alert revision.
+    /// </summary>
+    public long AlertRevision { get; set; }
+
+    /// <summary>
+    /// Gets or sets the alert lifecycle disposition.
+    /// </summary>
+    public AlertDisposition AlertDisposition { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current quarantine episode identity.
+    /// </summary>
+    public Guid? QuarantineEpisodeId { get; set; }
+
+    /// <summary>
     /// Gets or sets the last handled event sequence number.
     /// </summary>
     public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;

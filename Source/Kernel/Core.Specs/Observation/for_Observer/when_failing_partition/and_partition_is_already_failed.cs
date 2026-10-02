@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -25,6 +26,7 @@ public class and_partition_is_already_failed : given.an_observer
 
     async Task Because() => await _observer.PartitionFailed(EventSourceId, 44UL, [SecondMessage], SecondStackTrace);
 
+    [Fact] async Task should_not_report_an_unchanged_failure_episode() => await _observerAlerts.DidNotReceive().Reconcile(Arg.Any<ObserverAlertSnapshot>());
     [Fact] void should_have_only_one_failed_partition() => _failedPartitionsState.Partitions.Count().ShouldEqual(1);
     [Fact] void should_keep_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual((FailedPartitionCount)1);
     [Fact] void should_have_two_attempts() => _failedPartitionsState.Partitions.First().Attempts.Count().ShouldEqual(2);

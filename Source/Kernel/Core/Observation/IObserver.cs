@@ -94,6 +94,7 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="subscriberArgs">Optional arguments associated with the subscription.</param>
     /// <param name="isReplayable">Whether the observer supports replay scenarios. Defaults to true.</param>
     /// <param name="filters">Optional <see cref="ObserverFilters"/> to apply when observing events.</param>
+    /// <param name="reactivateRetired">Whether explicit registration may start a fresh lifecycle for a retired observer. Automatic recovery must pass false.</param>
     /// <returns>Awaitable task.</returns>
     Task Subscribe<TObserverSubscriber>(
         ObserverType type,
@@ -101,7 +102,8 @@ public interface IObserver : IGrainWithStringKey
         SiloAddress siloAddress,
         object? subscriberArgs = default,
         bool isReplayable = true,
-        ObserverFilters? filters = default)
+        ObserverFilters? filters = default,
+        bool reactivateRetired = true)
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
@@ -114,7 +116,7 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="subscriberArgs">Optional subscriber arguments.</param>
     /// <param name="isReplayable">Whether the observer supports replay.</param>
     /// <param name="filters">Optional event filters.</param>
-    /// <returns>The effective merged event types from this non-interleaved grain request.</returns>
+    /// <returns>The effective merged event types from this non-interleaved grain request. Retired or sealed observers are left unchanged.</returns>
     Task<IEnumerable<EventType>> SubscribeAdditively<TObserverSubscriber>(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
@@ -129,7 +131,7 @@ public interface IObserver : IGrainWithStringKey
     /// </summary>
     /// <remarks>
     /// This interleaved, read-only hint avoids unnecessary definition writes. Recovery must recheck in its own
-    /// serialized request because setup or quarantine can change before it runs.
+    /// serialized request because setup or quarantine can change before it runs. Retired or sealed observers never need recovery.
     /// </remarks>
     /// <param name="eventTypes">The expected event types.</param>
     /// <returns>Whether subscription recovery may be needed.</returns>
@@ -142,7 +144,7 @@ public interface IObserver : IGrainWithStringKey
     /// <remarks>
     /// The decision and recovery run in one non-interleaved grain request. A subscribed observer is retried after
     /// setup has failed and left it stalled, or after healthy setup if its event types have changed. Recovery
-    /// waits for any running setup request before making this decision.
+    /// waits for any running setup request before making this decision. Retired or sealed observers are left unchanged.
     /// This kernel-only operation is not exposed through the client contracts.
     /// </remarks>
     /// <typeparam name="TObserverSubscriber">The kernel-owned subscriber type.</typeparam>
@@ -163,19 +165,21 @@ public interface IObserver : IGrainWithStringKey
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
-    /// Subscribe to all event types in the observer.
+    /// Subscribe to all event types in the observer, respecting retirement during automatic recovery.
     /// </summary>
     /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>
     /// <param name="type"><see cref="ObserverType"/>.</param>
     /// <param name="siloAddress"><see cref="SiloAddress"/> the subscriber is connected to.</param>
     /// <param name="subscriberArgs">Optional arguments associated with the subscription.</param>
     /// <param name="isReplayable">Whether the observer supports replay scenarios. Defaults to true.</param>
-    /// <returns>Awaitable task.</returns>
+    /// <param name="reactivateRetired">Whether explicit registration may start a fresh lifecycle for a retired observer. Automatic recovery must pass false.</param>
+    /// <returns>Awaitable task. A retired observer is left unsubscribed during automatic recovery.</returns>
     Task SubscribeToAllEvents<TObserverSubscriber>(
         ObserverType type,
         SiloAddress siloAddress,
         object? subscriberArgs = default,
-        bool isReplayable = true)
+        bool isReplayable = true,
+        bool reactivateRetired = true)
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
@@ -283,6 +287,13 @@ public interface IObserver : IGrainWithStringKey
     Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown);
 
     /// <summary>
+    /// Records a projection bulk flush's failed partitions with one alert snapshot for the batch.
+    /// </summary>
+    /// <param name="failedPartitions">The failures returned by the projection sink.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionsFailed(IReadOnlyCollection<Cratis.Chronicle.Storage.Sinks.FailedPartition> failedPartitions);
+
+    /// <summary>
     /// Notify that the partition has recovered.
     /// </summary>
     /// <param name="partition">The partition that has recovered.</param>
@@ -335,17 +346,30 @@ public interface IObserver : IGrainWithStringKey
     Task ClearObserverQuarantine();
 
     /// <summary>
-    /// Remove the observer: stop it consuming events, forget everything it holds in memory and deactivate it.
+    /// Retire and remove this namespace's observer after its operational incidents have been cleared.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// The counterpart to deleting the observer's stored records. Deleting those alone is not enough: a live
-    /// activation keeps its definition, failure records and reminders in memory and writes them back on its next
-    /// state flush, resurrecting the very documents the removal deleted. This unsubscribes the observer, stops its
-    /// jobs, cancels every reminder it registered and deactivates the grain, so the storage deletion is the last
-    /// word rather than a race against an activation that outlives it.
+    /// Rechecks subscription and activity inside the non-interleaved call. Removal is forward-only and
+    /// nontransactional: failure may leave committed retirement or partially deleted resources. Retry continues
+    /// cleanup without restoring Active. The source record is deleted last; absent sources are never created.
     /// </remarks>
     Task Remove();
+
+    /// <summary>
+    /// Retire the observer: stop it consuming events and end its failures, keeping its records in place.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Used when a projection is retired. Failed partitions and their reminders are discarded and alert incidents
+    /// end as Removed. Normal unsubscription disconnects an observing observer, while a quarantined observer
+    /// stays quarantined without routing or changing replay progress or handled counts.
+    /// The durable Retired disposition suppresses retained quarantine across crashes. A failed reconciliation
+    /// fails this call and is retried by the lifetime alert reminder; the manager retains the orphan for retry.
+    /// Failure does not undo committed retirement. Automatic subscription recovery leaves it retired.
+    /// Explicit registration discards retained episodes before establishing a fresh active lifecycle.
+    /// </remarks>
+    Task Retire();
 
     /// <summary>
     /// Catch up the observer.

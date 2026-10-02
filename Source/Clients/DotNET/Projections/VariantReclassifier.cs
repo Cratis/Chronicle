@@ -22,6 +22,7 @@ internal static class VariantReclassifier
 {
     /// <summary>
     /// Reclassifies every handler that is not an entering event into an update-only, self-referential join.
+    /// Existing joins retain their routing and take precedence on conflicting property mappings.
     /// </summary>
     /// <param name="from">The create-or-update handlers, modified in place.</param>
     /// <param name="join">The update-only handlers, modified in place.</param>
@@ -39,12 +40,24 @@ internal static class VariantReclassifier
         {
             var fromDefinition = from[eventType];
             from.Remove(eventType);
-            join[eventType] = new JoinDefinition
+            var joinEventType = join.Keys.FirstOrDefault(eventType.IsSameEventType) ?? eventType;
+            if (join.TryGetValue(joinEventType, out var explicitJoin))
             {
-                On = keyPropertyName,
-                Key = fromDefinition.Key ?? WellKnownExpressions.EventSourceId,
-                Properties = fromDefinition.Properties
-            };
+                // Reuse the value-matched contract key and retain all explicit join settings.
+                foreach (var (property, expression) in fromDefinition.Properties)
+                {
+                    explicitJoin.Properties.TryAdd(property, expression);
+                }
+            }
+            else
+            {
+                join[joinEventType] = new JoinDefinition
+                {
+                    On = keyPropertyName,
+                    Key = fromDefinition.Key ?? WellKnownExpressions.EventSourceId,
+                    Properties = fromDefinition.Properties
+                };
+            }
         }
     }
 

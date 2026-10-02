@@ -16,6 +16,7 @@ public class an_evaluator : Specification
 {
     protected static readonly DateTimeOffset _now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     protected static readonly TimeSpan _graceTime = TimeSpan.FromMinutes(5);
+    protected static readonly Guid _defaultQuarantineEpisodeId = Guid.NewGuid();
 
     protected ObserverAlertEvaluator _evaluator;
     protected ObserverKey _observer;
@@ -47,7 +48,7 @@ public class an_evaluator : Specification
         new(id, partition, _now - failingFor, _now - TimeSpan.FromSeconds(10), attemptCount, isQuarantined, failureKind, message);
 
     protected ObserverAlertSnapshot SnapshotOf(params FailedPartitionSnapshot[] failedPartitions) =>
-        new(_observer, failedPartitions, false, false, 10);
+        new(_observer, failedPartitions, false, AlertDisposition.Active, 10) { QuarantineEpisodeId = _defaultQuarantineEpisodeId };
 
     protected ObserverAlertEvaluation Evaluate(ObserverAlertSnapshot snapshot, params OpenIncident[] openIncidents) =>
         _evaluator.Evaluate(snapshot, openIncidents, _now);
@@ -56,5 +57,5 @@ public class an_evaluator : Specification
         new(id, condition ?? AlertConditionKind.PartitionFailing, severity, partition);
 
     protected static OpenIncident OpenQuarantineIncident(IncidentId? id = null) =>
-        new(id ?? IncidentId.New(), AlertConditionKind.ObserverQuarantined, AlertSeverity.Critical, AlertPartition.None);
+        new(id ?? new IncidentId(_defaultQuarantineEpisodeId), AlertConditionKind.ObserverQuarantined, AlertSeverity.Critical, AlertPartition.None);
 }

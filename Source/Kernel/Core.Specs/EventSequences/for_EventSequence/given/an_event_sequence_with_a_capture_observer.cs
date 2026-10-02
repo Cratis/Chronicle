@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -8,6 +9,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Alerts;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
@@ -66,6 +68,15 @@ public class an_event_sequence_with_a_capture_observer : an_event_sequence
         var failures = observerSilo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
         _captureFailures = new FailedPartitions();
         failures.State = _captureFailures;
+        _namespaceStorage.Observers.Get(PatternCapture.ObserverIdentifier).Returns(_ => _captureState.State);
+        _namespaceStorage.FailedPartitions.GetFor(PatternCapture.ObserverIdentifier).Returns(_ => failures.State);
+        var alerts = Substitute.For<IObserverAlerts>();
+        alerts.Reconcile(Arg.Any<ObserverAlertSnapshot>()).Returns(call =>
+        {
+            var snapshot = call.Arg<ObserverAlertSnapshot>();
+            return new ObserverAlertReceipt(snapshot.LifecycleId, snapshot.Revision, ObserverAlertReconciliation.Applied);
+        });
+        observerSilo.AddProbe(_ => alerts);
         var key = new ObserverKey(PatternCapture.ObserverIdentifier, EventStore, EventStoreNamespace, _eventSequenceKey.EventSequenceId);
         _captureObserver = await observerSilo.CreateGrainAsync<Observer>(key);
         _silo.AddProbe<IObserver>(_ => _captureObserver);

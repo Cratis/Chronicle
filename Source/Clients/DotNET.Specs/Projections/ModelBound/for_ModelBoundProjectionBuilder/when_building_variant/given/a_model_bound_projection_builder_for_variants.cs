@@ -19,7 +19,8 @@ public class a_model_bound_projection_builder_for_variants : Specification
             typeof(IssueStarted),
             typeof(PullRequestCreated),
             typeof(TitleChanged),
-            typeof(BuildCompleted)
+            typeof(BuildCompleted),
+            typeof(VariantJoinedEvent)
         ]);
 
         builder = new ModelBoundProjectionBuilder(naming_policy, event_types);

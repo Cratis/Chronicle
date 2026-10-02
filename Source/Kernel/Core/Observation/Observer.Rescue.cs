@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Alerts;
 using Cratis.Chronicle.Observation.States;
 
 namespace Cratis.Chronicle.Observation;
@@ -147,6 +148,7 @@ public partial class Observer
         }
 
         _catchupRecoveryAttempts = 0;
+        RememberQuarantineEnding(AlertClearedReason.Revived);
         await quarantined.LeaveForSubscription();
     }
 }

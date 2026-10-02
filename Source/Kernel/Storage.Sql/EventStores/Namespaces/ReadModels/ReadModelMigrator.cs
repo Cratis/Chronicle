@@ -4,10 +4,13 @@
 using System.Collections.Concurrent;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 #pragma warning disable SA1204 // Static helpers placed after the public methods that drive them.
 #pragma warning disable CA2100 // Table and column names are internal constants, not user input.
@@ -67,24 +70,42 @@ public class ReadModelMigrator(
         {
             logger.AddingMissingColumns(missingColumns.Count, tableName, string.Join(',', missingColumns.Select(c => c.Name)));
 
-            var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
-            var databaseType = migrationBuilder.GetDatabaseType();
-
             foreach (var column in missingColumns)
             {
-                // New columns added to an existing table must be nullable so existing rows
-                // receive NULL rather than a default value. Primary-key columns cannot be
-                // missing from an existing table, so this case only applies to non-key columns.
-                var op = BuildAddColumnOperation(column, databaseType, tableName);
-                op.IsNullable = true;
+                // Each addition has its own transaction so a duplicate cannot roll back or skip other columns.
+                var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+                var op = BuildAddColumnOperation(column, migrationBuilder.GetDatabaseType(), tableName);
+                if (column.Name != WellKnownProperties.ReadModelInstanceInitialized)
+                {
+                    op.IsNullable = true;
+                }
                 migrationBuilder.Operations.Add(op);
-            }
 
-            await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+                try
+                {
+                    await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+                }
+                catch (Exception exception) when (IsDuplicateColumn(exception))
+                {
+                    // Another kernel added the column after our schema snapshot. Adopt only that column.
+                    if (!await tableMigrator.ColumnExists(context, tableName, column.Name))
+                    {
+                        throw;
+                    }
+                }
+            }
         }
 
         _columnMigrations.TryAdd(cacheKey, true);
     }
+
+    static bool IsDuplicateColumn(Exception exception) => exception switch
+    {
+        PostgresException postgres => postgres.SqlState == PostgresErrorCodes.DuplicateColumn,
+        SqlException sql => sql.Number == 2705,
+        SqliteException sqlite => sqlite.SqliteErrorCode == 1 && sqlite.Message.Contains("duplicate column name:", StringComparison.OrdinalIgnoreCase),
+        _ => false
+    };
 
     static async Task<HashSet<string>> GetExistingColumnNames(ReadModelDbContext context, string tableName)
     {
@@ -174,6 +195,13 @@ public class ReadModelMigrator(
             ColumnType = GetColumnType(column, databaseType),
             IsNullable = column.IsNullable && !column.IsKey
         };
+
+        if (column.Name == WellKnownProperties.ReadModelInstanceInitialized)
+        {
+            // Older SQL rows have no evidence of being placeholders. Treating them as uninitialized
+            // would replace legitimately null properties with initial values on their next root event.
+            op.DefaultValue = true;
+        }
 
         if (column.IsJson)
         {

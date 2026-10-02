@@ -32,6 +32,12 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
     public Task<IEnumerable<ObserverState>> GetAll() => Task.FromResult<IEnumerable<ObserverState>>(Snapshot());
 
     /// <inheritdoc/>
+    public Task<IEnumerable<ObserverId>> GetRetired(IEnumerable<ObserverId> observerIds) =>
+        Task.FromResult<IEnumerable<ObserverId>>(observerIds.Distinct()
+            .Where(id => _states.TryGetValue(id, out var state) && state.AlertDisposition == AlertDisposition.Retired)
+            .ToArray());
+
+    /// <inheritdoc/>
     public Task Save(ObserverState state)
     {
         _states[state.Identifier] = state;

@@ -26,6 +26,11 @@ public class and_initial_state_has_pii_and_subject_is_stored : given.all_depende
             }
         };
 
+        _schema.Properties["capacity"] = new JsonSchemaProperty { Type = JsonObjectType.Integer };
+        dynamic released = new ExpandoObject();
+        released.capacity = 0;
+        _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>()).Returns((ExpandoObject)released);
+
         dynamic state = new ExpandoObject();
         state.name = "encrypted-name";
         var storedState = (IDictionary<string, object?>)(ExpandoObject)state;
@@ -41,6 +46,8 @@ public class and_initial_state_has_pii_and_subject_is_stored : given.all_depende
 
     async Task Because() => _result = await _step.Perform(_projection, _context);
 
+    [Fact] void should_keep_the_schema_synthesized_property_for_a_legacy_initialized_document() => ((IDictionary<string, object?>)_context.Changeset.InitialState)["capacity"].ShouldEqual(0);
+    [Fact] void should_not_add_an_initialization_flag_to_a_legacy_document() => ((IDictionary<string, object?>)_context.Changeset.InitialState).ContainsKey(WellKnownProperties.ReadModelInstanceInitialized).ShouldBeFalse();
     [Fact] void should_call_compliance_manager_release() => _complianceManager.Received(1).Release(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), OtherSubject, Arg.Any<JsonObject>());
     [Fact] void should_preserve_the_default_subject_in_the_released_state() => ((IDictionary<string, object?>)_context.Changeset.InitialState)[WellKnownProperties.Subject].ShouldEqual(StoredSubject);
     [Fact] void should_preserve_the_property_subjects_in_the_released_state() => ReadModelSubjects.From(((IDictionary<string, object?>)_context.Changeset.InitialState)[WellKnownProperties.Subjects])["name"].ShouldEqual(OtherSubject);

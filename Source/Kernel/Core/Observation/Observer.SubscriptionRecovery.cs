@@ -12,7 +12,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task<bool> NeedsSubscriptionRecovery(IEnumerable<EventType> eventTypes)
     {
-        if (_removed || State.RunningState == ObserverRunningState.Quarantined)
+        if (_removed || IsRetired || State.AlertDisposition == AlertDisposition.Retired || State.RunningState == ObserverRunningState.Quarantined)
         {
             return false;
         }
@@ -44,10 +44,7 @@ public partial class Observer
         ObserverFilters? filters = null)
         where TObserverSubscriber : IObserverSubscriber
     {
-        // Merge inside the observer turn so two registrations cannot replace a newer subscription
-        // with an older registry snapshot. Ordinary client subscriptions remain replacement-based.
-        eventTypes = MergeSubscribedEventTypes(eventTypes);
-        await Subscribe<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters);
+        await SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, additive: true, reactivateRetired: false);
 
         return _subscription.EventTypes;
     }
@@ -62,29 +59,8 @@ public partial class Observer
         ObserverFilters? filters = null)
         where TObserverSubscriber : IObserverSubscriber
     {
-        // This is a non-interleaved grain request, not a check followed by a queued Subscribe. In particular,
-        // a Subscribe that was still running when reconciliation requested recovery finishes before this decision.
-        if (!await NeedsSubscriptionRecovery(eventTypes))
-        {
-            return _subscription.EventTypes;
-        }
-
-        // Preserve registrations installed after the caller read the registry, even if another expected type
-        // is missing. Recovery is additive and keeps the highest generation for each event type.
-        eventTypes = MergeSubscribedEventTypes(eventTypes);
-
-        // Keep the failure indication until setup completes, including when refreshing a healthy observer's
-        // event types. A failed refresh must remain repairable even after installing the new subscription.
-        _subscriptionSetupFailed = true;
-
-        // A failed entry write leaves the state machine in CatchingUpInFlight with its scheduled Routing
-        // discarded. That state cannot enter itself. Disconnected is a legal, progress-preserving way out.
-        await TransitionTo<Disconnected>();
-
-        // Do not reload stale progress or call LeaveQuarantineForSubscription. Reconciliation has no authority
-        // to release quarantine; ordinary application Subscribe retains its existing behavior.
-        await SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, recovering: true);
-        _subscriptionSetupFailed = await GetCurrentState() is not (Observing or States.Replay);
+        // The shared entry rechecks eligibility in this non-interleaved request, after any running setup.
+        await SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, additive: true, recovering: true, reactivateRetired: false);
 
         return _subscription.EventTypes;
     }

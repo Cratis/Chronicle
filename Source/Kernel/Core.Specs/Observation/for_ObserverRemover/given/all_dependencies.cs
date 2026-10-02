@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
@@ -11,8 +10,6 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Projections;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Observation.for_ObserverRemover.given;
@@ -36,8 +33,6 @@ public class all_dependencies : Specification
     protected IEventStoreNamespaceStorage _secondNamespaceStorage;
     protected IObserver _observerInFirstNamespace;
     protected IObserver _observerInSecondNamespace;
-    protected IJobsManager _firstNamespaceJobs;
-    protected IJobsManager _secondNamespaceJobs;
 
     protected ObserverRemover _remover;
 
@@ -60,9 +55,6 @@ public class all_dependencies : Specification
 
         _observerInFirstNamespace = SetupObserver(_firstNamespace);
         _observerInSecondNamespace = SetupObserver(_secondNamespace);
-
-        _firstNamespaceJobs = SetupJobsManager(_firstNamespace);
-        _secondNamespaceJobs = SetupJobsManager(_secondNamespace);
 
         _grainFactory.GetGrain<INamespaces>(_eventStore).Returns(_namespaces);
         _grainFactory.GetGrain<IProjectionsManager>(_eventStore).Returns(_projectionsManager);
@@ -114,13 +106,5 @@ public class all_dependencies : Specification
         _grainFactory.GetGrain<IObserver>(new ObserverKey(_observerId, _eventStore, @namespace, EventSequenceId.Log)).Returns(observer);
         ObserverIs(observer, ObserverRunningState.Disconnected, false);
         return observer;
-    }
-
-    IJobsManager SetupJobsManager(EventStoreNamespaceName @namespace)
-    {
-        var jobsManager = Substitute.For<IJobsManager>();
-        jobsManager.GetAllJobs().Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
-        _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_eventStore.Value, @namespace.Value)).Returns(jobsManager);
-        return jobsManager;
     }
 }

@@ -43,6 +43,7 @@ public class DecryptInitialState(
         var initialState = (IDictionary<string, object?>)context.Changeset.InitialState;
         initialState.TryGetValue(WellKnownProperties.Subject, out var storedSubject);
         initialState.TryGetValue(WellKnownProperties.Subjects, out var storedSubjects);
+        initialState.TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized);
 
         var released = await readModelsCompliance.Release(
             eventStore,
@@ -54,6 +55,21 @@ public class DecryptInitialState(
         if (storedSubjects is not null)
         {
             releasedState[WellKnownProperties.Subjects] = storedSubjects;
+        }
+
+        // Release's schema conversion must not turn an absent placeholder property into a default,
+        // or lose the flag that keeps subsequent events in a bulk window from initializing the root.
+        if (initialized is false)
+        {
+            var present = initialState.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in releasedState.Keys.Where(property => !present.Contains(property) && !WellKnownProperties.All.Contains(property)).ToArray())
+            {
+                releasedState.Remove(property);
+            }
+        }
+        if (initialized is not null)
+        {
+            releasedState[WellKnownProperties.ReadModelInstanceInitialized] = initialized;
         }
 
         context.Changeset.InitialState = released;

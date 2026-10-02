@@ -1,49 +1,53 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Alerts;
 using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Alerts;
 
 /// <summary>
-/// Represents what the kernel knows about an observer that is relevant to alerting, at one point in time.
+/// Represents committed current observer state, not a queue of lifecycle transitions.
 /// </summary>
 /// <remarks>
-/// The snapshot says what is true, not what changed. The evaluator compares it with the incidents that are open and
-/// works out the transitions, which is what makes duplicate notifications and a missed one harmless.
+/// Open incidents converge to this level. Unobserved intermediate episodes may be omitted. Ending hints are
+/// activation-local: after a crash an unknown partition ending defaults to Recovered and quarantine to Cleared.
+/// The Retired desired level always clears as Removed, whether or not resource cleanup has completed.
 /// </remarks>
-/// <param name="Observer">The <see cref="ObserverKey"/> of the observer.</param>
-/// <param name="FailedPartitions">The partitions of the observer that are still failing.</param>
-/// <param name="IsQuarantined">Whether the observer as a whole is quarantined.</param>
-/// <param name="IsRemoved">Whether the observer has been removed.</param>
-/// <param name="MaxRetryAttempts">The configured maximum number of retries of a failed partition, where 0 means retry forever.</param>
+/// <param name="Observer">The observer key.</param>
+/// <param name="FailedPartitions">Current partition episodes.</param>
+/// <param name="IsQuarantined">Whether operational quarantine is desired.</param>
+/// <param name="Disposition">The durable lifecycle disposition.</param>
+/// <param name="MaxRetryAttempts">Maximum retries, or zero for unlimited retries.</param>
 public record ObserverAlertSnapshot(
     ObserverKey Observer,
     IReadOnlyCollection<FailedPartitionSnapshot> FailedPartitions,
     bool IsQuarantined,
-    bool IsRemoved,
+    AlertDisposition Disposition,
     int MaxRetryAttempts)
 {
     /// <summary>
-    /// Gets the reason for partition incidents whose failed partition is no longer in <see cref="FailedPartitions"/>.
+    /// Gets the lifecycle token persisted by the observer.
     /// </summary>
-    /// <remarks>
-    /// Applies to every departed failure episode in this snapshot. ResolveFailedPartition (including replay resolution)
-    /// supplies Recovered; ClearFailedPartitions supplies Cleared. Removal or retirement sets IsRemoved, which takes
-    /// precedence and clears every incident as Removed. The tracker must retain the reason until the clears are appended.
-    /// </remarks>
-    public AlertClearedReason PartitionsEndedAs { get; init; } = AlertClearedReason.Recovered;
+    public Guid LifecycleId { get; init; }
 
     /// <summary>
-    /// Gets the reason to give when the observer quarantine incident ends because <see cref="IsQuarantined"/> is no
-    /// longer true. It is <see cref="AlertClearedReason.Cleared"/> unless the caller knows it was a revival.
+    /// Gets the committed alert revision in that lifecycle.
+    /// </summary>
+    public long Revision { get; init; }
+
+    /// <summary>
+    /// Gets the source-owned current quarantine episode identity.
+    /// </summary>
+    public Guid? QuarantineEpisodeId { get; init; }
+
+    /// <summary>
+    /// Gets the reasons for identified ended episodes that have not yet been acknowledged.
     /// </summary>
     /// <remarks>
-    /// A fresh subscription supplies Revived; ClearObserverQuarantine supplies Cleared. Quarantine survives reactivation
-    /// now that #4426 is fixed, so the caller must continue to report IsQuarantined during reactivation. Unguarded exits
-    /// tracked in #4440 clear with the reason the tracker supplies here; the evaluator does not infer an exit reason
-    /// from an observer running state. The tracker must retain the reason until the clear is appended.
+    /// Keys carry the incident's GUID value because the Orleans JSON codec cannot use concept converters for
+    /// dictionary property names. The observer keeps strongly typed incident keys in its local bookkeeping.
     /// </remarks>
-    public AlertClearedReason QuarantineEndedAs { get; init; } = AlertClearedReason.Cleared;
+    public IReadOnlyDictionary<Guid, AlertClearedReason> Endings { get; init; } = ImmutableDictionary<Guid, AlertClearedReason>.Empty;
 }

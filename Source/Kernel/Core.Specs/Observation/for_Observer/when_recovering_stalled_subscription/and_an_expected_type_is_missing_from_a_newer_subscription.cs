@@ -11,6 +11,7 @@ public class and_an_expected_type_is_missing_from_a_newer_subscription : given.a
     EventType[] _expectedTypes;
     EventType[] _mergedTypes;
     IEnumerable<EventType> _effectiveTypes;
+    Guid _previousLifecycle;
 
     async Task Establish()
     {
@@ -21,11 +22,13 @@ public class and_an_expected_type_is_missing_from_a_newer_subscription : given.a
         _expectedTypes = [oldType, missingType];
         _mergedTypes = [newerType, extraType, missingType];
         await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [newerType, extraType], SiloAddress.Zero, isReplayable: false);
+        _previousLifecycle = _stateStorage.State.AlertLifecycleId;
         _appendedEventsQueues.ClearReceivedCalls();
     }
 
     async Task Because() => _effectiveTypes = await _observer.RecoverStalledSubscription<NullObserverSubscriber>(ObserverType.Reactor, _expectedTypes, SiloAddress.Zero, isReplayable: false);
 
+    [Fact] void should_begin_a_new_alert_lifecycle() => _stateStorage.State.AlertLifecycleId.ShouldNotEqual(_previousLifecycle);
     [Fact] void should_return_the_effective_merged_types() => _effectiveTypes.ShouldContainOnly(_mergedTypes);
     [Fact] async Task should_preserve_newer_types_in_the_subscription() => (await _observer.GetSubscription()).EventTypes.ShouldContainOnly(_mergedTypes);
     [Fact] void should_preserve_newer_types_in_the_observer_definition() => _definitionStorage.State.EventTypes.ShouldContainOnly(_mergedTypes);

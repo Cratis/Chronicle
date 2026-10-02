@@ -31,9 +31,16 @@ public partial class Observer
     async Task Watchdog(CancellationToken cancellationToken)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        if (!_observerExists || _removed || IsRetired)
+        {
+            await ReconcileAlertsIfNeeded();
+            return;
+        }
+
         await CheckConnectedClient();
         await RecoverIfStuck();
         await FlushDebouncedProgressState();
+        await ReconcileAlertsIfNeeded();
     }
 
     /// <summary>
