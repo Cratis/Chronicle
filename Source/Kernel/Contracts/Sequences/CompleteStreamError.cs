@@ -10,8 +10,8 @@ namespace Cratis.Chronicle.Contracts.Sequences;
 /// Represents the outcome of a rejected stream completion.
 /// </summary>
 /// <remarks>
-/// Deliberately its own type rather than <see cref="T:Cratis.Chronicle.EventSequences.CompleteStreamError"/> directly
-/// - the same reason <see cref="T:Cratis.Chronicle.Sequences.EventType"/> and <see cref="T:Cratis.Chronicle.Sequences.ConcurrencyScope"/> are their own local types: it keeps
+/// Deliberately its own type rather than <c>CompleteStreamError</c> directly
+/// - the same reason <see cref="T:Cratis.Chronicle.Contracts.Sequences.EventType"/> and <see cref="T:Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope"/> are their own local types: it keeps
 /// this command's wire shape mirroring into this service's own <c language="csharp">Contracts.Sequences</c> namespace, rather than
 /// reaching into <c language="csharp">Contracts.EventSequences</c>, where a hand-written contract of the same name still serves the
 /// not-yet-retired <c language="csharp">EventSequences</c> service.
@@ -22,7 +22,7 @@ public enum CompleteStreamError
     /// There was no error - the stream was completed successfully.
     /// </summary>
     /// <remarks>
-    /// The wire representation of <see cref="T:Cratis.Chronicle.Sequences.CompleteStreamOutcome"/> carries this as a non-nullable value, so
+    /// The wire representation of <c>CompleteStreamOutcome</c> carries this as a non-nullable value, so
     /// completion needs an explicit "no error" member rather than relying on a nullable enum - a nullable enum that
     /// also needs value conversion has no defined null behavior on the wire.
     /// </remarks>

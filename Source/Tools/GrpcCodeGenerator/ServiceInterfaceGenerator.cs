@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -217,10 +218,60 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         {
             return BuildXmlDoc(fallback);
         }
-        var text = string.Join('\n', member.Elements().Select(element => element.ToString()))
-            .Replace(type.FullName!, SharedTypeRegistry.QualifiedNameFor(type), StringComparison.Ordinal);
+        var copy = new XElement(member);
+        var sharedNames = SharedTypeRegistry.Discovered.ToDictionary(pair => pair.Key.FullName!, pair => pair.Value["global::".Length..]);
+        sharedNames[type.FullName!] = SharedTypeRegistry.QualifiedNameFor(type)!["global::".Length..];
+
+        foreach (var element in copy.Descendants().Where(element => element.Attribute("cref") is not null).ToList())
+        {
+            var cref = element.Attribute("cref")!;
+            var token = $"cref=\"{cref.Value}\"";
+            var resolved = false;
+            foreach (var (sourceName, targetName) in sharedNames.OrderByDescending(pair => pair.Key.Length))
+            {
+                // Match a whole type in a documentation ID, not prose or a longer type with the same prefix.
+                var pattern = $"cref=\"([TFPME]:){Regex.Escape(sourceName)}(?=[.(\"])";
+                var regex = new Regex(pattern, RegexOptions.None, TimeSpan.FromSeconds(1));
+                if (!regex.IsMatch(token))
+                {
+                    continue;
+                }
+
+                cref.Value = regex.Replace(token, match => $"cref=\"{match.Groups[1].Value}{targetName}")["cref=\"".Length..^1];
+                resolved = true;
+                break;
+            }
+
+            if (!resolved && !IsBclDocumentationReference(cref.Value))
+            {
+                var name = cref.Value[2..].Split('(')[0];
+                element.ReplaceWith(new XElement("c", name[(name.LastIndexOf('.') + 1)..]));
+            }
+        }
+
+        var text = string.Join('\n', copy.Elements().Select(element => element.ToString()));
 
         return SyntaxFactory.ParseLeadingTrivia(string.Join('\n', text.Split('\n').Select(line => $"/// {line.Trim()}")) + "\n");
+    }
+
+    static bool IsBclDocumentationReference(string documentationId)
+    {
+        var name = documentationId[2..].Split('(')[0];
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(assembly => assembly == typeof(object).Assembly ||
+                assembly.GetName().Name?.StartsWith("System.", StringComparison.Ordinal) == true)
+            .ToList();
+        while (name.Contains('.'))
+        {
+            if (assemblies.Exists(assembly => assembly.GetType(name) is not null))
+            {
+                return true;
+            }
+
+            name = name[..name.LastIndexOf('.')];
+        }
+
+        return false;
     }
 
     static MethodDeclarationSyntax BuildCommandMethod(CommandDefinition command, string? requestTypeName, string? responseTypeName)
