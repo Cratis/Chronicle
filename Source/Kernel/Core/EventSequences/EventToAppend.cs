@@ -36,6 +36,11 @@ public record EventToAppend(
     public IReadOnlyCollection<NamedTag> NamedTags { get; init; } = [];
 
     /// <summary>
+    /// Gets the name of the registered event source definition the event is appended through, if any.
+    /// </summary>
+    public EventSourceName? EventSource { get; init; }
+
+    /// <summary>
     /// Gets or inits the optional event-specific causation chain. When absent, the batch chain is used.
     /// </summary>
     public IEnumerable<Causation>? Causation { get; init; }
