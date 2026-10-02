@@ -22,10 +22,8 @@ namespace Cratis.Chronicle.Schemas;
 /// </remarks>
 public static class SchemaMetadataExtensions
 {
-    static readonly ConditionalWeakTable<JsonSchema, Lazy<bool>> _protectionValidation = new();
     static readonly ConditionalWeakTable<JsonSchema, Lazy<bool>> _unprotectedValues = new();
     static readonly ConditionalWeakTable<JsonSchema, Lazy<bool>> _unprotectedContainers = new();
-    static readonly SchemaMetadataCategory[] _categories = [SchemaMetadataCategory.Compliance, SchemaMetadataCategory.Security];
     static readonly string[] _dynamicSchemas = ["if", "then", "else", "not", "additionalProperties", "additionalItems", "contains", "unevaluatedProperties", "unevaluatedItems", "propertyNames", "contentSchema"];
     static readonly string[] _schemaMaps = ["patternProperties", "dependentSchemas", "dependencies"];
 
@@ -102,7 +100,7 @@ public static class SchemaMetadataExtensions
             return value;
         }
 
-        var result = NestedSchemasAndSelf(schema).Any(node => node.Node.ContainsKey(KeyFor(category)));
+        var result = NestedSchemasAndSelf(schema, includeUnsupported: false).Any(node => node.Node.ContainsKey(KeyFor(category)));
         if (category == SchemaMetadataCategory.Compliance)
         {
             schema.CachedHasComplianceMetadata = result;
@@ -140,7 +138,7 @@ public static class SchemaMetadataExtensions
     /// present at all.
     /// </remarks>
     public static bool HasSchemaMetadata(this JsonSchema schema, SchemaMetadataCategory category, Func<string, bool> predicate) =>
-        NestedSchemasAndSelf(schema).Any(node => node.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType)));
+        NestedSchemasAndSelf(schema, includeUnsupported: false).Any(node => node.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType)));
 
     /// <summary>
     /// Check recursively whether the schema has metadata for any known category.
@@ -166,14 +164,6 @@ public static class SchemaMetadataExtensions
             .GetValue(schema, value => new Lazy<bool>(() => IsUnprotected(value, includeMembers))).Value;
 
     /// <summary>
-    /// Rejects schema shapes whose protection cannot be completely resolved before a write or release.
-    /// </summary>
-    /// <param name="schema">The document schema.</param>
-    /// <exception cref="UnresolvedSchemaProtection">A declaration cannot be resolved safely.</exception>
-    public static void EnsureProtectionCanBeResolved(this JsonSchema schema) =>
-        _ = _protectionValidation.GetValue(schema, value => new Lazy<bool>(() => ValidateProtection(value))).Value;
-
-    /// <summary>
     /// Gets the schema key a category is stored under.
     /// </summary>
     /// <param name="category">The metadata category.</param>
@@ -188,45 +178,20 @@ public static class SchemaMetadataExtensions
             (!node.HasReference || node.Reference is not null) &&
             !node.Node.ContainsKey("$dynamicRef") && !node.Node.ContainsKey("$recursiveRef"));
 
-    static bool ValidateProtection(JsonSchema schema)
-    {
-        if (!schema.HasSchemaMetadata()) return true;
-
-        foreach (var declaration in NestedSchemasAndSelf(schema))
-        {
-            // An unrelated unprotected union or dictionary cannot change a protected member's handling.
-            // Unresolved references remain unsafe in a protected document, even without a local marker.
-            if (declaration.HasReference || !declaration.IsUnprotectedSchemaValue()) _ = declaration.ResolveComposition();
-            if (DynamicSchemas(declaration).Any(child => !child.IsUnprotectedSchemaValue()) ||
-                declaration.Node.ContainsKey("$dynamicRef") || declaration.Node.ContainsKey("$recursiveRef"))
-            {
-                throw new UnresolvedSchemaProtection("conditional or dynamic member declarations");
-            }
-            foreach (var category in _categories)
-            {
-                if (declaration.Node.TryGetPropertyValue(KeyFor(category), out var metadata) &&
-                    (metadata is not JsonArray entries || entries.Count != declaration.GetSchemaMetadata(category).Count()))
-                {
-                    throw new UnresolvedSchemaProtection($"malformed {category} metadata");
-                }
-            }
-        }
-
-        return true;
-    }
-
-    static IEnumerable<JsonSchema> NestedSchemasAndSelf(JsonSchema schema, bool includeMembers = true)
+    static IEnumerable<JsonSchema> NestedSchemasAndSelf(JsonSchema schema, bool includeMembers = true, bool includeUnsupported = true)
     {
         var pending = new Stack<JsonSchema>();
         var references = new HashSet<(JsonSchema Root, string Reference)>();
-        var dynamicRoots = new HashSet<JsonSchema>();
         pending.Push(schema);
         while (pending.TryPop(out var current))
         {
             yield return current;
             var members = includeMembers ? current.Properties.Values.Cast<JsonSchema>() : [];
-            var dynamicSchemas = includeMembers ? DynamicSchemas(current) : [];
-            foreach (var child in members.Concat(current.AllOf).Concat(current.AnyOf).Concat(current.OneOf).Concat(dynamicSchemas))
+            var dynamicSchemas = includeMembers && includeUnsupported ? DynamicSchemas(current) : [];
+            var unions = new[] { current.AnyOf, current.OneOf }
+                .Where(alternatives => includeUnsupported || alternatives.Count(candidate => candidate.ActualTypeSchema.Type != JsonObjectType.Null) == 1)
+                .SelectMany(alternatives => alternatives);
+            foreach (var child in members.Concat(current.AllOf).Concat(unions).Concat(dynamicSchemas))
             {
                 pending.Push(child);
             }
@@ -241,21 +206,6 @@ public static class SchemaMetadataExtensions
             if (includeMembers && current.Item is { } item)
             {
                 pending.Push(item);
-            }
-
-            // Dynamic anchors can live in otherwise unreachable, nested definitions. Revisit the owning
-            // document once with definitions enabled; static reference tracking still terminates cycles.
-            if ((current.Node.ContainsKey("$dynamicRef") || current.Node.ContainsKey("$recursiveRef")) && dynamicRoots.Add(current.Root))
-            {
-                pending.Push(current.Root);
-            }
-            if (dynamicRoots.Contains(current.Root))
-            {
-                foreach (var key in new[] { "$defs", "definitions" })
-                {
-                    if (current.Node[key] is not JsonObject definitions) continue;
-                    foreach (var definition in definitions.Select(_ => _.Value).OfType<JsonObject>()) pending.Push(new JsonSchema(definition, current.Root));
-                }
             }
         }
     }

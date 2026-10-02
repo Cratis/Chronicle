@@ -17,6 +17,6 @@ public class and_schema_has_pii_but_no_subject_in_document : given.all_dependenc
         _schemaWithPii,
         _instance));
 
-    [Fact] void should_refuse_unattributed_personal_data() => _error.ShouldBeOfExactType<UnresolvedSchemaProtection>();
-    [Fact] void should_not_call_compliance_manager() => _complianceManager.DidNotReceive().Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>());
+    [Fact] void should_not_refuse_the_read() => _error.ShouldBeNull();
+    [Fact] void should_release_with_unattributed_subject_status() => _complianceManager.Received(1).Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), string.Empty, Arg.Any<JsonObject>());
 }

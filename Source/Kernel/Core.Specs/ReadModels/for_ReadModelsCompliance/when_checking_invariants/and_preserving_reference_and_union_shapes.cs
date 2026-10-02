@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModelsCompliance.when_checking_inv
 
 public class and_preserving_reference_and_union_shapes
 {
-    static readonly string[] _shapes = ["definitions_scalar", "defs_scalar", "definitions_object", "defs_object", "properties_scalar", "plain_name", "self", "mutual", "ancestor_anchor", "recursive_anyOf", "recursive_oneOf", "items_anyOf", "items_oneOf", "whole_anyOf", "whole_oneOf", "whole_allOf_anyOf", "whole_allOf_oneOf", "whole_root_anyOf", "whole_root_oneOf", "unprotected_anyOf", "unprotected_oneOf"];
+    static readonly string[] _shapes = ["definitions_scalar", "defs_scalar", "definitions_object", "defs_object", "properties_scalar", "plain_name", "plain_name_collision", "self", "mutual", "recursive_anyOf", "recursive_oneOf", "items_anyOf", "items_oneOf", "whole_anyOf", "whole_oneOf", "whole_allOf_anyOf", "whole_allOf_oneOf", "whole_root_anyOf", "whole_root_oneOf", "unprotected_anyOf", "unprotected_oneOf"];
 
     public static TheoryData<string, bool, bool> Cells
     {
@@ -42,11 +42,9 @@ public class and_preserving_reference_and_union_shapes
         var (other, _, _) = Create(shape, !pii);
         other.HasSchemaMetadata().ShouldEqual(!pii);
         other.IsUnprotectedSchemaValue().ShouldEqual(pii);
-        other.EnsureProtectionCanBeResolved();
         _ = other.ResolveComposition();
         schema.HasSchemaMetadata().ShouldEqual(pii);
         schema.IsUnprotectedSchemaValue().ShouldEqual(!pii);
-        schema.EnsureProtectionCanBeResolved();
         foreach (var property in schema.GetFlattenedProperties()) _ = property.GetFlattenedProperties().ToArray();
 
         var converter = new ExpandoObjectConverter(new TypeFormats());
@@ -62,7 +60,7 @@ public class and_preserving_reference_and_union_shapes
             alternateCase.Remove("guard");
             alternateCase["Guard"] = "private";
             await Assert.ThrowsAsync<SchemaPropertyNotFoundInSchema>(() => manager.Apply("store", "Default", schema, "subject", alternateCase));
-            await Assert.ThrowsAsync<SchemaPropertyNotFoundInSchema>(() => manager.Release("store", "Default", schema, "subject", alternateCase));
+            _ = await manager.Release("store", "Default", schema, "subject", alternateCase);
         }
         var appended = await manager.Apply("store", "Default", schema, "subject", input);
         CheckStored(appended, false);
@@ -125,41 +123,20 @@ public class and_preserving_reference_and_union_shapes
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void should_isolate_composition_caches_by_protection_context(bool protectedFirst)
-    {
-        var schema = JsonSchema.FromJson("""{"anyOf":[{"type":"object","properties":{"name":{"type":"string"}}},{"type":"null"}]}""");
-        _ = schema.ResolveComposition(protectedFirst);
-        schema.ResolveComposition(true).Properties.Keys.ShouldContain("name");
-        schema.ResolveComposition().Properties.ShouldBeEmpty();
-        schema.IsUnprotectedSchemaValue().ShouldBeTrue();
-    }
-
-    [Theory]
     [InlineData("self", false)]
     [InlineData("self", true)]
     [InlineData("mutual", false)]
     [InlineData("mutual", true)]
-    [InlineData("anchor", false)]
-    [InlineData("anchor", true)]
     public void should_terminate_reference_cycles_without_losing_metadata(string cycle, bool pii)
     {
         var node = JsonNode.Parse("""{"$ref":"#/$defs/a","$defs":{"a":{"$ref":"#/$defs/a"},"b":{"$ref":"#/$defs/a"}}}""")!.AsObject();
         if (cycle == "mutual") node["$defs"]!["a"]!["$ref"] = "#/$defs/b";
-        if (cycle == "anchor")
-        {
-            node["$anchor"] = "parent";
-            node["$defs"]!["a"]!["$ref"] = "#parent";
-        }
         if (pii) node["$defs"]!["a"]!["compliance"] = Marker();
         var schema = JsonSchema.FromJson(node.ToJsonString());
         schema.HasSchemaMetadata().ShouldEqual(pii);
         schema.IsUnprotectedSchemaValue().ShouldEqual(!pii);
         schema.GetFlattenedProperties().ShouldBeEmpty();
-        Assert.Throws<UnresolvedSchemaProtection>(() => schema.ResolveComposition());
-        if (pii) Assert.Throws<UnresolvedSchemaProtection>(schema.EnsureProtectionCanBeResolved);
-        else schema.EnsureProtectionCanBeResolved();
+        Assert.Same(schema, schema.ResolveComposition());
     }
 
     static (JsonSchema Schema, JsonObject Input, string[] Paths) Create(string shape, bool pii)
@@ -169,7 +146,7 @@ public class and_preserving_reference_and_union_shapes
         if (pii) leaf["compliance"] = Marker();
         var input = JsonNode.Parse("""{"value":"private"}""")!.AsObject();
         string[] paths = ["value"];
-        if (shape == "definitions_scalar" || shape == "defs_scalar" || shape == "definitions_object" || shape == "defs_object" || shape == "properties_scalar" || shape == "plain_name")
+        if (shape == "definitions_scalar" || shape == "defs_scalar" || shape == "definitions_object" || shape == "defs_object" || shape == "properties_scalar" || shape == "plain_name" || shape == "plain_name_collision")
         {
             var definition = leaf;
             if (shape.EndsWith("_object", StringComparison.Ordinal))
@@ -183,10 +160,11 @@ public class and_preserving_reference_and_union_shapes
             if (root[key] is null) root[key] = new JsonObject();
             root[key]!["Person"] = definition;
             var reference = $"#{key}/Person";
-            if (shape == "plain_name")
+            if (shape == "plain_name" || shape == "plain_name_collision")
             {
                 root["Person"] = definition.DeepClone();
                 reference = "#Person";
+                if (shape == "plain_name_collision") root["$defs"]!["foreign"] = JsonNode.Parse("""{"$id":"foreign","$anchor":"Person","type":"string"}""");
             }
             root["properties"]!["value"] = new JsonObject { ["$ref"] = reference };
         }
@@ -224,15 +202,14 @@ public class and_preserving_reference_and_union_shapes
         }
         else
         {
-            var reference = shape == "ancestor_anchor" ? "#ancestor" : "#/$defs/Person";
-            var next = shape == "mutual" ? "#/$defs/Alias" : reference;
+            const string Reference = "#/$defs/Person";
+            var next = shape == "mutual" ? "#/$defs/Alias" : Reference;
             var person = new JsonObject { ["type"] = "object", ["properties"] = new JsonObject { ["name"] = leaf, ["next"] = new JsonObject { ["$ref"] = next } } };
-            if (shape == "ancestor_anchor") person["$anchor"] = "ancestor";
             root["$defs"]!["Person"] = shape.StartsWith("recursive_", StringComparison.Ordinal)
                 ? new JsonObject { [shape[10..]] = new JsonArray(person, new JsonObject { ["type"] = "null" }) }
                 : person;
-            root["$defs"]!["Alias"] = new JsonObject { ["$ref"] = reference };
-            root["properties"]!["value"] = new JsonObject { ["$ref"] = reference };
+            root["$defs"]!["Alias"] = new JsonObject { ["$ref"] = Reference };
+            root["properties"]!["value"] = new JsonObject { ["$ref"] = Reference };
             input["value"] = JsonNode.Parse("""{"name":"private","next":{"name":"second"}}""");
             paths = ["value.name", "value.next.name"];
         }

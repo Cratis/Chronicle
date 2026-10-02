@@ -874,21 +874,6 @@ public class JsonSchema
 
     static string CombinePath(string? path, string name) => path is null ? name : $"{path}.{name}";
 
-    static JsonObject? FindAnchor(JsonObject schema, string anchor)
-    {
-        if (schema["$anchor"]?.GetValue<string>() == anchor) return schema;
-        foreach (var key in new[] { "$defs", "definitions" })
-        {
-            if (schema[key] is not JsonObject definitions) continue;
-            foreach (var definition in definitions.Select(_ => _.Value).OfType<JsonObject>())
-            {
-                if (FindAnchor(definition, anchor) is { } target) return target;
-            }
-        }
-
-        return null;
-    }
-
     List<JsonSchema> BuildSchemaList(string key)
     {
         var list = new List<JsonSchema>();
@@ -934,10 +919,7 @@ public class JsonSchema
         if (!HasReference && Properties.Count == 0 && AllOf.Count == 0 && (AnyOf.Count > 0 || OneOf.Count > 0) && this.HasSchemaMetadata())
         {
             var actual = this.ResolveComposition();
-
-            // Composition has already merged references and allOf. A preserved union may still carry
-            // metadata on items or dynamic members; resolving fresh wrappers again would never terminate.
-            properties.AddRange(actual.Properties.Values);
+            if (!ReferenceEquals(actual, this)) properties.AddRange(actual.Properties.Values);
         }
     }
 
@@ -957,17 +939,6 @@ public class JsonSchema
         {
             return root;
         }
-
-        var anchorName = Uri.UnescapeDataString(fragment);
-        if ((char.IsAsciiLetter(anchorName[0]) || anchorName[0] == '_') &&
-            anchorName.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '.' or '_') &&
-            FindAnchor(root.Node, anchorName) is { } anchor)
-        {
-            return new JsonSchema((JsonObject)anchor.DeepClone(), root);
-        }
-
-        // Keep the legacy pointer fallback, including fragments without a leading slash and plain-name
-        // root keys for which no anchor exists.
 
         // Resolve the fragment as a JSON Pointer (RFC 6901) into the root document. This covers both
         // definition references (#/$defs/<name>, #/definitions/<name>) and the in-document pointers that

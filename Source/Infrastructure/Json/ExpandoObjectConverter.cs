@@ -28,22 +28,15 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     /// <inheritdoc/>
     public ExpandoObject ToExpandoObject(JsonObject document, JsonSchema schema) => ConvertToExpandoObject(document, schema, false);
 
-    static JsonSchema ResolveForConversion(JsonSchema schema, bool protectsValue = false)
-    {
-        try
-        {
-            return schema.ResolveComposition(protectsValue);
-        }
-        catch (UnresolvedSchemaProtection) when (!schema.HasSchemaMetadata())
-        {
-            // Plain conversion is not a protection boundary. Retain the pre-composition conversion of
-            // unsupported schemas only when no protection declaration can be lost by that fallback.
-            return schema;
-        }
-    }
+    static JsonSchema ResolveForConversion(JsonSchema schema) => schema.ResolveComposition();
 
     JsonObject ConvertToJsonObject(ExpandoObject expandoObject, JsonSchema schema, bool preserveWholeValueMembers)
     {
+        if (preserveWholeValueMembers)
+        {
+            return (JsonObject)ConvertUnknownSchemaTypeToJsonValue(expandoObject)!;
+        }
+
         var jsonObject = new JsonObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
         schema = ResolveForConversion(schema);
@@ -108,6 +101,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
     ExpandoObject ConvertToExpandoObject(JsonObject document, JsonSchema schema, bool preserveWholeValueMembers)
     {
+        if (preserveWholeValueMembers && document.Count > 0)
+        {
+            return (ExpandoObject)ConvertUnknownSchemaTypeToClrType(document)!;
+        }
+
         var expandoObject = new ExpandoObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
 
@@ -168,7 +166,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty, bool preserveWholeValueMembers = false)
     {
         var selectActualType = !schemaProperty.HasReference && schemaProperty.AllOf.Count == 0;
-        schemaProperty = ResolveForConversion(schemaProperty, preserveWholeValueMembers);
+        schemaProperty = ResolveForConversion(schemaProperty);
         preserveWholeValueMembers |= schemaProperty.GetComplianceMetadata().Any() || schemaProperty.GetSecurityMetadata().Any();
 
         // Compliance handlers replace protected scalar values with opaque strings while the registered schema
@@ -244,7 +242,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     object? ConvertFromJsonNode(JsonNode? jsonNode, JsonSchema schemaProperty, bool preserveWholeValueMembers = false)
     {
         var selectActualType = !schemaProperty.HasReference && schemaProperty.AllOf.Count == 0;
-        schemaProperty = ResolveForConversion(schemaProperty, preserveWholeValueMembers);
+        schemaProperty = ResolveForConversion(schemaProperty);
         preserveWholeValueMembers |= schemaProperty.GetComplianceMetadata().Any() || schemaProperty.GetSecurityMetadata().Any();
         if (jsonNode is null)
         {
@@ -338,7 +336,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             }
         }
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
-                schemaProperty.Reference!.Type :
+                schemaProperty.Reference?.Type ?? JsonObjectType.None :
                 schemaProperty.Type;
 
         if (type.HasFlag(JsonObjectType.Null))
@@ -385,7 +383,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 {
                     var index = enumReadSchema.EnumerationNames.IndexOf(enumNameValue);
                     if (index >= 0 && index < enumReadSchema.Enumeration.Count)
-                        return TypeConversion.Convert(typeof(int), enumReadSchema.Enumeration.ToArray()[index]!);
+                        return TypeConversion.Convert(typeof(int), enumReadSchema.Enumeration.ToArray()[index]);
 
                     if (isCompliant)
                     {
@@ -563,7 +561,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             }
         }
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
-                schemaProperty.Reference!.Type :
+                schemaProperty.Reference?.Type ?? JsonObjectType.None :
                 schemaProperty.Type;
 
         if (type.HasFlag(JsonObjectType.Null))

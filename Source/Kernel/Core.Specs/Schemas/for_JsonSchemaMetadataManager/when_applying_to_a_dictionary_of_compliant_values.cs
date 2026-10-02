@@ -54,6 +54,6 @@ public class when_applying_to_a_dictionary_of_compliant_values : Specification
 
     async Task Because() => _exception = await Catch.Exception(() => _manager.Apply(string.Empty, string.Empty, _schema, Identifier, _input));
 
-    [Fact] void should_fail_rather_than_store_the_values_unprotected() => _exception.ShouldBeOfExactType<UnresolvedSchemaProtection>();
-    [Fact] void should_name_the_unresolved_shape() => _exception.Message.ShouldContain("dynamic member declarations");
+    [Fact] void should_fail_rather_than_store_the_values_unprotected() => _exception.ShouldBeOfExactType<SchemaPropertyNotFoundInSchema>();
+    [Fact] void should_name_the_key_it_could_not_resolve() => _exception.Message.ShouldContain("contacts.home");
 }

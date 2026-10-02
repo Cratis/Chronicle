@@ -62,7 +62,13 @@ public class and_restoring_only_classified_values
         var input = given.compliance_matrix.State(("value", original), ("guard", "guard"));
         if (kind == "container_undeclared") ((IDictionary<string, object?>)input)["extra"] = "personal-value";
         var error = await Catch.Exception(async () => stored = await compliance.Apply("store", "Default", schema, "subject", input));
-        if (kind == "unresolved" || kind == "container_undeclared")
+        if (kind == "unresolved")
+        {
+            Assert.Null(error);
+            Assert.False(((IDictionary<string, object?>)stored!).ContainsKey("value"));
+            return;
+        }
+        if (kind == "container_undeclared")
         {
             // A failed operation is closed, not permission to restore an unclassified value.
             error.ShouldBeOfExactType<UnresolvedSchemaProtection>();

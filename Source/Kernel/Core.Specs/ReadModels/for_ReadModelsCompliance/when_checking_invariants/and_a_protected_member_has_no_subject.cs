@@ -43,10 +43,10 @@ public class and_a_protected_member_has_no_subject
         var encryption = new Encryption();
         var manager = new JsonSchemaMetadataManager(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(new ManagedEncryptionKeyProvisioner(keys, encryption), keys, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
         var compliance = new ReadModelsCompliance(manager, converter);
-        var jsonError = await Catch.Exception(() => compliance.ReleaseJson("store", "Default", schema, input));
-        var expandoError = await Catch.Exception(() => compliance.Release("store", "Default", schema, state));
-        jsonError.ShouldBeOfExactType<UnresolvedSchemaProtection>();
-        expandoError.ShouldBeOfExactType<UnresolvedSchemaProtection>();
+        var json = await compliance.ReleaseJson("store", "Default", schema, input);
+        var expando = await compliance.Release("store", "Default", schema, state);
+        json[alternateCasing ? "Value" : "value"]!.GetValue<string>().ShouldEqual(string.Empty);
+        given.compliance_matrix.At(expando, "value")!.GetValue<string>().ShouldEqual(string.Empty);
         if (partialSubjects)
         {
             var applyError = await Catch.Exception(() => compliance.Apply("store", "Default", schema, string.Empty, state));

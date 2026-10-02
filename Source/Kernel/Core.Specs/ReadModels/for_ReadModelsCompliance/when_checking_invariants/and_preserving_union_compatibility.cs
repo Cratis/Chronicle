@@ -156,7 +156,7 @@ public class and_preserving_union_compatibility
         }
     }
 
-    static async Task<ExpandoObject> Reduce(IReadModelsCompliance compliance, JsonSchema schema, ExpandoObject state)
+    internal static async Task<ExpandoObject> Reduce(IReadModelsCompliance compliance, JsonSchema schema, ExpandoObject state)
     {
         var readModel = new ReadModelDefinition("union", "Union", "Union", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Reducer, "observer", new SinkDefinition(SinkConfigurationId.None, WellKnownSinkTypes.MongoDB), new Dictionary<ReadModelGeneration, JsonSchema> { [(ReadModelGeneration)1] = schema }, []);
         var sink = Substitute.For<ISink>();

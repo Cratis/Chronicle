@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModelsCompliance.when_checking_inv
 
 public static class compliance_matrix
 {
-    public static readonly string[] Shapes = ["flat", "own_and_referenced_base", "inline_allOf", "multiple_inline_groups", "reference_siblings", "nested_object", "object_array", "scalar_array", "recursive", "undeclared_key", "undeclared_pascal_key", "declared_key", "case_distinct", "referenced_member", "composed_member", "duplicate_member", "reference_chain", "referenced_scalar_array", "anchored_member", "anchored_anyOf", "anchored_oneOf"];
+    public static readonly string[] Shapes = ["flat", "own_and_referenced_base", "inline_allOf", "multiple_inline_groups", "reference_siblings", "nested_object", "object_array", "scalar_array", "recursive", "undeclared_key", "undeclared_pascal_key", "declared_key", "case_distinct", "referenced_member", "composed_member", "duplicate_member", "reference_chain", "referenced_scalar_array"];
     public static readonly string[] Members = ["string", "empty_string", "nullable_string", "nullable_empty_string", "nullable_null", "integer", "boolean", "guid", "date", "decimal", "referenced_enum", "value_object", "nullable_value_object", "null_value_object", "null"];
     public static readonly string[] Protections = ["pii", "non_pii", "undeclared"];
 
@@ -24,7 +24,6 @@ public static class compliance_matrix
                                from member in Members
                                from protection in Protections
                                from pipeline in new[] { false, true }
-                               where shape is not "anchored_anyOf" and not "anchored_oneOf" || protection == "pii"
                                select (shape, erased, member, protection, pipeline);
             foreach (var (shape, erased, member, protection, pipeline) in combinations) cells.Add(shape, erased, member, protection, pipeline);
             return cells;
@@ -118,20 +117,6 @@ public static class compliance_matrix
                 AddMember(root, "items", new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["$ref"] = "#/$defs/alias" } }, protection);
                 values.Add(("items", new object?[] { value, value, null }));
                 paths.AddRange(["items.0", "items.1"]);
-                break;
-            case "anchored_member":
-            case "anchored_anyOf":
-            case "anchored_oneOf":
-                leaf["$anchor"] = "personal";
-                root["$defs"]!["member"] = leaf;
-                var anchored = new JsonObject { ["$ref"] = "#personal" };
-                var anchoredMember = shape == "anchored_member" ? anchored : new JsonObject
-                {
-                    [shape == "anchored_anyOf" ? "anyOf" : "oneOf"] = new JsonArray(anchored)
-                };
-                AddMember(root, "value", anchoredMember, protection);
-                values.Add(("value", value));
-                paths.Add("value");
                 break;
             case "reference_chain":
             case "referenced_member":

@@ -12,18 +12,13 @@ namespace Cratis.Chronicle.Schemas;
 public static class SchemaCompositionExtensions
 {
     static readonly ConditionalWeakTable<JsonSchema, JsonSchema> _resolved = new();
-    static readonly ConditionalWeakTable<JsonSchema, JsonSchema> _protectedValues = new();
 
     /// <summary>
     /// Resolves references and compositions for one value, retaining every member declaration.
     /// </summary>
     /// <param name="schema">The value schema.</param>
-    /// <param name="protectsValue">Whether the containing declaration protects this entire value.</param>
-    /// <returns>The resolved schema, with nested members resolved on demand.</returns>
-    /// <exception cref="UnresolvedSchemaProtection">The declarations cannot be safely combined.</exception>
-    public static JsonSchema ResolveComposition(this JsonSchema schema, bool protectsValue = false) => protectsValue
-        ? _protectedValues.GetValue(schema, value => Resolve(value, true))
-        : _resolved.GetValue(schema, value => Resolve(value, false));
+    /// <returns>The resolved schema, or the original declaration when composition is unsupported.</returns>
+    public static JsonSchema ResolveComposition(this JsonSchema schema) => _resolved.GetValue(schema, Resolve);
 
     /// <summary>
     /// Determines whether union members may pass through without selecting a branch or bypassing protection.
@@ -35,19 +30,28 @@ public static class SchemaCompositionExtensions
         schema.IsUnprotectedSchemaValue(includeMembers: false) &&
         schema.AnyOf.Concat(schema.OneOf).All(alternative => alternative.IsUnprotectedSchemaValue());
 
-    static JsonSchema Resolve(JsonSchema schema, bool protectsValue)
+    static JsonSchema Resolve(JsonSchema schema)
     {
         if (!schema.HasReference && schema.AllOf.Count == 0 && schema.AnyOf.Count == 0 && schema.OneOf.Count == 0)
         {
             return schema;
         }
 
-        var node = new JsonObject();
-        Merge(schema, node, [], protectsValue || !schema.IsUnprotectedSchemaValue(includeMembers: false));
-        return new JsonSchema(node, schema.Root);
+        try
+        {
+            var node = new JsonObject();
+            Merge(schema, node, []);
+            return new JsonSchema(node, schema.Root);
+        }
+        catch (UnresolvedSchemaProtection)
+        {
+            // Composition is not schema validation. In particular, reading an already stored event
+            // cannot acquire a new refusal merely because its schema is outside this resolver's subset.
+            return schema;
+        }
     }
 
-    static void Merge(JsonSchema schema, JsonObject result, HashSet<(JsonSchema Root, string Reference)> references, bool protectsValue)
+    static void Merge(JsonSchema schema, JsonObject result, HashSet<(JsonSchema Root, string Reference)> references)
     {
         if (schema.Node["$ref"] is { } referenceNode)
         {
@@ -57,20 +61,20 @@ public static class SchemaCompositionExtensions
             {
                 throw new UnresolvedSchemaProtection(reference);
             }
-            Merge(target, result, references, protectsValue);
+            Merge(target, result, references);
             references.Remove(key);
         }
 
         foreach (var declaration in schema.AllOf)
         {
-            Merge(declaration, result, references, protectsValue);
+            Merge(declaration, result, references);
         }
 
         foreach (var (keyword, alternatives) in new[] { ("anyOf", schema.AnyOf), ("oneOf", schema.OneOf) }.Where(_ => _.Item2.Count > 0))
         {
             var scalarAlternative = alternatives.Where(_ => _.ActualTypeSchema.Type != JsonObjectType.Null).ToArray();
             var isScalarUnion = scalarAlternative.Length == 1 && scalarAlternative[0].ActualTypeSchema.Type is JsonObjectType.String or JsonObjectType.Integer or JsonObjectType.Number or JsonObjectType.Boolean;
-            if (!isScalarUnion && !protectsValue && alternatives.All(_ => _.IsUnprotectedSchemaValue()))
+            if (!isScalarUnion && !schema.GetComplianceMetadata().Any() && !schema.GetSecurityMetadata().Any() && alternatives.All(_ => _.IsUnprotectedSchemaValue()))
             {
                 // A union without protection does not select one shape for conversion. Keep its existing
                 // conversion behavior, including when a sibling property carries protection.
@@ -81,7 +85,7 @@ public static class SchemaCompositionExtensions
             var resolvedAlternatives = alternatives.Select(candidate =>
             {
                 var resolved = new JsonObject();
-                Merge(candidate, resolved, references, protectsValue);
+                Merge(candidate, resolved, references);
                 return new JsonSchema(resolved, schema.Root);
             }).ToArray();
             var nonNull = resolvedAlternatives.Where(_ => _.Type != JsonObjectType.Null).ToArray();
@@ -90,13 +94,13 @@ public static class SchemaCompositionExtensions
                 throw new UnresolvedSchemaProtection("ambiguous union");
             }
             var alternative = new JsonObject();
-            Merge(nonNull[0], alternative, references, protectsValue);
+            Merge(nonNull[0], alternative, references);
             if (resolvedAlternatives.Any(_ => _.Type == JsonObjectType.Null))
             {
                 var nullable = new JsonSchema(alternative);
                 nullable.Type |= JsonObjectType.Null;
             }
-            Merge(new JsonSchema(alternative, schema.Root), result, references, protectsValue);
+            Merge(new JsonSchema(alternative, schema.Root), result, references);
         }
 
         foreach (var (key, value) in schema.Node.Where(_ => _.Key is not "$ref" and not "allOf" and not "anyOf" and not "oneOf"))

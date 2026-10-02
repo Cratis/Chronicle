@@ -35,7 +35,6 @@ public class ReadModelsCompliance(
             ((IDictionary<string, object?>)instance)[WellKnownProperties.Subject] = identifier;
             return instance;
         }
-        schema.EnsureProtectionCanBeResolved();
 
         var instanceAsDictionary = (IDictionary<string, object?>)instance;
         var defaultSubject = instanceAsDictionary.TryGetValue(WellKnownProperties.Subject, out var storedSubject) &&
@@ -98,7 +97,6 @@ public class ReadModelsCompliance(
         {
             return instance;
         }
-        schema.EnsureProtectionCanBeResolved();
 
         var identifier = instance[WellKnownProperties.Subject]?.GetValue<string>();
         var subjects = ReadModelSubjects.From(instance[WellKnownProperties.Subjects]);
@@ -128,7 +126,8 @@ public class ReadModelsCompliance(
             withoutBookkeeping,
             identifier,
             subjects,
-            (subject, slice) => complianceManager.Release(eventStore, eventStoreNamespace, schema, subject, slice));
+            (subject, slice) => complianceManager.Release(eventStore, eventStoreNamespace, schema, subject, slice),
+            releasing: true);
     }
 
     /// <inheritdoc/>
@@ -142,7 +141,6 @@ public class ReadModelsCompliance(
         {
             return instance;
         }
-        schema.EnsureProtectionCanBeResolved();
 
         var dict = (IDictionary<string, object?>)instance;
         var identifier = dict.TryGetValue(WellKnownProperties.Subject, out var subjectObj)
@@ -159,7 +157,8 @@ public class ReadModelsCompliance(
             json,
             identifier,
             subjects,
-            (subject, slice) => complianceManager.Release(eventStore, eventStoreNamespace, schema, subject, slice));
+            (subject, slice) => complianceManager.Release(eventStore, eventStoreNamespace, schema, subject, slice),
+            releasing: true);
         var result = expandoObjectConverter.ToExpandoObject(released, schema);
         PreserveOutputNulls(released, result);
         return result;
@@ -247,13 +246,14 @@ public class ReadModelsCompliance(
         JsonObject json,
         string? defaultSubject,
         Dictionary<string, string> subjects,
-        Func<string, JsonObject, Task<JsonObject>> action)
+        Func<string, JsonObject, Task<JsonObject>> action,
+        bool releasing = false)
     {
         var resolved = schema.ResolveComposition();
         var protectsContainer = !resolved.IsUnprotectedSchemaValue(includeMembers: false);
         foreach (var property in json.Where(property => string.IsNullOrEmpty(subjects.TryGetValue(property.Key, out var subject) ? subject : defaultSubject)))
         {
-            if (protectsContainer || resolved.Properties.Any(member => member.Key.Equals(property.Key, StringComparison.OrdinalIgnoreCase) && !member.Value.IsUnprotectedSchemaValue()))
+            if (!releasing && (protectsContainer || resolved.Properties.Any(member => member.Key.Equals(property.Key, StringComparison.OrdinalIgnoreCase) && !member.Value.IsUnprotectedSchemaValue())))
             {
                 throw new UnresolvedSchemaProtection($"missing subject for {property.Key}");
             }
@@ -261,9 +261,9 @@ public class ReadModelsCompliance(
 
         if (subjects.Count == 0)
         {
-            return string.IsNullOrEmpty(defaultSubject)
+            return string.IsNullOrEmpty(defaultSubject) && !releasing
                 ? json
-                : await action(defaultSubject, json);
+                : await action(defaultSubject ?? string.Empty, json);
         }
 
         var result = (json.DeepClone() as JsonObject)!;
@@ -271,9 +271,9 @@ public class ReadModelsCompliance(
             .Select(property => new
             {
                 property.Key,
-                Subject = subjects.TryGetValue(property.Key, out var subject) ? subject : defaultSubject
+                Subject = (subjects.TryGetValue(property.Key, out var subject) ? subject : defaultSubject) ?? string.Empty
             })
-            .Where(_ => !string.IsNullOrEmpty(_.Subject))
+            .Where(_ => releasing || !string.IsNullOrEmpty(_.Subject))
             .GroupBy(_ => _.Subject!, StringComparer.Ordinal);
 
         foreach (var group in groups)
