@@ -548,7 +548,7 @@ public class EventSequence(
                 CausedBy = identity,
                 NamedTags = resolvedNamedTags,
                 Subject = subject ?? new Subject(eventSourceId.Value),
-                EventSource = routing?.EventSource
+                EventSource = routing?.EventSource ?? EventSourceName.NotSet
             };
             _appendedEventsRaised([new AppendedEventWithResult(new AppendedEvent(context, @event), result)]);
         }
@@ -903,7 +903,7 @@ public class EventSequence(
                     CausedBy = identity,
                     NamedTags = effectiveNamedTags[i],
                     Subject = new Subject(eventsToAppend[i].Subject ?? evt.EventSourceId.Value),
-                    EventSource = routings[i]?.EventSource
+                    EventSource = routings[i]?.EventSource ?? EventSourceName.NotSet
                 };
 
                 allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(resolvedCorrelationId, sequenceNumber, result, evtType)));
