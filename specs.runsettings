@@ -1,13 +1,20 @@
 <RunSettings>
   <RunConfiguration>
     <!--
-      Guard against a hung spec consuming the entire CI budget. The specs run in
-      well under a minute; a rare deadlock (an observer/grain concurrency spec
-      starving the thread pool on a constrained CI runner) previously ran until
-      GitHub's 6-hour job limit killed it. Abort the session long before that so
-      a hang fails fast and visibly instead of silently burning CI time.
+      Guard against a hung spec consuming the entire CI budget. A rare deadlock
+      (an observer/grain concurrency spec starving the thread pool on a
+      constrained CI runner) previously ran until GitHub's 6-hour job limit
+      killed it. Abort the session long before that so a hang fails fast and
+      visibly instead of silently burning CI time.
+
+      The combined specs session (every project in one `dotnet test` run) has
+      grown with the suite and now legitimately takes a little over 20 minutes
+      with 0 failures, which used to be the entire budget — the growth tripped
+      this guard without anything being hung. Set the budget with real headroom
+      above observed growth, well under the job's 120-minute timeout, so normal
+      suite growth doesn't masquerade as a hang.
     -->
-    <TestSessionTimeout>1200000</TestSessionTimeout>
+    <TestSessionTimeout>2700000</TestSessionTimeout>
     <TestCaseFilter>FullyQualifiedName!~Cratis.Chronicle.InProcess.Integration&amp;FullyQualifiedName!~Cratis.Chronicle.Integration.Api&amp;FullyQualifiedName!~Cratis.Chronicle.MongoDB.Integration</TestCaseFilter>
   </RunConfiguration>
 </RunSettings>
