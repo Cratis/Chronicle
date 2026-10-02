@@ -63,6 +63,8 @@ public partial class Observer(
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
     bool _resumingQuarantine;
+    bool _isQuarantined;
+    bool _recoverSubscriptionAfterQuarantine;
 
     /// <summary>
     /// Set once the observer has been removed, so nothing this activation does afterwards writes it back.
@@ -85,6 +87,11 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override Type InitialState => typeof(Routing);
 
+    /// <summary>
+    /// Gets whether the activation is quarantined, independently of reloadable stored-state snapshots.
+    /// </summary>
+    bool IsQuarantined => _isQuarantined;
+
     ObserverDefinition Definition => observerDefinition.State;
 
     FailedPartitions Failures => failures.State;
@@ -94,6 +101,7 @@ public partial class Observer(
     {
         _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
         _observerId = _observerKey.ObserverId;
+        State = State with { Identifier = _observerId };
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
@@ -155,7 +163,7 @@ public partial class Observer(
     public Task<bool> HasFailedPartitions() => Task.FromResult(Failures.HasFailedPartitions);
 
     /// <inheritdoc/>
-    public Task<bool> IsObserverQuarantined() => Task.FromResult(State.RunningState == ObserverRunningState.Quarantined);
+    public Task<bool> IsObserverQuarantined() => Task.FromResult(IsQuarantined);
 
     /// <inheritdoc/>
     public Task<IEnumerable<Key>> GetFailedPartitionKeys() => Task.FromResult(Failures.Partitions.Select(p => p.Partition));
@@ -163,9 +171,8 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task ClearObserverQuarantine()
     {
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
-            // With nobody subscribed this is the routing pass every activation of an unsubscribed observer already runs, so it drops nothing a plain reactivation would not.
             await ReviveFromQuarantine();
         }
     }
@@ -211,25 +218,52 @@ public partial class Observer(
         SiloAddress siloAddress,
         object? subscriberArgs = null,
         bool isReplayable = true,
-        ObserverFilters? filters = null)
+        ObserverFilters? filters = null,
+        bool automatic = false)
         where TObserverSubscriber : IObserverSubscriber
     {
+        if (!automatic)
+        {
+            _recoverSubscriptionAfterQuarantine = false;
+        }
         var owner = GetOwner<TObserverSubscriber>();
+        var wasQuarantined = IsQuarantined;
 
         var eventTypeSchemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(eventTypes);
         _eventTypeSchemas = eventTypeSchemas.ToDictionary(s => s.Type);
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
-        // Re-read all persistent state from storage. When the silo is shared
-        // across tests (KeepAlive grains survive ForceActivationCollection),
-        // the in-memory state may be stale if databases were dropped between
-        // tests. Reading from storage detects this and resets to defaults.
+        // KeepAlive activations can survive a storage reset. Reload for both explicit subscriptions and
+        // automatic reconciliation, but do not let a stale storage snapshot overwrite an interleaved quarantine.
         await ReadStateAsync();
+
+        // Missing records retain the unspecified identifier until the activation supplies its own identity.
+        // An existing record, even a stale Active snapshot, never invalidates activation-owned quarantine.
+        var storageWasReset = State.Identifier == ObserverId.Unspecified;
+        State = State with { Identifier = _observerId };
+        if (IsQuarantined)
+        {
+            State = State with { RunningState = ObserverRunningState.Quarantined };
+        }
+
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
+        if (storageWasReset && wasQuarantined && IsQuarantined)
+        {
+            // The quarantine belonged to a wiped world. Discard it only after all state has been reloaded,
+            // so routing cannot act on stale definitions or failures from that world.
+            _recoverSubscriptionAfterQuarantine = false;
+            _isPreparingCatchup = false;
+            _catchupRecoveryAttempts = 0;
+            _subscription = ObserverSubscription.Unsubscribed;
+            await TransitionTo<Routing>();
+        }
 
-        await LeaveQuarantineForSubscription();
+        if (!automatic)
+        {
+            await LeaveQuarantineForSubscription();
+        }
 
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
@@ -295,20 +329,7 @@ public partial class Observer(
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
 
-        if (await TransitionToReplayIfNeeded())
-        {
-            return;
-        }
-        await ResumeJobs();
-
-        // Recovering failed partitions starts one job per partition through the jobs manager. An observer
-        // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
-        // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
-        // returned: the client timed out, retried, and the observer was recorded as never subscribed.
-        // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards,
-        // in a turn of its own.
-        this.ScheduleInSeparateTurn(TryRecoverAllFailedPartitions);
-        await TransitionTo<CatchingUpInFlight>();
+        await RecoverSubscribedObserver();
     }
 
     /// <inheritdoc/>
@@ -319,6 +340,7 @@ public partial class Observer(
         bool isReplayable = true)
         where TObserverSubscriber : IObserverSubscriber
     {
+        _recoverSubscriptionAfterQuarantine = false;
         var owner = GetOwner<TObserverSubscriber>();
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -349,20 +371,7 @@ public partial class Observer(
         State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
 
-        if (await TransitionToReplayIfNeeded())
-        {
-            return;
-        }
-        await ResumeJobs();
-
-        // Recovering failed partitions starts one job per partition through the jobs manager. An observer
-        // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
-        // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
-        // returned: the client timed out, retried, and the observer was recorded as never subscribed.
-        // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards,
-        // in a turn of its own.
-        this.ScheduleInSeparateTurn(TryRecoverAllFailedPartitions);
-        await TransitionTo<CatchingUpInFlight>();
+        await RecoverSubscribedObserver();
     }
 
     /// <inheritdoc/>
@@ -407,6 +416,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        _recoverSubscriptionAfterQuarantine = false;
         await PauseJobs();
         _subscription = ObserverSubscription.Unsubscribed;
         await TransitionTo<Disconnected>();
@@ -456,7 +466,7 @@ public partial class Observer(
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
         await RemoveReminder(reminderName);
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             return;
         }
@@ -545,6 +555,11 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override Task OnBeforeEnteringState(IState<ObserverState> state)
     {
+        if (state is not Disconnected)
+        {
+            _recoverSubscriptionAfterQuarantine = false;
+        }
+        _isQuarantined = state is QuarantinedObserver;
         if (state is BaseObserverState observerState)
         {
             State = State with { RunningState = observerState.RunningState };
@@ -554,9 +569,26 @@ public partial class Observer(
     }
 
     /// <inheritdoc/>
+    protected override async Task OnAfterEnteringState(IState<ObserverState> state)
+    {
+        if (state is Disconnected && _recoverSubscriptionAfterQuarantine)
+        {
+            _recoverSubscriptionAfterQuarantine = false;
+            if (_subscription.IsSubscribed)
+            {
+                await RecoverSubscribedObserver();
+            }
+        }
+    }
+
+    /// <inheritdoc/>
     protected override async Task WriteStateAsync()
     {
         if (_stateWritingSuspended) return;
+        if (IsQuarantined)
+        {
+            State = State with { RunningState = ObserverRunningState.Quarantined };
+        }
         await base.WriteStateAsync();
 
         // Any actual persist carries the observer's current NextEventSequenceNumber, so it flushes whatever
@@ -632,9 +664,37 @@ public partial class Observer(
         static bool ShouldPauseJob(JobStatus status) => status is JobStatus.Running or JobStatus.PreparingJob or JobStatus.PreparingSteps or JobStatus.StartingSteps;
     }
 
+    async Task RecoverSubscribedObserver()
+    {
+        if (await TransitionToReplayIfNeeded())
+        {
+            return;
+        }
+
+        await ResumeJobs();
+        if (IsQuarantined)
+        {
+            return;
+        }
+
+        // Failed-partition recovery can exceed the subscription's grain-call budget. Run it in its own turn,
+        // both after subscribing and after an operator clears quarantine on an already subscribed observer.
+        this.ScheduleInSeparateTurn(TryRecoverAllFailedPartitions);
+        await TransitionTo<CatchingUpInFlight>();
+    }
+
     async Task ResumeJobs()
     {
+        if (IsQuarantined)
+        {
+            return;
+        }
+
         var unfilteredJobs = await _jobsManager.GetAllJobs();
+        if (IsQuarantined)
+        {
+            return;
+        }
 
         // Explicitly do not resume replay jobs.
         var resumeTasks = unfilteredJobs
@@ -642,7 +702,9 @@ public partial class Observer(
                           observerJobRequest is not ReplayObserverRequest &&
                           ShouldResumeJob(job.Status) &&
                           observerJobRequest.ObserverKey == _subscription.ObserverKey)
-            .Select(job => _jobsManager.Resume(job.Id));
+            .Select(job => IsQuarantined
+                ? Task.CompletedTask
+                : _jobsManager.Resume(job.Id));
         await Task.WhenAll(resumeTasks);
         return;
 

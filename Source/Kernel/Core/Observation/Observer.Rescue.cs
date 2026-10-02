@@ -27,7 +27,8 @@ public partial class Observer
     /// </remarks>
     async Task CheckStrandedSubscription()
     {
-        if (State.IsReplaying ||
+        if (IsQuarantined ||
+            State.IsReplaying ||
             State.CatchingUpPartitions.Count > 0 ||
             _isPreparingCatchup ||
             Failures.HasFailedPartitions)
@@ -35,12 +36,12 @@ public partial class Observer
             return;
         }
 
-        if (await _appendedEventsQueues.IsSubscribed(_observerKey))
+        if (await _appendedEventsQueues.IsSubscribed(_observerKey) || IsQuarantined)
         {
             return;
         }
 
-        if (await HasRunningCatchupJob())
+        if (await HasRunningCatchupJob() || IsQuarantined)
         {
             return;
         }
@@ -78,29 +79,40 @@ public partial class Observer
     /// which fails to start a job again, leaving the flag raised for the next tick to find stranded again. Bounding
     /// the number of consecutive stranded recoveries and quarantining the observer once that bound is exceeded turns
     /// the silent infinite loop into a visible, operator-actionable state instead.
+    /// Quarantine is an intentional stop, not a recoverable strand: preparation is left alone until an operator
+    /// clears quarantine or a fresh subscription resets it.
     /// </para>
     /// </remarks>
     async Task<bool> CheckStrandedCatchupPreparation()
     {
-        if (!_isPreparingCatchup || await HasRunningCatchupJob())
+        if (IsQuarantined ||
+            !_isPreparingCatchup ||
+            await HasRunningCatchupJob() ||
+            IsQuarantined)
         {
             return false;
         }
-
-        logger.WatchdogRescuingStrandedCatchupPreparation();
-        _isPreparingCatchup = false;
 
         if (!_subscription.IsSubscribed)
         {
             // Nothing subscribed means nothing was ever going to drive a catch-up forward - route the observer on
             // regardless, so it settles into Disconnected (or wherever routing decides) instead of being left
             // stuck in whatever state it happened to be in when the flag came down.
+            logger.WatchdogRescuingStrandedCatchupPreparation();
+            _isPreparingCatchup = false;
             await TransitionTo<Routing>();
             return true;
         }
 
-        _catchupRecoveryAttempts++;
         var config = await configurationProvider.GetFor(_observerKey);
+        if (IsQuarantined)
+        {
+            return false;
+        }
+
+        logger.WatchdogRescuingStrandedCatchupPreparation();
+        _isPreparingCatchup = false;
+        _catchupRecoveryAttempts++;
         if (_catchupRecoveryAttempts > config.MaxCatchupRecoveryAttempts)
         {
             logger.GivingUpOnCatchupPreparationRecovery(_catchupRecoveryAttempts, config.MaxCatchupRecoveryAttempts);
@@ -117,11 +129,27 @@ public partial class Observer
     /// resets along with it - the attempts belonged to the world the old subscription lived in, and without the
     /// reset a single further stranded catch-up preparation puts the observer straight back into quarantine
     /// because the counter is already past the bound. If catch-up keeps stranding, the bound quarantines the
-    /// observer again. Routing re-evaluates the gap and drives catch-up or observing from there.
+    /// observer again.
     /// </summary>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A subscribed observer runs the same recovery as a fresh subscription: replay evaluation, paused non-replay
+    /// job resumption, retries of eligible failed partitions in a separate turn, and in-flight partition catch-up.
+    /// An unsubscribed observer follows normal activation routing without resuming jobs or retrying partitions.
+    /// </remarks>
     async Task ReviveFromQuarantine()
     {
+        if (_subscription.IsSubscribed)
+        {
+            // A leave requested during quarantine's OnEnter is only scheduled. Resume recovery from the
+            // Disconnected entry hook, not from the return of the transition request.
+            _recoverSubscriptionAfterQuarantine = true;
+            await LeaveQuarantineForSubscription();
+            return;
+        }
+
+        _recoverSubscriptionAfterQuarantine = false;
+        _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
         await TransitionTo<Routing>();
     }
@@ -146,6 +174,7 @@ public partial class Observer
             return;
         }
 
+        _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
         await quarantined.LeaveForSubscription();
     }

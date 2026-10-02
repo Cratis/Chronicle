@@ -95,12 +95,16 @@ public partial class Observer
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        State.CatchingUpPartitions.Clear();
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
 
-        await TransitionTo<Routing>();
+        if (!IsQuarantined)
+        {
+            await TransitionTo<Routing>();
+        }
     }
 
     /// <inheritdoc/>

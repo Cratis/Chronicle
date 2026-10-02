@@ -57,5 +57,7 @@ public class and_subscription_is_already_subscribed : Specification
             Arg.Any<IEnumerable<EventType>>(),
             Arg.Any<SiloAddress>(),
             Arg.Any<object?>(),
-            Arg.Any<bool>());
+            Arg.Any<bool>(),
+            Arg.Any<ObserverFilters?>(),
+            true);
 }

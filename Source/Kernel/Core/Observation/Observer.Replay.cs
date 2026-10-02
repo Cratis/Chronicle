@@ -102,8 +102,13 @@ public partial class Observer
             LastHandledEventSequenceNumber = lastHandledEventSequenceNumber,
             NextEventSequenceNumber = lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : lastHandledEventSequenceNumber.Next()
         };
+        State.CatchingUpPartitions.Clear();
+        State.ReplayingPartitions.Clear();
         await WriteStateAsync();
-        await TransitionTo<Routing>();
+        if (!IsQuarantined)
+        {
+            await TransitionTo<Routing>();
+        }
     }
 
     async Task CompletePartitionReplay(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes)
@@ -180,6 +185,11 @@ public partial class Observer
 
     async Task<bool> TransitionToReplayIfNeeded()
     {
+        if (IsQuarantined)
+        {
+            return true;
+        }
+
         if (State.RunningState == ObserverRunningState.Replaying)
         {
             logger.Replaying();
@@ -188,17 +198,32 @@ public partial class Observer
         }
 
         var tailSequenceNumber = await _eventSequence.GetTailSequenceNumber();
+        if (IsQuarantined)
+        {
+            return true;
+        }
+
         var getNextToHandleResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(State.NextEventSequenceNumber, _subscription.EventTypes.ToList());
+        if (IsQuarantined)
+        {
+            return true;
+        }
         var nextUnhandledEventSequenceNumber = getNextToHandleResult.Match(eventSequenceNumber => eventSequenceNumber, _ => EventSequenceNumber.Unavailable);
         var replayEvaluator = new ReplayEvaluator(GrainFactory, _subscription.ObserverKey.EventStore, _observerKey.Namespace);
-        if (!await replayEvaluator.Evaluate(new(
-                State.Identifier,
-                _subscription.ObserverKey,
-                Definition,
-                State,
-                _subscription,
-                tailSequenceNumber,
-                nextUnhandledEventSequenceNumber)))
+        var needsReplay = await replayEvaluator.Evaluate(new(
+            State.Identifier,
+            _subscription.ObserverKey,
+            Definition,
+            State,
+            _subscription,
+            tailSequenceNumber,
+            nextUnhandledEventSequenceNumber));
+        if (IsQuarantined)
+        {
+            return true;
+        }
+
+        if (!needsReplay)
         {
             return false;
         }

@@ -227,7 +227,7 @@ public class EventStoreSubscriptionsManager(
         try
         {
             var observer = GetObserver(definition, namespaceName);
-            return await observer.IsSubscribed();
+            return await observer.IsSubscribed() && await IsSubscribedToCurrentEventTypes(observer, definition);
         }
         catch (OperationCanceledException)
         {
@@ -285,7 +285,8 @@ public class EventStoreSubscriptionsManager(
                 ObserverType.External,
                 definition.EventTypes.ToArray(),
                 localSiloDetails.SiloAddress,
-                _targetEventStoreName.Value);
+                _targetEventStoreName.Value,
+                automatic: true);
         }
         catch (Exception ex)
         {
@@ -317,13 +318,13 @@ public class EventStoreSubscriptionsManager(
     async Task SubscribeIfNotSubscribed(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
         var observer = GetObserver(definition, namespaceName);
-
         logger.Subscribing(definition.Identifier, namespaceName);
         await observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
             ObserverType.External,
             definition.EventTypes.ToArray(),
             localSiloDetails.SiloAddress,
-            _targetEventStoreName.Value);
+            _targetEventStoreName.Value,
+            automatic: true);
     }
 
     async Task Unsubscribe(IEnumerable<EventStoreNamespaceName> namespaces, EventStoreSubscriptionDefinition definition)
