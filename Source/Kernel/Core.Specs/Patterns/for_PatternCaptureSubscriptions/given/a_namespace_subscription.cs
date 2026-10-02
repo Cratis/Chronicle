@@ -4,12 +4,13 @@
 using Cratis.Chronicle.Namespaces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.BroadcastChannel;
-using Orleans.Hosting.for_ChronicleServerStartupTask.given;
+using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Patterns.for_PatternCaptureSubscriptions.given;
 
 public class a_namespace_subscription : Specification
 {
+    protected TestKitSilo _silo = new();
     protected IPatternCapture _capture;
     protected Func<NamespaceAdded, Task> _onNamespaceAdded;
     protected bool _subscribed;
@@ -21,7 +22,9 @@ public class a_namespace_subscription : Specification
         var subscription = Substitute.For<IBroadcastChannelSubscription>();
         subscription.When(_ => _.Attach(Arg.Any<Func<NamespaceAdded, Task>>(), Arg.Any<Func<Exception, Task>>()))
             .Do(call => _onNamespaceAdded = call.Arg<Func<NamespaceAdded, Task>>());
-        var subscriptions = new PatternCaptureSubscriptions(_capture, NullLogger<PatternCaptureSubscriptions>.Instance, new an_immediate_time_provider());
+        _silo.AddService(_capture);
+        _silo.AddService(NullLogger<PatternCaptureSubscriptions>.Instance);
+        var subscriptions = await _silo.CreateGrainAsync<PatternCaptureSubscriptions>(_added.EventStore);
         await subscriptions.OnSubscribed(subscription);
     }
 }

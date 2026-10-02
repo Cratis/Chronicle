@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Patterns.for_PatternCaptureSubscriptions.when_a_namespace_is_added;
 
-public class and_the_first_attempt_times_out : given.a_namespace_subscription
+public class and_a_later_notification_succeeds : given.a_namespace_subscription
 {
     int _attempts;
 
@@ -18,8 +18,14 @@ public class and_the_first_attempt_times_out : given.a_namespace_subscription
         return Task.CompletedTask;
     });
 
-    Task Because() => _onNamespaceAdded(_added);
+    async Task Because()
+    {
+        await _onNamespaceAdded(_added);
+        await _silo.TimerRegistry.FireAllAsync();
+        await _onNamespaceAdded(_added);
+        await _silo.TimerRegistry.FireAllAsync();
+    }
 
     [Fact] void should_recover_the_subscription() => _subscribed.ShouldBeTrue();
-    [Fact] void should_stop_retrying_after_success() => _attempts.ShouldEqual(2);
+    [Fact] void should_attempt_once_per_notification() => _attempts.ShouldEqual(2);
 }

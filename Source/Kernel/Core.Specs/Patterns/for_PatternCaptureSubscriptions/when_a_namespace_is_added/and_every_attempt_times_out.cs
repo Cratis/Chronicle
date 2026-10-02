@@ -10,8 +10,13 @@ public class and_every_attempt_times_out : given.a_namespace_subscription
     void Establish() => _capture.Subscribe(_added.EventStore, _added.Namespace)
         .Returns(_ => Task.FromException(new TimeoutException()));
 
-    async Task Because() => _error = await Catch.Exception(() => _onNamespaceAdded(_added));
+    async Task Because()
+    {
+        await _onNamespaceAdded(_added);
+        _error = await Catch.Exception(() => _silo.TimerRegistry.FireAllAsync());
+    }
 
-    [Fact] void should_limit_attempts() => _capture.Received(3).Subscribe(_added.EventStore, _added.Namespace);
+    [Fact] void should_leave_retries_to_reconciliation() => _capture.Received(1).Subscribe(_added.EventStore, _added.Namespace);
+    [Fact] void should_dispose_the_notification_timer() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
     [Fact] void should_not_propagate_the_failure_to_the_channel() => _error.ShouldBeNull();
 }

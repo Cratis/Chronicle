@@ -10,7 +10,11 @@ public class and_the_failure_is_not_transient : given.a_namespace_subscription
     void Establish() => _capture.Subscribe(_added.EventStore, _added.Namespace)
         .Returns(_ => Task.FromException(new InvalidOperationException()));
 
-    async Task Because() => _error = await Catch.Exception(() => _onNamespaceAdded(_added));
+    async Task Because()
+    {
+        await _onNamespaceAdded(_added);
+        _error = await Catch.Exception(() => _silo.TimerRegistry.FireAllAsync());
+    }
 
     [Fact] void should_not_retry() => _capture.Received(1).Subscribe(_added.EventStore, _added.Namespace);
     [Fact] void should_not_propagate_the_failure_to_the_channel() => _error.ShouldBeNull();
