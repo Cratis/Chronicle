@@ -636,10 +636,18 @@ internal static class ProjectionReadModelProcessor
         // document. Mirror that by resetting the instance state so any subsequent re-create starts clean.
         var removed = changeset.Changes.Any(change => change is Removed);
 
+        // The live pipeline writes the instance for a root event that creates it even when the event changes nothing
+        // (SetInitialState), so an event without properties still brings its read model into existence.
+        var createsInstance = !projection.HasParent &&
+            projection.Accepts(@event.Context.EventType) &&
+            context.CreatesInstance &&
+            !changeset.HasBeenRemoved() &&
+            await sink.FindOrDefault(key) is null;
+
         // Apply to the sink BEFORE mutating the instance state. The sink clones the changeset's InitialState —
         // which is the SAME object as `state` — so mutating the state first would let the sink re-apply an
         // additive change (e.g. a child add) on top of an already-advanced base, duplicating it.
-        if (changeset.HasChanges)
+        if (changeset.HasChanges || createsInstance)
         {
             await sink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
         }
