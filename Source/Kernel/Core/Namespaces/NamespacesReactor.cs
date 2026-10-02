@@ -31,8 +31,8 @@ public class NamespacesReactor(IGrainFactory grainFactory, IPatternCapture patte
     /// <remarks>
     /// A namespace is empty the instant it is added, so <see cref="IPatternCapture.Subscribe"/> is a no-op here -
     /// it checks the namespace's data itself and only actually subscribes once the namespace has something to
-    /// observe. Startup rehydration picks up pattern capture for namespaces that do go on to receive data, and
-    /// event type registration re-subscribes across namespaces that already have data when the type list grows.
+    /// observe. The event log schedules pattern capture after its first durable append; startup rehydration
+    /// resumes existing namespaces, and event type registration updates subscriptions when the type list grows.
     /// </remarks>
     public async Task Added(NamespaceAdded @event, EventContext eventContext)
     {

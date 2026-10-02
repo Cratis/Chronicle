@@ -16,6 +16,7 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -61,10 +62,12 @@ public class an_event_sequence : Specification
     protected RecordingConstraintValidator _recordingValidator;
     protected INamespaces _namespaces;
     protected IAppendedEventsQueues _appendedEventsQueues;
+    protected IPatternCapture _patternCapture;
     protected IConstraints _constraintsGrain;
     protected IJobsManager _jobsManager;
     protected List<IConstraintDefinition> _registeredConstraints;
 
+    protected virtual EventSequenceId EventSequenceId => EventSequenceId.Log;
     protected virtual int StatePersistenceInterval => 1000;
     protected virtual CausationPropertyRetention CausationPropertyRetention => CausationPropertyRetention.Retain;
 
@@ -76,7 +79,7 @@ public class an_event_sequence : Specification
 
     async Task Establish()
     {
-        _eventSequenceKey = new EventSequenceKey(EventSequenceId.Log, EventStore, EventStoreNamespace);
+        _eventSequenceKey = new EventSequenceKey(EventSequenceId, EventStore, EventStoreNamespace);
         _eventSourceId = "some-event-source";
         _eventType = new EventType("some-event", EventTypeGeneration.First);
         _appendedSequenceNumber = EventSequenceNumber.Unavailable;
@@ -175,6 +178,8 @@ public class an_event_sequence : Specification
         _constraintsGrain.GetVersion().Returns(_ => ConstraintDefinitionComparison.ComputeVersion(_registeredConstraints));
         _jobsManager = Substitute.For<IJobsManager>();
 
+        _patternCapture = Substitute.For<IPatternCapture>();
+        _silo.AddService(_patternCapture);
         _silo.AddService(_storage);
         _silo.AddService(_constraintValidationFactory);
         _silo.AddService(_eventTypeMigrations);

@@ -32,7 +32,9 @@ namespace Cratis.Chronicle.Patterns;
 /// Event types being registered somewhere in the store does not mean any particular namespace has ever been used,
 /// though - a namespace can be registered long before (or without ever) receiving a single event. Subscribing
 /// there anyway would materialize that namespace's storage for nothing, so <see cref="Subscribe"/> also checks
-/// whether the namespace itself already holds data and skips it when it does not.
+/// whether the namespace itself already holds data and skips it when it does not. The event log schedules a
+/// subscription after its first durable append, so a newly used namespace starts capturing without a restart
+/// or a change to the store-wide event types.
 /// </para>
 /// <para>
 /// The observer is not replayable. Replaying it would re-mine history that is already reflected in the sketch, and

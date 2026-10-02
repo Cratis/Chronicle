@@ -22,6 +22,7 @@ using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Events.Constraints;
@@ -54,6 +55,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
 /// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
 /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
+/// <param name="patternCapture">The pattern capture subscription for namespaces receiving events.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the <see cref="ConcurrencyValidator"/> created per append.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
@@ -69,6 +71,7 @@ public class EventSequence(
     IEventSerializer eventSerializer,
     IEventHashCalculator eventHashCalculator,
     IOptions<ChronicleOptions> options,
+    IPatternCapture patternCapture,
     ILogger<EventSequence> logger,
     ILogger<ConcurrencyValidator> concurrencyValidatorLogger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
@@ -88,6 +91,8 @@ public class EventSequence(
     int _statePersistenceInterval = 1;
     int _appendsSinceStateWrite;
     bool _stateWrittenSinceActivation;
+    bool _patternCaptureSubscribed;
+    IGrainTimer? _patternCaptureSubscriptionTimer;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
@@ -142,6 +147,7 @@ public class EventSequence(
             _appendsSinceStateWrite = 0;
         }
 
+        _patternCaptureSubscriptionTimer?.Dispose();
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
@@ -799,6 +805,15 @@ public class EventSequence(
             await SpillAppendedEventsQueuesToCatchup();
         }
 
+        try
+        {
+            SchedulePatternCaptureSubscription();
+        }
+        catch (Exception ex)
+        {
+            logger.FailedSubscribingPatternCapture(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, ex);
+        }
+
         foreach (var (context, sequenceNumber) in constraintUpdates)
         {
             try
@@ -810,6 +825,34 @@ public class EventSequence(
                 logger.FailedUpdatingConstraintIndex(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, ex);
             }
         }
+    }
+
+    void SchedulePatternCaptureSubscription()
+    {
+        if (_appendedEventsQueues is null || _eventSequenceId != EventSequenceId.Log || _patternCaptureSubscribed || _patternCaptureSubscriptionTimer is not null)
+        {
+            return;
+        }
+
+        // Namespace registration happens before the first append, while HasData can still be false.
+        // Subscribe only after events are durable, in a separate turn so subscription/catch-up cannot
+        // delay or fail the append. A transient subscription failure must recover even if no more events arrive.
+        _patternCaptureSubscriptionTimer = this.RegisterGrainTimer(
+            async _ =>
+            {
+                try
+                {
+                    await patternCapture.Subscribe(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+                    _patternCaptureSubscribed = true;
+                    _patternCaptureSubscriptionTimer?.Dispose();
+                    _patternCaptureSubscriptionTimer = null;
+                }
+                catch (Exception ex)
+                {
+                    logger.FailedSubscribingPatternCapture(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, ex);
+                }
+            },
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = TimeSpan.FromSeconds(5) });
     }
 
     async Task SpillAppendedEventsQueuesToCatchup()

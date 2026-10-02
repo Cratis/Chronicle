@@ -6,6 +6,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
@@ -30,6 +31,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
 /// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
 /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
+/// <param name="patternCapture">The pattern capture subscription.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the concurrency validator.</param>
 public class EventSequenceThatCannotPersistState(
@@ -43,6 +45,7 @@ public class EventSequenceThatCannotPersistState(
     IEventSerializer eventSerializer,
     IEventHashCalculator eventHashCalculator,
     IOptions<ChronicleOptions> options,
+    IPatternCapture patternCapture,
     ILogger<EventSequence> logger,
     ILogger<Concurrency.ConcurrencyValidator> concurrencyValidatorLogger) : EventSequence(
         storage,
@@ -55,6 +58,7 @@ public class EventSequenceThatCannotPersistState(
         eventSerializer,
         eventHashCalculator,
         options,
+        patternCapture,
         logger,
         concurrencyValidatorLogger)
 {
