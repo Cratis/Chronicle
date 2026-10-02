@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Alerts;
 /// <param name="database">The namespace database.</param>
 public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAlertIncidentsStorage
 {
-    readonly IMongoCollection<AlertIncidentDocument> _collection = AcknowledgedCollection(database);
+    readonly Lazy<IMongoCollection<AlertIncidentDocument>> _collection = new(() => AcknowledgedCollection(database));
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
 
     /// <inheritdoc/>
@@ -63,7 +63,7 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
         }
         try
         {
-            var result = await _collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = transition.Kind != AlertIncidentTransitionKind.Escalated, Collation = Collation.Simple }, cancellationToken);
+            var result = await _collection.Value.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = transition.Kind != AlertIncidentTransitionKind.Escalated, Collation = Collation.Simple }, cancellationToken);
             if (!result.IsAcknowledged)
             {
                 throw new AlertIncidentWriteNotConfirmed(transition.Id);
@@ -76,7 +76,7 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
         catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
             // Another insert may have won with an older position. Retry the same guard without inserting.
-            var result = await _collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = false, Collation = Collation.Simple }, cancellationToken);
+            var result = await _collection.Value.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = false, Collation = Collation.Simple }, cancellationToken);
             if (!result.IsAcknowledged)
             {
                 throw new AlertIncidentWriteNotConfirmed(transition.Id);
@@ -86,7 +86,7 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
                 return AlertIncidentWriteOutcome.Applied;
             }
         }
-        var current = await _collection.Find(_ => _.Id == document.Id, new FindOptions { Collation = Collation.Simple })
+        var current = await _collection.Value.Find(_ => _.Id == document.Id, new FindOptions { Collation = Collation.Simple })
             .FirstOrDefaultAsync(cancellationToken);
 
         return AlertIncidentStorageRules.Confirm(current?.ToKernel(), transition);
@@ -96,7 +96,7 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
     public async Task<AlertIncident?> GetOpen(AlertIncidentScope scope, IncidentId incidentId, CancellationToken cancellationToken = default)
     {
         await EnsureIndexes();
-        var row = await _collection.Find(
+        var row = await _collection.Value.Find(
             Scope(scope) & Builders<AlertIncidentDocument>.Filter.Eq(_ => _.Id, AlertIncidentStorageRules.Key(incidentId)),
             new FindOptions { Collation = Collation.Simple }).FirstOrDefaultAsync(cancellationToken);
 
@@ -119,7 +119,7 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
     public async Task<IEnumerable<AlertIncidentCount>> GetOpenCounts(AlertIncidentScope scope, CancellationToken cancellationToken = default)
     {
         await EnsureIndexes();
-        var counts = await _collection.Aggregate(new AggregateOptions { Collation = Collation.Simple }).Match(Scope(scope))
+        var counts = await _collection.Value.Aggregate(new AggregateOptions { Collation = Collation.Simple }).Match(Scope(scope))
             .Group(row => new { row.Namespace, row.Condition, row.Severity }, group => new
             {
                 group.Key.Namespace,
@@ -135,7 +135,12 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
     public Task<AlertIncidentStoragePage> EnumerateOpen(AlertIncidentCursor? after, int limit, CancellationToken cancellationToken = default) =>
         Page(Builders<AlertIncidentDocument>.Filter.Eq(_ => _.IsOpen, true), after, limit, cancellationToken);
 
-    static IMongoCollection<AlertIncidentDocument> AcknowledgedCollection(IEventStoreNamespaceDatabase database)
+    /// <summary>
+    /// Gets the incident collection, reading from the primary and keeping the configured write concern unless it is unacknowledged.
+    /// </summary>
+    /// <param name="database">The namespace database.</param>
+    /// <returns>The incident collection to read and write through.</returns>
+    internal static IMongoCollection<AlertIncidentDocument> AcknowledgedCollection(IEventStoreNamespaceDatabase database)
     {
         var collection = database.GetCollection<AlertIncidentDocument>(WellKnownCollectionNames.AlertIncidents)
             .WithReadPreference(ReadPreference.Primary);
@@ -166,7 +171,7 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
                 (builder.Eq(_ => _.RaisedSequenceNumber, number) & builder.Gt(_ => _.Id, AlertIncidentStorageRules.Key(after.IncidentId)));
         }
         await EnsureIndexes();
-        var rows = await _collection.Find(filter, new FindOptions { Collation = Collation.Simple })
+        var rows = await _collection.Value.Find(filter, new FindOptions { Collation = Collation.Simple })
             .Sort(Builders<AlertIncidentDocument>.Sort.Ascending(_ => _.RaisedSequenceNumber).Ascending(_ => _.Id))
             .Limit(limit + 1).ToListAsync(cancellationToken);
         var items = rows.Take(limit).Select(_ => _.ToKernel()).ToArray();
@@ -174,7 +179,7 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
         return new(items, rows.Count > limit ? new(items[^1].RaisedSequenceNumber!, items[^1].Id) : null);
     }
 
-    Task EnsureIndexes() => _collection.EnsureIndexesOnceAsync(
+    Task EnsureIndexes() => _collection.Value.EnsureIndexesOnceAsync(
         _ensuredIndexes,
         new(Builders<AlertIncidentDocument>.IndexKeys.Ascending(_ => _.EventStore).Ascending(_ => _.IsOpen).Ascending(_ => _.RaisedSequenceNumber).Ascending(_ => _.Id), new CreateIndexOptions { Name = "store-open-raised-id", Collation = Collation.Simple }),
         new(Builders<AlertIncidentDocument>.IndexKeys.Ascending(_ => _.EventStore).Ascending(_ => _.Namespace).Ascending(_ => _.IsOpen).Ascending(_ => _.RaisedSequenceNumber).Ascending(_ => _.Id), new CreateIndexOptions { Name = "store-namespace-open-raised-id", Collation = Collation.Simple }));

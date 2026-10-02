@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Alerts.for_AlertIncidentsStorage.when
 public class and_unacknowledged_is_configured : given.a_collection
 {
     void Establish() => _collection.Settings.Returns(new MongoCollectionSettings { WriteConcern = WriteConcern.Unacknowledged });
-    void Because() => _ = new AlertIncidentsStorage(_database);
+    void Because() => _ = AlertIncidentsStorage.AcknowledgedCollection(_database);
 
     [Fact] void should_strengthen_to_acknowledged() => _collection.Received(1).WithWriteConcern(WriteConcern.Acknowledged);
 }

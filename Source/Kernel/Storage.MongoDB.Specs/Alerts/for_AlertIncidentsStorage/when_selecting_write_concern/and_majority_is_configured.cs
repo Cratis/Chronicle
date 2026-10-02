@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Alerts.for_AlertIncidentsStorage.when
 public class and_majority_is_configured : given.a_collection
 {
     void Establish() => _collection.Settings.Returns(new MongoCollectionSettings { WriteConcern = WriteConcern.WMajority });
-    void Because() => _ = new AlertIncidentsStorage(_database);
+    void Because() => _ = AlertIncidentsStorage.AcknowledgedCollection(_database);
 
     [Fact] void should_preserve_the_inherited_concern() => _collection.DidNotReceive().WithWriteConcern(Arg.Any<WriteConcern>());
 }
