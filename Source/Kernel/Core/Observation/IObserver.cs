@@ -105,11 +105,24 @@ public interface IObserver : IGrainWithStringKey
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
-    /// Recover a missing or failed explicitly typed kernel subscription without releasing quarantine or resetting progress.
+    /// Check whether a kernel subscription is missing, has failed setup, or observes a different event-type set.
     /// </summary>
     /// <remarks>
-    /// The decision and recovery run in one non-interleaved grain request. A subscribed observer is retried only
-    /// after setup has failed and left it disconnected or in a transient state, not while setup is still running.
+    /// This interleaved, read-only hint avoids unnecessary definition writes. Recovery must recheck in its own
+    /// serialized request because setup or quarantine can change before it runs.
+    /// </remarks>
+    /// <param name="eventTypes">The expected event types.</param>
+    /// <returns>Whether subscription recovery may be needed.</returns>
+    [AlwaysInterleave]
+    Task<bool> NeedsSubscriptionRecovery(IEnumerable<EventType> eventTypes);
+
+    /// <summary>
+    /// Recover a missing, failed, or outdated explicitly typed kernel subscription without releasing quarantine or resetting progress.
+    /// </summary>
+    /// <remarks>
+    /// The decision and recovery run in one non-interleaved grain request. A subscribed observer is retried after
+    /// setup has failed and left it stalled, or after healthy setup if its event types have changed. Recovery
+    /// waits for any running setup request before making this decision.
     /// This kernel-only operation is not exposed through the client contracts.
     /// </remarks>
     /// <typeparam name="TObserverSubscriber">The kernel-owned subscriber type.</typeparam>

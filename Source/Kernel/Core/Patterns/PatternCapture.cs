@@ -58,7 +58,16 @@ public class PatternCapture(
 
         foreach (var @namespace in namespaces)
         {
-            await Subscribe(eventStore, @namespace);
+            try
+            {
+                await Subscribe(eventStore, @namespace);
+            }
+            catch (Exception exception)
+            {
+                // Registration has already persisted the types. Capture is best-effort in each namespace;
+                // its event-log timer repairs missing subscriptions and type drift independently.
+                logger.FailedSubscribingPatternCapture(exception, eventStore, @namespace);
+            }
         }
     }
 
@@ -70,6 +79,9 @@ public class PatternCapture(
 
     async Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace, bool recovering)
     {
+        // The per-type storage caches are not a complete registry. Read the authoritative set to detect
+        // registrations missed by this namespace, including types it has never observed. No schemas are
+        // otherwise needed here; a healthy matching subscription must not rewrite its reactor definition.
         var schemas = await storage.GetEventStore(eventStore).EventTypes.GetLatestForAllEventTypes();
         var eventTypes = schemas.Select(schema => schema.Type).ToArray();
 
@@ -79,9 +91,14 @@ public class PatternCapture(
             return;
         }
 
-        logger.SubscribingPatternCapture(eventStore, @namespace, eventTypes.Length);
-
         var key = new ObserverKey(ObserverIdentifier, eventStore, @namespace, EventSequenceId.Log);
+        var observer = grainFactory.GetGrain<IObserver>(key);
+        if (recovering && !await observer.NeedsSubscriptionRecovery(eventTypes))
+        {
+            return;
+        }
+
+        logger.SubscribingPatternCapture(eventStore, @namespace, eventTypes.Length);
 
         await storage.GetEventStore(eventStore).Reactors.Save(new ReactorDefinition(
             key.ObserverId,
@@ -90,7 +107,6 @@ public class PatternCapture(
             [.. eventTypes.Select(eventType => new EventTypeWithKeyExpression(eventType, WellKnownExpressions.EventSourceId))],
             false));
 
-        var observer = grainFactory.GetGrain<IObserver>(key);
         if (recovering)
         {
             await observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(

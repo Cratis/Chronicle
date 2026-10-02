@@ -8,7 +8,11 @@ namespace Cratis.Chronicle.Patterns.for_PatternCapture;
 
 public class when_recovering_subscription : given.a_pattern_capture
 {
-    void Establish() => EventTypesAre("CustomerNamed");
+    void Establish()
+    {
+        EventTypesAre("CustomerNamed");
+        _observer.NeedsSubscriptionRecovery(Arg.Any<IEnumerable<EventType>>()).Returns(true);
+    }
 
     Task Because() => _capture.RecoverSubscription(_eventStore, _namespace);
 
