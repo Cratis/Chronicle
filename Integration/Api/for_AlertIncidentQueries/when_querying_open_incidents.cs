@@ -3,6 +3,7 @@
 
 using System.Net;
 using Cratis.Chronicle.Alerts;
+using Cratis.Chronicle.EventStores;
 
 using context = Cratis.Chronicle.Integration.Api.for_AlertIncidentQueries.when_querying_open_incidents.context;
 
@@ -18,6 +19,12 @@ public class when_querying_open_incidents(context context) : Given<context>(cont
         public bool CountsSucceeded;
         public bool MissingScopeRejected;
         public bool AllQueriesRequireAuthentication;
+
+        async Task Establish()
+        {
+            var result = await Client.ExecuteCommand("/api/event-stores/ensure-event-store", new EnsureEventStore("unaffected"));
+            result!.IsSuccess.ShouldBeTrue();
+        }
 
         async Task Because()
         {

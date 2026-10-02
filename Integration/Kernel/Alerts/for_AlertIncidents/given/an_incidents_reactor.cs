@@ -38,6 +38,7 @@ public class an_incidents_reactor(ChronicleFixture fixture) : Specification<Chro
         _factory = Services.GetRequiredService<IGrainFactory>();
         _storage = Services.GetRequiredService<IStorage>();
         _serializer = Services.GetRequiredService<IEventSerializer>();
+
         // The fixture omits the server startup task; bootstrap the kernel artifacts this spec exercises.
         await Services.GetRequiredService<EventTypes.IEventTypes>().DiscoverAndRegister(Concepts.EventStoreName.System);
         await Services.GetRequiredService<Observation.Reactors.Kernel.IReactors>()
