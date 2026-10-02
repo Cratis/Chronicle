@@ -8,6 +8,9 @@ namespace Cratis.Chronicle.Patterns;
 
 internal static partial class PatternCaptureLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Failed subscribing pattern capture for event store {EventStore} in namespace {Namespace}. The event log will reconcile the subscription when active")]
+    internal static partial void FailedSubscribingPatternCapture(this ILogger<PatternCapture> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Warning, "Failed capturing behavior patterns for event store {EventStore} in namespace {Namespace}")]
     internal static partial void FailedCapturingPatterns(this ILogger<PatternCaptureSubscriber> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, Exception exception);
 
@@ -16,7 +19,4 @@ internal static partial class PatternCaptureLogging
 
     [LoggerMessage(LogLevel.Debug, "No event types are registered for event store {EventStore}, so there is nothing for pattern capture to observe yet")]
     internal static partial void NoEventTypesToCapture(this ILogger<PatternCapture> logger, EventStoreName eventStore);
-
-    [LoggerMessage(LogLevel.Debug, "Namespace {Namespace} in event store {EventStore} has no data yet, so pattern capture is not subscribed until it does")]
-    internal static partial void NamespaceHasNoDataToCapture(this ILogger<PatternCapture> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 }

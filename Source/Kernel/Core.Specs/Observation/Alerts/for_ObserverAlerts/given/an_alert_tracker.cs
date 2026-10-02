@@ -49,7 +49,7 @@ public class an_alert_tracker : Specification
     async Task Establish()
     {
         _key = new(_metrics.ObserverId, "store", "namespace", EventSequenceId.Log);
-        _snapshot = new(_key, [new(FailedPartitionId.New(), "partition", _clock.Now - TimeSpan.FromMinutes(10), _clock.Now, 1, false, FailureKind.Handling, "Failed")], false, AlertDisposition.Active, 10)
+        _snapshot = new(_key, [new(FailedPartitionId.New(), "partition", _clock.Now - TimeSpan.FromMinutes(10), _clock.Now, 1, 1, false, FailureKind.Handling, "Failed")], false, AlertDisposition.Active, 10)
         {
             LifecycleId = Guid.NewGuid(),
             Revision = 1

@@ -21,7 +21,7 @@ public class when_round_tripping_snapshot_through_orleans : Specification
     ObserverAlertReceipt _receipt;
     ObserverAlertReceipt _receiptResult;
 
-    void Establish() => _original = new(new("observer", "store", "namespace", EventSequenceId.Log), [new(FailedPartitionId.New(), "partition", DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddMinutes(1), 3, true, FailureKind.Handling, "Failed")], true, AlertDisposition.Active, 10)
+    void Establish() => _original = new(new("observer", "store", "namespace", EventSequenceId.Log), [new(FailedPartitionId.New(), "partition", DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddMinutes(1), 3, 3, true, FailureKind.Handling, "Failed")], true, AlertDisposition.Active, 10)
     {
         LifecycleId = Guid.NewGuid(),
         Revision = 42,

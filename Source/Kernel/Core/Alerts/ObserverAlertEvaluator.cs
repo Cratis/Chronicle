@@ -107,7 +107,7 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
         };
 
     static bool IsExhausted(ObserverAlertSnapshot snapshot, FailedPartitionSnapshot partition) =>
-        partition.IsQuarantined || (snapshot.MaxRetryAttempts > 0 && partition.AttemptCount > snapshot.MaxRetryAttempts);
+        partition.IsQuarantined || (snapshot.MaxRetryAttempts > 0 && partition.AttemptsInCurrentBudget > snapshot.MaxRetryAttempts);
 
     static AlertCleared Cleared(ObserverAlertSnapshot snapshot, OpenIncident incident, AlertClearedReason reason) =>
         new(incident.Id, incident.Condition, reason, AlertTarget.For(snapshot.Observer, incident.Partition));

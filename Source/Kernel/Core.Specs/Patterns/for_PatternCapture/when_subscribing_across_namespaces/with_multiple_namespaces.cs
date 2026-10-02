@@ -27,7 +27,7 @@ public class with_multiple_namespaces : given.a_pattern_capture
     }
 
     [Fact] async Task should_subscribe_once_for_every_namespace() =>
-        await _observer.Received(2).Subscribe<IPatternCaptureSubscriber>(
+        await _observer.Received(2).SubscribeAdditively<IPatternCaptureSubscriber>(
             ObserverType.Reactor,
             Arg.Any<IEnumerable<EventType>>(),
             Arg.Any<SiloAddress>(),

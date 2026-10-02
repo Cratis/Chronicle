@@ -12,11 +12,11 @@ public class and_a_step_fails_for_a_reason_other_than_the_cluster : given.a_star
     Exception _error;
 
     void Establish() =>
-        _patternCapture.Subscribe(_eventStore, _namespace)
+        _jobsManager.Rehydrate()
             .Returns(_ => Task.FromException(new InvalidOperationException("something is genuinely wrong")));
 
     async Task Because() => _error = await Catch.Exception(Execute);
 
     [Fact] void should_fail() => _error.ShouldNotBeNull();
-    [Fact] async Task should_not_have_tried_again() => await _patternCapture.Received(1).Subscribe(_eventStore, _namespace);
+    [Fact] async Task should_not_have_tried_again() => await _jobsManager.Received(1).Rehydrate();
 }

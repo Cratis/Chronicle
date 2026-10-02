@@ -22,4 +22,20 @@ internal static class ReactorPartitionRetryOutcomeConverters
             Contracts.Observation.PartitionRecoveryOutcome.PartitionQuarantined => ReactorPartitionRetryOutcome.PartitionQuarantined,
             _ => ReactorPartitionRetryOutcome.Unknown
         };
+
+    /// <summary>
+    /// Converts a contract clear-quarantine response to its client counterpart.
+    /// </summary>
+    /// <param name="response">The contract response.</param>
+    /// <returns>The client result.</returns>
+    internal static ReactorPartitionQuarantineClearResult ToClient(this Contracts.Observation.ClearPartitionQuarantineResponse response) =>
+        new(
+            response.Outcome switch
+            {
+                Contracts.Observation.ClearPartitionQuarantineOutcome.Cleared => ReactorPartitionQuarantineClearOutcome.Cleared,
+                Contracts.Observation.ClearPartitionQuarantineOutcome.NotFound => ReactorPartitionQuarantineClearOutcome.NotFound,
+                Contracts.Observation.ClearPartitionQuarantineOutcome.NotQuarantined => ReactorPartitionQuarantineClearOutcome.NotQuarantined,
+                _ => ReactorPartitionQuarantineClearOutcome.Unknown
+            },
+            response.RetryOutcome.ToClient());
 }

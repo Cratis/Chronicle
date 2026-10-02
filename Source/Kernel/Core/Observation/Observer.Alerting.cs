@@ -113,6 +113,7 @@ public partial class Observer
                         attempts.FirstOrDefault()?.Occurred ?? latest.Occurred,
                         latest.Occurred,
                         attempts.Length,
+                        partition.AttemptsInCurrentBudget,
                         partition.IsQuarantined,
                         latest.Kind,
                         latest.Messages.FirstOrDefault() ?? string.Empty);

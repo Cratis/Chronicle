@@ -99,6 +99,9 @@ BODY_SNIPPETS = {
     "troubleshooting/retry-reactor-partition": """
         IEventStore eventStore = default!;
     """,
+    "troubleshooting/clear-reactor-partition-quarantine": """
+        IEventStore eventStore = default!;
+    """,
 }
 
 # This excerpt is from an ASP.NET Core action. Supply only the action context
