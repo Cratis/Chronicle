@@ -50,6 +50,20 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<ObserverId>> GetRetired(IEnumerable<ObserverId> observerIds)
+    {
+        var ids = observerIds.Distinct().ToArray();
+        if (ids.Length == 0) return [];
+
+        await using var scope = await database.Namespace(eventStore, @namespace);
+
+        return await scope.DbContext.Observers
+            .Where(observer => ids.Contains(observer.Id) && observer.AlertDisposition == AlertDisposition.Retired)
+            .Select(observer => observer.Id)
+            .ToListAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task Save(Observation.ObserverState state)
     {
         // EF change-tracking rejects a null primary key. Mirror the Get path tolerance: an

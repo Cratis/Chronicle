@@ -59,6 +59,19 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<ObserverId>> GetRetired(IEnumerable<ObserverId> observerIds)
+    {
+        var ids = observerIds.Distinct().ToArray();
+        if (ids.Length == 0) return [];
+
+        var filter = Builders<ObserverState>.Filter.In(state => state.Id, ids) &
+            Builders<ObserverState>.Filter.Eq(state => state.AlertDisposition, AlertDisposition.Retired);
+        var retired = await _collection.Find(filter).Project(state => state.Id).ToListAsync().ConfigureAwait(false);
+
+        return retired;
+    }
+
+    /// <inheritdoc/>
     /// <remarks>
     /// Writes a targeted <c language="csharp">$set</c> of the observer-owned fields rather than replacing the whole document, so
     /// fields the observer state does not own — such as legacy per-partition counts that are still awaiting

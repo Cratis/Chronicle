@@ -55,7 +55,9 @@ public class a_manager_recovering_a_retired_observer : Observation.for_Observer.
         _managerSilo.AddService(Substitute.For<ILanguageService>());
         _managerSilo.AddService(Substitute.For<ILocalSiloDetails>());
         _managerSilo.AddService(_storage);
-        _eventStoreNamespaceStorage.Observers.GetAll().Returns(_ => [_stateStorage.State with { Identifier = _observerId }]);
+        _eventStoreNamespaceStorage.Observers.GetRetired(Arg.Any<IEnumerable<ObserverId>>())
+            .Returns(call => call.Arg<IEnumerable<ObserverId>>()
+                .Where(id => id == _observerId && _stateStorage.State.AlertDisposition == AlertDisposition.Retired).ToArray());
         var namespaces = Substitute.For<INamespaces>();
         namespaces.GetAll().Returns([_observerKey.Namespace]);
         _managerSilo.AddProbe(_ => namespaces);

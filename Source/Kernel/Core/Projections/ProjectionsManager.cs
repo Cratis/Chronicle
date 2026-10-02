@@ -264,14 +264,15 @@ public partial class ProjectionsManager(
     {
         if (definitions.Length == 0) return [];
 
-        // Batch by namespace rather than probing or subscribing every unchanged projection. The observer's
-        // subscription call still makes the authoritative retirement decision inside its own turn.
+        // Only query the submitted unchanged projections, and only return their retired identifiers. Loading
+        // every observer's full state makes identical client registrations pay for unrelated observers and failures.
+        // The observer's subscription call still makes the authoritative retirement decision inside its own turn.
+        var observerIds = definitions.Select(definition => (ObserverId)definition.Identifier).Distinct().ToArray();
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         var retired = new HashSet<ObserverId>();
         foreach (var namespaceName in namespaces)
         {
-            var states = await storage.GetEventStore(_eventStoreName).GetNamespace(namespaceName).Observers.GetAll();
-            retired.UnionWith(states.Where(state => state.AlertDisposition == AlertDisposition.Retired).Select(state => state.Identifier));
+            retired.UnionWith(await storage.GetEventStore(_eventStoreName).GetNamespace(namespaceName).Observers.GetRetired(observerIds));
         }
 
         return definitions.Where(definition => retired.Contains(definition.Identifier));
