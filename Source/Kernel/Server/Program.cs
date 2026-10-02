@@ -128,7 +128,9 @@ var hostBuilder = builder.Host
        if (!isSqlStorage && !isInMemoryStorage)
        {
            mongo.Server = chronicleOptions.Storage.ConnectionDetails;
-           mongo.Database = Cratis.Chronicle.Storage.MongoDB.WellKnownDatabaseNames.Chronicle;
+           mongo.Database = Cratis.Chronicle.Storage.MongoDB.DatabaseNames.WithPrefix(
+               Cratis.Chronicle.Storage.MongoDB.WellKnownDatabaseNames.Chronicle,
+               chronicleOptions.Storage.DatabaseNamePrefix);
        }
        else
        {

@@ -88,7 +88,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// prior state to wipe), so reusing a process-wide file path would carry data from earlier
     /// <c language="csharp">dotnet test</c> invocations into the next session's first test. A fixture-scoped directory
     /// guarantees every test session opens a fresh file regardless of what previous sessions
-    /// left in <c language="csharp">/tmp</c>, and SQLite's <c>-wal</c>, <c>-shm</c> and per-event-store sibling files
+    /// left in <c language="csharp">/tmp</c>, and SQLite's <c language="text">-wal</c>, <c language="text">-shm</c> and per-event-store sibling files
     /// all live in it, so removing the directory removes every one of them.
     /// </summary>
     public string InProcessSqliteFilePath => Path.Combine(_inProcessSqliteDirectory.Value, "chronicle.db");

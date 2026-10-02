@@ -29,7 +29,7 @@ public class an_event_types_storage(MongoDBFixture fixture) : Specification
         new ConventionPacks().Provide();
 
         var eventStore = new EventStoreName("test-event-store");
-        _databaseName = $"chronicle_event_types_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
         var collection = database.GetCollection<MongoEventType>(WellKnownCollectionNames.EventTypes);

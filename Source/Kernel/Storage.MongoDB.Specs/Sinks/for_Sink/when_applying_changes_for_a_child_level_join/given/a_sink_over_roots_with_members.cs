@@ -90,7 +90,7 @@ public abstract class a_sink_over_roots_with_members(MongoDBFixture fixture) : I
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
-        _databaseName = $"chr_child_join_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
 
         var schema = JsonSchema.FromType<ChildJoinedReadModel>();

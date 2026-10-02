@@ -18,11 +18,17 @@ public sealed class MongoDBFixture : IAsyncLifetime
     /// <summary>
     /// Gets the MongoDB connection string.
     /// </summary>
-    public string ConnectionString => $"mongodb://localhost:{_container!.GetMappedPublicPort(MongoDBPort)}/?directConnection=true";
+    public string ConnectionString => MongoDBSpecDatabaseNames.ExternalConnectionString
+        ?? $"mongodb://localhost:{_container!.GetMappedPublicPort(MongoDBPort)}/?directConnection=true";
 
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
+        if (MongoDBSpecDatabaseNames.ExternalConnectionString is not null)
+        {
+            return;
+        }
+
         var image = Environment.GetEnvironmentVariable("CHRONICLE_SPECS_MONGODB_IMAGE") ?? "mongo";
         _container = new ContainerBuilder(image)
             .WithMongoDBKernelCompatibility()

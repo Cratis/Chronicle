@@ -25,7 +25,7 @@ public class two_event_types_storages(MongoDBFixture fixture) : Specification
         new ConventionPacks().Provide();
 
         var eventStore = new EventStoreName("test-event-store");
-        _databaseName = $"chronicle_event_types_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
         var collection = database.GetCollection<EventType>(WellKnownCollectionNames.EventTypes);

@@ -19,6 +19,7 @@ public class EventStoreDatabase : IEventStoreDatabase
     readonly EventStoreName _eventStore;
     readonly IMongoDBClientManager _clientManager;
     readonly IOptions<MongoDBOptions> _mongoDBOptions;
+    readonly IOptions<MongoDBStorageOptions> _storageOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
@@ -26,25 +27,25 @@ public class EventStoreDatabase : IEventStoreDatabase
     /// <param name="eventStore"><see cref="EventStoreName"/> the database is for.</param>
     /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
     /// <param name="mongoDBOptions"><see cref="Storage"/> configuration.</param>
+    /// <param name="storageOptions">Chronicle-specific database naming options.</param>
     public EventStoreDatabase(
         EventStoreName eventStore,
         IMongoDBClientManager clientManager,
-        IOptions<MongoDBOptions> mongoDBOptions)
+        IOptions<MongoDBOptions> mongoDBOptions,
+        IOptions<MongoDBStorageOptions>? storageOptions = null)
     {
-        var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server)
-        {
-            DatabaseName = eventStore.Value
-        };
+        _storageOptions = storageOptions ?? Options.Create(new MongoDBStorageOptions());
+        var databaseName = DatabaseNames.ForEventStore(eventStore, _storageOptions.Value.DatabaseNamePrefix);
+        var settings = MongoClientSettings.FromUrl(new MongoUrl(mongoDBOptions.Value.Server));
         if (mongoDBOptions.Value.DirectConnection == true)
         {
-            urlBuilder.DirectConnection = true;
+            settings.DirectConnection = true;
         }
 
-        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
         var client = clientManager.GetClientFor(settings);
 
         // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
-        _database = client.GetDatabase(DatabaseNames.ForEventStore(eventStore));
+        _database = client.GetDatabase(databaseName);
         _eventStore = eventStore;
         _clientManager = clientManager;
         _mongoDBOptions = mongoDBOptions;
@@ -69,6 +70,6 @@ public class EventStoreDatabase : IEventStoreDatabase
             return database;
         }
 
-        return _eventStoreNamespaceDatabases[@namespace] = new EventStoreNamespaceDatabase(_eventStore, @namespace, _clientManager, _mongoDBOptions);
+        return _eventStoreNamespaceDatabases[@namespace] = new EventStoreNamespaceDatabase(_eventStore, @namespace, _clientManager, _mongoDBOptions, _storageOptions);
     }
 }

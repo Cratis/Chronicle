@@ -119,7 +119,7 @@ public abstract class a_sink_over_several_rows(MongoDBFixture fixture) : IAsyncL
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
-        _databaseName = $"chr_join_rows_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
 
         var schema = JsonSchema.FromType<GuidJoinedReadModel>();

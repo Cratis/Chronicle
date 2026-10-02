@@ -34,7 +34,7 @@ public class when_incrementing_and_removing_counts(MongoDBFixture fixture) : Spe
 
     void Establish()
     {
-        _databaseName = $"chronicle_handled_counts_{Guid.NewGuid():N}";
+        _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
 
