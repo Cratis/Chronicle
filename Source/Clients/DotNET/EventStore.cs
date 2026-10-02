@@ -18,6 +18,7 @@ using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventStoreSubscriptions;
+using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
@@ -129,6 +130,7 @@ public class EventStore : IEventStore
         _activitySource = serviceProvider.GetRequiredKeyedService<IActivitySource<EventSequence>>(ClientActivity.SourceName);
         var types = TypeUniverse.For(serviceProvider);
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation, namingPolicy);
+        EventSources = new EventSources.EventSources(this, clientArtifactsProvider);
         UnitOfWorkManager = new UnitOfWorkManager(
             this,
             serviceProvider.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName),
@@ -163,7 +165,8 @@ public class EventStore : IEventStore
             UnitOfWorkManager,
             identityProvider,
             jsonSerializerOptions,
-            reactorSideEffectHandlers);
+            reactorSideEffectHandlers,
+            EventSources);
         _sequences[EventLog.Id] = EventLog;
 
         Jobs = new Jobs.Jobs(this);
@@ -307,6 +310,9 @@ public class EventStore : IEventStore
     public IEventTypes EventTypes { get; }
 
     /// <inheritdoc/>
+    public IEventSources EventSources { get; }
+
+    /// <inheritdoc/>
     public IConstraints Constraints { get; }
 
     /// <inheritdoc/>
@@ -384,6 +390,7 @@ public class EventStore : IEventStore
 
         // We need to discover all event types first, as they are used by the other artifacts
         await EventTypes.Discover();
+        await EventSources.Discover();
 
         await Task.WhenAll(
             Constraints.Discover(),
@@ -429,7 +436,8 @@ public class EventStore : IEventStore
                 state._identityProvider,
                 state._jsonSerializerOptions,
                 state._activitySource,
-                state._reactorSideEffectHandlers),
+                state._reactorSideEffectHandlers,
+                state.EventSources),
             this);
 
     /// <inheritdoc/>
@@ -575,6 +583,7 @@ public class EventStore : IEventStore
         // We need to register event types and read models first, as they are used by the other artifacts
         await Task.WhenAll(
             EventTypes.Register(),
+            EventSources.Register(),
             ReadModels.Register());
 
         // Register all observers before seeding to prevent race conditions where

@@ -17,6 +17,7 @@ using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
+using Cratis.Chronicle.Contracts.EventSources;
 using Cratis.Chronicle.Contracts.Patterns;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
@@ -120,4 +121,7 @@ internal sealed class InProcessServices(
 
     /// <inheritdoc/>
     public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
+
+    /// <inheritdoc/>
+    public IEventSources EventSources => throw new NotSupportedException("EventSources is not supported in test scenarios.");
 }

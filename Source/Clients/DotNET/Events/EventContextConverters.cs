@@ -34,7 +34,8 @@ internal static class EventContextConverters
         Hash = context.Hash,
         ObservationState = context.ObservationState.ToContract(),
         Subject = context.Subject?.Value ?? string.Empty,
-        NamedTags = context.NamedTags.Select(_ => new Contracts.Events.NamedTag { Name = _.Name.Value, Value = _.Value }).ToList()
+        NamedTags = context.NamedTags.Select(_ => new Contracts.Events.NamedTag { Name = _.Name.Value, Value = _.Value }).ToList(),
+        EventSource = context.EventSource?.Value ?? string.Empty
     };
 
     /// <summary>
@@ -58,7 +59,8 @@ internal static class EventContextConverters
         context.Tags.Select(_ => (Tag)_).ToArray(),
         context.Hash,
         context.ObservationState.ToClient(),
-        Subject: ResolveSubject(context.Subject, context.EventSourceId))
+        Subject: ResolveSubject(context.Subject, context.EventSourceId),
+        EventSource: ResolveEventSource(context.EventSource))
     {
         NamedTags = (context.NamedTags ?? []).Select(tag => new NamedTag(tag.Name, tag.Value)).ToArray()
     };
@@ -90,7 +92,8 @@ internal static class EventContextConverters
         context.Tags.Select(_ => (Tag)_).ToArray(),
         context.Hash ?? EventHash.NotSet,
         context.ObservationState.ToClient(),
-        Subject: ResolveSubject(context.Subject, context.EventSourceId))
+        Subject: ResolveSubject(context.Subject, context.EventSourceId),
+        EventSource: ResolveEventSource(context.EventSource))
     {
         NamedTags = (context.NamedTags ?? []).Select(tag => tag.ToClient()).ToArray()
     };
@@ -105,6 +108,9 @@ internal static class EventContextConverters
     /// The fallback exists only for a server that predates the subject member on the contract, where an absent value
     /// meant "the subject is the event source id". An explicitly carried subject is never replaced by the event source id.
     /// </remarks>
+    static EventSourceName? ResolveEventSource(string? eventSource) =>
+        string.IsNullOrEmpty(eventSource) ? null : new EventSourceName(eventSource);
+
     static Subject ResolveSubject(string? subject, string eventSourceId) =>
         string.IsNullOrEmpty(subject)
             ? new Subject(eventSourceId)

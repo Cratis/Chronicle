@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSources;
 
 namespace Cratis.Chronicle.EventSequences.Concurrency;
 
@@ -68,6 +69,45 @@ public class OptimisticConcurrencyStrategy(IEventSequence eventSequence, Concurr
             eventStreamType,
             eventStreamId,
             eventSourceType,
+            eventTypes);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Reads the tail with exactly the dimensions the scope carries, including leaving the event source id out when
+    /// it is not declared, so a stream that is concurrent per stream rather than per event source is checked as one.
+    /// </remarks>
+    public async Task<ConcurrencyScope> GetScope(
+        ConcurrencyDimensions dimensions,
+        EventSourceId eventSourceId,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        IEnumerable<EventType>? eventTypes = default)
+    {
+        if (dimensions == ConcurrencyDimensions.None)
+        {
+            return await GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType, eventTypes);
+        }
+
+        EventSourceId? scopedEventSourceId = dimensions.HasFlag(ConcurrencyDimensions.EventSourceId) ? eventSourceId : null;
+        var scopedStreamType = dimensions.HasFlag(ConcurrencyDimensions.EventStreamType) ? eventStreamType : null;
+        var scopedStreamId = dimensions.HasFlag(ConcurrencyDimensions.EventStreamId) ? eventStreamId : null;
+        var scopedSourceType = dimensions.HasFlag(ConcurrencyDimensions.EventSourceType) ? eventSourceType : null;
+
+        var tail = await eventSequence.GetTailSequenceNumber(
+            eventSourceId: scopedEventSourceId,
+            eventSourceType: scopedSourceType,
+            eventStreamType: scopedStreamType,
+            eventStreamId: scopedStreamId,
+            filterEventTypes: eventTypes);
+
+        return new ConcurrencyScope(
+            tail.IsUnavailable && ChecksTheFirstAppend ? EventSequenceNumber.BeforeFirst : tail,
+            scopedEventSourceId,
+            scopedStreamType,
+            scopedStreamId,
+            scopedSourceType,
             eventTypes);
     }
 }

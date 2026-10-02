@@ -67,6 +67,9 @@ internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initia
     /// <inheritdoc/>
     public IEnumerable<Type> EventSeeders => _current.EventSeeders;
 
+    /// <inheritdoc/>
+    public IEnumerable<Type> EventSources => _current.EventSources;
+
     /// <summary>
     /// Gets or sets the singleton instance created during factory construction.
     /// </summary>
