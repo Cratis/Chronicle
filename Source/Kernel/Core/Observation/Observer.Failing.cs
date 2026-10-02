@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Observation.States;
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
@@ -79,7 +80,7 @@ public partial class Observer
         // source mutation lock over those calls. The separate reporting turn runs after this transition commits.
         if (quarantineObserver)
         {
-            await RequestQuarantine();
+            await TransitionTo<QuarantinedObserver>();
         }
     }
 
