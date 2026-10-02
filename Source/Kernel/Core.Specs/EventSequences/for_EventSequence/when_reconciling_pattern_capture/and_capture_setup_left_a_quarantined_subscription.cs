@@ -5,9 +5,13 @@ using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_reconciling_pattern_capture;
 
-public class and_capture_is_quarantined : given.an_event_sequence_with_pattern_capture
+public class and_capture_setup_left_a_quarantined_subscription : given.an_event_sequence_with_pattern_capture
 {
-    void Establish() => _captureRunningState = ObserverRunningState.Quarantined;
+    void Establish()
+    {
+        _captureIsSubscribed = true;
+        _captureRunningState = ObserverRunningState.Quarantined;
+    }
 
     Task Because() => _silo.TimerRegistry.FireAllAsync();
 

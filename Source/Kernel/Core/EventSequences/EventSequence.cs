@@ -1167,10 +1167,14 @@ public class EventSequence(
         {
             var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(
                 PatternCapture.ObserverIdentifier, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventSequenceId.Log));
-            if (!await observer.IsSubscribed() && !await observer.IsObserverQuarantined())
+            var isSubscribed = await observer.IsSubscribed();
+            var state = await observer.GetState();
+            if (state.RunningState != ObserverRunningState.Quarantined &&
+                (!isSubscribed || state.RunningState is ObserverRunningState.Disconnected or ObserverRunningState.Unknown))
             {
-                // Do not depend on NamespaceAdded delivery or on a persisted observer definition: both can
-                // be missing after a failed first subscription. Subscribe preserves the observer's progress.
+                // Subscribe installs its in-memory subscription before persistence, job recovery and routing
+                // finish. A failed setup can therefore still report IsSubscribed while disconnected. Retry
+                // that setup too, preserving progress and leaving active or quarantined observers alone.
                 await patternCapture.Subscribe(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
             }
         }
