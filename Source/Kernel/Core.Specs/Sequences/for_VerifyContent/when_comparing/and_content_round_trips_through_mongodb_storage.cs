@@ -32,7 +32,7 @@ public class and_content_round_trips_through_mongodb_storage : given.content_wit
         _stored = await converter.ToAppendedEvent(stored);
     }
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_refuse_equality_after_storage_loses_decimal_precision() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }

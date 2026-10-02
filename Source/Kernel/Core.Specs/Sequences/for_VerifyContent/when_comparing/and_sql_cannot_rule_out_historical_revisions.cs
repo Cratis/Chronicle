@@ -3,11 +3,9 @@
 
 namespace Cratis.Chronicle.Sequences.for_VerifyContent.when_comparing;
 
-public class and_non_member_enums_match_in_sql : given.a_storage_round_trip
+public class and_sql_cannot_rule_out_historical_revisions : given.a_sql_event
 {
-    async Task Establish() => await Store(EnumSchema, NonMemberEnums, sql: true);
-
     async Task Because() => _result = await Verify();
 
-    [Fact] void should_compare_the_stored_enum_values() => _result.Result.ShouldEqual(ContentVerificationResult.Equal);
+    [Fact] void should_fail_closed_without_revision_tracking() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }

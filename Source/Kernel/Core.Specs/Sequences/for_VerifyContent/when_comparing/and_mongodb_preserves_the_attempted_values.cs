@@ -14,7 +14,7 @@ public class and_mongodb_preserves_the_attempted_values : given.a_mongodb_round_
         """,
         """{"value":0.25,"status":1,"offset":"2026-03-04T05:06:07+02:30"}""");
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_compare_the_backend_representation() => _result.Result.ShouldEqual(ContentVerificationResult.Equal);
 }

@@ -7,7 +7,7 @@ public class and_the_event_is_missing : given.a_stored_event
 {
     void Establish() => _cursor.MoveNext().Returns(false);
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_report_unavailable() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }

@@ -7,7 +7,7 @@ public class and_the_schema_conversion_loses_number_precision : given.a_storage_
 {
     async Task Establish() => await Store("""{"type":"object","properties":{"value":{"type":"number"}}}""", """{"value":0.1234567890123456789012345678}""", sql: false);
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_not_claim_equality_for_a_rounded_attempt() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }

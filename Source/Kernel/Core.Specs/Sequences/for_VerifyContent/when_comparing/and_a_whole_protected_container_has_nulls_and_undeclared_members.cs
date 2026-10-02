@@ -30,7 +30,7 @@ public class and_a_whole_protected_container_has_nulls_and_undeclared_members : 
         _stored = _stored with { GenerationalContent = new Dictionary<int, string> { [1] = serialized! } };
     }
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_compare_the_complete_plaintext_without_schema_trimming() => _result.Result.ShouldEqual(ContentVerificationResult.Equal);
 }

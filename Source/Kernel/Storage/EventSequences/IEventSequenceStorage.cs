@@ -17,6 +17,12 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 public interface IEventSequenceStorage
 {
     /// <summary>
+    /// Gets whether reads reliably identify revisions, including revisions of another generation.
+    /// </summary>
+    /// <remarks>Verification must fail closed when historical revisions cannot be ruled out.</remarks>
+    bool SupportsRevisionTracking => false;
+
+    /// <summary>
     /// Renders content through this backend's append serialization without writing an event.
     /// </summary>
     /// <param name="content">The schema-converted, protected append content.</param>

@@ -11,7 +11,7 @@ public class and_decimals_differ_below_mongodb_precision : given.a_mongodb_round
         _command = _command with { Content = """{"value":0.1234567890123456789012345679}""" };
     }
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_not_claim_equality_for_the_rounded_attempt() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }

@@ -26,7 +26,7 @@ public class and_the_protected_type_is_ambiguous : given.a_protected_event
         _command = _command with { Content = "{\"value\":\"42\"}" };
     }
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_not_report_equality_between_encrypted_number_and_attempted_text() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }

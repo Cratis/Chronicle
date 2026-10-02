@@ -7,7 +7,7 @@ public class and_the_schema_is_missing : given.a_stored_event
 {
     void Establish() => _storage.GetEventStore("store").EventTypes.HasFor("event", 1U).Returns(false);
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_report_unavailable_even_for_identical_content() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }

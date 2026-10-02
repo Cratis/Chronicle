@@ -1,11 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
@@ -38,16 +40,22 @@ public record VerifyContent(
     string? EventSourceId = default)
 {
     /// <summary>
-    /// Compares JSON in the requested stored generation after strict compliance release.
+    /// Compares every stored generation after migration and strict compliance release.
     /// </summary>
     /// <param name="storage">The storage to read.</param>
     /// <param name="metadataManager">The strict release implementation.</param>
     /// <param name="expandoObjectConverter">The schema-guided append and storage converter.</param>
+    /// <param name="eventTypeMigrations">The append migration implementation.</param>
     /// <returns>Equal, different, or unavailable; partial release never produces equality.</returns>
-    public async Task<ContentVerification> Handle(IStorage storage, IJsonSchemaMetadataManager metadataManager, IExpandoObjectConverter expandoObjectConverter)
+    public async Task<ContentVerification> Handle(IStorage storage, IJsonSchemaMetadataManager metadataManager, IExpandoObjectConverter expandoObjectConverter, IEventTypeMigrations eventTypeMigrations)
     {
         var eventStore = storage.GetEventStore(EventStore);
         var sequence = eventStore.GetNamespace(Namespace).GetEventSequence(EventSequenceId);
+        if (!sequence.SupportsRevisionTracking)
+        {
+            return new(ContentVerificationResult.Unavailable);
+        }
+
         using var cursor = await sequence.GetRange(SequenceNumber, SequenceNumber);
         if (!await cursor.MoveNext())
         {
@@ -71,9 +79,7 @@ public record VerifyContent(
             return new(ContentVerificationResult.Different);
         }
 
-        // Revisions are not represented consistently across storage backends. Never compare stale
-        // original content as if it were the current revision, or silently upcast another generation.
-        if (!stored.GenerationalContent.TryGetValue((int)EventType.Generation, out var content) ||
+        if (!stored.GenerationalContent.ContainsKey((int)EventType.Generation) ||
             !await eventStore.EventTypes.HasFor(EventType.Id, EventType.Generation))
         {
             return new(ContentVerificationResult.Unavailable);
@@ -82,24 +88,75 @@ public record VerifyContent(
         var schema = await eventStore.EventTypes.GetFor(EventType.Id, EventType.Generation);
         try
         {
-            if (JsonNode.Parse(content) is not JsonObject document || JsonNode.Parse(Content) is not JsonObject attempted)
+            if (JsonNode.Parse(Content) is not JsonObject attempted)
             {
                 return new(ContentVerificationResult.Unavailable);
             }
 
-            var released = await metadataManager.TryRelease(EventStore, Namespace, schema.Schema, stored.Context.Subject.Value, document);
-            if (released is null)
+            var schemas = new Dictionary<int, JsonSchema>();
+            foreach (var generation in stored.GenerationalContent.Keys)
             {
-                return new(ContentVerificationResult.Unavailable);
+                if (generation <= 0 || !await eventStore.EventTypes.HasFor(EventType.Id, (uint)generation))
+                {
+                    return new(ContentVerificationResult.Unavailable);
+                }
+
+                schemas[generation] = (await eventStore.EventTypes.GetFor(EventType.Id, (uint)generation)).Schema;
             }
 
-            var expected = await metadataManager.TryPrepareForComparison(schema.Schema, attempted, document => ContentComparison.Prepare(document, schema.Schema, expandoObjectConverter, sequence));
+            var expected = await metadataManager.TryPrepareGenerationsForComparison(schema.Schema, attempted, async masked =>
+            {
+                var source = expandoObjectConverter.ToExpandoObject(masked, schema.Schema);
+                var lossless = ContentComparison.PreservesConversion(masked, source, schema.Schema);
+                var inspected = new HashSet<ExpandoObject>(ReferenceEqualityComparer.Instance);
+                var migrated = await eventTypeMigrations.MigrateToAllGenerations(EventStore, new(EventType.Id, EventType.Generation, EventType.Tombstone), masked, source, (raw, generationSchema, converted) =>
+                {
+                    lossless &= ContentComparison.PreservesConversion(raw, converted, generationSchema);
+                    inspected.Add(converted);
+                });
+                if (!lossless || migrated.Values.Any(content => !inspected.Contains(content)))
+                {
+                    return null;
+                }
+
+                var result = new Dictionary<int, (JsonSchema Schema, JsonObject Content)>();
+                foreach (var (generation, generationSchema) in schemas)
+                {
+                    if (!migrated.TryGetValue((uint)generation, out var content))
+                    {
+                        return null;
+                    }
+
+                    var prepared = ContentComparison.Prepare(content, generationSchema, expandoObjectConverter, sequence);
+                    if (prepared is null)
+                    {
+                        return null;
+                    }
+
+                    result[generation] = (generationSchema, prepared);
+                }
+
+                return result;
+            });
             if (expected is null)
             {
                 return new(ContentVerificationResult.Unavailable);
             }
 
-            return new(ContentComparison.Equals(released, expected) ? ContentVerificationResult.Equal : ContentVerificationResult.Different);
+            var equal = true;
+            foreach (var (generation, content) in stored.GenerationalContent)
+            {
+                if (JsonNode.Parse(content) is not JsonObject document ||
+                    await metadataManager.TryRelease(EventStore, Namespace, schemas[generation], stored.Context.Subject.Value, document) is not { } released)
+                {
+                    return new(ContentVerificationResult.Unavailable);
+                }
+
+                // Finish every release before returning Different: a partially compared event is unavailable.
+                equal &= ContentComparison.Equals(released, expected[generation]);
+            }
+
+            return new(equal ? ContentVerificationResult.Equal : ContentVerificationResult.Different);
         }
         catch (Exception exception) when (exception is JsonException or FormatException or InvalidCastException or InvalidOperationException or OverflowException)
         {

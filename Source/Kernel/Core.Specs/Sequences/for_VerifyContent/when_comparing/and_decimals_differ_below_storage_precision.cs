@@ -17,7 +17,7 @@ public class and_decimals_differ_below_storage_precision : given.a_stored_event
         _stored = _stored with { GenerationalContent = new Dictionary<int, string> { [1] = "{\"value\":0.1234567890123456789012345679}" } };
     }
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_detect_every_stored_decimal_digit() => _result.Result.ShouldEqual(ContentVerificationResult.Different);
 }

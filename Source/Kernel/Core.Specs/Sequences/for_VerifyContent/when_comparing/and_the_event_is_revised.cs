@@ -10,7 +10,7 @@ public class and_the_event_is_revised : given.a_stored_event
         Revisions = [new(1, CorrelationId.New(), [], Concepts.Identities.Identity.System, DateTimeOffset.UtcNow, _command.Content)]
     };
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_not_compare_original_content_as_the_revision() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }

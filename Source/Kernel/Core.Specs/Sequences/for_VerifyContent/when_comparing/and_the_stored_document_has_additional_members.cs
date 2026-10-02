@@ -7,7 +7,7 @@ public class and_the_stored_document_has_additional_members : given.a_stored_eve
 {
     void Establish() => _stored = _stored with { GenerationalContent = new Dictionary<int, string> { [1] = "{\"value\":42,\"subtypeValue\":true}" } };
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_not_discard_the_extra_content_before_comparing() => _result.Result.ShouldEqual(ContentVerificationResult.Different);
 }

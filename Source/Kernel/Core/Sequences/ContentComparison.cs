@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
@@ -28,12 +29,35 @@ internal static class ContentComparison
     internal static JsonObject? Prepare(JsonObject attempted, JsonSchema schema, IExpandoObjectConverter converter, IEventSequenceStorage storage)
     {
         var content = converter.ToExpandoObject(attempted, schema);
-        var before = JsonSerializer.SerializeToNode(content, Globals.JsonSerializerOptions)!.AsObject();
-        if (!PreservesValues(attempted, before, schema))
+        if (!PreservesConversion(attempted, content, schema))
         {
             return null;
         }
 
+        return Prepare(content, schema, converter, storage);
+    }
+
+    /// <summary>
+    /// Checks the raw migration output before schema conversion can discard precision.
+    /// </summary>
+    /// <param name="source">The raw JSON.</param>
+    /// <param name="converted">The converted content.</param>
+    /// <param name="schema">The conversion schema.</param>
+    /// <returns>Whether every declared non-null value survives conversion.</returns>
+    internal static bool PreservesConversion(JsonObject source, ExpandoObject converted, JsonSchema schema) =>
+        PreservesValues(source, JsonSerializer.SerializeToNode(converted, Globals.JsonSerializerOptions), schema);
+
+    /// <summary>
+    /// Checks the backend representation of already loss-checked migration content.
+    /// </summary>
+    /// <param name="content">The schema-converted content.</param>
+    /// <param name="schema">The generation schema.</param>
+    /// <param name="converter">The append converter.</param>
+    /// <param name="storage">The selected backend.</param>
+    /// <returns>The stored representation, or null when serialization loses information.</returns>
+    internal static JsonObject? Prepare(ExpandoObject content, JsonSchema schema, IExpandoObjectConverter converter, IEventSequenceStorage storage)
+    {
+        var before = JsonSerializer.SerializeToNode(content, Globals.JsonSerializerOptions);
         var serialized = storage.SerializeContentForVerification(content, schema);
         if (serialized is null || JsonNode.Parse(serialized) is not JsonObject expected)
         {
@@ -82,7 +106,7 @@ internal static class ContentComparison
         {
             // Append intentionally ignores undeclared properties and substitutes schema defaults
             // for nulls. A NON-null declared value disappearing is loss, not a default to compare.
-            var properties = schema.ActualTypeSchema.GetFlattenedProperties().ToArray();
+            var properties = schema.GetFlattenedProperties().ToArray();
             return document.All(property =>
             {
                 var definition = properties.FirstOrDefault(_ => _.Name == property.Key) ??
@@ -99,7 +123,7 @@ internal static class ContentComparison
 
         if (source is JsonArray array && converted is JsonArray convertedArray)
         {
-            var item = schema.ActualTypeSchema.Item?.ActualSchema ?? new JsonSchema();
+            var item = schema.Item ?? new JsonSchema();
             return array.Count == convertedArray.Count && array.Zip(convertedArray).All(pair => PreservesValues(pair.First, pair.Second, item));
         }
 

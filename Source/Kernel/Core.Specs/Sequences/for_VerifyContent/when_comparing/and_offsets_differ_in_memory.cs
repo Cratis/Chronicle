@@ -11,7 +11,7 @@ public class and_offsets_differ_in_memory : given.a_storage_round_trip
         _command = _command with { Content = """{"value":"2026-03-04T02:36:07+00:00"}""" };
     }
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_distinguish_offsets_for_the_same_instant() => _result.Result.ShouldEqual(ContentVerificationResult.Different);
 }

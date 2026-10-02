@@ -7,7 +7,7 @@ public class and_mongodb_replaces_non_member_enums_with_defaults : given.a_mongo
 {
     async Task Establish() => await StoreInMongoDB(EnumSchema, NonMemberEnums);
 
-    async Task Because() => _result = await _command.Handle(_storage, _manager, _converter);
+    async Task Because() => _result = await Verify();
 
     [Fact] void should_not_claim_equality_for_unrepresentable_enums() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }
