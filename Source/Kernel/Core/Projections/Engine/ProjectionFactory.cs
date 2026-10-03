@@ -332,7 +332,13 @@ public class ProjectionFactory(
 
     static JsonSchemaProperty GetChildCollectionProperty(ProjectionId projectionId, ReadModelDefinition rootReadModel, JsonSchema currentReadModelSchema, PropertyPath childrenProperty)
     {
+        // Resolve against the current child level, using the same casing compatibility as other schema paths.
         if (!currentReadModelSchema.Properties.TryGetValue(childrenProperty.LastSegment.Value, out var schemaProperty))
+        {
+            schemaProperty = currentReadModelSchema.GetSchemaPropertyForPropertyPath(new PropertyPath(childrenProperty.LastSegment.Value));
+        }
+
+        if (schemaProperty is null)
         {
             throw new MissingChildCollectionInReadModelSchema(
                 projectionId,
