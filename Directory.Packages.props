@@ -17,7 +17,7 @@
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
-    <!-- 7.22.0 is the minimum Cratis.Orleans 1.15.1 declares; NU1605 is suppressed, so a lower pin would silently downgrade it. -->
+    <!-- 7.22.0 is the minimum Cratis.Orleans 1.15.2 declares; NU1605 is suppressed, so a lower pin would silently downgrade it. -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.22.0" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.19.4" />
     <!-- Keep the Arc runtime packages aligned; Chronicle.Testing declares Arc dependencies for its embedded kernel. -->
@@ -74,10 +74,10 @@
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.3.1" />
     <PackageVersion Include="OrleansTestKit10" Version="10.0.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.5.0" />
-    <PackageVersion Include="Cratis.Orleans" Version="1.15.1" />
-    <PackageVersion Include="Cratis.Orleans.Storage" Version="1.15.1" />
-    <PackageVersion Include="Cratis.Orleans.Storage.MongoDB" Version="1.15.1" />
-    <PackageVersion Include="Cratis.Orleans.Storage.Sql" Version="1.15.1" />
+    <PackageVersion Include="Cratis.Orleans" Version="1.15.2" />
+    <PackageVersion Include="Cratis.Orleans.Storage" Version="1.15.2" />
+    <PackageVersion Include="Cratis.Orleans.Storage.MongoDB" Version="1.15.2" />
+    <PackageVersion Include="Cratis.Orleans.Storage.Sql" Version="1.15.2" />
     <!-- Open Telemetry -->
     <PackageVersion Include="OpenTelemetry" Version="1.19.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
