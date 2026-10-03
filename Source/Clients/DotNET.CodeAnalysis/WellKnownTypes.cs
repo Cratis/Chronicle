@@ -204,6 +204,31 @@ public static class WellKnownTypes
     public const string ICanProvideEventStreamIdName = "Cratis.Chronicle.Events.ICanProvideEventStreamId";
 
     /// <summary>
+    /// The full name of the open generic typed event source filter attribute.
+    /// </summary>
+    public const string FromEventSourceAttributeName = "Cratis.Chronicle.EventSources.FromEventSourceAttribute<TSource>";
+
+    /// <summary>
+    /// The full name of the event source definition attribute.
+    /// </summary>
+    public const string EventSourceAttributeName = "Cratis.Chronicle.EventSources.EventSourceAttribute";
+
+    /// <summary>
+    /// The full name of the event stream definition attribute.
+    /// </summary>
+    public const string EventStreamAttributeName = "Cratis.Chronicle.EventSources.EventStreamAttribute";
+
+    /// <summary>
+    /// The full name of the explicit event source type attribute.
+    /// </summary>
+    public const string EventSourceTypeAttributeName = "Cratis.Chronicle.Events.EventSourceTypeAttribute";
+
+    /// <summary>
+    /// The full name of the explicit event stream type attribute.
+    /// </summary>
+    public const string EventStreamTypeAttributeName = "Cratis.Chronicle.Events.EventStreamTypeAttribute";
+
+    /// <summary>
     /// The full name of the open generic IMongoCollection interface.
     /// </summary>
     public const string IMongoCollectionName = "MongoDB.Driver.IMongoCollection`1";
