@@ -13,6 +13,9 @@ on:
       - "Source/Clients/Python/**"
       - "Source/Kernel/Protobuf/**"
       - ".github/workflows/python-contracts.yml"
+      - ".github/workflows/attach-python-contract-assets.yml"
+      - ".github/scripts/python-contract-*.py"
+      - ".github/scripts/test-python-contract-assets.py"
 
 permissions: {}
 
@@ -50,6 +53,9 @@ jobs:
       - name: Generate Python contracts
         working-directory: Source/Clients/Python
         run: python generate.py --proto-root ../../Kernel/Protobuf
+
+      - name: Test release asset guards
+        run: python .github/scripts/test-python-contract-assets.py
 
       - name: Check formatting
         working-directory: Source/Clients/Python
