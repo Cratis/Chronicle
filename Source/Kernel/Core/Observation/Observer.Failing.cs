@@ -201,35 +201,6 @@ public partial class Observer
         ScheduleAlertReport();
     }
 
-    /// <inheritdoc/>
-    public async Task TryRecoverAllFailedPartitions()
-    {
-        if (IsRetired || _removed) return;
-        if (State.RunningState == ObserverRunningState.Quarantined)
-        {
-            logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
-            return;
-        }
-
-        var config = await configurationProvider.GetFor(_observerKey);
-        foreach (var partition in Failures.Partitions.Where(p => !p.IsQuarantined))
-        {
-            var attemptCount = partition.AttemptsInCurrentBudget;
-            if (config.MaxRetryAttempts > 0 && attemptCount > config.MaxRetryAttempts)
-            {
-                logger.SkippingRecoveryMaxAttemptsExceeded(partition.Partition, attemptCount, config.MaxRetryAttempts);
-                continue;
-            }
-
-            if (attemptCount > 0)
-            {
-                logger.StartingRecoveryWithExistingAttempts(partition.Partition, attemptCount, config.MaxRetryAttempts);
-            }
-
-            await StartRecoverJobForFailedPartition(partition);
-        }
-    }
-
     static TimeSpan GetNextRetryDelay(FailedPartition failure, Observers config)
     {
         var time = TimeSpan.FromSeconds(config.BackoffDelay * Math.Pow(config.ExponentialBackoffDelayFactor, failure.AttemptsInCurrentBudget));
