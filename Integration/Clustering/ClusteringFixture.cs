@@ -176,10 +176,18 @@ public class ClusteringFixture : IAsyncLifetime
                     },
                     _ => { });
 
+                // AddCratisArcMeter must run before the convention sweep below: it registers
+                // PipelineMetrics through a factory that resolves the keyed Meter it also adds.
+                // AddSelfBindings self-binds any concrete type with no registration yet by plain
+                // type (services.AddSingleton(type, type)) - if it runs first, it claims
+                // PipelineMetrics' ServiceType before the factory registration gets a chance to
+                // (TryAddSingleton no-ops against the existing registration), and the self-bound
+                // entry then fails to construct: PipelineMetrics has no public constructor DI can
+                // use, only the internal one AddCratisArcMeter's factory calls directly.
                 services.AddTypeDiscovery();
+                services.AddCratisArcMeter();
                 services.AddBindingsByConvention();
                 services.AddSelfBindings();
-                services.AddCratisArcMeter();
                 services.AddSingleton(ReactorSignal);
                 services.AddSingleton(ScaledOutSignal);
                 services.AddSingleton(FanOutSignal);
