@@ -27,9 +27,9 @@ The *Attach Python Contract Release Assets* workflow runs by manual dispatch onl
 - regenerates the protos with the real proto generator and fails if they differ from what the tag committed;
 - generates the Python modules with `generate.py` (never edited by hand), runs the package tests, builds, and runs `twine check`;
 - verifies the wheel version, name and generated contents, and writes the checksum and provenance files;
-- installs the wheel into a clean environment on Python 3.12 and 3.14 and exercises messages, gRPC stubs, the `bcl` `Guid`, event sources and the event source type and stream fields on append requests.
+- installs the wheel into a clean environment on Python 3.10, 3.11, 3.12, 3.13 and 3.14 and exercises messages, gRPC stubs, the `bcl` `Guid`, event sources and the event source type and stream fields on append requests.
 
-The wheel requires Python 3.12 or newer, so it does not install on older interpreters.
+The wheel requires Python 3.10 or newer, so it does not install on older interpreters.
 
 ## Attaching
 
