@@ -34,11 +34,12 @@ public class when_unsubscribing_and_there_are_ongoing_jobs : given.an_observer_w
             Request = new ReplayObserverRequest(_observerKey, ObserverType.Reactor, [EventType.Unknown])
         };
 
-        _jobsManager.GetAllJobs().Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(catchUpJob, replayJob)));
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(catchUpJob, replayJob)));
     }
 
     Task Because() => _observer.Unsubscribe();
 
     [Fact] void should_stop_the_catch_up_job() => _jobsManager.Received(1).Stop(_catchUpJobId);
     [Fact] void should_not_stop_the_replay_job() => _jobsManager.DidNotReceive().Stop(_replayJobId);
+    [Fact] void should_not_load_every_job() => _jobsManager.DidNotReceive().GetAllJobs();
 }

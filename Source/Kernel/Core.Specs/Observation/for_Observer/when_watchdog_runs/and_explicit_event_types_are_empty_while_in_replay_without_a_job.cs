@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
 
@@ -34,7 +35,7 @@ public class and_explicit_event_types_are_empty_while_in_replay_without_a_job : 
         await _observer.RunWatchdogAsync();
     }
 
-    [Fact] void should_look_for_the_replay_job_once() => _jobsManager.Received(1).GetJobsOfType<IReplayObserver, ReplayObserverRequest>();
+    [Fact] void should_look_for_the_replay_job_once() => _jobsManager.Received(1).GetJobs(Arg.Any<JobQuery>());
     [Fact] void should_route_to_disconnected_on_the_first_tick() => _runningStateAfterFirstTick.ShouldEqual(ObserverRunningState.Disconnected);
     [Fact] async Task should_remain_disconnected() => (await _observer.GetCurrentState()).ShouldBeOfExactType<Disconnected>();
     [Fact] void should_remain_out_of_replay() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Disconnected);

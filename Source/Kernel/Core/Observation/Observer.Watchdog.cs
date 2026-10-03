@@ -127,7 +127,7 @@ public partial class Observer
         if (State.IsReplaying &&
             (_subscription.EventTypes.Any() || State.SubscribesToAllEvents || State.RunningState == ObserverRunningState.Replaying))
         {
-            var replayJobs = await _jobsManager.GetJobsOfType<IReplayObserver, ReplayObserverRequest>();
+            var replayJobs = await _jobsManager.GetUnfinishedJobs();
             var hasRunningReplayJob = replayJobs.Any(job =>
                 job.Request is ReplayObserverRequest req &&
                 req.ObserverKey == _observerKey &&
@@ -153,7 +153,7 @@ public partial class Observer
 
     async Task<bool> HasRunningCatchupJob()
     {
-        var catchupJobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
+        var catchupJobs = await _jobsManager.GetUnfinishedJobs();
         return catchupJobs.Any(job =>
             job.Request is CatchUpObserverRequest request &&
             request.ObserverKey == _observerKey &&

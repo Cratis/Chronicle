@@ -505,7 +505,7 @@ public partial class Observer(
     /// <returns>Awaitable task.</returns>
     internal async Task StopAllRetryFailedPartitionJobs()
     {
-        var jobs = await _jobsManager.GetAllJobs();
+        var jobs = await _jobsManager.GetUnfinishedJobs();
         var stopTasks = jobs
             .Where(_ => _.Request is RetryFailedPartitionRequest request && request.ObserverKey == _observerKey)
             .Select(_ => _jobsManager.Stop(_.Id));
@@ -804,7 +804,7 @@ public partial class Observer(
     /// </summary>
     async Task PauseJobs()
     {
-        var allJobs = await _jobsManager.GetAllJobs();
+        var allJobs = await _jobsManager.GetUnfinishedJobs();
 
         // Explicitly do not pause replay jobs.
         var pauseTasks = allJobs
@@ -821,7 +821,7 @@ public partial class Observer(
 
     async Task ResumeJobs()
     {
-        var unfilteredJobs = await _jobsManager.GetAllJobs();
+        var unfilteredJobs = await _jobsManager.GetUnfinishedJobs();
 
         // Explicitly do not resume replay jobs.
         var resumeTasks = unfilteredJobs
