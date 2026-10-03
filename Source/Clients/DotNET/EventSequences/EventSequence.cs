@@ -932,19 +932,10 @@ public class EventSequence(
                 continue;
             }
 
-            var (firstEvent, routing) = eventsForEventSource.First();
-            resolvedConcurrencyScopes[eventsForEventSource.Key] = routing is null
-                ? await strategy.GetScope(
-                    firstEvent.EventSourceId,
-                    firstEvent.EventStreamType,
-                    firstEvent.EventStreamId,
-                    firstEvent.EventSourceType)
-                : await strategy.GetScope(
-                    routing.Dimensions,
-                    firstEvent.EventSourceId,
-                    firstEvent.EventStreamType,
-                    firstEvent.EventStreamId,
-                    firstEvent.EventSourceType);
+            resolvedConcurrencyScopes[eventsForEventSource.Key] = await DefinitionConcurrencyScopeResolver.Resolve(
+                eventsForEventSource.Key,
+                eventsForEventSource.ToList(),
+                strategy);
         }
 
         return resolvedConcurrencyScopes;

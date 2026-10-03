@@ -39,3 +39,15 @@ var scope = await eventStore.EventLog.ConcurrencyScope()
     .ForEventSource<ShoppingCartEventSource>("Items", cartId.ToString())
     .Build();
 ```
+
+### Batches that need different guards for one event source id
+
+An `AppendMany` call sends one concurrency scope per event source id. When a batch goes through event source definitions and you do not pass a scope for an id, Chronicle resolves the guard for every event with that id and compares them by what they check: event source id, event source type, event stream type, event stream id and event types. The expected sequence number is not part of the comparison, because it is read at a point in time.
+
+- Events whose guards check the same thing share one scope, and the first guard is kept.
+- An event whose strategy produces no guard, such as `ConcurrencyScope.None`, never hides a later event that does have one.
+- Events that need different guards cannot be sent, for example items for the streams `2025-01` and `2025-02` of the same cart, or two different event sources sharing an id. Chronicle throws `IncompatibleConcurrencyScopesForEventSource` before anything is appended instead of guarding one event and leaving the other unguarded.
+
+:::caution[Fail closed, not broadened]
+Chronicle never widens a guard to cover the difference. Pass an explicit `ConcurrencyScope` for the event source id that suits every event in the batch (an explicit scope always takes precedence), or append the events in separate batches. Batches that do not use event source definitions behave as before.
+:::
