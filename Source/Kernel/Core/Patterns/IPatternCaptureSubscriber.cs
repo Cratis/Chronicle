@@ -14,4 +14,4 @@ namespace Cratis.Chronicle.Patterns;
 /// only fan thousands of activations into that one grain with smaller, more frequent calls. One activation keeps
 /// the batches coalesced per store.
 /// </remarks>
-public interface IPatternCaptureSubscriber : IObserverSubscriber, IUnpartitionedObserverSubscriber;
+public interface IPatternCaptureSubscriber : IObserverSubscriber, IAmOwnedByKernel, IUnpartitionedObserverSubscriber;
