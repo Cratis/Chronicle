@@ -7,11 +7,13 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
 using Cratis.Chronicle.Storage.MongoDB.Captures;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
+using Cratis.Chronicle.Storage.MongoDB.EventSources;
 using Cratis.Chronicle.Storage.MongoDB.ExternalServices;
 using Cratis.Chronicle.Storage.MongoDB.Namespaces;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
@@ -72,6 +74,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IEventTypesStorage EventTypes { get; } = new EventTypesStorage(eventStore, eventStoreDatabase, loggerFactory.CreateLogger<EventTypesStorage>());
+
+    /// <inheritdoc/>
+    public IEventSourcesStorage EventSources { get; } = new EventSourcesStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionsStorage(eventStoreDatabase);

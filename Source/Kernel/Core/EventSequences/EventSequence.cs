@@ -20,6 +20,7 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
+using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patterns;
@@ -27,6 +28,7 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Observation;
@@ -92,6 +94,7 @@ public class EventSequence(
     int _appendsSinceStateWrite;
     bool _stateWrittenSinceActivation;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
+    IEventSourcesStorage EventSourcesStorage => storage.GetEventStore(_eventSequenceKey.EventStore).EventSources;
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
     IObserverDefinitionsStorage ObserverStorage => _observerDefinitionsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).Observers;
@@ -320,11 +323,19 @@ public class EventSequence(
         ConcurrencyScope concurrencyScope,
         DateTimeOffset? occurred,
         Subject? subject,
-        IReadOnlyCollection<NamedTag> namedTags)
+        IReadOnlyCollection<NamedTag> namedTags,
+        EventSourceName? eventSource = null)
     {
         try
         {
             await RefreshConstraintsIfChanged();
+            var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventSource, eventSourceType, eventStreamType, correlationId);
+            if (resolvedEventSourceType.TryGetError(out var eventSourceError))
+            {
+                return eventSourceError;
+            }
+
+            eventSourceType = resolvedEventSourceType.AsT0;
             var getValidAndCompliantEvent = await GetValidAndCompliantEvent(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, subject);
             if (getValidAndCompliantEvent.TryGetError(out var error))
             {
@@ -354,7 +365,8 @@ public class EventSequence(
                 constraintContext,
                 occurred,
                 subject,
-                namedTags);
+                namedTags,
+                eventSource);
 
             return appendResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
         }
@@ -386,8 +398,16 @@ public class EventSequence(
             // the whole batch has been appended, so without this earlier events in the batch are invisible.
             var batchClaims = new ConstraintBatchClaims();
             var getValidAndCompliantEvents = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
-            foreach (var e in events)
+            foreach (var eventToAppend in events)
             {
+                var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventToAppend.EventSource, eventToAppend.EventSourceType, eventToAppend.eventStreamType, correlationId);
+                if (resolvedEventSourceType.TryGetError(out var eventSourceError))
+                {
+                    getValidAndCompliantEvents.Add((eventToAppend, eventSourceError));
+                    continue;
+                }
+
+                var e = eventToAppend with { EventSourceType = resolvedEventSourceType.AsT0 };
                 var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject, batchClaims);
                 getValidAndCompliantEvents.Add((e, result));
             }
@@ -612,6 +632,7 @@ public class EventSequence(
                 eventToAppend.Subject)
             {
                 NamedTags = eventToAppend.NamedTags,
+                EventSource = eventToAppend.EventSource ?? EventSourceName.NotSet,
                 GenerationalContent = migratedContent,
                 ContentHashes = contentHashes
             });
@@ -692,7 +713,8 @@ public class EventSequence(
         ConstraintValidationContext constraintContext,
         DateTimeOffset? occurred,
         Subject? subject,
-        IReadOnlyCollection<NamedTag> namedTags)
+        IReadOnlyCollection<NamedTag> namedTags,
+        EventSourceName? eventSource)
     {
         using var span = activitySource.Append();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
@@ -725,6 +747,33 @@ public class EventSequence(
                     eventType,
                     eventSourceId,
                     State.SequenceNumber);
+
+                if (eventSource?.IsSet == true)
+                {
+                    appendResult = await AppendThroughEventSource(
+                        new EventToAppendToStorage(
+                            State.SequenceNumber,
+                            eventSourceType,
+                            eventSourceId,
+                            eventStreamType,
+                            eventStreamId,
+                            eventType,
+                            correlationId,
+                            CausationForStorage(causation),
+                            identity,
+                            tags,
+                            eventOccurred,
+                            compliantEvent,
+                            contentHashes.TryGetValue(eventType.Generation, out var eventHash) ? eventHash : EventHash.NotSet,
+                            subject)
+                        {
+                            NamedTags = namedTags,
+                            EventSource = eventSource,
+                            GenerationalContent = migratedContent,
+                            ContentHashes = contentHashes
+                        });
+                    continue;
+                }
 
                 appendResult = namedTags.Count == 0
                     ? await EventSequenceStorage.Append(
@@ -775,6 +824,24 @@ public class EventSequence(
         {
             return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
         }
+    }
+
+    /// <summary>
+    /// Appends a single event that is recorded against a registered event source.
+    /// </summary>
+    /// <param name="eventToAppend">The <see cref="EventToAppendToStorage"/> to append.</param>
+    /// <returns>The appended event, or the duplicate sequence number error.</returns>
+    /// <remarks>
+    /// The batch append is the storage operation that carries the event source, so a single event is appended as a batch of one.
+    /// </remarks>
+    async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> AppendThroughEventSource(EventToAppendToStorage eventToAppend)
+    {
+        var result = eventToAppend.NamedTags.Count > 0
+            ? await EventSequenceStorage.AppendManyWithNamedTags([eventToAppend])
+            : await EventSequenceStorage.AppendMany([eventToAppend]);
+        return result.TryGetResult(out var appended)
+            ? Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(appended.Single())
+            : result.AsT1;
     }
 
     /// <summary>

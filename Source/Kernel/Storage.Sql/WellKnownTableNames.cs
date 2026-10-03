@@ -209,6 +209,11 @@ public static class WellKnownTableNames
     public const string ExternalServiceDefinitions = "ExternalServiceDefinitions";
 
     /// <summary>
+    /// The table that holds registered event source definitions.
+    /// </summary>
+    public const string EventSourceDefinitions = "EventSourceDefinitions";
+
+    /// <summary>
     /// The table that holds saved event sequence queries.
     /// </summary>
     public const string SequenceQueries = "SequenceQueries";

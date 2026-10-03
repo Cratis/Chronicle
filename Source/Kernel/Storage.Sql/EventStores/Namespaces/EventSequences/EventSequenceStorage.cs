@@ -300,6 +300,7 @@ public class EventSequenceStorage(
                     eventToAppend.GenerationalContent,
                     eventToAppend.ContentHashes,
                     eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
+                eventEntry.EventSource = eventToAppend.EventSource.IsSet ? eventToAppend.EventSource.Value : null;
 
                 scope.DbContext.Events.Add(eventEntry);
                 scope.DbContext.NamedTags.AddRange(eventToAppend.NamedTags.Select((tag, position) => NamedTagEntry.From(eventSequenceId.Value, eventToAppend.SequenceNumber.Value, position, tag)));
@@ -323,7 +324,11 @@ public class EventSequenceStorage(
                     await identityStorage.GetFor(eventToAppend.CausedByChain),
                     eventToAppend.Tags,
                     appendedHash,
-                    Subject: resolvedSubject) { NamedTags = eventToAppend.NamedTags };
+                    Subject: resolvedSubject)
+                {
+                    NamedTags = eventToAppend.NamedTags,
+                    EventSource = eventToAppend.EventSource
+                };
 
                 appendedEvents.Add(new AppendedEvent(eventContext, eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
                 {

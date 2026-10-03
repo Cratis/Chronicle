@@ -34,7 +34,8 @@ internal static class EventContextConverters
         Hash = context.Hash,
         ObservationState = context.ObservationState.ToContract(),
         Subject = context.Subject?.Value ?? string.Empty,
-        NamedTags = context.NamedTags.Select(_ => new Contracts.Events.NamedTag { Name = _.Name.Value, Value = _.Value }).ToList()
+        NamedTags = context.NamedTags.Select(_ => new Contracts.Events.NamedTag { Name = _.Name.Value, Value = _.Value }).ToList(),
+        EventSource = context.EventSource?.Value ?? string.Empty
     };
 
     /// <summary>
@@ -60,7 +61,8 @@ internal static class EventContextConverters
         context.ObservationState.ToClient(),
         Subject: ResolveSubject(context.Subject, context.EventSourceId))
     {
-        NamedTags = (context.NamedTags ?? []).Select(tag => new NamedTag(tag.Name, tag.Value)).ToArray()
+        NamedTags = (context.NamedTags ?? []).Select(tag => new NamedTag(tag.Name, tag.Value)).ToArray(),
+        EventSource = ResolveEventSource(context.EventSource)
     };
 
     /// <summary>
@@ -92,8 +94,17 @@ internal static class EventContextConverters
         context.ObservationState.ToClient(),
         Subject: ResolveSubject(context.Subject, context.EventSourceId))
     {
-        NamedTags = (context.NamedTags ?? []).Select(tag => tag.ToClient()).ToArray()
+        NamedTags = (context.NamedTags ?? []).Select(tag => tag.ToClient()).ToArray(),
+        EventSource = ResolveEventSource(context.EventSource)
     };
+
+    /// <summary>
+    /// Resolves the <see cref="EventSourceName"/> a server sent.
+    /// </summary>
+    /// <param name="eventSource">The event source name as carried on the contract.</param>
+    /// <returns>The resolved <see cref="EventSourceName"/>, or <see cref="EventSourceName.NotSet"/> when the event was not appended through an event source.</returns>
+    static EventSourceName ResolveEventSource(string? eventSource) =>
+        string.IsNullOrEmpty(eventSource) ? EventSourceName.NotSet : new EventSourceName(eventSource);
 
     /// <summary>
     /// Resolves the <see cref="Subject"/> a server sent, falling back to the event source id when the server did not carry one.

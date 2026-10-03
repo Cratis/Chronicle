@@ -36,6 +36,18 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     public EventSourceType EventSourceType { get; init; } = EventSourceType.Default;
 
     /// <summary>
+    /// Gets or inits the type of the <see cref="EventSources.IEventSource"/> the event is appended through. When set, the
+    /// <see cref="EventSourceType"/> and <see cref="EventStreamType"/> are taken from the definition, and explicit values
+    /// that contradict it are rejected.
+    /// </summary>
+    public Type? EventSource { get; init; }
+
+    /// <summary>
+    /// Gets or inits the name of the stream declared by <see cref="EventSource"/> the event is appended to.
+    /// </summary>
+    public string? EventStream { get; init; }
+
+    /// <summary>
     /// Gets or inits the optional occurred time. If not set, the server will set it to approximately the time of append.
     /// </summary>
     public DateTimeOffset? Occurred { get; init; }

@@ -112,4 +112,9 @@ public interface IClientArtifactsProvider
     /// Gets all the available event seeder types.
     /// </summary>
     IEnumerable<Type> EventSeeders { get; }
+
+    /// <summary>
+    /// Gets all the available event source definition types.
+    /// </summary>
+    IEnumerable<Type> EventSources => [];
 }

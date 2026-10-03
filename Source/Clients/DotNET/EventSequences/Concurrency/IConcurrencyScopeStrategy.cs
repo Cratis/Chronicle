@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSources;
 
 namespace Cratis.Chronicle.EventSequences.Concurrency;
 
@@ -25,4 +26,35 @@ public interface IConcurrencyScopeStrategy
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
         IEnumerable<EventType>? eventTypes = default);
+
+    /// <summary>
+    /// Gets the <see cref="ConcurrencyScope"/>, narrowed to the dimensions an event source or event stream declares.
+    /// </summary>
+    /// <param name="dimensions">The <see cref="ConcurrencyDimensions"/> that take part in the scope.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> being appended to.</param>
+    /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> being appended to.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> being appended to.</param>
+    /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> being appended to.</param>
+    /// <param name="eventTypes">Optional event types to scope the check to.</param>
+    /// <returns>The <see cref="ConcurrencyScope"/>.</returns>
+    /// <remarks>
+    /// <see cref="ConcurrencyDimensions.None"/> declares nothing and gives the same scope as the scope without dimensions.
+    /// The default implementation leaves out the stream and event source type dimensions that are not declared, and
+    /// always includes the event source id; a strategy that can also leave the event source id out overrides it.
+    /// </remarks>
+    Task<ConcurrencyScope> GetScope(
+        ConcurrencyDimensions dimensions,
+        EventSourceId eventSourceId,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        IEnumerable<EventType>? eventTypes = default) =>
+        dimensions == ConcurrencyDimensions.None
+            ? GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType, eventTypes)
+            : GetScope(
+                eventSourceId,
+                dimensions.HasFlag(ConcurrencyDimensions.EventStreamType) ? eventStreamType : null,
+                dimensions.HasFlag(ConcurrencyDimensions.EventStreamId) ? eventStreamId : null,
+                dimensions.HasFlag(ConcurrencyDimensions.EventSourceType) ? eventSourceType : null,
+                eventTypes);
 }

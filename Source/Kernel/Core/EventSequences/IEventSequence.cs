@@ -172,6 +172,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="occurred">The occurrence time.</param>
     /// <param name="subject">The subject.</param>
     /// <param name="namedTags">The named tags.</param>
+    /// <param name="eventSource">Optional name of the registered event source definition the event is appended through.</param>
     /// <returns>The append result.</returns>
     Task<AppendResult> Append(
         EventSourceType eventSourceType,
@@ -187,7 +188,8 @@ public interface IEventSequence : IGrainWithStringKey
         ConcurrencyScope concurrencyScope,
         DateTimeOffset? occurred,
         Subject? subject,
-        IReadOnlyCollection<NamedTag> namedTags);
+        IReadOnlyCollection<NamedTag> namedTags,
+        EventSourceName? eventSource = null);
 
     /// <summary>
     /// Append a single event to the event store.

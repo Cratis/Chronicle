@@ -13,6 +13,7 @@ using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
@@ -44,6 +45,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
 /// <param name="activitySource">Optional <see cref="IActivitySource{T}"/> for tracing. Defaults to a source named <see cref="ClientActivity.SourceName"/> when not provided.</param>
 /// <param name="sideEffectHandlers">Optional handlers used to recognize synchronous reactor return types.</param>
+/// <param name="eventSources">Optional <see cref="IEventSources"/> for appending through event source definitions.</param>
 public class EventSequence(
     EventStoreName eventStoreName,
     EventStoreNamespaceName @namespace,
@@ -59,7 +61,8 @@ public class EventSequence(
     IIdentityProvider identityProvider,
     JsonSerializerOptions jsonSerializerOptions,
     IActivitySource<EventSequence>? activitySource = null,
-    IReactorSideEffectHandlers? sideEffectHandlers = null) : IEventSequence
+    IReactorSideEffectHandlers? sideEffectHandlers = null,
+    IEventSources? eventSources = null) : IEventSequence
 {
     /// <summary>
     /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client event sequence traces.
@@ -98,6 +101,64 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default) =>
         AppendCore(eventSourceId, @event, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
+
+    /// <inheritdoc/>
+    public async Task<AppendResult> AppendThroughEventSource(
+        Type eventSource,
+        EventSourceId eventSourceId,
+        object @event,
+        string? eventStream = default,
+        EventStreamId? eventStreamId = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
+    {
+        var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
+        return await AppendCore(
+            eventSourceId,
+            @event,
+            [],
+            routing.StreamType,
+            eventStreamId,
+            routing.SourceType,
+            correlationId,
+            tags,
+            concurrencyScope,
+            occurred,
+            subject,
+            routing);
+    }
+
+    /// <inheritdoc/>
+    public async Task<AppendManyResult> AppendManyThroughEventSource(
+        Type eventSource,
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        string? eventStream = default,
+        EventStreamId? eventStreamId = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
+    {
+        var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
+        return await AppendManyCore(
+            eventSourceId,
+            events,
+            [],
+            routing.StreamType,
+            eventStreamId,
+            routing.SourceType,
+            correlationId,
+            tags,
+            concurrencyScope,
+            occurred,
+            subject,
+            routing);
+    }
 
     /// <inheritdoc/>
     public Task<AppendResult> AppendWithNamedTags(
@@ -383,7 +444,8 @@ public class EventSequence(
         IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default,
         DateTimeOffset? occurred = default,
-        Subject? subject = default)
+        Subject? subject = default,
+        ResolvedEventRouting? routing = default)
     {
         var resolvedEventStreamType = ResolveEventStreamType(eventStreamType);
         var resolvedEventStreamId = ResolveEventStreamId(eventStreamId);
@@ -399,9 +461,7 @@ public class EventSequence(
         correlationId ??= correlationIdAccessor.Current;
         if (concurrencyScope is null || concurrencyScope == ConcurrencyScope.NotSet)
         {
-            concurrencyScope = await concurrencyScopeStrategies
-                .GetFor(this)
-                .GetScope(eventSourceId, resolvedEventStreamType, resolvedEventStreamId, resolvedEventSourceType);
+            concurrencyScope = await GetScopeFor(routing, eventSourceId, resolvedEventStreamType, resolvedEventStreamId, resolvedEventSourceType);
         }
 
         ThrowIfUnknownEventType(eventTypes, eventClrType);
@@ -435,7 +495,8 @@ public class EventSequence(
             Tags = allTags,
             ConcurrencyScope = concurrencyScope.ToSequencesContract(),
             Occurred = ToWireOccurred(occurred),
-            Subject = subject?.Value
+            Subject = subject?.Value,
+            EventSource = routing?.EventSource.Value
         };
         var response = resolvedNamedTags.Count == 0
             ? await _servicesAccessor.Services.Sequences.Append(request).EnsureSuccess()
@@ -457,7 +518,8 @@ public class EventSequence(
                 NamedTags = resolvedNamedTags.Select(tag => tag.ToSequencesContract()).ToArray(),
                 ConcurrencyScope = request.ConcurrencyScope,
                 Occurred = request.Occurred,
-                Subject = request.Subject
+                Subject = request.Subject,
+                EventSource = request.EventSource
             }).EnsureSuccess();
 
         var result = ResolveViolationMessages(response.ToClient()) with
@@ -485,7 +547,8 @@ public class EventSequence(
                 Causation = causation,
                 CausedBy = identity,
                 NamedTags = resolvedNamedTags,
-                Subject = subject ?? new Subject(eventSourceId.Value)
+                Subject = subject ?? new Subject(eventSourceId.Value),
+                EventSource = routing?.EventSource ?? EventSourceName.NotSet
             };
             _appendedEventsRaised([new AppendedEventWithResult(new AppendedEvent(context, @event), result)]);
         }
@@ -504,7 +567,8 @@ public class EventSequence(
         IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default,
         DateTimeOffset? occurred = default,
-        Subject? subject = default)
+        Subject? subject = default,
+        ResolvedEventRouting? routing = default)
     {
         using var span = _activitySource.AppendMany(eventStoreName.Value, @namespace.Value, eventSequenceId.Value);
 
@@ -516,9 +580,7 @@ public class EventSequence(
 
         if (concurrencyScope is null || concurrencyScope == ConcurrencyScope.NotSet)
         {
-            concurrencyScope = await concurrencyScopeStrategies
-                .GetFor(this)
-                .GetScope(eventSourceId, resolvedEventStreamType, resolvedEventStreamId, resolvedEventSourceType);
+            concurrencyScope = await GetScopeFor(routing, eventSourceId, resolvedEventStreamType, resolvedEventStreamId, resolvedEventSourceType);
         }
 
         // Merge static tags from every event type in the batch with dynamic tags. AppendManyRequest carries one
@@ -529,7 +591,7 @@ public class EventSequence(
 
         // The legacy single-source batch contract cannot carry routing metadata. Use the existing
         // multi-source contract for explicit routes, retaining the batch-wide union of tags and scope.
-        if (resolvedEventSourceType != EventSourceType.Default || resolvedEventStreamType != EventStreamType.All || !resolvedEventStreamId.IsDefault)
+        if (routing is not null || resolvedEventSourceType != EventSourceType.Default || resolvedEventStreamType != EventStreamType.All || !resolvedEventStreamId.IsDefault)
         {
             return await AppendManyForEventSources(
                 eventsList.Select(@event => new EventForEventSourceId(eventSourceId, @event)
@@ -537,6 +599,8 @@ public class EventSequence(
                     EventSourceType = resolvedEventSourceType,
                     EventStreamType = resolvedEventStreamType,
                     EventStreamId = resolvedEventStreamId,
+                    EventSource = routing?.Definition.ClrType,
+                    EventStream = routing?.Stream?.Name,
                     Occurred = occurred,
                     Subject = subject
                 }),
@@ -703,11 +767,19 @@ public class EventSequence(
         IEnumerable<NamedTag> namedTags)
     {
         var callNamedTags = namedTags.ToArray();
-        var eventsList = events.Select(@event => @event with
+        var routings = new List<ResolvedEventRouting?>();
+        var eventsList = events.Select(@event =>
         {
-            EventSourceType = ResolveEventSourceType(@event.EventSourceType),
-            EventStreamType = ResolveEventStreamType(@event.EventStreamType),
-            EventStreamId = ResolveEventStreamId(@event.EventStreamId)
+            var routing = @event.EventSource is null
+                ? null
+                : ResolvedEventRouting.Resolve(eventSources, @event.EventSource, @event.EventStream, @event.EventSourceType, @event.EventStreamType);
+            routings.Add(routing);
+            return @event with
+            {
+                EventSourceType = routing?.SourceType ?? ResolveEventSourceType(@event.EventSourceType),
+                EventStreamType = routing?.StreamType ?? ResolveEventStreamType(@event.EventStreamType),
+                EventStreamId = ResolveEventStreamId(@event.EventStreamId)
+            };
         }).ToList();
         var eventsToAppend = new List<Contracts.Sequences.EventForEventSourceId>(eventsList.Count);
         var effectiveNamedTags = eventsList.Select(_ => NamedTagConverters.Merge(_.NamedTags, callNamedTags)).ToArray();
@@ -736,12 +808,13 @@ public class EventSequence(
                 Tags = allTags,
                 Occurred = ToWireOccurred(@event.Occurred),
                 Subject = (@event.Subject ?? SubjectResolver.ResolveFrom(@event.Event))?.Value,
-                Causation = @event.Causation is null ? null : eventCausations[i].ToSequencesContract()
+                Causation = @event.Causation is null ? null : eventCausations[i].ToSequencesContract(),
+                EventSource = routings[i]?.EventSource.Value
             });
         }
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
-        var resolvedConcurrencyScopes = await ResolveConcurrencyScopes(eventsList, concurrencyScopes);
+        var resolvedConcurrencyScopes = await ResolveConcurrencyScopes(eventsList, routings, concurrencyScopes);
         var identity = identityProvider.GetCurrent();
 
         var request = new Contracts.Sequences.AppendManyForEventSourcesRequest
@@ -780,7 +853,8 @@ public class EventSequence(
                     NamedTags = effectiveNamedTags[index].Select(tag => tag.ToSequencesContract()).ToArray(),
                     Occurred = _.Occurred,
                     Subject = _.Subject,
-                    Causation = _.Causation
+                    Causation = _.Causation,
+                    EventSource = _.EventSource
                 }).ToArray(),
                 CorrelationId = request.CorrelationId,
                 Tags = request.Tags,
@@ -828,7 +902,8 @@ public class EventSequence(
                     Causation = eventCausations[i],
                     CausedBy = identity,
                     NamedTags = effectiveNamedTags[i],
-                    Subject = new Subject(eventsToAppend[i].Subject ?? evt.EventSourceId.Value)
+                    Subject = new Subject(eventsToAppend[i].Subject ?? evt.EventSourceId.Value),
+                    EventSource = routings[i]?.EventSource ?? EventSourceName.NotSet
                 };
 
                 allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(resolvedCorrelationId, sequenceNumber, result, evtType)));
@@ -842,12 +917,14 @@ public class EventSequence(
 
     async Task<Dictionary<EventSourceId, ConcurrencyScope>> ResolveConcurrencyScopes(
         IEnumerable<EventForEventSourceId> events,
+        List<ResolvedEventRouting?> routings,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes)
     {
         var resolvedConcurrencyScopes = concurrencyScopes?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value) ?? [];
         var strategy = concurrencyScopeStrategies.GetFor(this);
+        var routingByEvent = events.Select((@event, index) => (Event: @event, Routing: routings[index])).ToList();
 
-        foreach (var eventsForEventSource in events.GroupBy(_ => _.EventSourceId))
+        foreach (var eventsForEventSource in routingByEvent.GroupBy(_ => _.Event.EventSourceId))
         {
             if (resolvedConcurrencyScopes.TryGetValue(eventsForEventSource.Key, out var concurrencyScope) &&
                 concurrencyScope != ConcurrencyScope.NotSet)
@@ -855,15 +932,35 @@ public class EventSequence(
                 continue;
             }
 
-            var firstEvent = eventsForEventSource.First();
-            resolvedConcurrencyScopes[eventsForEventSource.Key] = await strategy.GetScope(
-                firstEvent.EventSourceId,
-                firstEvent.EventStreamType,
-                firstEvent.EventStreamId,
-                firstEvent.EventSourceType);
+            var (firstEvent, routing) = eventsForEventSource.First();
+            resolvedConcurrencyScopes[eventsForEventSource.Key] = routing is null
+                ? await strategy.GetScope(
+                    firstEvent.EventSourceId,
+                    firstEvent.EventStreamType,
+                    firstEvent.EventStreamId,
+                    firstEvent.EventSourceType)
+                : await strategy.GetScope(
+                    routing.Dimensions,
+                    firstEvent.EventSourceId,
+                    firstEvent.EventStreamType,
+                    firstEvent.EventStreamId,
+                    firstEvent.EventSourceType);
         }
 
         return resolvedConcurrencyScopes;
+    }
+
+    async Task<ConcurrencyScope> GetScopeFor(
+        ResolvedEventRouting? routing,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventSourceType eventSourceType)
+    {
+        var strategy = concurrencyScopeStrategies.GetFor(this);
+        return routing is null
+            ? await strategy.GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType)
+            : await strategy.GetScope(routing.Dimensions, eventSourceId, eventStreamType, eventStreamId, eventSourceType);
     }
 
     AppendResult ResolveViolationMessages(AppendResult result) => result with { ConstraintViolations = ResolveViolationMessages(result.ConstraintViolations) };

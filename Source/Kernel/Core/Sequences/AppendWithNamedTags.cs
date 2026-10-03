@@ -30,6 +30,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Causation">Optional causation.</param>
 /// <param name="CausedBy">Optional identity.</param>
 /// <param name="ConcurrencyScope">Optional concurrency scope.</param>
+/// <param name="EventSource">Optional name of the registered event source definition the event is appended through.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendWithNamedTags(
@@ -49,7 +50,8 @@ public record AppendWithNamedTags(
     string? Subject = default,
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
-    ConcurrencyScope? ConcurrencyScope = default)
+    ConcurrencyScope? ConcurrencyScope = default,
+    string? EventSource = default)
 {
     /// <summary>
     /// Handles the named-tag append through the existing append pipeline.
@@ -75,6 +77,7 @@ public record AppendWithNamedTags(
             Subject,
             Causation,
             CausedBy,
-            ConcurrencyScope)
+            ConcurrencyScope,
+            EventSource)
             .HandleWithNamedTags(grainFactory, causation, principalAccessor, NamedTags.ToChronicleNamedTags());
 }
