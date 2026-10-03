@@ -164,12 +164,12 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         eventType: item.context.eventType.id,
         generation: item.context.eventType.generation,
         eventSourceType: item.context.eventSourceType,
-        eventSourceDescription: eventSource?.description ?? '',
+        ...(eventSource?.description ? { eventSourceDescription: eventSource.description } : {}),
         ...(item.context.eventSource ? { eventSource: item.context.eventSource } : {}),
         eventSourceId: item.context.eventSourceId,
         sequenceNumber: item.context.sequenceNumber,
         eventStreamType: item.context.eventStreamType,
-        eventStreamDescription: eventStream?.description ?? '',
+        ...(eventStream?.description ? { eventStreamDescription: eventStream.description } : {}),
         eventStreamId: item.context.eventStreamId,
         occurred: currentMetadata.occurred instanceof Date
             ? (currentMetadata.occurred as Date).toISOString()
