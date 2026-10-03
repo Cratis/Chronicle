@@ -102,9 +102,9 @@ internal static class EventContextConverters
     /// Resolves the <see cref="EventSourceName"/> a server sent.
     /// </summary>
     /// <param name="eventSource">The event source name as carried on the contract.</param>
-    /// <returns>The <see cref="EventSourceName"/>, or null when the event was not appended through an event source.</returns>
-    static EventSourceName? ResolveEventSource(string? eventSource) =>
-        string.IsNullOrEmpty(eventSource) ? null : new EventSourceName(eventSource);
+    /// <returns>The resolved <see cref="EventSourceName"/>, or <see cref="EventSourceName.NotSet"/> when the event was not appended through an event source.</returns>
+    static EventSourceName ResolveEventSource(string? eventSource) =>
+        string.IsNullOrEmpty(eventSource) ? EventSourceName.NotSet : new EventSourceName(eventSource);
 
     /// <summary>
     /// Resolves the <see cref="Subject"/> a server sent, falling back to the event source id when the server did not carry one.

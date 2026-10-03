@@ -21,5 +21,5 @@ public class and_the_stream_is_declared : given_a_scenario_with_an_event_source
     [Fact] void should_store_the_event_source_type_from_the_definition() => _stored.Context.EventSourceType.Value.ShouldEqual("Warehouse");
     [Fact] void should_store_the_stream_type_from_the_definition() => _stored.Context.EventStreamType.Value.ShouldEqual("Receiving");
     [Fact] void should_store_the_stream_id_as_given() => _stored.Context.EventStreamId.Value.ShouldEqual("dock-3");
-    [Fact] void should_record_the_event_source_on_the_context() => _stored.Context.EventSource!.Value.ShouldEqual("Warehouse");
+    [Fact] void should_record_the_event_source_on_the_context() => _stored.Context.EventSource.Value.ShouldEqual("Warehouse");
 }

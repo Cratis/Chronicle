@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Events.for_EventContextConverters;
 
 public class when_round_tripping_an_event_context_through_the_wire_format : Specification
 {
+    const string TheEventSource = "orders";
     const string TheEventSourceId = "the-stream";
     const string TheSubject = "the-person";
 
@@ -31,7 +32,10 @@ public class when_round_tripping_an_event_context_through_the_wire_format : Spec
         [],
         EventHash.NotSet,
         EventObservationState.Initial,
-        new Subject(TheSubject));
+        new Subject(TheSubject))
+    {
+        EventSource = TheEventSource
+    };
 
     void Because()
     {
@@ -43,4 +47,5 @@ public class when_round_tripping_an_event_context_through_the_wire_format : Spec
 
     [Fact] void should_carry_the_subject_across_the_wire() => _result.Subject.Value.ShouldEqual(TheSubject);
     [Fact] void should_keep_the_event_source_id_distinct_from_the_subject() => _result.EventSourceId.Value.ShouldEqual(TheEventSourceId);
+    [Fact] void should_carry_the_event_source_across_the_wire() => _result.EventSource.Value.ShouldEqual(TheEventSource);
 }
