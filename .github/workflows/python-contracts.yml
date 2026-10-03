@@ -13,6 +13,9 @@ on:
       - "Source/Clients/Python/**"
       - "Source/Kernel/Protobuf/**"
       - ".github/workflows/python-contracts.yml"
+      - ".github/workflows/attach-python-contract-assets.yml"
+      - ".github/scripts/python-contract-*.py"
+      - ".github/scripts/test-python-contract-assets.py"
 
 permissions: {}
 
@@ -26,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.14"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - name: Checkout
@@ -51,6 +54,9 @@ jobs:
         working-directory: Source/Clients/Python
         run: python generate.py --proto-root ../../Kernel/Protobuf
 
+      - name: Test release asset guards
+        run: python .github/scripts/test-python-contract-assets.py
+
       - name: Check formatting
         working-directory: Source/Clients/Python
         run: ruff format --check generate.py build_package.py tests
@@ -68,3 +74,11 @@ jobs:
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.0"
         run: python build_package.py
+
+      - name: Smoke the built wheel in a clean environment
+        working-directory: Source/Clients/Python
+        run: |
+          python -m venv "$RUNNER_TEMP/consumer"
+          "$RUNNER_TEMP/consumer/bin/python" -m pip install dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/consumer/bin/python" "$GITHUB_WORKSPACE/.github/scripts/python-contract-smoke.py" 0.0.0

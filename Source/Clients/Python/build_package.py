@@ -37,6 +37,10 @@ def main() -> None:
     )
     with zipfile.ZipFile(wheel) as archive:
         wheel_paths = set(archive.namelist())
+        metadata_name = next(name for name in wheel_paths if name.endswith(".dist-info/METADATA"))
+        metadata = archive.read(metadata_name).decode("utf-8")
+    if "Requires-Python: >=3.10" not in metadata.splitlines():
+        raise SystemExit("Wheel must declare Requires-Python: >=3.10 to match the idiomatic Python clients")
     missing_from_wheel = [path for path in required_generated_paths if path not in wheel_paths]
     if missing_from_wheel:
         raise SystemExit(f"Generated contracts missing from wheel: {missing_from_wheel}")
