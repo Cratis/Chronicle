@@ -61,7 +61,7 @@ internal static class DefinitionConcurrencyScopeResolver
         var guards = resolved.Where(ChecksSomething).ToList();
         if (guards.Count == 0)
         {
-            return resolved.FirstOrDefault(_ => _ != ConcurrencyScope.NotSet) ?? resolved[0];
+            return resolved.Find(_ => _ != ConcurrencyScope.NotSet) ?? resolved[0];
         }
 
         var distinct = new List<ConcurrencyScope>();
