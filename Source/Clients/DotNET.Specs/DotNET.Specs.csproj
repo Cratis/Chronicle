@@ -24,6 +24,7 @@
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="FluentValidation" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Testcontainers" />
         <!-- Pulls Testcontainers' vulnerable SSH.NET forward — see Directory.Packages.props. -->

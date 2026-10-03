@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -31,6 +32,7 @@ public class Reducers : IReducers
 #else
     static readonly Lock _registerLock = new();
 #endif
+    static readonly ConcurrentDictionary<Type, Lazy<string>> _fingerprints = new();
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly IEventStore _eventStore;
     readonly IClientArtifactsProvider _clientArtifacts;
@@ -428,7 +430,7 @@ public class Reducers : IReducers
                     EventSourceType = eventSourceFilter.EventSourceType.Value,
                     EventStreamType = eventSourceFilter.EventStreamType.Value
                 },
-                Hash = ReducerFingerprint.Create(handler.ReducerType)
+                Hash = GetFingerprint(handler.ReducerType)
             }
         };
 
@@ -485,6 +487,24 @@ public class Reducers : IReducers
                         catch (OperationCanceledException) { }
                     });
                 });
+    }
+
+    string GetFingerprint(Type reducerType) => _fingerprints.GetOrAdd(
+        reducerType,
+        static (type, reducers) => new Lazy<string>(() => reducers.CreateFingerprint(type)),
+        this).Value;
+
+    string CreateFingerprint(Type reducerType)
+    {
+        try
+        {
+            return ReducerFingerprint.Create(reducerType);
+        }
+        catch (Exception exception)
+        {
+            _logger.ReducerFingerprintFailed(reducerType, exception);
+            return ReducerFingerprint.CreateFallback(reducerType);
+        }
     }
 
     async Task ObserverMethod(BehaviorSubject<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation)
