@@ -28,7 +28,7 @@ public class and_the_queue_dropped_the_subscription_while_a_catchup_job_runs : g
         };
 
         _jobsManager
-            .GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>()
+            .GetJobs(Arg.Any<JobQuery>())
             .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty.Add(runningJob)));
     }
 

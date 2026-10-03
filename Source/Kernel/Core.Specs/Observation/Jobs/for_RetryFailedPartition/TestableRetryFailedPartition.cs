@@ -24,6 +24,11 @@ public class TestableRetryFailedPartition(JsonSerializerOptions jsonSerializerOp
     public Type GrainType => typeof(IRetryFailedPartition);
 
     /// <summary>
+    /// Gets a value indicating whether the job is kept once it has completed with failures.
+    /// </summary>
+    public bool IsKeptAfterCompletedWithFailures => KeepAfterCompletedWithFailures;
+
+    /// <summary>
     /// Prepares the steps the real job would run, so a spec can inspect what a recovery actually re-delivers.
     /// </summary>
     /// <param name="request">The <see cref="RetryFailedPartitionRequest"/> to prepare steps for.</param>

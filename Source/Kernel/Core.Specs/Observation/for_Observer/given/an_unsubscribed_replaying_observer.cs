@@ -4,7 +4,6 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.given;
@@ -24,7 +23,7 @@ public class an_unsubscribed_replaying_observer : an_observer
         await _definitionStorage.WriteStateAsync();
         _stateStorage.State = _stateStorage.State with { IsReplaying = true };
         await _stateStorage.WriteStateAsync();
-        _jobsManager.GetJobsOfType<IReplayObserver, ReplayObserverRequest>()
+        _jobsManager.GetJobs(Arg.Any<JobQuery>())
             .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
     }
 }

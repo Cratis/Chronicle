@@ -23,7 +23,7 @@ public class and_client_disconnected_during_replay_with_stopped_jobs : given.a_r
             new() { Id = JobId.New(), Status = JobStatus.Running, Request = new RetryFailedPartitionRequest(_observerKey, ObserverType.Reactor, "failed-partition", EventSequenceNumber.First, [event_type]) },
             new() { Id = JobId.New(), Status = JobStatus.Running, Request = new ReplayObserverPartitionRequest(_observerKey, ObserverType.Reactor, "replaying-partition", EventSequenceNumber.First, EventSequenceNumber.Max, [event_type]) }
         ];
-        _jobsManager.GetAllJobs().Returns(_ => Task.FromResult<IImmutableList<JobState>>(_jobs.ToImmutableList()));
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult<IImmutableList<JobState>>([.. _jobs, _replayJob]));
         _jobsManager.When(_ => _.Stop(Arg.Any<JobId>()))
             .Do(call => _jobs.Single(job => job.Id == call.Arg<JobId>()).Status = JobStatus.Stopped);
         await DisconnectClient();

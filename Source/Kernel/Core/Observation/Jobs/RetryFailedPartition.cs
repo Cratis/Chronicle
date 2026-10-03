@@ -22,6 +22,15 @@ public class RetryFailedPartition(
     ILogger<RetryFailedPartition> logger) : Job<RetryFailedPartitionRequest, JobStateWithLastHandledEvent>, IRetryFailedPartition
 {
     /// <inheritdoc/>
+    /// <remarks>
+    /// A retry that fails leaves the partition failed, and the failed partition records the attempt - the job adds
+    /// nothing to it. Retained, one job and its failed step accumulated for every attempt made while the client was
+    /// away, which is every few minutes per failed partition: thousands within the retention period, each of them
+    /// read back by anything listing jobs.
+    /// </remarks>
+    protected override bool KeepAfterCompletedWithFailures => false;
+
+    /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);

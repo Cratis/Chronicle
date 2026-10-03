@@ -25,7 +25,7 @@ public class a_replaying_projection : an_observer
         };
         _replayJob = JobId.New();
         _jobsManager.Resume(_replayJob).Returns(true);
-        _jobsManager.GetJobsOfType<IReplayObserver, ReplayObserverRequest>()
+        _jobsManager.GetJobs(Arg.Any<JobQuery>())
             .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(new JobState
             {
                 Id = _replayJob,

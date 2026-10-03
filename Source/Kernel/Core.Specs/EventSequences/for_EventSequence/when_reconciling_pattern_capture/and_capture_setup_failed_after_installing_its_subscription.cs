@@ -18,7 +18,7 @@ public class and_capture_setup_failed_after_installing_its_subscription : given.
     async Task Establish()
     {
         // ResumeJobs runs after the real Subscribe has installed its in-memory subscription and written state.
-        _jobsManager.GetAllJobs().Returns(_ => ++_setupAttempts == 1
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => ++_setupAttempts == 1
             ? Task.FromException<IImmutableList<JobState>>(new TimeoutException())
             : Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
         _initialError = await Catch.Exception(SubscribeCapture);
