@@ -15,6 +15,6 @@ public class and_appending_without_an_event_source : given_a_scenario_with_an_ev
         _stored = (await _scenario.EventLog.GetFromSequenceNumber(EventSequenceNumber.First, _source)).Single();
     }
 
-    [Fact] void should_not_record_an_event_source() => _stored.Context.EventSource.ShouldBeNull();
+    [Fact] void should_normalize_to_a_not_set_event_source() => _stored.Context.EventSource.ShouldEqual(EventSourceName.NotSet);
     [Fact] void should_keep_the_default_event_source_type() => _stored.Context.EventSourceType.ShouldEqual(EventSourceType.Default);
 }
