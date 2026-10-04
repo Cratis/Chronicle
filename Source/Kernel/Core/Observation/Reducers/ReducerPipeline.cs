@@ -118,9 +118,7 @@ public class ReducerPipeline(
             {
                 // The comparer has no child identity for reducer-owned collections. A nested,
                 // unindexed array path cannot be applied safely by sinks, so replace that collection.
-                changeset.Add(new PropertiesChanged<ExpandoObject>(
-                    null!,
-                    differences.Collapse(initialForComparison, encryptedState)));
+                changeset.ReplaceState(encryptedState, differences.Collapse(initialForComparison, encryptedState));
             }
         }
 
