@@ -81,6 +81,22 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         CurrentState = workingState;
     }
 
+    /// <summary>
+    /// Replace the whole state with a state computed outside the changeset, recording the differences that lead to it.
+    /// </summary>
+    /// <remarks>
+    /// For a producer that computes the next state itself rather than through property mappers - a reducer. The state
+    /// becomes <see cref="CurrentState"/>, because a sink in bulk mode keeps <see cref="CurrentState"/> as the instance
+    /// the next batch for the same key starts from; leaving it at the initial state would make that batch start over.
+    /// </remarks>
+    /// <param name="state">The complete state after the change.</param>
+    /// <param name="differences">The differences between the current state and <paramref name="state"/>.</param>
+    public void ReplaceState(TTarget state, IEnumerable<PropertyDifference> differences)
+    {
+        Add(new PropertiesChanged<TTarget>(state!, differences));
+        CurrentState = state;
+    }
+
     /// <inheritdoc/>
     public IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers)
     {
