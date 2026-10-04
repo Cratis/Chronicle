@@ -67,6 +67,14 @@ public interface ICanHandleReplayForObserver
         Task.FromResult(Result.Failed(Error.CannotHandle));
 
     /// <summary>
+    /// Abandon a replay of a specific observer, leaving the read model as it was before the replay started.
+    /// </summary>
+    /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
+    /// <returns>Awaitable task.</returns>
+    Task<Result<Error>> AbandonReplayFor(ObserverDetails observerDetails) =>
+        Task.FromResult(Result.Failed(Error.CannotHandle));
+
+    /// <summary>
     /// Begin replay for a specific partition of an observer.
     /// </summary>
     /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>

@@ -150,7 +150,7 @@ public class ReplayObserver(
         using var scope = logger.BeginJobScope(JobId, JobKey);
         try
         {
-            await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
+            await FinalizeOrAbandon(promote: false);
         }
         catch (Exception exception)
         {
@@ -170,7 +170,7 @@ public class ReplayObserver(
         var finalized = true;
         try
         {
-            await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
+            finalized = await FinalizeOrAbandon(promote: AllStepsCompletedSuccessfully);
         }
         catch (Exception exception)
         {
@@ -225,6 +225,31 @@ public class ReplayObserver(
 
     /// <inheritdoc/>
     protected override JobDetails GetJobDetails() => $"{Request.ObserverKey.ObserverId}";
+
+    /// <summary>
+    /// Ends the replay on every silo, promoting what it rebuilt only when that is safe.
+    /// </summary>
+    /// <remarks>
+    /// A reducer's replay rebuilds each partition in its own step. If any step failed or stopped, its documents in the
+    /// replay container are partial or missing, and promoting the container would replace complete documents with them.
+    /// The replay is abandoned instead and the read model keeps the state it had before the replay started; the failed
+    /// partitions are recorded on the observer and a later replay starts over. A projection's replay is a single ordered
+    /// step whose failed partitions are recorded and retried after promotion, so it is always finalized as before.
+    /// </remarks>
+    /// <param name="promote">Whether every step completed successfully.</param>
+    /// <returns>True if the replay was finalized; false if it was abandoned.</returns>
+    async Task<bool> FinalizeOrAbandon(bool promote)
+    {
+        if (!promote && Request.ObserverType == ObserverType.Reducer)
+        {
+            logger.AbandoningReplay(Request.ObserverKey.ObserverId);
+            await replayStateServiceClient.AbandonReplayFor(State.ObserverDetails);
+            return false;
+        }
+
+        await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
+        return true;
+    }
 
     async Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber)
     {

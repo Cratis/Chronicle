@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Observation;
 using Orleans.Runtime.Services;
 
 namespace Cratis.Chronicle.Observation;
@@ -31,7 +30,7 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
     /// <inheritdoc/>
     public async Task<bool> TryFinalizeReplayFor(ObserverDetails observerDetails)
     {
-        if (observerDetails.Type != ObserverType.Projection)
+        if (!ObserverService.RebuildsReadModel(observerDetails))
         {
             await ForEachGrainService(service => service.EndReplayFor(observerDetails));
             return false;
@@ -40,6 +39,9 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
         var hosts = await _managementGrain.GetHosts(true);
         return await FinalizeProjectionReplay([.. hosts.Keys.Select(GetGrainService)], observerDetails);
     }
+
+    /// <inheritdoc/>
+    public async Task AbandonReplayFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.AbandonReplayFor(observerDetails));
 
     /// <inheritdoc/>
     public async Task<bool> FlushReplayFor(ObserverDetails observerDetails)
