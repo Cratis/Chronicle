@@ -41,6 +41,6 @@ internal static partial class ObservationJobLogMessages
     [LoggerMessage(LogLevel.Warning, "Could not check whether failed partition '{Partition}' has events from sequence number {FromSequenceNumber} left to handle. Keeping the partition failed")]
     internal static partial void FailedCheckingForEventsLeftToHandle(this ILogger<IJob> logger, Exception exception, Key partition, EventSequenceNumber fromSequenceNumber);
 
-    [LoggerMessage(LogLevel.Information, "Clearing failed partition '{Partition}' - every event up to sequence number {LastScannedEventSequenceNumber} is excluded by the observer's filters, so there is nothing left for the handler")]
+    [LoggerMessage(LogLevel.Information, "Clearing failed partition '{Partition}' - every event up to sequence number {LastScannedEventSequenceNumber} is excluded by the observer's filters, so there is nothing for the handler up to there")]
     internal static partial void ClearingFailedPartitionWithOnlyExcludedEvents(this ILogger<IJob> logger, Key partition, EventSequenceNumber lastScannedEventSequenceNumber);
 }

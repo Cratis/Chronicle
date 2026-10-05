@@ -48,18 +48,13 @@ public class RetryFailedPartition(
             }
 
             // The step succeeded having read only events the observer's filters exclude: there is nothing for the
-            // subscriber to handle up to there, so the failure is resolved without claiming any event was handled -
-            // provided nothing arrived for the partition after what the step read.
+            // subscriber to handle up to there, so the failure is resolved without claiming any event was handled.
+            // Whether anything arrived for the partition after what the step read is decided by the observer once the
+            // failure is cleared - checking here would race with appends live delivery skips while it is failed.
             if (State.LastScannedEventSequenceNumber.IsActualValue)
             {
-                if (await HasEventsLeftToHandle(State.LastScannedEventSequenceNumber.Next()))
-                {
-                    logger.NotClearingFailedPartitionWithEventsLeftToHandle(Request.Key, State.LastScannedEventSequenceNumber.Next());
-                    return;
-                }
-
                 logger.ClearingFailedPartitionWithOnlyExcludedEvents(Request.Key, State.LastScannedEventSequenceNumber);
-                await observer.FailedPartitionRecovered(Request.Key, EventSequenceNumber.Unavailable);
+                await observer.FailedPartitionRecovered(Request.Key, EventSequenceNumber.Unavailable, State.LastScannedEventSequenceNumber);
                 return;
             }
 
@@ -67,14 +62,14 @@ public class RetryFailedPartition(
             // the failed event without the handler ever running, so it is only correct when there genuinely
             // is no event left to handle — otherwise recovery silently discards the missed side effect and
             // reports the observer healthy. Confirm it against the event sequence before clearing.
-            if (await HasEventsLeftToHandle(Request.FromSequenceNumber))
+            if (await HasEventsLeftToHandle())
             {
                 logger.NotClearingFailedPartitionWithEventsLeftToHandle(Request.Key, Request.FromSequenceNumber);
                 return;
             }
 
             logger.ClearingFailedPartitionWithNothingLeftToHandle(Request.Key, Request.FromSequenceNumber);
-            await observer.FailedPartitionRecovered(Request.Key, Request.FromSequenceNumber);
+            await observer.FailedPartitionRecovered(Request.Key, Request.FromSequenceNumber, EventSequenceNumber.Unavailable);
             return;
         }
 
@@ -85,7 +80,7 @@ public class RetryFailedPartition(
             return;
         }
 
-        await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber);
+        await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber, State.LastScannedEventSequenceNumber);
     }
 
     /// <inheritdoc/>
@@ -132,14 +127,13 @@ public class RetryFailedPartition(
     /// <summary>
     /// Check whether the event sequence still holds an event the failed partition has not handled.
     /// </summary>
-    /// <param name="fromSequenceNumber">The <see cref="EventSequenceNumber"/> to look from.</param>
     /// <returns>True when there is at least one event left to handle, false when there is nothing left.</returns>
     /// <remarks>
     /// The answer decides whether a step that read nothing is evidence of a stale failure record. When the
     /// event sequence cannot be reached the honest answer is "assume there is" — leaving the partition failed
     /// costs another retry, while clearing it loses the work for good.
     /// </remarks>
-    async Task<bool> HasEventsLeftToHandle(EventSequenceNumber fromSequenceNumber)
+    async Task<bool> HasEventsLeftToHandle()
     {
         try
         {
@@ -150,7 +144,7 @@ public class RetryFailedPartition(
 
             var eventTypes = Request.EventTypes?.ToArray() ?? [];
             var nextSequenceNumber = await eventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(
-                fromSequenceNumber,
+                Request.FromSequenceNumber,
                 eventTypes.Length == 0 ? null : eventTypes,
                 Request.Key);
 
@@ -158,7 +152,7 @@ public class RetryFailedPartition(
         }
         catch (Exception ex)
         {
-            logger.FailedCheckingForEventsLeftToHandle(ex, Request.Key, fromSequenceNumber);
+            logger.FailedCheckingForEventsLeftToHandle(ex, Request.Key, Request.FromSequenceNumber);
             return true;
         }
     }

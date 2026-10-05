@@ -25,5 +25,5 @@ public class and_the_event_sequence_cannot_be_reached : given.a_retry_failed_par
 
     async Task Because() => await _job.Start(_request);
 
-    [Fact] void should_not_call_failed_partition_recovered() => _observer.DidNotReceive().FailedPartitionRecovered(Arg.Any<Key>(), Arg.Any<EventSequenceNumber>());
+    [Fact] void should_not_call_failed_partition_recovered() => _observer.DidNotReceive().FailedPartitionRecovered(Arg.Any<Key>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>());
 }

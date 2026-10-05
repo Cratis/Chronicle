@@ -313,6 +313,16 @@ public interface IObserver : IGrainWithStringKey
     Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Notify that the partition has recovered, including how far the recovery read.
+    /// </summary>
+    /// <param name="partition">The partition that has recovered.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event the recovery handled, or <see cref="EventSequenceNumber.Unavailable"/> when it handled nothing.</param>
+    /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the recovery read for the partition, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when it read nothing.</param>
+    /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
+    Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
+
+    /// <summary>
     /// Notify that the partition has partially recovered.
     /// </summary>
     /// <param name="partition">The partition that has recovered.</param>
