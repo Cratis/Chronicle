@@ -395,12 +395,31 @@ public interface IObserver : IGrainWithStringKey
     Task CaughtUp(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Notify that the observer has been caught up, including how far the catchup read.
+    /// </summary>
+    /// <param name="jobId">The <see cref="JobId"/> of the catch-up job that has concluded.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
+    /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the catchup read, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when the catchup did not complete every step.</param>
+    /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
+    Task CaughtUp(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
+
+    /// <summary>
     /// Notify that the partition was caught.
     /// </summary>
     /// <param name="partition">The partition that has caught up.</param>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
+    /// Notify that the partition was caught up, including how far the catchup read.
+    /// </summary>
+    /// <param name="partition">The partition that has caught up.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
+    /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the catchup read for the partition, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when the catchup did not complete.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
 
     /// <summary>
     /// Attempt to recover a failed partition.
