@@ -34,5 +34,5 @@ public class and_read_model_has_pii_and_initial_state_is_null : given.all_depend
         CreateReducer(_returnedState));
 
     [Fact] void should_not_call_release() => _complianceManager.DidNotReceive().Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>());
-    [Fact] void should_call_apply_with_event_source_id_as_identifier() => _complianceManager.Received(1).Apply(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
+    [Fact] void should_call_apply_with_event_source_id_as_identifier() => _complianceManager.Received(1).ApplyToReadModel(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
 }

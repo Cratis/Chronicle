@@ -176,10 +176,14 @@ public class ClusteringFixture : IAsyncLifetime
                     },
                     _ => { });
 
+                // Arc's meter registrations go first. Self-binding registers every concrete type it finds, Arc's
+                // internal PipelineMetrics included - by type, through a constructor DI cannot use - and Arc only
+                // TryAdds its own factory, so registered afterwards it never took effect and every command
+                // outcome Arc recorded failed instead.
+                services.AddCratisArcMeter();
                 services.AddTypeDiscovery();
                 services.AddBindingsByConvention();
                 services.AddSelfBindings();
-                services.AddCratisArcMeter();
                 services.AddSingleton(ReactorSignal);
                 services.AddSingleton(ScaledOutSignal);
                 services.AddSingleton(FanOutSignal);

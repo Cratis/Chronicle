@@ -34,11 +34,12 @@ public class and_there_are_stopped_jobs : given.an_observer
             Request = new ReplayObserverRequest(_observerKey, ObserverType.Reactor, [EventType.Unknown])
         };
 
-        _jobsManager.GetAllJobs().Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(catchUpJob, replayJob)));
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(catchUpJob, replayJob)));
     }
 
     Task Because() => _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
 
     [Fact] void should_resume_the_stopped_catch_up_job() => _jobsManager.Received(1).Resume(_catchUpJobId);
     [Fact] void should_not_resume_the_stopped_replay_job() => _jobsManager.DidNotReceive().Resume(_replayJobId);
+    [Fact] void should_not_load_every_job() => _jobsManager.DidNotReceive().GetAllJobs();
 }

@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using JobsDbContext = Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext;
+using Result = Cratis.Monads.Result;
 
 namespace Cratis.Chronicle.Storage.Sql.Jobs.for_jobs_storage;
 
@@ -42,6 +43,7 @@ public class when_the_kernel_resolves_it_for_an_event_store_namespace : Specific
     {
         var services = new ServiceCollection().BuildServiceProvider();
         var jobTypes = Substitute.For<IJobTypes>();
+        jobTypes.GetClrTypeFor(Arg.Any<JobType>()).Returns(Result.Success<Type, IJobTypes.GetClrTypeForError>(typeof(IJob)));
 
         var sqlJobsStorage = new SqlJobsStorage(
             jobTypes,

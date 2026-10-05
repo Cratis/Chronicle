@@ -5,11 +5,13 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
 using Cratis.Chronicle.Storage.InMemory.Captures;
 using Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 using Cratis.Chronicle.Storage.InMemory.Events.EventTypes;
+using Cratis.Chronicle.Storage.InMemory.EventSources;
 using Cratis.Chronicle.Storage.InMemory.ExternalServices;
 using Cratis.Chronicle.Storage.InMemory.Namespaces;
 using Cratis.Chronicle.Storage.InMemory.Observation;
@@ -56,6 +58,9 @@ public sealed class EventStoreStorage(
 
     /// <inheritdoc/>
     public IEventTypesStorage EventTypes { get; } = new EventTypesStorage();
+
+    /// <inheritdoc/>
+    public IEventSourcesStorage EventSources { get; } = new EventSourcesStorage();
 
     /// <inheritdoc/>
     public IConstraintsStorage Constraints { get; } = new ConstraintsStorage();

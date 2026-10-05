@@ -59,6 +59,19 @@ public record EventContext(
         CorrelationId.NotSet);
 
     /// <summary>
+    /// Gets the name of the registered event source definition the event was appended through.
+    /// <see cref="EventSourceName.NotSet"/> when it was not appended through a definition, including events stored before event sources existed.
+    /// </summary>
+    /// <remarks>
+    /// Declared outside the primary constructor so existing positional construction and deconstruction shapes remain compatible.
+    /// </remarks>
+    public EventSourceName EventSource
+    {
+        get;
+        init => field = value ?? EventSourceName.NotSet;
+    } = EventSourceName.NotSet;
+
+    /// <summary>
     /// Gets the structured named tags associated with the event.
     /// </summary>
     /// <exception cref="InvalidNamedTag">The supplied collection contains a null named tag.</exception>

@@ -47,4 +47,10 @@ public record Event(
     /// Gets the structured named tags. Missing in historic documents.
     /// </summary>
     public IEnumerable<NamedTagDocument> NamedTags { get; init; } = [];
+
+    /// <summary>
+    /// Gets the name of the registered event source definition the event was appended through.
+    /// Missing, or null, in historic documents and in events not appended through a definition.
+    /// </summary>
+    public EventSourceName? EventSource { get; init; }
 }

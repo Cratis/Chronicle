@@ -28,7 +28,7 @@ public class and_the_quarantined_observer_was_reactivated_and_has_stopped_jobs :
             Request = new CatchUpObserverRequest(_observerKey, ObserverType.Reactor, EventSequenceNumber.First, [EventType.Unknown])
         };
 
-        _jobsManager.GetAllJobs().Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(catchUpJob)));
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(catchUpJob)));
     }
 
     Task Because() => _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);

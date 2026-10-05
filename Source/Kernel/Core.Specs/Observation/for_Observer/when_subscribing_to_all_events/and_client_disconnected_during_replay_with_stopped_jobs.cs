@@ -23,7 +23,7 @@ public class and_client_disconnected_during_replay_with_stopped_jobs : given.a_r
             Status = JobStatus.Running,
             Request = new CatchUpObserverRequest(_observerKey, ObserverType.Reactor, EventSequenceNumber.First, [event_type])
         };
-        _jobsManager.GetAllJobs().Returns(_ => Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(_catchUpJob)));
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(_catchUpJob, _replayJob)));
         _jobsManager.When(_ => _.Stop(_catchUpJob.Id)).Do(_ => _catchUpJob.Status = JobStatus.Stopped);
         await DisconnectClient();
     }

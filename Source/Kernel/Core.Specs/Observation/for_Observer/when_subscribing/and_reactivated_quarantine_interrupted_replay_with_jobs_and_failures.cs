@@ -29,7 +29,7 @@ public class and_reactivated_quarantine_interrupted_replay_with_jobs_and_failure
             Status = JobStatus.Stopped,
             Request = new CatchUpObserverRequest(_observerKey, ObserverType.Reactor, EventSequenceNumber.First, [EventType.Unknown])
         };
-        _jobsManager.GetAllJobs().Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(stoppedJob)));
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(stoppedJob)));
     }
 
     async Task Because()

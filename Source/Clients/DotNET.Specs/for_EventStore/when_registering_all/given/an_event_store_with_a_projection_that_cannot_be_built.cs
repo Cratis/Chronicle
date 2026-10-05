@@ -8,6 +8,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
@@ -95,6 +96,7 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
         SetAutoProperty("Name", new EventStoreName("Testing"));
         SetAutoProperty("Namespace", new EventStoreNamespaceName("default"));
         SetAutoProperty("EventTypes", Substitute.For<IEventTypes>());
+        SetAutoProperty("EventSources", Substitute.For<IEventSources>());
         SetAutoProperty("ReadModels", Substitute.For<IReadModels>());
         SetAutoProperty("Constraints", Substitute.For<IConstraints>());
         SetAutoProperty("Reactors", Substitute.For<Reactors.IReactors>());

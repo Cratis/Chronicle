@@ -83,6 +83,7 @@ message AppendRequest {
    repeated Causation Causation = 14;
    Identity CausedBy = 15;
    ConcurrencyScope ConcurrencyScope = 16;
+   string EventSource = 17;
 }
 message AppendResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -114,6 +115,7 @@ message AppendWithNamedTagsRequest {
    repeated Causation Causation = 15;
    Identity CausedBy = 16;
    ConcurrencyScope ConcurrencyScope = 17;
+   string EventSource = 18;
 }
 message AppendedEventResponse {
    string Id = 1;
@@ -249,6 +251,7 @@ message EventContext {
    EventObservationState ObservationState = 13;
    string Subject = 14;
    repeated NamedTag NamedTags = 15;
+   string EventSource = 16;
 }
 message EventForEventSourceId {
    string EventSourceId = 1;
@@ -261,6 +264,7 @@ message EventForEventSourceId {
    SerializableDateTimeOffset Occurred = 8;
    string Subject = 9;
    repeated Causation Causation = 10;
+   string EventSource = 11;
 }
 message EventForEventSourceIdWithNamedTags {
    string EventSourceId = 1;
@@ -274,6 +278,7 @@ message EventForEventSourceIdWithNamedTags {
    SerializableDateTimeOffset Occurred = 9;
    string Subject = 10;
    repeated Causation Causation = 11;
+   string EventSource = 12;
 }
 enum EventObservationState {
    EVENT_OBSERVATION_STATE_None = 0;

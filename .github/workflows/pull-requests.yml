@@ -92,6 +92,7 @@ jobs:
       - name: Upload Workbench outputs
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 3
           name: workbench-out
           path: ./Source/Workbench/wwwroot
           if-no-files-found: error
@@ -130,6 +131,7 @@ jobs:
       - name: Upload development outputs
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 3
           name: kernel-development-out
           path: ./Source/Kernel/Server/out/development
           if-no-files-found: error

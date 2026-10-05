@@ -21,7 +21,7 @@ public class and_schema_has_no_pii : given.all_dependencies
         _instance);
 
     [Fact] void should_return_original_instance() => _result.ShouldEqual(_instance);
-    [Fact] void should_not_call_compliance_manager() => _complianceManager.DidNotReceive().Apply(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>());
+    [Fact] void should_not_call_compliance_manager() => _complianceManager.DidNotReceive().ApplyToReadModel(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>());
     [Fact] void should_write_subject_to_instance() => ((IDictionary<string, object?>)_result).ContainsKey(WellKnownProperties.Subject).ShouldBeTrue();
     [Fact] void should_write_correct_subject_value() => ((IDictionary<string, object?>)_result)[WellKnownProperties.Subject].ShouldEqual(Identifier);
 }

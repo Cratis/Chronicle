@@ -34,6 +34,6 @@ public class and_read_model_is_rekeyed : given.all_dependencies
         CreateContext(EventSourceIdValue, key: ResolvedKey),
         CreateReducer(_returnedState));
 
-    [Fact] void should_call_apply_with_the_resolved_key_as_identifier() => _complianceManager.Received(1).Apply(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), ResolvedKey, Arg.Any<JsonObject>());
-    [Fact] void should_not_use_the_event_source_id_as_identifier() => _complianceManager.DidNotReceive().Apply(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
+    [Fact] void should_call_apply_with_the_resolved_key_as_identifier() => _complianceManager.Received(1).ApplyToReadModel(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), ResolvedKey, Arg.Any<JsonObject>());
+    [Fact] void should_not_use_the_event_source_id_as_identifier() => _complianceManager.DidNotReceive().ApplyToReadModel(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
 }

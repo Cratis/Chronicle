@@ -38,5 +38,5 @@ public class and_read_model_has_pii_and_initial_state_exists : given.all_depende
         CreateReducer(_returnedState));
 
     [Fact] void should_call_release_for_initial_state() => _complianceManager.Received(1).Release(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
-    [Fact] void should_call_apply_on_result() => _complianceManager.Received(1).Apply(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
+    [Fact] void should_call_apply_on_result() => _complianceManager.Received(1).ApplyToReadModel(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), EventSourceIdValue, Arg.Any<JsonObject>());
 }

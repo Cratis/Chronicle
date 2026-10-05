@@ -17,6 +17,13 @@ public interface IReadModelMigrator
     Task EnsureTableMigrated(string tableName, ReadModelDbContext context);
 
     /// <summary>
+    /// Ensures the Chronicle-owned replay promotion marker table exists in the read-model database.
+    /// </summary>
+    /// <param name="context">The context whose connection is used for the promotion transaction.</param>
+    /// <returns>Awaitable task.</returns>
+    Task EnsureReplayPromotions(ReadModelDbContext context);
+
+    /// <summary>
     /// Clears cached migration state for all tables whose connection string starts with the given prefix.
     /// </summary>
     /// <param name="connectionStringPrefix">

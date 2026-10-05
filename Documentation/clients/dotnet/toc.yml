@@ -10,5 +10,7 @@
   href: captures/toc.yml
 - name: External Services
   href: external-services.md
+- name: Event sources
+  href: event-sources.md
 - name: Behavior Patterns
   href: patterns.md

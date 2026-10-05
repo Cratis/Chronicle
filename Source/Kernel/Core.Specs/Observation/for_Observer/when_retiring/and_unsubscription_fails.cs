@@ -18,7 +18,7 @@ public class and_unsubscription_fails : given.an_observer_with_subscription
     {
         await _observer.PartitionFailed("failed", 12UL, ["Failed"], "Stack");
         _progress = _stateStorage.State.NextEventSequenceNumber;
-        _jobsManager.GetAllJobs().Returns(Task.FromException<IImmutableList<JobState>>(new Exception("Jobs unavailable")));
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(Task.FromException<IImmutableList<JobState>>(new Exception("Jobs unavailable")));
         _subscriber.ClearReceivedCalls();
     }
 

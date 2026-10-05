@@ -6,7 +6,6 @@ using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 using Orleans.TestKit;
 
@@ -30,11 +29,7 @@ public class an_observer_with_client_owned_subscription : for_Observer.given.an_
         _silo.AddProbe(_ => _connectedClientsGrain);
 
         _jobsManager
-            .GetJobsOfType<IReplayObserver, ReplayObserverRequest>()
-            .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
-
-        _jobsManager
-            .GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>()
+            .GetJobs(Arg.Any<JobQuery>())
             .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
 
         await _observer.Subscribe<IClientOwnedObserverSubscriber>(

@@ -80,6 +80,12 @@ public class EventEntry
     public string? Subject { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of the registered event source definition the event was appended through.
+    /// Null for events not appended through a definition, including events stored before event sources existed.
+    /// </summary>
+    public string? EventSource { get; set; }
+
+    /// <summary>
     /// Gets or sets the tags for the event, serialized as a JSON array of strings.
     /// </summary>
     public string Tags { get; set; } = string.Empty;

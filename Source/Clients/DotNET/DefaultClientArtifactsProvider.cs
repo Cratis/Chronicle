@@ -6,6 +6,7 @@ using Cratis.Chronicle.Confidentiality;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
+using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reactors;
@@ -62,6 +63,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     IEnumerable<Type> _removeConstraintEventTypes = [];
     IEnumerable<Type> _eventSeeders = [];
     IEnumerable<Type> _eventTypeMigrators = [];
+    IEnumerable<Type> _eventSources = [];
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> EventTypes
@@ -243,6 +245,16 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         }
     }
 
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> EventSources
+    {
+        get
+        {
+            EnsureInitialized();
+            return _eventSources;
+        }
+    }
+
     /// <summary>
     /// Ensures that all artifacts are initialized before they are published to readers.
     /// </summary>
@@ -279,6 +291,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
                 _uniqueEventTypeConstraints = _eventTypes.Where(_ => _.HasAttribute<UniqueAttribute>()).ToArray();
                 _removeConstraintEventTypes = _eventTypes.Where(_ => _.HasAttribute<RemoveConstraintAttribute>()).ToArray();
                 _eventSeeders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanSeedEvents>()).ToArray();
+                _eventSources = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IEventSource>() && _.IsClass && !_.IsAbstract && !_.IsGenericTypeDefinition).ToArray();
                 _eventTypeMigrators = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IEventTypeMigrationFor<>))).ToArray();
 
                 // Publish all artifact arrays together only after every discovery step succeeds.

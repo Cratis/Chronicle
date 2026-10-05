@@ -6,6 +6,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
@@ -52,6 +53,12 @@ public interface IEventStore
     /// Gets the <see cref="IEventTypes"/> for the event store.
     /// </summary>
     IEventTypes EventTypes { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IEventSources"/> for the event store.
+    /// </summary>
+    /// <exception cref="EventSourcesNotSupported">Thrown when the implementation does not support event sources.</exception>
+    IEventSources EventSources => throw new EventSourcesNotSupported(GetType());
 
     /// <summary>
     /// Gets the <see cref="IConstraints"/> for the event store.

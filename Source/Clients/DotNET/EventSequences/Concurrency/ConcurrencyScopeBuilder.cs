@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSources;
 
 namespace Cratis.Chronicle.EventSequences.Concurrency;
 
@@ -87,6 +88,32 @@ public class ConcurrencyScopeBuilder
     public ConcurrencyScopeBuilder WithEventSourceType(EventSourceType eventSourceType)
     {
         _eventSourceType = eventSourceType;
+        return this;
+    }
+
+    /// <summary>
+    /// Scopes the check to an event source and optionally one of its streams.
+    /// </summary>
+    /// <typeparam name="TSource">The <see cref="IEventSource"/> to scope to.</typeparam>
+    /// <param name="stream">Optional name of a stream declared by the event source.</param>
+    /// <param name="streamId">Optional <see cref="EventStreamId"/> within the stream.</param>
+    /// <returns><see cref="ConcurrencyScopeBuilder"/> for continuation.</returns>
+    /// <exception cref="EventStreamDoesNotBelongToEventSource">The stream is not declared by the event source.</exception>
+    public ConcurrencyScopeBuilder ForEventSource<TSource>(string? stream = default, EventStreamId? streamId = default)
+        where TSource : IEventSource
+    {
+        var definition = EventSources.EventSources.Describe(typeof(TSource));
+        _eventSourceType = definition.EventSourceType;
+        if (stream is not null)
+        {
+            _eventStreamType = (definition.FindStream(stream) ?? throw new EventStreamDoesNotBelongToEventSource(definition.Name, stream)).EventStreamType;
+        }
+
+        if (streamId is not null)
+        {
+            _eventStreamId = streamId;
+        }
+
         return this;
     }
 

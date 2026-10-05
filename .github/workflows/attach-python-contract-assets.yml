@@ -1,0 +1,265 @@
+# Temporary distribution of the canonical Python contracts as assets of an existing Chronicle release.
+#
+# PyPI publication is deliberately not configured (see publish-python-client.yml, whose publish job stays disabled),
+# so a wheel and sdist generated from the EXACT tag of a published release are attached to that same release.
+# Nothing here is a claim of PyPI publishing. Manual dispatch only; a dry run (attach = false) builds, tests and
+# smoke-tests everything and uploads nothing. Attaching needs attach = true, a run from main, and never overwrites.
+
+name: Attach Python Contract Release Assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Exact published release tag, for example v19.31.2
+        type: string
+        required: true
+      attach:
+        description: Attach the verified assets to the release (false = dry run, uploads nothing)
+        type: boolean
+        default: false
+
+# Two runs for one tag must not race each other's upload, and a half-finished attach must never be cancelled.
+concurrency:
+  group: python-contract-assets-${{ inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_VERSION: "10.0.x"
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      commit: ${{ steps.release.outputs.commit }}
+
+    steps:
+      # Inputs reach the shell only through env, and are validated before anything uses them.
+      - name: Validate tag
+        id: tag
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          # Tooling is not checked out yet, so the strict pattern lives here too; the script re-checks it.
+          [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "::error::'$TAG' is not an exact stable release tag"; exit 1; }
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout tooling (workflow ref)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: tooling
+          persist-credentials: false
+
+      - name: Checkout release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify the release is published and the source is its tag
+        id: release
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 tooling/.github/scripts/python-contract-assets.py resolve-tag --tag "$TAG" > /dev/null
+          gh release view "$TAG" --json tagName,isDraft,isPrerelease,publishedAt,assets > release.json
+          python3 tooling/.github/scripts/python-contract-assets.py check-release --tag "$TAG" --release release.json --repo source
+          echo "commit=$(git -C source rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Building Contracts runs the real proto generator. The result must equal what the tag committed, so a
+      # hand-patched or stale generated file cannot reach the wheel.
+      - name: Regenerate protos from the tag and require they match what it committed
+        working-directory: source
+        run: |
+          set -euo pipefail
+          dotnet build Source/Kernel/Contracts/Contracts.csproj -c Release
+          if ! git diff --quiet -- Source/Kernel/Protobuf; then
+            echo "::error::Generated protos at this tag are stale or hand-edited"
+            git diff --stat -- Source/Kernel/Protobuf
+            exit 1
+          fi
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+
+      - name: Install package tooling
+        working-directory: source/Source/Clients/Python
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Generate and test canonical contracts
+        working-directory: source/Source/Clients/Python
+        run: |
+          set -euo pipefail
+          python generate.py --proto-root ../../Kernel/Protobuf
+          pytest
+
+      - name: Build and check distributions
+        working-directory: source/Source/Clients/Python
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          export SOURCE_DATE_EPOCH
+          python build_package.py
+
+      - name: Verify contents and write checksums and provenance
+        env:
+          TAG: ${{ inputs.tag }}
+          VERSION: ${{ steps.tag.outputs.version }}
+          COMMIT: ${{ steps.release.outputs.commit }}
+        run: |
+          set -euo pipefail
+          tool=tooling/.github/scripts/python-contract-assets.py
+          dist=source/Source/Clients/Python/dist
+          python3 "$tool" verify-dist --dist "$dist" --version "$VERSION"
+          python3 "$tool" manifest --dist "$dist" --tag "$TAG" --commit "$COMMIT" --proto-root source/Source/Kernel/Protobuf
+          python3 "$tool" verify-checksums --dist "$dist" --version "$VERSION"
+          {
+            echo "### Python contract assets for \`$TAG\` (attach: ${{ inputs.attach }})"
+            echo
+            echo "Source commit \`$COMMIT\`. Temporary release assets, not published to PyPI."
+            echo '```'
+            cat "$dist/SHA256SUMS"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload build output
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: python-contract-assets
+          path: source/Source/Clients/Python/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Keep the tooling for later jobs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: python-contract-tooling
+          path: tooling/.github/scripts/python-contract-*.py
+          if-no-files-found: error
+          retention-days: 7
+
+  smoke:
+    name: Consumer smoke (Python ${{ matrix.python-version }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+
+    steps:
+      - name: Download assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: python-contract-assets
+          path: dist/
+
+      - name: Download tooling
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: python-contract-tooling
+          path: tooling/
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install the wheel into a clean environment and exercise it
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          python tooling/python-contract-assets.py verify-checksums --dist dist --version "$VERSION"
+          python -m venv consumer
+          consumer/bin/python -m pip install "dist/cratis_chronicle_contracts-${VERSION}-py3-none-any.whl"
+          cd "$RUNNER_TEMP"
+          "$GITHUB_WORKSPACE/consumer/bin/python" "$GITHUB_WORKSPACE/tooling/python-contract-smoke.py" "$VERSION"
+
+  attach:
+    name: Attach to release ${{ inputs.tag }}
+    needs: [build, smoke]
+    # Only a deliberate attach, only from the reviewed workflow on main.
+    if: inputs.attach && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: python-contract-assets
+          path: dist/
+
+      - name: Download tooling
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: python-contract-tooling
+          path: tooling/
+
+      - name: Attach without overwriting
+        env:
+          TAG: ${{ inputs.tag }}
+          VERSION: ${{ needs.build.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tool=tooling/python-contract-assets.py
+          [ "v$VERSION" = "$TAG" ]
+          python3 "$tool" verify-checksums --dist dist --version "$VERSION"
+
+          # Re-read the release now: it may have changed since the build, and a draft or moved state must stop us.
+          gh release view "$TAG" --json tagName,isDraft,isPrerelease,publishedAt,assets > release.json
+          python3 - <<'PY'
+          import json, sys
+          r = json.load(open("release.json"))
+          if r["isDraft"] or r["isPrerelease"] or not r["publishedAt"]:
+              sys.exit("::error::Release is not a published stable release")
+          PY
+          python3 "$tool" plan-upload --dist dist --version "$VERSION" --release release.json | tee plan.txt
+
+          # No --clobber: gh refuses to replace an asset that appeared after the plan was made.
+          while read -r action name; do
+            if [ "$action" = "upload" ]; then
+              gh release upload "$TAG" "dist/$name"
+            fi
+          done < plan.txt
+
+          # Re-read and require every asset to be attached with exactly the content that was verified.
+          gh release view "$TAG" --json assets > after.json
+          python3 "$tool" plan-upload --dist dist --version "$VERSION" --release after.json | tee after.txt
+          if grep -q '^upload' after.txt; then
+            echo "::error::Assets are missing after upload"
+            exit 1
+          fi
+          echo "Attached to $TAG: $(cat dist/SHA256SUMS | tr '\n' ' ')" >> "$GITHUB_STEP_SUMMARY"

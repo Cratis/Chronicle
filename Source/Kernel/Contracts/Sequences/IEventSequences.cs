@@ -314,6 +314,12 @@ public class AppendRequest
     /// </summary>
     [ProtoMember(16)]
     public global::Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope? ConcurrencyScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventSource.
+    /// </summary>
+    [ProtoMember(17)]
+    public string? EventSource { get; set; }
 }
 
 /// <summary>
@@ -825,6 +831,12 @@ public class AppendWithNamedTagsRequest
     /// </summary>
     [ProtoMember(17)]
     public global::Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope? ConcurrencyScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventSource.
+    /// </summary>
+    [ProtoMember(18)]
+    public string? EventSource { get; set; }
 }
 
 /// <summary>

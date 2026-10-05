@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation;
 
@@ -12,6 +13,32 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 public static partial class JobsManagerExtensions
 {
+    static readonly JobStatus[] _unfinishedStatuses =
+    [
+        JobStatus.None,
+        JobStatus.PreparingJob,
+        JobStatus.PreparingSteps,
+        JobStatus.StartingSteps,
+        JobStatus.Running,
+        JobStatus.Stopped
+    ];
+
+    /// <summary>
+    /// Gets the jobs that have not finished - the only ones an observer can pause, resume, stop or wait on.
+    /// </summary>
+    /// <param name="jobsManager">The jobs manager.</param>
+    /// <returns>The jobs that are preparing, running or stopped.</returns>
+    /// <remarks>
+    /// Finished jobs are retained - those completed with failures for days - and a retry job finishes with failures
+    /// every time it runs while the client is away, so they far outnumber the live ones. Every observer looks its
+    /// jobs up on every subscribe and unsubscribe. Loading all jobs there deserialized thousands of finished ones
+    /// per call, and a fleet of reconnecting clients turned that into hundreds of megabytes of garbage a second:
+    /// the garbage collector paused the silo for a quarter of its time, observer turns outlived the clients' 30
+    /// second timeout, and every retry added another round. The status filter is served by an index.
+    /// </remarks>
+    public static Task<IImmutableList<JobState>> GetUnfinishedJobs(this IJobsManager jobsManager) =>
+        jobsManager.GetJobs(new JobQuery { Statuses = _unfinishedStatuses, Take = 0 });
+
     /// <summary>
     /// Starts or resumes an observer job.
     /// </summary>
@@ -44,7 +71,7 @@ public static partial class JobsManagerExtensions
         onStartNew ??= () => Task.CompletedTask;
         onResumeRefused ??= () => Task.CompletedTask;
 
-        var jobs = await jobsManager.GetJobsOfType<TJob, TRequest>();
+        var jobs = await jobsManager.GetUnfinishedJobs();
         jobs = jobs.Where(job => job.Request is TRequest observerRequest && observerRequest.ObserverKey == request.ObserverKey && requestPredicate(observerRequest)).ToImmutableList();
         var alreadyRunningJob = jobs.FirstOrDefault(job => job.IsPreparingOrRunning);
         if (alreadyRunningJob is not null)

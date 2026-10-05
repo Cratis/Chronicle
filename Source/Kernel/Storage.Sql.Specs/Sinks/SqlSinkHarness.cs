@@ -1,16 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
+using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 using SqlSink = Cratis.Chronicle.Storage.Sql.Sinks.Sink;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
@@ -18,20 +21,35 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// <summary>
 /// Runs the shared <see cref="ISink"/> contract against the SQL sink, backed by an in-memory SQLite database.
 /// </summary>
-public class SqlSinkHarness : ISinkHarness
+public class SqlSinkHarness : ISqlSinkHarness
 {
-    readonly SqliteConnection _connection = new("DataSource=:memory:");
-    IReadOnlyList<ProjectedColumn> _columns = [];
+    readonly ReadModelMigrator _migrator = new(
+        new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
+        Substitute.For<ILogger<ReadModelMigrator>>());
     readonly ReplayingTables _replayingTables = new();
+    IReadOnlyList<ProjectedColumn> _columns = [];
+    SqliteConnection? _connection;
     ReadModelDefinition? _definition;
+
+    /// <summary>
+    /// Gets the isolated database shared by this harness's connections.
+    /// </summary>
+    public string ConnectionString { get; init; } = $"Data Source=sink-{Guid.NewGuid():N};Mode=Memory;Cache=Shared;Pooling=False";
+
+    /// <summary>
+    /// Gets interceptors that let concurrency specs arrange an exact command interleaving.
+    /// </summary>
+    public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
         _definition = definition;
         _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration());
-        if (_connection.State != System.Data.ConnectionState.Open)
+        if (_connection is null)
         {
+            // Keep the in-memory database alive, but never share a connection between concurrent scopes.
+            _connection = new SqliteConnection(ConnectionString);
             _connection.Open();
         }
 
@@ -41,7 +59,7 @@ public class SqlSinkHarness : ISinkHarness
         var database = Substitute.For<IDatabase>();
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
-            .Returns(callInfo => Task.FromResult(new DbContextScope<ReadModelDbContext>(CreateContext(callInfo.ArgAt<string>(2)), () => { })));
+            .Returns(async callInfo => new DbContextScope<ReadModelDbContext>(await CreateContext(callInfo.ArgAt<string>(2)), () => { }));
 
         return new SqlSink(
             "test-event-store",
@@ -68,38 +86,23 @@ public class SqlSinkHarness : ISinkHarness
     /// <returns>The rows in the read model's primary table.</returns>
     public async Task<DynamicReadModelEntity[]> ReadStoredRows()
     {
-        await using var context = CreateContext(_definition!.ContainerName.Value);
+        await using var context = await CreateContext(_definition!.ContainerName.Value);
         return await context.Entries.AsNoTracking().ToArrayAsync();
     }
 
     /// <inheritdoc/>
-    public void Dispose() => _connection.Dispose();
+    public virtual void Dispose() => _connection?.Dispose();
 
-    bool TableExists(string tableName)
+    async Task<ReadModelDbContext> CreateContext(string containerName)
     {
-        using var command = _connection.CreateCommand();
-        command.CommandText = "select count(*) from sqlite_master where type = 'table' and name = $name";
-        command.Parameters.AddWithValue("$name", tableName);
-        return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) > 0;
-    }
-
-    ReadModelDbContext CreateContext(string containerName)
-    {
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>()
-            .UseSqlite(_connection)
-            .AddConceptAsSupport()
+        var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
+        builder.UseDatabaseFromConnectionString(ConnectionString);
+        var options = builder.AddConceptAsSupport()
+            .AddInterceptors(Interceptors)
             .Options;
 
-        var context = new ReadModelDbContext(options, containerName, _columns, Substitute.For<IReadModelMigrator>());
-
-        // The real database creates a container's table on first use through the migrator; the substitute
-        // does not, so the harness creates it here. Existence is asked of the database rather than
-        // remembered, because ending a replay renames tables out from under any memo of what exists.
-        if (!TableExists(containerName))
-        {
-            context.Database.ExecuteSqlRaw(context.Database.GenerateCreateScript());
-        }
-
+        var context = new ReadModelDbContext(options, containerName, _columns, _migrator);
+        await context.EnsureTableExists();
         return context;
     }
 }

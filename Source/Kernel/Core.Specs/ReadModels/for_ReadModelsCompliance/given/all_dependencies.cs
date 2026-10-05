@@ -58,7 +58,7 @@ public class all_dependencies : Specification
                 return result;
             });
 
-        _complianceManager.Apply(
+        _complianceManager.ApplyToReadModel(
                 Arg.Any<EventStoreName>(),
                 Arg.Any<EventStoreNamespaceName>(),
                 Arg.Any<JsonSchema>(),

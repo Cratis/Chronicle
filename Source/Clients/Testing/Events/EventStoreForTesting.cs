@@ -20,6 +20,7 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
@@ -52,6 +53,7 @@ using ExternalServicesImpl = Cratis.Chronicle.ExternalServices.ExternalServices;
 using FailedPartitionsImpl = Cratis.Chronicle.Observation.FailedPartitions;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
+using InMemoryEventSourcesStorage = Cratis.Chronicle.Storage.InMemory.EventSources.EventSourcesStorage;
 using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
 using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
 using InMemoryUniqueEventTypesConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueEventTypesConstraintsStorage;
@@ -78,6 +80,8 @@ public class EventStoreForTesting : IEventStore
     readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly EventTypes _eventTypes;
+    readonly EventSources.EventSources _eventSources;
+    readonly InMemoryEventSourcesStorage _eventSourcesStorage = new();
     readonly Projections.Projections _projections;
     readonly Reducers.Reducers _reducers;
     readonly ICanProvideConstraints _constraintProvider;
@@ -150,13 +154,22 @@ public class EventStoreForTesting : IEventStore
                 new InMemoryIdentityStorage()),
 
             // The registry needs Connection during construction; schema lookups happen after discovery below.
-            eventTypesStorage: new InMemoryEventTypesStorage(() => _eventTypes!, JsonSchemaGenerator));
+            eventTypesStorage: new InMemoryEventTypesStorage(() => _eventTypes!, JsonSchemaGenerator),
+            eventSourcesStorage: _eventSourcesStorage);
         Connection = new ChronicleConnectionForTesting(topLevelGrainFactory, topLevelStorage, _compliance, _jsonSerializerOptions, () => _eventTypes!);
 
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, _serviceProvider);
 
         _eventTypes = new EventTypes(this, JsonSchemaGenerator, ClientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation: false, namingPolicy: _namingPolicy);
         _eventTypes.Discover().GetAwaiter().GetResult();
+
+        // The in-memory event log validates appends against the same definitions a real Kernel would hold.
+        _eventSources = new EventSources.EventSources(this, ClientArtifactsProvider);
+        _eventSources.Discover().GetAwaiter().GetResult();
+        foreach (var definition in _eventSources.All)
+        {
+            _eventSourcesStorage.Save(definition.ToKernel()).GetAwaiter().GetResult();
+        }
 
         EventSerializer = new EventSerializer(ClientArtifactsProvider, _artifactActivator, _eventTypes, _jsonSerializerOptions);
 
@@ -304,6 +317,9 @@ public class EventStoreForTesting : IEventStore
     public IEventTypes EventTypes => _eventTypes;
 
     /// <inheritdoc/>
+    public IEventSources EventSources => _eventSources;
+
+    /// <inheritdoc/>
     public IUnitOfWorkManager UnitOfWorkManager => _unitOfWorkManager.Value;
 
     /// <inheritdoc/>
@@ -434,7 +450,8 @@ public class EventStoreForTesting : IEventStore
             constraintsStorage,
             closedStreamsStorage,
             identityStorage,
-            eventTypesStorage);
+            eventTypesStorage,
+            _eventSourcesStorage);
 
         var grain = InProcessEventSequence.Create(
             storage,
@@ -489,7 +506,8 @@ public class EventStoreForTesting : IEventStore
                 new CausationManager(),
                 new NoUnitOfWorkManager(),
                 new BaseIdentityProvider(),
-                _jsonSerializerOptions);
+                _jsonSerializerOptions,
+                eventSources: _eventSources);
         }
 
         return new EventSequence(
@@ -505,7 +523,8 @@ public class EventStoreForTesting : IEventStore
             new CausationManager(),
             new NoUnitOfWorkManager(),
             new BaseIdentityProvider(),
-            _jsonSerializerOptions);
+            _jsonSerializerOptions,
+            eventSources: _eventSources);
     }
 
     T[] Activate<T>(IEnumerable<Type> artifactTypes)

@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Schemas;
 /// </summary>
 /// <remarks>
 /// This is the single, generalized engine both compliance (<c language="csharp">[PII]</c>) and security
-/// (<c language="csharp">[Encrypted]</c>) values go through. Neither category is special-cased here - each
-/// registered handler reports its own <see cref="SchemaMetadataCategory"/>, and this manager reads the matching
+/// (<c language="csharp">[Encrypted]</c>) values go through. Each registered handler reports its own
+/// <see cref="SchemaMetadataCategory"/>, and this manager reads the matching
 /// category's schema key for it. See <see cref="SchemaMetadataCategory"/> for why the categories are kept apart
 /// at all.
 /// </remarks>
@@ -30,6 +30,18 @@ public interface IJsonSchemaMetadataManager
     /// <param name="json">JSON to apply rules for.</param>
     /// <returns>JSON with schema metadata rules applied.</returns>
     Task<JsonObject> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json);
+
+    /// <summary>
+    /// Apply schema metadata rules to a read model, storing erased PII as the marker returned by release.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the value belongs to.</param>
+    /// <param name="eventStoreNamespace"><see cref="EventStoreNamespaceName"/> the value belongs to.</param>
+    /// <param name="schema"><see cref="JsonSchema"/> that represents the object.</param>
+    /// <param name="identifier">Identifier of the object.</param>
+    /// <param name="json">JSON to apply rules for.</param>
+    /// <returns>JSON with schema metadata rules applied.</returns>
+    Task<JsonObject> ApplyToReadModel(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json) =>
+        Apply(eventStore, eventStoreNamespace, schema, identifier, json);
 
     /// <summary>
     /// Release JSON from schema metadata rules.

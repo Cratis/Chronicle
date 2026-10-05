@@ -36,7 +36,7 @@ public class a_jobs_manager : Specification
 
     protected void HasJobs(params JobState[] jobs) =>
         _jobsManager
-            .GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>()
+            .GetJobs(Arg.Any<JobQuery>())
             .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(jobs)));
 
     protected JobState AJob(JobStatus status, ObserverKey? forObserver = null) => new()

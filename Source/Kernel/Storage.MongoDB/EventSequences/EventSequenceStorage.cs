@@ -382,7 +382,8 @@ public class EventSequenceStorage(
                     [],
                     Subject: eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null)
                 {
-                    NamedTags = eventToAppend.NamedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value)).ToArray()
+                    NamedTags = eventToAppend.NamedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value)).ToArray(),
+                    EventSource = eventToAppend.EventSource.IsSet ? eventToAppend.EventSource : null
                 };
 
                 eventsToInsert.Add(@event);
@@ -406,7 +407,8 @@ public class EventSequenceStorage(
                         appendedHash,
                         Subject: resolvedSubject)
                     {
-                        NamedTags = eventToAppend.NamedTags
+                        NamedTags = eventToAppend.NamedTags,
+                        EventSource = eventToAppend.EventSource
                     },
                     eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
                 {

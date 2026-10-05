@@ -203,15 +203,18 @@ public class EventSequenceStorage(
 
         lock (_lock)
         {
+            var sequenceNumbers = new HashSet<EventSequenceNumber>();
+            if (eventsToAppend.Any(@event => !sequenceNumbers.Add(@event.SequenceNumber) || _events.Exists(existing => existing.Context.SequenceNumber == @event.SequenceNumber)))
+            {
+                var nextAvailable = _events.Count == 0
+                    ? EventSequenceNumber.First
+                    : (EventSequenceNumber)(_events.Max(@event => @event.Context.SequenceNumber.Value) + 1);
+                return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable));
+            }
+
             for (var index = 0; index < eventsToAppend.Count; index++)
             {
                 var e = eventsToAppend[index];
-                if (_events.Exists(_ => _.Context.SequenceNumber == e.SequenceNumber))
-                {
-                    var nextAvailable = (EventSequenceNumber)(_events.Max(_ => _.Context.SequenceNumber.Value) + 1);
-                    return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable));
-                }
-
                 var hash = e.ContentHashes.TryGetValue(e.EventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
                 var appendedEvent = BuildAppendedEvent(
                     e.SequenceNumber,
@@ -228,7 +231,8 @@ public class EventSequenceStorage(
                     e.GenerationalContent,
                     hash,
                     e.Subject,
-                    e.NamedTags);
+                    e.NamedTags,
+                    e.EventSource);
 
                 _events.Add(appendedEvent);
                 _originalCausedByChains[e.SequenceNumber] = e.CausedByChain.ToArray();
@@ -704,7 +708,8 @@ public class EventSequenceStorage(
         IDictionary<EventTypeGeneration, ExpandoObject> content,
         EventHash hash,
         Subject? subject = null,
-        IReadOnlyCollection<NamedTag>? namedTags = null)
+        IReadOnlyCollection<NamedTag>? namedTags = null,
+        EventSourceName? eventSource = null)
     {
         var eventContext = new EventContext(
             eventType,
@@ -723,7 +728,8 @@ public class EventSequenceStorage(
             hash,
             Subject: subject?.IsSet is true ? subject : new Subject(eventSourceId.Value))
         {
-            NamedTags = namedTags ?? []
+            NamedTags = namedTags ?? [],
+            EventSource = eventSource ?? EventSourceName.NotSet
         };
 
         var eventContent = content.TryGetValue(eventType.Generation, out var generationContent)

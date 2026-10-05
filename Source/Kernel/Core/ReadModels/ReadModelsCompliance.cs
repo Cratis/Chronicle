@@ -49,7 +49,7 @@ public class ReadModelsCompliance(
             json,
             defaultSubject,
             subjects,
-            (subject, slice) => complianceManager.Apply(eventStore, eventStoreNamespace, schema, subject, slice));
+            (subject, slice) => complianceManager.ApplyToReadModel(eventStore, eventStoreNamespace, schema, subject, slice));
         var result = expandoObjectConverter.ToExpandoObject(applied, schema);
         var resultAsDictionary = (IDictionary<string, object?>)result;
 

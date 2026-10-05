@@ -4,6 +4,8 @@
         <RootNamespace>Cratis.Chronicle.Storage.Sql</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <IsPackable>false</IsPackable>
+        <!-- Microsoft.Data.SqlClient cannot connect in globalization-invariant mode. -->
+        <InvariantGlobalization>false</InvariantGlobalization>
     </PropertyGroup>
 
     <ItemGroup>

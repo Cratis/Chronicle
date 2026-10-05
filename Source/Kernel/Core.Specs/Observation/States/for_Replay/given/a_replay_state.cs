@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
@@ -66,7 +65,7 @@ public class a_replay_state : Specification
         _observer.GetSubscription().Returns(_ => Task.FromResult(_subscription));
 
         _jobsManager
-            .GetJobsOfType<IReplayObserver, ReplayObserverRequest>()
+            .GetJobs(Arg.Any<JobQuery>())
             .Returns(Enumerable.Empty<JobState>().ToImmutableList());
     }
 }

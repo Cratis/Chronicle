@@ -35,6 +35,7 @@ message EventContext {
    EventObservationState ObservationState = 13;
    string Subject = 14;
    repeated NamedTag NamedTags = 15;
+   string EventSource = 16;
 }
 enum EventObservationState {
    None = 0;

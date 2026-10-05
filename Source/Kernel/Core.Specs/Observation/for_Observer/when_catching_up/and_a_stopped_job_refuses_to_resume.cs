@@ -28,7 +28,7 @@ public class and_a_stopped_job_refuses_to_resume : given.an_observer_with_subscr
     void Establish()
     {
         _jobsManager
-            .GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>()
+            .GetJobs(Arg.Any<JobQuery>())
             .Returns(Task.FromResult<IImmutableList<JobState>>(
                 ImmutableList.Create(new JobState
                 {

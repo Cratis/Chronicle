@@ -62,7 +62,8 @@ public class EventConverter(
                 hash,
                 Subject: @event.Subject?.IsSet == true ? @event.Subject : new Subject(@event.EventSourceId.Value))
             {
-                NamedTags = (@event.NamedTags ?? []).Select(tag => new NamedTag(new TagName(tag.Name), tag.Value)).ToArray()
+                NamedTags = (@event.NamedTags ?? []).Select(tag => new NamedTag(new TagName(tag.Name), tag.Value)).ToArray(),
+                EventSource = @event.EventSource ?? EventSourceName.NotSet
             },
             resolvedContent)
         {

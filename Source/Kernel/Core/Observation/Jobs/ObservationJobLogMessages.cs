@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -21,6 +22,9 @@ internal static partial class ObservationJobLogMessages
 
     [LoggerMessage(LogLevel.Information, "Replay progress: {CompletedSteps}/{TotalSteps} partitions completed ({PercentComplete:F1}%). Last handled sequence number: {LastSequenceNumber}")]
     internal static partial void ReplayProgress(this ILogger<ReplayObserver> logger, int completedSteps, int totalSteps, double percentComplete, EventSequenceNumber lastSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "Not every partition of the replay of reducer '{ObserverId}' was rebuilt. Abandoning the replay and keeping the read model as it was before it started")]
+    internal static partial void AbandoningReplay(this ILogger<ReplayObserver> logger, ObserverId observerId);
 
     [LoggerMessage(LogLevel.Error, "Could not finalize observer replay; failed partitions will remain unresolved")]
     internal static partial void ReplayFinalizationFailed(this ILogger<ReplayObserver> logger, Exception exception);
