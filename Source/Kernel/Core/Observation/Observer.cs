@@ -215,12 +215,23 @@ public partial class Observer(
         {
             await ReviveFromQuarantine();
         }
-        else if (_retryRecoveryAfterQuarantine && _subscription.IsSubscribed && await GetCurrentState() is Disconnected)
+        else if (_retryRecoveryAfterQuarantine && _subscription.IsSubscribed)
         {
-            // The quarantine ended but recovering its subscription failed, leaving the observer disconnected.
-            // Clearing again retries that recovery rather than doing nothing.
-            _retryRecoveryAfterQuarantine = false;
-            await RecoverAfterQuarantine();
+            // The quarantine ended but recovering its subscription never reached a settled state - recovery or the
+            // persistence of a transition failed, dropping the transition that would have carried it on. Clearing
+            // again retries that recovery rather than doing nothing.
+            switch (await GetCurrentState())
+            {
+                case Disconnected:
+                    await RecoverAfterQuarantine();
+                    break;
+
+                case Routing or CatchingUpInFlight:
+                    // Stranded in a transient state whose onward transition was dropped. Disconnected owns recovery.
+                    _recoverSubscriptionAfterQuarantine = true;
+                    await TransitionTo<Disconnected>();
+                    break;
+            }
         }
     }
 
@@ -499,6 +510,13 @@ public partial class Observer(
     }
 
     /// <summary>
+    /// Gets whether a recovery owed after a quarantine ended has not yet settled, so the next clearance retries it.
+    /// This is internal and visible to the test suite only.
+    /// </summary>
+    /// <returns>True if the recovery is still owed, false if not.</returns>
+    internal bool OwesRecoveryAfterQuarantine() => _retryRecoveryAfterQuarantine;
+
+    /// <summary>
     /// Records, in the observer's metrics, that the observer was quarantined.
     /// </summary>
     /// <remarks>
@@ -560,12 +578,21 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override async Task OnBeforeEnteringState(IState<ObserverState> state)
     {
+        // Any transition supersedes a recovery scheduled for when a requested leave enters Disconnected. Entering
+        // Disconnected is how that leave completes, so only that keeps it.
         if (state is not Disconnected)
         {
             _recoverSubscriptionAfterQuarantine = false;
         }
 
-        _retryRecoveryAfterQuarantine = false;
+        // A recovery owed after quarantine stays retryable until it settles. Entering a transient state does not
+        // settle it: the transition carrying it onward is dropped if persisting that entry fails. A new quarantine
+        // supersedes it, since clearing that one owes a recovery of its own.
+        if (state is QuarantinedObserver)
+        {
+            _retryRecoveryAfterQuarantine = false;
+        }
+
         _isQuarantined = state is QuarantinedObserver;
         await _alertMutationLock.WaitAsync();
         try
@@ -602,6 +629,13 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override async Task OnAfterEnteringState(IState<ObserverState> state)
     {
+        if (state is Observing or States.Replay)
+        {
+            // Settled: the observer is driven forward again, so no recovery remains owed.
+            _retryRecoveryAfterQuarantine = false;
+            return;
+        }
+
         if (state is Disconnected && _recoverSubscriptionAfterQuarantine)
         {
             _recoverSubscriptionAfterQuarantine = false;
@@ -904,25 +938,20 @@ public partial class Observer(
             // The leave was only scheduled because quarantine entry is still stopping its retry work. The new
             // subscription is in place, so recover once the leave has actually entered Disconnected.
             _recoverSubscriptionAfterQuarantine = true;
+            _retryRecoveryAfterQuarantine = true;
             return;
         }
 
         await RecoverSubscribedObserver();
     }
 
-    async Task RecoverAfterQuarantine()
+    Task RecoverAfterQuarantine()
     {
-        try
-        {
-            await RecoverSubscribedObserver();
-        }
-        catch
-        {
-            // A failure here leaves the observer disconnected but no longer quarantined. Keep the recovery owed,
-            // so the operator's next clearance retries it. Any later transition or subscription supersedes it.
-            _retryRecoveryAfterQuarantine = await GetCurrentState() is Disconnected;
-            throw;
-        }
+        // Recovery only schedules the transition out of Disconnected when called from its entry hook. That transition
+        // runs after Disconnected is persisted, and is dropped if the write fails, after this method has returned.
+        // Keep the recovery owed until a settled state is entered, so the operator's next clearance retries it.
+        _retryRecoveryAfterQuarantine = true;
+        return RecoverSubscribedObserver();
     }
 
     async Task RecoverSubscribedObserver()

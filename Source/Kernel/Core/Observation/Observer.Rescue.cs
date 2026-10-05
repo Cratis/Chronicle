@@ -146,6 +146,7 @@ public partial class Observer
             // A leave requested during quarantine's OnEnter is only scheduled. Resume recovery from the
             // Disconnected entry hook, not from the return of the transition request.
             _recoverSubscriptionAfterQuarantine = true;
+            _retryRecoveryAfterQuarantine = true;
 
             // An operator's clear stays a clear: claim the ending before the subscription-flow leave can
             // relabel the exit as a revival.
