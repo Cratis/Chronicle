@@ -32,12 +32,11 @@ internal sealed class RegistrationBackoff(TimeSpan? initialDelay = null, TimeSpa
             return TimeSpan.Zero;
         }
 
-        var exponential = _initialDelay * Math.Pow(2, consecutiveFailures - 1);
-        if (exponential > _maximumDelay)
-        {
-            exponential = _maximumDelay;
-        }
+        // Clamp in floating-point ticks before constructing a TimeSpan: multiplying a TimeSpan by 2^n overflows
+        // once n passes ~43, and a run that keeps failing reaches that within the hour.
+        var exponentialTicks = Math.Min(_initialDelay.Ticks * Math.Pow(2, consecutiveFailures - 1), _maximumDelay.Ticks);
+        var jitteredTicks = exponentialTicks * (0.5 + (0.5 * _jitterSource()));
 
-        return exponential * (0.5 + (0.5 * _jitterSource()));
+        return TimeSpan.FromTicks((long)jitteredTicks);
     }
 }
