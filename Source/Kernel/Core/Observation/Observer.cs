@@ -78,6 +78,7 @@ public partial class Observer(
     bool _subscriptionSetupFailed;
     bool _isQuarantined;
     bool _recoverSubscriptionAfterQuarantine;
+    bool _retryRecoveryAfterQuarantine;
 
     /// <summary>
     /// Set once the observer has been removed, so nothing this activation does afterwards writes it back.
@@ -214,6 +215,13 @@ public partial class Observer(
         {
             await ReviveFromQuarantine();
         }
+        else if (_retryRecoveryAfterQuarantine && _subscription.IsSubscribed && await GetCurrentState() is Disconnected)
+        {
+            // The quarantine ended but recovering its subscription failed, leaving the observer disconnected.
+            // Clearing again retries that recovery rather than doing nothing.
+            _retryRecoveryAfterQuarantine = false;
+            await RecoverAfterQuarantine();
+        }
     }
 
     /// <inheritdoc/>
@@ -318,6 +326,7 @@ public partial class Observer(
     {
         ThrowIfSealed();
         _recoverSubscriptionAfterQuarantine = false;
+        _retryRecoveryAfterQuarantine = false;
         var owner = GetOwner<TObserverSubscriber>();
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -353,7 +362,7 @@ public partial class Observer(
         State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
 
-        await RecoverSubscribedObserver();
+        await RecoverAfterSubscribing(leavesQuarantine: true);
     }
 
     /// <inheritdoc/>
@@ -399,6 +408,7 @@ public partial class Observer(
     public async Task Unsubscribe()
     {
         _recoverSubscriptionAfterQuarantine = false;
+        _retryRecoveryAfterQuarantine = false;
         _subscription = ObserverSubscription.Unsubscribed;
         await PauseJobs();
         await TransitionTo<Disconnected>();
@@ -554,6 +564,8 @@ public partial class Observer(
         {
             _recoverSubscriptionAfterQuarantine = false;
         }
+
+        _retryRecoveryAfterQuarantine = false;
         _isQuarantined = state is QuarantinedObserver;
         await _alertMutationLock.WaitAsync();
         try
@@ -595,7 +607,7 @@ public partial class Observer(
             _recoverSubscriptionAfterQuarantine = false;
             if (_subscription.IsSubscribed)
             {
-                await RecoverSubscribedObserver();
+                await RecoverAfterQuarantine();
             }
         }
     }
@@ -679,6 +691,14 @@ public partial class Observer(
         ThrowIfSealed();
         if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
 
+        // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.
+        var leavesQuarantine = !automatic && !recovering;
+        if (leavesQuarantine)
+        {
+            _recoverSubscriptionAfterQuarantine = false;
+            _retryRecoveryAfterQuarantine = false;
+        }
+
         if (additive)
         {
             // Merge inside the serialized observer turn, retaining newer concurrent registrations.
@@ -738,6 +758,7 @@ public partial class Observer(
             }
 
             await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters);
+            await RecoverAfterSubscribing(leavesQuarantine);
 
             // A persisted Active marker alone does not prove setup completed after an entry-write failure.
             _subscriptionSetupFailed = await GetCurrentState() is not (Observing or States.Replay);
@@ -822,8 +843,6 @@ public partial class Observer(
 
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
-
-        await RecoverSubscribedObserver();
     }
 
     bool CanFanOutInto<TObserverSubscriber>(IEnumerable<EventType> eventTypes, ObserverFilters? filters)
@@ -876,6 +895,34 @@ public partial class Observer(
         return;
 
         static bool ShouldPauseJob(JobStatus status) => status is JobStatus.Running or JobStatus.PreparingJob or JobStatus.PreparingSteps or JobStatus.StartingSteps;
+    }
+
+    async Task RecoverAfterSubscribing(bool leavesQuarantine)
+    {
+        if (leavesQuarantine && IsQuarantined)
+        {
+            // The leave was only scheduled because quarantine entry is still stopping its retry work. The new
+            // subscription is in place, so recover once the leave has actually entered Disconnected.
+            _recoverSubscriptionAfterQuarantine = true;
+            return;
+        }
+
+        await RecoverSubscribedObserver();
+    }
+
+    async Task RecoverAfterQuarantine()
+    {
+        try
+        {
+            await RecoverSubscribedObserver();
+        }
+        catch
+        {
+            // A failure here leaves the observer disconnected but no longer quarantined. Keep the recovery owed,
+            // so the operator's next clearance retries it. Any later transition or subscription supersedes it.
+            _retryRecoveryAfterQuarantine = await GetCurrentState() is Disconnected;
+            throw;
+        }
     }
 
     async Task RecoverSubscribedObserver()
