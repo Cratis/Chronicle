@@ -276,6 +276,16 @@ public interface IObserver : IGrainWithStringKey
     Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Notify that a partition replay finished, including how far the replay read.
+    /// </summary>
+    /// <param name="partition">The partition being replayed.</param>
+    /// <param name="lastHandledEventSequenceNumber">The last event sequence number handled by the replay, or <see cref="EventSequenceNumber.Unavailable"/> when it handled nothing.</param>
+    /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the replay read for the partition, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when the replay did not complete.</param>
+    /// <param name="replayedEventTypes">The event types included in the replay, or empty when the replay cannot prove it handled the partition's failed event.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes);
+
+    /// <summary>
     /// Notify that the partition has failed.
     /// </summary>
     /// <param name="partition">The partition that failed.</param>
