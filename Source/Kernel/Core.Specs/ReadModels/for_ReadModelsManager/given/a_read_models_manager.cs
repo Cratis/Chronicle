@@ -30,7 +30,7 @@ public class a_read_models_manager : Specification
         _silo.AddProbe(_ => _readModelGrain);
 
         _projectionsManagerGrain = Substitute.For<IProjectionsManager>();
-        _projectionsManagerGrain.GetProjectionDefinitions().Returns(Enumerable.Empty<ProjectionDefinition>());
+        _projectionsManagerGrain.GetProjectionDefinitions().Returns([]);
         _silo.AddProbe(_ => _projectionsManagerGrain);
 
         _namespacesGrain = Substitute.For<INamespaces>();
