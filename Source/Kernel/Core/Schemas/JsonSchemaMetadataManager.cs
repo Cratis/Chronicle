@@ -119,11 +119,19 @@ public class JsonSchemaMetadataManager(
     {
         // Append encrypts BEFORE schema conversion. Use opaque markers, not encryption: verification
         // must neither provision keys nor normalize the plaintext inside a protected container.
+        // Markers carry a random nonce per call, so a migration cannot name, synthesize or map another value onto one.
+        // Content that already looks like a marker cannot be told apart from one, so it is never compared.
+        if (VerificationMarkers.AppearIn(json))
+        {
+            return null;
+        }
+
+        var markerPrefix = VerificationMarkers.NewPrefix();
         var values = new Dictionary<string, JsonNode>();
         var walker = new StrictJsonSchemaRelease(_propertyValueHandlers);
         var masked = !schema.HasSchemaMetadata() ? json : await walker.Transform(schema, json, (_, _, node) =>
         {
-            var marker = $"chronicle-verification:{values.Count}";
+            var marker = $"{markerPrefix}{values.Count}";
             values.Add(marker, node.DeepClone());
             return Task.FromResult<JsonNode?>(JsonValue.Create(marker));
         });
@@ -136,11 +144,15 @@ public class JsonSchemaMetadataManager(
         var result = new Dictionary<int, JsonObject>();
         foreach (var (generation, content) in converted)
         {
+            // Each marker restores at most once per generation, and only at a protected location. A marker that
+            // was duplicated, moved to an unprotected location or embedded in other text means the migration did
+            // something to the protected value that this comparison cannot reproduce: never report it as equal.
+            var restoredMarkers = new HashSet<string>(StringComparer.Ordinal);
             var restored = !content.Schema.HasSchemaMetadata() ? content.Content : await walker.Transform(content.Schema, content.Content, (_, _, node) => Task.FromResult(
-                node is JsonValue scalar && scalar.TryGetValue<string>(out var marker) && values.TryGetValue(marker, out var value)
+                node is JsonValue scalar && scalar.TryGetValue<string>(out var marker) && values.TryGetValue(marker, out var value) && restoredMarkers.Add(marker)
                     ? value.DeepClone()
                     : null));
-            if (restored is null)
+            if (restored is null || VerificationMarkers.AppearIn(restored))
             {
                 return null;
             }
