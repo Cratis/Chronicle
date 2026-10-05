@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -35,7 +36,7 @@ public class a_partition_replay_job : Specification
             (Key)"some-partition",
             0UL,
             100UL,
-            []) { ReplaysAllEventTypes = true };
+            [new EventType("some-event", EventTypeGeneration.First)]) { ReplaysAllEventTypes = true };
 
         _replayStateServiceClient = Substitute.For<IObserverServiceClient>();
         _observer = Substitute.For<IObserver>();
