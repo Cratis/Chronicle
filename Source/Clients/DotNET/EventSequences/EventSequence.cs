@@ -114,6 +114,37 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
+    public Task<AppendResult> AppendPreparedThroughEventSource(
+        Type eventSource,
+        EventSourceId eventSourceId,
+        PreparedEvent preparedEvent,
+        string? eventStream = default,
+        EventStreamId? eventStreamId = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
+    {
+        ThrowIfNotOwner(preparedEvent);
+        var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
+        return AppendCore(
+            eventSourceId,
+            preparedEvent.Event,
+            [],
+            routing.StreamType,
+            eventStreamId,
+            routing.SourceType,
+            correlationId,
+            tags,
+            concurrencyScope,
+            occurred,
+            subject,
+            routing,
+            preparedEvent);
+    }
+
+    /// <inheritdoc/>
     public async Task<ContentVerificationResult> VerifyContent(EventSequenceNumber sequenceNumber, PreparedEvent preparedEvent, EventSourceId? eventSourceId = default)
     {
         ThrowIfNotOwner(preparedEvent);
