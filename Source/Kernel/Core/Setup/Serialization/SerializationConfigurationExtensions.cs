@@ -2,14 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Schemas;
 using Cratis.Json;
 using Cratis.Orleans.Serialization;
 using Microsoft.Extensions.DependencyInjection;
@@ -123,6 +121,21 @@ public static class SerializationConfigurationExtensions
         return services;
     }
 
+    /// <summary>
+    /// Let the Orleans exception codec carry Cratis exceptions between silos.
+    /// </summary>
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
+    /// <remarks>
+    /// The codec only serializes exception types under its supported namespace prefixes. Any other exception thrown by a
+    /// grain fails to serialize, so the response never reaches the caller on the other silo, which hangs until it times out.
+    /// </remarks>
+    public static IServiceCollection AddExceptionSerialization(this IServiceCollection services)
+    {
+        services.Configure<ExceptionSerializationOptions>(options => options.SupportedNamespacePrefixes.Add("Cratis"));
+        return services;
+    }
+
     static void Configure(this IServiceCollection services)
     {
         // Pre-warm the global JsonSerializerOptions on this single configuration thread. Its lazy
@@ -142,29 +155,10 @@ public static class SerializationConfigurationExtensions
         services.AddSingleton(options);
         services.AddConceptSerializer();
         services.AddCustomSerializers();
+        services.AddExceptionSerialization();
         services.AddSerializer(
             serializerBuilder => serializerBuilder.AddJsonSerializer(
-            type =>
-            {
-                // Check if type inherits from OneOfBase - if so, exclude it from JSON serialization
-                var current = type;
-                while (current != typeof(object) && current is not null)
-                {
-                    if (current.IsGenericType && current.GetGenericTypeDefinition().Name.Contains("OneOfBase"))
-                    {
-                        return false;
-                    }
-                    current = current.BaseType;
-                }
-
-                // OneOf marker types (e.g. OneOf.Types.None, used as job acknowledgements) have no
-                // generated Orleans codec. They must be serializable for failed-partition recovery jobs
-                // to start across silo boundaries, so route them through the JSON serializer.
-                return type == typeof(JsonObject)
-                    || type == typeof(JsonSchema)
-                    || type.Namespace == "OneOf.Types"
-                    || (type.Namespace?.StartsWith("Cratis") ?? false);
-            },
+            JsonSerializedTypes.Includes,
             options));
     }
 
