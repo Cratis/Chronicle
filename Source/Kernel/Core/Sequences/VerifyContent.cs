@@ -147,8 +147,10 @@ public record VerifyContent(
             foreach (var (generation, content) in stored.GenerationalContent)
             {
                 if (JsonNode.Parse(content) is not JsonObject document ||
-                    await metadataManager.TryRelease(EventStore, Namespace, schemas[generation], stored.Context.Subject.Value, document) is not { } released)
+                    await metadataManager.TryRelease(EventStore, Namespace, schemas[generation], stored.Context.Subject.Value, document) is not { } released ||
+                    VerificationMarkers.AppearIn(released))
                 {
+                    // Stored text that looks like a verification marker cannot be told apart from one: never compare it.
                     return new(ContentVerificationResult.Unavailable);
                 }
 
