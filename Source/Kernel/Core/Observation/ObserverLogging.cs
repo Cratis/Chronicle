@@ -82,6 +82,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Failing partition {Partition} has successfully recovered")]
     internal static partial void FailingPartitionRecovered(this ILogger<Observer> logger, Key partition);
 
+    [LoggerMessage(LogLevel.Debug, "Failing partition {Partition} was not recovered. Scheduling another retry")]
+    internal static partial void FailingPartitionNotRecovered(this ILogger<Observer> logger, Key partition);
+
     [LoggerMessage(LogLevel.Debug, "Failing partition {Partition} has partially recovered. Last successfully handled event was {LastEventSequenceNumber}")]
     internal static partial void FailingPartitionPartiallyRecovered(this ILogger<Observer> logger, Key partition, EventSequenceNumber lastEventSequenceNumber);
 

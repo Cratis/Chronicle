@@ -323,6 +323,17 @@ public interface IObserver : IGrainWithStringKey
     Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
 
     /// <summary>
+    /// Notify that a recovery attempt ended without recovering the partition and without recording a new failure.
+    /// </summary>
+    /// <param name="partition">The partition that is still failed.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The retry reminder is removed when the recovery starts, so the partition needs another retry scheduled.
+    /// </remarks>
+    [AlwaysInterleave]
+    Task FailedPartitionNotRecovered(Key partition);
+
+    /// <summary>
     /// Notify that the partition has partially recovered.
     /// </summary>
     /// <param name="partition">The partition that has recovered.</param>

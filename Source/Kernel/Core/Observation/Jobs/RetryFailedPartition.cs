@@ -61,10 +61,12 @@ public class RetryFailedPartition(
             // The step succeeded having read nothing. Clearing the failure here advances the observer past
             // the failed event without the handler ever running, so it is only correct when there genuinely
             // is no event left to handle — otherwise recovery silently discards the missed side effect and
-            // reports the observer healthy. Confirm it against the event sequence before clearing.
+            // reports the observer healthy. Confirm it against the event sequence before clearing. The retry
+            // reminder was removed when this recovery started, so a partition kept failed gets another one.
             if (await HasEventsLeftToHandle())
             {
                 logger.NotClearingFailedPartitionWithEventsLeftToHandle(Request.Key, Request.FromSequenceNumber);
+                await observer.FailedPartitionNotRecovered(Request.Key);
                 return;
             }
 
