@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
@@ -48,7 +47,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         _mediator = Substitute.For<IReducerMediator>();
         _mediator.When(_ => _.OnNext(
                 Arg.Any<ReducerId>(),
-                Arg.Any<ConnectionId>(),
+                Arg.Any<Cratis.Chronicle.Concepts.Clients.ConnectionId>(),
                 Arg.Any<EventStoreName>(),
                 Arg.Any<EventStoreNamespaceName>(),
                 Arg.Any<ReduceOperation>(),
