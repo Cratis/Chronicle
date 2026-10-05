@@ -82,6 +82,10 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
+    public Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber) =>
+        CaughtUp(lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable);
+
+    /// <inheritdoc/>
     /// <remarks>
     /// Catch-up is over however it got here, so the preparing flag comes down with it. Lowering it only in
     /// <see cref="RegisterCatchingUpPartitions"/> covers just the path where a brand-new job prepared steps.
@@ -92,12 +96,24 @@ public partial class Observer
     /// observes anything again. The watchdog then clears the flag, routes, and catch-up concludes the same way
     /// on the next tick, five times over, until the observer is quarantined for a strand that was never its
     /// own fault.
+    /// <para>
+    /// Events the observer's filters exclude are read but never handled, so the last handled event cannot say how
+    /// far catch-up got. The next event sequence number moves past the last event read as well; otherwise the
+    /// excluded events after the last handled one look unhandled to routing, which would start another catch-up
+    /// that reads them again and concludes the same way, without end.
+    /// </para>
     /// </remarks>
-    public async Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber)
+    public async Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber)
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        if (lastScannedEventSequenceNumber.IsActualValue &&
+            (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber))
+        {
+            State = State with { NextEventSequenceNumber = lastScannedEventSequenceNumber.Next() };
+        }
+
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
@@ -108,7 +124,16 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public async Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    public Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) =>
+        PartitionCaughtUp(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Events the observer's filters exclude are read but never handled. Whether the partition needs another
+    /// catch-up is therefore decided from the furthest event read, so trailing excluded events do not start a
+    /// catch-up that reads them again, while only the handled events count as handled.
+    /// </remarks>
+    public async Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber)
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -116,7 +141,17 @@ public partial class Observer
         State.CatchingUpPartitions.Remove(partition);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
-        await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
+        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+    }
+
+    static EventSequenceNumber FurthestOf(EventSequenceNumber lastHandled, EventSequenceNumber lastScanned)
+    {
+        if (!lastScanned.IsActualValue)
+        {
+            return lastHandled;
+        }
+
+        return !lastHandled.IsActualValue || lastScanned > lastHandled ? lastScanned : lastHandled;
     }
 
     async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)

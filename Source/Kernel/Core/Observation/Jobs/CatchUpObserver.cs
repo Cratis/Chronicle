@@ -64,7 +64,11 @@ public class CatchUpObserver(
             // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
             // CatchUp(), so CaughtUp() would be queued and deadlock. Returning first lets the Observer
             // grain become free to process CaughtUp(), even if finalization fails after recording partitions.
-            _ = observer.CaughtUp(State.LastHandledEventSequenceNumber);
+            // Only a catch-up whose every step completed may move the observer past events it read but did not
+            // handle; a step that stopped early can leave events behind the furthest point another step reached.
+            _ = observer.CaughtUp(
+                State.LastHandledEventSequenceNumber,
+                AllStepsCompletedSuccessfully ? State.LastScannedEventSequenceNumber : EventSequenceNumber.Unavailable);
         }
 
         if (!AllStepsCompletedSuccessfully)
