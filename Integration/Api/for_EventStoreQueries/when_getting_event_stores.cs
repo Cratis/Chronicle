@@ -26,5 +26,9 @@ public class when_getting_event_stores(context context) : Given<context>(context
 
     [Fact] void should_succeed_query() => Context.Result.IsSuccess.ShouldBeTrue();
 
-    [Fact] void should_return_two_event_stores_including_system() => Context.Data.Select(_ => _.Name).ShouldContainOnly(EventStoreName.System.Value, "testing");
+    [Fact] void should_return_system_event_store() => Context.Data.Select(_ => _.Name).ShouldContain(EventStoreName.System.Value);
+
+    // Other specs in this collection ensure their own event stores and the fixture does not wipe them between specs,
+    // so the list holds every event store created so far - not only the one this spec ensured.
+    [Fact] void should_return_event_store_ensured_by_the_spec() => Context.Data.Select(_ => _.Name).ShouldContain("testing");
 }
