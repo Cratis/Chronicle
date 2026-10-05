@@ -153,6 +153,34 @@ public static class ReactorWaitExtensions
     }
 
     /// <summary>
+    /// Wait till the reactor has moved past a specific event sequence number, with an optional timeout.
+    /// </summary>
+    /// <param name="reactor">Reactor to wait for.</param>
+    /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> the reactor should have moved past.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>The <see cref="ReactorState"/> observed once the reactor moved past the sequence number.</returns>
+    /// <remarks>
+    /// Unlike <see cref="WaitTillReachesEventSequenceNumber"/>, this does not require the event at
+    /// <paramref name="eventSequenceNumber"/> to have been handled - it is satisfied once the reactor's
+    /// next event sequence number has advanced past it, which also covers events excluded by a filter.
+    /// </remarks>
+    public static async Task<ReactorState> WaitTillMovesPastEventSequenceNumber(this IReactorHandler reactor, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (true)
+        {
+            var state = await reactor.GetState();
+            if (state.NextEventSequenceNumber.IsActualValue && state.NextEventSequenceNumber.Value > eventSequenceNumber.Value)
+            {
+                return state;
+            }
+
+            await Task.Delay(DefaultDelay, cts.Token);
+        }
+    }
+
+    /// <summary>
     /// Wait for there to be failed partitions for a specific reactor, with an optional timeout.
     /// </summary>
     /// <param name="reactor">Reactor to wait for.</param>

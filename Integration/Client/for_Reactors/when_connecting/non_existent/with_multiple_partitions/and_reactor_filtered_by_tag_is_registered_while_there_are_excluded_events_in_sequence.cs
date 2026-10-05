@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
@@ -43,22 +42,7 @@ public class and_reactor_filtered_by_tag_is_registered_while_there_are_excluded_
             await reactor.WaitTillSubscribed();
             ExcludedCompletion = await ExcludedAppend.WaitForCompletion(TimeSpanFactory.DefaultTimeout());
             await AuditedAppend.WaitForCompletion(TimeSpanFactory.DefaultTimeout());
-            ReactorState = await WaitTillMovedPast(reactor, ExcludedAppend.TailSequenceNumber);
-        }
-
-        static async Task<ReactorState> WaitTillMovedPast(IReactorHandler reactor, EventSequenceNumber sequenceNumber)
-        {
-            using var cancellation = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-            while (true)
-            {
-                var state = await reactor.GetState();
-                if (state.NextEventSequenceNumber.IsActualValue && state.NextEventSequenceNumber.Value > sequenceNumber.Value)
-                {
-                    return state;
-                }
-
-                await Task.Delay(50, cancellation.Token);
-            }
+            ReactorState = await reactor.WaitTillMovesPastEventSequenceNumber(ExcludedAppend.TailSequenceNumber, TimeSpanFactory.DefaultTimeout());
         }
     }
 
