@@ -15,6 +15,7 @@ public class and_content_matches(context context) : Given<context>(context)
     {
         public override IEnumerable<Type> EventTypes => [typeof(ContactRecorded)];
         public ContentVerificationResult Result { get; private set; }
+        public ContentVerificationResult Expected => ExpectedVerification.For(ChronicleFixture, ContentVerificationResult.Equal);
 
         public async Task Because()
         {
@@ -26,5 +27,5 @@ public class and_content_matches(context context) : Given<context>(context)
         }
     }
 
-    [Fact] void should_verify_the_complete_released_content() => Context.Result.ShouldEqual(ContentVerificationResult.Equal);
+    [Fact] void should_verify_the_complete_released_content_where_the_backend_can_compare() => Context.Result.ShouldEqual(Context.Expected);
 }
