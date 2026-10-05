@@ -5,10 +5,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
-using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Concepts.Sinks;
-using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Schemas;
 using Orleans.Core;
 using Orleans.TestKit;
 
@@ -81,17 +77,5 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         [],
         "the-model",
         true,
-        []);
-
-    protected static ReadModelDefinition ReadModelDefinition(ReadModelContainerName containerName) => new(
-        "the-model",
-        containerName,
-        "The model",
-        ReadModelOwner.Client,
-        ReadModelSource.Code,
-        ReadModelObserverType.Reducer,
-        ReadModelObserverIdentifier.Unspecified,
-        SinkDefinition.None,
-        new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new() },
         []);
 }
