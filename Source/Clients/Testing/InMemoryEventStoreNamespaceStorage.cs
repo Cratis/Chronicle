@@ -3,6 +3,7 @@
 
 extern alias KernelConcepts;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Alerts;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -55,6 +56,9 @@ internal sealed class InMemoryEventStoreNamespaceStorage(
 
     /// <inheritdoc/>
     public IObserverStateStorage Observers => throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    public IAlertIncidentsStorage AlertIncidents { get; } = new Storage.InMemory.Alerts.AlertIncidentsStorage();
 
     /// <inheritdoc/>
     public IFailedPartitionsStorage FailedPartitions => throw new NotSupportedException();

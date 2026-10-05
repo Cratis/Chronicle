@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Storage.Alerts;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -32,10 +33,10 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="namespace">The name of the namespace.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
+/// <param name="jobsStorage">The <see cref="Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
 /// <param name="observerDefinitionsStorage">The <see cref="IObserverDefinitionsStorage"/> for working with observer definitions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage, IObserverDefinitionsStorage observerDefinitionsStorage, JsonSerializerOptions jsonSerializerOptions) : IEventStoreNamespaceStorage
+public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Orleans.Storage.IJobsStorage jobsStorage, IObserverDefinitionsStorage observerDefinitionsStorage, JsonSerializerOptions jsonSerializerOptions) : IEventStoreNamespaceStorage
 {
     /// <inheritdoc/>
     public IChangesetStorage Changesets { get; } = new Changesets.ChangesetStorage(eventStore, @namespace, database);
@@ -51,6 +52,9 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
 
     /// <inheritdoc/>
     public IObserverStateStorage Observers { get; } = new Observers.ObserverStateStorage(eventStore, @namespace, database);
+
+    /// <inheritdoc/>
+    public IAlertIncidentsStorage AlertIncidents { get; } = new Alerts.AlertIncidentsStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
     public IFailedPartitionsStorage FailedPartitions { get; } = new FailedPartitions.FailedPartitionStorage(eventStore, @namespace, database);

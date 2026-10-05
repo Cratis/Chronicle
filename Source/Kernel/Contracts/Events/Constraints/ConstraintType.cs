@@ -7,28 +7,28 @@
 
 namespace Cratis.Chronicle.Contracts.Events.Constraints;
 /// <summary>
-/// Represents the ConstraintType value.
+/// Defines the types of constraints.
 /// </summary>
 public enum ConstraintType
 {
     /// <summary>
-    /// Represents the Unknown value.
+    /// Represents unknown constraint.
     /// </summary>
     Unknown = 0,
     /// <summary>
-    /// Represents the Unique value.
+    /// Represents a unique constraint.
     /// </summary>
     Unique = 1,
     /// <summary>
-    /// Represents the UniqueEventType value.
+    /// Represents a unique event type constraint.
     /// </summary>
     UniqueEventType = 2,
     /// <summary>
-    /// Represents the Schema value.
+    /// Represents a schema validation constraint.
     /// </summary>
     Schema = 3,
     /// <summary>
-    /// Represents the StreamClosed value.
+    /// Represents a stream-closed constraint.
     /// </summary>
     StreamClosed = 4
 }

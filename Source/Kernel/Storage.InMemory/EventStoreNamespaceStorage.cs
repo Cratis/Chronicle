@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Storage.Alerts;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -37,7 +38,7 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// </summary>
 /// <param name="eventStore">The <see cref="EventStoreName"/> the storage serves.</param>
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage serves.</param>
-/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
+/// <param name="jobsStorage">The <see cref="IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
 /// <param name="sinks">The <see cref="ISinks"/> for the namespace.</param>
 public sealed class EventStoreNamespaceStorage(
     EventStoreName eventStore,
@@ -65,6 +66,9 @@ public sealed class EventStoreNamespaceStorage(
 
     /// <inheritdoc/>
     public IObserverStateStorage Observers { get; } = new ObserverStateStorage();
+
+    /// <inheritdoc/>
+    public IAlertIncidentsStorage AlertIncidents { get; } = new Alerts.AlertIncidentsStorage();
 
     /// <inheritdoc/>
     public IFailedPartitionsStorage FailedPartitions { get; } = new FailedPartitionStorage();

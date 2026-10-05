@@ -3,6 +3,8 @@
 
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -126,6 +128,9 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     /// <returns>The generated C# source code.</returns>
     public string GenerateSharedType(Type type, string outputDirectory)
     {
+        SharedTypeRegistry.QualifiedNameFor(type);
+        SharedTypeRegistry.CompleteDiscovery();
+
         // Namespace mapping goes through the registry, not BuildTargetNamespace/BuildFolderPath below - a shared
         // type reused from a project Core depends on (Cratis.Orleans.Jobs.JobStatus, say) does not necessarily sit at
         // the same relative namespace depth a service's own artifacts do, and the registry is what already
@@ -187,6 +192,8 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         // shared enum. Rendered as an int literal to match every hand-written enum in this codebase (the
         // underlying type of a C# enum defaults to int, and nothing here declares otherwise); Convert.ToInt64
         // would compile too, but as a spurious "0L" no hand-written enum in the codebase ever writes.
+        var documentationPath = Path.ChangeExtension(type.Assembly.Location, ".xml");
+        var documentation = File.Exists(documentationPath) ? XDocument.Load(documentationPath) : null;
         var members = Enum.GetValues(type)
             .Cast<object>()
             .Select(value =>
@@ -197,14 +204,84 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
                         SyntaxFactory.LiteralExpression(
                             SyntaxKind.NumericLiteralExpression,
                             SyntaxFactory.Literal(Convert.ToInt32(value)))))
-                    .WithLeadingTrivia(BuildXmlDoc($"Represents the {name} value."));
+                    .WithLeadingTrivia(EnumDocumentation(documentation, type, $"F:{type.FullName}.{name}", $"Represents the {name} value."));
             });
 
         return SyntaxFactory.EnumDeclaration(type.Name)
             .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
-            .WithLeadingTrivia(BuildXmlDoc($"Represents the {type.Name} value."))
+            .WithLeadingTrivia(EnumDocumentation(documentation, type, $"T:{type.FullName}", $"Represents the {type.Name} value."))
             .AddMembers([.. members]);
     }
+
+    static SyntaxTriviaList EnumDocumentation(XDocument? documentation, Type type, string memberName, string fallback)
+    {
+        var member = documentation?.Root?.Element("members")?.Elements("member")
+            .FirstOrDefault(element => (string?)element.Attribute("name") == memberName);
+        if (member is null)
+        {
+            return BuildXmlDoc(fallback);
+        }
+        var copy = new XElement(member);
+        var sharedNames = SharedTypeRegistry.Discovered.ToDictionary(pair => pair.Key.FullName!, pair => pair.Value["global::".Length..]);
+        sharedNames[type.FullName!] = SharedTypeRegistry.QualifiedNameFor(type)!["global::".Length..];
+
+        foreach (var element in copy.Descendants().Reverse().Where(element => element.Attribute("cref") is not null).ToList())
+        {
+            var cref = element.Attribute("cref")!;
+            var token = $"cref=\"{cref.Value}\"";
+            var resolved = false;
+            foreach (var (sourceName, targetName) in sharedNames.OrderByDescending(pair => pair.Key.Length))
+            {
+                // Match a whole type in a documentation ID, not prose or a longer type with the same prefix.
+                var pattern = $"cref=\"([TFPME]:){Regex.Escape(sourceName)}(?=[.(\"])";
+                var regex = new Regex(pattern, RegexOptions.None, TimeSpan.FromSeconds(1));
+                if (!regex.IsMatch(token))
+                {
+                    continue;
+                }
+
+                cref.Value = regex.Replace(token, match => $"cref=\"{match.Groups[1].Value}{targetName}")["cref=\"".Length..^1];
+                resolved = true;
+                break;
+            }
+
+            if (!resolved && !IsBclDocumentationReference(cref.Value))
+            {
+                switch (element.Name.LocalName)
+                {
+                    case "see":
+                        var name = cref.Value[2..].Split('(')[0];
+                        element.ReplaceWith(element.Nodes().Any()
+                            ? new XElement("c", element.Nodes())
+                            : new XElement("c", name[(name.LastIndexOf('.') + 1)..]));
+                        break;
+                    case "seealso":
+                    case "exception":
+                        if (element.Nodes().Any())
+                        {
+                            var description = new XElement("para", element.Nodes());
+                            element.ReplaceWith(element.Parent == copy ? new XElement("remarks", description) : description);
+                        }
+                        else
+                        {
+                            element.Remove();
+                        }
+                        break;
+                    default:
+                        cref.Remove();
+                        break;
+                }
+            }
+        }
+
+        var text = string.Join('\n', copy.Elements().Select(element => element.ToString()));
+
+        return SyntaxFactory.ParseLeadingTrivia(string.Join('\n', text.Split('\n').Select(line => $"/// {line.Trim()}")) + "\n");
+    }
+
+    static bool IsBclDocumentationReference(string documentationId) =>
+        documentationId[2..].StartsWith("System.", StringComparison.Ordinal) ||
+        documentationId[2..].StartsWith("Microsoft.", StringComparison.Ordinal);
 
     static MethodDeclarationSyntax BuildCommandMethod(CommandDefinition command, string? requestTypeName, string? responseTypeName)
     {

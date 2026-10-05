@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Storage.Alerts;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -47,6 +48,11 @@ public interface IEventStoreNamespaceStorage
     /// Gets the <see cref="IObserverStateStorage"/> for the event store namespace.
     /// </summary>
     IObserverStateStorage Observers { get; }
+
+    /// <summary>
+    /// Gets the retained alert incident storage for this namespace.
+    /// </summary>
+    IAlertIncidentsStorage AlertIncidents { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventSequenceStorage"/> for the event store namespace.
