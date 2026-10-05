@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_RetryFailedPartition.when_completed;
 
@@ -28,4 +29,5 @@ public class and_an_event_arrived_after_the_excluded_events_were_read : given.a_
 
     [Fact] void should_hand_what_was_read_to_the_observer() => _observer.Received(1).FailedPartitionRecovered(_request.Key, EventSequenceNumber.Unavailable, (EventSequenceNumber)7UL);
     [Fact] void should_leave_looking_for_later_events_to_the_observer() => _eventSequenceStorage.DidNotReceive().GetNextSequenceNumberGreaterOrEqualThan(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>?>(), Arg.Any<EventSourceId?>());
+    [Fact] void should_not_keep_the_partition_failed() => _observer.DidNotReceive().FailedPartitionNotRecovered(Arg.Any<Key>());
 }

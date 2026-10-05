@@ -105,6 +105,16 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
+    public async Task FailedPartitionNotRecovered(Key partition)
+    {
+        if (IsRetired || _removed || State.RunningState == ObserverRunningState.Quarantined) return;
+        if (!Failures.TryGet(partition, out var failure) || failure.IsQuarantined) return;
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.FailingPartitionNotRecovered(partition);
+        await RegisterRetryReminder(failure);
+    }
+
+    /// <inheritdoc/>
     public async Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
         if (IsRetired || _removed) return;

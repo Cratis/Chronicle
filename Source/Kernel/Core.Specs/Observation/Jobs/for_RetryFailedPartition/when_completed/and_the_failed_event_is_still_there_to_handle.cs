@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_RetryFailedPartition.when_comple
 /// A step that succeeded having read nothing while the event it failed on is still in the sequence is not a
 /// stale failure record. Clearing it advances the observer past that event without the handler ever running -
 /// the missed side effect is lost for good and the observer reports healthy, so nothing ever prompts a look.
-/// Keep the partition failed and let the next retry try again.
+/// Keep the partition failed and schedule the next retry - the reminder that started this one is gone.
 /// </summary>
 public class and_the_failed_event_is_still_there_to_handle : given.a_retry_failed_partition_job
 {
@@ -28,4 +28,5 @@ public class and_the_failed_event_is_still_there_to_handle : given.a_retry_faile
 
     [Fact] void should_not_call_failed_partition_recovered() => _observer.DidNotReceive().FailedPartitionRecovered(Arg.Any<Key>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>());
     [Fact] void should_not_call_failed_partition_partially_recovered() => _observer.DidNotReceive().FailedPartitionPartiallyRecovered(Arg.Any<Key>(), Arg.Any<EventSequenceNumber>());
+    [Fact] void should_have_the_observer_schedule_another_retry() => _observer.Received(1).FailedPartitionNotRecovered(_request.Key);
 }
