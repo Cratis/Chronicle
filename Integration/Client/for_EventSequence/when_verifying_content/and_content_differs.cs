@@ -15,6 +15,7 @@ public class and_content_differs(context context) : Given<context>(context)
     {
         public override IEnumerable<Type> EventTypes => [typeof(ContactRecorded)];
         public ContentVerificationResult Result { get; private set; }
+        public ContentVerificationResult Expected => ExpectedVerification.For(ChronicleFixture, ContentVerificationResult.Different);
 
         public async Task Because()
         {
@@ -26,5 +27,5 @@ public class and_content_differs(context context) : Given<context>(context)
         }
     }
 
-    [Fact] void should_report_different() => Context.Result.ShouldEqual(ContentVerificationResult.Different);
+    [Fact] void should_report_different_where_the_backend_can_compare() => Context.Result.ShouldEqual(Context.Expected);
 }
