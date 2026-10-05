@@ -63,7 +63,6 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         _clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
         silo.AddService<TimeProvider>(_clock);
 
-
         _subscriber = await silo.CreateGrainAsync<ReducerObserverSubscriber>(_key.ToString());
         _pipelineFactory.ClearReceivedCalls();
     }
