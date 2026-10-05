@@ -25,15 +25,37 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// <param name="reducerPipelineFactory"><see cref="IReducerPipelineFactory"/> for creating pipelines.</param>
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for notifying actual clients.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="timeProvider"><see cref="TimeProvider"/> for deciding when the cached pipeline is due for a refresh.</param>
 [ConnectedObserverPlacement]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
 public class ReducerObserverSubscriber(
     IReducerPipelineFactory reducerPipelineFactory,
     IReducerMediator reducerMediator,
-    ILogger<ReducerObserverSubscriber> logger) : Grain<ReducerDefinition>, IReducerObserverSubscriber
+    ILogger<ReducerObserverSubscriber> logger,
+    TimeProvider? timeProvider = null) : Grain<ReducerDefinition>, IReducerObserverSubscriber
 {
+    /// <summary>
+    /// How long a built pipeline - and the sink it resolved the target read model's definition to - is
+    /// trusted before the next <see cref="OnNext"/> rebuilds it from the read model's current definition.
+    /// </summary>
+    /// <remarks>
+    /// This grain activates once per partition and keeps running for as long as the client stays connected -
+    /// potentially the activation's entire lifetime, since nothing here ever deactivates it on its own. A
+    /// read model's definition - its container name, in particular - can change on a later client reconnect
+    /// (a rename) while this activation is never told: the client-side reducer re-registering its own
+    /// definition is a deliberate no-op when that definition is unchanged, which it usually is, and even
+    /// when it is not, re-registration resubscribes the observer rather than reaching into every partition
+    /// activation's cached pipeline. Without a bound, a pipeline built against a superseded container name
+    /// keeps writing to it for as long as the activation lives. A short, bounded staleness window costs one
+    /// extra read-model lookup per window on an already cross-grain call; the default favors bounded
+    /// staleness over added work on every batch.
+    /// </remarks>
+    internal static readonly TimeSpan PipelineRefreshInterval = TimeSpan.FromMinutes(1);
+
+    readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     ObserverKey _key = ObserverKey.NotSet;
     IReducerPipeline? _pipeline;
+    DateTimeOffset _pipelineBuiltAt = DateTimeOffset.MinValue;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -45,6 +67,11 @@ public class ReducerObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
+        if (_clock.GetUtcNow() - _pipelineBuiltAt >= PipelineRefreshInterval)
+        {
+            await HandlePipeline();
+        }
+
         foreach (var @event in events)
         {
             logger.EventReceived(
@@ -95,5 +122,6 @@ public class ReducerObserverSubscriber(
     async Task HandlePipeline()
     {
         _pipeline = await reducerPipelineFactory.Create(_key.EventStore, _key.Namespace, State);
+        _pipelineBuiltAt = _clock.GetUtcNow();
     }
 }
