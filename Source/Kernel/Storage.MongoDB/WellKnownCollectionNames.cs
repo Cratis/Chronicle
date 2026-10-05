@@ -114,6 +114,11 @@ public static class WellKnownCollectionNames
     public const string WebhookDefinitions = "webhooks";
 
     /// <summary>
+    /// The collection that holds registered event source definitions.
+    /// </summary>
+    public const string EventSources = "event-sources";
+
+    /// <summary>
     /// The collection that holds external service definitions.
     /// </summary>
     public const string ExternalServiceDefinitions = "external-services";

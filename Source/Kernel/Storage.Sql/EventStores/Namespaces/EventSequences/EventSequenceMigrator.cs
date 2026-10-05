@@ -128,6 +128,7 @@ public class EventSequenceMigrator(
                 ContentHashes = table.StringColumn(migrationBuilder),
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
                 Subject = table.StringColumn(migrationBuilder, nullable: true),
+                EventSource = table.StringColumn(migrationBuilder, nullable: true),
                 Tags = table.StringColumn(migrationBuilder)
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", x => x.SequenceNumber));
@@ -162,20 +163,31 @@ public class EventSequenceMigrator(
 
     async Task UpgradeTable(EventSequenceDbContext context, string tableName)
     {
-        if (await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Tags)))
+        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Tags)))
         {
-            return;
+            logger.AddingTagsColumn(tableName);
+
+            var tagsMigration = new MigrationBuilder(context.Database.ProviderName);
+            tagsMigration.AddColumn<string>(
+                name: nameof(EventEntry.Tags),
+                table: tableName,
+                nullable: false,
+                defaultValue: string.Empty);
+
+            await tableMigrator.ExecuteMigrationOperations(context, tagsMigration);
         }
 
-        logger.AddingTagsColumn(tableName);
+        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.EventSource)))
+        {
+            logger.AddingEventSourceColumn(tableName);
 
-        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
-        migrationBuilder.AddColumn<string>(
-            name: nameof(EventEntry.Tags),
-            table: tableName,
-            nullable: false,
-            defaultValue: string.Empty);
+            var eventSourceMigration = new MigrationBuilder(context.Database.ProviderName);
+            eventSourceMigration.AddColumn<string>(
+                name: nameof(EventEntry.EventSource),
+                table: tableName,
+                nullable: true);
 
-        await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+            await tableMigrator.ExecuteMigrationOperations(context, eventSourceMigration);
+        }
     }
 }

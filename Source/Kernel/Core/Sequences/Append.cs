@@ -30,6 +30,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
 /// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
 /// <param name="ConcurrencyScope">Optional concurrency scope to validate the append against. Defaults to no check when not provided.</param>
+/// <param name="EventSource">Optional name of the registered event source definition the event is appended through.</param>
 /// <remarks>
 /// Content travels as a JSON string rather than <see cref="JsonObject"/> because protobuf-net has no serializer for
 /// that BCL type - it has no plain reflectable shape, so the gRPC contract generated from this command would produce
@@ -53,7 +54,8 @@ public record Append(
     string? Subject = default,
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
-    ConcurrencyScope? ConcurrencyScope = default)
+    ConcurrencyScope? ConcurrencyScope = default,
+    string? EventSource = default)
 {
     /// <summary>
     /// Handles the command by appending the event.
@@ -97,11 +99,12 @@ public record Append(
         var scope = ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None;
         var subject = string.IsNullOrWhiteSpace(Subject) ? null : new Subject(Subject);
 
-        if (namedTags.Count == 0)
+        if (namedTags.Count == 0 && string.IsNullOrEmpty(EventSource))
         {
             return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject);
         }
 
-        return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject, namedTags);
+        var eventSource = string.IsNullOrEmpty(EventSource) ? null : new EventSourceName(EventSource);
+        return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject, namedTags, eventSource);
     }
 }

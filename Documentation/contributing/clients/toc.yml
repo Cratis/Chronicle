@@ -14,3 +14,5 @@
   href: ./protobuf-extraction.md
 - name: TypeScript gRPC Client
   href: ./typescript-grpc-package.mdx
+- name: Python contracts as release assets
+  href: ./python-contract-assets.md

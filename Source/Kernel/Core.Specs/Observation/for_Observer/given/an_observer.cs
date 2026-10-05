@@ -176,7 +176,7 @@ public class an_observer : Specification
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>()).Returns(EventSequenceNumber.Unavailable);
 
-        _jobsManager.GetJobsOfType<IRetryFailedPartition, RetryFailedPartitionRequest>()
+        _jobsManager.GetJobs(Arg.Any<JobQuery>())
             .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
 
         _observer = await _silo.CreateGrainAsync<Observer>(_observerKey);

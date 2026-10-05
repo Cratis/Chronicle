@@ -47,6 +47,17 @@ public interface IObserverService : IGrainService
     Task<bool> FlushReplayFor(ObserverDetails observerDetails);
 
     /// <summary>
+    /// Abandon a replay of a specific observer without making what it rebuilt the live read model.
+    /// </summary>
+    /// <remarks>
+    /// Used when a replay did not handle every partition: promoting its result would replace complete documents with
+    /// partial or missing ones. The read model keeps the state it had before the replay started.
+    /// </remarks>
+    /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
+    /// <returns>Awaitable task.</returns>
+    Task AbandonReplayFor(ObserverDetails observerDetails);
+
+    /// <summary>
     /// Begin replay for a specific partition of an observer.
     /// </summary>
     /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>

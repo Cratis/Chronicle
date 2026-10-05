@@ -188,7 +188,8 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<ILocalSiloDetails>(),
                     sp.GetRequiredService<Cratis.Chronicle.Clients.ConnectedClientsQuery>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Clients.ConnectionService>>(),
-                    sp.GetRequiredService<IOptions<ChronicleOptions>>()));
+                    sp.GetRequiredService<IOptions<ChronicleOptions>>()),
+                ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.EventSources.EventSources>(sp));
         });
 
         return builder;

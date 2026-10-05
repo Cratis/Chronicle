@@ -15,4 +15,7 @@ internal static partial class EventSequenceMigratorLogging
 
     [LoggerMessage(LogLevel.Information, "Adding Tags column to existing event sequence table {TableName}")]
     internal static partial void AddingTagsColumn(this ILogger<EventSequenceMigrator> logger, string tableName);
+
+    [LoggerMessage(LogLevel.Information, "Adding EventSource column to existing event sequence table {TableName}")]
+    internal static partial void AddingEventSourceColumn(this ILogger<EventSequenceMigrator> logger, string tableName);
 }

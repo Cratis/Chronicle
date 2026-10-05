@@ -28,7 +28,7 @@ public class and_observer_is_replaying_with_running_replay_job : given.an_observ
         };
 
         _jobsManager
-            .GetJobsOfType<IReplayObserver, ReplayObserverRequest>()
+            .GetJobs(Arg.Any<JobQuery>())
             .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty.Add(runningJob)));
     }
 

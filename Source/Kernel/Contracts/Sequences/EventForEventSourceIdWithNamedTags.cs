@@ -79,4 +79,10 @@ public class EventForEventSourceIdWithNamedTags
     /// </summary>
     [ProtoMember(11)]
     public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.Causation>? Causation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventSource.
+    /// </summary>
+    [ProtoMember(12)]
+    public string? EventSource { get; set; }
 }

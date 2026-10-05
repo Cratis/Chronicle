@@ -54,6 +54,12 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Skipping failed partition recovery because observer is quarantined")]
     internal static partial void SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined(this ILogger<Observer> logger);
 
+    [LoggerMessage(LogLevel.Debug, "Skipping failed partition recovery because observer is not subscribed")]
+    internal static partial void SkippingFailedPartitionRecoveryBecauseObserverIsNotSubscribed(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Deferring recovery of {Count} failed partition(s) to a later turn so other calls can reach the observer")]
+    internal static partial void DeferringRecoveryOfFailedPartitions(this ILogger<Observer> logger, int count);
+
     [LoggerMessage(LogLevel.Debug, "Skipping catch-up because observer is replaying")]
     internal static partial void SkippingCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
 

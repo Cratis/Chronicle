@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events.Constraints;
+using Cratis.Chronicle.Contracts.EventSources;
 using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
@@ -42,6 +43,7 @@ using KernelCapturesService = KernelGrpc::Cratis.Chronicle.Services.Captures.Cap
 using KernelCaptureValidator = KernelCore::Cratis.Chronicle.Captures.Engine.CaptureValidator;
 using KernelComplianceService = KernelGrpc::Cratis.Chronicle.Services.Compliance.ComplianceService;
 using KernelConstraintsService = KernelGrpc::Cratis.Chronicle.Services.Events.Constraints.Constraints;
+using KernelEventSourcesService = KernelGrpc::Cratis.Chronicle.Services.EventSources.EventSources;
 using KernelEventStoresService = KernelGrpc::Cratis.Chronicle.Services.EventStores.EventStores;
 using KernelEventTypeRegistrar = KernelCore::Cratis.Chronicle.EventTypes.EventTypeRegistrar;
 using KernelEventTypesService = KernelGrpc::Cratis.Chronicle.Services.EventTypes.EventTypes;
@@ -104,6 +106,7 @@ internal sealed class TestingServices : IServices
     readonly Lazy<INamespaces> _namespaces;
     readonly Lazy<IIdentities> _identities;
     readonly Lazy<IEventTypes> _eventTypes;
+    readonly Lazy<IEventSources> _eventSources;
     readonly Lazy<IPatterns> _patterns;
     readonly Lazy<IRecommendations> _recommendations;
     readonly Lazy<IConstraints> _constraints;
@@ -241,6 +244,12 @@ internal sealed class TestingServices : IServices
         _identities = new(() =>
             new KernelIdentitiesService(commandPipeline.Value, storage, NullLogger<KernelIdentitiesService>.Instance));
 
+        _eventSources = new(() =>
+            new KernelEventSourcesService(
+                commandPipeline.Value,
+                storage,
+                NullLogger<KernelEventSourcesService>.Instance));
+
         _eventTypes = new(() =>
             new KernelEventTypesService(
                 commandPipeline.Value,
@@ -363,6 +372,9 @@ internal sealed class TestingServices : IServices
 
     /// <inheritdoc/>
     public IEventTypes EventTypes => _eventTypes.Value;
+
+    /// <inheritdoc/>
+    public IEventSources EventSources => _eventSources.Value;
 
     /// <inheritdoc/>
     public IPatterns Patterns => _patterns.Value;

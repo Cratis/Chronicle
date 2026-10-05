@@ -15,6 +15,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Testing.Compliance;
+using Cratis.Chronicle.Testing.Events;
 using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
 using Cratis.Json;
@@ -22,6 +23,7 @@ using Cratis.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
+using InMemoryEventSourcesStorage = Cratis.Chronicle.Storage.InMemory.EventSources.EventSourcesStorage;
 using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
 using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
 using InMemoryUniqueEventTypesConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueEventTypesConstraintsStorage;
@@ -205,6 +207,16 @@ public class EventScenario(
         var constraintsStorage = new InMemoryConstraintsStorage(resolvedConstraintProvider);
         var eventTypesStorage = new InMemoryEventTypesStorage(() => defaults.EventTypes, defaults.JsonSchemaGenerator);
 
+        // Appends through an event source are validated against the definitions a real Kernel would hold, so the
+        // scenario registers whatever the client artifacts declare, exactly as connecting to a Kernel would.
+        var eventSources = new Cratis.Chronicle.EventSources.EventSources(null, defaults.ClientArtifactsProvider);
+        eventSources.Discover().GetAwaiter().GetResult();
+        var eventSourcesStorage = new InMemoryEventSourcesStorage();
+        foreach (var definition in eventSources.All)
+        {
+            eventSourcesStorage.Save(definition.ToKernel()).GetAwaiter().GetResult();
+        }
+
         var storage = new InMemoryStorage(
             eventSequenceStorage,
             uniqueConstraintsStorage,
@@ -212,7 +224,8 @@ public class EventScenario(
             constraintsStorage,
             closedStreamsStorage,
             identityStorage,
-            eventTypesStorage);
+            eventTypesStorage,
+            eventSourcesStorage);
 
         var grain = InProcessEventSequence.Create(
             storage,
@@ -263,7 +276,8 @@ public class EventScenario(
             new CausationManager(),
             new NoUnitOfWorkManager(),
             new BaseIdentityProvider(),
-            jsonSerializerOptions);
+            jsonSerializerOptions,
+            eventSources: eventSources);
 
         return (eventLog, connection, eventSequenceStorage);
     }

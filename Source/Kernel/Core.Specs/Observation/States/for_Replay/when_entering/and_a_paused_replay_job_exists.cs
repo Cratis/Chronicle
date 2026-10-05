@@ -45,7 +45,7 @@ public class and_a_paused_replay_job_exists : given.a_replay_state
         };
 
         _jobsManager
-            .GetJobsOfType<IReplayObserver, ReplayObserverRequest>()
+            .GetJobs(Arg.Any<JobQuery>())
             .Returns(new[]
                 {
                     _pausedJob

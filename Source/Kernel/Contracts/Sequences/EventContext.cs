@@ -103,4 +103,10 @@ public class EventContext
     /// </summary>
     [ProtoMember(15)]
     public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.NamedTag> NamedTags { get; set; } = new List<global::Cratis.Chronicle.Contracts.Sequences.NamedTag>();
+
+    /// <summary>
+    /// Gets or sets the EventSource.
+    /// </summary>
+    [ProtoMember(16)]
+    public string EventSource { get; set; } = string.Empty;
 }

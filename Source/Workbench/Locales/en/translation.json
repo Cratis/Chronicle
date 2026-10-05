@@ -69,6 +69,7 @@
         "general": {
             "groupLabel": "General",
             "eventTypes": "Event Types",
+            "eventSources": "Event Sources",
             "readModelTypes": "Read Model Types",
             "readModels": "Read Models",
             "namespaces": "Namespaces",
@@ -92,6 +93,37 @@
     },
     "eventStore": {
         "general": {
+            "eventSources": {
+                "title": "Event Sources",
+                "empty": "No event sources found",
+                "columns": {
+                    "name": "Name",
+                    "description": "Description",
+                    "owner": "Owner",
+                    "concurrency": "Default concurrency",
+                    "streams": "Streams"
+                },
+                "owners": {
+                    "none": "Unknown",
+                    "client": "Client",
+                    "kernel": "Kernel"
+                },
+                "concurrencyDimensions": {
+                    "none": "None",
+                    "eventSourceId": "Event source ID",
+                    "eventSourceType": "Event source type",
+                    "eventStreamType": "Event stream type",
+                    "eventStreamId": "Event stream ID"
+                },
+                "streams": {
+                    "empty": "No event streams declared",
+                    "columns": {
+                        "name": "Name",
+                        "description": "Description",
+                        "concurrency": "Concurrency"
+                    }
+                }
+            },
             "eventTypes": {
                 "title": "Event Types",
                 "empty": "No types found",

@@ -5,6 +5,7 @@ extern alias KernelConcepts;
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Testing.EventSequences;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
@@ -25,6 +26,7 @@ namespace Cratis.Chronicle.Testing;
 /// <param name="closedStreamsStorage">Optional <see cref="InMemoryClosedStreamsConstraintStorage"/> for closed streams.</param>
 /// <param name="identityStorage">Optional <see cref="InMemoryIdentityStorage"/>.</param>
 /// <param name="eventTypesStorage">Optional <see cref="InMemoryEventTypesStorage"/>.</param>
+/// <param name="eventSourcesStorage">Optional <see cref="IEventSourcesStorage"/> holding the registered event source definitions.</param>
 internal sealed class InMemoryStorage(
     InMemoryEventSequenceStorage eventSequenceStorage,
     InMemoryUniqueConstraintsStorage? uniqueConstraintsStorage = null,
@@ -32,7 +34,8 @@ internal sealed class InMemoryStorage(
     InMemoryConstraintsStorage? constraintsStorage = null,
     InMemoryClosedStreamsConstraintStorage? closedStreamsStorage = null,
     InMemoryIdentityStorage? identityStorage = null,
-    InMemoryEventTypesStorage? eventTypesStorage = null) : IStorage
+    InMemoryEventTypesStorage? eventTypesStorage = null,
+    IEventSourcesStorage? eventSourcesStorage = null) : IStorage
 {
     /// <inheritdoc/>
     public ISystemStorage System => throw new NotSupportedException();
@@ -58,7 +61,8 @@ internal sealed class InMemoryStorage(
             constraintsStorage,
             closedStreamsStorage,
             identityStorage,
-            eventTypesStorage);
+            eventTypesStorage,
+            eventSourcesStorage);
 
     /// <inheritdoc/>
     public void Clear()

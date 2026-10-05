@@ -118,4 +118,9 @@ public static class WellKnownServices
     /// The statistics service.
     /// </summary>
     public const string Statistics = "Statistics";
+
+    /// <summary>
+    /// The name of the EventSources service, holding the registered event source definitions.
+    /// </summary>
+    public const string EventSources = "EventSources";
 }

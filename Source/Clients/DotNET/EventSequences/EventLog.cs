@@ -7,6 +7,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.Transactions;
@@ -32,6 +33,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
 /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
 /// <param name="sideEffectHandlers">Optional handlers used to recognize synchronous reactor return types.</param>
+/// <param name="eventSources">Optional <see cref="IEventSources"/> for appending through event source definitions.</param>
 public class EventLog(
      EventStoreName eventStoreName,
      EventStoreNamespaceName @namespace,
@@ -45,7 +47,8 @@ public class EventLog(
      IUnitOfWorkManager unitOfWorkManager,
      IIdentityProvider identityProvider,
      JsonSerializerOptions jsonSerializerOptions,
-     IReactorSideEffectHandlers? sideEffectHandlers = null) : EventSequence(
+     IReactorSideEffectHandlers? sideEffectHandlers = null,
+     IEventSources? eventSources = null) : EventSequence(
         eventStoreName,
         @namespace,
         EventSequenceId.Log,
@@ -59,4 +62,5 @@ public class EventLog(
         unitOfWorkManager,
         identityProvider,
         jsonSerializerOptions,
-        sideEffectHandlers: sideEffectHandlers), IEventLog;
+        sideEffectHandlers: sideEffectHandlers,
+        eventSources: eventSources), IEventLog;

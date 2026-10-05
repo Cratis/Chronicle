@@ -5,6 +5,7 @@ using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events.Constraints;
+using Cratis.Chronicle.Contracts.EventSources;
 using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
@@ -165,4 +166,9 @@ public interface IServices
     /// Gets the <see cref="IConnectionService"/> service.
     /// </summary>
     IConnectionService Connections { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IEventSources"/> service.
+    /// </summary>
+    IEventSources EventSources { get; }
 }
