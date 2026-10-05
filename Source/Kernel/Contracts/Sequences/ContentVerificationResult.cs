@@ -7,20 +7,20 @@
 
 namespace Cratis.Chronicle.Contracts.Sequences;
 /// <summary>
-/// Represents the ContentVerificationResult value.
+/// Describes whether a stored event's complete content matches an attempted append.
 /// </summary>
 public enum ContentVerificationResult
 {
     /// <summary>
-    /// Represents the Unavailable value.
+    /// The complete content cannot be recovered in the requested generation.
     /// </summary>
     Unavailable = 0,
     /// <summary>
-    /// Represents the Equal value.
+    /// The complete released content equals the attempted content.
     /// </summary>
     Equal = 1,
     /// <summary>
-    /// Represents the Different value.
+    /// The event type or complete released content differs.
     /// </summary>
     Different = 2
 }
