@@ -88,6 +88,12 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Partition {Partition} successfully caught up to event sequence number {EventSequenceNumber}")]
     internal static partial void PartitionCaughtUp(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
 
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} received events while catching up, the first unread at event sequence number {EventSequenceNumber}; it keeps catching up")]
+    internal static partial void PartitionReceivedEventsWhileCatchingUp(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} concluded catching up and is handed back to live delivery")]
+    internal static partial void ConcludedPartitionCatchUp(this ILogger<Observer> logger, Key partition);
+
     [LoggerMessage(LogLevel.Debug, "Resuming catchup for partition {Partition} starting from event sequence number {EventSequenceNumber}")]
     internal static partial void StartingCatchUpForPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
 

@@ -56,4 +56,10 @@ internal static partial class HandleEventsForPartitionLogging
 
     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step failed, but it had successfully handled some events. Last successfully handled event was: {LastHandledEventSequenceNumber}")]
     internal static partial void FailedWithPartialSuccess(this ILogger<HandleEventsForPartition> logger, Exception error, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "HandleEventsForPartition job step for partition {Partition} reads on from sequence number {FromSequenceNumber} for events appended while it was catching up")]
+    internal static partial void ReadingOnForEventsAppendedWhileCatchingUp(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber fromSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} could not conclude catching up, as reading on handled nothing past sequence number {LastHandledEventSequenceNumber}")]
+    internal static partial void CouldNotConcludePartitionCatchUp(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 }

@@ -47,4 +47,9 @@ public class HandleEventsForPartitionState : JobStepState
     /// Gets or sets the collection of <see cref="EventType"/> to process.
     /// </summary>
     public IEnumerable<EventType> EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the step hands its partition back to live delivery itself before completing.
+    /// </summary>
+    public bool ConcludesPartitionCatchUp { get; set; }
 }

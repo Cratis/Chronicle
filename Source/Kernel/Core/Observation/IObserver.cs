@@ -403,6 +403,19 @@ public interface IObserver : IGrainWithStringKey
     Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Conclude catching up a partition that a step of an observer-wide catch-up has read to the end of, handing it back to live delivery.
+    /// </summary>
+    /// <param name="partition">The partition the step has caught up.</param>
+    /// <param name="nextEventSequenceNumber">The first event sequence number the step has not read.</param>
+    /// <param name="eventTypes">The event types the step reads.</param>
+    /// <returns>True if the partition is concluded and live delivery owns it; false if it has events the step has not read yet.</returns>
+    /// <remarks>
+    /// Live delivery drops events for a partition while it is catching up. Checking for unread events and handing the
+    /// partition back happen in one turn of the observer, so every event is either read by the step or delivered live.
+    /// </remarks>
+    Task<bool> ConcludePartitionCatchUp(Key partition, EventSequenceNumber nextEventSequenceNumber, IEnumerable<EventType> eventTypes);
+
+    /// <summary>
     /// Attempt to recover a failed partition.
     /// </summary>
     /// <param name="partition">The partition that is failed.</param>
