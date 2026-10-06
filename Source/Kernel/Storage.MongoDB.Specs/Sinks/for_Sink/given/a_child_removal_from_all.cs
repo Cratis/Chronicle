@@ -20,6 +20,7 @@ public class a_child_removal_from_all : Specification
     protected IChangeset<AppendedEvent, ExpandoObject> _changeset;
     protected BsonDocument _update;
     protected BsonDocument _filter;
+    protected BsonDocument[] _arrayFilters;
 
     void Establish()
     {
@@ -48,6 +49,7 @@ public class a_child_removal_from_all : Specification
                     BsonSerializer.SerializerRegistry.GetSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
                 _update = call.Arg<UpdateDefinition<BsonDocument>>().Render(renderArgs).AsBsonDocument;
                 _filter = call.Arg<FilterDefinition<BsonDocument>>().Render(renderArgs);
+                _arrayFilters = call.Arg<UpdateOptions>()?.ArrayFilters?.Cast<BsonDocumentArrayFilterDefinition<BsonDocument>>().Select(filter => filter.Document).ToArray() ?? [];
                 return Task.FromResult<UpdateResult>(new UpdateResult.Acknowledged(2, 2, null));
             });
         var converter = Substitute.For<IMongoDBConverter>();
