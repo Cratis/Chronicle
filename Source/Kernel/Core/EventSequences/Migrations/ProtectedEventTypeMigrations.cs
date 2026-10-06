@@ -28,7 +28,7 @@ internal class ProtectedEventTypeMigrations(
     /// Releases stored event content before migrating it and protecting target generations.
     /// </summary>
     /// <param name="eventStore">The event store.</param>
-    /// <param name="@namespace">The event store namespace.</param>
+    /// <param name="namespace">The event store namespace.</param>
     /// <param name="eventType">The source event type and generation.</param>
     /// <param name="protectedContent">The stored JSON content.</param>
     /// <param name="protectedEvent">The stored event content.</param>
@@ -53,7 +53,7 @@ internal class ProtectedEventTypeMigrations(
     /// Migrates plaintext append content and protects target generations.
     /// </summary>
     /// <param name="eventStore">The event store.</param>
-    /// <param name="@namespace">The event store namespace.</param>
+    /// <param name="namespace">The event store namespace.</param>
     /// <param name="eventType">The source event type and generation.</param>
     /// <param name="plaintext">The original plaintext JSON content.</param>
     /// <param name="protectedEvent">The already-protected source generation.</param>
