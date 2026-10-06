@@ -22,6 +22,11 @@ public static class DatabaseNames
     /// </summary>
     const int MaximumLengthInBytes = 63;
 
+    // Logical global-key coordinates are backend-independent. Reserve a separate physical name space so
+    // a real event store (including its namespace or configured prefix) cannot alias the global key database.
+    const string GlobalKeyCoordinate = "$chronicle-encrypted-value$global-scope$";
+    const string ReservedPhysicalMarker = "!chronicle-encrypted!";
+
     /// <summary>
     /// The characters MongoDB does not allow in a database name.
     /// </summary>
@@ -75,6 +80,15 @@ public static class DatabaseNames
 
     static string Validated(string databaseName, EventStoreName eventStore, EventStoreNamespaceName? @namespace)
     {
+        if (eventStore.Value == GlobalKeyCoordinate)
+        {
+            databaseName = databaseName.Replace(GlobalKeyCoordinate, ReservedPhysicalMarker, StringComparison.Ordinal);
+        }
+        else if (databaseName.Contains(ReservedPhysicalMarker, StringComparison.Ordinal))
+        {
+            throw new InvalidDatabaseName(databaseName, "it uses the physical name space reserved for confidentiality keys", eventStore, @namespace?.Value);
+        }
+
         var reason = GetInvalidReason(databaseName);
         if (reason is not null)
         {
