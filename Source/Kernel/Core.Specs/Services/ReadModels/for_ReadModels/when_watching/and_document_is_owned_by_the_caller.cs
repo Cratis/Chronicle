@@ -14,15 +14,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.when_watching;
 
 /// <summary>
-/// The changeset document on the observable path belongs to the notifier that pushed it, not to the release
-/// call — so releasing it must hand it back untouched. The compliance chain is wired for real here rather than
-/// substituted, because the real manager releases onto a clone: a substitute that returns the very instance it
-/// was given makes the release path look non-mutating when it is not.
+/// The released changeset document belongs to the notifier that pushed it. Watch must serialize a copy
+/// without changing the original document or releasing it a second time.
 /// </summary>
 public class and_document_is_owned_by_the_caller : given.all_dependencies
 {
     const string Key = "person-42";
-    const string EncryptedName = "encrypted-name";
     const string DecryptedName = "decrypted-name";
 
     readonly List<ReadModelChangeset> _emitted = [];
@@ -88,7 +85,7 @@ public class and_document_is_owned_by_the_caller : given.all_dependencies
 
         var forwarder = await _forwarderCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        _document = new JsonObject { ["id"] = Key, ["name"] = EncryptedName };
+        _document = new JsonObject { ["id"] = Key, ["name"] = DecryptedName };
         _documentBefore = _document.ToJsonString();
 
         await forwarder(

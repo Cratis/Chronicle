@@ -19,9 +19,7 @@ public class and_read_model_has_pii_property : given.all_dependencies
 
     void Establish()
     {
-        // Snapshot the subject the observable path stamps before it hands the document to ReleaseJson —
-        // the document is stamped, decrypted, then the marker is stripped from the same instance, so a
-        // post-hoc matcher on the captured argument would no longer see it.
+        // Watch receives an already-released snapshot. Capture any accidental second release.
         _complianceHelper
             .ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>())
             .Returns(callInfo =>
@@ -75,7 +73,7 @@ public class and_read_model_has_pii_property : given.all_dependencies
         var model = new JsonObject
         {
             [WellKnownProperties.Subject] = "some-subject",
-            ["name"] = "encrypted-name"
+            ["name"] = "released-name"
         };
 
         await forwarder(
@@ -89,6 +87,6 @@ public class and_read_model_has_pii_property : given.all_dependencies
                 Cratis.Execution.CorrelationId.NotSet));
     }
 
-    [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>());
-    [Fact] void should_release_using_the_document_subject() => _releasedSubject.ShouldEqual("some-subject");
+    [Fact] void should_not_release_the_snapshot_again() => _complianceHelper.DidNotReceive().ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>());
+    [Fact] void should_not_use_the_document_subject_for_a_second_release() => _releasedSubject.ShouldBeNull();
 }

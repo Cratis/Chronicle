@@ -95,6 +95,8 @@ public class and_read_model_has_a_child_collection_with_pii : Specification
 
     [Fact] void should_leave_non_pii_child_members_untouched() => ChildValue("status").ShouldEqual("active");
 
+    [Fact] void should_capture_plaintext_children_for_notifications_before_encrypting_them() => ((IDictionary<string, object?>)((IEnumerable<object>)((IDictionary<string, object?>)_context.ReleasedReadModel!)["contacts"]!).Single())["name"].ShouldEqual(PlaintextName);
+
     string ChildValue(string property) => (string)((IDictionary<string, object?>)_child)[property]!;
 
     static bool IsBase64(string value)

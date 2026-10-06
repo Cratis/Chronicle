@@ -23,8 +23,9 @@ public class and_loaded_state_contains_cipher_shaped_plaintext : given.all_depen
 {
     const string Owner = "owner";
     const string Source = "source-not-owner";
-    readonly string _plaintext = Convert.ToBase64String(new byte[256]);
-    readonly List<JsonObject> _received = [];
+    protected readonly string _plaintext = Convert.ToBase64String(new byte[256]);
+    protected readonly List<JsonObject> _received = [];
+    protected virtual string IdentifierProperty => "id";
     readonly TaskCompletionSource _subscribed = new();
     TaskCompletionSource<ChangesetForwarder> _forwarderCaptured;
     InMemoryEncryptionKeyStorage _keyStorage;
@@ -41,7 +42,7 @@ public class and_loaded_state_contains_cipher_shaped_plaintext : given.all_depen
               "secret": { "type": "string", "security": [{ "metadataType": "EncryptedNamespace", "details": "" }] },
               "tick": { "type": "integer" }
             } }
-            """);
+            """.Replace("\"id\"", $"\"{IdentifierProperty}\"", StringComparison.Ordinal));
         _readModelDefinition = _readModelDefinition with
         {
             Schemas = new Dictionary<ReadModelGeneration, JsonSchema> { { (ReadModelGeneration)1, schema } }
@@ -55,7 +56,7 @@ public class and_loaded_state_contains_cipher_shaped_plaintext : given.all_depen
                 new PIICompliancePropertyValueHandler(provisioner, _keyStorage, encryption),
                 new EncryptedNamespaceValueHandler(provisioner, _keyStorage, encryption)),
             NullLogger<JsonSchemaMetadataManager>.Instance);
-        var encrypted = await manager.Apply("test-store", "test-namespace", schema, Owner, new JsonObject { ["id"] = Source, ["name"] = _plaintext, ["secret"] = _plaintext, ["tick"] = 0 });
+        var encrypted = await manager.Apply("test-store", "test-namespace", schema, Owner, new JsonObject { [IdentifierProperty] = Source, ["name"] = _plaintext, ["secret"] = _plaintext, ["tick"] = 0 });
 
         // DecryptInitialState releases stored values for projection processing; the subscriber forwards
         // changeset.CurrentState, not the encrypted sink payload. Supply that already-released boundary value.
@@ -110,4 +111,5 @@ public class and_loaded_state_contains_cipher_shaped_plaintext : given.all_depen
     [Fact] void should_preserve_the_already_released_namespace_plaintext() => _received[0]["secret"]!.GetValue<string>().ShouldEqual(_plaintext);
     [Fact] void should_keep_personal_data_erased() => _received[1]["name"]!.GetValue<string>().ShouldEqual(string.Empty);
     [Fact] void should_preserve_namespace_confidentiality_after_personal_erasure() => _received[1]["secret"]!.GetValue<string>().ShouldEqual(_plaintext);
+    [Fact] void should_not_expose_internal_subjects() => _received.TrueForAll(model => !model.ContainsKey(WellKnownProperties.Subject) && !model.ContainsKey(WellKnownProperties.Subjects)).ShouldBeTrue();
 }
