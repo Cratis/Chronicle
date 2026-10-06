@@ -156,7 +156,6 @@ public class ProjectionObserverSubscriber(
         try
         {
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
-            ExpandoObject? releasedReadModel = null;
             var isNewInstance = false;
 
             foreach (var @event in events)
@@ -178,7 +177,6 @@ public class ProjectionObserverSubscriber(
 
                 var pipelineContext = await _pipeline.Handle(@event);
                 changeset = pipelineContext.Changeset;
-                releasedReadModel = pipelineContext.ReleasedReadModel;
 
                 // Accumulate across the batch: a single OnNext delivers all events for one partition
                 // (e.g. AppendMany, or an observer draining a backlog on catch-up). If the instance was
@@ -209,21 +207,14 @@ public class ProjectionObserverSubscriber(
             // Note: We don't want to send changesets if the projection is not active
             if (changeset?.HasChanges == true && State.IsActive)
             {
-                // The pipeline owns release. Watch receives this snapshot, never protected sink changes.
-                if (releasedReadModel is null && _schema!.HasSchemaMetadata())
-                {
-                    throw new MissingReleasedProjectionState();
-                }
-
-                var notificationState = releasedReadModel ?? changeset.CurrentState;
-                var model = expandoObjectConverter.ToJsonObject(notificationState, _schema!);
+                var model = expandoObjectConverter.ToJsonObject(changeset.CurrentState, _schema!);
 
                 // Mirror the metadata fields that the storage sink writes so that watched models
                 // match what a direct read from the underlying store returns.
                 model[WellKnownProperties.LastHandledEventSequenceNumber] =
                     JsonValue.Create((ulong)lastSuccessfullyObservedEvent!.Context.SequenceNumber);
 
-                var stateDict = (IDictionary<string, object?>)notificationState;
+                var stateDict = (IDictionary<string, object?>)changeset.CurrentState;
                 if (stateDict.TryGetValue(WellKnownProperties.Subject, out var subjectValue) && subjectValue is string subject)
                 {
                     model[WellKnownProperties.Subject] = JsonValue.Create(subject);

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <param name="namespaceName">The <see cref="EventStoreNamespaceName"/> the changeset belongs to.</param>
 /// <param name="readModelKey">The <see cref="ReadModelKey"/> identifying the read model instance.</param>
-/// <param name="readModel">The already-released read model as a <see cref="JsonObject"/>. The projection pipeline owns release; forwarders must not release it again.</param>
+/// <param name="readModel">The serialized read model as a <see cref="JsonObject"/>.</param>
 /// <param name="change">The <see cref="ReadModelChangeContext"/> describing the change.</param>
 /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
 public delegate Task ChangesetForwarder(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel, ReadModelChangeContext change);

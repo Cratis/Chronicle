@@ -417,17 +417,17 @@ internal sealed class ReadModels(
                 var schema = definition.GetSchemaForLatestGeneration();
                 var subscriptionId = Guid.NewGuid();
 
-                // Register the forwarder that pushes a released changeset onto this client's gRPC
+                // Register the forwarder that decrypts a changeset and pushes it onto this client's gRPC
                 // stream into this silo's changeset mediator. The per-watch subscriber grain below is
                 // pinned to this silo, so the notifier -> subscriber -> mediator -> stream path ends with
                 // a strictly in-process hop. This mirrors the reducer/reactor delivery pattern and
                 // replaces the previous CreateObjectReference grain-observer callback, whose one-way
                 // dispatch from the notifier grain was silently dropped on slower backends.
-                changesetMediator.Subscribe(subscriptionId, (namespaceName, readModelKey, readModelInstance, change) =>
+                changesetMediator.Subscribe(subscriptionId, async (namespaceName, readModelKey, readModelInstance, change) =>
                 {
-                    // Projection notifications carry a released snapshot. Releasing again corrupts legitimate
-                    // plaintext that resembles a legacy cipher block, and can erase unrelated confidentiality.
-                    var decrypted = StripReleasedProjectionBookkeeping(readModelInstance, schema);
+                    // Decrypt through the shared release path so observable queries resolve the compliance
+                    // subject exactly like one-shot queries (explicit __subject, else inferred from _id/id).
+                    var decrypted = await ReleaseJsonForProjectedReadModel(request.EventStore, namespaceName, schema, readModelInstance);
                     observer.OnNext(new ReadModelChangeset
                     {
                         Namespace = namespaceName,
@@ -444,7 +444,6 @@ internal sealed class ReadModels(
                         Occurred = change.Occurred,
                         CorrelationId = change.CorrelationId.Value
                     });
-                    return Task.CompletedTask;
                 });
 
                 // The subscriber grain carries this silo's address in its key so [ConnectedObserverPlacement]
@@ -505,19 +504,6 @@ internal sealed class ReadModels(
         {
             throw new NotSupportedException("Server-side reducer session dehydration is not yet supported. Reducers typically run client-side.");
         }
-    }
-
-    static JsonObject StripReleasedProjectionBookkeeping(JsonObject readModel, JsonSchema schema)
-    {
-        var result = (readModel.DeepClone() as JsonObject)!;
-        var declaredProperties = schema.GetFlattenedProperties().Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
-        foreach (var property in WellKnownProperties.All.Where(property => !declaredProperties.Contains(property)))
-        {
-            result.Remove(property);
-        }
-        result.Remove(WellKnownProperties.Subject);
-        result.Remove(WellKnownProperties.Subjects);
-        return result;
     }
 
     static EventSequenceNumber GetLastHandledEventSequenceNumber(ExpandoObject instance)
@@ -736,12 +722,17 @@ internal sealed class ReadModels(
         JsonObject readModel,
         string? preferredSubject = null)
     {
-        // Replay and session folds project stored ciphertext and release it here, using event lineage before
-        // falling back to a request key or document identity. Watch has a different owner: its pipeline supplies
-        // an already-released snapshot, so it must never come through this method.
+        // A read model projected directly from stored (encrypted) events still holds its [PII] and [Encrypted]
+        // fields encrypted under the resolved subject. The subject is resolved identically for one-shot and
+        // observable queries — an explicit subject when the caller supplies one, otherwise inferred from the
+        // document (__subject -> _id -> id) — stamped so the schema metadata manager can decrypt, then stripped
+        // again so the internal marker never leaves the kernel. Sharing this between the one-shot query path and
+        // the observable (Watch) path keeps them from diverging: observable queries used to skip the inference
+        // entirely and streamed a __subject-less document back as ciphertext.
         //
-        // Immediate projections may cache the document handed in. Stamp and release a copy so a later session
-        // request still starts from protected state and retains its authoritative lineage.
+        // The document handed in is never modified. On the observable path it belongs to the changeset the notifier
+        // pushed, not to this call, so stamping bookkeeping onto it would leave an internal marker on an object
+        // this method does not own.
         var stamped = (readModel.DeepClone() as JsonObject)!;
         if (!schema.HasSchemaMetadata())
         {

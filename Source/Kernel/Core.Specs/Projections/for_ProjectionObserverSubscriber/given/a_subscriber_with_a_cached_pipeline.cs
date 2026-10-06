@@ -26,9 +26,6 @@ namespace Cratis.Chronicle.Projections.for_ProjectionObserverSubscriber.given;
 public class a_subscriber_with_a_cached_pipeline : Specification
 {
     protected ProjectionObserverSubscriber _subscriber;
-    protected IProjectionChangesetNotifier _notifier;
-    protected IExpandoObjectConverter _converter;
-    protected JsonSchema _schema;
     protected ProjectionDefinition _definition;
     protected IProjectionPipelineManager _pipelines;
     protected IProjectionFactory _factory;
@@ -49,9 +46,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         var projectionGrain = Substitute.For<IProjection>();
         projectionGrain.GetDefinition().Returns(_definition);
         silo.AddProbe(_ => projectionGrain);
-        _notifier = Substitute.For<IProjectionChangesetNotifier>();
-        silo.AddProbe(_ => _notifier);
-        _schema = new JsonSchema();
+        silo.AddProbe(_ => Substitute.For<IProjectionChangesetNotifier>());
 
         var readModel = new ReadModelDefinition(
             _definition.ReadModel,
@@ -62,7 +57,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
-            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = _schema },
+            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new() },
             []);
         var readModelGrain = Substitute.For<IReadModel>();
         readModelGrain.GetDefinition().Returns(readModel);
@@ -71,8 +66,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         var storage = Substitute.For<Storage.IStorage>();
         storage.GetEventStore(_key.EventStore).EventTypes.GetLatestForAllEventTypes().Returns([]);
         silo.AddService(storage);
-        _converter = Substitute.For<IExpandoObjectConverter>();
-        silo.AddService(_converter);
+        silo.AddService(Substitute.For<IExpandoObjectConverter>());
         _factory = Substitute.For<IProjectionFactory>();
         _projection = Substitute.For<EngineProjection>();
 

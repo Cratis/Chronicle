@@ -40,7 +40,7 @@ public interface IProjectionChangesetNotifier : IGrainWithStringKey
     /// </summary>
     /// <param name="namespaceName">The <see cref="EventStoreNamespaceName"/> the changeset belongs to.</param>
     /// <param name="readModelKey">The <see cref="ReadModelKey"/> identifying the read model instance.</param>
-    /// <param name="readModel">The already-released read model snapshot as a <see cref="JsonObject"/>. Consumers must not release it again.</param>
+    /// <param name="readModel">The serialized read model as a <see cref="JsonObject"/>.</param>
     /// <param name="change">The <see cref="ReadModelChangeContext"/> describing the change and the event that caused it.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task Notify(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel, ReadModelChangeContext change);

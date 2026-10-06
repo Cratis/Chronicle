@@ -5,7 +5,6 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
@@ -36,9 +35,6 @@ public class EncryptChangeset(
             return context;
         }
 
-        // Initial state and incoming event values have already been released. Capture notification
-        // ownership before encryption mutates child payloads or records protected sink differences.
-        context.ReleasedReadModel = context.Changeset.CurrentState.Clone();
         var schema = projection.TargetReadModelSchema;
         var identifier = context.Event.Context.ResolveComplianceIdentifier(context.Key);
 

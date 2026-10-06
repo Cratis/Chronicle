@@ -102,11 +102,6 @@ public record ProjectionEventContext(
     public bool CreatesInstance => !IsJoin && !ChildrenAffected;
 
     /// <summary>
-    /// Gets or sets the released snapshot owned by the projection pipeline for Watch notifications.
-    /// </summary>
-    internal ExpandoObject? ReleasedReadModel { get; set; }
-
-    /// <summary>
     /// Adds a deferred future to the context.
     /// </summary>
     /// <param name="future">The <see cref="ProjectionFuture"/> to add.</param>
