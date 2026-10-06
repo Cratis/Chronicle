@@ -10,5 +10,5 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// Represents the event for target URL being set for a webhook.
 /// </summary>
 /// <param name="TargetUrl">The target URL.</param>
-[EventType]
+[EventType, AllEventStores]
 public record TargetUrlSetForWebhook(WebhookTargetUrl TargetUrl);

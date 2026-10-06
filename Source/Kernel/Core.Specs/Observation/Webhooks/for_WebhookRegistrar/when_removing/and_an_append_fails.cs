@@ -8,30 +8,28 @@ using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookRegistrar.when_removing;
 
-public class with_webhook_ids : given.a_webhook_registrar
+public class and_an_append_fails : given.a_webhook_registrar
 {
     IEventSequence _eventSequence;
-    IEnumerable<string> _webhooks;
+    Exception? _exception;
 
     void Establish()
     {
-        _eventSequence = AnEventSequenceThatAppendsSuccessfully();
+        _eventSequence = Substitute.For<IEventSequence>();
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_eventSequence);
-
-        _webhooks = ["webhook-1", "webhook-2"];
-    }
-
-    async Task Because() => await _registrar.Remove("test-event-store", _webhooks);
-
-    [Fact] void should_append_webhook_removed_event_for_each_webhook() =>
-        _eventSequence.Received(2).Append(
+        _eventSequence.Append(
             Arg.Any<EventSourceId>(),
-            Arg.Any<WebhookRemoved>(),
+            Arg.Any<object>(),
             Arg.Any<CorrelationId>(),
             Arg.Any<IEnumerable<Causation>>(),
             Arg.Any<Identity>(),
             Arg.Any<IEnumerable<Tag>>(),
             Arg.Any<EventSourceType>(),
             Arg.Any<EventStreamType>(),
-            Arg.Any<EventStreamId>());
+            Arg.Any<EventStreamId>()).Returns(_ => AppendResult.Failed(CorrelationId.New(), [new AppendError("Missing event schema")]));
+    }
+
+    async Task Because() => _exception = await Catch.Exception(async () => await _registrar.Remove("non-system-store", ["webhook"]));
+
+    [Fact] void should_fail_the_removal() => _exception.ShouldBeOfExactType<WebhookRegistrationFailed>();
 }

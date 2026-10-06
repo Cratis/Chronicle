@@ -52,4 +52,6 @@ public class with_a_failed_bearer_authorization_append : given.a_webhook_registr
     async Task Because() => _exception = await Catch.Exception(async () => await _registrar.Add("non-system-store", [_webhook]));
 
     [Fact] void should_not_report_success_after_the_authorization_append_failed() => _exception.ShouldNotBeNull();
+    [Fact] void should_fail_the_registration() => _exception.ShouldBeOfExactType<WebhookRegistrationFailed>();
+    [Fact] void should_keep_the_token_out_of_the_failure() => _exception!.Message.ShouldNotContain("synthetic");
 }
