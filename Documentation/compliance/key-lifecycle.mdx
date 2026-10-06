@@ -60,7 +60,7 @@ Once a fence exists, the key store refuses, in every backend:
 - **Saving at or below the floor.** `SaveFor` refuses any revision at or below `ErasedThrough`. This is what stops a composed store healing a survivor back into the store that was erased.
 - **Restoring the destroyed material.** Any save of a key whose public-key fingerprint matches a destroyed one is refused, *at any revision, even after a new lifecycle is authorized*. This is the one that closes the cross-store copy: the copy carries the very same key bytes, and those bytes are exactly what the fingerprint fence names.
 
-Reads are untouched. `TryGetFor`, `HasFor` and `GetFor` answer about key material and keep answering exactly as they did — an erased subject has no key, so `[PII]` values release as empty strings and queries keep working.
+Reads are untouched. `TryGetFor`, `HasFor` and `GetFor` answer about key material and keep answering exactly as they did — an erased subject has no key, so `[PII]` values release as the empty value of their type (an empty string, `0`, `false` or `null`, see [Erasing a subject](erasing-a-subject)) and queries keep working.
 
 ### What it does *not* refuse
 
@@ -138,6 +138,16 @@ Until you make that call, appending a `[PII]` value for an erased subject fails 
 > A forwarded event carrying `[PII]` for an erased subject fails to append in the target event store, and the observer partition for that event source enters a failed state. The rest of the subscription keeps flowing. Either stop appending that subject's personal data, or authorize a new key — both are deliberate acts, which is the intent.
 
 The same refusal reaches anything that *writes* protected values, not only appends. Replaying a projection or reducer into a stored read model re-applies what the release produced, so a rebuild that touches an erased subject asks for a key and is refused for that subject's partition. This is deliberate: the alternative is to store the subject's slot in the clear, which changes what a unique constraint over a `[PII]` property means, or to mint a key on replay, which is the resurrection the fence exists to stop. Authorize a new key for the subjects you intend to keep protecting before a rebuild that has to cover them.
+
+## Migrations and revisions release strictly
+
+Reading a value for a query releases it leniently: a property that cannot be decrypted degrades to its empty value so that the query keeps working. Writing is held to a stricter standard. When Chronicle migrates stored events to a new [event type generation](../concepts/event-type-migrations) or applies a revision, it releases the stored protected values first and then protects the result again, so a silently blanked value would be written back as lost data. Both paths therefore release strictly:
+
+- **An operational failure aborts the write.** A key storage failure, an I/O error or a malformed key stops the migration or revision instead of storing blanks.
+- **A value whose subject has a recorded erasure is migrated as erased.** The new generation or revision holds the empty value of the property's type, not an error.
+- **A data-key unwrap failure for an erased subject counts as erased.** Ciphertext written before the erasure cannot be unwrapped with a key minted afterwards by `AllowNewEncryptionKeyFor`, so for a subject with a recorded erasure that failure is treated as erased and logged, rather than blocking every later event of the type.
+
+The last rule has a limit. Corrupt ciphertext belonging to a subject with a recorded erasure fails the same way as pre-erasure ciphertext, so it is migrated as erased and cannot be told apart today. This is tracked in [issue 4619](https://github.com/Cratis/Chronicle/issues/4619). For a subject with no recorded erasure, an unwrap failure still aborts the write.
 
 ## The threat model
 

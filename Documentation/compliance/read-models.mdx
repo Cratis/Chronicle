@@ -78,7 +78,7 @@ Read model queries are transparent to PII encryption. No changes to query code a
 
 <ChronicleClientTabs snippet="compliance/read-models/querying" />
 
-Chronicle decrypts PII fields automatically before returning results to the caller. When the encryption key has been deleted for a subject, `Name` returns an empty string — the caller receives an `Employee` record with an empty name, never an exception or partial result.
+Chronicle decrypts PII fields automatically before returning results to the caller. When the encryption key has been deleted for a subject, `Name` returns an empty string — the caller receives an `Employee` record with an empty name, never an exception or partial result. Properties that are not strings release as the empty value of their type, listed in the table below.
 
 That automatic decryption covers `IReadModels`' query methods. For an instance that arrived some other way — built from raw storage, restored from a cache, or delivered through `Watch`, which streams changes without releasing them — call `IReadModels.Release` yourself; see [Releasing PII](../read-models/releasing-pii).
 
@@ -89,9 +89,11 @@ Decryption is resolved per property, and a property that cannot be read never fa
 | The stored value | What the caller gets |
 |---|---|
 | Encrypted under this subject | The decrypted value. |
-| Encrypted, but the subject's key was deleted | An empty value — the erasure case above. |
+| Encrypted, but the subject's key was deleted | The empty value of the property's type — the erasure case above. |
 | Never encrypted under this subject | The value, untouched. |
 | Encrypted under a *different* subject and missing ownership metadata | An empty value for that property, plus an error in the Kernel log naming the property, the subject, and the likely cause. |
+
+The empty value of a property's type is an empty string for a string, `0` or `false` for a non-nullable number or boolean, `null` for a nullable one, and an empty collection or object for a collection or value object. An erased value therefore cannot be told apart from one genuinely stored as `0`, `false` or empty; whether to make them distinguishable is an open decision in [issue 4620](https://github.com/Cratis/Chronicle/issues/4620).
 
 The third row matters when a `[PII]`-typed property is resolved in memory at the query edge — for display on a view whose own compliance subject is not that person — or when a property was marked `[PII]` after values had already been stored. Chronicle recognizes the shape of the values it encrypts, so a value it never encrypted is passed through rather than blanked or rejected.
 
