@@ -16,8 +16,8 @@ public static class ProjectedColumns
 
     /// <summary>
     /// Derive the table columns for a read model from its latest-generation <see cref="JsonSchema"/>.
-    /// The returned list always includes a primary key column, preserving the schema's identifier spelling
-    /// regardless of casing (or using its likely key name when no identifier is declared), and the sink-owned
+    /// The returned list always includes <c language="csharp">Id</c> as the primary key column (using the schema's likely
+    /// key name when it does not declare an explicit <c language="csharp">Id</c> / <c language="csharp">id</c>) and the sink-owned
     /// <see cref="WellKnownProperties.LastHandledEventSequenceNumber"/> and
     /// <see cref="WellKnownProperties.ReadModelInstanceInitialized"/> bookkeeping columns.
     /// </summary>
@@ -34,15 +34,7 @@ public static class ProjectedColumns
         }
         else
         {
-            keyName = "Id";
-        }
-
-        // Keep the existing Id, then id precedence, but do not synthesize a key for another casing.
-        if (!schema.Properties.ContainsKey(keyName))
-        {
-            keyName = schema.Properties.Keys.FirstOrDefault(name => name.Equals("id", StringComparison.OrdinalIgnoreCase))
-                ?? schema.GetLikelyKeyPropertyName()
-                ?? "Id";
+            keyName = schema.GetLikelyKeyPropertyName() ?? "Id";
         }
 
         var schemaHasKey = schema.Properties.ContainsKey(keyName);
