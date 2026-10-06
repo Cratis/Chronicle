@@ -214,17 +214,13 @@ public class Sink(
         {
             return await ApplyChangesCore(key, changeset, eventSequenceNumber, mode, preflushFailures);
         }
-        catch (BulkWriteFailed failure)
+        catch (Exception ex) when (preflushFailures.Count > 0)
         {
-            // ApplyChanges can report the entire interrupted batch directly, including the current event
-            // if its join pre-flush failed before its own operation was queued.
-            return MergeFailures(preflushFailures.Concat(failure.FailedPartitions).Append(
-                new FailedPartition(key, eventSequenceNumber) { Reason = "The MongoDB bulk write outcome is unknown" }));
-        }
-        catch (Exception) when (preflushFailures.Count > 0)
-        {
-            return MergeFailures(preflushFailures.Append(
-                new FailedPartition(key, eventSequenceNumber) { Reason = "The write was interrupted after the bulk pre-flush" }));
+            // Keep known pre-flush failures, but never acknowledge the interrupted event.
+            var failures = ex is BulkWriteFailed bulkFailure
+                ? preflushFailures.Concat(bulkFailure.FailedPartitions)
+                : preflushFailures;
+            throw new BulkWriteFailed(MergeFailures(failures), ex);
         }
         finally
         {
@@ -500,7 +496,7 @@ public class Sink(
     /// earlier event for the partition. Not promoting would leave the observer continuing from the end of the replay
     /// on top of the collection as it was before the replay began; another silo ending the same replay without
     /// failures would promote it regardless. Only a final flush that throws, leaving the outcome unknown and nothing
-    /// recorded, abandons the rebuilt collection instead.
+    /// recorded, retains the rebuilt collection and its buffered writes for a later flush instead.
     /// </para>
     /// </remarks>
     public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context) =>
@@ -514,12 +510,6 @@ public class Sink(
                 }
 
                 await collections.EndReplay(context);
-                _replayContext = null;
-            },
-            onFailure: () =>
-            {
-                logger.AbandoningReplayAfterFailedFlush(readModel.Identifier);
-                collections.AbandonReplay();
                 _replayContext = null;
             });
 
@@ -855,8 +845,7 @@ public class Sink(
 
     async Task<IEnumerable<FailedPartition>> CloseBulkWindow(
         Func<IEnumerable<FailedPartition>, Task>? afterDrain = null,
-        bool beginBulk = false,
-        Action? onFailure = null)
+        bool beginBulk = false)
     {
         TaskCompletionSource<IEnumerable<FailedPartition>> completion;
         Task writersDrained;
@@ -881,15 +870,15 @@ public class Sink(
                 }
             }
 
-            var previousFailures = await previous;
+            await previous;
             if (afterDrain is null)
             {
-                return previousFailures;
+                // Only the closing owner reports its outcome.
+                return [];
             }
         }
 
         IEnumerable<FailedPartition> failures = [];
-        Exception? failure = null;
         try
         {
             // Only the finite set admitted before closing may still enqueue. Wait for it before draining;
@@ -913,8 +902,7 @@ public class Sink(
         }
         catch (Exception ex)
         {
-            failure = ex is not BulkWriteFailed && failures.Any() ? new BulkWriteFailed(failures, ex) : ex;
-            onFailure?.Invoke();
+            var failure = ex is not BulkWriteFailed && failures.Any() ? new BulkWriteFailed(failures, ex) : ex;
             if (ReferenceEquals(failure, ex))
             {
                 throw;
@@ -930,15 +918,9 @@ public class Sink(
                 _writersDrained = null;
             }
 
-            if (failure is null)
-            {
-                completion.SetResult(failures);
-            }
-            else
-            {
-                completion.SetException(failure);
-                _ = completion.Task.Exception;
-            }
+            // This signals admission, not the owner's result. After a failed drain bulk mode is still
+            // open, so waiting writers enqueue behind retained work instead of writing directly.
+            completion.SetResult([]);
         }
     }
 
@@ -967,71 +949,47 @@ public class Sink(
     {
         // Flush snapshots are serialized; a closing drain additionally waits for admitted writers.
         var failedPartitions = new Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)>();
-        try
+        do
         {
-            do
-            {
-                List<WriteModel<BsonDocument>> snapshot;
-                Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadataSnapshot;
-                KeyValuePair<string, long>[] pendingDeletes;
-                lock (_bulkLock)
-                {
-                    if (_bulkOperations.Count == 0)
-                    {
-                        if (endBulk)
-                        {
-                            CloseBulk();
-                        }
-
-                        break;
-                    }
-
-                    snapshot = [.._bulkOperations];
-                    metadataSnapshot = new(_bulkOperationMetadata);
-                    pendingDeletes = _bulkPendingDeletes.ToArray();
-                    _bulkOperations.Clear();
-                    _bulkOperationMetadata.Clear();
-                    _currentBulkSize = 0;
-                }
-
-                try
-                {
-                    await WriteBulkBatch(snapshot, metadataSnapshot, failedPartitions);
-                }
-                finally
-                {
-                    lock (_bulkLock)
-                    {
-                        foreach (var pending in pendingDeletes)
-                        {
-                            if (_bulkPendingDeletes.TryGetValue(pending.Key, out var version) && version == pending.Value)
-                            {
-                                _bulkPendingDeletes.TryRemove(pending.Key, out _);
-                            }
-                        }
-                    }
-                }
-            }
-            while (endBulk);
-
-            return failedPartitions
-                .Select(partition => new FailedPartition(partition.Key, partition.Value.SequenceNumber) { Reason = partition.Value.Reason })
-                .ToArray();
-        }
-        catch (BulkWriteFailed failure)
-        {
+            List<WriteModel<BsonDocument>> snapshot;
+            Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadataSnapshot;
+            KeyValuePair<string, long>[] pendingDeletes;
             lock (_bulkLock)
             {
-                // Report every accepted operation instead of retaining older writes behind a closed window.
-                AddFailedPartitions(_bulkOperationMetadata.Keys, _bulkOperationMetadata, failedPartitions, UnknownBulkOutcome());
+                if (_bulkOperations.Count == 0)
+                {
+                    if (endBulk)
+                    {
+                        CloseBulk();
+                    }
+
+                    break;
+                }
+
+                snapshot = [.._bulkOperations];
+                metadataSnapshot = new(_bulkOperationMetadata);
+                pendingDeletes = _bulkPendingDeletes.ToArray();
                 _bulkOperations.Clear();
                 _bulkOperationMetadata.Clear();
                 _currentBulkSize = 0;
-                CloseBulk();
             }
 
-            throw new BulkWriteFailed(ToFailedPartitions(failedPartitions), failure.InnerException!);
+            // An interrupted batch is restored by WriteBulkBatch. Retire delete marks only after settlement.
+            await WriteBulkBatch(snapshot, metadataSnapshot, failedPartitions);
+            lock (_bulkLock)
+            {
+                foreach (var pending in pendingDeletes)
+                {
+                    if (_bulkPendingDeletes.TryGetValue(pending.Key, out var version) && version == pending.Value)
+                    {
+                        _bulkPendingDeletes.TryRemove(pending.Key, out _);
+                    }
+                }
+            }
         }
+        while (endBulk);
+
+        return ToFailedPartitions(failedPartitions);
     }
 
     void CloseBulk()
@@ -1097,16 +1055,43 @@ public class Sink(
             }
             catch (Exception ex)
             {
-                AddFailedPartitions(remainingIndexes, metadataSnapshot, failedPartitions, UnknownBulkOutcome());
-                throw new BulkWriteFailed(ToFailedPartitions(failedPartitions), ex);
+                lock (_bulkLock)
+                {
+                    // Restore only the interrupted suffix; a preceding known-error prefix is already settled.
+                    // Concurrently accepted operations keep their order behind this batch and their delete versions.
+                    var queuedMetadata = new Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)>(_bulkOperationMetadata);
+                    _bulkOperations.InsertRange(0, remaining);
+                    _bulkOperationMetadata.Clear();
+                    for (var index = 0; index < remainingIndexes.Count; index++)
+                    {
+                        if (metadataSnapshot.TryGetValue(remainingIndexes[index], out var metadata))
+                        {
+                            _bulkOperationMetadata[index] = metadata;
+                        }
+                    }
+
+                    foreach (var (index, metadata) in queuedMetadata)
+                    {
+                        _bulkOperationMetadata[index + remaining.Count] = metadata;
+                    }
+
+                    _currentBulkSize += remaining.Sum(EstimateOperationSize);
+                }
+
+                if (failedPartitions.Count > 0)
+                {
+                    // Carry only known MongoDB failures. Unknown outcomes stay queued and are never reported
+                    // as settled failed operations; the original interruption remains available as the cause.
+                    throw new BulkWriteFailed(ToFailedPartitions(failedPartitions), ex);
+                }
+
+                throw;
             }
         }
     }
 
     static FailedPartition[] MergeFailures(IEnumerable<FailedPartition> failures) =>
         failures.GroupBy(failure => failure.EventSourceId).Select(partition => partition.MinBy(failure => failure.EventSequenceNumber.Value)!).ToArray();
-
-    static BulkWriteFailureReasons UnknownBulkOutcome() => new(new Dictionary<int, string>(), "The MongoDB bulk write outcome is unknown");
 
     static FailedPartition[] ToFailedPartitions(Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> failures) =>
         failures.Select(partition => new FailedPartition(partition.Key, partition.Value.SequenceNumber) { Reason = partition.Value.Reason }).ToArray();

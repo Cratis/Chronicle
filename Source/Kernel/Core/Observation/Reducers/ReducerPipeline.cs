@@ -140,13 +140,11 @@ public class ReducerPipeline(
             var mode = guardWritesOnWatermark && initial is not null
                 ? SinkWriteMode.OnlyWhenAdvancingWatermark
                 : SinkWriteMode.Always;
-            var failedPartitions = await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber, mode);
+            var failedPartitions = (await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber, mode)).ToArray();
 
-            if (failedPartitions.Any())
+            if (failedPartitions.Length > 0)
             {
-                var firstFailure = failedPartitions.First();
-                var reason = string.IsNullOrEmpty(firstFailure.Reason) ? string.Empty : $": {firstFailure.Reason}";
-                throw new InvalidOperationException($"Bulk operation failed for partition {firstFailure.EventSourceId} at sequence number {firstFailure.EventSequenceNumber}{reason}");
+                throw new BulkWriteFailed(failedPartitions);
             }
         }
     }

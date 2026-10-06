@@ -36,6 +36,6 @@ public class and_an_unknown_threshold_failure_has_concurrent_writes : for_Sink.g
     [Fact] void should_keep_the_bulk_cache() => _cached.ShouldBeTrue();
     [Fact] void should_not_allow_direct_writes() => _directWrites.ShouldBeEmpty();
     [Fact] void should_retry_the_failed_batch_before_concurrent_writes() => _batches[1].Length.ShouldEqual(1002);
-    [Fact] void should_preserve_other_writers_order() => WrittenValuesFor(_secondKey).ShouldContainOnly(1000, 1001);
-    [Fact] void should_retain_the_failed_operations() => _batches[1].Take(1000).ShouldContainOnly(_batches[0]);
+    [Fact] void should_preserve_other_writers_order() => WrittenValuesFor(_secondKey).SequenceEqual([1000, 1001]).ShouldBeTrue();
+    [Fact] void should_retain_the_failed_operations() => _batches[1].Take(1000).SequenceEqual(_batches[0]).ShouldBeTrue();
 }

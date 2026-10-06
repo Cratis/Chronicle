@@ -36,5 +36,5 @@ public class and_an_unexpected_failure_precedes_a_later_write : given.a_sink_wit
     [Fact] void should_reopen_bulk_admission_for_the_waiting_writer() => _lateError.ShouldBeNull();
     [Fact] void should_not_report_the_owners_failure_again() => _concurrentFailures.ShouldBeEmpty();
     [Fact] void should_not_allow_direct_writes() => _directWrites.ShouldBeEmpty();
-    [Fact] void should_retry_every_accepted_write_in_order() => WrittenValuesFor(_firstKey).ShouldContainOnly(1, 1, 2, 3);
+    [Fact] void should_retry_every_accepted_write_in_order() => WrittenValuesFor(_firstKey).SequenceEqual([1, 1, 2, 3]).ShouldBeTrue();
 }

@@ -8,6 +8,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_ending_a_bulk_wri
 public class and_an_unexpected_failure_follows_a_known_failure : given.a_sink_with_gated_bulk_writes
 {
     Exception _error;
+    FailedPartition[] _laterFailures;
 
     async Task Establish()
     {
@@ -24,8 +25,14 @@ public class and_an_unexpected_failure_follows_a_known_failure : given.a_sink_wi
         await _firstFlushStarted.Task;
         _releaseFirstFlush.SetResult();
         _error = await Catch.Exception(async () => await ending);
+        _throwLaterBatch = false;
+        await Apply(_secondKey, 3, 3);
+        _laterFailures = (await _sink.EndBulk()).ToArray();
     }
 
     [Fact] void should_preserve_the_known_failure() => (_error is BulkWriteFailed failed && failed.FailedPartitions.Any(partition => partition.EventSourceId == _firstKey && partition.EventSequenceNumber.Value == 1)).ShouldBeTrue();
-    [Fact] void should_report_the_partition_with_an_unknown_outcome() => (_error is BulkWriteFailed failed && failed.FailedPartitions.Any(partition => partition.EventSourceId == _secondKey)).ShouldBeTrue();
+    [Fact] void should_not_report_retained_operations_as_failed() => ((BulkWriteFailed)_error).FailedPartitions.Select(partition => partition.EventSourceId).ShouldContainOnly(_firstKey);
+    [Fact] void should_preserve_the_original_cause() => _error.InnerException.ShouldEqual(_unexpectedFailure);
+    [Fact] void should_retry_the_interrupted_suffix_before_later_writes() => WrittenValuesFor(_secondKey).SequenceEqual([2, 2, 2, 3]).ShouldBeTrue();
+    [Fact] void should_not_report_known_failures_twice() => _laterFailures.ShouldBeEmpty();
 }

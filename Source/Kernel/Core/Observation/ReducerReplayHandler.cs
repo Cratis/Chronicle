@@ -131,6 +131,11 @@ public class ReducerReplayHandler(
         }
         catch (Exception ex)
         {
+            if (ex is BulkWriteFailed failure)
+            {
+                await ProjectionBulkFailures.Record(grainFactory, observerDetails, failure.FailedPartitions);
+            }
+
             logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
             return ICanHandleReplayForObserver.Error.Unknown;
         }
@@ -262,6 +267,11 @@ public class ReducerReplayHandler(
         }
         catch (Exception ex)
         {
+            if (ex is BulkWriteFailed failure)
+            {
+                await ProjectionBulkFailures.Record(grainFactory, observerDetails, failure.FailedPartitions);
+            }
+
             logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
             return ICanHandleReplayForObserver.Error.Unknown;
         }

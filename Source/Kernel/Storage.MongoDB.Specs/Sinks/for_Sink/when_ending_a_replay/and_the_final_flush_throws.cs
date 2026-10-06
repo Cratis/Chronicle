@@ -16,9 +16,8 @@ using MongoDB.Driver;
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_ending_a_replay;
 
 /// <summary>
-/// A final flush that throws leaves the outcome of the replay's last writes unknown and records nothing to retry, so
-/// the rebuilt collection is not promoted - but the sink still leaves replay and bulk mode, and later writes go
-/// straight to the read model.
+/// A final flush that throws retains the replay collection and buffered writes. Later writes remain buffered
+/// until a subsequent final flush succeeds.
 /// </summary>
 public class and_the_final_flush_throws : Specification
 {
@@ -68,8 +67,8 @@ public class and_the_final_flush_throws : Specification
         await _sink.ApplyChanges(_key, _changeset, 2UL);
     }
 
-    [Fact] void should_fail_with_the_flush_failure() => _error.InnerException.ShouldEqual(_failure);
-    [Fact] void should_leave_replay_mode() => _collections.Received(1).AbandonReplay();
+    [Fact] void should_fail_with_the_flush_failure() => _error.ShouldEqual(_failure);
+    [Fact] void should_keep_replay_mode() => _collections.DidNotReceive().AbandonReplay();
     [Fact] void should_not_promote_the_replay() => _collections.DidNotReceive().EndReplay(Arg.Any<ReplayContext>());
-    [Fact] void should_write_later_changes_directly() => _collection.Received(1).DeleteOneAsync(Arg.Any<FilterDefinition<BsonDocument>>(), Arg.Any<CancellationToken>());
+    [Fact] void should_keep_later_changes_buffered() => _collection.DidNotReceive().DeleteOneAsync(Arg.Any<FilterDefinition<BsonDocument>>(), Arg.Any<CancellationToken>());
 }

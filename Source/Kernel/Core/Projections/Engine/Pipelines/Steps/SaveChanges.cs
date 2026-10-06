@@ -95,7 +95,11 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
             : [];
         foreach (var pendingSave in context.PendingFutureSaves.Where(p => !foldedSet.Contains(p)))
         {
-            await sink.ApplyChanges(pendingSave.Key, pendingSave.Changeset, context.Event.Context.SequenceNumber);
+            var failedPartitions = await sink.ApplyChanges(pendingSave.Key, pendingSave.Changeset, context.Event.Context.SequenceNumber);
+            foreach (var failedPartition in failedPartitions)
+            {
+                context.AddFailedPartition(failedPartition);
+            }
         }
 
         return context;
