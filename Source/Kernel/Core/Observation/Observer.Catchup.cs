@@ -8,6 +8,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -58,7 +59,8 @@ public partial class Observer
                 logger.NoCatchUpJobTookOwnership();
                 _isPreparingCatchup = false;
                 return Task.CompletedTask;
-            });
+            },
+            concludedJobs: _concludedCatchUpJobs);
     }
 
     /// <inheritdoc/>
@@ -102,6 +104,12 @@ public partial class Observer
 
         _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
+
+        // The job reports back before it is finalized, so it is still listed as running while routing decides
+        // whether the observer is behind. Finding it there must not count as an owner: it has done its work and will
+        // never report back again, which would leave an event appended at that boundary without anyone to handle it.
+        // Only one catch-up job runs per observer, so every unfinished one listed now is the one that just concluded.
+        _concludedCatchUpJobs = await GetUnfinishedCatchUpJobs();
 
         if (IsRetired || _removed) return;
         await TransitionTo<Routing>();
@@ -162,6 +170,15 @@ public partial class Observer
         State.CatchingUpPartitions.Add(partition);
         await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes));
         await WriteStateAsync();
+    }
+
+    async Task<IReadOnlySet<JobId>> GetUnfinishedCatchUpJobs()
+    {
+        var jobs = await _jobsManager.GetUnfinishedJobs();
+        return jobs
+            .Where(job => job.Request is CatchUpObserverRequest request && request.ObserverKey == _observerKey)
+            .Select(job => job.Id)
+            .ToHashSet();
     }
 
     async Task<Result<bool, GetSequenceNumberError>> NeedsCatchup(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)

@@ -50,6 +50,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onResume">The optional callback when a job needs to be resumed.</param>
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
+    /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -61,7 +62,8 @@ public static partial class JobsManagerExtensions
         Func<Task>? onAlreadyRunningJob = null,
         Func<Task>? onResume = null,
         Func<Task>? onStartNew = null,
-        Func<Task>? onResumeRefused = null)
+        Func<Task>? onResumeRefused = null,
+        IEnumerable<JobId>? concludedJobs = null)
         where TJob : IJob<TRequest>
         where TRequest : class, IObserverJobRequest
     {
@@ -70,9 +72,14 @@ public static partial class JobsManagerExtensions
         onResume ??= () => Task.CompletedTask;
         onStartNew ??= () => Task.CompletedTask;
         onResumeRefused ??= () => Task.CompletedTask;
+        var concluded = concludedJobs?.ToHashSet() ?? [];
 
         var jobs = await jobsManager.GetUnfinishedJobs();
-        jobs = jobs.Where(job => job.Request is TRequest observerRequest && observerRequest.ObserverKey == request.ObserverKey && requestPredicate(observerRequest)).ToImmutableList();
+        jobs = jobs.Where(job =>
+            job.Request is TRequest observerRequest &&
+            observerRequest.ObserverKey == request.ObserverKey &&
+            requestPredicate(observerRequest) &&
+            !concluded.Contains(job.Id)).ToImmutableList();
         var alreadyRunningJob = jobs.FirstOrDefault(job => job.IsPreparingOrRunning);
         if (alreadyRunningJob is not null)
         {

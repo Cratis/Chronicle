@@ -79,6 +79,7 @@ public partial class Observer(
     IMeterScope<Observer>? _metrics;
     bool _isPreparingCatchup;
     int _catchupRecoveryAttempts;
+    IReadOnlySet<JobId> _concludedCatchUpJobs = new HashSet<JobId>();
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     int _statePersistenceBatchInterval = 1;
     int _debouncedProgressWrites;
