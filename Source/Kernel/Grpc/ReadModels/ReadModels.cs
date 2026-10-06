@@ -346,7 +346,8 @@ internal sealed class ReadModels(
         var readModelDefinition = await storage.GetEventStore(request.EventStore).ReadModels.Get(definition.Identifier);
         var projectionKey = new ProjectionKey((ProjectionId)definition.ObserverIdentifier.Value, request.EventStore);
         var projection = grainFactory.GetGrain<IProjection>(projectionKey);
-        var eventTypes = await projection.GetEventTypes();
+        var projectionDefinition = await projection.GetDefinition();
+        var eventTypes = projectionDefinition.SubscribesToAllEvents ? [] : await projection.GetEventTypes();
 
         // Get events from the beginning, optionally limited by event count
         var events = new List<AppendedEvent>();

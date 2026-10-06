@@ -135,7 +135,7 @@ internal static class ReadModelSnapshotReader
         var projection = grainFactory.GetGrain<IProjection>(new ProjectionKey(projectionId, eventStore));
         var definition = await projection.GetDefinition();
         var readModelDefinition = await storage.GetEventStore(eventStore).ReadModels.Get(definition.ReadModel);
-        var eventTypes = await projection.GetEventTypes();
+        var eventTypes = definition.SubscribesToAllEvents ? [] : await projection.GetEventTypes();
 
         var keyIsEventSourceId = definition.From.Values.All(from => from.Key is null || string.IsNullOrEmpty(from.Key.Value));
 

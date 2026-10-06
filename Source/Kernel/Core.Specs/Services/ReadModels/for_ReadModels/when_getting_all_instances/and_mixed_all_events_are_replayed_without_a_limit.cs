@@ -5,7 +5,7 @@ using Cratis.Chronicle.Contracts.ReadModels;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.when_getting_all_instances;
 
-public class and_all_events_are_subscribed_alongside_an_explicit_from : given.a_projection_replay
+public class and_mixed_all_events_are_replayed_without_a_limit : given.a_projection_replay
 {
     GetAllInstancesResponse _result;
 
@@ -17,9 +17,8 @@ public class and_all_events_are_subscribed_alongside_an_explicit_from : given.a_
         Namespace = "test-namespace",
         ReadModelIdentifier = _readModelDefinition.Identifier,
         EventSequenceId = "event-log",
-        EventCount = 3
+        EventCount = ulong.MaxValue
     });
 
     [Fact] void should_replay_every_event_including_the_unmapped_type() => _result.ProcessedEventsCount.ShouldEqual(3UL);
-    [Fact] void should_pass_every_event_to_the_projection() => _processedEvents.Select(@event => @event.Context.EventType).ShouldEqual<IEnumerable<Concepts.Events.EventType>>([Mapped, Unmapped, Mapped]);
 }

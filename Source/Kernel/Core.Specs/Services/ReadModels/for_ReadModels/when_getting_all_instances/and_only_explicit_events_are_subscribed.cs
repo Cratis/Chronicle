@@ -5,11 +5,9 @@ using Cratis.Chronicle.Contracts.ReadModels;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.when_getting_all_instances;
 
-public class and_all_events_are_subscribed_alongside_an_explicit_from : given.a_projection_replay
+public class and_only_explicit_events_are_subscribed : given.a_projection_replay
 {
     GetAllInstancesResponse _result;
-
-    void Establish() => _definition = _definition with { SubscribesToAllEvents = true };
 
     async Task Because() => _result = await _service.GetAllInstances(new()
     {
@@ -20,6 +18,5 @@ public class and_all_events_are_subscribed_alongside_an_explicit_from : given.a_
         EventCount = 3
     });
 
-    [Fact] void should_replay_every_event_including_the_unmapped_type() => _result.ProcessedEventsCount.ShouldEqual(3UL);
-    [Fact] void should_pass_every_event_to_the_projection() => _processedEvents.Select(@event => @event.Context.EventType).ShouldEqual<IEnumerable<Concepts.Events.EventType>>([Mapped, Unmapped, Mapped]);
+    [Fact] void should_replay_only_the_explicit_event_type() => _result.ProcessedEventsCount.ShouldEqual(2UL);
 }

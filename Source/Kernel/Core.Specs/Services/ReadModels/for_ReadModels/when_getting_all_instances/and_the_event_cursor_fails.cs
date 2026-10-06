@@ -2,7 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.ReadModels;
 
@@ -23,6 +27,21 @@ public class and_the_event_cursor_fails : given.all_dependencies
         _namespaceStorage.GetEventSequence("event-log").Returns(eventSequenceStorage);
 
         var projection = Substitute.For<IProjection>();
+        projection.GetDefinition().Returns(new ProjectionDefinition(
+            ProjectionOwner.Client,
+            EventSequenceId.Log,
+            "projection",
+            _readModelDefinition.Identifier,
+            true,
+            true,
+            new(),
+            new Dictionary<EventType, FromDefinition>(),
+            new Dictionary<EventType, JoinDefinition>(),
+            new Dictionary<PropertyPath, ChildrenDefinition>(),
+            [],
+            new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false),
+            new Dictionary<EventType, RemovedWithDefinition>(),
+            new Dictionary<EventType, RemovedWithJoinDefinition>()));
         projection.GetEventTypes().Returns([]);
         _grainFactory.GetGrain<IProjection>(Arg.Any<string>()).Returns(projection);
 
