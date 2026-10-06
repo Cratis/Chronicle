@@ -700,8 +700,8 @@ public class Sink : ISink
             return;
         }
 
+        var segments = childRemoved.ChildrenProperty.Segments.ToArray();
         var identifierSegment = childRemoved.IdentifiedByProperty.LastSegment.Value;
-        var keyAsString = childRemoved.Key?.ToString();
 
         var entries = await scope.DbContext.Entries.ToListAsync();
         var modified = false;
@@ -712,32 +712,13 @@ public class Sink : ISink
                 continue;
             }
 
-            if (DeserializeJsonColumn(jsonValue) is not IList<object?> collection)
+            var content = DeserializeJsonColumn(jsonValue);
+            if (!RemoveChildrenFromPath(content, segments, 1, identifierSegment, childRemoved.Key))
             {
                 continue;
             }
 
-            var retained = new List<object?>(collection.Count);
-            var didRemove = false;
-            foreach (var item in collection)
-            {
-                if (item is IDictionary<string, object?> dict
-                    && dict.TryGetValue(identifierSegment, out var value)
-                    && (Equals(value, childRemoved.Key) || (value is not null && value.ToString() == keyAsString)))
-                {
-                    didRemove = true;
-                    continue;
-                }
-
-                retained.Add(item);
-            }
-
-            if (!didRemove)
-            {
-                continue;
-            }
-
-            entry[column.Name] = SerializeJsonColumn(retained, column);
+            entry[column.Name] = SerializeJsonColumn(content, column);
             var trackedEntry = scope.DbContext.Entries.Entry(entry);
             trackedEntry.Property(column.Name).IsModified = true;
             AdvanceLastHandledSequenceNumber(trackedEntry, eventSequenceNumber);
@@ -748,6 +729,47 @@ public class Sink : ISink
         {
             await scope.DbContext.SaveChangesAsync();
         }
+    }
+
+    static bool RemoveChildrenFromPath(object? node, IPropertyPathSegment[] segments, int index, string identifier, object? key)
+    {
+        if (index == segments.Length)
+        {
+            if (node is not IList<object?> children)
+            {
+                return false;
+            }
+
+            var removed = false;
+            for (var childIndex = children.Count - 1; childIndex >= 0; childIndex--)
+            {
+                if (children[childIndex] is IDictionary<string, object?> child &&
+                    child.TryGetValue(identifier, out var value) && CompareLoose(value, key))
+                {
+                    children.RemoveAt(childIndex);
+                    removed = true;
+                }
+            }
+
+            return removed;
+        }
+
+        if (node is IDictionary<string, object?> nested)
+        {
+            return nested.TryGetValue(segments[index].Value, out var value) &&
+                RemoveChildrenFromPath(value, segments, index + 1, identifier, key);
+        }
+
+        var modified = false;
+        if (node is IList<object?> parents)
+        {
+            foreach (var parent in parents)
+            {
+                modified |= RemoveChildrenFromPath(parent, segments, index, identifier, key);
+            }
+        }
+
+        return modified;
     }
 
     void ApplyChangesToEntity(EntityEntry<DynamicReadModelEntity> entry, IEnumerable<Change> changes)
