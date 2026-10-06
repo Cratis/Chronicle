@@ -115,43 +115,6 @@ public partial class Observer
         await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
     }
 
-    /// <inheritdoc/>
-    /// <remarks>
-    /// The steps of an observer-wide catch-up run independently, and the job reports back only the furthest any of
-    /// them got. A partition left held back until then drops every event appended after its own step read its last
-    /// one - and once the position moves past those events nothing reads them again. Releasing it here instead closes
-    /// that window: nothing else runs on the observer between finding no unread events and handing the partition back,
-    /// so an event is either found here, and read by the step, or appended later and delivered live.
-    /// </remarks>
-    public async Task<bool> ConcludePartitionCatchUp(Key partition, EventSequenceNumber nextEventSequenceNumber, IEnumerable<EventType> eventTypes)
-    {
-        // Nothing holds back a partition that is not catching up - routing may already have released it - so reading on
-        // would only deliver what live delivery already does.
-        if (IsRetired || _removed || !State.CatchingUpPartitions.Contains(partition)) return true;
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-
-        var unreadEvent = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(nextEventSequenceNumber, eventTypes, partition);
-        if (unreadEvent.TryGetResult(out var sequenceNumber) && sequenceNumber.IsActualValue)
-        {
-            logger.PartitionReceivedEventsWhileCatchingUp(partition, sequenceNumber);
-            return false;
-        }
-
-        // A failed lookup cannot tell whether anything was missed, so the partition is failed from where the step got
-        // to and recovered from there, rather than handed back over events nobody may have read.
-        if (unreadEvent.TryGetError(out var error) && error != GetSequenceNumberError.NotFound)
-        {
-            State.CatchingUpPartitions.Remove(partition);
-            await PartitionFailed(partition, nextEventSequenceNumber, ["Event Sequence storage error while concluding the partition's catch-up"], string.Empty);
-            return true;
-        }
-
-        logger.ConcludedPartitionCatchUp(partition);
-        State.CatchingUpPartitions.Remove(partition);
-        await WriteStateAsync();
-        return true;
-    }
-
     async Task HandOverCaughtUpJob(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber)
     {
         // The job reports back before it is finalized, so it is still listed as running while routing decides

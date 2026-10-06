@@ -164,13 +164,7 @@ public class CatchUpObserver(
                     request.FromEventSequenceNumber,
                     EventSequenceNumber.Max,
                     EventObservationState.None,
-                    request.EventTypes)
-                {
-                    // The steps run independently and the job reports back only the furthest any of them got, so each
-                    // step concludes its own partition: an event that arrived after it read its last one is otherwise
-                    // below the position the observer moves to, and never read again.
-                    ConcludesPartitionCatchUp = true
-                }))
+                    request.EventTypes)))
             .ToImmutableList();
     }
 }
