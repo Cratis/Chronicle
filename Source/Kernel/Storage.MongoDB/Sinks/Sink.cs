@@ -951,7 +951,7 @@ public class Sink(
     async Task RemoveChildFromAll(ChildRemovedFromAll childRemoved)
     {
         var childrenProperty = (string)childRemoved.ChildrenProperty.GetChildrenProperty();
-        var identifiedByProperty = (string)childRemoved.IdentifiedByProperty;
+        var identifiedByProperty = childRemoved.IdentifiedByProperty.Path.ToMongoDBPropertyName();
         var propertyValue = childRemoved.Key.ToBsonValue();
 
         var collection = Collection;
