@@ -36,6 +36,9 @@ public class EncryptChangeset(
             return context;
         }
 
+        // Initial state and incoming event values have already been released. Capture notification
+        // ownership before encryption mutates child payloads or records protected sink differences.
+        context.ReleasedReadModel = context.Changeset.CurrentState.Clone();
         var schema = projection.TargetReadModelSchema;
         var identifier = context.Event.Context.ResolveComplianceIdentifier(context.Key);
 
@@ -73,10 +76,6 @@ public class EncryptChangeset(
         {
             currentStateAsDictionary.Remove(WellKnownProperties.Subjects);
         }
-
-        // Capture notification ownership only for protected models, after subject lineage is resolved
-        // and before child payloads are encrypted in place.
-        context.ReleasedReadModel = currentState.Clone();
 
         var encrypted = await readModelsCompliance.Apply(
             eventStore,
@@ -154,14 +153,6 @@ public class EncryptChangeset(
         // encrypted symmetrically on write — otherwise a protected child-element value is persisted in the
         // clear and then fails to release on read.
         await EncryptProtectedValuesForChildren(schema, identifier, context.Changeset.Changes);
-
-        // Check erasure after protection has enforced it, without decrypting the notification plaintext.
-        context.ReleasedReadModel = await readModelsCompliance.ApplyErasureFence(
-            eventStore,
-            eventStoreNamespace,
-            schema,
-            identifier,
-            context.ReleasedReadModel);
 
         return context;
     }

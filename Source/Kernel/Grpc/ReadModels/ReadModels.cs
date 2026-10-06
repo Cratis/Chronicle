@@ -511,9 +511,9 @@ internal sealed class ReadModels(
     {
         var result = (readModel.DeepClone() as JsonObject)!;
         var declaredProperties = schema.GetFlattenedProperties().Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
-        if (!declaredProperties.Contains(WellKnownProperties.ReadModelInstanceInitialized))
+        foreach (var property in WellKnownProperties.All.Where(property => !declaredProperties.Contains(property)))
         {
-            result.Remove(WellKnownProperties.ReadModelInstanceInitialized);
+            result.Remove(property);
         }
         result.Remove(WellKnownProperties.Subject);
         result.Remove(WellKnownProperties.Subjects);

@@ -104,7 +104,6 @@ public class and_document_carries_kernel_bookkeeping : given.all_dependencies
                 Cratis.Execution.CorrelationId.NotSet)));
     }
 
-    [Fact] void should_keep_the_last_handled_watermark() => JsonSerializer.Deserialize<JsonElement>(_emitted.Single(_ => !_.Subscribed).ReadModel).GetProperty(WellKnownProperties.LastHandledEventSequenceNumber).GetUInt64().ShouldEqual(42UL);
     [Fact] void should_not_fail() => _exception.ShouldBeNull();
     [Fact] void should_stream_the_changeset() => _emitted.Count(_ => !_.Subscribed).ShouldEqual(1);
     [Fact] void should_stream_the_decrypted_read_model() => JsonSerializer.Deserialize<JsonElement>(_emitted.Single(_ => !_.Subscribed).ReadModel).GetProperty("name").GetString().ShouldEqual(DecryptedName);
