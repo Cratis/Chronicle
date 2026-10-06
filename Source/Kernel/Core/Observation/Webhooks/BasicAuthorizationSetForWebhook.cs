@@ -11,5 +11,5 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// </summary>
 /// <param name="Username">The username.</param>
 /// <param name="Password">The password.</param>
-[EventType]
+[EventType, AllEventStores]
 public record BasicAuthorizationSetForWebhook(Username Username, Password Password);

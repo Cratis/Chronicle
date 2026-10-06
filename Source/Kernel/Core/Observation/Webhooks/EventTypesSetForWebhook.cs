@@ -9,5 +9,5 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// Represents the event for event types being set for a webhook.
 /// </summary>
 /// <param name="EventTypes">The event types.</param>
-[EventType]
+[EventType, AllEventStores]
 public record EventTypesSetForWebhook(IEnumerable<EventType> EventTypes);

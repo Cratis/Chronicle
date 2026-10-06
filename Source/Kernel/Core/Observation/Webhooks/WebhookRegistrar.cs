@@ -45,6 +45,7 @@ public sealed class WebhookRegistrar(
     /// <param name="eventStore">The <see cref="EventStoreName"/> the webhooks belong to.</param>
     /// <param name="webhooks">The webhook definitions to add or update.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="WebhookRegistrationFailed">Thrown when an event recording the registration could not be appended.</exception>
     internal async Task Add(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
     {
         var eventSequence = grainFactory.GetSystemEventSequence(eventStore);
@@ -75,7 +76,7 @@ public sealed class WebhookRegistrar(
                     encryptedWebhook.IsReplayable,
                     encryptedWebhook.IsActive);
 
-                await eventSequence.Append(webhook.Identifier, addedEvent);
+                await Append(eventSequence, webhook.Identifier, addedEvent);
                 await AppendAuthorizationEvent(eventSequence, webhook.Identifier, encryptedWebhook.Target.Authorization);
             }
             else if (compareResult.Result == WebhookDefinitionCompareResult.Different && compareResult.ChangedProperties is not null)
@@ -84,17 +85,17 @@ public sealed class WebhookRegistrar(
 
                 if (changedProperties.EventTypesChanged)
                 {
-                    await eventSequence.Append(webhook.Identifier, new EventTypesSetForWebhook(encryptedWebhook.EventTypes));
+                    await Append(eventSequence, webhook.Identifier, new EventTypesSetForWebhook(encryptedWebhook.EventTypes));
                 }
 
                 if (changedProperties.TargetUrlChanged)
                 {
-                    await eventSequence.Append(webhook.Identifier, new TargetUrlSetForWebhook(encryptedWebhook.Target.Url));
+                    await Append(eventSequence, webhook.Identifier, new TargetUrlSetForWebhook(encryptedWebhook.Target.Url));
                 }
 
                 if (changedProperties.TargetHeadersChanged)
                 {
-                    await eventSequence.Append(webhook.Identifier, new TargetHeadersSetForWebhook(encryptedWebhook.Target.Headers));
+                    await Append(eventSequence, webhook.Identifier, new TargetHeadersSetForWebhook(encryptedWebhook.Target.Headers));
                 }
 
                 if (changedProperties.AuthorizationChanged)
@@ -113,6 +114,7 @@ public sealed class WebhookRegistrar(
     /// <param name="eventStore">The <see cref="EventStoreName"/> the webhooks belong to.</param>
     /// <param name="webhooks">The identifiers of the webhooks to remove.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="WebhookRegistrationFailed">Thrown when a removal could not be appended.</exception>
     /// <remarks>
     /// The removals are appended together rather than one at a time, so the order in which they land in the system
     /// event sequence relative to each other is no longer the order they appear in the request. Each removal targets
@@ -122,7 +124,7 @@ public sealed class WebhookRegistrar(
     internal async Task Remove(EventStoreName eventStore, IEnumerable<string> webhooks)
     {
         var eventSequence = grainFactory.GetSystemEventSequence(eventStore);
-        await Task.WhenAll(webhooks.Select(webhookId => eventSequence.Append(webhookId, new WebhookRemoved())));
+        await Task.WhenAll(webhooks.Select(webhookId => Append(eventSequence, webhookId, new WebhookRemoved())));
     }
 
     /// <summary>
@@ -244,9 +246,31 @@ public sealed class WebhookRegistrar(
     async Task AppendAuthorizationEvent(IEventSequence eventSequence, string webhookId, WebhookAuthorization authorization)
     {
         await authorization.Match(
-            async basic => await eventSequence.Append(webhookId, new BasicAuthorizationSetForWebhook(basic.Username, basic.Password)),
-            async bearer => await eventSequence.Append(webhookId, new BearerTokenAuthorizationSetForWebhook(bearer.Token)),
-            async oauth => await eventSequence.Append(webhookId, new OAuthAuthorizationSetForWebhook(oauth.Authority, oauth.ClientId, oauth.ClientSecret)),
-            async none => await Task.CompletedTask);
+            basic => Append(eventSequence, webhookId, new BasicAuthorizationSetForWebhook(basic.Username, basic.Password)),
+            bearer => Append(eventSequence, webhookId, new BearerTokenAuthorizationSetForWebhook(bearer.Token)),
+            oauth => Append(eventSequence, webhookId, new OAuthAuthorizationSetForWebhook(oauth.Authority, oauth.ClientId, oauth.ClientSecret)),
+            none => Task.CompletedTask);
+    }
+
+    /// <summary>
+    /// Appends an event recording part of a webhook registration, failing the registration when the append fails.
+    /// </summary>
+    /// <remarks>
+    /// A registration is a series of appends, and a failed one is not an exception from the event sequence but a
+    /// failed result. Ignoring it reported the registration as complete with only part of it stored - a webhook
+    /// without its authorization, for instance.
+    /// </remarks>
+    /// <param name="eventSequence">The <see cref="IEventSequence"/> to append to.</param>
+    /// <param name="webhookId">The identifier of the webhook, used as event source.</param>
+    /// <param name="event">The event to append.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="WebhookRegistrationFailed">Thrown when the append did not succeed.</exception>
+    async Task Append(IEventSequence eventSequence, string webhookId, object @event)
+    {
+        var result = await eventSequence.Append(webhookId, @event);
+        if (!result.IsSuccess)
+        {
+            throw new WebhookRegistrationFailed(webhookId, @event.GetType());
+        }
     }
 }
