@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
@@ -18,7 +19,7 @@ public class when_observer_is_caught_up_having_read_only_excluded_events : given
         };
     }
 
-    Task Because() => _observer.CaughtUp(EventSequenceNumber.Unavailable, 7UL);
+    Task Because() => _observer.CaughtUp(JobId.New(), EventSequenceNumber.Unavailable, 7UL);
 
     [Fact] void should_not_count_any_event_as_handled() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
     [Fact] void should_move_past_the_last_event_read() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)8UL);

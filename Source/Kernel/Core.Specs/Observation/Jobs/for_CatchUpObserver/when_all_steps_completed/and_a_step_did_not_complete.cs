@@ -27,5 +27,5 @@ public class and_a_step_did_not_complete : given.a_catch_up_observer_job
     }
 
     [Fact] async Task should_not_let_the_observer_move_past_what_was_handled() =>
-        await _observer.Received(1).CaughtUp((EventSequenceNumber)3UL, EventSequenceNumber.Unavailable);
+        await _observer.Received(1).CaughtUp(_jobId, (EventSequenceNumber)3UL, EventSequenceNumber.Unavailable);
 }

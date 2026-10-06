@@ -64,7 +64,7 @@ public partial class Observer(
     /// </summary>
     /// <remarks>
     /// A job being started is not listed by the jobs manager until its start completes, so a catch-up arriving in the
-    /// meantime - routing after an interleaved <see cref="CaughtUp"/>, or the appended-events queue triggering one -
+    /// meantime - routing after an interleaved <see cref="CaughtUp(JobId, EventSequenceNumber)"/>, or the appended-events queue triggering one -
     /// would find no owner and start a second job over the same events. It adopts the outcome of this acquisition instead.
     /// </remarks>
     Task<JobId>? _pendingCatchUpAcquisition;
