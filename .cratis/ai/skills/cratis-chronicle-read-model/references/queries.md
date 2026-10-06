@@ -119,6 +119,43 @@ Two details that catch people out:
 Also available in the same place: `FindById<T, TId>` and
 `FindByIdAsync<T, TId>`.
 
+## Cost and composition
+
+The behavior below was checked against **Arc v22.49.0**
+([collection observation](https://github.com/Cratis/Arc/blob/v22.49.0/Documentation/backend/csharp/mongodb/observing-collections.md),
+[implementation](https://github.com/Cratis/Arc/blob/v22.49.0/Source/DotNET/MongoDB/MongoCollectionExtensions.cs)).
+Do not generalize it to every provider or custom observable.
+
+- Per-collection `Observe` reads an initial filtered set, retains it in memory,
+  and applies change-stream updates. It does **not** re-query the entire
+  collection for every event. Updates/replacements perform a keyed membership
+  lookup; paged removals can query to refill the page.
+- Collection emissions still construct a snapshot of the retained set. In-memory
+  joins, sorting, mapping, and serialization downstream can be expensive even
+  without a full database re-query. Measure retained rows, payload size, change
+  frequency, and concurrent subscriptions separately from database calls.
+- A custom change callback that explicitly runs another query pays that query's
+  cost on each invocation. Distinguish this recompute path from ordinary retained
+  observation; inspect the actual callback before reporting a full scan.
+- Filter by the requested entity, parent, tenant, or relevant state at the
+  observation source; filtering after an unbounded `Observe()` retains too much.
+  This narrows initial state and emissions, not necessarily every watched change:
+  updates/deletes must still detect documents leaving the set. Test removal and
+  filter-exit behavior as well as additions.
+- For counts, do not retain rich documents and entire histories just to count
+  them. Consider a slim projected counter or an explicit aggregate query with an
+  appropriate refresh policy; preserve the count's actual semantics.
+- Prefer a purpose-built projected summary for frequently recomputed joins.
+  Query-time composition is supported, not forbidden. Bound each input and define
+  count, paging, missing-related-data, and subscription-disposal behavior.
+  In v22.49.0 auxiliary observations can use `ignoreQueryContext: true` so client
+  paging/counts belong to the primary source. That option reads **all matching
+  auxiliary rows**; it is not a performance limit. Confirm version support before
+  using it, and keep an explicit narrow filter.
+
+Use the **cratis-arc-query-paging** skill for source-side paging. Paging an
+already materialized list does not bound database reads or retained memory.
+
 ## Custom routes
 
 ```csharp

@@ -11,14 +11,16 @@ using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_an_event;
 
-public class it_passes_the_compliant_content_to_migration_without_reserializing : given.an_event_sequence
+public class it_passes_the_plaintext_content_to_migration_without_reserializing : given.an_event_sequence
 {
     JsonObject _compliantContent;
+    JsonObject _plaintextContent;
     JsonObject _contentPassedToMigration;
 
     void Establish()
     {
-        _compliantContent = new JsonObject { ["name"] = "Jane" };
+        _plaintextContent = new JsonObject { ["name"] = "Jane" };
+        _compliantContent = new JsonObject { ["name"] = "protected Jane" };
         _complianceManager.Apply(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
             .Returns(_ => Task.FromResult(_compliantContent));
         _eventTypeMigrations.MigrateToAllGenerations(Arg.Any<EventStoreName>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<ExpandoObject>())
@@ -35,12 +37,12 @@ public class it_passes_the_compliant_content_to_migration_without_reserializing 
         EventStreamType.All,
         EventStreamId.Default,
         _eventType,
-        new JsonObject(),
+        _plaintextContent,
         CorrelationId.New(),
         [],
         Identity.System,
         [],
         ConcurrencyScope.None);
 
-    [Fact] void should_pass_the_exact_compliant_json_object_instance_to_migration() => _contentPassedToMigration.ShouldBeSame(_compliantContent);
+    [Fact] void should_pass_the_exact_plaintext_json_object_instance_to_migration() => _contentPassedToMigration.ShouldBeSame(_plaintextContent);
 }

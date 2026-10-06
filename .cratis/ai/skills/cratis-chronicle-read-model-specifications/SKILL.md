@@ -39,6 +39,21 @@ version.
 - Deciding what the read model or projection should *be*: use
   `cratis-chronicle-read-model`, `cratis-chronicle-projection`, or
   `cratis-chronicle-reducer`.
+- The scope is model-first (its read-model `specification` blocks and `then
+  readmodel` rows are the contract). Decide this with the decision rule in
+  `cratis-screenplay-modeling-lifecycle`: model-first only when an accepted
+  model under the model root covers this scope, or the repository is opted in
+  (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set `mcpServers.screenplay.root`
+  in `.cratis/ai.json`); an empty directory, install output, a `.play` file
+  outside the root or an uncommitted draft does not count, and framework, infrastructure, client, adapter and not-opted-in
+  brownfield work stays code-first. Opted in but no model for this scope: model
+  it first (`cratis-screenplay-discovery`, then `cratis-screenplay-slice-design`)
+  before writing specifications. If those Screenplay skills are not installed,
+  say so and stop; never author `.play` from memory. Never edit Stage-managed
+  output, and never change a model specification to match existing code. Author model
+  specifications with `cratis-screenplay-specifications` and
+  `cratis-screenplay-scenario-coverage`; check finished code against them with
+  `cratis-application-slice-conformance`.
 
 ## When you need this
 
@@ -156,6 +171,35 @@ public class and_two_items_are_priced : Specification
 Wrap every file in `#if DEBUG … #endif` so specification code ships only in
 Debug, and keep one outcome per `should_` fact.
 
+## Step 6 — Cover the read model, not just one event
+
+One summation example proves one event. Take the inventory from the contract
+(the `.play` read model and its specifications, or the agreed outline); without
+one, derive it from the projection and say so. Then check each line:
+
+- **Every property is asserted** in at least one specification.
+- **Every subscribed event has a specification.** Reconcile three lists in both
+  directions: the contract's event types, the projection's actual subscriptions,
+  and the events your specifications seed. Report any event in one list missing
+  from another; route that reconciliation to
+  `cratis-application-slice-conformance`. `WithStrictEventSubscription()` is
+  narrower: it fails a specification that *seeds* an event the projection does
+  not subscribe to. It does not reveal an extra subscription that no
+  specification seeds, nor a subscribed event lacking a specification.
+- **Every removal or clearing event has a specification asserting absence**:
+  `Instance` is `null`, or the child is gone from the collection. Absence is a
+  result, not a skipped case.
+- **A later event that updates only some properties** has a specification showing
+  the other properties are unchanged.
+- **Use the contract's example values** so the code and the contract describe the
+  same example; substitute fresh identifiers only where isolation needs it,
+  keeping the example's relationships. A read-model rule found in the projection with no contract
+  specification is a proposal for the contract (the `.play` model when one covers the slice, otherwise the agreed outline), not silent coverage.
+
+## Lineage
+
+Step 6 is adapted in our own words from ideas recorded in `references/provenance.md`.
+
 ## What breaks
 
 - **`NoReadModelHandlerFound`.** Nothing in the loaded assemblies handles
@@ -168,6 +212,9 @@ Debug, and keep one outcome per `should_` fact.
   identically named property over the explicit setter, or the explicit setter
   never fired. This looks like a specification problem and is a projection
   problem.
+- **A removal is never exercised.** The suite is green because every
+  specification only adds. Seed the event that removes or clears, then assert the
+  instance is `null` or the child is absent.
 - **The specification passes but production does not.** The specification pinned
   a read-model instance instead of seeding events, so the projection under
   question never ran.

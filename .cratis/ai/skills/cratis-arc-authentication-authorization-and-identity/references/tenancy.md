@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/tenancy.md -->
 # Tenancy
 
-Verified against `Cratis.Arc.Core` `22.16.0`. Types are in `Cratis.Arc.Tenancy`.
+Verified against `Cratis.Arc.Core` `22.41.1`. Types are in `Cratis.Arc.Tenancy`.
 
 Arc tenancy is **request-scoped tenant resolution**. It answers "which tenant is
 this request for". It is not Chronicle's tenant namespace isolation, and it does
@@ -73,12 +73,19 @@ be refused.
 `string.IsNullOrEmpty(tenantId)` never fires for an unresolved tenant. Compare
 against `TenantId.NotSet`.
 
+`ITenantScope.Begin(TenantId)` selects a tenant explicitly for the current
+asynchronous flow until the returned scope is disposed, and takes precedence over
+the configured resolver. It rejects a null or blank tenant, and it does **not**
+authorize access to that tenant. Resolve tenant-scoped services in a DI scope
+created after beginning it.
+
 ## Development listing
 
 `ICanProvideTenants` (`Task<IEnumerable<Tenant>> Provide()`) feeds
 `GET /.cratis/tenants`, where `Tenant` is `record (TenantId Id, TenantName Name)`.
-The endpoint is `AllowAnonymous` and mapped unconditionally, so an implementation
-that returns real tenants publishes them. Return development fixtures only.
+The endpoint is `AllowAnonymous` and mapped unconditionally — also in Production,
+and an ASP.NET fallback policy does not protect it — so an implementation that
+returns real tenants publishes them. Return development fixtures only.
 
 ## Where the boundary is
 

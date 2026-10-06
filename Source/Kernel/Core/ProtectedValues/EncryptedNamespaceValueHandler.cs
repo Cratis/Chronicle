@@ -48,6 +48,10 @@ public class EncryptedNamespaceValueHandler(
         EncryptedValueOperations.Apply(provisioner, encryption, eventStore, eventStoreNamespace, EncryptedValueKeyIdentifiers.ForNamespace(), value);
 
     /// <inheritdoc/>
+    public Task<JsonNode> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        EncryptedValueOperations.Release(encryptionKeyStore, encryption, eventStore, eventStoreNamespace, EncryptedValueKeyIdentifiers.ForNamespace(), value, strict: true);
+
+    /// <inheritdoc/>
     public Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
         EncryptedValueOperations.Release(encryptionKeyStore, encryption, eventStore, eventStoreNamespace, EncryptedValueKeyIdentifiers.ForNamespace(), value);
 }

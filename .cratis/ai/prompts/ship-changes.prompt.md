@@ -15,7 +15,7 @@ branch → commits → PR → merge → issue disposition → cleanup workflow.
 ## Inputs
 
 - **What changed** — brief description of the work (used for branch name and PR title)
-- **Label** — `no-release`, `patch`, `minor`, or `major`, or omit entirely if no label should be applied
+- **Label** — exactly one of `no-release`, `patch`, `minor`, or `major`, selected from the repository's release contract and applied in `gh pr create --label <intent>`
 - **Related issue** — optional exact repository and issue number; if unknown, search read-only first. Comment on or close it only when the user's request includes that effect; otherwise prepare the disposition as a proposal. In repositories released by `cratis/release-action`, a delivered issue is closed by release-action through `(#n)` in the description, but release-action does not run for a `no-release` PR, so `(#n)` closes nothing there; elsewhere follow the repository's own release and issue-closing process.
 
 Invoking this prompt is direct authority for the standard branch, commit, push, pull-request,
@@ -40,11 +40,16 @@ The description is published verbatim as the release notes, so it follows the co
 [`pull-requests.md`](../rules/pull-requests.md#the-description-is-the-release-note).
 
 - Before `gh pr create` or `gh pr edit`, write the body from `.github/pull_request_template.md` and
-  check it against the contract. The rules agents most often break:
+  save it to `.ai-work/pr-body.md`, and run `node .cratis/ai/hooks/scripts/cratis-check-pr.mjs --body-file .ai-work/pr-body.md --label <intent>`.
+  After a merge or rebase from main and before a body edit, reconcile every bullet with
+  `git diff --stat origin/main...HEAD`. The rules agents most often break:
   - No development write-up: no Overview/Verification/Test plan headings (only a first `## Summary`
     is allowed), no review, testing or provenance notes. Those go in a PR comment.
   - `(#n)` ends the bullet that delivers an issue and `(part of #n)` marks anything that stays open;
     never `Closes`/`Fixes`/`Refs` before a number, and never an issue reference inside an HTML comment,
     which still closes the issue.
   - Links are absolute `https://` URLs, never relative paths.
+- Post reviewer notes (checks run, what was not verified, review provenance, stacking, merge or
+  deploy order) right after creating the PR with `gh pr comment <n> --body-file .ai-work/pr-notes.md`.
+  Never put them in the description, even for `no-release`.
 - After pushing, if `verify-release-notes` fails, fix it by editing the description; it re-runs on edit.

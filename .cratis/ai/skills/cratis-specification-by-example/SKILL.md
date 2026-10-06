@@ -51,6 +51,22 @@ before claiming behavior for another version.
 - Deciding what a command, projection, reducer, or reactor *should do*: that is
   a modeling question. Settle the behavior first; a specification records a
   decision, it does not make one.
+- The scope is model-first (the behavior lives in `specification` blocks of the
+  model). Decide this with the decision rule in
+  `cratis-screenplay-modeling-lifecycle`: model-first only when an accepted
+  model under the model root covers this scope, or the repository is opted in
+  (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set `mcpServers.screenplay.root`
+  in `.cratis/ai.json`); an empty directory, install output, a `.play` file
+  outside the root or an uncommitted draft does not count, and framework, infrastructure, client, adapter and not-opted-in
+  brownfield work stays code-first. Opted in but no model for this scope: model
+  it first (`cratis-screenplay-discovery`, then `cratis-screenplay-slice-design`)
+  before writing specifications. If those Screenplay skills are not installed,
+  say so and stop; never author `.play` from memory. Never edit Stage-managed
+  output, and never change a model specification to match existing code. Write model specifications with
+  `cratis-screenplay-specifications`, decide coverage with
+  `cratis-screenplay-scenario-coverage`, and treat code specifications as
+  realizations of them (`cratis-application-slice-specifications`;
+  `cratis-application-slice-conformance` checks the two against each other).
 
 ## Step 1 — State the behavior as a sentence
 
@@ -158,6 +174,32 @@ A specification is only as good as the signal it reads.
   it changes for reasons that have nothing to do with the behavior. Assert on
   the identity of what failed — an error code, a constraint name, a typed
   result — never on the sentence shown to a user.
+  - **In code (C#, TypeScript):** never assert a message string.
+  - **In a `.play` model:** a rejection specification pins the message, or
+    its localization key, with `then error "<message>"` or
+    `then error "$strings.<key>"`, because the model has no reason codes. Bare
+    `then error` leaves the reason to the specification's name. The model pins
+    the message; the code specification pins the kind. They do not conflict.
+
+```screenplay
+concept InvoiceId : Uuid
+concept InvoiceNumber : String
+module Invoicing
+  feature Registration
+    slice StateChange RegisterInvoice
+      command RegisterInvoice
+        invoiceId     InvoiceId identifier
+        invoiceNumber InvoiceNumber
+        validate
+          invoiceNumber not empty message "Invoice number is required"
+        produces event InvoiceRegistered
+          invoiceNumber InvoiceNumber = invoiceNumber
+      specification RejectingAnEmptyInvoiceNumber
+        when RegisterInvoice
+          invoiceId     = "9c858901-8a57-4791-81fe-4c455b099bc9"
+          invoiceNumber = ""
+        then error "Invoice number is required"
+```
 - **Never wait on the clock.** A sleep before an assertion passes because the
   machine happened to be fast, and writes today's latency into the suite. Await
   a completion signal, under a deadline. A timeout turns a hang into a named
@@ -184,6 +226,7 @@ edge someone chose is a different thing from one nobody saw.
 - One specification per file; one outcome per specification.
 - No action and no assertion sits on a `given/` context.
 - Nothing trivial, delegated, or compiler-verified is specified.
-- No assertion reads a presentation message string.
+- No code assertion reads a presentation message string; a `.play` rejection
+  pins its message or key deliberately.
 - No sleep, bare delay, or poll loop stands in for a completion signal.
 - The suite runs green, and the report names what was not covered.

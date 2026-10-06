@@ -23,6 +23,8 @@
         "cratis/arc/java",
         "cratis/arc/kotlin",
         "cratis/arc/react",
+        "cratis/arc/server-typescript",
+        "cratis/arc/typescript",
         "cratis/chronicle",
         "cratis/chronicle/client-dotnet",
         "cratis/chronicle/client-elixir",
@@ -251,6 +253,7 @@
       "availableTargets": [
         "cratis-arc-command",
         "cratis-arc-command-execution",
+        "cratis-arc-command-operation",
         "cratis-arc-command-validation",
         "cratis-arc-observable-query-http",
         "cratis-arc-query-paging"
@@ -332,6 +335,27 @@
       ],
       "languages": [
         "react",
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/arc/server-typescript",
+      "availableTargets": [
+        "cratis-arc-command-typescript",
+        "cratis-arc-query-typescript",
+        "cratis-arc-validation-typescript"
+      ],
+      "languages": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/arc/typescript",
+      "composes": [
+        "cratis/arc/server-typescript",
+        "cratis/language/typescript"
+      ],
+      "languages": [
         "typescript"
       ]
     },
@@ -666,6 +690,7 @@
       "id": "cratis/full/typescript",
       "composes": [
         "cratis/application/typescript",
+        "cratis/arc/typescript",
         "cratis/chronicle/typescript",
         "cratis/modeling/screenplay-stage"
       ],
@@ -770,13 +795,23 @@
     {
       "id": "cratis/screenplay",
       "availableTargets": [
+        "cratis-screenplay-automations-and-translations",
         "cratis-screenplay-captures-and-reactions",
         "cratis-screenplay-command-surface",
+        "cratis-screenplay-discovery",
         "cratis-screenplay-event-modeling",
+        "cratis-screenplay-legacy-extraction",
         "cratis-screenplay-model-authoring",
+        "cratis-screenplay-model-review",
+        "cratis-screenplay-modeling-lifecycle",
         "cratis-screenplay-projections",
         "cratis-screenplay-read-surface",
+        "cratis-screenplay-render-and-gap-fill",
+        "cratis-screenplay-scenario-coverage",
+        "cratis-screenplay-slice-design",
         "cratis-screenplay-specifications",
+        "cratis-screenplay-streams-and-consistency",
+        "cratis-screenplay-toolchain",
         "cratis-screenplay-ui-composition"
       ],
       "languages": [
@@ -798,6 +833,7 @@
         "cratis/specifications"
       ],
       "availableTargets": [
+        "cratis-application-slice-conformance",
         "cratis-application-slice-specifications",
         "cratis-chronicle-event-specifications",
         "cratis-chronicle-read-model-specifications",

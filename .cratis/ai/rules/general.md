@@ -105,6 +105,8 @@ A claim is only as good as the signal behind it — a build result, a test run, 
 
 > **Building an application on Cratis?** Project layout, slice types, slice naming, the seventeen slice rules, the implementation workflow and the application quality gates are in [application-profile.md](./application-profile.md), which loads only for repositories that select an application profile. If you are contributing to a Cratis framework repo, see **Framework profile** below.
 
+**Model first.** When an accepted `.play` model covers the scope, or the repository has opted in, the `.play` model is the source of truth for behavior: change the model first, verify it, then render it or gap-fill from it, and never edit Stage-managed output, take code as a shortcut around the model, or weaken protection (authorization, `@pii`, rules) to make a model compile or render. Opted in means the model root (default `.cratis/screenplay/`) holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project explicitly set `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install output, an installed profile or skill, a `.play` file outside the root or an untracked or uncommitted draft is not opt-in, and a behavior is a contract only when an accepted model under the root covers it (accepted means committed: staged or untracked files under the root are drafts; a committed file with uncommitted working-tree edits is a model change in progress, and its HEAD version is the contract until the change is committed; committing a model under the root is the team's act of acceptance and opts the repository in; an explicitly configured but empty root also counts as opted in). Otherwise stay code-first; the entry-point session may propose a model at most once per session (never for trivial, bug-fix, infrastructure, client, framework or brownfield-maintenance work), and infrastructure, client and adapter work stays in code at any level. Trivial changes keep the proportional-delegation policy. The master decision rule is in **cratis-screenplay-modeling-lifecycle** (router: **cratis-screenplay-event-modeling**); if the Screenplay skills are not installed, say so and do not author `.play` from memory.
+
 ---
 
 # Framework profile
@@ -148,9 +150,12 @@ A claim is only as good as the signal behind it — a build result, a test run, 
 | Exit-code meaning and wrappers that lose a verdict | `exit-codes-and-wrappers.md` |
 | Writing a scan, allowlist or destructive pass that cannot pass vacuously | `guards-and-fuses.md` |
 | How the shared corpus is installed, updated and rolled back | `ai-distribution.md` |
-| Event modeling / schema migration / calling commands from code / paging / cross-cutting metadata / multi-tenancy | the matching skills |
-| Designing an information system, business process or information flow as a **Screenplay** `.play` model | the **cratis-screenplay-event-modeling** skill, then the per-surface `cratis-screenplay-*` skills |
-| Rendering a settled `.play` model into an application | the **cratis-stage-rendering-and-sandbox** skill |
+| Code-level event modeling / schema migration / calling commands from code / paging / cross-cutting metadata / multi-tenancy | the matching skills |
+| Building or changing behavior in an opted-in repository (see Model first above), or designing an information system, business process or information flow: **model first** | the **cratis-screenplay-event-modeling** skill (decision rule), then **cratis-screenplay-modeling-lifecycle** and one phase skill; per-surface `cratis-screenplay-*` skills for syntax |
+| Building or changing behavior in a Cratis application that is not opted in | `application-profile.md` Phase 0, then the code skills (**cratis-arc-command**, **cratis-chronicle-projection**, ...) |
+| Reviewing or explaining a `.play` model | the **cratis-screenplay-model-review** skill |
+| Turning an existing system into a model | the **cratis-screenplay-legacy-extraction** skill |
+| Rendering or gap-filling an accepted model | the **cratis-screenplay-render-and-gap-fill** skill, then **cratis-stage-rendering-and-sandbox** for renderer facts |
 | Step-by-step recipes | `.cratis/ai/skills/` |
 
 ## Source-of-Truth Discipline

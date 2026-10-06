@@ -39,6 +39,18 @@ After selecting the profile and lane, read the applicable entries only:
 
 ---
 
+## Model-first decision
+
+Run this once per request, before choosing an implementer; the master text is in `cratis-screenplay-modeling-lifecycle`.
+
+1. **Skill availability is separate from consent.** Check that the Screenplay method skills you need are installed. If they are missing, report which and stop for model work; never author Screenplay from memory and never install anything. Installed skills never opt a repository in.
+2. **Opted in?** Yes only when the model root (default `.cratis/screenplay/`) holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project explicitly set `mcpServers.screenplay.root` in `.cratis/ai.json`. An empty directory, install output, an installed skill, a `.play` file outside the root or an untracked or uncommitted draft is not opt-in; a behavior is a contract only when an accepted model under the root covers it. If your brief already states the decision, use it. Then the `.play` model is the source of truth and the plan starts from it.
+3. **Not opted in:** stay code-first. Only the entry-point agent or session proposes a model (never when your brief carries the decision), at most once per session, naming the feature it would start with, and never for trivial, bug-fix, infrastructure, client, framework or brownfield-maintenance work; if declined, do not ask again, and put the decision in the brief of every delegated agent. Unattended: record the recommendation in the final report. Framework, brownfield, infrastructure, client and adapter work stays code-first and is never forced into a model.
+4. **Code is the right level for** infrastructure, clients, Screenplay code attachments and handlers, adapters, and scope Stage cannot render yet (gap-fill, with the `.play` slice and specs as the contract). Never use code as a shortcut around the model, change the model to match existing code, edit Stage-managed output, leave a modeled rule living only in code, or weaken protection (authorization, `@pii`, rules) to make a model compile or render.
+5. **Proportional execution still applies.** A model-first request does not require a multi-agent hierarchy: a trivial change is one short plan for one implementer (or the parent).
+
+---
+
 ## Available specialist agents
 
 | Agent | Handles |
@@ -49,6 +61,11 @@ After selecting the profile and lane, read the applicable entries only:
 | `code-reviewer` | Architecture conformance, C# and TypeScript standards, review checklist |
 | `security-reviewer` | Security vulnerabilities, injection, auth/authz, data exposure |
 | `performance-reviewer` | Chronicle projections, MongoDB query patterns, .NET allocations, React render overhead |
+| `screenplay-modeler` | Authoring and changing the `.play` model: discovery, slice design, specs, MCP proposals |
+| `screenplay-reviewer` | Independent, read-only model review in a fresh context; reports a verdict, never edits |
+| `screenplay-renderer` | Admission, rendering and target verification of an accepted model; gap-fill only when authorized |
+
+**Model work first:** applies only to model-owned behavior or changes to the model in an opted-in repository. Route it to `screenplay-modeler`, then `screenplay-reviewer`, then user acceptance, then `screenplay-renderer`; `backend-developer`, `frontend-developer` and `spec-writer` then handle only authorized gap-fill, with the `.play` slice and specs as the contract. Infrastructure, client, adapter and code-attachment/handler work does not wait for modeling: route it directly to the matching code agent, keeping any model or spec contract it touches.
 
 For ordinary vertical-slice work, recommend one `slice-implementer` when available, or the parent directly. Add a separate planner only for explicitly requested independent large-scope planning.
 

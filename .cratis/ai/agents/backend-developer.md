@@ -33,12 +33,15 @@ Select from these canonical rules in `.cratis/ai/rules/` only after applying the
 - `efcore.md` — EF Core read models (only if the project uses EF Core)
 - `general.md` — the operating manual
 
+Load **cratis-application-slice-conformance** when it is installed; read the skill for the slice type (`cratis-arc-command`, `cratis-chronicle-read-model`, `cratis-chronicle-projection`, `cratis-chronicle-reactor`) before writing the artifact it covers.
+
 ---
 
 ## Inputs you expect
 
 - Feature name and slice name
 - Slice type (`State Change`, `State View`, `Automation`, `Translation`)
+- The slice's contract: the `.play` slice and its specifications, or the agreed slice outline. Before accepting an outline, apply Phase 0 of `application-profile.md`; if none is given, find it from the stated domain requirements, or ask when those are unclear.
 - Domain requirements (what the slice should do)
 - Any existing events from other slices this slice depends on
 - The namespace root (read from `global.json` or existing source files, e.g. `Studio`, `Library`)
@@ -47,6 +50,7 @@ Select from these canonical rules in `.cratis/ai/rules/` only after applying the
 
 ## Process
 
+0. **Find the contract.** Apply Phase 0 of `application-profile.md` first: the repository is opted in only when the model root (default `.cratis/screenplay/`, or the root set by `mcpServers.screenplay.root` in `.cratis/ai.json`) holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it) or the project explicitly set that root; an empty directory, install output, an installed skill, a `.play` file outside the root or an untracked or uncommitted draft is not opt-in. When opted in, an accepted model under the root is the contract, and new behaviour missing from the model is a request to add it, not a reason to use an outline. Skill availability is checked separately from opt-in. Without opt-in, an agreed outline is the contract and code-first work (infrastructure, clients, adapters, framework) is preserved. If the slice is in a Screenplay model, the `.play` slice and its specifications are the contract: write C# only for scope the renderer rejects or for adapters, never edit Stage-managed output, and never change the model to match code. If the contract is ambiguous or contradictory, do not guess: stop that scope and return one specific question (for `.play`, an edit request: address, change, reason).
 1. **Determine the namespace root** by reading an existing source file to identify the convention (e.g. `Studio`, `Library`, `MyApp`).
 2. **Read existing slices** in the same feature to understand naming, existing concepts, and events you may reference.
 3. **Create a single `.cs` file** at `<Feature>/<Slice>/<Slice>.cs` (under the app source root; an optional `<Module>/` may group the feature — there is **no** top-level `Features/` wrapper).
@@ -117,6 +121,7 @@ public record ProjectRegistered(ProjectName Name);
 
 Before handing back:
 
+- [ ] Every contract element is realised and nothing is invented (no field, default, filter, rule or event the contract does not state): cratis-application-slice-conformance
 - [ ] Debug and Release builds succeed with zero errors and warnings
 - [ ] All artifacts are in a single `<Slice>.cs` file, in the slice folder (no `Features/` wrapper)
 - [ ] Namespace mirrors the folder path under the source root
@@ -124,3 +129,12 @@ Before handing back:
 - [ ] Business rejection returns a `ValidationResult`/`Result<,>` — never thrown
 - [ ] `[EventType]` has no arguments; events carry no event-source id and no nullable properties
 - [ ] No `.AutoMap()` call anywhere (it is on by default)
+
+---
+
+## Output
+
+- `Status: done | partial | blocked` (meanings in **cratis-application-slice-conformance**: `done` = everything maps, nothing invented, gates green; `partial` = listed gaps remain; `blocked` = one specific question is open).
+- The contract used (`.play` slice path or agreed outline) and the specification map: contract specification → spec class/result, naming pending or unexecuted specs honestly.
+- Files created/modified, build results, and any open question or model edit request.
+- Reusable learnings (0–3 bullets) that apply beyond this slice; not slice details or debugging notes. The parent decides whether one belongs in `AGENTS.md`; do not edit it yourself.
