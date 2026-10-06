@@ -116,11 +116,11 @@ public static class EventTypeExtensions
             var referencedAttribute = referencedType.GetCustomAttribute<EventTypeAttribute>() ??
                 throw new EventTypeGenerationReferencesNonEventType(type, referencedType);
 
-            return new EventType(ResolveId(referencedType, referencedAttribute), generationFor.Generation, Attribute.IsDefined(type, typeof(TombstoneAttribute)) || Attribute.IsDefined(referencedType, typeof(TombstoneAttribute)));
+            return new EventType(ResolveId(referencedType, referencedAttribute), generationFor.Generation);
         }
 
         var attribute = type.GetCustomAttribute<EventTypeAttribute>()!;
-        return new EventType(ResolveId(type, attribute), attribute.Generation, Attribute.IsDefined(type, typeof(TombstoneAttribute)));
+        return new EventType(ResolveId(type, attribute), attribute.Generation);
     }
 
     static EventTypeId ResolveId(Type type, EventTypeAttribute attribute) => attribute.Id.Value switch

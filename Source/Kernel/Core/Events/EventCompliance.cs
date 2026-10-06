@@ -37,15 +37,10 @@ public class EventCompliance(
         IEnumerable<AppendedEvent> events,
         IDictionary<EventType, EventTypeSchema> eventTypeSchemas)
     {
-        // Tombstone is declaration metadata, not part of an event's schema identity. Persisted events
-        // and older clients can carry false even when the registered declaration records true.
-        var schemasByIdentity = eventTypeSchemas
-            .DistinctBy(_ => (_.Key.Id, _.Key.Generation))
-            .ToDictionary(_ => (_.Key.Id, _.Key.Generation), _ => _.Value);
         var releasedEvents = new List<AppendedEvent>();
         foreach (var @event in events)
         {
-            if (!schemasByIdentity.TryGetValue((@event.Context.EventType.Id, @event.Context.EventType.Generation), out var schema) ||
+            if (!eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema) ||
                 @event.Context.Subject is null ||
                 !schema.Schema.HasSchemaMetadata())
             {

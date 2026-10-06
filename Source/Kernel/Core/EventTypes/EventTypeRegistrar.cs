@@ -75,11 +75,7 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         foreach (var eventType in typesList)
         {
             newGenerationsPerEventType.Add(GetNewGenerations(eventType, StoredFor(stored, eventType)));
-            var registration = await CreateEventTypeToRegister(eventType, skipValidation);
-
-            // Older clients did not send the marker. Their reconnect must not erase recorded metadata.
-            var tombstone = registration.Definition.Tombstone || StoredFor(stored, eventType)?.Tombstone == true;
-            eventTypesToRegister.Add(registration with { Definition = registration.Definition with { Tombstone = tombstone } });
+            eventTypesToRegister.Add(await CreateEventTypeToRegister(eventType, skipValidation));
         }
 
         // Evict the event type cache on every silo whenever a registration actually changed the stored

@@ -316,8 +316,7 @@ public class ProjectionObserverSubscriber(
         {
             foreach (var (eventType, oldFromRule) in oldDefinition.From)
             {
-                var newFromRule = newDefinition.From.FirstOrDefault(_ => _.Key.Id == eventType.Id && _.Key.Generation == eventType.Generation).Value;
-                if (newFromRule is null)
+                if (!newDefinition.From.TryGetValue(eventType, out var newFromRule))
                 {
                     return true;
                 }
@@ -334,8 +333,7 @@ public class ProjectionObserverSubscriber(
         {
             foreach (var (eventType, oldJoinRule) in oldDefinition.Join)
             {
-                var newJoinRule = newDefinition.Join.FirstOrDefault(_ => _.Key.Id == eventType.Id && _.Key.Generation == eventType.Generation).Value;
-                if (newJoinRule is null)
+                if (!newDefinition.Join.TryGetValue(eventType, out var newJoinRule))
                 {
                     return true;
                 }

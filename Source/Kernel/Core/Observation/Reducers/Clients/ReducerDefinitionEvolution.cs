@@ -27,15 +27,15 @@ internal static class ReducerDefinitionEvolution
             return [];
         }
 
-        var previousByType = previous.EventTypes.ToDictionary(_ => (_.EventType.Id, _.EventType.Generation));
-        var currentByType = current.EventTypes.ToDictionary(_ => (_.EventType.Id, _.EventType.Generation));
+        var previousByType = previous.EventTypes.ToDictionary(_ => _.EventType);
+        var currentByType = current.EventTypes.ToDictionary(_ => _.EventType);
         if (previousByType.Keys.Except(currentByType.Keys).Any() ||
             previousByType.Any(entry => currentByType[entry.Key].Key != entry.Value.Key))
         {
             return [];
         }
 
-        return currentByType.Keys.Except(previousByType.Keys).Select(_ => currentByType[_].EventType).ToArray();
+        return currentByType.Keys.Except(previousByType.Keys).ToArray();
     }
 
     /// <summary>

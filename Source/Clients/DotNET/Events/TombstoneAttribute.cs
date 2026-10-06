@@ -4,10 +4,7 @@
 namespace Cratis.Chronicle.Events;
 
 /// <summary>
-/// Marks an event type with tombstone metadata recorded during registration.
+/// Attribute to adorn types for providing metadata that tells that the event is a tombstone event type.
 /// </summary>
-/// <remarks>
-/// The marker does not delete events or read models, change observation, or perform compliance erasure.
-/// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 public sealed class TombstoneAttribute : Attribute;

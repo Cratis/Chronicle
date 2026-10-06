@@ -91,14 +91,14 @@ public class EventTypes : IEventTypes
         }).ToArray();
 
         var duplicate = eventTypes
-            .GroupBy(_ => (_.EventType.Id, _.EventType.Generation))
+            .GroupBy(_ => _.EventType)
             .Where(_ => _.Count() > 1)
             .OrderBy(_ => _.Key.Id.Value)
             .ThenBy(_ => _.Key.Generation.Value)
             .FirstOrDefault();
         if (duplicate is not null)
         {
-            throw new MultipleEventTypesWithSameIdFound(duplicate.First().EventType, duplicate.Select(_ => _.ClrType));
+            throw new MultipleEventTypesWithSameIdFound(duplicate.Key, duplicate.Select(_ => _.ClrType));
         }
 
         _typesByEventType = eventTypes.ToFrozenDictionary(_ => _.EventType, _ => _.ClrType);
