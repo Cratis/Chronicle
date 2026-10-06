@@ -11,32 +11,29 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Namespaces.for_NamespacesReactor;
 
-public class when_a_namespace_notification_is_delivered_twice : Seeding.for_EventSeeding.given.an_event_seeding_grain
+public class when_pattern_capture_subscription_fails : Seeding.for_EventSeeding.given.an_event_seeding_grain
 {
     NamespacesReactor _reactor;
-    NamespaceAdded _added;
+    Exception _error;
 
     void Establish()
     {
-        _added = new NamespaceAdded(_key.EventStore, _key.Namespace);
+        var capture = Substitute.For<IPatternCapture>();
+        capture.Subscribe(_key.EventStore, _key.Namespace)
+            .Returns(Task.FromException(new EventSeedingIncomplete(_key.EventStore, _key.Namespace)));
         var global = Substitute.For<IResultAwareEventSeeding>();
-        var entry = new SeededEventEntry("the-office", "office-opened", "{\"city\":\"Bergen\"}", ["seed"]);
+        var entry = new SeededEventEntry("the-office", "office-opened", "{\"city\":\"Bergen\"}", []);
         global.GetSeededEvents().Returns(new EventSeeds(
             new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>> { [entry.EventTypeId] = [entry] },
             new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>> { [entry.EventSourceId] = [entry] }));
         _grainFactory.GetGrain<IResultAwareEventSeeding>(EventSeedingKey.ForGlobal(_key.EventStore).ToString(), default).Returns(global);
         _grainFactory.GetGrain<IResultAwareEventSeeding>(EventSeedingKey.ForNamespace(_key.EventStore, _key.Namespace).ToString(), default).Returns(_grain);
-        _reactor = new NamespacesReactor(_grainFactory, Substitute.For<IPatternCapture>(), NullLogger<NamespacesReactor>.Instance);
+        _reactor = new NamespacesReactor(_grainFactory, capture, NullLogger<NamespacesReactor>.Instance);
     }
 
-    async Task Because()
-    {
-        await _reactor.Added(_added, null!);
-        await _reactor.Added(_added, null!);
-    }
+    async Task Because() => _error = await Catch.Exception(() => _reactor.Added(new NamespaceAdded(_key.EventStore, _key.Namespace), null!));
 
-    [Fact] void should_append_the_global_seed_once() => _eventSequence.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(IEventSequence.AppendMany)).ShouldEqual(1);
-    [Fact] void should_track_the_global_seed_once() => TrackedByEventSource.Count().ShouldEqual(1);
-    [Fact] void should_preserve_the_seed_content() => TrackedByEventSource.Single().Content.ShouldEqual("{\"city\":\"Bergen\"}");
-    [Fact] void should_preserve_the_seed_tags() => TrackedByEventSource.Single().Tags.ShouldContainOnly("seed");
+    [Fact] void should_not_fail_the_namespace_partition() => _error.ShouldBeNull();
+    [Fact] void should_still_append_the_global_seed() => _eventSequence.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(IEventSequence.AppendMany)).ShouldEqual(1);
+    [Fact] void should_track_the_seed() => TrackedByEventSource.Count().ShouldEqual(1);
 }

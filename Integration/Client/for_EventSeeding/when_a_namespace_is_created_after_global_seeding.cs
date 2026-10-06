@@ -24,19 +24,6 @@ public class when_a_namespace_is_created_after_global_seeding(context context) :
 
         protected override void ConfigureServices(IServiceCollection services) => services.AddSingleton(_observer);
 
-        async Task Establish()
-        {
-            if (ChronicleFixture.Options.Mode == ChronicleRuntimeMode.InProcess)
-            {
-                // The in-process fixture removes the server startup task. Reproduce its System-store
-                // registration here so the durable notification has a schema and a subscribed consumer.
-                await Services.GetRequiredService<Cratis.Chronicle.EventTypes.IEventTypes>()
-                    .DiscoverAndRegister(Concepts.EventStoreName.System);
-                await Services.GetRequiredService<Observation.Reactors.Kernel.IReactors>()
-                    .DiscoverAndRegister(Concepts.EventStoreName.System, Concepts.EventStoreNamespaceName.Default);
-            }
-        }
-
         async Task Because()
         {
             EventStore.Namespace.ShouldEqual(EventStoreNamespaceName.Default);

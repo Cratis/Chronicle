@@ -16,6 +16,7 @@ public class a_namespaces_grain : Specification
 {
     protected TestKitSilo _silo = new();
     protected Namespaces _namespaces;
+    protected IClusterClient _client;
     protected IEventSequence _systemSequence;
     protected IBroadcastChannelWriter<NamespaceAdded> _writer;
     protected NamespacesState _state;
@@ -31,9 +32,9 @@ public class a_namespaces_grain : Specification
         _services = new ServiceCollection()
             .AddKeyedSingleton(WellKnownBroadcastChannelNames.NamespaceAdded, channelProvider)
             .BuildServiceProvider();
-        var client = Substitute.For<IClusterClient>();
-        client.ServiceProvider.Returns(_services);
-        _silo.AddService(client);
+        _client = Substitute.For<IClusterClient>();
+        _client.ServiceProvider.Returns(_services);
+        _silo.AddService(_client);
         _silo.AddService(NullLogger<Namespaces>.Instance);
 
         _systemSequence = Substitute.For<IEventSequence>();

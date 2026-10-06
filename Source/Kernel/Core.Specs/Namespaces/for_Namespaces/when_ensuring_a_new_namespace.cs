@@ -15,7 +15,7 @@ public class when_ensuring_a_new_namespace : given.a_namespaces_grain
     }
 
     [Fact] async Task should_append_the_namespace_added_event_for_the_system_reactor() =>
-        await _systemSequence.Received(1).Append(_namespace.Value, new NamespaceAdded(_eventStore, _namespace));
+        await _systemSequence.Received(1).Append($"{_eventStore}/{_namespace}", new NamespaceAdded(_eventStore, _namespace));
     [Fact] async Task should_keep_the_namespace_added_broadcast() =>
         await _writer.Received(1).Publish(new NamespaceAdded(_eventStore, _namespace));
 }

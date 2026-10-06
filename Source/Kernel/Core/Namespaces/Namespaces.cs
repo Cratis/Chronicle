@@ -41,7 +41,7 @@ public class Namespaces(
         // Record the notification before committing the namespace. Otherwise a failed append followed by
         // Ensure would find an existing namespace and permanently skip global seeding. Retried notifications
         // are safe because each namespace's seeding grain tracks the entries it has already appended.
-        var result = await GrainFactory.GetSystemEventSequence().Append(@namespace.Value, added);
+        var result = await GrainFactory.GetSystemEventSequence().Append($"{eventStoreName}/{@namespace}", added);
         if (!result.IsSuccess)
         {
             throw new NamespaceAddedCouldNotBeAppended(eventStoreName, @namespace);

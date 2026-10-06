@@ -9,7 +9,7 @@ public class when_the_namespace_notification_is_rejected : given.a_namespaces_gr
 {
     Exception _error;
 
-    void Establish() => _systemSequence.Append(_namespace.Value, new NamespaceAdded(_eventStore, _namespace))
+    void Establish() => _systemSequence.Append($"{_eventStore}/{_namespace}", new NamespaceAdded(_eventStore, _namespace))
         .Returns(AppendResult.Failed(CorrelationId.NotSet, new AppendError[] { new("append failed") }));
 
     async Task Because() => _error = await Catch.Exception(() => _namespaces.Ensure(_namespace));
