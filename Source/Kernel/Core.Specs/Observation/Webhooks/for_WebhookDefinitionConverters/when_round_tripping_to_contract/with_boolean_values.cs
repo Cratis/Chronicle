@@ -28,10 +28,10 @@ public class with_boolean_values : Specification
 
     [Fact] void should_send_legacy_true_replayability() => _results[0].IsReplayable.ShouldBeTrue();
     [Fact] void should_send_legacy_true_activity() => _results[0].IsActive.ShouldBeTrue();
-    [Fact] void should_send_explicit_true_replayability() => _results[0].IsReplayableValue.ShouldEqual(true);
-    [Fact] void should_send_explicit_true_activity() => _results[0].IsActiveValue.ShouldEqual(true);
+    [Fact] void should_not_disable_replayability() => _results[0].IsNotReplayable.ShouldBeFalse();
+    [Fact] void should_not_disable_activity() => _results[0].IsInactive.ShouldBeFalse();
     [Fact] void should_send_legacy_false_replayability() => _results[1].IsReplayable.ShouldBeFalse();
     [Fact] void should_send_legacy_false_activity() => _results[1].IsActive.ShouldBeFalse();
-    [Fact] void should_send_explicit_false_replayability() => _results[1].IsReplayableValue.ShouldEqual(false);
-    [Fact] void should_send_explicit_false_activity() => _results[1].IsActiveValue.ShouldEqual(false);
+    [Fact] void should_send_the_disabling_replayability_companion() => _results[1].IsNotReplayable.ShouldBeTrue();
+    [Fact] void should_send_the_disabling_activity_companion() => _results[1].IsInactive.ShouldBeTrue();
 }

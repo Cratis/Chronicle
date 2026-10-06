@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Queries;
 using ProtoBuf;
-using ProtoBuf.Meta;
 
 namespace Cratis.Chronicle.Contracts.for_response_defaults;
 
@@ -27,18 +26,16 @@ public class when_authorization_is_read_by_a_proto3_client : Specification
         using var stream = new MemoryStream();
         Serializer.Serialize(stream, result);
         stream.Position = 0;
-
-        // This one-field decoder models proto3 defaults, not a product serialization contract.
-        var proto3Model = RuntimeTypeModel.Create();
-        proto3Model.Add(typeof(Proto3Envelope), applyDefaultBehaviour: false).Add(2, nameof(Proto3Envelope.IsAuthorized));
-        return proto3Model.Deserialize<Proto3Envelope>(stream).IsAuthorized;
+        return Serializer.Deserialize<Proto3Envelope>(stream).IsAuthorized;
     }
 
     /// <summary>
     /// Models a proto3 client, whose missing boolean starts at false irrespective of C# initializers.
     /// </summary>
+    [ProtoContract]
     class Proto3Envelope
     {
+        [ProtoMember(2)]
         public bool IsAuthorized { get; set; }
     }
 }

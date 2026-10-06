@@ -48,14 +48,14 @@ public class WebhookDefinition
     public bool IsActive { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets explicit replayability, taking precedence over <see cref="IsReplayable"/> when specified.
+    /// Gets or sets whether replay is disabled, even when <see cref="IsReplayable"/> is true.
     /// </summary>
-    [ProtoMember(7), NullWrappedValue]
-    public bool? IsReplayableValue { get; set; }
+    [ProtoMember(7)]
+    public bool IsNotReplayable { get; set; }
 
     /// <summary>
-    /// Gets or sets explicit activity, taking precedence over <see cref="IsActive"/> when specified.
+    /// Gets or sets whether the webhook is inactive, even when <see cref="IsActive"/> is true.
     /// </summary>
-    [ProtoMember(8), NullWrappedValue]
-    public bool? IsActiveValue { get; set; }
+    [ProtoMember(8)]
+    public bool IsInactive { get; set; }
 }

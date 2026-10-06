@@ -14,15 +14,14 @@ public class and_the_encoder_omits_proto3_defaults : Specification
 
     void Because()
     {
-        // Proto3 encoders omit the legacy false scalars. A present, empty BoolValue
-        // carries false explicitly: reactor field 7, webhook fields 7 and 8.
-        using var reactorPayload = new MemoryStream([0x0a, 0x01, 0x78, 0x12, 0x01, 0x79, 0x3a, 0x00]);
-        using var webhookPayload = new MemoryStream([0x0a, 0x01, 0x79, 0x12, 0x01, 0x78, 0x3a, 0x00, 0x42, 0x00]);
+        // Proto3 omits legacy false scalars and sends true for the inverted companions.
+        using var reactorPayload = new MemoryStream([0x0a, 0x01, 0x78, 0x12, 0x01, 0x79, 0x38, 0x01]);
+        using var webhookPayload = new MemoryStream([0x0a, 0x01, 0x79, 0x12, 0x01, 0x78, 0x38, 0x01, 0x40, 0x01]);
         _reactor = Serializer.Deserialize<ReactorDefinition>(reactorPayload);
         _webhook = Serializer.Deserialize<WebhookDefinition>(webhookPayload);
     }
 
-    [Fact] void should_preserve_false_for_reactor_replayability() => (_reactor.IsReplayableValue ?? _reactor.IsReplayable).ShouldBeFalse();
-    [Fact] void should_preserve_false_for_webhook_replayability() => (_webhook.IsReplayableValue ?? _webhook.IsReplayable).ShouldBeFalse();
-    [Fact] void should_preserve_false_for_webhook_activity() => (_webhook.IsActiveValue ?? _webhook.IsActive).ShouldBeFalse();
+    [Fact] void should_preserve_false_for_reactor_replayability() => (_reactor.IsReplayable && !_reactor.IsNotReplayable).ShouldBeFalse();
+    [Fact] void should_preserve_false_for_webhook_replayability() => (_webhook.IsReplayable && !_webhook.IsNotReplayable).ShouldBeFalse();
+    [Fact] void should_preserve_false_for_webhook_activity() => (_webhook.IsActive && !_webhook.IsInactive).ShouldBeFalse();
 }

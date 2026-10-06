@@ -21,6 +21,7 @@ public class CommandResult
     /// Gets or sets whether the command was authorized to execute.
     /// </summary>
     [ProtoMember(2, IsRequired = true)]
+    [DefaultValue(true)]
     public bool IsAuthorized { get; set; } = true;
 
     /// <summary>

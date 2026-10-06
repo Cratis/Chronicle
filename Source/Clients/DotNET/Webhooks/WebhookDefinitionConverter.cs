@@ -23,8 +23,8 @@ internal static class WebhookDefinitionConverter
             Identifier = definition.Identifier.Value,
             IsActive = definition.IsActive,
             IsReplayable = definition.IsReplayable,
-            IsActiveValue = definition.IsActive,
-            IsReplayableValue = definition.IsReplayable,
+            IsInactive = !definition.IsActive,
+            IsNotReplayable = !definition.IsReplayable,
             Target = definition.Target.ToContract()
         };
 

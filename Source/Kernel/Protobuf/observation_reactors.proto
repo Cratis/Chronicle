@@ -1,6 +1,5 @@
 syntax = "proto3";
 package Cratis.Chronicle.Contracts.Observation.Reactors;
-import "google/protobuf/wrappers.proto";
 import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
 
 message AppendedEvent {
@@ -101,7 +100,7 @@ message ReactorDefinition {
    bool IsReplayable = 4; // default value could not be applied: True
    repeated string Tags = 5;
    ObserverFilters Filters = 6;
-   .google.protobuf.BoolValue IsReplayableValue = 7;
+   bool IsNotReplayable = 7;
 }
 message ReactorMessage {
    OneOf_RegisterReactor_ReactorResult Content = 1;

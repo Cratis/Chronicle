@@ -8,10 +8,9 @@
         <RootNamespace>Cratis.Chronicle.Contracts</RootNamespace>
         <!--
             PBN2013 asks for a [ProtoModel] partial class so protobuf-net generates compile-time serializers.
-            Compile-time serializers require protobuf-net 3.3+ at runtime, but the Cratis.Chronicle and
-            Connections packages still accept protobuf-net 3.2.56 through protobuf-net.Grpc.Reflection.
-            Keep the advisory suppressed until that minimum is raised deliberately, then consider adopting
-            compile-time serializers on their own merits.
+            The attribute is protobuf-net 3.3+, and protobuf-net.Grpc 1.2.2 pins the runtime below that — so
+            the analyzer (BuildTools 3.3.8) is advising something this project cannot express yet. Drop this
+            once the runtime moves up and adopt compile-time serializers deliberately, on their own merits.
         -->
         <NoWarn>$(NoWarn);CS8618;PBN2008;PBN0022;PBN2013</NoWarn>
     </PropertyGroup>
@@ -33,7 +32,6 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="protobuf-net" />
         <PackageReference Include="protobuf-net.Grpc" />
     </ItemGroup>
 

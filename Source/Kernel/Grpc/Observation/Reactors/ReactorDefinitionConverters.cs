@@ -21,7 +21,7 @@ internal static class ReactorDefinitionConverters
             ReactorOwner.Client,
             reactorDefinition.EventSequenceId,
             reactorDefinition.EventTypes.Select(_ => _.ToChronicle()),
-            reactorDefinition.IsReplayableValue ?? reactorDefinition.IsReplayable,
+            reactorDefinition.IsReplayable && !reactorDefinition.IsNotReplayable,
             reactorDefinition.Tags,
             reactorDefinition.Filters.ToChronicle());
 }

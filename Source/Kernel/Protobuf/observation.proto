@@ -1,7 +1,6 @@
 syntax = "proto3";
 package Cratis.Chronicle.Contracts.Observation;
 import "google/protobuf/empty.proto";
-import "google/protobuf/wrappers.proto";
 import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
 
 message AllObserversRequest {
@@ -119,10 +118,9 @@ message ObserverInformation {
    uint64 LastHandledEventSequenceNumber = 7;
    ObserverRunningState RunningState = 8;
    bool IsSubscribed = 9;
-   bool IsReplayable = 10; // default value could not be applied: True
+   bool IsReplayable = 10;
    uint64 TailEventSequenceNumber = 11;
    uint64 HandledEventCount = 12;
-   .google.protobuf.BoolValue IsReplayableValue = 13;
 }
 enum ObserverOwner {
    None = 0;

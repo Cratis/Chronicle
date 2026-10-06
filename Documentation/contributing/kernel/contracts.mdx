@@ -42,32 +42,43 @@ Proto3 omits scalar `false` values. A legacy C# contract initialized to `true` w
 `DefaultValue(true)` reads that omission as `true`; in the other direction,
 protobuf-net omits `true` and an ordinary proto3 client reads it as `false`.
 
-The following fields have additive `google.protobuf.BoolValue` companions:
+For client-written inputs, keep the legacy fields and their `true` defaults.
+Add inverted, default-false companions as plain `bool` properties with
+`[ProtoMember]`, without `DefaultValue`:
 
-| Message | Legacy field | Explicit field | Field number |
+| Message | Legacy field | Disabling companion | Field number |
 | --- | --- | --- | --- |
-| `ReactorDefinition` | `IsReplayable` | `IsReplayableValue` | 7 |
-| `WebhookDefinition` | `IsReplayable` | `IsReplayableValue` | 7 |
-| `WebhookDefinition` | `IsActive` | `IsActiveValue` | 8 |
-| `ObserverInformation` | `IsReplayable` | `IsReplayableValue` | 13 |
+| `ReactorDefinition` | `IsReplayable` (4) | `IsNotReplayable` | 7 |
+| `WebhookDefinition` | `IsReplayable` (5) | `IsNotReplayable` | 7 |
+| `WebhookDefinition` | `IsActive` (6) | `IsInactive` | 8 |
 
-The companions use the standard wrapper from `google/protobuf/wrappers.proto`.
-An absent wrapper means unspecified; a present wrapper carries either `true` or
-`false`, even when its inner scalar is omitted. Write both the legacy field and
-its companion. Read the companion first; when absent, use the legacy field.
+Write both representations consistently: `IsReplayable = value` and
+`IsNotReplayable = !value`; likewise, `IsActive = value` and `IsInactive = !value`.
+The kernel resolves replayability as `IsReplayable && !IsNotReplayable` and
+activity as `IsActive && !IsInactive`. A disabling companion wins a conflict.
+An absent companion is `false`, so older .NET clients retain their legacy
+behavior. Proto3 clients can disable replay or activity by sending a `true`
+companion even when their encoder omits the legacy `false` scalar.
 
-In C#, protobuf-net's `[NullWrappedValue]` annotation on a `bool?` property
-produces this wrapper. Assign the boolean directly when writing, and use
-`explicitValue ?? legacyValue` when reading. A nullable boolean alone, even with
-`CompatibilityLevel.Level300`, generates a plain proto3 scalar without presence;
-it is not a substitute for the wrapper.
+For kernel-written booleans, use `IsRequired = true` on the existing
+`[ProtoMember]` so protobuf-net writes both `true` and `false`. For example,
+`ObserverInformation.IsReplayable` uses `[ProtoMember(10, IsRequired = true)]`
+and retains `DefaultValue(true)` and its initializer. It needs no companion:
+field 10 carries the verdict directly, just as `CommandResult.IsAuthorized`
+and `QueryResult.IsAuthorized` do. This does not make a proto3 field required;
+it controls protobuf-net's writer.
 
-The kernel uses explicit values for reactor and webhook registration and sends
-both fields in `ObserverInformation`. Webhook query responses use
-`WebhookDetailsResponse`, whose ordinary boolean fields are unaffected. Older
-kernels ignore the new fields, and older clients keep their existing legacy
-behavior, including its omitted-field limitations. Using explicit values requires
-regenerated bindings and a kernel that understands the companion fields.
+Use this pattern for future contract booleans: choose default-false input
+semantics where possible; when preserving a legacy default-true input, add an
+inverted companion. For kernel-written verdicts that clients must receive,
+force emission with `IsRequired` rather than adding another field. Plain bools
+also preserve the Contracts package's existing protobuf-net dependency floor.
+
+Using the input companions requires regenerated bindings and a kernel that
+understands them. Older kernels ignore the new fields; older proto3 clients
+keep their omitted-field limitations. Public .NET APIs remain positive.
+Webhook query responses use `WebhookDetailsResponse`, whose ordinary boolean
+fields are unaffected.
 
 ## Streaming APIs
 

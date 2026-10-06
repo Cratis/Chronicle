@@ -1,6 +1,5 @@
 syntax = "proto3";
 package Cratis.Chronicle.Contracts.Observation.Webhooks;
-import "google/protobuf/wrappers.proto";
 import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
 
 message AddWebhookRequest {
@@ -100,8 +99,8 @@ message WebhookDefinition {
    WebhookTarget Target = 4;
    bool IsReplayable = 5; // default value could not be applied: True
    bool IsActive = 6; // default value could not be applied: True
-   .google.protobuf.BoolValue IsReplayableValue = 7;
-   .google.protobuf.BoolValue IsActiveValue = 8;
+   bool IsNotReplayable = 7;
+   bool IsInactive = 8;
 }
 message WebhookDetailsResponse {
    string Identifier = 1;

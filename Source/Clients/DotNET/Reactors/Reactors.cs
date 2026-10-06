@@ -541,7 +541,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
                 IsReplayable = registration.IsReplayable,
-                IsReplayableValue = registration.IsReplayable,
+                IsNotReplayable = !registration.IsReplayable,
                 Tags = registration.Tags,
                 Filters = new()
                 {

@@ -30,6 +30,6 @@ public class when_round_tripping_non_replayable_inactive_webhook : Specification
 
     [Fact] void should_send_legacy_false_replayability() => _result.IsReplayable.ShouldBeFalse();
     [Fact] void should_send_legacy_false_activity() => _result.IsActive.ShouldBeFalse();
-    [Fact] void should_send_explicit_false_replayability() => _result.IsReplayableValue.ShouldEqual(false);
-    [Fact] void should_send_explicit_false_activity() => _result.IsActiveValue.ShouldEqual(false);
+    [Fact] void should_send_the_disabling_replayability_companion() => _result.IsNotReplayable.ShouldBeTrue();
+    [Fact] void should_send_the_disabling_activity_companion() => _result.IsInactive.ShouldBeTrue();
 }

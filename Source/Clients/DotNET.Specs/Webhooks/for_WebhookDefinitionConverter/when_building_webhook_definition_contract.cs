@@ -40,8 +40,8 @@ public class when_building_webhook_definition_contract : Specification
 
     [Fact] void should_send_legacy_replayability() => _contract.IsReplayable.ShouldBeTrue();
     [Fact] void should_send_legacy_activity() => _contract.IsActive.ShouldBeTrue();
-    [Fact] void should_send_explicit_replayability() => _contract.IsReplayableValue.ShouldEqual(true);
-    [Fact] void should_send_explicit_activity() => _contract.IsActiveValue.ShouldEqual(true);
+    [Fact] void should_not_disable_replayability() => _contract.IsNotReplayable.ShouldBeFalse();
+    [Fact] void should_not_disable_activity() => _contract.IsInactive.ShouldBeFalse();
 
     [Fact]
     void should_map_identifier() => _contract.Identifier.ShouldEqual(_id.Value);

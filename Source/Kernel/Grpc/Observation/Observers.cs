@@ -249,8 +249,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             HandledEventCount = state.HandledEventCount,
             RunningState = state.RunningState.ToContract(),
             IsSubscribed = subscribed,
-            IsReplayable = definition.IsReplayable,
-            IsReplayableValue = definition.IsReplayable
+            IsReplayable = definition.IsReplayable
         };
     }
 
