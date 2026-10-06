@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -43,9 +44,16 @@ internal class ProtectedEventTypeMigrations(
         string subject)
     {
         var sourceSchema = await eventTypes.GetFor(eventType.Id, eventType.Generation);
-        var plaintext = sourceSchema.Schema.HasSchemaMetadata()
-            ? await metadataManager.ReleaseStrict(eventStore, @namespace, sourceSchema.Schema, subject, protectedContent)
-            : protectedContent;
+        var plaintext = protectedContent;
+        if (sourceSchema.Schema.HasSchemaMetadata())
+        {
+            plaintext = await metadataManager.ReleaseStrict(eventStore, @namespace, sourceSchema.Schema, subject, protectedContent);
+
+            // Protected integer enums can release as either numeric text or names, depending on the
+            // writer. Migration value maps use the schema's numbers, not its display names.
+            NormalizeEnumValues(plaintext, sourceSchema.Schema);
+        }
+
         return await MigratePlaintext(eventStore, @namespace, eventType, plaintext, protectedEvent, subject, storedContent: true);
     }
 
@@ -97,5 +105,41 @@ internal class ProtectedEventTypeMigrations(
         }
 
         return protectedGenerations;
+    }
+
+    static JsonNode? NormalizeEnumValues(JsonNode? value, JsonSchema schema)
+    {
+        schema = schema.ActualTypeSchema;
+        if (schema.Type.HasFlag(JsonObjectType.Integer) && schema.IsEnumeration &&
+            value is JsonValue scalar && scalar.TryGetValue<string>(out var name))
+        {
+            var index = schema.EnumerationNames.ToList().IndexOf(name);
+            if (index >= 0 && index < schema.Enumeration.Count)
+            {
+                return JsonValue.Create(JsonSerializer.SerializeToElement(schema.Enumeration[index]));
+            }
+        }
+
+        if (value is JsonObject obj)
+        {
+            var properties = schema.GetFlattenedProperties().ToArray();
+            foreach (var (property, child) in obj.ToArray())
+            {
+                var propertySchema = (JsonSchema?)properties.FirstOrDefault(_ => _.Name == property) ?? schema.AdditionalPropertiesSchema;
+                if (propertySchema is not null)
+                {
+                    obj[property] = NormalizeEnumValues(child, propertySchema);
+                }
+            }
+        }
+        else if (value is JsonArray array && schema.Item is { } itemSchema)
+        {
+            for (var index = 0; index < array.Count; index++)
+            {
+                array[index] = NormalizeEnumValues(array[index], itemSchema);
+            }
+        }
+
+        return value;
     }
 }
