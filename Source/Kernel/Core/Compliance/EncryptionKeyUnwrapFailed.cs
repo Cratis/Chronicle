@@ -9,5 +9,5 @@ namespace Cratis.Chronicle.Compliance;
 /// The exception that is thrown when an imported RSA key cannot unwrap a protected value.
 /// </summary>
 /// <param name="innerException">The RSA decryption failure.</param>
-internal class EncryptionKeyUnwrapFailed(CryptographicException innerException)
+public class EncryptionKeyUnwrapFailed(CryptographicException innerException)
     : Exception("The encryption key could not unwrap the protected value.", innerException);

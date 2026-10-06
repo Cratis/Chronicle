@@ -78,6 +78,7 @@ public class Encryption : IEncryption
     }
 
     /// <inheritdoc/>
+    /// <exception cref="EncryptionKeyUnwrapFailed">The imported key cannot decrypt the RSA-protected value.</exception>
     public byte[] Decrypt(byte[] bytes, EncryptionKey key)
     {
         if (!TryReadEnvelope(bytes, out var wrappedKey, out var nonce, out var tag, out var ciphertext))
@@ -119,6 +120,7 @@ public class Encryption : IEncryption
     static byte[] DecryptRsa(byte[] bytes, EncryptionKey key, RSAEncryptionPadding padding)
     {
         using var rsa = RSA.Create();
+
         // Key initialization failures are operational errors, never evidence of an erased lifecycle.
         rsa.ImportRSAPrivateKey(key.Private, out _);
         try
