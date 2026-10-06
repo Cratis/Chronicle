@@ -3,6 +3,8 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
@@ -33,6 +35,8 @@ public class the_job_step : Specification
 
         _silo.AddService(_storage);
         _silo.AddService(_eventTypeMigrations);
+        _silo.AddService(Substitute.For<IJsonSchemaMetadataManager>());
+        _silo.AddService(Substitute.For<IExpandoObjectConverter>());
         _silo.AddService(new JsonSerializerOptions());
         _silo.AddService(Substitute.For<IJobStepThrottle>());
 
