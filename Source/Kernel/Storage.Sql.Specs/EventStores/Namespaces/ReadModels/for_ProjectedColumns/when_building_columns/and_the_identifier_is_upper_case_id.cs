@@ -16,6 +16,6 @@ public class and_the_identifier_is_upper_case_id : Specification
 
     [Fact] void should_use_the_schemas_identifier_as_the_primary_key() => _result.Single(column => column.IsKey).Name.ShouldEqual("ID");
     [Fact] void should_not_synthesize_a_second_identifier_column() => _result.Any(column => column.Name == "Id").ShouldBeFalse();
-    [Fact] void should_put_the_key_first() => _result.First().Name.ShouldEqual("ID");
+    [Fact] void should_put_the_key_first() => _result[0].Name.ShouldEqual("ID");
     [Fact] void should_make_the_schema_identifier_non_nullable() => _result.Single(column => column.Name == "ID").IsNullable.ShouldBeFalse();
 }
