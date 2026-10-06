@@ -39,9 +39,11 @@ public class protected_events : Specification
     protected Catch<JobStepResult> _result;
     protected readonly Dictionary<ulong, IDictionary<EventTypeGeneration, ExpandoObject>> _stored = [];
     protected readonly List<string> _migrationInputs = [];
+    protected readonly List<AppendedEvent> _events = [];
     protected const string Store = "test-event-store";
     protected const string Namespace = "default";
     protected virtual bool UsesObjectArray => false;
+    protected virtual string MigrationSuffix => " migrated";
 
     async Task Establish()
     {
@@ -73,19 +75,18 @@ public class protected_events : Specification
             return Task.FromResult<IDictionary<EventTypeGeneration, ExpandoObject>>(new Dictionary<EventTypeGeneration, ExpandoObject>
             {
                 [1] = call.ArgAt<ExpandoObject>(3),
-                [2] = _converter.ToExpandoObject(new JsonObject { ["renamed"] = name + " migrated" }, _targetSchema)
+                [2] = _converter.ToExpandoObject(new JsonObject { ["renamed"] = name + MigrationSuffix }, _targetSchema)
             });
         });
-        var events = new List<AppendedEvent>();
         foreach (var (number, subject) in new[] { (1UL, "erased-owner"), (2UL, "active-owner") })
         {
             var content = await _manager.Apply(Store, Namespace, _sourceSchema, subject, JsonNode.Parse(UsesObjectArray ? """{"contacts":[{"name":"Jane"}]}""" : """{"name":"Jane"}""")!.AsObject());
             var storedContent = _converter.ToExpandoObject(content, _sourceSchema);
             _stored[number] = new Dictionary<EventTypeGeneration, ExpandoObject> { [1] = storedContent };
-            events.Add(new AppendedEvent(EventContext.From(Store, Namespace, new EventType(typeId, 1), EventSourceType.Default, "not-the-subject", EventStreamType.All, EventStreamId.Default, number, CorrelationId.NotSet, subject: subject), storedContent));
+            _events.Add(new AppendedEvent(EventContext.From(Store, Namespace, new EventType(typeId, 1), EventSourceType.Default, "not-the-subject", EventStreamType.All, EventStreamId.Default, number, CorrelationId.NotSet, subject: subject), storedContent));
         }
         var cursor = Substitute.For<IEventCursor>();
-        cursor.Current.Returns(events);
+        cursor.Current.Returns(_events);
         var page = 0;
         cursor.MoveNext().Returns(_ => Task.FromResult(page++ == 0));
         _sequence = Substitute.For<IEventSequenceStorage>();

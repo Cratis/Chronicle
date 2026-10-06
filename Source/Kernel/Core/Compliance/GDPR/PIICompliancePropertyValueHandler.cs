@@ -1,11 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Compliance.GDPR;
 
@@ -18,11 +21,24 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 /// <param name="provisioner"><see cref="IManagedEncryptionKeyProvisioner"/> used to provision the subject's key.</param>
 /// <param name="encryptionKeyStore"><see cref="IEncryptionKeyStorage"/> to use for keys.</param>
 /// <param name="encryption"><see cref="IEncryption"/> for performing encryption/decryption.</param>
+/// <param name="logger">The logger for unrecoverable values released after subject erasure.</param>
 public class PIICompliancePropertyValueHandler(
     IManagedEncryptionKeyProvisioner provisioner,
     IEncryptionKeyStorage encryptionKeyStore,
-    IEncryption encryption) : IJsonSchemaMetadataValueHandler
+    IEncryption encryption,
+    ILogger<PIICompliancePropertyValueHandler> logger) : IJsonSchemaMetadataValueHandler
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PIICompliancePropertyValueHandler"/> class without logging.
+    /// </summary>
+    /// <param name="provisioner">The subject key provisioner.</param>
+    /// <param name="encryptionKeyStore">The encryption key store.</param>
+    /// <param name="encryption">The encryption implementation.</param>
+    public PIICompliancePropertyValueHandler(IManagedEncryptionKeyProvisioner provisioner, IEncryptionKeyStorage encryptionKeyStore, IEncryption encryption)
+        : this(provisioner, encryptionKeyStore, encryption, NullLogger<PIICompliancePropertyValueHandler>.Instance)
+    {
+    }
+
     /// <inheritdoc/>
     public SchemaMetadataCategory Category => SchemaMetadataCategory.Compliance;
 
@@ -49,6 +65,12 @@ public class PIICompliancePropertyValueHandler(
             : value;
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Ciphertext that cannot be unwrapped with the current key is unrecoverable either way. For a subject
+    /// with recorded erasure, the overwhelmingly likely cause is pre-erasure ciphertext; permanently failing
+    /// the stored-event migration would block every later event of the type. Only strict release treats such
+    /// unwrap failures as erased. Key-storage failures and authenticated-payload corruption still propagate.
+    /// </remarks>
     public async Task<JsonNode> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
         if (!ProtectedValueCodec.TryDecodeCipherText(encryption, value.ToString(), out var encrypted))
@@ -59,7 +81,20 @@ public class PIICompliancePropertyValueHandler(
         var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier);
         if (key is not null)
         {
-            return ProtectedValueCodec.Decrypt(encryption, key, encrypted);
+            try
+            {
+                return ProtectedValueCodec.Decrypt(encryption, key, encrypted);
+            }
+            catch (CryptographicException ex) when (ex is not AuthenticationTagMismatchException)
+            {
+                if (await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is null)
+                {
+                    throw;
+                }
+
+                logger.UnrecoverableValueAfterErasure(identifier);
+                return JsonValue.Create(string.Empty);
+            }
         }
 
         if (await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is not null)
