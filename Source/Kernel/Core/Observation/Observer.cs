@@ -57,9 +57,17 @@ public partial class Observer(
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable, IDisposable
 {
-    const int MaxRememberedConcludedCatchUpJobs = 8;
+    readonly HashSet<JobId> _concludedCatchUpJobs = [];
 
-    readonly Queue<JobId> _concludedCatchUpJobs = new();
+    /// <summary>
+    /// The catch-up job acquisition currently in flight, if any.
+    /// </summary>
+    /// <remarks>
+    /// A job being started is not listed by the jobs manager until its start completes, so a catch-up arriving in the
+    /// meantime - routing after an interleaved <see cref="CaughtUp"/>, or the appended-events queue triggering one -
+    /// would find no owner and start a second job over the same events. It adopts the outcome of this acquisition instead.
+    /// </remarks>
+    Task<JobId>? _pendingCatchUpAcquisition;
 
     ObserverId _observerId = ObserverId.Unspecified;
     ObserverKey _observerKey = ObserverKey.NotSet;

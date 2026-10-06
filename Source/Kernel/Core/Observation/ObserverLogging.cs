@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation;
@@ -131,6 +132,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "No catch-up job took ownership of the preparation - clearing it rather than waiting for a job that will never report")]
     internal static partial void NoCatchUpJobTookOwnership(this ILogger logger);
+
+    [LoggerMessage(LogLevel.Debug, "Adopting catch-up job {JobId} acquired by a catch-up already in flight rather than starting another")]
+    internal static partial void AdoptingPendingCatchUpJob(this ILogger<Observer> logger, JobId jobId);
     [LoggerMessage(LogLevel.Trace, "Registering partitions that are catching up")]
     internal static partial void RegisteringCatchingUpPartitions(this ILogger<Observer> logger);
 

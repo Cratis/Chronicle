@@ -21,6 +21,9 @@ public partial class Observer
         _isPreparingCatchup = true;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
+        if (await AdoptedPendingCatchUpJob()) return;
+        if (IsRetired || _removed) return;
+
         if (State.RunningState == ObserverRunningState.Replaying)
         {
             logger.SkippingCatchUpBecauseObserverIsReplaying();
@@ -28,39 +31,24 @@ public partial class Observer
             return;
         }
 
-        var subscription = await GetSubscription();
-        await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
-            logger,
-            new(_observerKey, Definition.Type, State.NextEventSequenceNumber, subscription.EventTypes),
-            requestPredicate: null,
-            () =>
+        // Set before anything is awaited, so a catch-up interleaving with this one finds it and adopts its outcome.
+        var acquisition = new TaskCompletionSource<JobId>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _pendingCatchUpAcquisition = acquisition.Task;
+        var jobId = JobId.NotSet;
+        try
+        {
+            jobId = await AcquireCatchUpJob();
+        }
+        finally
+        {
+            if (_pendingCatchUpAcquisition == acquisition.Task)
             {
-                logger.FinishingExistingCatchUpJob();
-                return Task.CompletedTask;
-            },
-            () =>
-            {
-                logger.ResumingCatchUpJob();
-                return Task.CompletedTask;
-            },
-            () =>
-            {
-                logger.StartCatchUpJob(State.NextEventSequenceNumber);
-                return Task.CompletedTask;
-            },
+                _pendingCatchUpAcquisition = null;
+            }
 
-            // A stopped job that refuses to resume is nobody's: it will not run, will not finalize, and will never
-            // report back, so nothing is ever going to lower the flag again. Leaving it raised makes Handle drop
-            // every live event and makes Observing skip its missed-events check, and the watchdog then quarantines
-            // the observer for a strand that was only ever a job nobody took. A job that fails to *start* is a
-            // different situation and keeps its existing retry-then-quarantine handling.
-            () =>
-            {
-                logger.NoCatchUpJobTookOwnership();
-                _isPreparingCatchup = false;
-                return Task.CompletedTask;
-            },
-            concludedJobs: _concludedCatchUpJobs);
+            // A failed acquisition hands waiters no job, so they acquire one themselves rather than inherit the failure.
+            acquisition.SetResult(jobId);
+        }
     }
 
     /// <inheritdoc/>
@@ -130,6 +118,69 @@ public partial class Observer
         await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
     }
 
+    /// <summary>
+    /// Waits for any catch-up job acquisition already in flight and adopts the job it produced.
+    /// </summary>
+    /// <returns>True if a live job from an acquisition in flight now owns catch-up; false if this catch-up must acquire one.</returns>
+    /// <remarks>
+    /// A job that has already concluded - one adopted by a lookup that ran before it reported back - or no job at all
+    /// does not own anything, so the waiting catch-up goes on to acquire one itself.
+    /// </remarks>
+    async Task<bool> AdoptedPendingCatchUpJob()
+    {
+        var pending = _pendingCatchUpAcquisition;
+        while (pending is not null)
+        {
+            var jobId = await pending;
+            if (jobId != JobId.NotSet && !_concludedCatchUpJobs.Contains(jobId))
+            {
+                logger.AdoptingPendingCatchUpJob(jobId);
+                return true;
+            }
+
+            pending = _pendingCatchUpAcquisition == pending ? null : _pendingCatchUpAcquisition;
+        }
+
+        return false;
+    }
+
+    async Task<JobId> AcquireCatchUpJob()
+    {
+        var subscription = await GetSubscription();
+        return await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
+            logger,
+            new(_observerKey, Definition.Type, State.NextEventSequenceNumber, subscription.EventTypes),
+            requestPredicate: null,
+            () =>
+            {
+                logger.FinishingExistingCatchUpJob();
+                return Task.CompletedTask;
+            },
+            () =>
+            {
+                logger.ResumingCatchUpJob();
+                return Task.CompletedTask;
+            },
+            () =>
+            {
+                logger.StartCatchUpJob(State.NextEventSequenceNumber);
+                return Task.CompletedTask;
+            },
+
+            // A stopped job that refuses to resume is nobody's: it will not run, will not finalize, and will never
+            // report back, so nothing is ever going to lower the flag again. Leaving it raised makes Handle drop
+            // every live event and makes Observing skip its missed-events check, and the watchdog then quarantines
+            // the observer for a strand that was only ever a job nobody took. A job that fails to *start* is a
+            // different situation and keeps its existing retry-then-quarantine handling.
+            () =>
+            {
+                logger.NoCatchUpJobTookOwnership();
+                _isPreparingCatchup = false;
+                return Task.CompletedTask;
+            },
+            concludedJobs: _concludedCatchUpJobs);
+    }
+
     async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
         if (State.RunningState == ObserverRunningState.Replaying)
@@ -175,18 +226,18 @@ public partial class Observer
         await WriteStateAsync();
     }
 
+    /// <summary>
+    /// Remembers a catch-up job that has reported its work as done, so no catch-up takes it as an owner.
+    /// </summary>
+    /// <param name="jobId">The <see cref="JobId"/> of the job that concluded.</param>
+    /// <remarks>
+    /// Forgotten only once a catch-up lookup no longer lists the job as unfinished. A job whose finalization is slow or
+    /// failed stays listed, and so stays remembered for as long as it could be mistaken for an owner.
+    /// </remarks>
     void RememberConcludedCatchUpJob(JobId jobId)
     {
-        if (jobId == JobId.NotSet || _concludedCatchUpJobs.Contains(jobId)) return;
-
-        // A concluded job is only listed for the short while it takes to finalize, so only the most recent ones can
-        // still be found by a catch-up; older ones are forgotten to keep a long-lived activation from accumulating them.
-        if (_concludedCatchUpJobs.Count == MaxRememberedConcludedCatchUpJobs)
-        {
-            _concludedCatchUpJobs.Dequeue();
-        }
-
-        _concludedCatchUpJobs.Enqueue(jobId);
+        if (jobId == JobId.NotSet) return;
+        _concludedCatchUpJobs.Add(jobId);
     }
 
     async Task<Result<bool, GetSequenceNumberError>> NeedsCatchup(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)

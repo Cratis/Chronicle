@@ -50,7 +50,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onResume">The optional callback when a job needs to be resumed.</param>
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
-    /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing.</param>
+    /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Jobs the lookup no longer lists as unfinished are removed from it.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -63,7 +63,7 @@ public static partial class JobsManagerExtensions
         Func<Task>? onResume = null,
         Func<Task>? onStartNew = null,
         Func<Task>? onResumeRefused = null,
-        IEnumerable<JobId>? concludedJobs = null)
+        ICollection<JobId>? concludedJobs = null)
         where TJob : IJob<TRequest>
         where TRequest : class, IObserverJobRequest
     {
@@ -72,9 +72,25 @@ public static partial class JobsManagerExtensions
         onResume ??= () => Task.CompletedTask;
         onStartNew ??= () => Task.CompletedTask;
         onResumeRefused ??= () => Task.CompletedTask;
-        var concluded = concludedJobs?.ToHashSet() ?? [];
-
+        var rememberedBeforeLookup = concludedJobs?.ToArray() ?? [];
         var jobs = await jobsManager.GetUnfinishedJobs();
+
+        // A concluded job is only dangerous while it is still listed as unfinished - that is what makes it look like an
+        // owner. Once a lookup no longer lists it, it has finished for good and can be forgotten, which is what keeps the
+        // remembered set bounded. Forgetting by anything else, such as how many jobs concluded after it, readmits a job
+        // whose finalization is slow or failed and strands the observer on a job that will never report back again.
+        // Only jobs remembered before the lookup started are pruned; one concluding while it was in flight is judged by
+        // the next lookup. The exclusion itself is read after the lookup, so it covers jobs that concluded meanwhile.
+        if (concludedJobs is not null)
+        {
+            var listed = jobs.Select(job => job.Id).ToHashSet();
+            foreach (var finishedJob in rememberedBeforeLookup.Where(id => !listed.Contains(id)))
+            {
+                concludedJobs.Remove(finishedJob);
+            }
+        }
+
+        var concluded = concludedJobs?.ToHashSet() ?? [];
         jobs = jobs.Where(job =>
             job.Request is TRequest observerRequest &&
             observerRequest.ObserverKey == request.ObserverKey &&
