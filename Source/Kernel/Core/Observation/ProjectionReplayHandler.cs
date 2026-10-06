@@ -8,6 +8,7 @@ using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -118,6 +119,11 @@ public class ProjectionReplayHandler(
         }
         catch (Exception ex)
         {
+            if (ex is BulkWriteFailed failure)
+            {
+                await ProjectionBulkFailures.Record(grainFactory, observerDetails, failure.FailedPartitions);
+            }
+
             logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
             return ICanHandleReplayForObserver.Error.Unknown;
         }
@@ -187,6 +193,11 @@ public class ProjectionReplayHandler(
         }
         catch (Exception ex)
         {
+            if (ex is BulkWriteFailed failure)
+            {
+                await ProjectionBulkFailures.Record(grainFactory, observerDetails, failure.FailedPartitions);
+            }
+
             logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
             return ICanHandleReplayForObserver.Error.Unknown;
         }

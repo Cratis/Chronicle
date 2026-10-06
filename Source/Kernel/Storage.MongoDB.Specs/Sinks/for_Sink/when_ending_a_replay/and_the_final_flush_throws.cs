@@ -68,7 +68,7 @@ public class and_the_final_flush_throws : Specification
         await _sink.ApplyChanges(_key, _changeset, 2UL);
     }
 
-    [Fact] void should_fail_with_the_flush_failure() => _error.ShouldEqual(_failure);
+    [Fact] void should_fail_with_the_flush_failure() => _error.InnerException.ShouldEqual(_failure);
     [Fact] void should_leave_replay_mode() => _collections.Received(1).AbandonReplay();
     [Fact] void should_not_promote_the_replay() => _collections.DidNotReceive().EndReplay(Arg.Any<ReplayContext>());
     [Fact] void should_write_later_changes_directly() => _collection.Received(1).DeleteOneAsync(Arg.Any<FilterDefinition<BsonDocument>>(), Arg.Any<CancellationToken>());

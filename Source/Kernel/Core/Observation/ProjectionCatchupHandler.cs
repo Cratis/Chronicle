@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
@@ -72,6 +73,11 @@ public class ProjectionCatchupHandler(
         }
         catch (Exception ex)
         {
+            if (ex is BulkWriteFailed failure)
+            {
+                await ProjectionBulkFailures.Record(grainFactory, observerDetails, failure.FailedPartitions);
+            }
+
             logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
             return ICanHandleCatchupForObserver.Error.Unknown;
         }

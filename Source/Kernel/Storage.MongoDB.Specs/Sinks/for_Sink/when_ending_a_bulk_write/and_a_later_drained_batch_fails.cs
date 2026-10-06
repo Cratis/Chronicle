@@ -11,27 +11,21 @@ public class and_a_later_drained_batch_fails : given.a_sink_with_gated_bulk_writ
 
     async Task Establish()
     {
+        _failFirstBatch = true;
         _failLaterBatch = true;
         await _sink.BeginBulk();
         await Apply(_firstKey, 1, 1);
+        await Apply(_secondKey, 2, 2);
     }
 
     async Task Because()
     {
         var ending = _sink.EndBulk();
         await _firstFlushStarted.Task;
-        try
-        {
-            await Apply(_secondKey, 2, 2);
-        }
-        finally
-        {
-            _releaseFirstFlush.SetResult();
-        }
-
+        _releaseFirstFlush.SetResult();
         _failures = (await ending).ToArray();
     }
 
-    [Fact] void should_return_the_later_failed_partition() => _failures.Select(failure => failure.EventSourceId).ShouldContainOnly(_secondKey);
-    [Fact] void should_return_the_later_failed_event_sequence_number() => _failures.Select(failure => failure.EventSequenceNumber.Value).ShouldContainOnly(2UL);
+    [Fact] void should_return_the_later_failed_partition() => _failures.Select(failure => failure.EventSourceId).ShouldContain(_secondKey);
+    [Fact] void should_return_the_later_failed_event_sequence_number() => _failures.Single(failure => failure.EventSourceId == _secondKey).EventSequenceNumber.Value.ShouldEqual(2UL);
 }

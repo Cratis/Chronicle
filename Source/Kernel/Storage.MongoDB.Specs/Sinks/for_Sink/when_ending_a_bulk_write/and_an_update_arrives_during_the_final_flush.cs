@@ -15,16 +15,10 @@ public class and_an_update_arrives_during_the_final_flush : given.a_sink_with_ga
     {
         var ending = _sink.EndBulk();
         await _firstFlushStarted.Task;
-        try
-        {
-            await Apply(_secondKey, 2, 2);
-        }
-        finally
-        {
-            _releaseFirstFlush.SetResult();
-        }
-
+        var lateWrite = Apply(_secondKey, 2, 2);
+        _releaseFirstFlush.SetResult();
         await ending;
+        await lateWrite;
     }
 
     [Fact] void should_write_the_update_accepted_during_the_flush() => WrittenCountFor(_secondKey).ShouldEqual(1);

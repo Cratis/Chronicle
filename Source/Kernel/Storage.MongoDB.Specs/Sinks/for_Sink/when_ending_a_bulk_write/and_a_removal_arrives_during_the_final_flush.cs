@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_ending_a_bulk_wri
 
 public class and_a_removal_arrives_during_the_final_flush : given.a_sink_with_gated_bulk_writes
 {
-    bool _cachedModelWasRemoved;
+    bool _completedDuringFlush;
 
     async Task Establish()
     {
@@ -20,21 +20,15 @@ public class and_a_removal_arrives_during_the_final_flush : given.a_sink_with_ga
     {
         var ending = _sink.EndBulk();
         await _firstFlushStarted.Task;
-        try
-        {
-            var removal = Changes(0);
-            removal.Remove();
-            await _sink.ApplyChanges(_firstKey, removal, 2UL);
-            _cachedModelWasRemoved = await _sink.FindOrDefault(_firstKey) is null;
-        }
-        finally
-        {
-            _releaseFirstFlush.SetResult();
-        }
-
+        var removal = Changes(0);
+        removal.Remove();
+        var lateRemoval = _sink.ApplyChanges(_firstKey, removal, 2UL);
+        _completedDuringFlush = lateRemoval.IsCompleted;
+        _releaseFirstFlush.SetResult();
         await ending;
+        await lateRemoval;
     }
 
-    [Fact] void should_flush_the_removal() => _batches.SelectMany(batch => batch).OfType<DeleteOneModel<BsonDocument>>().Count().ShouldEqual(1);
-    [Fact] void should_report_the_cached_model_as_removed() => _cachedModelWasRemoved.ShouldBeTrue();
+    [Fact] void should_delete_directly_after_the_flush() => _collection.Received(1).DeleteOneAsync(Arg.Any<FilterDefinition<BsonDocument>>(), Arg.Any<CancellationToken>());
+    [Fact] void should_wait_for_closure_before_deleting() => _completedDuringFlush.ShouldBeFalse();
 }

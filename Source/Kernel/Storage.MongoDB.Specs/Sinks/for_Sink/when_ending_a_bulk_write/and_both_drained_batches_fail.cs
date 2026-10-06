@@ -15,21 +15,14 @@ public class and_both_drained_batches_fail : given.a_sink_with_gated_bulk_writes
         _failLaterBatch = true;
         await _sink.BeginBulk();
         await Apply(_firstKey, 1, 1);
+        await Apply(_secondKey, 2, 2);
     }
 
     async Task Because()
     {
         var ending = _sink.EndBulk();
         await _firstFlushStarted.Task;
-        try
-        {
-            await Apply(_secondKey, 2, 2);
-        }
-        finally
-        {
-            _releaseFirstFlush.SetResult();
-        }
-
+        _releaseFirstFlush.SetResult();
         _failures = (await ending).ToArray();
     }
 
