@@ -229,47 +229,44 @@ public class JsonSchemaMetadataManager(
             }
 
             var elementPath = $"{path}[{i}]";
-            switch (element)
+            var handlerApplied = false;
+            foreach (var (category, metadata) in itemMetadata.DistinctBy(_ => (_.Category, _.Metadata.metadataType)))
             {
-                // A geospatial element is a single typed value, not a container of members, so it falls through to
-                // the value branch below — handled as a whole when the element type is marked, left alone when it
-                // is not. Walking into it would report its GeoJSON members as drift, the same as for a property.
-                case JsonObject elementObject when !itemSchema.DescribesGeospatialValue():
-                    await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath);
-                    break;
-
-                case JsonArray elementArray:
-                    await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath);
-                    break;
-
-                default:
-                    foreach (var (category, metadata) in itemMetadata.DistinctBy(_ => (_.Category, _.Metadata.metadataType)))
+                if (_propertyValueHandlers.TryGetValue((category, metadata.metadataType), out var handler))
+                {
+                    try
                     {
-                        if (_propertyValueHandlers.TryGetValue((category, metadata.metadataType), out var handler))
-                        {
-                            try
-                            {
-                                var handled = await action(handler, identifier, element);
-                                array[i] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, itemSchema) : handled;
-                            }
-                            catch (Exception ex)
-                            {
-                                var failure = new SchemaMetadataActionFailed(actionName, elementPath, identifier, ex);
-
-                                // Same asymmetry as the property walk above — apply fails, release degrades the
-                                // single element so the rest of the array, and the query, still come back.
-                                if (actionName != SchemaMetadataActionFailed.ReleaseAction)
-                                {
-                                    throw failure;
-                                }
-
-                                logger.FailedToReleaseProperty(elementPath, identifier, failure);
-                                array[i] = RestoreReleasedContainerShape(JsonValue.Create(string.Empty), itemSchema);
-                            }
-                        }
+                        var handled = await action(handler, identifier, element);
+                        array[i] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, itemSchema) : handled;
+                        handlerApplied = true;
                     }
+                    catch (Exception ex)
+                    {
+                        var failure = new SchemaMetadataActionFailed(actionName, elementPath, identifier, ex);
 
-                    break;
+                        // Same asymmetry as the property walk above — apply fails, release degrades the
+                        // single element so the rest of the array, and the query, still come back.
+                        if (actionName != SchemaMetadataActionFailed.ReleaseAction)
+                        {
+                            throw failure;
+                        }
+
+                        logger.FailedToReleaseProperty(elementPath, identifier, failure);
+                        array[i] = RestoreReleasedContainerShape(JsonValue.Create(string.Empty), itemSchema);
+                        handlerApplied = true;
+                    }
+                }
+            }
+
+            // A classified element is protected as a whole, including collection-valued elements. Never
+            // descend into the detached original or decrypt members that were not separately encrypted.
+            if (!handlerApplied && element is JsonObject elementObject && !itemSchema.DescribesGeospatialValue())
+            {
+                await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath);
+            }
+            else if (!handlerApplied && element is JsonArray elementArray)
+            {
+                await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath);
             }
         }
     }

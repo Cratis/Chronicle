@@ -38,14 +38,24 @@ public class and_the_element_is_an_array : Specification
                 "secrets": {
                   "type": "array",
                   "items": { "type": "array", "security": [{ "metadataType": "EncryptedNamespace", "details": "" }], "items": { "type": "string" } }
+                },
+                "maps": {
+                  "type": "array",
+                  "items": { "type": "object", "compliance": [{ "metadataType": "PII", "details": "" }], "additionalProperties": { "type": "string" } }
+                },
+                "secretMaps": {
+                  "type": "array",
+                  "items": { "type": "object", "security": [{ "metadataType": "EncryptedNamespace", "details": "" }], "additionalProperties": { "type": "string" } }
                 }
               }
             }
             """);
         _input = new JsonObject
         {
-            ["names"] = new JsonArray(new JsonArray(Plaintext)),
-            ["secrets"] = new JsonArray(new JsonArray(Plaintext))
+            ["names"] = new JsonArray(new JsonArray(Plaintext), null),
+            ["secrets"] = new JsonArray(new JsonArray(Plaintext)),
+            ["maps"] = new JsonArray(new JsonObject { ["home"] = Plaintext }),
+            ["secretMaps"] = new JsonArray(new JsonObject { ["home"] = Plaintext })
         };
         _keyStorage = new InMemoryEncryptionKeyStorage();
         var encryption = new Encryption();
@@ -61,6 +71,7 @@ public class and_the_element_is_an_array : Specification
     {
         _applied = await _manager.Apply("test-store", "test-namespace", _schema, Subject, _input);
         _released = await _manager.Release("test-store", "test-namespace", _schema, Subject, _applied);
+        await _keyStorage.RecordErasureFor("test-store", "test-namespace", Subject);
         await _keyStorage.DeleteFor("test-store", "test-namespace", Subject);
         _releasedAfterErasure = await _manager.Release("test-store", "test-namespace", _schema, Subject, _applied);
         _subsequentWriteFailure = await Catch.Exception(() => _manager.Apply("test-store", "test-namespace", _schema, Subject, _input));
@@ -71,5 +82,10 @@ public class and_the_element_is_an_array : Specification
     [Fact] void should_restore_the_container_shape_on_release() => _released.ToJsonString().ShouldEqual(_input.ToJsonString());
     [Fact] void should_erase_the_personal_array_element() => _releasedAfterErasure["names"]![0]!.AsArray().Count.ShouldEqual(0);
     [Fact] void should_keep_namespace_confidentiality_readable_after_erasure() => _releasedAfterErasure["secrets"]![0]![0]!.GetValue<string>().ShouldEqual(Plaintext);
+    [Fact] void should_encrypt_personal_dictionary_elements_as_a_whole() => (_applied["maps"]![0] is JsonValue).ShouldBeTrue();
+    [Fact] void should_encrypt_confidential_dictionary_elements_as_a_whole() => (_applied["secretMaps"]![0] is JsonValue).ShouldBeTrue();
+    [Fact] void should_erase_the_personal_dictionary_element() => _releasedAfterErasure["maps"]![0]!.AsObject().Count.ShouldEqual(0);
+    [Fact] void should_keep_confidential_dictionary_elements_readable_after_erasure() => _releasedAfterErasure["secretMaps"]![0]!["home"]!.GetValue<string>().ShouldEqual(Plaintext);
+    [Fact] void should_preserve_null_array_elements() => (_applied["names"]![1] is null).ShouldBeTrue();
     [Fact] void should_refuse_new_personal_array_elements_after_erasure() => _subsequentWriteFailure.ShouldBeOfExactType<SchemaMetadataActionFailed>();
 }
