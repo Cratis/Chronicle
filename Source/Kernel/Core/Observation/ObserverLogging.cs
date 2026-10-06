@@ -60,6 +60,12 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Deferring recovery of {Count} failed partition(s) to a later turn so other calls can reach the observer")]
     internal static partial void DeferringRecoveryOfFailedPartitions(this ILogger<Observer> logger, int count);
 
+    [LoggerMessage(LogLevel.Debug, "Replay requested while the observer is changing state, it will start once the observer settles")]
+    internal static partial void ReplayDeferred(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Requested replay did not start, the observer did not settle into a state it can replay from")]
+    internal static partial void RequestedReplayDidNotStart(this ILogger<Observer> logger);
+
     [LoggerMessage(LogLevel.Debug, "Skipping catch-up because observer is replaying")]
     internal static partial void SkippingCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
 
