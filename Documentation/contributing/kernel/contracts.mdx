@@ -36,6 +36,33 @@ Example:
 
 <ChronicleClientTabs snippet="contributing/kernel/contracts/service-contract" />
 
+## Presence-aware booleans
+
+Proto3 omits scalar `false` values. A legacy C# contract initialized to `true` with
+`DefaultValue(true)` reads that omission as `true`; in the other direction,
+protobuf-net omits `true` and an ordinary proto3 client reads it as `false`.
+
+The following fields have additive `BooleanValue` companions:
+
+| Message | Legacy field | Explicit field | Field number |
+| --- | --- | --- | --- |
+| `ReactorDefinition` | `IsReplayable` | `IsReplayableValue` | 7 |
+| `WebhookDefinition` | `IsReplayable` | `IsReplayableValue` | 7 |
+| `WebhookDefinition` | `IsActive` | `IsActiveValue` | 8 |
+| `ObserverInformation` | `IsReplayable` | `IsReplayableValue` | 13 |
+
+`BooleanValue` uses `Unspecified = 0`, `True = 1`, and `False = 2`. Both explicit
+boolean values are nonzero, so proto3 encoders preserve them. Write both the
+legacy field and its companion. Read the companion first; for `Unspecified`,
+use the legacy field. The .NET contracts provide `ToBooleanValue()` and
+`Resolve(legacyValue)` for these conversions.
+
+The kernel uses explicit values for reactor and webhook registration and sends
+both fields when returning webhook definitions or observer information. Older
+kernels ignore the new fields, and older clients keep their existing legacy
+behavior, including its omitted-field limitations. Using explicit values requires
+regenerated bindings and a kernel that understands the companion fields.
+
 ## Streaming APIs
 
 Some APIs require streaming data from client to server, server to client, or both. We use the `System.Reactive` type `IObservable<>` for streaming, as it is intuitive,

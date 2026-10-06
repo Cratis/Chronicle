@@ -83,4 +83,10 @@ public class ObserverInformation
     [ProtoMember(10)]
     [DefaultValue(true)]
     public bool IsReplayable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets explicit replayability, taking precedence over <see cref="IsReplayable"/> when specified.
+    /// </summary>
+    [ProtoMember(13)]
+    public BooleanValue IsReplayableValue { get; set; }
 }

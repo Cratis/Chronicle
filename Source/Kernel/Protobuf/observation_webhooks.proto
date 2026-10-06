@@ -36,6 +36,11 @@ message BasicAuthorization {
 message BearerTokenAuthorization {
    string Token = 1;
 }
+enum BooleanValue {
+   Unspecified = 0;
+   True = 1;
+   False = 2;
+}
 message CommandResult {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -99,6 +104,8 @@ message WebhookDefinition {
    WebhookTarget Target = 4;
    bool IsReplayable = 5; // default value could not be applied: True
    bool IsActive = 6; // default value could not be applied: True
+   BooleanValue IsReplayableValue = 7;
+   BooleanValue IsActiveValue = 8;
 }
 message WebhookDetailsResponse {
    string Identifier = 1;

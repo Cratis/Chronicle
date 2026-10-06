@@ -44,4 +44,10 @@ public class ReactorDefinition
     /// </summary>
     [ProtoMember(6)]
     public ObserverFilters Filters { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets explicit replayability, taking precedence over <see cref="IsReplayable"/> when specified.
+    /// </summary>
+    [ProtoMember(7)]
+    public BooleanValue IsReplayableValue { get; set; }
 }

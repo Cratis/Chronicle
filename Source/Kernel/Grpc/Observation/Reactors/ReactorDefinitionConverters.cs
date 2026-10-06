@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation.Reactors;
+using Cratis.Chronicle.Contracts.Primitives;
 
 namespace Cratis.Chronicle.Services.Observation.Reactors;
 
@@ -21,7 +22,7 @@ internal static class ReactorDefinitionConverters
             ReactorOwner.Client,
             reactorDefinition.EventSequenceId,
             reactorDefinition.EventTypes.Select(_ => _.ToChronicle()),
-            reactorDefinition.IsReplayable,
+            reactorDefinition.IsReplayableValue.Resolve(reactorDefinition.IsReplayable),
             reactorDefinition.Tags,
             reactorDefinition.Filters.ToChronicle());
 }

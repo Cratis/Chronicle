@@ -4,7 +4,9 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Storage.Observation;
+using ProtoBuf;
 
 namespace Cratis.Chronicle.Services.Observation.for_ObserverInformationConverters.when_converting_to_contract;
 
@@ -40,8 +42,15 @@ public class and_observer_is_not_replayable : Specification
         };
     }
 
-    void Because() => _result = _definition.ToContract(_state);
+    void Because()
+    {
+        using var payload = new MemoryStream();
+        Serializer.Serialize(payload, _definition.ToContract(_state));
+        payload.Position = 0;
+        _result = Serializer.Deserialize<ObserverInformation>(payload);
+    }
 
     [Fact] void should_set_is_replayable_to_false() => _result.IsReplayable.ShouldBeFalse();
+    [Fact] void should_send_explicit_false_to_proto3_clients() => _result.IsReplayableValue.ShouldEqual(BooleanValue.False);
     [Fact] void should_have_correct_tail_event_sequence_number() => _result.TailEventSequenceNumber.ShouldEqual(99ul);
 }

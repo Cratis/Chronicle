@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Webhooks;
@@ -23,6 +24,8 @@ internal static class WebhookDefinitionConverter
             Identifier = definition.Identifier.Value,
             IsActive = definition.IsActive,
             IsReplayable = definition.IsReplayable,
+            IsActiveValue = definition.IsActive.ToBooleanValue(),
+            IsReplayableValue = definition.IsReplayable.ToBooleanValue(),
             Target = definition.Target.ToContract()
         };
 

@@ -9,6 +9,11 @@ message AppendedEvent {
    repeated EventRevision Revisions = 4;
    map<int32,string> GenerationalContent = 5;
 }
+enum BooleanValue {
+   Unspecified = 0;
+   True = 1;
+   False = 2;
+}
 message Causation {
    SerializableDateTimeOffset Occurred = 1;
    string Type = 2;
@@ -100,6 +105,7 @@ message ReactorDefinition {
    bool IsReplayable = 4; // default value could not be applied: True
    repeated string Tags = 5;
    ObserverFilters Filters = 6;
+   BooleanValue IsReplayableValue = 7;
 }
 message ReactorMessage {
    OneOf_RegisterReactor_ReactorResult Content = 1;

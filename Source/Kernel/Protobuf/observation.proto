@@ -11,6 +11,11 @@ message AppendedEventTypeTail {
    EventType EventType = 1;
    uint64 SequenceNumber = 2;
 }
+enum BooleanValue {
+   Unspecified = 0;
+   True = 1;
+   False = 2;
+}
 message ClearFailedPartitions {
    string EventStore = 1;
    string Namespace = 2;
@@ -121,6 +126,7 @@ message ObserverInformation {
    bool IsReplayable = 10; // default value could not be applied: True
    uint64 TailEventSequenceNumber = 11;
    uint64 HandledEventCount = 12;
+   BooleanValue IsReplayableValue = 13;
 }
 enum ObserverOwner {
    None = 0;
