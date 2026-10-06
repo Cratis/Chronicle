@@ -9,6 +9,7 @@ public class and_an_unexpected_failure_precedes_a_later_write : given.a_sink_wit
 {
     Exception _error;
     Exception _lateError;
+    IEnumerable<FailedPartition> _concurrentFailures;
 
     async Task Establish()
     {
@@ -21,16 +22,19 @@ public class and_an_unexpected_failure_precedes_a_later_write : given.a_sink_wit
     {
         var ending = _sink.EndBulk();
         await _firstFlushStarted.Task;
+        var concurrentEnding = _sink.EndBulk();
         var lateWrite = Apply(_firstKey, 2, 2);
         _releaseFirstFlush.SetResult();
         _error = await Catch.Exception(async () => await ending);
+        _concurrentFailures = await concurrentEnding;
         _lateError = await Catch.Exception(async () => await lateWrite);
         await Apply(_firstKey, 3, 3);
-        await _sink.BeginBulk();
         await _sink.EndBulk();
     }
 
-    [Fact] void should_surface_the_failed_partition() => (_error is BulkWriteFailed failed && failed.FailedPartitions.Any(partition => partition.EventSourceId == _firstKey)).ShouldBeTrue();
-    [Fact] void should_fail_the_waiting_write_instead_of_acknowledging_orphaned_work() => _lateError.ShouldNotBeNull();
-    [Fact] void should_not_flush_an_older_write_after_the_newer_direct_write() => WrittenValuesFor(_firstKey).ShouldNotContain(2);
+    [Fact] void should_rethrow_the_original_failure() => _error.ShouldEqual(_unexpectedFailure);
+    [Fact] void should_reopen_bulk_admission_for_the_waiting_writer() => _lateError.ShouldBeNull();
+    [Fact] void should_not_report_the_owners_failure_again() => _concurrentFailures.ShouldBeEmpty();
+    [Fact] void should_not_allow_direct_writes() => _directWrites.ShouldBeEmpty();
+    [Fact] void should_retry_every_accepted_write_in_order() => WrittenValuesFor(_firstKey).ShouldContainOnly(1, 1, 2, 3);
 }
