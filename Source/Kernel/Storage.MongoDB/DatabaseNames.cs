@@ -4,6 +4,7 @@
 using System.Buffers;
 using System.Text;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.ProtectedValues;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -21,11 +22,6 @@ public static class DatabaseNames
     /// The maximum length, in bytes, MongoDB allows for a database name.
     /// </summary>
     const int MaximumLengthInBytes = 63;
-
-    /// <summary>
-    /// The backend-independent logical coordinate used for global confidentiality keys.
-    /// </summary>
-    const string GlobalKeyCoordinate = "$chronicle-encrypted-value$global-scope$";
 
     /// <summary>
     /// The reserved physical name space that real event stores, namespaces and prefixes cannot alias.
@@ -85,9 +81,9 @@ public static class DatabaseNames
 
     static string Validated(string databaseName, EventStoreName eventStore, EventStoreNamespaceName? @namespace)
     {
-        if (eventStore.Value == GlobalKeyCoordinate)
+        if (eventStore == EncryptedValueKeyIdentifiers.GlobalEventStore)
         {
-            databaseName = databaseName.Replace(GlobalKeyCoordinate, ReservedPhysicalMarker, StringComparison.Ordinal);
+            databaseName = databaseName.Replace(EncryptedValueKeyIdentifiers.GlobalEventStore.Value, ReservedPhysicalMarker, StringComparison.Ordinal);
         }
         else if (databaseName.Contains(ReservedPhysicalMarker, StringComparison.Ordinal))
         {
