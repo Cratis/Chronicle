@@ -58,7 +58,8 @@ use the legacy field. The .NET contracts provide `ToBooleanValue()` and
 `Resolve(legacyValue)` for these conversions.
 
 The kernel uses explicit values for reactor and webhook registration and sends
-both fields when returning webhook definitions or observer information. Older
+both fields in `ObserverInformation`. Webhook query responses use
+`WebhookDetailsResponse`, whose ordinary boolean fields are unaffected. Older
 kernels ignore the new fields, and older clients keep their existing legacy
 behavior, including its omitted-field limitations. Using explicit values requires
 regenerated bindings and a kernel that understands the companion fields.
