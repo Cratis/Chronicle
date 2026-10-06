@@ -137,7 +137,10 @@ internal static class ReadModelSnapshotReader
         var readModelDefinition = await storage.GetEventStore(eventStore).ReadModels.Get(definition.ReadModel);
         var eventTypes = definition.SubscribesToAllEvents ? [] : await projection.GetEventTypes();
 
-        var keyIsEventSourceId = definition.From.Values.All(from => from.Key is null || string.IsNullOrEmpty(from.Key.Value));
+        var allEventsKey = definition.FromEvery.Key;
+        var allEventsKeyIsEventSourceId = allEventsKey is null || string.IsNullOrEmpty(allEventsKey.Value) || allEventsKey.Value == WellKnownExpressions.EventSourceId;
+        var keyIsEventSourceId = definition.From.Values.All(from => from.Key is null || string.IsNullOrEmpty(from.Key.Value)) &&
+            (!definition.SubscribesToAllEvents || allEventsKeyIsEventSourceId);
 
         var cursor = keyIsEventSourceId
             ? await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, readModelKey, eventTypes: eventTypes)

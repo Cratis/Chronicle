@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.ReadModelExplorer.for_ReadModelSnapshot.when_getting_
 public class a_mixed_all_event_history : a_projection_with_a_history
 {
     protected ProjectionDefinition _definition;
+    protected AppendedEvent[] _events;
 
     async Task Establish()
     {
@@ -24,7 +25,7 @@ public class a_mixed_all_event_history : a_projection_with_a_history
         };
         _projection.GetDefinition().Returns(_ => _definition);
         _projection.GetEventTypes().Returns([mapped]);
-        AppendedEvent[] events =
+        _events =
         [
             new(EventContext.EmptyWithEventSourceId("my-instance") with { EventType = mapped, SequenceNumber = 1, CorrelationId = FirstCorrelation }, new()),
             new(EventContext.EmptyWithEventSourceId("my-instance") with { EventType = unmapped, SequenceNumber = 2, CorrelationId = SecondCorrelation }, new()),
@@ -35,9 +36,12 @@ public class a_mixed_all_event_history : a_projection_with_a_history
             .Returns(call =>
             {
                 var filter = call.Arg<IEnumerable<EventType>>().ToArray();
+                var source = call.ArgAt<EventSourceId?>(1);
                 var cursor = Substitute.For<IEventCursor>();
                 cursor.MoveNext().Returns(true, false);
-                cursor.Current.Returns(events.Where(@event => filter.Length == 0 || filter.Contains(@event.Context.EventType)).ToArray());
+                cursor.Current.Returns(_events.Where(@event =>
+                    (source?.IsSpecified != true || @event.Context.EventSourceId == source) &&
+                    (filter.Length == 0 || filter.Contains(@event.Context.EventType))).ToArray());
                 return cursor;
             });
         _projection.GetEventsForKey(Arg.Any<Concepts.EventStoreNamespaceName>(), "my-instance", Arg.Any<IEnumerable<AppendedEvent>>())
