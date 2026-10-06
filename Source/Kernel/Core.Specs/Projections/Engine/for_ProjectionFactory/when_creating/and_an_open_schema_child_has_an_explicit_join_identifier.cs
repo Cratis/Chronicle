@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_creatin
 public class and_an_open_schema_child_has_an_explicit_join_identifier : given.a_child_collection_projection
 {
     Exception _error;
+    IProjection _projection;
 
     void Establish()
     {
@@ -56,7 +57,9 @@ public class and_an_open_schema_child_has_an_explicit_join_identifier : given.a_
         };
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _factory.Create(_eventStore, _namespace, _definition, _readModel, []));
+    async Task Because() => _error = await Catch.Exception(async () => _projection = await _factory.Create(_eventStore, _namespace, _definition, _readModel, []));
 
     [Fact] void should_register_using_the_explicit_child_identifier() => _error.ShouldBeNull();
+    [Fact] void should_keep_the_explicit_child_identifier() => _projection.ChildProjections.Single().IdentifiedByProperty.ShouldEqual((PropertyPath)"itemId");
+    [Fact] void should_subscribe_to_the_child_join_event() => _projection.ChildProjections.Single().EventTypes.ShouldContain(new EventType("ItemRenamed", EventTypeGeneration.First));
 }
