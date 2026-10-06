@@ -93,7 +93,10 @@ public class ReadModelsCompliance(
             resultValues.Remove(property);
         }
 
-        foreach (var (property, value) in values)
+        // Nullable schema values may disappear during conversion after erasure. Only carry
+        // bookkeeping through; restoring a declared property would resurrect its plaintext.
+        var declaredProperties = schema.GetFlattenedProperties().Select(_ => _.Name).ToHashSet(StringComparer.Ordinal);
+        foreach (var (property, value) in values.Where(property => !declaredProperties.Contains(property.Key)))
         {
             if (!resultValues.ContainsKey(property))
             {

@@ -39,7 +39,11 @@ public class and_a_projection_produces_pii_after_erasure : given.all_dependencie
     async Task Establish()
     {
         _schema = await JsonSchema.FromJsonAsync("""
-            {"type":"object","properties":{"contacts":{"type":"array","items":{"type":"object","properties":{
+            {"type":"object","properties":{
+              "optionalAge":{"type":["integer","null"],"format":"int32?","compliance":[{"metadataType":"PII","details":""}]},
+              "optionalActive":{"type":["boolean","null"],"compliance":[{"metadataType":"PII","details":""}]},
+              "optionalStatus":{"type":["integer","null"],"enum":[0,2],"x-enumNames":["Unknown","Verified"],"compliance":[{"metadataType":"PII","details":""}]},
+              "contacts":{"type":"array","items":{"type":"object","properties":{
               "name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]},
               "age":{"type":"integer","format":"int32","compliance":[{"metadataType":"PII","details":""}]},
               "score":{"type":"number","format":"double","compliance":[{"metadataType":"PII","details":""}]},
@@ -78,7 +82,13 @@ public class and_a_projection_produces_pii_after_erasure : given.all_dependencie
         ((IDictionary<string, object?>)_child)["optionalAge"] = 42;
         ((IDictionary<string, object?>)_child)["flags"] = new[] { true, true };
         ((IDictionary<string, object?>)_child)["secret"] = "namespace secret";
-        var changeset = new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, new ExpandoObject());
+        var initialState = new ExpandoObject();
+        var initialValues = (IDictionary<string, object?>)initialState;
+        initialValues["optionalAge"] = 42;
+        initialValues["optionalActive"] = true;
+        initialValues["optionalStatus"] = 2;
+        initialValues["sinkId"] = "not-owner";
+        var changeset = new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, initialState);
         changeset.AddChild("contacts", _child);
         _context = new ProjectionEventContext(new Key("not-owner", ArrayIndexers.NoIndexers), @event, changeset, ProjectionOperationType.None, false);
         _service = new ReadModels(_grainFactory, _storage, _expandoObjectConverter, _reducerMediator, _changesetMediator, _localSiloDetails, compliance, _materializedReadModels, new JsonSerializerOptions());
@@ -112,5 +122,9 @@ public class and_a_projection_produces_pii_after_erasure : given.all_dependencie
     [Fact] void should_restore_an_erased_enum() => _received.Single()["contacts"]![0]!["status"]!.GetValue<string>().ShouldEqual("Unknown");
     [Fact] void should_restore_an_erased_nullable_integer() => _received.Single()["contacts"]![0]!["optionalAge"].ShouldBeNull();
     [Fact] void should_restore_erased_scalar_array_elements() => _received.Single()["contacts"]![0]!["flags"]!.AsArray().All(value => !value!.GetValue<bool>()).ShouldBeTrue();
+    [Fact] void should_not_restore_top_level_nullable_integer_plaintext() => _received.Single()["optionalAge"].ShouldBeNull();
+    [Fact] void should_not_restore_top_level_nullable_boolean_plaintext() => _received.Single()["optionalActive"].ShouldBeNull();
+    [Fact] void should_not_restore_top_level_nullable_enum_plaintext() => _received.Single()["optionalStatus"].ShouldBeNull();
+    [Fact] void should_preserve_non_schema_bookkeeping() => ((IDictionary<string, object?>)_context.ReleasedReadModel!)["sinkId"].ShouldEqual("not-owner");
     [Fact] void should_keep_the_watermark() => _received.Single()[WellKnownProperties.LastHandledEventSequenceNumber]!.GetValue<ulong>().ShouldEqual(1UL);
 }
