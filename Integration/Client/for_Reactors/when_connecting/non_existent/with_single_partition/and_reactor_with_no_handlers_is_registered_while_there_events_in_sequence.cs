@@ -29,8 +29,11 @@ public class and_reactor_with_no_handlers_is_registered_while_there_events_in_se
         async Task Because()
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutHandlers>();
-            await reactor.WaitForState(ObserverRunningState.Disconnected);
-            ReactorState = await reactor.GetState();
+
+            // Disconnected is also the observer's resting state before this registration routes on the kernel,
+            // and routing passes through a transient Unknown state. Reading the state separately from the wait
+            // sampled that transient; assert on the snapshot the wait satisfied on instead.
+            ReactorState = await reactor.WaitForStateAndGetState(ObserverRunningState.Disconnected);
         }
     }
 
