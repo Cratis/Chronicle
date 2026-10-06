@@ -499,6 +499,23 @@ internal sealed class Projections(
             };
         }
 
+        if (resolveReferences && result["type"] is null)
+        {
+            var sourceSchema = new JsonSchema(source, sourceRoot);
+            var effectiveSchema = sourceSchema.ActualTypeSchema;
+            var scalarType = effectiveSchema.Type & ~JsonObjectType.Null;
+            if (scalarType is JsonObjectType.String or JsonObjectType.Boolean or JsonObjectType.Integer or JsonObjectType.Number)
+            {
+                // Keep the composition, but expose its runtime scalar shape to schema-based conversion.
+                var runtimeSchema = new JsonSchema(result) { Type = effectiveSchema.Type };
+                runtimeSchema.Format ??= effectiveSchema.Format;
+                if (sourceSchema.AnyOf.Any(branch => branch.ActualTypeSchema.Type.HasFlag(JsonObjectType.Null)))
+                {
+                    runtimeSchema.Type |= JsonObjectType.Null;
+                }
+            }
+        }
+
         return result;
     }
 
