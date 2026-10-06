@@ -179,21 +179,17 @@ public class HandleEventsForPartition(
             _eventTypeSchemas = (await _eventTypes.GetFor(eventTypesToRead))
                 .ToDictionary(_ => _.Type);
 
-            // Catch-up holds live delivery back for this partition until the whole job has reported back, so an event
-            // appended after the cursor below has run dry is not delivered live. Tell the observer how far this step has
-            // read, and read on from there for as long as the observer still finds events the step has not read. The
-            // position is the next event after the last one read - not the last one handled - so a tail of events the
-            // step reads but does not deliver, such as redactions of types the observer does not subscribe to, does not
-            // look unread forever.
-            var nextToRead = lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
-                ? currentState.StartEventSequenceNumber
-                : lastSuccessfullyHandledEventSequenceNumber.Next();
+            // Catch-up holds live delivery back for this partition until it is concluded, so an event appended after
+            // the cursor below has run dry would otherwise belong to nobody. Conclude the partition with the observer, and
+            // read on from where this step got to for as long as the observer still finds events it has not handled.
             var concludingAttempted = false;
             while (true)
             {
-                var nextToReadBeforeReading = nextToRead;
+                var lastHandledBeforeReading = lastSuccessfullyHandledEventSequenceNumber;
                 using var events = await eventSequenceStorage.GetRange(
-                    nextToRead,
+                    lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
+                        ? currentState.StartEventSequenceNumber
+                        : lastSuccessfullyHandledEventSequenceNumber.Next(),
                     currentState.EndEventSequenceNumber,
                     _eventSourceId,
                     eventTypesToRead,
@@ -287,13 +283,6 @@ public class HandleEventsForPartition(
                         await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind);
                         return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), exceptionMessages, exceptionStackTrace));
                     }
-
-                    // Every event in the batch has now been read, whether it was delivered or filtered out.
-                    var lastRead = events.Current.LastOrDefault()?.Context.SequenceNumber;
-                    if (lastRead?.IsActualValue == true && lastRead.Next() > nextToRead)
-                    {
-                        nextToRead = lastRead.Next();
-                    }
                 }
 
                 if (!currentState.ConcludesPartitionCatchUp)
@@ -301,21 +290,24 @@ public class HandleEventsForPartition(
                     break;
                 }
 
-                // Reading on read nothing the observer was waiting for, so asking again would only spin. The observer
-                // already knows how far this step read, and reads what was left behind once the job reports back.
-                if (concludingAttempted && nextToRead == nextToReadBeforeReading)
+                // Reading on found nothing the observer was waiting for - these events are not ones this step can
+                // deliver, so asking again would only spin. The partition is then left for routing to release.
+                if (concludingAttempted && lastSuccessfullyHandledEventSequenceNumber == lastHandledBeforeReading)
                 {
-                    logger.CouldNotConcludePartitionCatchUp(currentState.Partition, nextToRead);
+                    logger.CouldNotConcludePartitionCatchUp(currentState.Partition, lastSuccessfullyHandledEventSequenceNumber);
                     break;
                 }
 
-                if (await _observer.ConcludePartitionCatchUp(currentState.Partition, nextToRead, eventTypesToRead))
+                var nextEventSequenceNumber = lastSuccessfullyHandledEventSequenceNumber.IsActualValue
+                    ? lastSuccessfullyHandledEventSequenceNumber.Next()
+                    : currentState.StartEventSequenceNumber;
+                if (await _observer.ConcludePartitionCatchUp(currentState.Partition, nextEventSequenceNumber, eventTypesToRead))
                 {
                     break;
                 }
 
                 concludingAttempted = true;
-                logger.ReadingOnForEventsAppendedWhileCatchingUp(currentState.Partition, nextToRead);
+                logger.ReadingOnForEventsAppendedWhileCatchingUp(currentState.Partition, nextEventSequenceNumber);
             }
 
             if (lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)

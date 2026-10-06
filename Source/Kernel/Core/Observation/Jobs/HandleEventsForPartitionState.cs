@@ -49,7 +49,7 @@ public class HandleEventsForPartitionState : JobStepState
     public IEnumerable<EventType> EventTypes { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets a value indicating whether the step tells the observer how far it read its partition before completing.
+    /// Gets or sets a value indicating whether the step hands its partition back to live delivery itself before completing.
     /// </summary>
     public bool ConcludesPartitionCatchUp { get; set; }
 }

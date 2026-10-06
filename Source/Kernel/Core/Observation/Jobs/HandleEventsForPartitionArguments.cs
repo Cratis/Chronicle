@@ -27,14 +27,14 @@ public record HandleEventsForPartitionArguments(
     IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Partition)
 {
     /// <summary>
-    /// Gets a value indicating whether the step tells the observer how far it read its partition before completing.
+    /// Gets a value indicating whether the step hands its partition back to live delivery itself before completing.
     /// </summary>
     /// <remarks>
-    /// Live delivery drops events for a partition while it is catching up, and the partition is held back until the
-    /// whole job has reported back. An event appended after the step has read its last one is therefore delivered by
-    /// nobody, and the position the observer moves to can lie past it. Observer-wide catch-up sets this so the step
-    /// tells the observer how far it read, and keeps reading for as long as the observer finds events it has not read.
-    /// The observer reads whatever is still left behind when the job reports back, before it moves its position on.
+    /// Live delivery drops events for a partition while it is catching up, so an event appended after the step has
+    /// read its last one belongs to nobody. Observer-wide catch-up sets this so the step asks the observer to
+    /// conclude the partition's catch-up, and keeps reading for as long as the observer finds events it has not
+    /// handled yet. Without it the partition stays held back until the whole job has concluded, and an event in that
+    /// window can sit below the position the observer moves to.
     /// </remarks>
     public bool ConcludesPartitionCatchUp { get; init; }
 }
