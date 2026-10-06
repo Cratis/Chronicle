@@ -90,7 +90,28 @@ public class JsonSchemaMetadataManager(
         }
 
         var result = (json.DeepClone() as JsonObject)!;
-        await HandleActionFor(schema, identifier, result, ErasureFenceAction, async (handler, subject, value) => await handler.ApplyErasureFence(eventStore, eventStoreNamespace, subject, value), strictRelease: true);
+
+        // Erasure is subject-wide. Resolve it once in this walk, not once per property or child,
+        // and never keep that decision across operations where the lifecycle may have changed.
+        var erasedSubjects = new Dictionary<string, bool>(StringComparer.Ordinal);
+        async Task<JsonNode> Fence(IJsonSchemaMetadataValueHandler handler, string subject, JsonNode value)
+        {
+            var isPII = handler.Category == SchemaMetadataCategory.Compliance && handler.Type == ComplianceMetadataType.PII.Value;
+            if (isPII && erasedSubjects.TryGetValue(subject, out var erased))
+            {
+                return erased ? JsonValue.Create(string.Empty) : value;
+            }
+
+            var fenced = await handler.ApplyErasureFence(eventStore, eventStoreNamespace, subject, value);
+            if (isPII)
+            {
+                erasedSubjects[subject] = !ReferenceEquals(fenced, value);
+            }
+
+            return fenced;
+        }
+
+        await HandleActionFor(schema, identifier, result, ErasureFenceAction, Fence, strictRelease: true);
         return result;
     }
 
