@@ -64,7 +64,7 @@ public class CatchUpObserver(
             // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
             // CatchUp(), so CaughtUp() would be queued and deadlock. Returning first lets the Observer
             // grain become free to process CaughtUp(), even if finalization fails after recording partitions.
-            _ = observer.CaughtUp(JobId, State.LastHandledEventSequenceNumber);
+            _ = observer.CaughtUp(JobId, GetCaughtUpTo());
         }
 
         if (!AllStepsCompletedSuccessfully)
@@ -113,6 +113,14 @@ public class CatchUpObserver(
         var failedPartitions = await observer.GetFailedPartitionKeys();
         var failedPartitionSet = failedPartitions.ToHashSet();
 
+        if (request.PartitionsLeftBehind.Any())
+        {
+            var partitionsLeftBehind = request.PartitionsLeftBehind.Where(_ => !failedPartitionSet.Contains(_.Partition)).ToArray();
+            var stepsForPartitionsLeftBehind = CreateStepsForPartitionsLeftBehind(request, partitionsLeftBehind);
+            await observer.RegisterCatchingUpPartitions(partitionsLeftBehind.Select(_ => _.Partition));
+            return stepsForPartitionsLeftBehind;
+        }
+
         var observerKeyIndexes = storage.GetEventStore(JobKey.Scope).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
         var index = await observerKeyIndexes.GetFor(request.ObserverKey);
         var keys = index.GetKeys(request.FromEventSequenceNumber);
@@ -134,6 +142,39 @@ public class CatchUpObserver(
         await observer.RegisterCatchingUpPartitions(keysToCatchUp);
         return steps;
     }
+
+    /// <summary>
+    /// Gets how far the observer has caught up once every step has completed.
+    /// </summary>
+    /// <returns>The <see cref="EventSequenceNumber"/> to report back to the observer.</returns>
+    /// <remarks>
+    /// A catch-up that only finishes the partitions an earlier one left behind reads them up to where that earlier one
+    /// got every other partition. Reporting back only what its own few steps handled would hold the observer's position
+    /// below that, and the next catch-up would deliver the other partitions' events a second time.
+    /// </remarks>
+    EventSequenceNumber GetCaughtUpTo()
+    {
+        var caughtUpTo = State.LastHandledEventSequenceNumber;
+        if (!Request.PartitionsLeftBehind.Any() || !Request.ToEventSequenceNumber.IsActualValue)
+        {
+            return caughtUpTo;
+        }
+
+        return !caughtUpTo.IsActualValue || caughtUpTo < Request.ToEventSequenceNumber ? Request.ToEventSequenceNumber : caughtUpTo;
+    }
+
+    ImmutableList<JobStepDetails> CreateStepsForPartitionsLeftBehind(CatchUpObserverRequest request, IEnumerable<CatchUpObserverPartitionRange> partitions) =>
+        partitions
+            .Select(partition => CreateStep<IHandleEventsForPartition>(
+                new HandleEventsForPartitionArguments(
+                    request.ObserverKey,
+                    request.ObserverType,
+                    partition.Partition,
+                    partition.FromEventSequenceNumber,
+                    request.ToEventSequenceNumber,
+                    EventObservationState.None,
+                    request.EventTypes)))
+            .ToImmutableList();
 
     ImmutableList<JobStepDetails> CreateStepsFor(CatchUpObserverRequest request, IEnumerable<Key> keys)
     {
@@ -167,8 +208,8 @@ public class CatchUpObserver(
                     request.EventTypes)
                 {
                     // The steps run independently and the job reports back only the furthest any of them got, so each
-                    // step concludes its own partition: an event that arrived after it read its last one is otherwise
-                    // below the position the observer moves to, and never read again.
+                    // step tells the observer how far it read its partition: an event that arrived after it read its
+                    // last one is otherwise below the position the observer moves to, and never read again.
                     ConcludesPartitionCatchUp = true
                 }))
             .ToImmutableList();

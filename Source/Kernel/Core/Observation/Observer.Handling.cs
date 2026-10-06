@@ -73,7 +73,7 @@ public partial class Observer
         {
             State = State with
             {
-                NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                NextEventSequenceNumber = MovedForwardTo(observedTailEventSequenceNumber.Next()),
                 TailEventSequenceNumber = observedTailEventSequenceNumber
             };
             await WriteProgressStateDebounced();
@@ -88,7 +88,7 @@ public partial class Observer
             {
                 State = State with
                 {
-                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                    NextEventSequenceNumber = MovedForwardTo(observedTailEventSequenceNumber.Next()),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
                 await WriteProgressStateDebounced();
@@ -101,7 +101,7 @@ public partial class Observer
             {
                 State = State with
                 {
-                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                    NextEventSequenceNumber = MovedForwardTo(observedTailEventSequenceNumber.Next()),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
                 await WriteProgressStateDebounced();
@@ -113,7 +113,7 @@ public partial class Observer
             {
                 State = State with
                 {
-                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                    NextEventSequenceNumber = MovedForwardTo(observedTailEventSequenceNumber.Next()),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
                 await WriteProgressStateDebounced();
@@ -199,7 +199,7 @@ public partial class Observer
                         stateChanged = true;
                         State = State with
                         {
-                            NextEventSequenceNumber = result.LastSuccessfulObservation.Next(),
+                            NextEventSequenceNumber = MovedForwardTo(result.LastSuccessfulObservation.Next()),
                             TailEventSequenceNumber = observedTailEventSequenceNumber
                         };
                         var previousLastHandled = State.LastHandledEventSequenceNumber;
@@ -414,6 +414,19 @@ public partial class Observer
             NextEventSequenceNumber = nextEventSequenceNumber
         };
     }
+
+    /// <summary>
+    /// Gets the <see cref="ObserverState.NextEventSequenceNumber"/> after moving it forward to a candidate, never back.
+    /// </summary>
+    /// <param name="candidate">The <see cref="EventSequenceNumber"/> handling got the observer to.</param>
+    /// <returns>The candidate if it is further than the current position, or the current position otherwise.</returns>
+    /// <remarks>
+    /// Catch-up reports back interleaved with live delivery, so the position can move past an event while it is still
+    /// being delivered. Setting the position back to just after that event afterwards would make the next catch-up
+    /// deliver everything between the two a second time.
+    /// </remarks>
+    EventSequenceNumber MovedForwardTo(EventSequenceNumber candidate) =>
+        State.NextEventSequenceNumber.IsActualValue && State.NextEventSequenceNumber > candidate ? State.NextEventSequenceNumber : candidate;
 
     /// <summary>
     /// Persists a progress-only advance of <see cref="ObserverState.NextEventSequenceNumber"/> — the observer

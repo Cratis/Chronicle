@@ -91,8 +91,17 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Partition {Partition} received events while catching up, the first unread at event sequence number {EventSequenceNumber}; it keeps catching up")]
     internal static partial void PartitionReceivedEventsWhileCatchingUp(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
 
-    [LoggerMessage(LogLevel.Debug, "Partition {Partition} concluded catching up and is handed back to live delivery")]
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} has nothing left to read for its catch-up step and stays held back until the catch-up reports back")]
     internal static partial void ConcludedPartitionCatchUp(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} has an event its catch-up step did not read at event sequence number {EventSequenceNumber}, below where the observer is about to move")]
+    internal static partial void PartitionLeftBehindByCatchUp(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Information, "Catching up {Count} partition(s) left behind by catch-up up to event sequence number {EventSequenceNumber} before moving on")]
+    internal static partial void CatchingUpPartitionsLeftBehind(this ILogger<Observer> logger, int count, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "Failed starting catch-up for partitions left behind by catch-up; they are failed and recovered instead")]
+    internal static partial void FailedStartingCatchUpForPartitionsLeftBehind(this ILogger<Observer> logger, Exception exception);
 
     [LoggerMessage(LogLevel.Debug, "Resuming catchup for partition {Partition} starting from event sequence number {EventSequenceNumber}")]
     internal static partial void StartingCatchUpForPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber);

@@ -60,6 +60,18 @@ public partial class Observer(
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
 
     /// <summary>
+    /// How far each partition's step of the observer-wide catch-up in progress has read, and the event types it reads.
+    /// </summary>
+    /// <remarks>
+    /// The job reports back only the furthest any of its steps got, and an event appended for a partition after its step
+    /// read its last one is delivered by nobody while the partition is held back. When the job reports back, these are
+    /// what tell which partitions such an event was left behind for, and where reading them has to resume, before the
+    /// observer's position moves past it. Kept for the activation only: they matter from a step concluding until its
+    /// job reports back, and routing - which a deactivation in between runs again - releases every held partition.
+    /// </remarks>
+    readonly Dictionary<Key, (EventSequenceNumber NextToRead, EventType[] EventTypes)> _catchUpStepsReadUpTo = [];
+
+    /// <summary>
     /// The catch-up job acquisition currently in flight, if any.
     /// </summary>
     /// <remarks>
@@ -556,6 +568,13 @@ public partial class Observer(
         await _alertMutationLock.WaitAsync();
         try
         {
+            // Routing releases every partition held back for catch-up, so how far their steps read no longer says
+            // what is left to read for them: live delivery takes them on from the position routing settles on.
+            if (state is Routing)
+            {
+                _catchUpStepsReadUpTo.Clear();
+            }
+
             if (state is BaseObserverState observerState)
             {
                 var wasQuarantined = State.RunningState == ObserverRunningState.Quarantined;

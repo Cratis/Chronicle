@@ -31,25 +31,7 @@ public partial class Observer
             return;
         }
 
-        // Set before anything is awaited, so a catch-up interleaving with this one finds it and adopts its outcome.
-        var acquisition = new TaskCompletionSource<JobId>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pendingCatchUpAcquisition = acquisition.Task;
-        _catchUpOwnershipEpoch++;
-        var jobId = JobId.NotSet;
-        try
-        {
-            jobId = await AcquireCatchUpJob();
-        }
-        finally
-        {
-            if (_pendingCatchUpAcquisition == acquisition.Task)
-            {
-                _pendingCatchUpAcquisition = null;
-            }
-
-            // A failed acquisition hands waiters no job, so they acquire one themselves rather than inherit the failure.
-            acquisition.SetResult(jobId);
-        }
+        await AcquireCatchUpJobOwnership(AcquireCatchUpJob);
     }
 
     /// <inheritdoc/>
@@ -118,10 +100,10 @@ public partial class Observer
     /// <inheritdoc/>
     /// <remarks>
     /// The steps of an observer-wide catch-up run independently, and the job reports back only the furthest any of
-    /// them got. A partition left held back until then drops every event appended after its own step read its last
-    /// one - and once the position moves past those events nothing reads them again. Releasing it here instead closes
-    /// that window: nothing else runs on the observer between finding no unread events and handing the partition back,
-    /// so an event is either found here, and read by the step, or appended later and delivered live.
+    /// them got. The partition stays held back until then - live delivery drops its events, so nothing a step reads is
+    /// ever delivered a second time - and an event appended after its step read its last one is therefore delivered by
+    /// nobody. Finding such an event here keeps the step reading. Otherwise how far the step read is remembered, so an
+    /// event appended later still is read before the job's report moves the observer's position past it.
     /// </remarks>
     public async Task<bool> ConcludePartitionCatchUp(Key partition, EventSequenceNumber nextEventSequenceNumber, IEnumerable<EventType> eventTypes)
     {
@@ -130,7 +112,11 @@ public partial class Observer
         if (IsRetired || _removed || !State.CatchingUpPartitions.Contains(partition)) return true;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
-        var unreadEvent = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(nextEventSequenceNumber, eventTypes, partition);
+        // Remembered before looking, so even a step that gives up reading on has said how far it got.
+        var eventTypesRead = eventTypes.ToArray();
+        _catchUpStepsReadUpTo[partition] = (nextEventSequenceNumber, eventTypesRead);
+
+        var unreadEvent = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(nextEventSequenceNumber, eventTypesRead, partition);
         if (unreadEvent.TryGetResult(out var sequenceNumber) && sequenceNumber.IsActualValue)
         {
             logger.PartitionReceivedEventsWhileCatchingUp(partition, sequenceNumber);
@@ -141,14 +127,13 @@ public partial class Observer
         // to and recovered from there, rather than handed back over events nobody may have read.
         if (unreadEvent.TryGetError(out var error) && error != GetSequenceNumberError.NotFound)
         {
+            _catchUpStepsReadUpTo.Remove(partition);
             State.CatchingUpPartitions.Remove(partition);
             await PartitionFailed(partition, nextEventSequenceNumber, ["Event Sequence storage error while concluding the partition's catch-up"], string.Empty);
             return true;
         }
 
         logger.ConcludedPartitionCatchUp(partition);
-        State.CatchingUpPartitions.Remove(partition);
-        await WriteStateAsync();
         return true;
     }
 
@@ -162,6 +147,8 @@ public partial class Observer
         // interleaving with this call already sees it.
         RememberConcludedCatchUpJob(jobId);
 
+        if (await ContinuedCatchUpForPartitionsLeftBehind(lastHandledEventSequenceNumber)) return;
+
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
 
@@ -170,6 +157,184 @@ public partial class Observer
 
         if (IsRetired || _removed) return;
         await TransitionTo<Routing>();
+    }
+
+    /// <summary>
+    /// Starts a catch-up for the partitions an observer-wide catch-up left behind, before the position moves past them.
+    /// </summary>
+    /// <param name="lastHandledEventSequenceNumber">The furthest any step of the reporting job got.</param>
+    /// <returns>True if a catch-up now reads the partitions left behind and the observer stays where it is until it reports back; false if the observer can move on.</returns>
+    /// <remarks>
+    /// Every partition the job caught up is still held back, so an event its step did not read was not delivered live
+    /// either. One appended at or below where the position is about to move is left behind for good: routing only looks
+    /// for events past the position. The partitions it was left behind for stay held back and are read from where their
+    /// own step got to, up to that point and no further - what lies past it is routing's, as for every other partition.
+    /// The observer moves on once that catch-up reports back, and checks again then.
+    /// <para>
+    /// Live delivery of partitions that are not held back interleaves with this check and can move the position further
+    /// while it looks, so it looks again until the position it checked up to is where the position is about to move.
+    /// </para>
+    /// </remarks>
+    async Task<bool> ContinuedCatchUpForPartitionsLeftBehind(EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        if (_catchUpStepsReadUpTo.Count == 0 || !lastHandledEventSequenceNumber.IsActualValue || IsRetired || _removed)
+        {
+            _catchUpStepsReadUpTo.Clear();
+            return false;
+        }
+
+        EventSequenceNumber? checkedUpTo = null;
+        while (true)
+        {
+            var movingPast = GetPositionMovingPast(lastHandledEventSequenceNumber);
+            if (checkedUpTo == movingPast) break;
+
+            var partitionsLeftBehind = await FindPartitionsLeftBehind(movingPast);
+            checkedUpTo = movingPast;
+            if (partitionsLeftBehind.Count > 0 && await StartedCatchUpForPartitionsLeftBehind(partitionsLeftBehind, movingPast))
+            {
+                return true;
+            }
+        }
+
+        _catchUpStepsReadUpTo.Clear();
+        return false;
+    }
+
+    /// <summary>
+    /// Gets the last event sequence number the position moves past once the reporting job's work is accepted.
+    /// </summary>
+    /// <param name="lastHandledEventSequenceNumber">The furthest any step of the reporting job got.</param>
+    /// <returns>The <see cref="EventSequenceNumber"/> the position moves past.</returns>
+    EventSequenceNumber GetPositionMovingPast(EventSequenceNumber lastHandledEventSequenceNumber) =>
+        State.NextEventSequenceNumber.IsActualValue && State.NextEventSequenceNumber > lastHandledEventSequenceNumber.Next()
+            ? State.NextEventSequenceNumber - 1
+            : lastHandledEventSequenceNumber;
+
+    /// <summary>
+    /// Finds the partitions still held back with an event their catch-up did not read, at or below a given point.
+    /// </summary>
+    /// <param name="movingPast">The last <see cref="EventSequenceNumber"/> the position is about to move past.</param>
+    /// <returns>The partitions left behind, each with where reading it has to resume.</returns>
+    /// <remarks>
+    /// A partition found to have nothing unread up to that point has been read that far, as nothing delivers a held
+    /// partition's events but its catch-up, so looking again only has to look past it.
+    /// </remarks>
+    async Task<List<CatchUpObserverPartitionRange>> FindPartitionsLeftBehind(EventSequenceNumber movingPast)
+    {
+        var partitionsLeftBehind = new List<CatchUpObserverPartitionRange>();
+        foreach (var (partition, (nextToRead, eventTypes)) in _catchUpStepsReadUpTo.ToArray())
+        {
+            if (!State.CatchingUpPartitions.Contains(partition) || Failures.IsFailed(partition) || nextToRead > movingPast) continue;
+
+            var unreadEvent = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(nextToRead, eventTypes, partition);
+            if (unreadEvent.TryGetResult(out var sequenceNumber) && sequenceNumber.IsActualValue && sequenceNumber <= movingPast)
+            {
+                logger.PartitionLeftBehindByCatchUp(partition, sequenceNumber);
+                partitionsLeftBehind.Add(new(partition, nextToRead));
+            }
+            else if (unreadEvent.TryGetError(out var error) && error != GetSequenceNumberError.NotFound)
+            {
+                // A failed lookup cannot tell whether anything was left behind, so the partition is recovered from
+                // where its catch-up got to rather than skipped by the position moving on.
+                _catchUpStepsReadUpTo.Remove(partition);
+                State.CatchingUpPartitions.Remove(partition);
+                await PartitionFailed(partition, nextToRead, ["Event Sequence storage error while looking for events left behind by the partition's catch-up"], string.Empty);
+            }
+            else if (_catchUpStepsReadUpTo.ContainsKey(partition))
+            {
+                _catchUpStepsReadUpTo[partition] = (movingPast.Next(), eventTypes);
+            }
+        }
+
+        return partitionsLeftBehind;
+    }
+
+    /// <summary>
+    /// Starts the catch-up that reads the partitions left behind, up to the point the position is about to move past.
+    /// </summary>
+    /// <param name="partitionsLeftBehind">The partitions left behind, each with where reading it has to resume.</param>
+    /// <param name="movingPast">The last <see cref="EventSequenceNumber"/> the position is about to move past.</param>
+    /// <returns>True if the catch-up started; false if the partitions were failed instead.</returns>
+    async Task<bool> StartedCatchUpForPartitionsLeftBehind(List<CatchUpObserverPartitionRange> partitionsLeftBehind, EventSequenceNumber movingPast)
+    {
+        var jobId = await AcquireCatchUpJobOwnership(async () =>
+        {
+            var subscription = await GetSubscription();
+            var from = partitionsLeftBehind.Select(_ => _.FromEventSequenceNumber).Aggregate((lowest, next) => next < lowest ? next : lowest);
+            var request = new CatchUpObserverRequest(_observerKey, Definition.Type, from, subscription.EventTypes)
+            {
+                PartitionsLeftBehind = partitionsLeftBehind,
+                ToEventSequenceNumber = movingPast
+            };
+
+            try
+            {
+                var startResult = await _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(request);
+                return startResult is not null && startResult.TryGetResult(out var startedJobId) ? startedJobId : JobId.NotSet;
+            }
+            catch (Exception ex)
+            {
+                logger.FailedStartingCatchUpForPartitionsLeftBehind(ex);
+                return JobId.NotSet;
+            }
+        });
+
+        if (jobId != JobId.NotSet)
+        {
+            logger.CatchingUpPartitionsLeftBehind(partitionsLeftBehind.Count, movingPast);
+
+            // Once that catch-up has reported back, these have been read up to the point it reads to.
+            foreach (var partitionLeftBehind in partitionsLeftBehind)
+            {
+                if (_catchUpStepsReadUpTo.TryGetValue(partitionLeftBehind.Partition, out var readUpTo))
+                {
+                    _catchUpStepsReadUpTo[partitionLeftBehind.Partition] = (movingPast.Next(), readUpTo.EventTypes);
+                }
+            }
+
+            return true;
+        }
+
+        // Nothing is going to read them, so they are failed from where their own catch-up got to and recovered from
+        // there, rather than skipped by the position moving on.
+        foreach (var partitionLeftBehind in partitionsLeftBehind)
+        {
+            _catchUpStepsReadUpTo.Remove(partitionLeftBehind.Partition);
+            State.CatchingUpPartitions.Remove(partitionLeftBehind.Partition);
+            await PartitionFailed(partitionLeftBehind.Partition, partitionLeftBehind.FromEventSequenceNumber, ["Could not start catching up events left behind by the partition's catch-up"], string.Empty);
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Acquires a catch-up job as the one catch-up acquisition in flight, so a catch-up interleaving with it adopts it.
+    /// </summary>
+    /// <param name="acquire">Acquires the job.</param>
+    /// <returns>The <see cref="JobId"/> of the job acquired, or <see cref="JobId.NotSet"/> if none was.</returns>
+    async Task<JobId> AcquireCatchUpJobOwnership(Func<Task<JobId>> acquire)
+    {
+        // Set before anything is awaited, so a catch-up interleaving with this one finds it and adopts its outcome.
+        var acquisition = new TaskCompletionSource<JobId>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _pendingCatchUpAcquisition = acquisition.Task;
+        _catchUpOwnershipEpoch++;
+        var jobId = JobId.NotSet;
+        try
+        {
+            jobId = await acquire();
+            return jobId;
+        }
+        finally
+        {
+            if (_pendingCatchUpAcquisition == acquisition.Task)
+            {
+                _pendingCatchUpAcquisition = null;
+            }
+
+            // A failed acquisition hands waiters no job, so they acquire one themselves rather than inherit the failure.
+            acquisition.SetResult(jobId);
+        }
     }
 
     /// <summary>
@@ -245,7 +410,7 @@ public partial class Observer
             logger.SkippingPartitionCatchUpBecauseObserverIsReplaying();
             return;
         }
-        if (failures.State.IsFailed(partition))
+        if (Failures.IsFailed(partition))
         {
             logger.PartitionToCatchUpIsFailing(partition);
             return;
@@ -278,6 +443,9 @@ public partial class Observer
         if (IsRetired || _removed) return;
         var nextEventSequenceNumber = lastHandledEventSequenceNumber.Next();
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
+
+        // The partition's own job reads it from here on, so no observer-wide catch-up reads it again from where it got to.
+        _catchUpStepsReadUpTo.Remove(partition);
         State.CatchingUpPartitions.Add(partition);
         await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes));
         await WriteStateAsync();
