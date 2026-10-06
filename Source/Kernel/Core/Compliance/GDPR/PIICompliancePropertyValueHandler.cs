@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.ProtectedValues;
@@ -85,7 +84,7 @@ public class PIICompliancePropertyValueHandler(
             {
                 return ProtectedValueCodec.Decrypt(encryption, key, encrypted);
             }
-            catch (CryptographicException ex) when (ex is not AuthenticationTagMismatchException)
+            catch (EncryptionKeyUnwrapFailed)
             {
                 if (await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is null)
                 {
