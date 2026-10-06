@@ -3,16 +3,15 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
 /// <summary>
 /// The interleaving of live delivery and catch-up for one partition. The partition's step has read its last event when
 /// event 11 is appended for it: live delivery drops it, as the partition is still catching up, and concluding finds it,
-/// so the step reads on and delivers it. Once the step has read it, the step concludes, and once the catch-up has
-/// reported back the next event, 12, is delivered live. Every event reaches the subscriber exactly once - live delivery
-/// never delivers what the step reads, and nothing is left to nobody (#4583).
+/// so the step reads on and delivers it. Once the step has read it, the partition concludes and the next event, 12, is
+/// delivered live. Every event reaches the subscriber exactly once - live delivery never delivers what the step reads,
+/// and nothing is left to nobody (#4583).
 /// </summary>
 public class when_an_event_arrives_for_a_partition_after_its_catch_up_step_read_its_last : given.an_observer_with_subscription_for_specific_event_type
 {
@@ -49,12 +48,11 @@ public class when_an_event_arrives_for_a_partition_after_its_catch_up_step_read_
 
         // The step has read on and handled event 11 itself.
         _concludedOnceTheStepReadIt = await _observer.ConcludePartitionCatchUp(_partition, _appendedAfterStepReadItsLast.Next(), [event_type]);
-        await _observer.CaughtUp(JobId.New(), _appendedAfterStepReadItsLast);
         await _observer.Handle(_partition, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, _appendedAfterConcluding)]);
     }
 
     [Fact] void should_leave_the_event_appended_after_the_step_read_its_last_to_the_step() => _concludedWhileTheEventWasUnread.ShouldBeFalse();
     [Fact] void should_not_deliver_the_event_the_step_reads_live() => _deliveredLive.ShouldNotContain(_appendedAfterStepReadItsLast);
     [Fact] void should_conclude_once_the_step_has_read_it() => _concludedOnceTheStepReadIt.ShouldBeTrue();
-    [Fact] void should_deliver_the_next_event_live_exactly_once_the_catch_up_has_reported_back() => _deliveredLive.ShouldContainOnly(_appendedAfterConcluding);
+    [Fact] void should_deliver_the_next_event_live_exactly_once() => _deliveredLive.ShouldContainOnly(_appendedAfterConcluding);
 }

@@ -32,12 +32,6 @@ public class TestableCatchUpObserver(
     /// <inheritdoc/>
     public Type GrainType => typeof(ICatchUpObserver);
 
-    /// <summary>
-    /// Completes the job as when every step has completed, without running any.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    public Task CompleteAllSteps() => OnAllStepsCompleted();
-
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
