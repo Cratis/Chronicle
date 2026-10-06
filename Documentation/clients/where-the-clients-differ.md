@@ -79,7 +79,7 @@ Sources: [.NET PII API](https://github.com/Cratis/Chronicle/blob/main/Source/Cli
 | --- | --- |
 | .NET | Reactors are replayable unless the class has `[OnceOnly]`. Method-level `[OnceOnly]` skips that handler during replay; `[Replay]` selects a replay handler. |
 | Kotlin and Java | Kotlin registration and dispatch use `@OnceOnly` and `@Replay`; Java reactors go through the same JVM registration. |
-| TypeScript | Reactors are replayable unless the class has `@onceOnly()`: registration sets `IsReplayable: !isOnceOnly(reactorType)`. Method-level `@onceOnly()` skips that handler during replay; `@replay()` selects a replay handler. The kernel's replay guards do not start a replay for observers registered as non-replayable. |
+| TypeScript | Method-level `@onceOnly()` skips that handler during replay; `@replay()` selects a replay handler. Class-level `@onceOnly()` sets `IsReplayable: false` at registration, but the proto3 encoder leaves a `false` value out, so the kernel registers the reactor as replayable and still replays it. The kernel honors class-level `@onceOnly()` only once the client also sends `IsNotReplayable: true`, tracked in [Chronicle.TypeScript#236](https://github.com/Cratis/Chronicle.TypeScript/issues/236). |
 | Elixir | Reactor registration sets `IsReplayable: true`. There is no once-only marker. Per-event context has no replay flag, but optional replay-begin/end and partition-replay callbacks report lifecycle transitions. |
 
 These differences follow from registration and dispatch code, together with the kernel's replay guards. Do not treat an available lifecycle callback as proof that the client's registered reactors are replayable.
