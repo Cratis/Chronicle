@@ -144,10 +144,15 @@ The same refusal reaches anything that *writes* protected values, not only appen
 Reading a value for a query releases it leniently: a property that cannot be decrypted degrades to its empty value so that the query keeps working. Writing is held to a stricter standard. When Chronicle migrates stored events to a new [event type generation](../concepts/event-type-migrations) or applies a revision, it releases the stored protected values first and then protects the result again, so a silently blanked value would be written back as lost data. Both paths therefore release strictly:
 
 - **An operational failure aborts the write.** A key storage failure, an I/O error or a malformed key stops the migration or revision instead of storing blanks.
-- **A value whose subject has a recorded erasure is migrated as erased.** The new generation or revision holds the empty value of the property's type, not an error.
+- **Release tolerates a recorded erasure.** A value whose key was erased releases as the empty value of the property's type instead of failing. A recorded erasure alone does not blank anything: a value that still decrypts, for example one written under a new lifecycle authorized by `AllowNewEncryptionKeyFor`, stays intact.
 - **A data-key unwrap failure for an erased subject counts as erased.** Ciphertext written before the erasure cannot be unwrapped with a key minted afterwards by `AllowNewEncryptionKeyFor`, so for a subject with a recorded erasure that failure is treated as erased and logged, rather than blocking every later event of the type.
 
-The last rule has a limit. Corrupt ciphertext belonging to a subject with a recorded erasure fails the same way as pre-erasure ciphertext, so it is migrated as erased and cannot be told apart today. This is tracked in [issue 4619](https://github.com/Cratis/Chronicle/issues/4619). For a subject with no recorded erasure, an unwrap failure still aborts the write.
+Release and persistence are separate steps, and they differ between the two paths:
+
+- **Stored-event migration** protects the migrated content again in an erasure-aware way, so a subject with a recorded erasure is migrated as erased and the new generation holds the empty value of each erased property.
+- **Revision** persists through the ordinary protect step, which still refuses an erased subject. Revising an event of an erased subject fails with `EncryptionKeyErased` until a new lifecycle is authorized with `AllowNewEncryptionKeyFor`.
+
+The unwrap rule has a limit. It applies only to corruption that makes the data-key unwrap itself fail (`EncryptionKeyUnwrapFailed`). For a subject with a recorded erasure, such a corrupt data key looks the same as pre-erasure ciphertext, so it is migrated as erased and cannot be told apart today. This is tracked in [issue 4619](https://github.com/Cratis/Chronicle/issues/4619). Corruption of the authenticated payload is not covered: it still aborts the write, as does any unwrap failure for a subject with no recorded erasure.
 
 ## The threat model
 
