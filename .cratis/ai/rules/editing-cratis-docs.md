@@ -61,7 +61,8 @@ Restart `npm run dev` after a build/check. The build re-sync can degrade a runni
 
 - Product source links to files keep the real `.md` or `.mdx` extension. The converter removes either extension for the public route.
 - Directory links end in `/`.
-- Site-level MDX and cross-product links use clean root-relative public routes such as `/arc/backend/commands/`.
+- Site-level MDX and cross-product links use clean root-relative public routes such as `/arc/backend/commands/` - never `https://cratis.io/...` or a GitHub `blob/` URL, which the site build does not check. There are no symbol (`xref:`) links: the converter turns them into plain text.
+- A product's local link gate skips root-relative links to other products by rule, not by product name; the full site check is what verifies them. See [Documentation Structure and Formatting](./documentation-structure-and-formatting.md#tables-images-links-and-diagrams).
 - Slugification removes punctuation from path segments (`react.mvvm` becomes `reactmvvm`), so verify hand-authored site-absolute paths against the build.
 
 ## Content and rendering

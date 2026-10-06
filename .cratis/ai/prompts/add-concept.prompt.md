@@ -6,7 +6,7 @@ description: Create a strongly-typed Concept for a primitive domain value or an 
 
 # Add a Concept
 
-Create a strongly-typed concept to replace a raw primitive. Invoke the **add-concept** skill and follow `.cratis/ai/rules/concepts.md`.
+Create a strongly-typed concept to replace a raw primitive. Invoke the **cratis-fundamentals-concept** skill and follow `.cratis/ai/rules/concepts.md`.
 
 ## Confirm first
 

@@ -71,13 +71,18 @@ and neighboring pages; ask only when the alternatives change the outcome.
    Inside a step, write only what the current tab's reader needs. Across a
    series, keep backend limitations in one table on the series index and link
    it; don't repeat an issue-tracked limitation on every page.
-4. Draft in workflow order. For a tutorial, use one working domain throughout,
+4. Link required tools to their canonical installation procedures before the
+   first command. For cross-product prerequisites, use a verified public route;
+   a named Markdown reference is defined on this same page, not in another
+   repository. Do not revive DocFX `xref:` symbols or duplicate another
+   product's setup recipe. See the documentation formatting rule for syntax.
+5. Draft in workflow order. For a tutorial, use one working domain throughout,
    show what to run and what appears, and recap before adding another concept.
    For a how-to, keep only what the specific task needs. Link out for details.
    Many Cratis readers are adopting a paradigm (event sourcing, event
    modeling, vertical slices), not only a tool: link the explanation from the
    start route, but let the reader reach a first success before the theory.
-5. Read the rendered page as a newcomer: could they find it, begin without
+6. Read the rendered page as a newcomer: could they find it, begin without
    hidden prerequisites, recover from a common mistake, and recognize success?
    Then check claims, examples, accessibility, links, and the owning gates.
 

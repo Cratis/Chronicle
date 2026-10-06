@@ -905,7 +905,10 @@ public class ProjectionFactory(
 
         // Include join expressions that join on the id property
         var keyPropertyName = currentReadModelSchema.HasKeyProperty() ? currentReadModelSchema.GetKeyProperty().Name : currentReadModelSchema.GetLikelyKeyPropertyName();
-        joinExpressions = [.. joinExpressions, .. projectionDefinition.Join.Where(join => join.Value.On == keyPropertyName)];
+        if (keyPropertyName is not null)
+        {
+            joinExpressions = [.. joinExpressions, .. projectionDefinition.Join.Where(join => join.Value.On == keyPropertyName)];
+        }
 
         if (joinExpressions.Length == 0)
         {

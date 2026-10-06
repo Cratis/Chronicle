@@ -48,14 +48,17 @@ static class EncryptedValueOperations
     /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> the key was provisioned under.</param>
     /// <param name="keyIdentifier">The <see cref="EncryptionKeyIdentifier"/> the value was encrypted under.</param>
     /// <param name="value">The <see cref="JsonNode"/> to decrypt.</param>
+    /// <param name="strict">Whether a missing key must fail instead of returning an empty value.</param>
     /// <returns>The decrypted <see cref="JsonNode"/>.</returns>
+    /// <exception cref="MissingEncryptionKey">Strict release cannot find the confidentiality key.</exception>
     public static async Task<JsonNode> Release(
         IEncryptionKeyStorage encryptionKeyStore,
         IEncryption encryption,
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier keyIdentifier,
-        JsonNode value)
+        JsonNode value,
+        bool strict = false)
     {
         // A value carrying none of this encryption's shape was never protected under this key - display-only
         // resolution, or data written before the property was marked - so releasing it is a pass-through rather
@@ -73,6 +76,11 @@ static class EncryptedValueOperations
         // rest of the document working, exactly as the PII path already does for its own missing-key case.
         if (key is null)
         {
+            if (strict)
+            {
+                throw new MissingEncryptionKey(keyIdentifier);
+            }
+
             return JsonValue.Create(string.Empty);
         }
 

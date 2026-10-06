@@ -346,7 +346,8 @@ internal sealed class ReadModels(
         var readModelDefinition = await storage.GetEventStore(request.EventStore).ReadModels.Get(definition.Identifier);
         var projectionKey = new ProjectionKey((ProjectionId)definition.ObserverIdentifier.Value, request.EventStore);
         var projection = grainFactory.GetGrain<IProjection>(projectionKey);
-        var eventTypes = await projection.GetEventTypes();
+        var projectionDefinition = await projection.GetDefinition();
+        var eventTypes = projectionDefinition.SubscribesToAllEvents ? [] : await projection.GetEventTypes();
 
         // Get events from the beginning, optionally limited by event count
         var events = new List<AppendedEvent>();
@@ -704,6 +705,11 @@ internal sealed class ReadModels(
             return identifier.ToString();
         }
 
+        if (instance.TryGetValue("Id", out identifier) && identifier is not null)
+        {
+            return identifier.ToString();
+        }
+
         return null;
     }
 
@@ -728,32 +734,36 @@ internal sealed class ReadModels(
         // The document handed in is never modified. On the observable path it belongs to the changeset the notifier
         // pushed, not to this call, so stamping bookkeeping onto it would leave an internal marker on an object
         // this method does not own.
+        var stamped = (readModel.DeepClone() as JsonObject)!;
         if (!schema.HasSchemaMetadata())
         {
-            return readModel;
+            stamped.Remove(WellKnownProperties.Subject);
+            stamped.Remove(WellKnownProperties.Subjects);
+            return stamped;
         }
 
-        var resolvedSubject = !string.IsNullOrWhiteSpace(preferredSubject) && preferredSubject != ReadModelKey.Unspecified.Value
+        // Persisted event lineage is authoritative; a request key is only a fallback for older state.
+        var storedSubject = readModel[WellKnownProperties.Subject]?.GetValue<string>();
+        var fallbackSubject = !string.IsNullOrWhiteSpace(preferredSubject) && preferredSubject != ReadModelKey.Unspecified.Value
             ? preferredSubject
             : InferSubjectFromJson(readModel);
-        if (string.IsNullOrWhiteSpace(resolvedSubject))
+        var resolvedSubject = !string.IsNullOrWhiteSpace(storedSubject) ? storedSubject : fallbackSubject;
+        if (!string.IsNullOrWhiteSpace(resolvedSubject))
         {
-            return readModel;
+            stamped[WellKnownProperties.Subject] = resolvedSubject;
         }
-
-        var stamped = (readModel.DeepClone() as JsonObject)!;
-        stamped[WellKnownProperties.Subject] = resolvedSubject;
 
         // The strip stays even though the compliance manager releases onto a clone that never carried the marker:
         // an implementation that hands back the instance it was given returns the stamped document, and the marker
         // must never reach the client.
         var released = await complianceHelper.ReleaseJson(eventStore, @namespace, schema, stamped);
         released.Remove(WellKnownProperties.Subject);
+        released.Remove(WellKnownProperties.Subjects);
         return released;
 
         static string? InferSubjectFromJson(JsonObject json)
         {
-            foreach (var property in new[] { WellKnownProperties.Subject, "_id", "id" })
+            foreach (var property in new[] { WellKnownProperties.Subject, "_id", "id", "Id" })
             {
                 if (json.TryGetPropertyValue(property, out var value) && value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var identifier))
                 {

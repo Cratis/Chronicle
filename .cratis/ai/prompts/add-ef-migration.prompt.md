@@ -6,7 +6,7 @@ description: Add or update an Entity Framework Core DbContext, table column, or 
 
 # Add an EF Core Migration
 
-Make a database schema change via EF Core. Invoke the **add-ef-migration** skill and follow `.cratis/ai/rules/efcore.md` (+ `.cratis/ai/rules/efcore.specs.md`).
+Make a database schema change via EF Core. Invoke the **cratis-arc-ef-core-migration** skill and follow `.cratis/ai/rules/efcore.md` (+ `.cratis/ai/rules/efcore.specs.md`).
 
 > Applies only to projects that use EF Core.
 

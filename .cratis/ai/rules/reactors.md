@@ -10,20 +10,22 @@ profile: application
 
 Reactors are the "if this then that" of event sourcing — they observe events and produce side effects. Unlike projections (which build state), reactors *do things*: send emails, trigger commands in other slices, call external APIs.
 
+**Model first:** when an accepted model under the model root covers this scope (or the repository is opted in: the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it) or the project explicitly set `mcpServers.screenplay.root` in `.cratis/ai.json`; master definition in `cratis-screenplay-modeling-lifecycle`), a reactor implements an automation that the model owns (`produces` / `invokes`); read the modeled slice first and keep the reactor to what the model leaves to code (gap-fill). Otherwise (not opted in) stay code-first: this file and the **cratis-chronicle-reactor** skill are the guide, and the entry-point session may propose a model at most once per session. A `.play` file outside the root, an untracked or uncommitted draft or an empty directory is not consent.
+
 ## IReactor — Marker Interface
 
 `IReactor` is a **marker interface** with no methods to implement. Method dispatch is entirely by convention: the first parameter type of each public method determines which event it handles.
 
 ```csharp
-public class ProjectRegisteredNotifier(INotificationService notifications) : IReactor
+public class InvoiceIssuedNotifier(INotificationService notifications) : IReactor
 {
     /// <summary>
-    /// Reacts to <see cref="ProjectRegistered"/> events by sending a notification.
+    /// Reacts to <see cref="InvoiceIssued"/> events by sending a notification.
     /// </summary>
     /// <param name="event">The event.</param>
     /// <param name="context">The event context.</param>
-    public async Task ProjectRegistered(ProjectRegistered @event, EventContext context) =>
-        await notifications.Notify($"Project '{@event.Name}' was registered.");
+    public async Task InvoiceIssued(InvoiceIssued @event, EventContext context) =>
+        await notifications.Notify($"Invoice '{@event.Number}' was issued.");
 }
 ```
 
@@ -165,16 +167,17 @@ public Task<IEnumerable<EventForEventSourceId>> Handle(AnEvent @event, EventCont
 When the follow-up belongs to **another slice**, return its `[Command]` instead of an event — the same idiom as returning events, applied to intent. Arc's Chronicle integration executes a returned command through the full pipeline (validation, authorization, `Handle()`) in its own service scope; a collection is executed in order when **every** element is a command (events and commands do not mix in one return). An unauthorized, invalid or throwing result is a **side-effect failure** — it fails the partition like a failed append, so it is never silently dropped.
 
 ```csharp
-public class StockKeeping : IReactor
+public class RenewalBilling : IReactor
 {
     [OnceOnly]
-    public Task<DecreaseStock> BookReserved(BookReserved @event, EventContext context) =>
-        Task.FromResult(new DecreaseStock(@event.Isbn, @event.Quantity));
+    public Task<IssueRenewalInvoice> MembershipRenewed(MembershipRenewed @event, EventContext context) =>
+        Task.FromResult(new IssueRenewalInvoice(@event.MemberId, @event.Amount));
 }
 ```
 
 - **A reactor runs with no principal.** It is not an HTTP request, so a returned command gated by `[Roles]`/`[Authorize]` is denied. Opt in on the reactor **class** with `[ExecuteCommandsAsSystem("<role>", …)]` (`Cratis.Arc.Chronicle.Reactors`), naming only the roles its returned commands need. The attribute covers **returned** commands only.
 - Mark the handler `[OnceOnly]` — a replay would otherwise execute the command again. Replay exclusion is not exactly-once: recovery re-delivers, so the command itself must be safe to repeat.
+- A reactor retry can execute the command's operations again; inline operations are not a substitute for reactor/outbox durability — see **cratis-arc-command-operation** (verified at Arc v22.48.1).
 - The imperative alternative — inject `ICommandPipeline` and call `Execute(command)` — remains supported (see the **cratis-arc-command-execution** skill). It needs `[OnceOnly]` (`ARCCHR0006` warns otherwise), its `CommandResult` must be inspected (a denied or invalid result is otherwise discarded), and it needs its own execution context: `[ExecuteCommandsAsSystem]` does not apply to it.
 
 ## External event stores (outbox / inbox)
@@ -196,52 +199,69 @@ The default is fire-and-forget. When a caller's correctness depends on all obser
 2. **Use event data directly** — Never query the read model back inside a reactor. The event contains all the information you need.
 3. **Return events and commands instead of injecting the plumbing** — If the reactor needs to produce new events, return them directly as `Task<TEvent>`, `Task<EventForEventSourceId>`, or a collection thereof. For intent in another slice, return the `[Command]` (Arc executes it; a denied or invalid result fails the partition) — or inject `ICommandPipeline` and inspect the result. Either way the handler is `[OnceOnly]`. Avoid injecting `IEventLog` directly into a reactor.
 4. **Single responsibility** — Each reactor class should have a focused purpose. Multiple handler methods in one reactor are fine if they serve the same automation concern.
-5. **Failure behavior** — If a reactor throws, *or* a returned side-effect event fails to append (constraint violation, concurrency violation, or error), the failing event-source partition pauses until the issue is resolved. Repeated failures can **quarantine** the observer: once `QuarantineOnFailedPartitionCount`/`QuarantineOnFailedPartitionPercentage` (under `Observers`) is crossed, the observer enters the `Quarantined` state — reminders cancelled, retries stopped, automatic recovery suppressed. **A quarantined observer does NOT auto-resume on reconnect** — an operator must call `ClearObserverQuarantine()`. A periodic watchdog (default 60s, `WatchdogInterval`) re-routes stuck/dead observers but does not rescue quarantined ones. Design for resilience.
+5. **Failure behavior** — If a reactor throws, *or* a returned side-effect event fails to append (constraint violation, concurrency violation, or error), the failing event-source partition pauses until the issue is resolved. Repeated failures can **quarantine** the observer: once `QuarantineOnFailedPartitionCount`/`QuarantineOnFailedPartitionPercentage` (under `Observers`) is crossed, the observer enters the `Quarantined` state — reminders cancelled, retries stopped, automatic recovery suppressed. **A quarantine ends when an operator clears it (`ClearObserverQuarantine()`), or when the observer is subscribed again** — for an application observer that is when the client connects again, for example after a redeploy; Kernel-owned observers are subscribed again when the Kernel starts. A periodic watchdog (default 60s, `WatchdogInterval`) re-routes stuck/dead observers but does not rescue quarantined ones. Design for resilience.
 6. **Don't throw to validate malformed inbound events** — reactors are not data-quality validators; invalid payloads must be rejected at the command/append site. When a malformed cross-service fact reaches a consumer, throwing just to reject it pauses the partition and can quarantine the whole observer. Instead append a clear failure/dead-letter event (e.g. `ProvisioningFailed`) or surface it via the operational failure path, and skip partial side effects.
 7. **No state** — Reactors should be stateless. Inject dependencies via primary constructor, but do not store mutable state on the class.
 8. **An unattended, irreversible pass reads the log, not the sink — and carries a fuse.** A reactor that deletes, revokes, bills or notifies *because a read model says something is absent* is trusting a materialized sink that is only as current as its observer: a paused partition, a replay in progress or a lagging projection makes "absent" true of the sink and false of the world. Decide from a **`[Passive]`** read model (computed on demand from the events at the moment the reactor runs) or from the events themselves. And the code shape cannot tell an **empty subject set** ("nothing to consider" — fail-safe) from an **empty qualifying set** ("nothing survived the filter" — fail-destructive: every subject is about to be acted on), so an unattended pass states its expected population, refuses when the count is implausible, and caps how many subjects one run may touch — the same discipline as [guards-and-fuses.md](./guards-and-fuses.md), applied to a reactor.
+
+## Failure transitions **[convention]**
+
+A domain failure must produce a timely, observable workflow outcome rather than
+leave work looking active until a watchdog notices. Assign the transition to a
+reliable consumer: an existing state machine can be sufficient; do not add a
+redundant failure reactor when it already owns the event. Watchdogs cover missing
+signals, not ordinary handling of an already recorded failure. Specify the visible
+transition, repeated delivery, and stale failures from earlier attempts. Keep
+public reasons free of secrets. See **cratis-chronicle-reactor** for the distinction
+between domain failure and an observer's operational failure.
 
 ## Slice Types That Use Reactors
 
 | Slice type | Pattern |
 |------------|---------|
-| **Automation** | Reacts to events, makes decisions, triggers side effects |
-| **Translation** | Adapts events from one slice/system by triggering commands in another |
+| **Automation** | Reacts to our own events, makes decisions, triggers side effects: an external call, a follow-up event (`produces`), or a follow-up command in another slice (`invokes`) |
+| **Translation** | Takes data from outside the model's own facts (an external system or another service) and records it as our own facts. A reactor is only its adapter code; a reactor that turns our own event into a follow-up event or command is an Automation |
 
 ### Automation Example
 
 ```csharp
-public class ProjectRegisteredNotifier(INotificationService notifications) : IReactor
+public class InvoiceIssuedNotifier(INotificationService notifications) : IReactor
 {
     /// <summary>
-    /// Sends a notification when a project is registered.
+    /// Sends a notification when an invoice is issued.
     /// </summary>
     /// <param name="event">The event.</param>
     /// <param name="context">The event context.</param>
-    public async Task ProjectRegistered(ProjectRegistered @event, EventContext context) =>
-        await notifications.Notify($"Project '{@event.Name}' was registered.");
+    public async Task InvoiceIssued(InvoiceIssued @event, EventContext context) =>
+        await notifications.Notify($"Invoice '{@event.Number}' was issued.");
 }
 ```
 
-### Translation Example
+### Automation Example — Returning a Command
 
 ```csharp
-[ExecuteCommandsAsSystem("inventory")]
-public class StockKeeping : IReactor
+[ExecuteCommandsAsSystem("invoicing")]
+public class RenewalBilling : IReactor
 {
     /// <summary>
-    /// Reacts to a book reservation by decreasing stock in the inventory slice.
+    /// Reacts to a membership renewal by invoking the invoice issuing in the invoicing slice.
     /// </summary>
     /// <param name="event">The event.</param>
     /// <param name="context">The event context.</param>
     /// <returns>The command Arc executes as this reactor's side effect.</returns>
     [OnceOnly]
-    public Task<DecreaseStock> BookReserved(BookReserved @event, EventContext context) =>
-        Task.FromResult(new DecreaseStock(@event.Isbn, @event.Quantity));
+    public Task<IssueRenewalInvoice> MembershipRenewed(MembershipRenewed @event, EventContext context) =>
+        Task.FromResult(new IssueRenewalInvoice(@event.MemberId, @event.Amount));
 }
 ```
 
-The command is returned, not executed: Arc runs it through validation and authorization under the roles the class opts into, and a rejected command fails the partition instead of vanishing. `[OnceOnly]` keeps a replay from decreasing stock twice.
+The command is returned, not executed: Arc runs it through validation and authorization under the roles the class opts into, and a rejected command fails the partition instead of vanishing. `[OnceOnly]` keeps a replay from issuing the renewal invoice twice.
+
+## Contract checks for a reactor
+
+- **Field lineage:** every field of a returned command or event comes from the trigger event, an injected read model, or a mapping the contract states. Nothing is invented or defaulted.
+- **Contract-authorized filtering:** every condition that skips an event is stated in the contract; do not add a skip the contract does not name.
+- **Repeated delivery:** write a specification for the same event arriving again. Recovery re-delivers even with `[OnceOnly]`.
 
 ## Testing Reactors
 
@@ -254,9 +274,9 @@ void Establish()
     _scenario = new(new ServiceCollection().AddSingleton(_notifications).BuildServiceProvider());
 }
 
-async Task Because() => await _scenario.Given.ForEventSource(_id).Events(new ProjectRegistered("Acme"));
+async Task Because() => await _scenario.Given.ForEventSource(_id).Events(new InvoiceIssued("INV-1001"));
 
-[Fact] async Task should_notify() => await _notifications.Received(1).Notify("Project 'Acme' was registered.");
+[Fact] async Task should_notify() => await _notifications.Received(1).Notify("Invoice 'INV-1001' was issued.");
 ```
 
 For reactors that return side-effect events, assert the resulting appends through the scenario's event store; for non-event side effects, assert on the mocked services (as above). See [specs.scenarios.csharp.md](./specs.scenarios.csharp.md) for the full `*Scenario` family.

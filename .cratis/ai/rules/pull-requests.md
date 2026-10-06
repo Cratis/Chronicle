@@ -7,7 +7,7 @@ applyTo: "**/*"
 
 ## The description is the release note
 
-**The PR description is published verbatim as the GitHub release. In repositories released by `cratis/release-action`, it also closes every issue written as `(#n)`; elsewhere, follow the repository's own release and issue-closing process.** Write the note the person upgrading should read, not a development write-up. The same contract applies to release notes typed into a manual workflow run or written straight into a release. Where it is installed, the `verify-release-notes` check enforces it on every PR into the default branch that carries exactly one of `major`/`minor`/`patch` (it re-runs when the label is added); it skips `no-release` and unlabelled PRs, which should still be written this way because any of them may become releasable. `release-action` does not run for a `no-release` PR, so `(#n)` closes nothing there. Editing the description re-runs the check. HTML comments are not shown on the release page and the check ignores them for headings, keywords and placeholders, but a `(#n)` inside a comment still closes the issue (`release-action` skips only fenced and inline code) and the check fails it, so never put an issue reference in a comment. The template's own comment can stay: its `(#123)` examples are inline code.
+**The PR description is published verbatim as the GitHub release. In repositories released by `cratis/release-action`, it also closes every issue written as `(#n)`; elsewhere, follow the repository's own release and issue-closing process.** Write the note the person upgrading should read, not a development write-up. The same contract applies to release notes typed into a manual workflow run or written straight into a release. Where it is installed, the `verify-release-notes` check enforces it on release-bound PRs into the default branch carrying `major`/`minor`/`patch` (it re-runs when the label is added); it warns on `no-release` and unlabelled PRs, which must still be written this way because any of them may become releasable. `release-action` does not run for a `no-release` PR, so `(#n)` closes nothing there. Editing the description re-runs the check. HTML comments are not shown on the release page and the check ignores them for headings, keywords and placeholders, but a `(#n)` inside a comment still closes the issue (`release-action` skips only fenced and inline code) and the check fails it, so never put an issue reference in a comment. The template's own comment can stay: its `(#123)` examples are inline code.
 
 ### Allowed shape
 
@@ -37,11 +37,18 @@ applyTo: "**/*"
 
 - **Headings** (any level, also written as HTML `<h2>`, `<b>`, `<i>` or a possibly multi-line `<summary>`, or as an `*italic*` line; a heading line is checked like any other, so a keyword, relative link or `(#n)` in one fails too) other than a first `## Summary`, such as Overview, Description, What, Why, How, Context, Changes, What changed, Test plan, Testing, Tests, Verification, Verified, Validation, Quality, Review, Notes, Notes for reviewers, Limitations, Known follow-up, Acceptance, Details, and any `#`/`##` heading not in the allowed list.
 - **Review, verification, testing and provenance notes**: `Review:`, `Reviewed:`, a stand-alone `Reviewed by` line, `Verification:`, `Tested:`, `Testing:`, `Validation:` lines that stand alone or report a result (`Tests: 400 passed`, `Review: approved`); same-provider, cross-provider, Opus-only or Anthropic-only review remarks; the review workflow having passed, returned or run; CI or gate results (`CI green`, `all tests passed`); and a line stating which agent or model wrote the description (`Generated with Claude Code`, `Co-Authored-By:`). A bullet that describes a product change and only mentions review, validation, tests or an AI model (`- Validation: rules now apply to commands (#3)`, `- Reviewed by status is now shown on the dashboard (#4)`) is fine: inside a bullet, a summary or the lead paragraph the check reads a note only when it ends the clause (`- Cross-provider review pending`).
+- **Verification and scope notes**: how or where something was checked (`verified by building …`, `verified in Storybook`, `tested locally`, `Storybook only`), what was not checked (`not yet verified`, `Not verified against a real kernel`), and results (`492/492`, `9 of 9 runs`, `Tier 1 PASS`, `0 warnings, 0 errors`, a `Local:`, `CI:`, `Checks:` or `Checked locally:` line).
+- **Reviewer, merge and deploy instructions**: `Stacked on #207`, `retarget to main once #207 merges`, `This PR should be deployed separately`, `Draft:`, `do not merge`, merge or deploy order. If a consumer must upgrade in a set order, write that as an upgrade bullet ("Upgrade the Chronicle kernel to 19.25 before this client").
+- **Provenance**: which branch, commit or build something was checked against (`verified against Arc.TypeScript main (v0.34.0)`). If compatibility matters to the reader, state it as a fact about the release: "Requires `@cratis/arc` 0.34 or later."
 - **Internal state** that is not a consumer change (for example "npm publication remains disabled").
 - **Relative links** (`](Documentation/x.md)`, `](./x)`, `](Source/...)`): they 404 on the release page. Use `https://github.com/Cratis/<Repo>/blob/main/<path>`, a `#anchor` or `mailto:`.
 - **Placeholders and transcripts**: template text, empty sections, Copilot "Original prompt" blocks, agent transcripts.
 
-Reviewer-facing information (test plan, verification, review provenance, notes for reviewers) goes in a **PR comment**, never the description.
+Reviewer-facing information (test plan, verification, what was not verified, review provenance, stacking, merge or deploy order) goes in a **PR comment** posted right after creating the PR: `gh pr comment <n> --body-file .ai-work/pr-notes.md`. Never put it in the description, even when the PR is labelled `no-release`.
+
+### Keep the note true to the diff
+
+After merging or rebasing the base branch, and before every body edit, run `git diff --stat origin/main...HEAD`. Delete each bullet whose change is now on main through another PR, or was dropped in conflict resolution. Check every version, package name and registry against the diff and the current `.github/workflows/publish*.yml`; never name a registry the publish workflow does not push to.
 
 ### Bad to good
 
@@ -75,9 +82,10 @@ Arc can now construct Chronicle reactors and reducers through its own dependency
 
 ### Before you create or edit a PR
 
-1. Read the body against the forbidden list and the issue table above; delete every hit and verify every issue number.
-2. Sections in order, none empty, at most one summary form; every bullet user-facing.
-3. Test plan, verification and review notes are in a PR comment.
+1. Run `node .cratis/ai/hooks/scripts/cratis-check-pr.mjs --body-file <file> --label <intent>`. It runs the exact `verify-release-notes` rules plus the label and diff checks, and the Bash hook runs it on `gh pr create` and `gh pr edit`.
+2. Read the body against the forbidden list and the issue table above; delete every hit and verify every issue number.
+3. Sections in order, none empty, at most one summary form; every bullet user-facing.
+4. Test plan, verification and review notes are in a PR comment.
 
 If `verify-release-notes` fails, fix it by editing the description, not by pushing code.
 
@@ -95,6 +103,8 @@ Quick reminders:
 
 Confirm the current repository workflow contract before selecting release intent because release-intent labels can trigger publication. A direct request to ship with a named label authorizes applying that label and completing the repository's standard pull-request workflow, including the release it normally triggers. Do not ask for separate authorization at each step. If the user did not request shipping or publication, a proposed semantic label describes impact but does not grant authority.
 
+- Exactly one of `major`/`minor`/`patch`/`no-release`, set in the creating command (`gh pr create --label patch`), in every repository, including samples, docs and tooling repositories (`no-release` when nothing is shipped). To change intent, swap labels in one command: `gh pr edit <n> --remove-label minor --add-label patch`. Never add a second.
+- Dependabot PRs carry only `no-release`. release-action never releases them, and the `major`/`minor`/`patch` Dependabot adds describe the dependency's version, not this product's.
 - Label the PR according to semantic versioning impact:
   - **major** — breaking changes to public APIs
   - **minor** — new features, new slices, non-breaking additions
