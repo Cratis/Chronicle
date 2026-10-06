@@ -110,6 +110,16 @@ public class Sink(
     int _currentBulkSize;
     volatile bool _isBulkMode;
 
+    /// <summary>
+    /// Completes when the bulk window that <see cref="EndBulk"/> is closing has been flushed and left; set while it is.
+    /// </summary>
+    /// <remarks>
+    /// Guarded by <see cref="_bulkLock"/>. While it is set, no write is admitted into the window: a write accepted after
+    /// the final flush had taken its snapshot would otherwise be cleared without ever being written (#4598). Such a write
+    /// waits for the closing to finish and is then written directly, after the flushed batch, so it cannot overtake it.
+    /// </remarks>
+    TaskCompletionSource? _closing;
+
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
@@ -209,16 +219,22 @@ public class Sink(
         {
             if (_isBulkMode)
             {
-                AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, eventSequenceNumber);
                 var cacheKey = converter.ToBsonValue(key).ToString()!;
-                _bulkStateCache.TryRemove(cacheKey, out _);
-                _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
-                _bulkWatermarks.TryRemove(cacheKey, out _);
+                void ForgetState()
+                {
+                    _bulkStateCache.TryRemove(cacheKey, out _);
+                    _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
+                    _bulkWatermarks.TryRemove(cacheKey, out _);
 
-                // Marked after the operation is queued, never before: a flush that observes the mark without the
-                // operation would clear it while the delete is still pending, which is the failure this prevents.
-                _bulkPendingDeletes[cacheKey] = 0;
-                return await FlushBulkIfNeeded();
+                    // Marked after the operation is queued, never before: a flush that observes the mark without the
+                    // operation would clear it while the delete is still pending, which is the failure this prevents.
+                    _bulkPendingDeletes[cacheKey] = 0;
+                }
+
+                if (await AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, eventSequenceNumber, ForgetState))
+                {
+                    return await FlushBulkIfNeeded();
+                }
             }
 
             await Collection.DeleteOneAsync(filter);
@@ -282,11 +298,7 @@ public class Sink(
                     ? Builders<BsonDocument>.Filter.And(filter, Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null))
                     : filter;
                 var unset = Builders<BsonDocument>.Update.Unset(parent.Path);
-                if (_isBulkMode)
-                {
-                    AddToBulk(new UpdateOneModel<BsonDocument>(nullFilter, unset) { ArrayFilters = parent.Filters }, key, eventSequenceNumber);
-                }
-                else
+                if (!_isBulkMode || !await AddToBulk(new UpdateOneModel<BsonDocument>(nullFilter, unset) { ArrayFilters = parent.Filters }, key, eventSequenceNumber))
                 {
                     await Collection.UpdateOneAsync(nullFilter, unset, new UpdateOptions { ArrayFilters = parent.Filters });
                 }
@@ -300,25 +312,31 @@ public class Sink(
                 IsUpsert = isUpsert,
                 ArrayFilters = converted.ArrayFilters
             };
-            AddToBulk(updateModel, key, eventSequenceNumber);
+            Action? cacheState = null;
             if (!changeset.HasJoined())
             {
                 var cacheKey = converter.ToBsonValue(key).ToString()!;
-                _bulkStateCache[cacheKey] = changeset.CurrentState;
-                _bulkKeysByCacheKey[cacheKey] = key;
-                _bulkPendingDeletes.TryRemove(cacheKey, out _);
-                if (eventSequenceNumber.IsActualValue)
+                cacheState = () =>
                 {
-                    RecordBulkWatermark(cacheKey, eventSequenceNumber.Value);
-                }
+                    _bulkStateCache[cacheKey] = changeset.CurrentState;
+                    _bulkKeysByCacheKey[cacheKey] = key;
+                    _bulkPendingDeletes.TryRemove(cacheKey, out _);
+                    if (eventSequenceNumber.IsActualValue)
+                    {
+                        RecordBulkWatermark(cacheKey, eventSequenceNumber.Value);
+                    }
+                };
             }
 
-            if (changeset.HasJoined())
+            if (await AddToBulk(updateModel, key, eventSequenceNumber, cacheState))
             {
-                return await ExecuteBulk();
-            }
+                if (changeset.HasJoined())
+                {
+                    return await ExecuteBulk();
+                }
 
-            return await FlushBulkIfNeeded();
+                return await FlushBulkIfNeeded();
+            }
         }
 
         await Collection.UpdateOneAsync(
@@ -351,8 +369,31 @@ public class Sink(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Admission to the window closes first, so the final flush holds every write that was accepted into it and the
+    /// closing finishes however many writers keep arriving. A write arriving while the window closes waits for it to
+    /// finish and is then written directly, after the flushed batch.
+    /// </remarks>
     public async Task<IEnumerable<FailedPartition>> EndBulk()
     {
+        var closing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        while (true)
+        {
+            Task previousClosing;
+            lock (_bulkLock)
+            {
+                if (_closing is null)
+                {
+                    _closing = closing;
+                    break;
+                }
+
+                previousClosing = _closing.Task;
+            }
+
+            await previousClosing;
+        }
+
         // Bulk mode ends whatever the final flush does: a sink left in bulk mode would hold every later
         // write back until a thousand of them had queued up.
         try
@@ -373,6 +414,13 @@ public class Sink(
             _bulkKeysByCacheKey.Clear();
             _bulkWatermarks.Clear();
             _bulkPendingDeletes.Clear();
+
+            lock (_bulkLock)
+            {
+                _closing = null;
+            }
+
+            closing.SetResult();
         }
     }
 
@@ -706,14 +754,44 @@ public class Sink(
         return GetCollation(options);
     }
 
-    void AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber)
+    /// <summary>
+    /// Queues an operation into the open bulk window, together with the bulk state that describes it.
+    /// </summary>
+    /// <param name="operation">The <see cref="WriteModel{TDocument}"/> to queue.</param>
+    /// <param name="key">The <see cref="Key"/> the operation is for.</param>
+    /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> the operation applies.</param>
+    /// <param name="whenQueued">Optional update of the bulk state, made atomically with queueing the operation.</param>
+    /// <returns>True if the operation was queued; false if no bulk window is open and the caller must write directly.</returns>
+    /// <remarks>
+    /// Checking the window and queueing happen under one lock, so <see cref="EndBulk"/> either flushes the operation or
+    /// never admits it. While a window is closing, the caller waits for it to finish before it is told to write directly.
+    /// </remarks>
+    async Task<bool> AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber, Action? whenQueued = null)
     {
-        lock (_bulkLock)
+        while (true)
         {
-            var operationIndex = _bulkOperations.Count;
-            _bulkOperations.Add(operation);
-            _bulkOperationMetadata[operationIndex] = (key, eventSequenceNumber);
-            _currentBulkSize += EstimateOperationSize(operation);
+            Task closing;
+            lock (_bulkLock)
+            {
+                if (!_isBulkMode)
+                {
+                    return false;
+                }
+
+                if (_closing is null)
+                {
+                    var operationIndex = _bulkOperations.Count;
+                    _bulkOperations.Add(operation);
+                    _bulkOperationMetadata[operationIndex] = (key, eventSequenceNumber);
+                    _currentBulkSize += EstimateOperationSize(operation);
+                    whenQueued?.Invoke();
+                    return true;
+                }
+
+                closing = _closing.Task;
+            }
+
+            await closing;
         }
     }
 
