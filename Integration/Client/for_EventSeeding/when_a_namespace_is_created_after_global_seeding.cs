@@ -24,6 +24,19 @@ public class when_a_namespace_is_created_after_global_seeding(context context) :
 
         protected override void ConfigureServices(IServiceCollection services) => services.AddSingleton(_observer);
 
+        async Task Establish()
+        {
+            if (ChronicleFixture.Options.Mode == ChronicleRuntimeMode.InProcess)
+            {
+                // The in-process fixture removes the server startup task. Reproduce its System-store
+                // registration here so the durable notification has a schema and a subscribed consumer.
+                await Services.GetRequiredService<Cratis.Chronicle.EventTypes.IEventTypes>()
+                    .DiscoverAndRegister(Concepts.EventStoreName.System);
+                await Services.GetRequiredService<Observation.Reactors.Kernel.IReactors>()
+                    .DiscoverAndRegister(Concepts.EventStoreName.System, Concepts.EventStoreNamespaceName.Default);
+            }
+        }
+
         async Task Because()
         {
             EventStore.Namespace.ShouldEqual(EventStoreNamespaceName.Default);
@@ -38,10 +51,12 @@ public class when_a_namespace_is_created_after_global_seeding(context context) :
             {
                 EventStore = EventStore.Name.Value
             }).EnsureSuccess();
-            globalSeeds.ByEventSource.Single().Entries.Count().ShouldEqual(1);
+            globalSeeds.ByEventSource.Single().Entries.Count.ShouldEqual(1);
 
             var request = new EnsureNamespaceRequest { EventStore = EventStore.Name.Value, Namespace = "future" };
-            (await services.Namespaces.EnsureNamespace(request)).IsSuccess.ShouldBeTrue();
+            var ensured = await services.Namespaces.EnsureNamespace(request);
+            ensured.ExceptionMessages.ShouldBeEmpty();
+            ensured.IsSuccess.ShouldBeTrue();
             var future = await Services.GetRequiredService<IChronicleClient>().GetEventStore(EventStore.Name, "future");
             await future.WaitForRegistration();
 

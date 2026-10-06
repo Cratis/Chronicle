@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage.Namespaces;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
@@ -28,22 +29,32 @@ public class Namespaces(
     public Task EnsureDefault() => Ensure(EventStoreNamespaceName.Default);
 
     /// <inheritdoc/>
+    /// <exception cref="NamespaceAddedCouldNotBeAppended">The durable namespace creation notification could not be appended.</exception>
     public async Task Ensure(EventStoreNamespaceName @namespace)
     {
         if (State.Namespaces.Any(_ => _.Name.Value.Equals(@namespace.Value, StringComparison.InvariantCultureIgnoreCase))) return;
 
         logger.AddingNamespace(@namespace);
-        State.NewNamespaces.Add(new NamespaceState(@namespace, DateTimeOffset.UtcNow));
-
         var eventStoreName = (EventStoreName)this.GetPrimaryKeyString();
+        var added = new NamespaceAdded(eventStoreName, @namespace);
+
+        // Record the notification before committing the namespace. Otherwise a failed append followed by
+        // Ensure would find an existing namespace and permanently skip global seeding. Retried notifications
+        // are safe because each namespace's seeding grain tracks the entries it has already appended.
+        var result = await GrainFactory.GetSystemEventSequence().Append(@namespace.Value, added);
+        if (!result.IsSuccess)
+        {
+            throw new NamespaceAddedCouldNotBeAppended(eventStoreName, @namespace);
+        }
+
+        State.NewNamespaces.Add(new NamespaceState(@namespace, DateTimeOffset.UtcNow));
         var channelId = ChannelId.Create(WellKnownBroadcastChannelNames.NamespaceAdded, eventStoreName);
         await WriteStateAsync();
 
         logger.BroadcastAddedNamespace(@namespace);
 
         var channelWriter = _namespaceAddedChannel.GetChannelWriter<NamespaceAdded>(channelId);
-        var eventStore = this.GetPrimaryKeyString();
-        await channelWriter.Publish(new NamespaceAdded(eventStore, @namespace));
+        await channelWriter.Publish(added);
     }
 
     /// <inheritdoc/>
