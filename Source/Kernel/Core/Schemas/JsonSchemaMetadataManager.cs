@@ -345,12 +345,16 @@ public class JsonSchemaMetadataManager(
                             continue;
                         }
 
-                        array[i] = actionName switch
+                        var restored = actionName switch
                         {
                             SchemaMetadataActionFailed.ReleaseAction => RestoreReleasedContainerShape(handled, itemSchema),
                             ErasureFenceAction => RestoreErasedValueShape(handled, itemSchema),
                             _ => handled
                         };
+                        if (!ReferenceEquals(restored, element))
+                        {
+                            array[i] = restored;
+                        }
                         handlerApplied = true;
                     }
                     catch (Exception ex)
