@@ -48,4 +48,26 @@ public interface IJsonSchemaMetadataValueHandler
     /// <param name="value">Value to release.</param>
     /// <returns>Released value.</returns>
     Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value);
+
+    /// <summary>
+    /// Applies recorded erasure to plaintext without attempting decryption or provisioning a key.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The event store namespace.</param>
+    /// <param name="identifier">The subject identifier.</param>
+    /// <param name="value">The already-released value.</param>
+    /// <returns>The original plaintext or its erased value.</returns>
+    Task<JsonNode> ApplyErasureFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        Task.FromResult(value);
+
+    /// <summary>
+    /// Releases a stored value without treating an unconfirmed missing key as erasure.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The event store namespace.</param>
+    /// <param name="identifier">The original subject identifier.</param>
+    /// <param name="value">The protected value.</param>
+    /// <returns>The released or confirmed erased value.</returns>
+    Task<JsonNode> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        Release(eventStore, eventStoreNamespace, identifier, value);
 }

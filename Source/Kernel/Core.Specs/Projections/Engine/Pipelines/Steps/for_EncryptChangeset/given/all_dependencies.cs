@@ -46,6 +46,9 @@ public class all_dependencies : Specification
         _complianceManager.ApplyToReadModel(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
             .Returns(ci => Task.FromResult(new JsonObject()));
 
+        _complianceManager.ApplyErasureFence(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
+            .Returns(ci => Task.FromResult(ci.ArgAt<JsonObject>(4)));
+
         _objectComparer.Compare(Arg.Any<ExpandoObject>(), Arg.Any<ExpandoObject>(), out Arg.Any<IEnumerable<PropertyDifference>>())
             .Returns(true);  // true = equal (no differences)
 

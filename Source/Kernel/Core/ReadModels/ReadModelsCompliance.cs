@@ -72,6 +72,39 @@ public class ReadModelsCompliance(
     }
 
     /// <inheritdoc/>
+    public async Task<ExpandoObject> ApplyErasureFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, ExpandoObject instance)
+    {
+        var values = (IDictionary<string, object?>)instance;
+        var subject = values.TryGetValue(WellKnownProperties.Subject, out var storedSubject) && storedSubject is string stored
+            ? stored
+            : identifier;
+        var subjects = values.TryGetValue(WellKnownProperties.Subjects, out var storedSubjects) ? ReadModelSubjects.From(storedSubjects) : [];
+        var json = expandoObjectConverter.ToJsonObject(instance, schema);
+        var fenced = await HandleBySubject(json, subject, subjects, (owner, slice) => complianceManager.ApplyErasureFence(eventStore, eventStoreNamespace, schema, owner, slice));
+        if (JsonNode.DeepEquals(json, fenced))
+        {
+            return instance;
+        }
+
+        var result = expandoObjectConverter.ToExpandoObject(fenced, schema);
+        var resultValues = (IDictionary<string, object?>)result;
+        foreach (var property in resultValues.Keys.Where(property => !values.ContainsKey(property)).ToArray())
+        {
+            resultValues.Remove(property);
+        }
+
+        foreach (var (property, value) in values)
+        {
+            if (!resultValues.ContainsKey(property))
+            {
+                resultValues[property] = value;
+            }
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
     public async Task<JsonObject> ReleaseJson(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,

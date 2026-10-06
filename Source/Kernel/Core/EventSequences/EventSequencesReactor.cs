@@ -88,7 +88,7 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
         var subject = original.Context.Subject?.IsSet == true ? original.Context.Subject.Value : original.Context.EventSourceId.Value;
 
         // Revision requests own protected content. Release it here; Revise owns protection for storage.
-        var releasedContent = await metadataManager.Release(context.EventStore, context.Namespace, schema.Schema, subject, content);
+        var releasedContent = await metadataManager.ReleaseStrict(context.EventStore, context.Namespace, schema.Schema, subject, content);
         await eventSequence.Revise(
             @event.SequenceNumber,
             @event.EventType,

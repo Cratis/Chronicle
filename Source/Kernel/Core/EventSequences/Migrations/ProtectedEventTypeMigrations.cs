@@ -44,9 +44,9 @@ internal class ProtectedEventTypeMigrations(
     {
         var sourceSchema = await eventTypes.GetFor(eventType.Id, eventType.Generation);
         var plaintext = sourceSchema.Schema.HasSchemaMetadata()
-            ? await metadataManager.Release(eventStore, @namespace, sourceSchema.Schema, subject, protectedContent)
+            ? await metadataManager.ReleaseStrict(eventStore, @namespace, sourceSchema.Schema, subject, protectedContent)
             : protectedContent;
-        return await MigratePlaintext(eventStore, @namespace, eventType, plaintext, protectedEvent, subject);
+        return await MigratePlaintext(eventStore, @namespace, eventType, plaintext, protectedEvent, subject, storedContent: true);
     }
 
     /// <summary>
@@ -58,6 +58,7 @@ internal class ProtectedEventTypeMigrations(
     /// <param name="plaintext">The original plaintext JSON content.</param>
     /// <param name="protectedEvent">The already-protected source generation.</param>
     /// <param name="subject">The original event's compliance subject.</param>
+    /// <param name="storedContent">Whether the source is already stored and must honor prior subject erasure.</param>
     /// <returns>Protected content for every generation.</returns>
     internal async Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigratePlaintext(
         EventStoreName eventStore,
@@ -65,7 +66,8 @@ internal class ProtectedEventTypeMigrations(
         EventType eventType,
         JsonObject plaintext,
         ExpandoObject protectedEvent,
-        string subject)
+        string subject,
+        bool storedContent = false)
     {
         var sourceSchema = await eventTypes.GetFor(eventType.Id, eventType.Generation);
         var plaintextEvent = converter.ToExpandoObject(plaintext, sourceSchema.Schema);
@@ -88,7 +90,9 @@ internal class ProtectedEventTypeMigrations(
             }
 
             var json = converter.ToJsonObject(content, schema.Schema);
-            var applied = await metadataManager.Apply(eventStore, @namespace, schema.Schema, subject, json);
+            var applied = storedContent
+                ? await metadataManager.ApplyToReadModel(eventStore, @namespace, schema.Schema, subject, json)
+                : await metadataManager.Apply(eventStore, @namespace, schema.Schema, subject, json);
             protectedGenerations[generation] = converter.ToExpandoObject(applied, schema.Schema);
         }
 
