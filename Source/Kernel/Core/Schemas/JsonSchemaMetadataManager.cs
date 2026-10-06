@@ -24,6 +24,7 @@ public class JsonSchemaMetadataManager(
     IInstancesOf<IJsonSchemaMetadataValueHandler> propertyValueHandlers,
     ILogger<JsonSchemaMetadataManager> logger) : IJsonSchemaMetadataManager
 {
+    const string ErasureFenceAction = "apply erasure fence";
     readonly Dictionary<(SchemaMetadataCategory Category, SchemaMetadataTypeName Type), IJsonSchemaMetadataValueHandler> _propertyValueHandlers =
         propertyValueHandlers.ToDictionary(_ => (_.Category, _.Type), _ => _);
     readonly IReadOnlyCollection<SchemaMetadataCategory> _categories = propertyValueHandlers.Select(_ => _.Category).Distinct().ToArray();
@@ -77,6 +78,51 @@ public class JsonSchemaMetadataManager(
         var result = (json.DeepClone() as JsonObject)!;
         await HandleActionFor(schema, identifier, result!, SchemaMetadataActionFailed.ReleaseAction, async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
         return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<JsonObject> ApplyErasureFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
+    {
+        if (!schema.HasSchemaMetadata())
+        {
+            return json;
+        }
+
+        var result = (json.DeepClone() as JsonObject)!;
+        await HandleActionFor(schema, identifier, result, ErasureFenceAction, async (handler, subject, value) => await handler.ApplyErasureFence(eventStore, eventStoreNamespace, subject, value), strictRelease: true);
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<JsonObject> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
+    {
+        if (!schema.HasSchemaMetadata())
+        {
+            return json;
+        }
+
+        var result = (json.DeepClone() as JsonObject)!;
+        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ReleaseAction, async (handler, subject, value) => await handler.ReleaseStrict(eventStore, eventStoreNamespace, subject, value), strictRelease: true);
+        return result;
+    }
+
+    static JsonNode RestoreErasedContainerShape(JsonNode value, JsonSchema schema)
+    {
+        if (value is JsonValue scalar && scalar.TryGetValue<string>(out var text) && text.Length == 0)
+        {
+            schema = schema.ActualTypeSchema;
+            if (schema.IsArray)
+            {
+                return new JsonArray();
+            }
+
+            if (schema.Type.HasFlag(JsonObjectType.Object))
+            {
+                return new JsonObject();
+            }
+        }
+
+        return value;
     }
 
     static JsonNode? RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
@@ -135,7 +181,8 @@ public class JsonSchemaMetadataManager(
         JsonObject json,
         string actionName,
         Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> action,
-        string path = "")
+        string path = "",
+        bool strictRelease = false)
     {
         var metadataForContainer = MetadataAcrossCategories(schema).ToArray();
         foreach (var (property, value) in json.ToArray())
@@ -159,6 +206,17 @@ public class JsonSchemaMetadataManager(
                         try
                         {
                             var handled = await action(handler, identifier, value);
+                            if (actionName == ErasureFenceAction)
+                            {
+                                if (ReferenceEquals(handled, value))
+                                {
+                                    handlerApplied = true;
+                                    continue;
+                                }
+
+                                handled = RestoreErasedContainerShape(handled, propertySchema);
+                            }
+
                             json[property] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, propertySchema) : handled;
                             handlerApplied = true;
                         }
@@ -171,7 +229,7 @@ public class JsonSchemaMetadataManager(
                             // entire query, so surface it as empty — the shape an erased subject already produces
                             // — and keep the diagnostic, which names the property, the identifier and the likely
                             // cause, in the log.
-                            if (actionName != SchemaMetadataActionFailed.ReleaseAction)
+                            if (actionName != SchemaMetadataActionFailed.ReleaseAction || strictRelease)
                             {
                                 throw failure;
                             }
@@ -195,14 +253,14 @@ public class JsonSchemaMetadataManager(
                     // property under them for a marker to sit on. Descending would report every one of them as drift
                     // and fail a document that matches its schema. Only the descent is skipped — a value marked
                     // [PII] or [Encrypted] is still handled as a whole above, like any other container.
-                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath);
+                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath, strictRelease);
                 }
                 else if (!handlerApplied && value is JsonArray jsonArrayValue)
                 {
                     // The property itself was not encrypted as a whole, so descend into the array and handle
                     // schema metadata that lives on the element type — a [PII]/[Encrypted] scalar concept (e.g.
                     // IReadOnlyList<Email>) or a member marked that way inside element objects.
-                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath);
+                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath, strictRelease);
                 }
             }
         }
@@ -214,7 +272,8 @@ public class JsonSchemaMetadataManager(
         JsonArray array,
         string actionName,
         Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> action,
-        string path)
+        string path,
+        bool strictRelease = false)
     {
         var itemSchema = arraySchema.Item?.ActualSchema;
         if (itemSchema is null)
@@ -240,6 +299,17 @@ public class JsonSchemaMetadataManager(
                     try
                     {
                         var handled = await action(handler, identifier, element);
+                        if (actionName == ErasureFenceAction)
+                        {
+                            if (ReferenceEquals(handled, element))
+                            {
+                                handlerApplied = true;
+                                continue;
+                            }
+
+                            handled = RestoreErasedContainerShape(handled, itemSchema);
+                        }
+
                         array[i] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, itemSchema) : handled;
                         handlerApplied = true;
                     }
@@ -249,7 +319,7 @@ public class JsonSchemaMetadataManager(
 
                         // Same asymmetry as the property walk above — apply fails, release degrades the
                         // single element so the rest of the array, and the query, still come back.
-                        if (actionName != SchemaMetadataActionFailed.ReleaseAction)
+                        if (actionName != SchemaMetadataActionFailed.ReleaseAction || strictRelease)
                         {
                             throw failure;
                         }
@@ -265,11 +335,11 @@ public class JsonSchemaMetadataManager(
             // descend into the detached original or decrypt members that were not separately encrypted.
             if (!handlerApplied && element is JsonObject elementObject && !itemSchema.DescribesGeospatialValue())
             {
-                await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath);
+                await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath, strictRelease);
             }
             else if (!handlerApplied && element is JsonArray elementArray)
             {
-                await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath);
+                await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath, strictRelease);
             }
         }
     }

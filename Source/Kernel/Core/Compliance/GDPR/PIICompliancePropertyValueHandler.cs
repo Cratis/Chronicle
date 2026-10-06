@@ -43,6 +43,34 @@ public class PIICompliancePropertyValueHandler(
     }
 
     /// <inheritdoc/>
+    public async Task<JsonNode> ApplyErasureFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is { NewKeyAllowed: false }
+            ? JsonValue.Create(string.Empty)
+            : value;
+
+    /// <inheritdoc/>
+    public async Task<JsonNode> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
+    {
+        if (!ProtectedValueCodec.TryDecodeCipherText(encryption, value.ToString(), out var encrypted))
+        {
+            return value;
+        }
+
+        var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier);
+        if (key is not null)
+        {
+            return ProtectedValueCodec.Decrypt(encryption, key, encrypted);
+        }
+
+        if (await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is not null)
+        {
+            return JsonValue.Create(string.Empty);
+        }
+
+        throw new MissingEncryptionKey(identifier);
+    }
+
+    /// <inheritdoc/>
     public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
         // Only a value this encryption produced can be released. One that carries none of its shape was never
