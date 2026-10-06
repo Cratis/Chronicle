@@ -58,12 +58,6 @@ public class PIICompliancePropertyValueHandler(
     }
 
     /// <inheritdoc/>
-    public async Task<JsonNode> ApplyErasureFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
-        await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is { NewKeyAllowed: false }
-            ? JsonValue.Create(string.Empty)
-            : value;
-
-    /// <inheritdoc/>
     /// <remarks>
     /// Ciphertext that cannot be unwrapped with the current key is unrecoverable either way. For a subject
     /// with recorded erasure, the overwhelmingly likely cause is pre-erasure ciphertext; permanently failing
