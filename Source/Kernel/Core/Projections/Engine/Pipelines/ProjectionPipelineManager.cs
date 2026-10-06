@@ -91,8 +91,7 @@ public class ProjectionPipelineManager(
             new EncryptChangeset(readModelsCompliance, objectComparer, eventStore, @namespace),
             new StoreFutures(projectionFutures, futuresTracker, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
-            new SaveChanges(sink, namespaceStorage.Changesets, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>()),
-            new RefreshReleasedReadModel(readModelsCompliance, eventStore, @namespace)
+            new SaveChanges(sink, namespaceStorage.Changesets, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>())
         ];
 
         var handleLock = _handleLocks.GetOrAdd(key, _ => new ProjectionHandleLock());
