@@ -16,5 +16,5 @@ public class and_the_child_identifier_is_id : given.a_child_removal_from_all
     async Task Because() => await _sink.ApplyChanges(new Key("order", ArrayIndexers.NoIndexers), _changeset, EventSequenceNumber.First);
 
     [Fact] void should_pull_children_using_the_stored_identifier_name() => _update.ShouldEqual(BsonDocument.Parse("""{ "$pull": { "items": { "_id": "item" } } }"""));
-    [Fact] void should_remove_from_every_parent() => _filter.ShouldEqual(new BsonDocument());
+    [Fact] void should_remove_from_every_parent_with_an_array() => _filter.ShouldEqual(BsonDocument.Parse("""{ "items": { "$type": 4 } }"""));
 }

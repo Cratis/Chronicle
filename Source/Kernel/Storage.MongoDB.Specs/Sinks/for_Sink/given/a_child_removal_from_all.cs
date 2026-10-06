@@ -21,6 +21,8 @@ public class a_child_removal_from_all : Specification
     protected BsonDocument _update;
     protected BsonDocument _filter;
     protected BsonDocument[] _arrayFilters;
+    protected BsonValue[] _leafValues = [];
+    protected BsonValue[] _matchedLeafValues;
 
     void Establish()
     {
@@ -50,6 +52,14 @@ public class a_child_removal_from_all : Specification
                 _update = call.Arg<UpdateDefinition<BsonDocument>>().Render(renderArgs).AsBsonDocument;
                 _filter = call.Arg<FilterDefinition<BsonDocument>>().Render(renderArgs);
                 _arrayFilters = call.Arg<UpdateOptions>()?.ArrayFilters?.Cast<BsonDocumentArrayFilterDefinition<BsonDocument>>().Select(filter => filter.Document).ToArray() ?? [];
+
+                // Model only the leaf $type predicate so these unit specs expose which BSON values the
+                // generated UpdateMany filter would target; update rendering itself uses the real driver.
+                var leafPath = _update["$pull"].AsBsonDocument.GetElement(0).Name;
+                var leafType = _filter.TryGetValue(leafPath, out var condition) && condition.AsBsonDocument.TryGetValue("$type", out var type)
+                    ? (BsonType?)type.AsInt32
+                    : null;
+                _matchedLeafValues = _leafValues.Where(value => leafType is null || value.BsonType == leafType).ToArray();
                 return Task.FromResult<UpdateResult>(new UpdateResult.Acknowledged(2, 2, null));
             });
         var converter = Substitute.For<IMongoDBConverter>();

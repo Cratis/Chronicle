@@ -983,6 +983,11 @@ public class Sink(
             path.Add($"$[{identifier}]");
         }
 
+        if (arrayFilters.Count == 0)
+        {
+            filter = Builders<BsonDocument>.Filter.Type(string.Join('.', path), BsonType.Array);
+        }
+
         var identifiedByProperty = childRemoved.IdentifiedByProperty.ToMongoDB();
         var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
         var update = Builders<BsonDocument>.Update.PullFilter(string.Join('.', path), childFilter);
