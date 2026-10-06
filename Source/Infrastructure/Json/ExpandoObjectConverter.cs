@@ -189,8 +189,13 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return ConvertToJsonNodeFromUnknownFormat(value, schemaProperty);
     }
 
-    object? ConvertFromJsonNode(JsonNode jsonNode, JsonSchema schemaProperty)
+    object? ConvertFromJsonNode(JsonNode? jsonNode, JsonSchema schemaProperty)
     {
+        if (jsonNode is null)
+        {
+            return null;
+        }
+
         if (jsonNode is JsonObject childObject)
         {
             if (schemaProperty.IsDictionary)
@@ -221,7 +226,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             {
                 return array.Select(ConvertUnknownSchemaTypeToClrType).ToArray();
             }
-            return array.Select(_ => ConvertFromJsonNode(_!, schemaProperty.Item!)).ToArray();
+            return array.Select(_ => ConvertFromJsonNode(_, schemaProperty.Item!)).ToArray();
         }
 
         if (typeFormats.IsKnown(schemaProperty.Format!))

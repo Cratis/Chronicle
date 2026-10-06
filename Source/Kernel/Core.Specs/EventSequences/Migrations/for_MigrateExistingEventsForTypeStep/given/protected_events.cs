@@ -39,6 +39,7 @@ public class protected_events : Specification
     protected Catch<JobStepResult> _result;
     protected readonly Dictionary<ulong, IDictionary<EventTypeGeneration, ExpandoObject>> _stored = [];
     protected readonly List<string> _migrationInputs = [];
+    protected readonly List<ExpandoObject> _plaintextEvents = [];
     protected readonly List<AppendedEvent> _events = [];
     protected const string Store = "test-event-store";
     protected const string Namespace = "default";
@@ -74,6 +75,7 @@ public class protected_events : Specification
             var plaintext = call.ArgAt<JsonObject>(2);
             var name = (UsesObjectArray ? plaintext["contacts"]![0]!["name"] : plaintext["name"])!.GetValue<string>();
             _migrationInputs.Add(name);
+            _plaintextEvents.Add(call.ArgAt<ExpandoObject>(3));
             return Task.FromResult<IDictionary<EventTypeGeneration, ExpandoObject>>(new Dictionary<EventTypeGeneration, ExpandoObject>
             {
                 [1] = call.ArgAt<ExpandoObject>(3),
