@@ -6,7 +6,7 @@ description: Add a Chronicle projection to an existing read model slice.
 
 # Add a Projection
 
-Add a Chronicle projection that populates a read model from events. Invoke the **add-projection** skill and follow `.cratis/ai/rules/vertical-slices.md` (projections). For reactors, use the **add-reactor** prompt instead.
+Add a Chronicle projection that populates a read model from events. Invoke the **cratis-chronicle-projection** skill and follow `.cratis/ai/rules/vertical-slices.md` (projections). For reactors, use the **add-reactor** prompt instead.
 
 ## Confirm first
 

@@ -78,6 +78,21 @@ public record <ReadModelName>(
 - `Cratis.Chronicle.ReadModels.IndexAttribute` (`[Index]`) marks a property for
   indexing in the sink.
 
+### Shape the model for its consumer
+
+Prefer a slim, purpose-built projection over assembling a screen by repeatedly
+joining broad collections at query time. A summary needs summary fields, not
+every detail and historical entry. This is a design convention, **not a
+one-collection framework requirement**: bounded query composition remains valid,
+including when separate security or compliance boundaries must be preserved.
+
+Embed children only when their cardinality and payload are bounded by the use
+case. Keep growing activity, message, or attempt histories in separately paged
+timeline models; embedding all history makes every parent read and emission
+larger. Evaluate variants when lifecycle shapes genuinely diverge, not merely
+because a status changes. See the projection skill for children and variants,
+and [query cost and composition](references/queries.md#cost-and-composition).
+
 ## Step 3 — Choose a projection or a reducer
 
 | | Projection | Reducer |
@@ -166,6 +181,23 @@ passive: no sink, nothing materialized, and the instance is computed on demand
 from the events at the moment it is read. Reach for it when a decision needs the
 model **strongly consistent** rather than eventually consistent.
 
+**`IMongoCollection<T>` reads only the sink.** It cannot compute passive state:
+a fresh passive model has no maintained collection, and a formerly active one
+may leave stale documents. Use Chronicle's keyed read API above (or supported
+read-model parameter injection) when you need its computed state. Do not remove
+`[Passive]` merely to make a sink query work when the model contains secrets.
+Keep secret-bearing state on the protected access path; project only safe
+metadata into a separate list/search model.
+
+The number of passive types is not itself a performance smell. Review event
+history length, invocation frequency, and the consistency/security requirement;
+repeated reconstruction of large histories on a hot path is the concern.
+Passivity does not itself authorize access or encrypt secrets.
+
+This access distinction was checked against Chronicle **v19.31.2**
+([passive projections](https://github.com/Cratis/Chronicle/blob/v19.31.2/Documentation/projections/declarative/passive.mdx),
+[passive reducers](https://github.com/Cratis/Chronicle/blob/v19.31.2/Documentation/reducers/passive-reducers.mdx)).
+
 `[Passive]` on its own does **not** make a read model a projection. It is
 deliberately excluded from the annotations that do; it changes how an existing
 projection is registered.
@@ -176,6 +208,19 @@ Build, fix every error, then prove the behavior: drive the contributing events
 through the read-model specification for this model and assert the projected
 state. Seed each contributing stream with its own event source when the model
 spans streams.
+
+## Route near misses
+
+- An accepted `.play` model under the model root covers the behavior, or the
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
+  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
+  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
+  say so and do not author `.play` from memory.
+  Edit code here only for infrastructure, clients, adapters, Screenplay code
+  attachments, or gap-fill scope (`cratis-screenplay-render-and-gap-fill`);
+  never edit Stage-managed output.
 
 ## Verify
 
@@ -188,7 +233,9 @@ spans streams.
 - Query methods are `static` and declare `ISubject<...>` rather than a concrete
   subject type.
 - A direct `GetInstanceById` result is checked for absence before use.
-- `[Passive]` is present only where a strongly consistent command-side read is
-  genuinely required.
+- Passive access goes through Chronicle, not a sink collection; consistency,
+  access frequency, and non-materialization requirements justify the choice.
+- Summary payloads and embedded children are bounded; growing histories have
+  a separate paged surface, and no secret was materialized to fix a query.
 - The project builds clean and the read-model specifications pass against the
   verified package versions.

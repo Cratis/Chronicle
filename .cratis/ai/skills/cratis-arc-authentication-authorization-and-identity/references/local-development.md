@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/local-development.md -->
 # Running with an identity locally
 
-Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.16.0`.
+Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.41.1`.
 
 ## What Arc does not give you
 
@@ -30,8 +30,11 @@ public interface ICanProvideUsers { Task<IEnumerable<User>> Provide(); }
 ```
 
 ⚠️ Both are mapped `AllowAnonymous` and **unconditionally** — there is no
-environment check in the mapper. Whatever your implementations return is public
-to anyone who can reach the application. Register them only for a development
+environment check in the mapper, so they are anonymous in Production too, and an
+ASP.NET `FallbackPolicy` does not protect them. Without providers they return
+empty arrays. Whatever your implementations return is public to anyone who can
+reach the application. The `Cratis:Arc:Introspection` options do not affect them;
+restrict them at the ingress (see the discovery note in the skill). Register them only for a development
 environment, and return fixtures rather than production users or tenants.
 
 ## Supplying an identity locally

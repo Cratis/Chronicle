@@ -1,6 +1,6 @@
 ---
 name: cratis-event-model-diagram
-description: Create and maintain Mermaid eventmodeling diagrams for a Cratis module or feature, and keep them in sync with the code. Use when adding, renaming, moving, or deleting a module, feature, behavior, command, event, read model, automation, translation, or cross-module flow. Do not use to decide the event vocabulary or stream boundaries - settle the model first, then render it here.
+description: Create and maintain Mermaid eventmodeling diagrams for a Cratis module or feature, and keep them in sync with their authority (the accepted `.play` model where one covers the scope, otherwise the code). Use when adding, renaming, moving, or deleting a module, feature, behavior, command, event, read model, automation, translation, or cross-module flow. Do not use to decide the event vocabulary or stream boundaries - settle the model first, then render it here.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-event-model-diagram/SKILL.md -->
@@ -74,22 +74,30 @@ tf 03 evt <EntityName><PastTenseVerb>
 rf 04 rmo <ReadModelName> ->> 03
 tf 05 ui <Persona>
 
-%% -- Automation: <ReactorName> (external side effect only) --
+%% -- Automation: <ReactorName> (reacts to our own event) --
 rf 06 evt <EntityName><PastTenseVerb>
 tf 07 pcr <ReactorName>
+%% add the next two frames only when the automation invokes a command
+tf 08 cmd <CommandName>
+tf 09 evt <EntityName><PastTenseVerb>
 
-%% -- Translation: <Source>.<Event> -> <Target>.<Reactor> --
-rf 08 evt <SourceModule>.<EventName>
-tf 09 pcr <TargetModule>.<ReactorName>
-tf 10 evt <TargetModule>.<EventName>
+%% -- Translation: <Outside>.<Fact> -> <Adapter> -> our event --
+rf 10 evt <ExternalSource>.<FactName>
+tf 11 pcr <AdapterName>
+tf 12 evt <EntityName><PastTenseVerb>
 ```
 
 - A state view's `rmo` references the event frames it projects from by number;
   its consumer `ui` frame auto-chains after it. A passive read model has no
   consumer UI — emit only the `rmo ... ->>` line with a `%% passive` comment.
-- Translation flows are reactor-only: `evt` to `pcr` to `evt`, with no
-  intermediate `cmd`. If you draw a `cmd` between the `pcr` and the resulting
-  event, it is an **automation**, not a translation — reclassify it.
+- One definition of Translation everywhere: data from **outside** our own facts
+  becomes our own facts. Its flow starts at an outside-origin `evt` (an
+  `<ExternalSource>.` prefix marks it), passes through the adapter `pcr`, and
+  ends at an event we own. A `pcr` that reacts to **our own** event is an
+  **automation**, whether it causes an external side effect, appends a
+  follow-up event, or invokes a command (then draw the `cmd` and its resulting
+  `evt` after the `pcr`). Classify by where the data comes from, not by how the
+  reactor is built.
 - Several consumers of one read model: declare each consumer `ui` as its own
   `rf` frame with an explicit `->>` back to the `rmo`.
 
@@ -106,17 +114,25 @@ language. Include commands that emit no event.
 1. **Discover** the behaviors by scanning the module for the artifacts that
    define them: command records for state changes, read models without a command
    handler for state views, `IReactor` implementations that call out of the
-   system for automations, and `IReactor` implementations that return events for
-   translations. Use the exact type names.
+   system or return events or commands in response to our own events for
+   automations, and adapters that take outside data in as our own events for
+   translations. Choose the **authority** here: when an accepted model covers
+   the scope (or the repository is opted in, per `cratis-screenplay-modeling-lifecycle`), read the behaviors from
+   its slices (`StateChange`, `StateView`, `Automation`, `Translate`) and render
+   from the model; otherwise the code is the authority. Report code that
+   disagrees with the model as drift, separately; do not add unmodeled behavior
+   to the diagram. Use the exact type names.
 2. **Order** frames by domain causality — what must happen before what. Put state
    views after the events they project from. Use `rf` only between independent
    flows, never between sibling events of one flow, or the diagram becomes a
    tall tower one event wide.
 3. **Write** the diagram and the command-rules table.
 4. **Verify** it renders without a syntax-error banner, then reconcile it against
-   the source: every behavior appears, classified by the marker it actually
-   contains. A clean render proves valid Mermaid, not completeness — close the
-   gaps against the code, never from memory.
+   the authority chosen in step 1 (the model's slices, or the code's markers):
+   every behavior appears, classified by the type the authority gives it. A clean
+   render proves valid Mermaid, not completeness — close the gaps against the
+   authority, never from memory. List model/code drift in the report instead of
+   resolving it in the diagram.
 
 ## Common mistakes
 
@@ -134,7 +150,7 @@ language. Include commands that emit no event.
 ## Verify
 
 - The diagram renders with no syntax-error banner.
-- Every behavior in the module appears, with the type its code actually has.
+- Every behavior in the module appears, with the type its authority (the accepted `.play` slice, otherwise the code) gives it; drift is reported separately.
 - Every event frame uses the exact event type name from the source.
 - Independent flows start with `rf`; sibling events within a flow do not.
 - Passive read models have no consumer `ui` frame.
@@ -144,6 +160,9 @@ language. Include commands that emit no event.
 
 ## Route near misses
 
+- An accepted model covers the scope (or the repository is opted in): it is the source for this
+  diagram; do not redraw from code and never change the model to match a
+  diagram. The diagram is a view of it.
 - Deciding the model rather than drawing one: `cratis-chronicle-event-modeling`
   for a hand-written Chronicle implementation, or
   `cratis-screenplay-event-modeling` when the model is authored as a Screenplay

@@ -7,6 +7,22 @@ license: MIT
 
 # Chronicle event modeling
 
+> **Model-first check.** If an accepted model under the model root covers this scope, or the
+> repository is opted in (the root, default `.cratis/screenplay/`, holds a committed `.play`
+> file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project explicitly set `mcpServers.screenplay.root` in
+> `.cratis/ai.json`), the model is the source of truth: use
+> `cratis-screenplay-event-modeling` (and the lifecycle in
+> `cratis-screenplay-modeling-lifecycle`, which holds the master definition)
+> instead of this skill. An empty directory, install output, a `.play` file
+> outside the root or an untracked or uncommitted draft is not consent. This skill is for
+> hand-written C# models where the repository has not opted in (never force a
+> model; only the entry-point session proposes one, at most once per session), and for
+> code-level work against an already accepted contract (stream identity,
+> compliance, specifications). If the repository is opted in and the Screenplay
+> skills are not installed, report the missing capability and block the
+> model-authoring work; do not write a competing brief here and never author
+> model syntax from memory.
+
 Use this **before writing code**, when behavior, event vocabulary, stream
 boundaries, or a multi-step flow is not already settled. The output is an
 implementation brief: which commands exist, which stream each event lands on,
@@ -39,11 +55,14 @@ Classify every behavior in the model as exactly one:
 | --- | --- | --- |
 | **State change** | accepts a command, appends events | command, validation, events |
 | **State view** | projects events into a queryable read model | read model plus a projection or a reducer |
-| **Automation** | reacts to events and causes an external side effect | a reactor |
-| **Translation** | reacts to events and appends follow-up events elsewhere | a reactor |
+| **Automation** | reacts to our own events and causes a side effect: an external call, a follow-up event (Screenplay `produces`) or a follow-up command (Screenplay `invokes`) | a reactor |
+| **Translation** | takes data from outside our own facts (an external system or another service) and records it as our own facts | an adapter at the boundary, often a reactor |
 
-Automation and translation differ in the *result*: an automation reaches out of
-the system, a translation stays inside it and produces new facts.
+The two differ in where the data comes from. An automation answers one of our own
+events. A translation brings outside data in and keeps the external fact distinct
+from the local one. A reactor that turns our own event into a follow-up event or
+command is therefore an **automation**, however it is built. In Screenplay terms
+these are the `Automation` and `Translate` slice types.
 
 ## Decide before implementing
 
@@ -60,8 +79,9 @@ the system, a translation stays inside it and produces new facts.
 - **Read models** — their consumers and their source events, and whether the
   model is projection-backed, reducer-backed, or `[Passive]` for a
   strongly-consistent command-side decision.
-- **Automations and translations** — which events they react to, whether they
-  emit follow-up events or run commands, and which side effects must not repeat.
+- **Automations and translations** — which events (or which outside data) they
+  react to, whether they emit follow-up events or run commands, and which side
+  effects must not repeat.
 - **Specifications** — the happy path, the validation failures, the constraints,
   the projections and reducers, and the reactor side effects.
 
@@ -81,9 +101,14 @@ than after the projection misbehaves.
   automation, or translation. An event nothing consumes is a smell: either a
   consumer is missing or the event should not exist.
 
-If a field can only be filled by reaching into another behavior's read model,
-you have found a missing event or a wrong stream boundary. Fix the model; do not
-cross-read at runtime.
+If a field can only be filled by reaching into another behavior's read model to
+*learn a fact the events should have carried*, you have found a missing event or
+a wrong stream boundary. Fix the model. A read-only cross-slice read through
+Chronicle is allowed where the rule needs it (an injected read model read by
+explicit key, or a `[Passive]` projection for a command-side decision); see
+Cross-slice patterns in `rules/vertical-slices.md`. Make such a read deliberate
+and name it in the brief, with the consistency it needs: a rule that must hold
+under concurrency uses the DCB pattern rather than a stale materialized read.
 
 ## Compliance modeling
 
@@ -152,13 +177,16 @@ remain separately authorized; a ready model authorizes none of them.
   property.
 - Every read-model field traces back to an event.
 - Every event has at least one consumer.
-- No behavior depends on reading another behavior's read model at runtime.
+- Every cross-slice read is deliberate, read-only, goes through Chronicle, and
+  is named in the brief with the consistency it needs; none stands in for a
+  missing event.
 - Personal data has a decided subject, and the subject is person-level or the
   trade-off is surfaced.
 - The specification outline names the failures, not only the happy path.
 
 ## Route near misses
 
+- A model covers the scope or the repository opted in (see the check at the top): start from `cratis-screenplay-event-modeling`; do not write the brief here.
 - Modeling the same system as a **Screenplay `.play` document** rather than as a
   brief for hand-written C#: `cratis-screenplay-event-modeling`. The method is the
   same; the artifact is a file that compiles, and the four behavior types above

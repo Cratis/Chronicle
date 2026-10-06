@@ -58,6 +58,7 @@ public class and_all_information_is_valid : Specification
 - **Seed prior state through `_scenario.Given` or `_scenario.Services`.** `_scenario.Given.ForEventSource(id).Events(...)` materializes the seeded events into an **in-memory read-model dictionary** the harness answers keyed reads from — it never reaches the event log (see the false-greens list below). To populate the DCB read models the validator/`Provide()`/`Handle()` inject, substitute `IReadModels` and register it (`_scenario.Services.Replace(new ServiceDescriptor(typeof(IReadModels), mock))`, mocking `GetInstanceById(...)`) or register projections with `_scenario.Services.AddReadModels(...)`.
 - **Validator/`Provide()` dependencies:** register them in `_scenario.Services`; Arc testing discovers the concrete validator automatically. When several specs need different injected validator states, test rejected variants by instantiating the validator directly (per-scenario state can be order-sensitive under parallel xUnit).
 - **`Provide()`:** drive it through `CommandScenario` end-to-end; when the handler's decision is pure given provided data, also test `Handle(providedValue)` directly.
+- **Command operations:** use **cratis-arc-command-operation** for decision/adapter specs and real `CommandScenario` execution, forward failure, compensation, and Chronicle commit rejection; a direct `Handle()` does not execute operations.
 
 #### Validation-failure assertions — non-negotiable
 
@@ -185,4 +186,4 @@ These supplement the universal conventions in [specs.csharp.md](./specs.csharp.m
 - [specs.csharp.md](./specs.csharp.md) — the universal `Specification` + NSubstitute base this builds on (and what framework specs use).
 - [vertical-slices.md](./vertical-slices.md) — what each artifact promises (the contract under spec).
 - [efcore.specs.md](./efcore.specs.md) — `DbContext` specs with SQLite in-memory.
-- skills: **write-specs**, **write-specs-events**, **write-specs-readmodels**.
+- skills: **cratis-application-slice-specifications**, **cratis-chronicle-event-specifications**, **cratis-chronicle-read-model-specifications**.

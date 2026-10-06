@@ -183,7 +183,7 @@
     },
     {
       "command": "jobs resume",
-      "effect": "resumes a stopped or failed background job"
+      "effect": "resumes a stopped background job"
     },
     {
       "command": "recommendations perform",
