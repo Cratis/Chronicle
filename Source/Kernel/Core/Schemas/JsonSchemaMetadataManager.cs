@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
@@ -99,7 +100,9 @@ public class JsonSchemaMetadataManager(
                 return propertySchema.Type.HasFlag(JsonObjectType.Boolean) ? JsonValue.Create(false) : JsonValue.Create(0);
             }
 
-            return JsonNode.Parse(text);
+            // Enum names and legacy scalar text must reach the converter unchanged when they do not
+            // match the declared JSON kind. Never pass decrypted parser diagnostics to the release log.
+            return TryParseReleasedScalar(text, propertySchema, out var parsed) ? parsed : released;
         }
 
         // A coarse schema metadata marker on a whole container is blob-encrypted to a single ciphertext string,
@@ -124,6 +127,25 @@ public class JsonSchemaMetadataManager(
         }
 
         return released;
+    }
+
+    static bool TryParseReleasedScalar(string text, JsonSchema schema, out JsonNode? parsed)
+    {
+        try
+        {
+            parsed = JsonNode.Parse(text);
+            var kind = parsed?.GetValueKind();
+            return schema.Type.HasFlag(JsonObjectType.Boolean)
+                ? kind is JsonValueKind.True or JsonValueKind.False
+                : kind == JsonValueKind.Number;
+        }
+        catch (JsonException)
+        {
+            // Released text is not a JSON scalar. Preserve it for legacy conversion without exposing
+            // the parser's value-bearing exception message or substituting a fabricated default.
+            parsed = null;
+            return false;
+        }
     }
 
     IEnumerable<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> MetadataAcrossCategories(JsonSchema schema) =>
