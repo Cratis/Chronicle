@@ -17,4 +17,18 @@ public record CatchUpObserverRequest(
     ObserverKey ObserverKey,
     ObserverType ObserverType,
     EventSequenceNumber FromEventSequenceNumber,
-    IEnumerable<EventType> EventTypes) : IObserverJobRequest;
+    IEnumerable<EventType> EventTypes) : IObserverJobRequest
+{
+    /// <summary>
+    /// Gets the partitions left behind by an earlier catch-up, each read from its own position, when this catch-up only
+    /// finishes what that one left behind. Empty for an ordinary catch-up over every partition.
+    /// </summary>
+    public IEnumerable<CatchUpObserverPartitionRange> PartitionsLeftBehind { get; init; } = [];
+
+    /// <summary>
+    /// Gets the <see cref="EventSequenceNumber"/> an earlier catch-up got every other partition to, when this catch-up
+    /// only finishes what that one left behind. The partitions left behind are read up to and including it, and the
+    /// observer is told it has caught up at least that far.
+    /// </summary>
+    public EventSequenceNumber ToEventSequenceNumber { get; init; } = EventSequenceNumber.Max;
+}

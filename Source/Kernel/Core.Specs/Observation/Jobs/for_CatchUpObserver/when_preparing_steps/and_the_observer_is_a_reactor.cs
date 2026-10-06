@@ -27,5 +27,5 @@ public class and_the_observer_is_a_reactor : given.a_catch_up_observer_job
     [Fact] void should_prepare_a_step_per_partition() => _job.PreparedSteps!.Count.ShouldEqual(2);
     [Fact] void should_prepare_steps_that_handle_events_for_a_partition() => _job.PreparedSteps!.All(step => step.Type == typeof(IHandleEventsForPartition)).ShouldBeTrue();
 
-    [Fact] void should_have_every_step_conclude_its_own_partition_rather_than_wait_for_the_job_to_report_back() => _job.PreparedSteps!.All(step => ((HandleEventsForPartitionArguments)step.Request).ConcludesPartitionCatchUp).ShouldBeTrue();
+    [Fact] void should_have_every_step_tell_the_observer_how_far_it_read_its_partition() => _job.PreparedSteps!.All(step => ((HandleEventsForPartitionArguments)step.Request).ConcludesPartitionCatchUp).ShouldBeTrue();
 }
