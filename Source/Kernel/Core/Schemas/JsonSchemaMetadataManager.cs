@@ -254,6 +254,15 @@ public class JsonSchemaMetadataManager(
             }
 
             var elementPath = $"{path}[{i}]";
+            if (element is JsonObject declaredObject && itemSchema.GetFlattenedProperties().Any() && !itemSchema.DescribesGeospatialValue())
+            {
+                // Declared object members have historically been protected individually, including
+                // projection child writes. Only arrays and objects without declared properties need
+                // whole-element protection; preserve the persisted member-level representation.
+                await HandleActionFor(itemSchema, identifier, declaredObject, actionName, action, elementPath);
+                continue;
+            }
+
             var handlerApplied = false;
             foreach (var (category, metadata) in itemMetadata.DistinctBy(_ => (_.Category, _.Metadata.metadataType)))
             {
