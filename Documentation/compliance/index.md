@@ -26,7 +26,7 @@ When an event is appended to the event log, Chronicle inspects the event's schem
 2. Encrypts the property value using that key.
 3. Stores the ciphertext in place of the plaintext value.
 
-When a projection or observer reads the event, Chronicle performs the reverse: it retrieves the key, decrypts each PII property, and delivers the plaintext value to the consumer. If the key has been deleted (because an erasure was requested), decryption fails gracefully and the value is returned as an empty string — the data is gone, but the event slot and all non-PII fields remain intact.
+When a projection or observer reads the event, Chronicle performs the reverse: it retrieves the key, decrypts each PII property, and delivers the plaintext value to the consumer. If the key has been deleted (because an erasure was requested), decryption fails gracefully and the value is returned as an empty string, `0`, `false` or `null` depending on the property's type, as described in [Erasing a subject](erasing-a-subject) — the data is gone, but the event slot and all non-PII fields remain intact.
 
 Encryption keys are managed by the `IPIIManager` grain in the Chronicle kernel. Keys are stored and retrieved by subject, so every individual whose data lives in the event store has their own key. Deleting a key is the Chronicle equivalent of GDPR erasure.
 
