@@ -6,7 +6,7 @@ description: Add a Chronicle reducer to a read model when model-bound and fluent
 
 # Add a Reducer
 
-Add an `IReducerFor<T>` reducer — the last-resort escape hatch for a "current state + event → next state" transition that model-bound projection attributes and fluent `IProjectionFor<T>` cannot express. Invoke the **add-reducer** skill and follow `.cratis/ai/rules/vertical-slices.md`. For ordinary projections, use the **add-projection** prompt instead.
+Add an `IReducerFor<T>` reducer — the last-resort escape hatch for a "current state + event → next state" transition that model-bound projection attributes and fluent `IProjectionFor<T>` cannot express. Invoke the **cratis-chronicle-reducer** skill and follow `.cratis/ai/rules/vertical-slices.md`. For ordinary projections, use the **add-projection** prompt instead.
 
 ## Confirm first
 

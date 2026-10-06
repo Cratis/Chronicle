@@ -16,12 +16,20 @@
     "  excludeChanged   globs that never count as a relevant change",
     "  requires.commands executables that must be on PATH",
     "  requires.paths   repo-relative literal paths that must all exist (no globbing)",
+    "  requires.packageScripts  package.json scripts that must be defined in the gate\u0027s working directory",
+    "                   (a g: script may instead be defined in the repository root package.json, which assumes",
+    "                   Yarn Berry, where a root-defined g: script runs from every workspace; no workspace",
+    "                   package.json is inspected); a missing script makes the gate a NO-OP instead of a",
+    "                   \u0022Couldn\u0027t find a script\u0022 failure",
     "  workingDirectory repo-relative directory the command runs in",
     "  workingDirectoryFrom  globs identifying the project file this gate builds; the command runs",
     "                   in that file\u0027s directory, and a repository holding none makes the gate a",
     "                   NO-OP. Globs are tried in order, so the list states a preference. Ignored",
     "                   when workingDirectory is set.",
     "  command          argv array \u2014 executed directly, never through a shell (no eval)",
+    "",
+    "Managed corpus and adapter trees (.cratis/**, .pi/**, .claude/**) never count as a relevant change:",
+    "a corpus update must not run a repository\u0027s application gates over files that are not its application.",
     "",
     "No gate names a product\u0027s solution, package or source root \u2014 a default that does would",
     "silently no-op in every repository except the one it was written for. The .NET and frontend",
@@ -33,7 +41,9 @@
     "own .cratis/ai/quality-gates.project.json, which the runner merges over this file by gate id",
     "(a project fact belongs there, never edited into this managed file, or the next managed update",
     "reports drift or discards it); or it points CRATIS_HOOKS_GATES at a file anywhere. Neither",
-    "requires a script fork.",
+    "requires a script fork. The merge is shallow: a field the override states replaces the managed one.",
+    "The one exception: an override that sets \u0022command\u0022 without \u0022requires\u0022 also drops this gate\u0027s",
+    "requires.packageScripts, since those guard the managed command, not the override\u0027s.",
     "",
     "Example .cratis/ai/quality-gates.project.json, for a repository whose frontend is not at the root:",
     "  { \u0022gates\u0022: [ { \u0022id\u0022: \u0022frontend-lint\u0022, \u0022workingDirectory\u0022: \u0022Source/App\u0022 } ] }",
@@ -64,7 +74,10 @@
       ],
       "excludeChanged": [
         "**/obj/**",
-        "**/bin/**"
+        "**/bin/**",
+        ".cratis/**",
+        ".pi/**",
+        ".claude/**"
       ],
       "requires": {
         "commands": [
@@ -95,7 +108,10 @@
       ],
       "excludeChanged": [
         "**/obj/**",
-        "**/bin/**"
+        "**/bin/**",
+        ".cratis/**",
+        ".pi/**",
+        ".claude/**"
       ],
       "requires": {
         "commands": [
@@ -129,7 +145,10 @@
       ],
       "excludeChanged": [
         "**/obj/**",
-        "**/bin/**"
+        "**/bin/**",
+        ".cratis/**",
+        ".pi/**",
+        ".claude/**"
       ],
       "requires": {
         "commands": [
@@ -162,7 +181,10 @@
         "**/wwwroot/**",
         "**/dist/**",
         "**/obj/**",
-        "**/bin/**"
+        "**/bin/**",
+        ".cratis/**",
+        ".pi/**",
+        ".claude/**"
       ],
       "requires": {
         "commands": [
@@ -190,11 +212,17 @@
         "**/wwwroot/**",
         "**/dist/**",
         "**/obj/**",
-        "**/bin/**"
+        "**/bin/**",
+        ".cratis/**",
+        ".pi/**",
+        ".claude/**"
       ],
       "requires": {
         "commands": [
           "yarn"
+        ],
+        "packageScripts": [
+          "g:compile"
         ]
       },
       "workingDirectoryFrom": [
@@ -218,11 +246,17 @@
         "**/wwwroot/**",
         "**/dist/**",
         "**/obj/**",
-        "**/bin/**"
+        "**/bin/**",
+        ".cratis/**",
+        ".pi/**",
+        ".claude/**"
       ],
       "requires": {
         "commands": [
           "yarn"
+        ],
+        "packageScripts": [
+          "g:compile:specs"
         ]
       },
       "workingDirectoryFrom": [
@@ -246,7 +280,10 @@
         "**/wwwroot/**",
         "**/dist/**",
         "**/obj/**",
-        "**/bin/**"
+        "**/bin/**",
+        ".cratis/**",
+        ".pi/**",
+        ".claude/**"
       ],
       "requires": {
         "commands": [

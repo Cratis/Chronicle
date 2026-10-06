@@ -15,6 +15,8 @@ A vertical slice owns a single behavior: the command or query, the events it pro
 
 This file is the reference for *what* goes in each part of a slice. Layout, slice types, workflow, and quality gates are in [general.md](./general.md).
 
+**Model-first check.** Before changing a slice, look for it in the accepted `.play` model (in the committed tree: `git ls-tree -r --name-only HEAD -- <root>` lists it; its HEAD version remains the contract until working-tree edits are committed) under the model root (default `.cratis/screenplay/`, or the root set by `mcpServers.screenplay.root` in `.cratis/ai.json`). A `.play` file outside the root or an untracked or uncommitted draft is not a contract. If an accepted model covers it, change the model and render or gap-fill from it; never edit Stage-managed files. See Phase 0 in [application-profile.md](./application-profile.md).
+
 ## Technical stack
 
 - .NET / C# (ASP.NET Core) — **Cratis Arc** for CQRS / model-bound commands and queries, **Cratis Chronicle** for event sourcing, MongoDB or EF Core for read models.
@@ -66,13 +68,15 @@ public record AuthorName(string Value) : ConceptAs<string>(Value)
 }
 ```
 
-**[convention] Placement:** slice-specific concept → in the slice file; feature-shared → feature folder; module-shared → module folder; app-wide → `Common/`. Scan `Common/` and the feature folder before creating a new concept. See [concepts.md](./concepts.md) for full patterns, or invoke the **add-concept** skill.
+**[convention] Placement:** slice-specific concept → in the slice file; feature-shared → feature folder; module-shared → module folder; app-wide → `Common/`. Scan `Common/` and the feature folder before creating a new concept. See [concepts.md](./concepts.md) for full patterns, or invoke the **cratis-fundamentals-concept** skill.
 
 ## Commands
 
-The command carries input from the caller. `Handle()` is defined directly on the record — never a separate handler class. For step-by-step creation, invoke the **cratis-command** skill.
+The command carries input from the caller. `Handle()` is defined directly on the record — never a separate handler class. For step-by-step creation, invoke the **cratis-arc-command** skill.
 
 > This application is event-sourced, so the guidance below assumes a command's `Handle()` returns event(s) that Arc+Chronicle appends. Arc itself is a standalone CQRS framework (see [general.md](./general.md)) — a command may legitimately return a response or `void` and do its work through injected services when a slice isn't event-sourced; the return-shape and "never inject `IEventLog`" rules are the event-sourced default, not universal Arc laws.
+
+**[convention]** Return immediate external work chosen by a command as a command operation rather than performing it inside `Handle()`; durable after-commit work belongs in reactors. Operations also work without Chronicle; direct service calls remain supported when the decision needs their result. Audit custom `ICommandExecutionScope`s first — every one must implement `ICommandOperationExecutionScope` or operation-bearing commands are rejected. See **cratis-arc-command-operation** (verified at Arc v22.48.1).
 
 ### The decision matrix — where each rule lives **[contract]**
 
@@ -87,7 +91,16 @@ The command carries input from the caller. `Handle()` is defined directly on the
 | Uniqueness | Chronicle `[Unique]` / `IConstraint` (race-safe) — not a read-model pre-check |
 | Genuinely exceptional failure (bug, missing infra) | `throw` a domain exception |
 
-**Do not throw for normal business rejection.** A thrown exception (from `Provide()` or `Handle()`) surfaces as an exception/HTTP 500, *not* a validation result. Recoverable, user-facing rejections are validation: `ValidationResult.Error(...)` via a validator or `Result<,>`. (For step-by-step business-rule placement, invoke the **add-business-rule** skill.)
+**Do not throw for normal business rejection.** A thrown exception (from `Provide()` or `Handle()`) surfaces as an exception/HTTP 500, *not* a validation result. Recoverable, user-facing rejections are validation: `ValidationResult.Error(...)` via a validator or `Result<,>`. (For step-by-step business-rule placement, invoke the **cratis-arc-command-validation** skill.)
+
+### Nested commands **[contract]**
+
+With Arc + Chronicle, ordinary nested pipeline commands join the outer ambient
+transaction even when the call creates a new DI scope. Child success is enrollment,
+not final persistence. Do not promise partial success for an atomic returned batch.
+Independent outcomes require separate top-level executions outside that transaction;
+operation-capable commands reject nesting entirely. See **cratis-arc-command-execution**
+for the versioned boundary and supported alternatives.
 
 ### Causation — what a command records **[contract]**
 
@@ -137,6 +150,8 @@ public record PlaceOrder(OrderId OrderId, CustomerId CustomerId) : ICanProvideEv
 
 Use `Provide()` for IO/fetched/computed data a valid command needs (explicit-key read-model lookups, external services, snapshots). It may short-circuit with `ValidationResult` / `AuthorizationResult` / `Result<TProvided, ValidationResult>` when the supplied data is missing or unusable. Keep IO in `Provide()` and the decision in `Handle()`. Do **not** write a pass-through `Provide()` that only wraps a read model `Handle(...)` could take directly, and do **not** duplicate the same rejection in both the validator and `Provide()` — pick one owner.
 
+**[convention]** `Provide()` acquires decision inputs, not the writes moved out of `Handle()`; declare those as operations and let Arc execute them. Operations cannot return receipts into the decision — see **cratis-arc-command-operation**.
+
 ### `Handle()` return shapes **[contract]**
 
 Return the event(s) directly — Arc appends them; never inject `IEventLog` to append the primary event. If there is no `await`, return the value directly (no `Task<T>`/`Task.FromResult`).
@@ -148,9 +163,10 @@ Return the event(s) directly — Arc appends them; never inject `IEventLog` to a
 | `(TResponse, TEvent)` | a response value plus an event |
 | `IEnumerable<object>` | multiple events; `EventForEventSourceId(id, @event)` wrappers for cross-stream |
 | `Result<TEvent, ValidationResult>` | success event or a typed validation error (concurrency-sensitive rule) |
+| `ICommandOperation` / `CommandOperations` | immediate server-side work after event enrollment, never the client response |
 | `void` | no event |
 
-**How Arc picks the response vs. metadata:** for an `(A, B)` tuple, each element is checked — exactly one element *without* a registered event handler becomes the `CommandResult<...>` response; if all are events, there is no response; **more than one un-handled element throws**. A `Result<TSuccess, TError>` has its inner value unwrapped and processed by these same rules (so `Result<(TId, TEvent), ValidationResult>` is processed as a tuple). A `(TEvent, Subject)` tuple's `Subject` is treated as **append metadata** (not a response) and overrides the resolved compliance subject. A `(TIdConcept, TEvent)` tuple opens a new stream — the id concept is the event source for that event.
+**How Arc picks the response vs. metadata:** for an `(A, B)` tuple, each element is checked — operations are server-consumed, and at most one ordinary element without a response-value handler becomes the `CommandResult<...>` response; if all are server-consumed, there is no response; **more than one un-handled element throws**. A `Result<TSuccess, TError>` has its inner value unwrapped and processed by these same rules (so `Result<(TId, TEvent), ValidationResult>` is processed as a tuple). A `(TEvent, Subject)` tuple's `Subject` is treated as **append metadata** (not a response) and overrides the resolved compliance subject. A `(TIdConcept, TEvent)` tuple opens a new stream — the id concept is the event source for that event.
 
 ### Stream metadata & DCB concurrency **[contract]**
 
@@ -186,7 +202,7 @@ Apply authorization attributes on the `[Command]` record or query method. **[con
 
 `[EventType]` records are the schema-bound truth of the system.
 
-- **[contract] No arguments for new events** — the type name is the identifier. Use `generation:`/id only when evolving an existing contract (invoke the **event-type-migrations** skill).
+- **[contract] No arguments for new events** — the type name is the identifier. Use `generation:`/id only when evolving an existing contract (invoke the **cratis-chronicle-event-type-migration** skill).
 - **[contract] Past-tense, one-purpose names** (`AuthorRegistered`, not `Updated`/`FormSubmitted`) — Chronicle requires past-tense, single-purpose facts. Self-describing without slice context.
 - **[contract] Avoid nullable properties** — Chronicle's analyzer warns on nullable event members; model optional facts as a separate event, or resolve a nullable command input to a non-null sentinel before constructing the event.
 - **[contract] Never carry the event-source id** — it's implicit in the event context.
@@ -211,13 +227,13 @@ public record AuthorRegistered(AuthorName Name);
 
 ## Read Models and Queries
 
-**[contract]** `[ReadModel]` records expose queries as `public static` methods; dependencies are plain method parameters (no `[FromServices]`). Default to model-bound projection shape; drop to fluent only when needed. For step-by-step creation, invoke the **cratis-readmodel** skill.
+**[contract]** `[ReadModel]` records expose queries as `public static` methods; dependencies are plain method parameters (no `[FromServices]`). Default to model-bound projection shape; drop to fluent only when needed. For step-by-step creation, invoke the **cratis-chronicle-read-model** skill.
 
 ### Query return shapes **[contract]**
 
 Stay within analyzer-supported shapes: the read model, `T?`, a collection/array/`IQueryable<T>` of it, `Task<...>` of those, `IAsyncEnumerable<T>`, or `ISubject<...>` of read model/collection.
 
-- **`IQueryable<TReadModel>`** → automatic server-side paging/sorting (frontend `useWithPaging` — see the **query-paging** skill). Use it whenever a list can grow.
+- **`IQueryable<TReadModel>`** → automatic server-side paging/sorting (frontend `useWithPaging` — see the **cratis-arc-query-paging** skill). Use it whenever a list can grow.
 - **`ISubject<...>`** → live/observable queries. Return it directly — **never** `Task<ISubject<...>>`.
 - **[contract] Custom paths use `[Path("...")]`** (`PathAttribute`), not ASP.NET `[Route]`. Reserve `[Route]` for controller endpoints (which this convention avoids).
 
@@ -236,9 +252,27 @@ public record Author(AuthorId Id, AuthorName Name)
 
 **[convention] Read-model boundaries & naming.** Read models are shaped for consumers and command policies, not CRUD-style aggregate DTOs. Split one when it starts mixing unrelated lifecycles — the test is coupling (state that changes for different reasons), not size. The event log is already the canonical history/audit trail, so name a model `AuditLog`/`ActivityLog` only when it genuinely is an audit surface; for curated UI projections prefer names like `Timeline`, `WorkSurface`, `Summary`, `Detail`, or `Policy`. (This is "specialization over reuse" applied to read models.)
 
+**[convention] Keep query cost bounded.** Prefer slim, purpose-built projections
+for frequently read summaries rather than repeatedly joining broad collections.
+This is not a one-collection framework restriction. Embed bounded children; keep
+growing histories in separately paged timeline models. Evaluate variants when
+lifecycle shapes diverge, and preserve reducer admission/ordering guards when
+considering a projection conversion. Narrow observable inputs at the source.
+Ordinary MongoDB `Observe` retains its initial set and applies changes; do not
+claim it always re-queries the whole collection per event. Explicit recompute
+callbacks have a different cost. See the **cratis-chronicle-read-model** skill's
+query reference for versioned behavior and composition trade-offs.
+
 ### Choosing read-model access in command-side code **[convention]**
 
 Ladder, first that fits: (1) direct read-model (DCB) injection — only when keyed by the command's own event-source id; (2) a `[Passive]` projection; (3) `IReadModels.GetInstanceById<T>((EventSourceId)key)` for a different/derived key; (4) a materialized projection. A lookup *interface* is justified **only** for a genuine non-key search (e.g. find-by-email) — never to wrap a keyed `GetInstanceById`.
+
+**[contract] Passive state is not sink state.** `IMongoCollection<T>` cannot
+compute a passive read model; any leftover documents are not maintained state.
+Read through Chronicle by key or supported injection. **[convention]** Never
+materialize secret-bearing state just to make a collection query work: project
+safe metadata separately. Count passive types only as inventory, not as a defect;
+evaluate reconstruction frequency, history length, consistency, and security.
 
 ### Existence checks — what an absent read model actually resolves to **[contract]**
 
@@ -258,7 +292,7 @@ Ladder, first that fits: (1) direct read-model (DCB) injection — only when key
 
 ## Projections **[contract]**
 
-Projections build read models from **events** (never from other read models). Use the ladder — for adding one to an existing model, invoke the **add-projection** skill:
+Projections build read models from **events** (never from other read models). Use the ladder — for adding one to an existing model, invoke the **cratis-chronicle-projection** skill:
 
 1. **Model-bound attributes** on the `[ReadModel]`: `[FromEvent<T>]`, `[SetFrom<T>]`, `[SetFromContext<T>]`, `[ChildrenFrom<T>]`, `[RemovedWith<T>]`, `[Nested]`, `[ClearWith<T>]`, counters, `[FromAll]`.
 2. **Fluent `IProjectionFor<T>`** for joins, composite/constant keys, parent-key extraction, context mapping, `.NotRewindable()`, or supported conditional setters. Declarative metadata only — no DI side effects, no imperative `Define()` body, builder lambdas are member access only.
@@ -281,7 +315,7 @@ Group multi-event constraints under a shared name constant (`<Module>ConstraintN
 
 ## Reactors **[contract]**
 
-`IReactor` is a marker interface; dispatch is by the first parameter type. Reactors live only in Automation/Translation slices. See [reactors.md](./reactors.md) for full rules, or invoke the **add-reactor** skill.
+`IReactor` is a marker interface; dispatch is by the first parameter type. Reactors live in Automation slices (reacting to events, calling external systems, returning follow-up commands/events) and in Translation slices that record outside data as our facts. See [reactors.md](./reactors.md) for full rules, or invoke the **cratis-chronicle-reactor** skill.
 
 ```csharp
 public Task AuthorRegistered(AuthorRegistered @event, EventContext context) => ...
@@ -341,4 +375,4 @@ Frontend commands run through the Cratis dialogs — never a vendor or hand-roll
 - [concepts.md](./concepts.md) — `ConceptAs<T>` / `EventSourceId<T>` full patterns.
 - [reactors.md](./reactors.md) — reactor signatures and side-effect rules.
 - [specs.md](./specs.md) — `CommandScenario` / `EventScenario` / `ReadModelScenario` / `ReactorScenario`.
-- skills: **event-modeling**, **new-vertical-slice**, **scaffold-feature**, **cratis-command**, **cratis-readmodel**, **add-concept**, **add-projection**, **add-reactor**, **add-business-rule**, **event-type-migrations**, **call-command-from-code**, **query-paging**, **cross-cutting-properties**, **multi-tenancy**.
+- skills: **cratis-chronicle-event-modeling**, **cratis-arc-command**, **cratis-chronicle-read-model**, **cratis-fundamentals-concept**, **cratis-chronicle-projection**, **cratis-chronicle-reactor**, **cratis-arc-command-validation**, **cratis-chronicle-event-type-migration**, **cratis-arc-command-execution**, **cratis-arc-query-paging**, **cratis-chronicle-multi-tenancy**.

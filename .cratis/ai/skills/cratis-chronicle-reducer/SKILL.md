@@ -60,6 +60,22 @@ public class <ReadModelName>Reducer : IReducerFor<<ReadModelName>>
 `IReducerFor<TReadModel>` is a marker with no members, constrained to
 `where TReadModel : class`.
 
+## Preserve admission and ordering when converting
+
+A handler that ends with `current with { Status = ... }` is not necessarily a
+plain setter. First inspect guards: does it require a creation event, ignore an
+older attempt, preserve a terminal state, or compare prior values? Replacing it
+with unconditional `[SetValue<T>]` can create state too early or resurrect a
+finished entity. Keep the reducer when the projection APIs cannot express those
+semantics; the admission test is about behavior, not handler length.
+
+Evaluate variants for mutually exclusive lifecycle shapes (see the projection
+skill). Their non-entering events are update-only, but that does not replace
+arbitrary guards on attempt identity, ordering, or prior state. Before conversion,
+keep specifications for update-before-create, late events after completion,
+repeated events, and each guarded branch, as applicable. Assert the same outcomes
+with the replacement, not only the happy-path final status.
+
 ## Method signatures — exactly what is accepted
 
 Dispatch is by the **first parameter's type**, never by the method name. Name the
@@ -158,6 +174,19 @@ model and assert on the resulting instance. Cover, at minimum:
 - accumulation across several events on one event source;
 - every branch the reducer actually has;
 - deletion, if the reducer ever returns `null`.
+
+## Route near misses
+
+- An accepted `.play` model under the model root covers the behavior, or the
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
+  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
+  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
+  say so and do not author `.play` from memory.
+  Edit code here only for infrastructure, clients, adapters, Screenplay code
+  attachments, or gap-fill scope (`cratis-screenplay-render-and-gap-fill`);
+  never edit Stage-managed output.
 
 ## Verify
 

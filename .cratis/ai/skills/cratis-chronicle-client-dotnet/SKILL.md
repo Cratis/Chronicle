@@ -141,12 +141,12 @@ credentials (`:57`). Query options: `apiKey`, `auth`, `skipTlsValidation`,
 from `string` (`:158`) and a `Redacted` form for logging (`:152`).
 
 > **Certificate validation is skipped by default, and that is deliberate.** The
-> Chronicle server always serves TLS, generating a self-signed certificate on
-> every start when none is configured, so a development pair connects with no
-> setup — the rationale is written out at `ChronicleClient.cs:141-146`. **A
-> production connection string must set `skipTlsValidation=false`** (or
-> `Tls.SkipCertificateValidation = false`) against a server whose certificate is
-> actually verifiable.
+> development Chronicle images (`latest-development` and `latest-development-slim`)
+> generate a self-signed certificate on every start, so a development pair
+> connects with no setup. The production image does not: it refuses to start with
+> TLS enabled (the default) and no configured certificate. **A production connection string must set
+> `skipTlsValidation=false`** (or `Tls.SkipCertificateValidation = false`)
+> against a server whose certificate is actually verifiable.
 
 ### In a host
 

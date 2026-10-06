@@ -215,6 +215,13 @@ storage, configured under `Cratis:Chronicle:Compliance:Encryption`.
 > migration flag before switching stores, and confirm a known subject still
 > reads after the switch.
 
+> **Restore order.** The erasure fence is kept inside the key store, so a key
+> store restored from *before* an erasure brings the key back without its fence
+> and the erased personal data reads again; a key store older than the storage
+> also lacks keys for newer subjects, and their values read as empty. Restore
+> the certificate ring first, then the storage, then the key store to the
+> storage's point in time.
+
 ## Modeling rules that follow from erasure
 
 - Prefer **one subject per event stream** for person-level personal data. The
