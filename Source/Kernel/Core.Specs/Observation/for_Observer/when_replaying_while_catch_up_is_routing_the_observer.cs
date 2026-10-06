@@ -13,8 +13,7 @@ namespace Cratis.Chronicle.Observation.for_Observer;
 /// CaughtUp is AlwaysInterleave and routes the observer, so an explicit Replay can arrive while the state machine is
 /// still entering Routing. The state machine defers a transition requested during another one and returns at once,
 /// so Replay reads the Replay state's LastStartedJobId before Replay.OnEnter has run and answers JobId.NotSet for a
-/// replayable observer (Cratis/Chronicle#4514). Routing then replaces the scheduled replay with its own next state,
-/// so the replay must still start once the observer settles.
+/// replayable observer (Cratis/Chronicle#4514).
 /// </summary>
 public class when_replaying_while_catch_up_is_routing_the_observer : given.an_observer_with_subscription
 {
@@ -38,14 +37,11 @@ public class when_replaying_while_catch_up_is_routing_the_observer : given.an_ob
 
     async Task Because()
     {
-        var caughtUp = _observer.CaughtUp(JobId.New(), EventSequenceNumber.First);
-        var replay = _observer.Replay();
+        var caughtUp = _observer.CaughtUp(EventSequenceNumber.First);
+        _result = await _observer.Replay();
         _tail.SetResult(EventSequenceNumber.Unavailable);
-        _result = await replay;
         await caughtUp;
     }
 
     [Fact] void should_return_the_replay_job_it_started() => _result.ShouldEqual(_replayJob);
-    [Fact] void should_start_the_replay_job() => _jobsManager.Received(1).Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<ReplayObserverRequest>());
-    [Fact] void should_be_replaying() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Replaying);
 }

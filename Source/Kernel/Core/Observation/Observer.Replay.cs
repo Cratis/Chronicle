@@ -6,10 +6,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
-using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
-using Cratis.Orleans.StateMachines;
-
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
@@ -23,29 +20,9 @@ public partial class Observer
             return JobId.NotSet;
         }
 
-        if (State.RunningState != ObserverRunningState.Replaying && await CanTransitionTo<Replay>())
+        if (State.RunningState != ObserverRunningState.Replaying)
         {
-            // A transition requested while another one is in progress - typically one driven by an interleaved
-            // callback such as CaughtUp - is only scheduled, and the state being entered may replace it with its own
-            // next state. The request is therefore held until a replay actually starts, or until the observer
-            // settles somewhere it can not replay from, so the caller gets the job that is really replaying.
-            var pendingReplay = _pendingReplay ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
             await TransitionTo<Replay>();
-            if (!pendingReplay.Task.IsCompleted)
-            {
-                logger.ReplayDeferred();
-            }
-
-            try
-            {
-                return await pendingReplay.Task.WaitAsync(_pendingReplayTimeout);
-            }
-            catch (TimeoutException)
-            {
-                logger.RequestedReplayDidNotStart();
-                ConcludePendingReplay(pendingReplay, JobId.NotSet);
-                return JobId.NotSet;
-            }
         }
 
         var states = await GetStates();
@@ -80,41 +57,6 @@ public partial class Observer
 
     /// <inheritdoc/>
     public Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, []);
-
-    /// <inheritdoc/>
-    protected override async Task OnAfterEnteringState(IState<ObserverState> state)
-    {
-        if (_pendingReplay is not { } pendingReplay) return;
-
-        switch (state)
-        {
-            case Replay replay:
-                ConcludePendingReplay(pendingReplay, replay.LastStartedJobId);
-                break;
-
-            // The observer settled without replaying - the scheduled replay was replaced by the next state of the
-            // transition that was in progress. It is still in a state that can replay, so replay from here; this
-            // runs as part of the ongoing transition and is therefore performed as soon as entering it completes.
-            case Observing:
-                await TransitionTo<Replay>();
-                break;
-
-            case Disconnected:
-            case QuarantinedObserver:
-                ConcludePendingReplay(pendingReplay, JobId.NotSet);
-                break;
-        }
-    }
-
-    void ConcludePendingReplay(TaskCompletionSource<JobId> pendingReplay, JobId jobId)
-    {
-        if (ReferenceEquals(_pendingReplay, pendingReplay))
-        {
-            _pendingReplay = null;
-        }
-
-        pendingReplay.TrySetResult(jobId);
-    }
 
     async Task CompleteReplay(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt)
     {

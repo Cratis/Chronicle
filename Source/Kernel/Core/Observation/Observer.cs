@@ -58,7 +58,6 @@ public partial class Observer(
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable, IDisposable
 {
     const int MaxRememberedConcludedCatchUpJobs = 8;
-    static readonly TimeSpan _pendingReplayTimeout = TimeSpan.FromSeconds(20);
 
     readonly Queue<JobId> _concludedCatchUpJobs = new();
 
@@ -84,7 +83,6 @@ public partial class Observer(
     IMeterScope<Observer>? _metrics;
     bool _isPreparingCatchup;
     int _catchupRecoveryAttempts;
-    TaskCompletionSource<JobId>? _pendingReplay;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     int _statePersistenceBatchInterval = 1;
     int _debouncedProgressWrites;
