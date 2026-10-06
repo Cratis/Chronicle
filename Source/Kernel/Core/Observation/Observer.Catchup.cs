@@ -149,7 +149,9 @@ public partial class Observer
         var subscription = await GetSubscription();
         return await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
             logger,
-            new(_observerKey, Definition.Type, State.NextEventSequenceNumber, subscription.EventTypes),
+
+            // Created after the lookup: a job concluding while it is in flight is excluded and has moved the position on.
+            () => new(_observerKey, Definition.Type, State.NextEventSequenceNumber, subscription.EventTypes),
             requestPredicate: null,
             () =>
             {
@@ -231,7 +233,8 @@ public partial class Observer
     /// </summary>
     /// <param name="jobId">The <see cref="JobId"/> of the job that concluded.</param>
     /// <remarks>
-    /// Forgotten only once a catch-up lookup no longer lists the job as unfinished. A job whose finalization is slow or
+    /// Forgotten only once a catch-up lookup lists other unfinished jobs but no longer this one; an empty listing may be a
+    /// failed lookup and forgets nothing. A job whose finalization is slow or
     /// failed stays listed, and so stays remembered for as long as it could be mistaken for an owner.
     /// </remarks>
     void RememberConcludedCatchUpJob(JobId jobId)

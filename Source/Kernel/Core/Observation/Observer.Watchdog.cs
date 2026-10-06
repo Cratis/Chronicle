@@ -153,11 +153,14 @@ public partial class Observer
 
     async Task<bool> HasRunningCatchupJob()
     {
+        // A concluded job stays listed until it is finalized but owns nothing; counting it would keep a failed
+        // replacement from ever being rescued while that finalization is slow or failed.
         var catchupJobs = await _jobsManager.GetUnfinishedJobs();
         return catchupJobs.Any(job =>
             job.Request is CatchUpObserverRequest request &&
             request.ObserverKey == _observerKey &&
-            job.IsPreparingOrRunning);
+            job.IsPreparingOrRunning &&
+            !_concludedCatchUpJobs.Contains(job.Id));
     }
 
     async Task<bool> CheckNextSequenceNumber()

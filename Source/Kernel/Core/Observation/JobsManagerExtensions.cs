@@ -50,14 +50,56 @@ public static partial class JobsManagerExtensions
     /// <param name="onResume">The optional callback when a job needs to be resumed.</param>
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
-    /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Jobs the lookup no longer lists as unfinished are removed from it.</param>
+    /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Jobs a lookup listing other jobs no longer lists as unfinished are removed from it.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
-    public static async Task<JobId> StartOrResumeObserverJobFor<TJob, TRequest>(
+    public static Task<JobId> StartOrResumeObserverJobFor<TJob, TRequest>(
         this IJobsManager jobsManager,
         ILogger logger,
         TRequest request,
+        Func<TRequest, bool>? requestPredicate = null,
+        Func<Task>? onAlreadyRunningJob = null,
+        Func<Task>? onResume = null,
+        Func<Task>? onStartNew = null,
+        Func<Task>? onResumeRefused = null,
+        ICollection<JobId>? concludedJobs = null)
+        where TJob : IJob<TRequest>
+        where TRequest : class, IObserverJobRequest =>
+        jobsManager.StartOrResumeObserverJobFor<TJob, TRequest>(
+            logger,
+            () => request,
+            requestPredicate,
+            onAlreadyRunningJob,
+            onResume,
+            onStartNew,
+            onResumeRefused,
+            concludedJobs);
+
+    /// <summary>
+    /// Starts or resumes an observer job, creating the request only once the existing jobs have been looked up.
+    /// </summary>
+    /// <param name="jobsManager">The jobs manager.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="createRequest">Creates the observer request. Called after the lookup, so it reflects any state that changed while the lookup was in flight.</param>
+    /// <param name="requestPredicate">The optional predicate.</param>
+    /// <param name="onAlreadyRunningJob">The optional callback when there already is a running job.</param>
+    /// <param name="onResume">The optional callback when a job needs to be resumed.</param>
+    /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
+    /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
+    /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Jobs a lookup listing other jobs no longer lists as unfinished are removed from it.</param>
+    /// <typeparam name="TJob">The type of the job.</typeparam>
+    /// <typeparam name="TRequest">The type of the observer request.</typeparam>
+    /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
+    /// <remarks>
+    /// A job excluded because it concluded while the lookup was in flight has moved the observer on. A request built
+    /// before the lookup still carries the position from before that job's work, and a replacement started from it
+    /// delivers that work a second time.
+    /// </remarks>
+    public static async Task<JobId> StartOrResumeObserverJobFor<TJob, TRequest>(
+        this IJobsManager jobsManager,
+        ILogger logger,
+        Func<TRequest> createRequest,
         Func<TRequest, bool>? requestPredicate = null,
         Func<Task>? onAlreadyRunningJob = null,
         Func<Task>? onResume = null,
@@ -74,6 +116,7 @@ public static partial class JobsManagerExtensions
         onResumeRefused ??= () => Task.CompletedTask;
         var rememberedBeforeLookup = concludedJobs?.ToArray() ?? [];
         var jobs = await jobsManager.GetUnfinishedJobs();
+        var request = createRequest();
 
         // A concluded job is only dangerous while it is still listed as unfinished - that is what makes it look like an
         // owner. Once a lookup no longer lists it, it has finished for good and can be forgotten, which is what keeps the
@@ -81,7 +124,9 @@ public static partial class JobsManagerExtensions
         // whose finalization is slow or failed and strands the observer on a job that will never report back again.
         // Only jobs remembered before the lookup started are pruned; one concluding while it was in flight is judged by
         // the next lookup. The exclusion itself is read after the lookup, so it covers jobs that concluded meanwhile.
-        if (concludedJobs is not null)
+        // The jobs manager reports a failed lookup as an empty listing, so an empty listing proves nothing has finished;
+        // pruning on it would readmit every concluded job still running. Forgetting waits for a listing of other jobs.
+        if (concludedJobs is not null && jobs.Count > 0)
         {
             var listed = jobs.Select(job => job.Id).ToHashSet();
             foreach (var finishedJob in rememberedBeforeLookup.Where(id => !listed.Contains(id)))
