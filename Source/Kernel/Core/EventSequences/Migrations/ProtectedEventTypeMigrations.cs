@@ -128,7 +128,11 @@ internal class ProtectedEventTypeMigrations(
                 var propertySchema = (JsonSchema?)properties.FirstOrDefault(_ => _.Name == property) ?? schema.AdditionalPropertiesSchema;
                 if (propertySchema is not null)
                 {
-                    obj[property] = NormalizeEnumValues(child, propertySchema);
+                    var normalized = NormalizeEnumValues(child, propertySchema);
+                    if (!ReferenceEquals(normalized, child))
+                    {
+                        obj[property] = normalized;
+                    }
                 }
             }
         }
@@ -136,7 +140,12 @@ internal class ProtectedEventTypeMigrations(
         {
             for (var index = 0; index < array.Count; index++)
             {
-                array[index] = NormalizeEnumValues(array[index], itemSchema);
+                var child = array[index];
+                var normalized = NormalizeEnumValues(child, itemSchema);
+                if (!ReferenceEquals(normalized, child))
+                {
+                    array[index] = normalized;
+                }
             }
         }
 

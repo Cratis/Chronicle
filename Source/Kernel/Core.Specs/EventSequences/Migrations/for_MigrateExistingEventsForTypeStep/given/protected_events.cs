@@ -44,6 +44,10 @@ public class protected_events : Specification
     protected const string Namespace = "default";
     protected virtual bool UsesObjectArray => false;
     protected virtual string MigrationSuffix => " migrated";
+    protected virtual string SourceSchemaJson => UsesObjectArray
+        ? """{"type":"object","properties":{"contacts":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}}}}"""
+        : """{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""";
+    protected virtual string SourceContentJson => UsesObjectArray ? """{"contacts":[{"name":"Jane"}]}""" : """{"name":"Jane"}""";
 
     async Task Establish()
     {
@@ -58,9 +62,7 @@ public class protected_events : Specification
             new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(new ManagedEncryptionKeyProvisioner(_keys, encryption), _keyAccess, encryption)),
             NullLogger<JsonSchemaMetadataManager>.Instance);
         _converter = new ExpandoObjectConverter(new TypeFormats());
-        _sourceSchema = await JsonSchema.FromJsonAsync(UsesObjectArray
-            ? """{"type":"object","properties":{"contacts":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}}}}"""
-            : """{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""");
+        _sourceSchema = await JsonSchema.FromJsonAsync(SourceSchemaJson);
         _targetSchema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"renamed":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""");
         EventTypeId typeId = "protected-event";
         var eventTypes = Substitute.For<IEventTypesStorage>();
@@ -80,7 +82,7 @@ public class protected_events : Specification
         });
         foreach (var (number, subject) in new[] { (1UL, "erased-owner"), (2UL, "active-owner") })
         {
-            var content = await _manager.Apply(Store, Namespace, _sourceSchema, subject, JsonNode.Parse(UsesObjectArray ? """{"contacts":[{"name":"Jane"}]}""" : """{"name":"Jane"}""")!.AsObject());
+            var content = await _manager.Apply(Store, Namespace, _sourceSchema, subject, JsonNode.Parse(SourceContentJson)!.AsObject());
             var storedContent = _converter.ToExpandoObject(content, _sourceSchema);
             _stored[number] = new Dictionary<EventTypeGeneration, ExpandoObject> { [1] = storedContent };
             _events.Add(new AppendedEvent(EventContext.From(Store, Namespace, new EventType(typeId, 1), EventSourceType.Default, "not-the-subject", EventStreamType.All, EventStreamId.Default, number, CorrelationId.NotSet, subject: subject), storedContent));
