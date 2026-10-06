@@ -13,5 +13,5 @@ public class and_type_is_a_tombstone : Specification
 
     void Because() => _result = typeof(EntityRemoved).GetEventType();
 
-    [Fact] void should_preserve_the_tombstone_flag() => _result.Tombstone.ShouldBeTrue();
+    [Fact] void should_not_carry_the_tombstone_marker() => _result.Tombstone.ShouldBeFalse();
 }
