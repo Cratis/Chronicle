@@ -91,9 +91,12 @@ public class JsonSchemaMetadataManager(
             // missing kind; strings must never be parsed just because their content resembles JSON.
             if (string.IsNullOrEmpty(text))
             {
-                return propertySchema.Type.HasFlag(JsonObjectType.Null) || (propertySchema.Format?.EndsWith('?') ?? false)
-                    ? null
-                    : propertySchema.Type.HasFlag(JsonObjectType.Boolean) ? JsonValue.Create(false) : JsonValue.Create(0);
+                if (propertySchema.Type.HasFlag(JsonObjectType.Null) || (propertySchema.Format?.EndsWith('?') ?? false))
+                {
+                    return null;
+                }
+
+                return propertySchema.Type.HasFlag(JsonObjectType.Boolean) ? JsonValue.Create(false) : JsonValue.Create(0);
             }
 
             return JsonNode.Parse(text);
