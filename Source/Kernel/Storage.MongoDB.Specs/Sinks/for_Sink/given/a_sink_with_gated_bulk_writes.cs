@@ -34,6 +34,9 @@ public class a_sink_with_gated_bulk_writes : Specification
     protected readonly Key _secondKey = new("second", ArrayIndexers.NoIndexers);
     protected bool _failLaterBatch;
     protected bool _failFirstBatch;
+    protected bool _throwFirstBatch;
+    protected bool _throwLaterBatch;
+    protected readonly Exception _unexpectedFailure = new BulkServerUnavailable();
     protected bool _holdFirstFlush = true;
     protected IMongoCollection<BsonDocument> _collection;
 
@@ -83,6 +86,19 @@ public class a_sink_with_gated_bulk_writes : Specification
         .Concat(_directWrites)
         .Count(operation => operation.Filter.Render(new RenderArgs<BsonDocument>(BsonSerializer.SerializerRegistry.GetSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry))["_id"] == key.Value.ToString());
 
+    protected static Changeset<AppendedEvent, ExpandoObject> JoinedChanges(int count)
+    {
+        var changeset = Changes(count);
+        changeset.Add(new Joined(new ExpandoObject(), "other", "id", ArrayIndexers.NoIndexers, []) { HasKeyedFrom = true });
+        return changeset;
+    }
+
+    protected int[] WrittenValuesFor(Key key) => _batches.SelectMany(batch => batch).OfType<UpdateOneModel<BsonDocument>>()
+        .Concat(_directWrites)
+        .Where(operation => operation.Filter.Render(new RenderArgs<BsonDocument>(BsonSerializer.SerializerRegistry.GetSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry))["_id"] == key.Value.ToString())
+        .Select(operation => operation.Update.Render(new RenderArgs<BsonDocument>(BsonSerializer.SerializerRegistry.GetSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry))["$set"]["count"].AsInt32)
+        .ToArray();
+
     async Task<BulkWriteResult<BsonDocument>> WriteBatch(WriteModel<BsonDocument>[] operations)
     {
         _batches.Add(operations);
@@ -92,18 +108,26 @@ public class a_sink_with_gated_bulk_writes : Specification
             await _releaseFirstFlush.Task;
         }
 
+        if ((_batches.Count == 1 && _throwFirstBatch) || (_batches.Count > 1 && _throwLaterBatch))
+        {
+            throw _unexpectedFailure;
+        }
+
         var result = new BulkWriteResult<BsonDocument>.Acknowledged(operations.Length, 0, 0, 0, 0, operations, []);
         if ((_batches.Count == 1 && _failFirstBatch) || (_batches.Count > 1 && _failLaterBatch))
         {
             var error = (BulkWriteError)Activator.CreateInstance(typeof(BulkWriteError), BindingFlags.Instance | BindingFlags.NonPublic, null, [0, ServerErrorCategory.DuplicateKey, 11000, "duplicate key", new BsonDocument()], null)!;
             var connection = new ConnectionId(new ServerId(new ClusterId(), new DnsEndPoint("localhost", 27017)));
-            throw new MongoBulkWriteException<BsonDocument>(connection, result, [error], null, []);
+            var failedResult = new BulkWriteResult<BsonDocument>.Acknowledged(operations.Length, 0, 0, 0, 0, operations[..1], []);
+            throw new MongoBulkWriteException<BsonDocument>(connection, failedResult, [error], null, operations[1..]);
         }
 
         return result;
     }
 
     record Model(string Id, int Count);
+
+    sealed class BulkServerUnavailable() : Exception("The server did not answer");
 
     sealed class FixedCollections(IMongoCollection<BsonDocument> collection, SinkCollections inner) : ISinkCollections
     {
