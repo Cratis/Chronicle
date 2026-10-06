@@ -144,7 +144,8 @@ public class JsonSchemaMetadataManager(
 
                 // FirstOrDefault rather than Single: a schema flattened across inheritance can declare the same
                 // property name more than once, and the duplicate is not a reason to fail the whole walk.
-                var propertySchema = flattenedProperties.FirstOrDefault(_ => _.Name == property) ??
+                var propertySchema = (JsonSchema?)flattenedProperties.FirstOrDefault(_ => _.Name == property) ??
+                    schema.AdditionalPropertiesSchema?.ActualSchema ??
                     throw new SchemaPropertyNotFoundInSchema(actionName, propertyPath, identifier, flattenedProperties.Select(_ => _.Name));
 
                 var handlerApplied = false;

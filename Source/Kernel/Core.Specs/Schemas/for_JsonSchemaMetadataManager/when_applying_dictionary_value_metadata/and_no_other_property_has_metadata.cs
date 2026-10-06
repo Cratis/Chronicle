@@ -18,6 +18,7 @@ public class and_no_other_property_has_metadata : Specification
     JsonSchema _schema;
     JsonObject _input;
     JsonObject _applied;
+    JsonObject _released;
     JsonObject _releasedAfterErasure;
     Exception? _subsequentWriteFailure;
     InMemoryEncryptionKeyStorage _keyStorage;
@@ -32,6 +33,7 @@ public class and_no_other_property_has_metadata : Specification
               "properties": {
                 "names": {
                   "type": "object",
+                  "properties": { "public": { "type": "string" } },
                   "additionalProperties": { "type": "string", "compliance": [{ "metadataType": "PII", "details": "" }] }
                 },
                 "secrets": {
@@ -43,7 +45,7 @@ public class and_no_other_property_has_metadata : Specification
             """);
         _input = new JsonObject
         {
-            ["names"] = new JsonObject { ["home"] = Plaintext },
+            ["names"] = new JsonObject { ["home"] = Plaintext, ["work"] = Plaintext, ["public"] = Plaintext, ["missing"] = null },
             ["secrets"] = new JsonObject { ["home"] = Plaintext }
         };
         _keyStorage = new InMemoryEncryptionKeyStorage();
@@ -59,6 +61,8 @@ public class and_no_other_property_has_metadata : Specification
     async Task Because()
     {
         _applied = await _manager.Apply("test-store", "test-namespace", _schema, Subject, _input);
+        _released = await _manager.Release("test-store", "test-namespace", _schema, Subject, _applied);
+        await _keyStorage.RecordErasureFor("test-store", "test-namespace", Subject);
         await _keyStorage.DeleteFor("test-store", "test-namespace", Subject);
         _releasedAfterErasure = await _manager.Release("test-store", "test-namespace", _schema, Subject, _applied);
         _subsequentWriteFailure = await Catch.Exception(() => _manager.Apply("test-store", "test-namespace", _schema, Subject, _input));
@@ -70,5 +74,9 @@ public class and_no_other_property_has_metadata : Specification
     [Fact] void should_encrypt_the_confidential_dictionary_value() => _applied["secrets"]!["home"]!.GetValue<string>().ShouldNotEqual(Plaintext);
     [Fact] void should_erase_the_personal_dictionary_value() => _releasedAfterErasure["names"]!["home"]!.GetValue<string>().ShouldEqual(string.Empty);
     [Fact] void should_keep_namespace_confidentiality_readable_after_erasure() => _releasedAfterErasure["secrets"]!["home"]!.GetValue<string>().ShouldEqual(Plaintext);
+    [Fact] void should_restore_the_dictionary_shape_and_values() => _released.ToJsonString().ShouldEqual(_input.ToJsonString());
+    [Fact] void should_encrypt_each_dynamic_value() => _applied["names"]!["work"]!.GetValue<string>().ShouldNotEqual(Plaintext);
+    [Fact] void should_use_a_declared_property_schema_before_the_dictionary_value_schema() => _applied["names"]!["public"]!.GetValue<string>().ShouldEqual(Plaintext);
+    [Fact] void should_preserve_null_dictionary_values() => (_applied["names"]!["missing"] is null).ShouldBeTrue();
     [Fact] void should_refuse_new_personal_dictionary_values_after_erasure() => _subsequentWriteFailure.ShouldBeOfExactType<SchemaMetadataActionFailed>();
 }
