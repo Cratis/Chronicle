@@ -57,7 +57,10 @@ public partial class Observer(
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable, IDisposable
 {
+    const int MaxRememberedConcludedCatchUpJobs = 8;
     static readonly TimeSpan _pendingReplayTimeout = TimeSpan.FromSeconds(20);
+
+    readonly Queue<JobId> _concludedCatchUpJobs = new();
 
     ObserverId _observerId = ObserverId.Unspecified;
     ObserverKey _observerKey = ObserverKey.NotSet;
@@ -81,7 +84,6 @@ public partial class Observer(
     IMeterScope<Observer>? _metrics;
     bool _isPreparingCatchup;
     int _catchupRecoveryAttempts;
-    IReadOnlySet<JobId> _concludedCatchUpJobs = new HashSet<JobId>();
     TaskCompletionSource<JobId>? _pendingReplay;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     int _statePersistenceBatchInterval = 1;

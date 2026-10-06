@@ -41,9 +41,7 @@ public class when_catch_up_concludes_while_its_job_is_still_finalizing : given.a
             .Returns((EventSequenceNumber)2UL);
     }
 
-    Task Because() => _observer.CaughtUp(1UL);
-
-    [Fact] void should_look_for_an_existing_catch_up_job_again() => _ = _jobsManager.Received().GetJobs(Arg.Any<JobQuery>());
+    Task Because() => _observer.CaughtUp(_finishingJob, 1UL);
 
     [Fact]
     async Task should_start_a_catch_up_job_for_the_event_appended_at_the_boundary() =>

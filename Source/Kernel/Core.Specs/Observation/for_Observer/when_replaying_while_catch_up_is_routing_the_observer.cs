@@ -38,7 +38,7 @@ public class when_replaying_while_catch_up_is_routing_the_observer : given.an_ob
 
     async Task Because()
     {
-        var caughtUp = _observer.CaughtUp(EventSequenceNumber.First);
+        var caughtUp = _observer.CaughtUp(JobId.New(), EventSequenceNumber.First);
         var replay = _observer.Replay();
         _tail.SetResult(EventSequenceNumber.Unavailable);
         _result = await replay;

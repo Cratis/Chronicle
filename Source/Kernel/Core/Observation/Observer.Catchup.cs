@@ -95,21 +95,24 @@ public partial class Observer
     /// on the next tick, five times over, until the observer is quarantined for a strand that was never its
     /// own fault.
     /// </remarks>
-    public async Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber)
+    public async Task CaughtUp(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber)
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+
+        // The job reports back before it is finalized, so it is still listed as running while routing decides
+        // whether the observer is behind. Finding it there must not count as an owner: it has done its work and will
+        // never report back again, which would leave an event appended at that boundary without anyone to handle it.
+        // Only the job reporting back is excluded - any other catch-up job, such as one started after it was
+        // finalized, is still live and still owns its work. Recorded before anything is awaited, so a catch-up
+        // interleaving with this call already sees it.
+        RememberConcludedCatchUpJob(jobId);
+
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
-
-        // The job reports back before it is finalized, so it is still listed as running while routing decides
-        // whether the observer is behind. Finding it there must not count as an owner: it has done its work and will
-        // never report back again, which would leave an event appended at that boundary without anyone to handle it.
-        // Only one catch-up job runs per observer, so every unfinished one listed now is the one that just concluded.
-        _concludedCatchUpJobs = await GetUnfinishedCatchUpJobs();
 
         if (IsRetired || _removed) return;
         await TransitionTo<Routing>();
@@ -172,13 +175,18 @@ public partial class Observer
         await WriteStateAsync();
     }
 
-    async Task<IReadOnlySet<JobId>> GetUnfinishedCatchUpJobs()
+    void RememberConcludedCatchUpJob(JobId jobId)
     {
-        var jobs = await _jobsManager.GetUnfinishedJobs();
-        return jobs
-            .Where(job => job.Request is CatchUpObserverRequest request && request.ObserverKey == _observerKey)
-            .Select(job => job.Id)
-            .ToHashSet();
+        if (jobId == JobId.NotSet || _concludedCatchUpJobs.Contains(jobId)) return;
+
+        // A concluded job is only listed for the short while it takes to finalize, so only the most recent ones can
+        // still be found by a catch-up; older ones are forgotten to keep a long-lived activation from accumulating them.
+        if (_concludedCatchUpJobs.Count == MaxRememberedConcludedCatchUpJobs)
+        {
+            _concludedCatchUpJobs.Dequeue();
+        }
+
+        _concludedCatchUpJobs.Enqueue(jobId);
     }
 
     async Task<Result<bool, GetSequenceNumberError>> NeedsCatchup(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
