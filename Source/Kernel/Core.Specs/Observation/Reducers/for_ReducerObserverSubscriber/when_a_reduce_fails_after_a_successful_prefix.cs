@@ -65,6 +65,9 @@ public class when_a_reduce_fails_after_a_successful_prefix : given.a_subscriber_
 
     [Fact] void should_have_failed() => _result.State.ShouldEqual(ObserverSubscriberState.Failed);
     [Fact] void should_not_report_events_as_handled_that_the_read_model_does_not_hold() => (_result.HandledAnyEvents && _sink.WriteModes.Count == 0).ShouldBeFalse();
+    [Fact] void should_not_write_the_read_model() => _sink.WriteModes.ShouldBeEmpty();
+    [Fact] void should_report_no_events_as_handled() => _result.LastSuccessfulObservation.ShouldEqual(EventSequenceNumber.Unavailable);
+    [Fact] void should_keep_the_reason_for_the_failure() => _result.ExceptionMessages.ShouldContainOnly("failed at 12");
 
     static ReadModelDefinition CreateReadModelDefinition() =>
         new(
