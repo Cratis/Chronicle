@@ -25,7 +25,8 @@ public class and_the_identifier_is_reserved_for_namespace_confidentiality : give
         EncryptedValueKeyIdentifiers.ForNamespace().Value,
         JsonValue.Create("personal value")));
 
-    [Fact] void should_reject_the_reserved_pii_identifier() => _exception.ShouldNotBeNull();
+    [Fact] void should_reject_the_reserved_pii_identifier() => _exception.ShouldBeOfExactType<PIIIdentifierIsReserved>();
+    [Fact] void should_not_encrypt_the_value() => _encryption.DidNotReceive().Encrypt(Arg.Any<byte[]>(), _key);
     [Fact] async Task should_not_provision_or_share_a_confidentiality_key() => await _provisioner.DidNotReceive().EnsureKeyFor(
         Arg.Any<EventStoreName>(),
         Arg.Any<EventStoreNamespaceName>(),
