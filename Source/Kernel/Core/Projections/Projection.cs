@@ -255,6 +255,11 @@ public class Projection(
                     state = ApplyActualChanges(key, changeset.Changes, state);
                 }
 
+                if (shouldMaterialize)
+                {
+                    ReadModelSubjects.TrackChanges(state, changeset.Changes, @event);
+                }
+
                 hasReadModel = shouldMaterialize;
             }
 
@@ -362,6 +367,7 @@ public class Projection(
                     state = ApplyActualChanges(key, changeset.Changes, state);
                 }
 
+                ReadModelSubjects.TrackChanges(state, changeset.Changes, @event);
                 lastKey = key;
             }
 
@@ -446,6 +452,11 @@ public class Projection(
                 {
                     state = ApplyActualChanges(key, changeset.Changes, state);
                     lastSequenceByKeyValue[keyValue] = @event.Context.SequenceNumber;
+                }
+
+                if (shouldMaterialize)
+                {
+                    ReadModelSubjects.TrackChanges(state, changeset.Changes, @event);
                 }
 
                 hasReadModel = shouldMaterialize;

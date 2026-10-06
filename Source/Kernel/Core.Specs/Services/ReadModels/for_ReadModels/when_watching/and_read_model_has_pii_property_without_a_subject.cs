@@ -19,7 +19,7 @@ public class and_read_model_has_pii_property_without_a_subject : given.all_depen
 
     void Establish()
     {
-        // Snapshot the subject the observable path resolves before it hands the document to ReleaseJson.
+        // Capture any accidental second release of the pipeline's released snapshot.
         _complianceHelper
             .ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>())
             .Returns(callInfo =>
@@ -70,13 +70,11 @@ public class and_read_model_has_pii_property_without_a_subject : given.all_depen
 
         var forwarder = await _forwarderCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        // The forwarded changeset carries no __subject — only the read model's own identifier. The observable
-        // path must infer the compliance subject from it (matching the one-shot query paths) rather than
-        // streaming the document back undecrypted.
+        // Released snapshots need no inferred subject, even when the producer omits metadata.
         var model = new JsonObject
         {
             ["id"] = "key-1",
-            ["name"] = "encrypted-name"
+            ["name"] = "released-name"
         };
 
         await forwarder(
@@ -90,6 +88,6 @@ public class and_read_model_has_pii_property_without_a_subject : given.all_depen
                 Cratis.Execution.CorrelationId.NotSet));
     }
 
-    [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>());
-    [Fact] void should_infer_the_subject_from_the_identifier() => _releasedSubject.ShouldEqual("key-1");
+    [Fact] void should_not_release_the_snapshot_again() => _complianceHelper.DidNotReceive().ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>());
+    [Fact] void should_not_infer_a_subject_for_a_second_release() => _releasedSubject.ShouldBeNull();
 }

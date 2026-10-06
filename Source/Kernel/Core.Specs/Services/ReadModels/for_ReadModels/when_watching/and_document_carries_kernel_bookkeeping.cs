@@ -14,18 +14,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.when_watching;
 
 /// <summary>
-/// The projection observer subscriber stamps the sink's last-handled-sequence-number watermark onto every
-/// changeset it pushes, after the schema round trip that would otherwise have dropped it. The read model's own
-/// schema does not declare it, and the compliance manager rejects every property the schema does not declare —
-/// so the release has to take kernel bookkeeping off the document before handing it over. The compliance chain
-/// is wired for real here rather than substituted, because a substitute at that seam is exactly what hides the
-/// hand-off that fails. The failure it guards against is silent: <c language="csharp">OnChangeset</c> is one-way, so a throw on
-/// this path drops the changeset without surfacing anywhere and the watching client simply stops updating.
+/// The projection subscriber supplies a released snapshot with a watermark that the schema does not declare.
+/// Watch strips internal bookkeeping without sending that snapshot through the compliance manager again.
 /// </summary>
 public class and_document_carries_kernel_bookkeeping : given.all_dependencies
 {
     const string Key = "person-42";
-    const string EncryptedName = "encrypted-name";
     const string DecryptedName = "decrypted-name";
 
     readonly List<ReadModelChangeset> _emitted = [];
@@ -95,7 +89,7 @@ public class and_document_carries_kernel_bookkeeping : given.all_dependencies
         var document = new JsonObject
         {
             ["id"] = Key,
-            ["name"] = EncryptedName,
+            ["name"] = DecryptedName,
             [WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(42UL)
         };
 

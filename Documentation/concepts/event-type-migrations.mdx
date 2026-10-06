@@ -92,6 +92,23 @@ This ensures that:
 - Newer consumers can read events with the latest schema
 - The generation an event was appended as is stored as written, so the original content is never overwritten. The other generations hold only what the migrations produce: the example above splits a name on spaces, so for "Mary Ann Smith" the upcast generation 2 keeps "Mary" and "Ann" and drops "Smith". Write migrations that keep every part a consumer needs.
 
+## Protected values
+
+Migration expressions operate on plaintext, including values protected by `[PII]` or
+`[Encrypted]`. Split, combine, and value-map operations therefore see the original
+values rather than ciphertext.
+
+Before storing a generated generation, Chronicle applies that generation's protection
+metadata under the original event's subject, falling back to its event source when no
+subject was supplied. This also protects default values in classified target properties.
+Keep the appropriate metadata on every target property that carries personal or
+confidential data; a migration does not replace that schema declaration.
+
+When a new generation is added for existing events, Chronicle releases the stored source
+content under its original subject before transforming it. Erasing that subject's PII
+keys also makes protected PII in the generated generations unavailable; independent
+confidentiality keys are not erased by a PII erasure request.
+
 ## Registration
 
 Migrations are automatically discovered and registered when you connect to Chronicle.
