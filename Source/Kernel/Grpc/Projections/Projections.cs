@@ -159,7 +159,11 @@ internal sealed class Projections(
                 await projection.SetDefinition(definition);
 
                 IEnumerable<EventType> eventTypes;
-                if (isInferredReadModel || (draftDefinition is not null && readModelDefinition.Identifier == draftDefinition.Identifier))
+                if (definition.SubscribesToAllEvents)
+                {
+                    eventTypes = [];
+                }
+                else if (isInferredReadModel || (draftDefinition is not null && readModelDefinition.Identifier == draftDefinition.Identifier))
                 {
                     eventTypes = await projection.GetEventTypesForPreview(readModelDefinition);
                 }
