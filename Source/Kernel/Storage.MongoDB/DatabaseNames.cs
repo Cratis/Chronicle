@@ -22,9 +22,14 @@ public static class DatabaseNames
     /// </summary>
     const int MaximumLengthInBytes = 63;
 
-    // Logical global-key coordinates are backend-independent. Reserve a separate physical name space so
-    // a real event store (including its namespace or configured prefix) cannot alias the global key database.
+    /// <summary>
+    /// The backend-independent logical coordinate used for global confidentiality keys.
+    /// </summary>
     const string GlobalKeyCoordinate = "$chronicle-encrypted-value$global-scope$";
+
+    /// <summary>
+    /// The reserved physical name space that real event stores, namespaces and prefixes cannot alias.
+    /// </summary>
     const string ReservedPhysicalMarker = "!chronicle-encrypted!";
 
     /// <summary>
