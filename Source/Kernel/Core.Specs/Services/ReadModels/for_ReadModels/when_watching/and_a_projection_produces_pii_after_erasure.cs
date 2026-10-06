@@ -41,6 +41,12 @@ public class and_a_projection_produces_pii_after_erasure : given.all_dependencie
         _schema = await JsonSchema.FromJsonAsync("""
             {"type":"object","properties":{"contacts":{"type":"array","items":{"type":"object","properties":{
               "name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]},
+              "age":{"type":"integer","format":"int32","compliance":[{"metadataType":"PII","details":""}]},
+              "score":{"type":"number","format":"double","compliance":[{"metadataType":"PII","details":""}]},
+              "active":{"type":"boolean","compliance":[{"metadataType":"PII","details":""}]},
+              "status":{"type":"integer","enum":[0,2],"x-enumNames":["Unknown","Verified"],"compliance":[{"metadataType":"PII","details":""}]},
+              "optionalAge":{"type":["integer","null"],"format":"int32?","compliance":[{"metadataType":"PII","details":""}]},
+              "flags":{"type":"array","items":{"type":"boolean","compliance":[{"metadataType":"PII","details":""}]}},
               "secret":{"type":"string","security":[{"metadataType":"EncryptedNamespace","details":""}]}
             }}}}}
             """);
@@ -65,6 +71,12 @@ public class and_a_projection_produces_pii_after_erasure : given.all_dependencie
         var @event = new AppendedEvent(EventContext.From("test-store", "test-namespace", EventType.Unknown, EventSourceType.Default, "not-owner", EventStreamType.All, EventStreamId.Default, 1UL, CorrelationId.NotSet, subject: "owner"), new ExpandoObject());
         _child = new ExpandoObject();
         ((IDictionary<string, object?>)_child)["name"] = "new personal value";
+        ((IDictionary<string, object?>)_child)["age"] = 42;
+        ((IDictionary<string, object?>)_child)["score"] = 3.5;
+        ((IDictionary<string, object?>)_child)["active"] = true;
+        ((IDictionary<string, object?>)_child)["status"] = 2;
+        ((IDictionary<string, object?>)_child)["optionalAge"] = 42;
+        ((IDictionary<string, object?>)_child)["flags"] = new[] { true, true };
         ((IDictionary<string, object?>)_child)["secret"] = "namespace secret";
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, new ExpandoObject());
         changeset.AddChild("contacts", _child);
@@ -94,5 +106,11 @@ public class and_a_projection_produces_pii_after_erasure : given.all_dependencie
     [Fact] void should_blank_the_persisted_child() => ((IDictionary<string, object?>)_child)["name"].ShouldEqual(string.Empty);
     [Fact] void should_blank_the_watch_payload() => _received.Single()["contacts"]![0]!["name"]!.GetValue<string>().ShouldEqual(string.Empty);
     [Fact] void should_preserve_namespace_plaintext_without_releasing_again() => _received.Single()["contacts"]![0]!["secret"]!.GetValue<string>().ShouldEqual("namespace secret");
+    [Fact] void should_restore_an_erased_integer() => _received.Single()["contacts"]![0]!["age"]!.GetValue<int>().ShouldEqual(0);
+    [Fact] void should_restore_an_erased_number() => _received.Single()["contacts"]![0]!["score"]!.GetValue<double>().ShouldEqual(0d);
+    [Fact] void should_restore_an_erased_boolean() => _received.Single()["contacts"]![0]!["active"]!.GetValue<bool>().ShouldBeFalse();
+    [Fact] void should_restore_an_erased_enum() => _received.Single()["contacts"]![0]!["status"]!.GetValue<string>().ShouldEqual("Unknown");
+    [Fact] void should_restore_an_erased_nullable_integer() => _received.Single()["contacts"]![0]!["optionalAge"].ShouldBeNull();
+    [Fact] void should_restore_erased_scalar_array_elements() => _received.Single()["contacts"]![0]!["flags"]!.AsArray().All(value => !value!.GetValue<bool>()).ShouldBeTrue();
     [Fact] void should_keep_the_watermark() => _received.Single()[WellKnownProperties.LastHandledEventSequenceNumber]!.GetValue<ulong>().ShouldEqual(1UL);
 }

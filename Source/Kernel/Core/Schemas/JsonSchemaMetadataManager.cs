@@ -128,24 +128,10 @@ public class JsonSchemaMetadataManager(
         return result;
     }
 
-    static JsonNode RestoreErasedContainerShape(JsonNode value, JsonSchema schema)
-    {
-        if (value is JsonValue scalar && scalar.TryGetValue<string>(out var text) && text.Length == 0)
-        {
-            schema = schema.ActualTypeSchema;
-            if (schema.IsArray)
-            {
-                return new JsonArray();
-            }
-
-            if (schema.Type.HasFlag(JsonObjectType.Object))
-            {
-                return new JsonObject();
-            }
-        }
-
-        return value;
-    }
+    static JsonNode? RestoreErasedValueShape(JsonNode value, JsonSchema schema) =>
+        value is JsonValue scalar && scalar.TryGetValue<string>(out var text) && text.Length == 0
+            ? RestoreReleasedContainerShape(value, schema)
+            : value;
 
     static JsonNode? RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
     {
@@ -164,7 +150,9 @@ public class JsonSchemaMetadataManager(
                     return null;
                 }
 
-                return propertySchema.Type.HasFlag(JsonObjectType.Boolean) ? JsonValue.Create(false) : JsonValue.Create(0);
+                // A parsed JSON number supports every schema numeric format, unlike a JsonValue<int>
+                // which cannot be consumed as a double, long or decimal by the converter.
+                return propertySchema.Type.HasFlag(JsonObjectType.Boolean) ? JsonValue.Create(false) : JsonNode.Parse("0");
             }
 
             // Enum names and legacy scalar text must reach the converter unchanged when they do not
@@ -249,18 +237,18 @@ public class JsonSchemaMetadataManager(
                         try
                         {
                             var handled = await action(handler, identifier, value);
-                            if (actionName == ErasureFenceAction)
+                            if (actionName == ErasureFenceAction && ReferenceEquals(handled, value))
                             {
-                                if (ReferenceEquals(handled, value))
-                                {
-                                    handlerApplied = true;
-                                    continue;
-                                }
-
-                                handled = RestoreErasedContainerShape(handled, propertySchema);
+                                handlerApplied = true;
+                                continue;
                             }
 
-                            json[property] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, propertySchema) : handled;
+                            json[property] = actionName switch
+                            {
+                                SchemaMetadataActionFailed.ReleaseAction => RestoreReleasedContainerShape(handled, propertySchema),
+                                ErasureFenceAction => RestoreErasedValueShape(handled, propertySchema),
+                                _ => handled
+                            };
                             handlerApplied = true;
                         }
                         catch (Exception ex)
@@ -351,18 +339,18 @@ public class JsonSchemaMetadataManager(
                     try
                     {
                         var handled = await action(handler, identifier, element);
-                        if (actionName == ErasureFenceAction)
+                        if (actionName == ErasureFenceAction && ReferenceEquals(handled, element))
                         {
-                            if (ReferenceEquals(handled, element))
-                            {
-                                handlerApplied = true;
-                                continue;
-                            }
-
-                            handled = RestoreErasedContainerShape(handled, itemSchema);
+                            handlerApplied = true;
+                            continue;
                         }
 
-                        array[i] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, itemSchema) : handled;
+                        array[i] = actionName switch
+                        {
+                            SchemaMetadataActionFailed.ReleaseAction => RestoreReleasedContainerShape(handled, itemSchema),
+                            ErasureFenceAction => RestoreErasedValueShape(handled, itemSchema),
+                            _ => handled
+                        };
                         handlerApplied = true;
                     }
                     catch (Exception ex)
