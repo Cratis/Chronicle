@@ -66,6 +66,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 // Preserve the existing id, then Id precedence before considering other identifier spellings.
                 schemaProperty = schemaPropertiesByName.GetValueOrDefault("Id")
                     ?? schemaPropertiesByName.Values.FirstOrDefault(property => property.Name.Equals("id", StringComparison.OrdinalIgnoreCase));
+
                 // Without a schema identifier, keep MongoDB's own name to distinguish the primary key.
                 name = schemaProperty?.Name ?? element.Name;
             }
