@@ -72,6 +72,7 @@ public class and_child_object_has_item_level_metadata : Specification
     async Task Because()
     {
         await _step.Perform(_projection, _context);
+
         // The child payload is what the sink persists through $push. Read that exact representation,
         // rather than the independent root snapshot, to pin child write/read symmetry.
         var persisted = new ExpandoObject();

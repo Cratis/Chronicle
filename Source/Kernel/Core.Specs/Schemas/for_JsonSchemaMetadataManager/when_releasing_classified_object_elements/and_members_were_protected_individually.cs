@@ -22,7 +22,7 @@ public class and_members_were_protected_individually : Specification
 
     async Task Establish()
     {
-        _schema = JsonSchema.FromJson(
+        _schema = await JsonSchema.FromJsonAsync(
             """
             {
               "type": "object",
@@ -43,6 +43,7 @@ public class and_members_were_protected_individually : Specification
         var provisioner = new ManagedEncryptionKeyProvisioner(_keys, encryption);
         var handler = new PIICompliancePropertyValueHandler(provisioner, _keys, encryption);
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(handler), NullLogger<JsonSchemaMetadataManager>.Instance);
+
         // This is the historical storage representation: protect members directly, not via the
         // array traversal under test, so an Apply/Release pair cannot hide a compatibility break.
         _stored = new JsonObject
