@@ -31,11 +31,6 @@ public record ObserverState(
     bool IsReplaying,
     bool SubscribesToAllEvents)
 {
-    /// <summary>
-    /// Represents an empty observer state.
-    /// </summary>
-    public static readonly ObserverState Empty = new();
-
     readonly EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
 
     /// <summary>
@@ -54,6 +49,16 @@ public record ObserverState(
               false)
     {
     }
+
+    /// <summary>
+    /// Gets a new empty observer state.
+    /// </summary>
+    /// <remarks>
+    /// Every access returns a new instance. The partition sets are mutable and owned by the observer that reads the
+    /// state, so a shared empty instance would leak partitions from one observer into every other observer that has no
+    /// stored state.
+    /// </remarks>
+    public static ObserverState Empty => new();
 
     /// <summary>
     /// Gets the source-owned lifecycle token, replaced on subscription but not activation.

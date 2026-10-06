@@ -388,10 +388,11 @@ public interface IObserver : IGrainWithStringKey
     /// <summary>
     /// Notify that the observer has been caught up.
     /// </summary>
+    /// <param name="jobId">The <see cref="JobId"/> of the catch-up job that has concluded.</param>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
-    Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber);
+    Task CaughtUp(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Notify that the partition was caught.

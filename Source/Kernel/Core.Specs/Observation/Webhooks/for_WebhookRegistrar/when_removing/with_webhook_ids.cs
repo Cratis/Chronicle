@@ -15,7 +15,7 @@ public class with_webhook_ids : given.a_webhook_registrar
 
     void Establish()
     {
-        _eventSequence = Substitute.For<IEventSequence>();
+        _eventSequence = AnEventSequenceThatAppendsSuccessfully();
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_eventSequence);
 
         _webhooks = ["webhook-1", "webhook-2"];
