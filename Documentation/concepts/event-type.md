@@ -34,8 +34,9 @@ generations — see [Event Type Migrations](./event-type-migrations).
 
 In the .NET client, `[Tombstone]` marks an event type with metadata recorded during
 registration. Historical declarations using `[EventTypeGenerationFor<T>]` also carry
-`T`'s marker. The marker does not delete events or read models, change which events
-observers and projections process, or erase personal data.
+`T`'s marker. Registration records the marker if any declared generation carries it.
+The marker does not delete events or read models, change which events observers and
+projections process, or erase personal data.
 
 An event type's identity remains its identifier and generation. Recording the marker
 does not require a new generation. An older client that omits it does not clear a

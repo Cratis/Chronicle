@@ -125,7 +125,7 @@ public class EventTypes : IEventTypes
 
             var registration = new EventTypeRegistration
             {
-                Type = latestEventType.ToContract(),
+                Type = (latestEventType with { Tombstone = orderedGroup.Exists(_ => _.Key.Tombstone) }).ToContract(),
                 Schema = latestSchema.ToJson(),
                 EventStore = eventStoreAttribute?.EventStore ?? string.Empty
             };
