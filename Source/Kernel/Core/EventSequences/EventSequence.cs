@@ -475,7 +475,7 @@ public class EventSequence(
         }
 
         var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-        var contentAsExpandoObject = expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
+        var (contentAsExpandoObject, _) = await MakeEventCompliant(@event.Context.EventSourceId, eventSchema, content, @event.Context.Subject);
         var hash = eventHashCalculator.Calculate(eventType.Id, @event.Context.EventSourceId, contentAsExpandoObject);
 
         await EventSequenceStorage.Revise(
