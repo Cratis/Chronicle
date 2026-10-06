@@ -25,7 +25,12 @@ public class and_the_immediate_projection_subject_differs_from_the_request_key :
     const string Owner = "owner";
     const string Source = "different-source";
     const string Plaintext = "Ada Lovelace";
-    GetInstanceByKeyResponse _result;
+    protected GetInstanceByKeyResponse _result;
+    GetInstanceByKeyResponse _afterErasure;
+    InMemoryEncryptionKeyStorage _keyStorage;
+
+    protected virtual string IdentifierProperty => "Id";
+    protected virtual string SessionId => string.Empty;
 
     async Task Establish()
     {
@@ -33,9 +38,14 @@ public class and_the_immediate_projection_subject_differs_from_the_request_key :
             """
             { "type": "object", "properties": {
               "Id": { "type": "string" },
-              "name": { "type": "string", "compliance": [{ "metadataType": "PII", "details": "" }] }
+              "name": { "type": "string", "compliance": [{ "metadataType": "PII", "details": "" }] },
+              "otherName": { "type": "string", "compliance": [{ "metadataType": "PII", "details": "" }] },
+              "subjectSecret": { "type": "string", "security": [{ "metadataType": "EncryptedSubject", "details": "" }] },
+              "namespaceSecret": { "type": "string", "security": [{ "metadataType": "EncryptedNamespace", "details": "" }] },
+              "globalSecret": { "type": "string", "security": [{ "metadataType": "EncryptedGlobal", "details": "" }] }
             } }
-            """);
+            """.Replace("\"Id\"", $"\"{IdentifierProperty}\"", StringComparison.Ordinal));
+
         _readModelDefinition = _readModelDefinition with
         {
             Schemas = new Dictionary<ReadModelGeneration, JsonSchema> { { (ReadModelGeneration)1, schema } }
@@ -43,13 +53,20 @@ public class and_the_immediate_projection_subject_differs_from_the_request_key :
         _readModel.GetDefinition().Returns(_readModelDefinition);
         _sink.TypeId.Returns(SinkTypeId.None);
 
-        var keyStorage = new InMemoryEncryptionKeyStorage();
+        _keyStorage = new InMemoryEncryptionKeyStorage();
         var encryption = new Encryption();
-        var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
+        var provisioner = new ManagedEncryptionKeyProvisioner(_keyStorage, encryption);
         var manager = new JsonSchemaMetadataManager(
-            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
+                new PIICompliancePropertyValueHandler(provisioner, _keyStorage, encryption),
+                new EncryptedSubjectValueHandler(provisioner, _keyStorage, encryption),
+                new EncryptedNamespaceValueHandler(provisioner, _keyStorage, encryption),
+                new EncryptedGlobalValueHandler(provisioner, _keyStorage, encryption)),
             NullLogger<JsonSchemaMetadataManager>.Instance);
-        var projected = await manager.Apply("test-store", "test-namespace", schema, Owner, new JsonObject { ["Id"] = Source, ["name"] = Plaintext });
+        var projected = await manager.Apply("test-store", "test-namespace", schema, Owner, new JsonObject { [IdentifierProperty] = Source, ["name"] = Plaintext, ["subjectSecret"] = "subject secret", ["namespaceSecret"] = "namespace secret", ["globalSecret"] = "global secret" });
+        var otherContribution = await manager.Apply("test-store", "test-namespace", schema, "other-owner", new JsonObject { ["otherName"] = "other name" });
+        projected["otherName"] = otherContribution["otherName"]!.DeepClone();
+        projected[WellKnownProperties.Subjects] = new JsonObject { ["otherName"] = "other-owner" };
 
         // Even a producer that supplies the authoritative owner has it overwritten by the request key.
         projected[WellKnownProperties.Subject] = Owner;
@@ -61,14 +78,29 @@ public class and_the_immediate_projection_subject_differs_from_the_request_key :
         _service = new ReadModels(_grainFactory, _storage, _expandoObjectConverter, _reducerMediator, _changesetMediator, _localSiloDetails, _complianceHelper, _materializedReadModels, new JsonSerializerOptions());
     }
 
-    async Task Because() => _result = await _service.GetInstanceByKey(new()
+    async Task Because()
     {
-        EventStore = "test-store",
-        Namespace = "test-namespace",
-        ReadModelIdentifier = _readModelDefinition.Identifier,
-        EventSequenceId = "event-log",
-        ReadModelKey = Source
-    });
+        var request = new GetInstanceByKeyRequest
+        {
+            EventStore = "test-store",
+            Namespace = "test-namespace",
+            ReadModelIdentifier = _readModelDefinition.Identifier,
+            EventSequenceId = "event-log",
+            ReadModelKey = Source,
+            SessionId = SessionId
+        };
+        _result = await _service.GetInstanceByKey(request);
+        await _keyStorage.RecordErasureFor("test-store", "test-namespace", Owner);
+        await _keyStorage.DeleteFor("test-store", "test-namespace", Owner);
+        _afterErasure = await _service.GetInstanceByKey(request);
+    }
 
     [Fact] void should_release_using_the_owner_instead_of_the_request_key() => JsonNode.Parse(_result.ReadModel)!["name"]!.GetValue<string>().ShouldEqual(Plaintext);
+    [Fact] void should_release_the_other_contributing_subject() => JsonNode.Parse(_result.ReadModel)!["otherName"]!.GetValue<string>().ShouldEqual("other name");
+    [Fact] void should_erase_only_the_personal_data_for_the_erased_owner() => JsonNode.Parse(_afterErasure.ReadModel)!["name"]!.GetValue<string>().ShouldEqual(string.Empty);
+    [Fact] void should_keep_the_other_owners_personal_data() => JsonNode.Parse(_afterErasure.ReadModel)!["otherName"]!.GetValue<string>().ShouldEqual("other name");
+    [Fact] void should_keep_subject_confidentiality_after_erasure() => JsonNode.Parse(_afterErasure.ReadModel)!["subjectSecret"]!.GetValue<string>().ShouldEqual("subject secret");
+    [Fact] void should_keep_namespace_confidentiality_after_erasure() => JsonNode.Parse(_afterErasure.ReadModel)!["namespaceSecret"]!.GetValue<string>().ShouldEqual("namespace secret");
+    [Fact] void should_keep_global_confidentiality_after_erasure() => JsonNode.Parse(_afterErasure.ReadModel)!["globalSecret"]!.GetValue<string>().ShouldEqual("global secret");
+    [Fact] void should_strip_subject_metadata_from_the_reply() => JsonNode.Parse(_result.ReadModel)!.AsObject().ContainsKey(WellKnownProperties.Subjects).ShouldBeFalse();
 }
