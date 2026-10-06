@@ -422,7 +422,9 @@ internal sealed class Projections(
         IEnumerable<EventTypeSchema> eventTypeSchemas,
         string title)
     {
-        var schema = new JsonSchema { Type = JsonObjectType.Object, Title = title };
+        // Build the backing JSON directly: the Properties IDictionary setter does not synchronize additions.
+        var properties = new JsonObject();
+        var schema = new JsonSchema(new JsonObject { ["properties"] = properties }) { Type = JsonObjectType.Object, Title = title };
 
         // Track seen property names to take only the first occurrence of each.
         // Type compatibility is already validated by the compiler before reaching this point.
@@ -441,7 +443,7 @@ internal sealed class Projections(
                 if (seenPropertyNames.Add(name))
                 {
                     var propType = prop.ActualTypeSchema?.Type ?? prop.Type;
-                    schema.Properties[name] = new JsonSchemaProperty { Type = propType, Format = prop.Format };
+                    properties[name] = JsonNode.Parse(new JsonSchemaProperty { Type = propType, Format = prop.Format }.ToJson());
                 }
             }
         }

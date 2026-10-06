@@ -8,7 +8,7 @@ using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Services.Projections.for_Projections.when_previewing;
 
-public class and_the_read_model_is_inferred_from_a_registered_event : given.an_inferred_read_model_preview
+public class and_the_inferred_read_model_uses_default_automap : given.an_inferred_read_model_preview
 {
     OneOf<ProjectionPreview, ProjectionDeclarationParsingErrors> _result;
 
@@ -16,14 +16,14 @@ public class and_the_read_model_is_inferred_from_a_registered_event : given.an_i
     {
         EventStore = EventStore,
         Namespace = EventStoreNamespace,
-        EventSequenceId = "event-log",
+        EventSequenceId = "custom-sequence",
         Declaration = """
             projection PreviewIssues
               from VariantIssueOpened
-                title = title
             """
     });
 
     [Fact] void should_infer_the_projected_property_schema() => JsonSchema.FromJson(_result.Value0.ReadModel.Schema).Properties.ContainsKey("title").ShouldBeTrue();
     [Fact] void should_preserve_the_projected_property_in_the_response() => (JsonNode.Parse(_result.Value0.ReadModelEntries.Single())!["title"]?.GetValue<string>()).ShouldEqual("preview");
+    [Fact] void should_read_the_requested_sequence() => _namespaceStorage.Received(1).GetEventSequence("custom-sequence");
 }

@@ -8,7 +8,7 @@ using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Services.Projections.for_Projections.when_previewing;
 
-public class and_the_read_model_is_inferred_from_a_registered_event : given.an_inferred_read_model_preview
+public class and_the_inferred_read_model_uses_explicit_automap : given.an_inferred_read_model_preview
 {
     OneOf<ProjectionPreview, ProjectionDeclarationParsingErrors> _result;
 
@@ -19,8 +19,8 @@ public class and_the_read_model_is_inferred_from_a_registered_event : given.an_i
         EventSequenceId = "event-log",
         Declaration = """
             projection PreviewIssues
+              automap
               from VariantIssueOpened
-                title = title
             """
     });
 
