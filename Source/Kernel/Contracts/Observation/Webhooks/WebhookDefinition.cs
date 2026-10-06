@@ -50,12 +50,12 @@ public class WebhookDefinition
     /// <summary>
     /// Gets or sets explicit replayability, taking precedence over <see cref="IsReplayable"/> when specified.
     /// </summary>
-    [ProtoMember(7)]
-    public BooleanValue IsReplayableValue { get; set; }
+    [ProtoMember(7), NullWrappedValue]
+    public bool? IsReplayableValue { get; set; }
 
     /// <summary>
     /// Gets or sets explicit activity, taking precedence over <see cref="IsActive"/> when specified.
     /// </summary>
-    [ProtoMember(8)]
-    public BooleanValue IsActiveValue { get; set; }
+    [ProtoMember(8), NullWrappedValue]
+    public bool? IsActiveValue { get; set; }
 }

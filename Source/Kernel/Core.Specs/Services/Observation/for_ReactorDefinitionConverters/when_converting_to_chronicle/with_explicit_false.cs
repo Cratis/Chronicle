@@ -13,8 +13,8 @@ public class with_explicit_false : Specification
 
     void Establish()
     {
-        // An ordinary proto3 client omits the legacy false field and writes enum False (2) at field 7.
-        using var payload = new MemoryStream([0x0a, 0x01, 0x78, 0x12, 0x01, 0x79, 0x38, 0x02]);
+        // An ordinary proto3 client omits the legacy false field and writes an empty BoolValue at field 7.
+        using var payload = new MemoryStream([0x0a, 0x01, 0x78, 0x12, 0x01, 0x79, 0x3a, 0x00]);
         _contract = Serializer.Deserialize<ReactorDefinition>(payload);
     }
 

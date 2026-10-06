@@ -6,7 +6,6 @@ using System.Reactive.Linq;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
@@ -251,7 +250,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             RunningState = state.RunningState.ToContract(),
             IsSubscribed = subscribed,
             IsReplayable = definition.IsReplayable,
-            IsReplayableValue = definition.IsReplayable.ToBooleanValue()
+            IsReplayableValue = definition.IsReplayable
         };
     }
 

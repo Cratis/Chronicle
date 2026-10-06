@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
-using Cratis.Chronicle.Contracts.Primitives;
 using OneOf.Types;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -29,8 +28,8 @@ internal static class WebhookDefinitionConverters
             string.IsNullOrEmpty(webhookDefinition.EventSequenceId) ? EventSequenceId.Log : webhookDefinition.EventSequenceId,
             webhookDefinition.EventTypes.Select(_ => _.ToChronicle()).ToArray(),
             webhookDefinition.Target.ToChronicle(),
-            webhookDefinition.IsReplayableValue.Resolve(webhookDefinition.IsReplayable),
-            webhookDefinition.IsActiveValue.Resolve(webhookDefinition.IsActive));
+            webhookDefinition.IsReplayableValue ?? webhookDefinition.IsReplayable,
+            webhookDefinition.IsActiveValue ?? webhookDefinition.IsActive);
 
     /// <summary>
     /// Convert from <see cref="Contracts.Observation.Webhooks.WebhookDefinition"/> to <see cref="WebhookDefinition"/>.
@@ -45,8 +44,8 @@ internal static class WebhookDefinitionConverters
             EventTypes = webhookDefinition.EventTypes.Select(type => type.ToContract()).ToList(),
             IsActive = webhookDefinition.IsActive,
             IsReplayable = webhookDefinition.IsReplayable,
-            IsActiveValue = webhookDefinition.IsActive.ToBooleanValue(),
-            IsReplayableValue = webhookDefinition.IsReplayable.ToBooleanValue(),
+            IsActiveValue = webhookDefinition.IsActive,
+            IsReplayableValue = webhookDefinition.IsReplayable,
             Target = webhookDefinition.Target.ToContract()
         };
 

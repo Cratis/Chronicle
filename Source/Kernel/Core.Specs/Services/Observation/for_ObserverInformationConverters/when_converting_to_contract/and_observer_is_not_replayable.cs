@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Storage.Observation;
 using ProtoBuf;
 
@@ -51,6 +50,6 @@ public class and_observer_is_not_replayable : Specification
     }
 
     [Fact] void should_set_is_replayable_to_false() => _result.IsReplayable.ShouldBeFalse();
-    [Fact] void should_send_explicit_false_to_proto3_clients() => _result.IsReplayableValue.ShouldEqual(BooleanValue.False);
+    [Fact] void should_send_explicit_false_to_proto3_clients() => _result.IsReplayableValue.ShouldEqual(false);
     [Fact] void should_have_correct_tail_event_sequence_number() => _result.TailEventSequenceNumber.ShouldEqual(99ul);
 }

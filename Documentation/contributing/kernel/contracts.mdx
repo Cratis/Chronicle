@@ -42,7 +42,7 @@ Proto3 omits scalar `false` values. A legacy C# contract initialized to `true` w
 `DefaultValue(true)` reads that omission as `true`; in the other direction,
 protobuf-net omits `true` and an ordinary proto3 client reads it as `false`.
 
-The following fields have additive `BooleanValue` companions:
+The following fields have additive `google.protobuf.BoolValue` companions:
 
 | Message | Legacy field | Explicit field | Field number |
 | --- | --- | --- | --- |
@@ -51,11 +51,16 @@ The following fields have additive `BooleanValue` companions:
 | `WebhookDefinition` | `IsActive` | `IsActiveValue` | 8 |
 | `ObserverInformation` | `IsReplayable` | `IsReplayableValue` | 13 |
 
-`BooleanValue` uses `Unspecified = 0`, `True = 1`, and `False = 2`. Both explicit
-boolean values are nonzero, so proto3 encoders preserve them. Write both the
-legacy field and its companion. Read the companion first; for `Unspecified`,
-use the legacy field. The .NET contracts provide `ToBooleanValue()` and
-`Resolve(legacyValue)` for these conversions.
+The companions use the standard wrapper from `google/protobuf/wrappers.proto`.
+An absent wrapper means unspecified; a present wrapper carries either `true` or
+`false`, even when its inner scalar is omitted. Write both the legacy field and
+its companion. Read the companion first; when absent, use the legacy field.
+
+In C#, protobuf-net's `[NullWrappedValue]` annotation on a `bool?` property
+produces this wrapper. Assign the boolean directly when writing, and use
+`explicitValue ?? legacyValue` when reading. A nullable boolean alone, even with
+`CompatibilityLevel.Level300`, generates a plain proto3 scalar without presence;
+it is not a substitute for the wrapper.
 
 The kernel uses explicit values for reactor and webhook registration and sends
 both fields in `ObserverInformation`. Webhook query responses use

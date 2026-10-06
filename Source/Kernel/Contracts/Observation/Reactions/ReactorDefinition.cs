@@ -48,6 +48,6 @@ public class ReactorDefinition
     /// <summary>
     /// Gets or sets explicit replayability, taking precedence over <see cref="IsReplayable"/> when specified.
     /// </summary>
-    [ProtoMember(7)]
-    public BooleanValue IsReplayableValue { get; set; }
+    [ProtoMember(7), NullWrappedValue]
+    public bool? IsReplayableValue { get; set; }
 }

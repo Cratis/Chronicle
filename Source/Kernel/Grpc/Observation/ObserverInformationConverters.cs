@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Services.Observation;
@@ -44,7 +43,7 @@ internal static class ObserverInformationConverters
             HandledEventCount = state.HandledEventCount,
             RunningState = state.RunningState.ToContract(),
             IsReplayable = definition.IsReplayable,
-            IsReplayableValue = definition.IsReplayable.ToBooleanValue()
+            IsReplayableValue = definition.IsReplayable
         };
 
     /// <summary>

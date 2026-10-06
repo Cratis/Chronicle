@@ -32,6 +32,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
+        <PackageReference Include="protobuf-net" />
         <PackageReference Include="protobuf-net.Grpc" />
     </ItemGroup>
 

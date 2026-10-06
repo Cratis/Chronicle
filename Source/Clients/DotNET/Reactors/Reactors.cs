@@ -9,7 +9,6 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
-using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
@@ -542,7 +541,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
                 IsReplayable = registration.IsReplayable,
-                IsReplayableValue = registration.IsReplayable.ToBooleanValue(),
+                IsReplayableValue = registration.IsReplayable,
                 Tags = registration.Tags,
                 Filters = new()
                 {

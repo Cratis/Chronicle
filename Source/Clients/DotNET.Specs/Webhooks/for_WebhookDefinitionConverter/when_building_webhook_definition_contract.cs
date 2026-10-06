@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Webhooks;
@@ -41,8 +40,8 @@ public class when_building_webhook_definition_contract : Specification
 
     [Fact] void should_send_legacy_replayability() => _contract.IsReplayable.ShouldBeTrue();
     [Fact] void should_send_legacy_activity() => _contract.IsActive.ShouldBeTrue();
-    [Fact] void should_send_explicit_replayability() => _contract.IsReplayableValue.ShouldEqual(BooleanValue.True);
-    [Fact] void should_send_explicit_activity() => _contract.IsActiveValue.ShouldEqual(BooleanValue.True);
+    [Fact] void should_send_explicit_replayability() => _contract.IsReplayableValue.ShouldEqual(true);
+    [Fact] void should_send_explicit_activity() => _contract.IsActiveValue.ShouldEqual(true);
 
     [Fact]
     void should_map_identifier() => _contract.Identifier.ShouldEqual(_id.Value);

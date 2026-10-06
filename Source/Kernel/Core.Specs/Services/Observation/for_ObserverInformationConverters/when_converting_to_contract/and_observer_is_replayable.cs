@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Storage.Observation;
 using ProtoBuf;
 
@@ -54,9 +53,9 @@ public class and_observer_is_replayable : Specification
     }
 
     [Fact] void should_set_is_replayable_to_true() => _result.IsReplayable.ShouldBeTrue();
-    [Fact] void should_send_explicit_true_to_proto3_clients() => _result.IsReplayableValue.ShouldEqual(BooleanValue.True);
+    [Fact] void should_send_explicit_true_to_proto3_clients() => _result.IsReplayableValue.ShouldEqual(true);
     [Fact] void should_keep_the_legacy_proto3_read_behavior() => _proto3Result.IsReplayable.ShouldBeFalse();
-    [Fact] void should_override_the_proto3_false_default() => _proto3Result.IsReplayableValue.Resolve(_proto3Result.IsReplayable).ShouldBeTrue();
+    [Fact] void should_override_the_proto3_false_default() => (_proto3Result.IsReplayableValue ?? _proto3Result.IsReplayable).ShouldBeTrue();
     [Fact] void should_have_correct_id() => _result.Id.ShouldEqual(_definition.Identifier.Value);
     [Fact] void should_have_correct_running_state() => _result.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_have_correct_tail_event_sequence_number() => _result.TailEventSequenceNumber.ShouldEqual(99ul);
@@ -70,7 +69,7 @@ public class and_observer_is_replayable : Specification
         [ProtoMember(10)]
         public bool IsReplayable { get; set; }
 
-        [ProtoMember(13)]
-        public BooleanValue IsReplayableValue { get; set; }
+        [ProtoMember(13), NullWrappedValue]
+        public bool? IsReplayableValue { get; set; }
     }
 }
