@@ -169,10 +169,13 @@ public partial class Observer
 
         // A concluded job stays listed until it is finalized but owns nothing; counting it would keep a failed
         // replacement from ever being rescued while that finalization is slow or failed.
+        var ownershipEpochBeforeLookup = _catchUpOwnershipEpoch;
         var catchupJobs = await _jobsManager.GetUnfinishedJobs();
 
-        // CaughtUp can begin a handover while the lookup is awaited, so ownership must be checked again.
-        if (HasCatchupOwnershipInFlight())
+        // CaughtUp can begin a handover while the lookup is awaited, so ownership must be checked again. It can also
+        // begin and finish there - successor started, nothing left in flight - and then the listing predates the
+        // successor, so it cannot say who owns catch-up now. A changed epoch tells.
+        if (HasCatchupOwnershipInFlight() || _catchUpOwnershipEpoch != ownershipEpochBeforeLookup)
         {
             return true;
         }

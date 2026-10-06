@@ -91,6 +91,15 @@ public partial class Observer(
     IMeterScope<Observer>? _metrics;
     bool _isPreparingCatchup;
     int _catchUpHandoversInFlight;
+
+    /// <summary>
+    /// Counts every time catch-up ownership started moving - a handover entering or an acquisition starting.
+    /// </summary>
+    /// <remarks>
+    /// A handover can both start and finish while the watchdog awaits its job lookup, leaving nothing in flight to
+    /// see afterwards and a listing that predates the successor it started. A changed epoch is what reveals it.
+    /// </remarks>
+    int _catchUpOwnershipEpoch;
     int _catchupRecoveryAttempts;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     int _statePersistenceBatchInterval = 1;

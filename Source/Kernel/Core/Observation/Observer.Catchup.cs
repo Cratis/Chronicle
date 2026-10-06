@@ -34,6 +34,7 @@ public partial class Observer
         // Set before anything is awaited, so a catch-up interleaving with this one finds it and adopts its outcome.
         var acquisition = new TaskCompletionSource<JobId>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pendingCatchUpAcquisition = acquisition.Task;
+        _catchUpOwnershipEpoch++;
         var jobId = JobId.NotSet;
         try
         {
@@ -91,6 +92,7 @@ public partial class Observer
         // From the moment the reporting job stops counting as an owner until routing has asked for its successor, the
         // handover itself owns catch-up. The watchdog interleaves with this call and must not rescue in that window.
         _catchUpHandoversInFlight++;
+        _catchUpOwnershipEpoch++;
         try
         {
             await HandOverCaughtUpJob(jobId, lastHandledEventSequenceNumber);
