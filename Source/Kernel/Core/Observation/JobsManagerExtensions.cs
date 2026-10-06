@@ -50,7 +50,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onResume">The optional callback when a job needs to be resumed.</param>
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
-    /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Jobs a lookup listing other jobs no longer lists as unfinished are removed from it.</param>
+    /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -87,7 +87,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onResume">The optional callback when a job needs to be resumed.</param>
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
-    /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Jobs a lookup listing other jobs no longer lists as unfinished are removed from it.</param>
+    /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -114,33 +114,17 @@ public static partial class JobsManagerExtensions
         onResume ??= () => Task.CompletedTask;
         onStartNew ??= () => Task.CompletedTask;
         onResumeRefused ??= () => Task.CompletedTask;
-        var rememberedBeforeLookup = concludedJobs?.ToArray() ?? [];
         var jobs = await jobsManager.GetUnfinishedJobs();
         var request = createRequest();
 
-        // A concluded job is only dangerous while it is still listed as unfinished - that is what makes it look like an
-        // owner. Once a lookup no longer lists it, it has finished for good and can be forgotten, which is what keeps the
-        // remembered set bounded. Forgetting by anything else, such as how many jobs concluded after it, readmits a job
-        // whose finalization is slow or failed and strands the observer on a job that will never report back again.
-        // Only jobs remembered before the lookup started are pruned; one concluding while it was in flight is judged by
-        // the next lookup. The exclusion itself is read after the lookup, so it covers jobs that concluded meanwhile.
-        // The jobs manager reports a failed lookup as an empty listing, so an empty listing proves nothing has finished;
-        // pruning on it would readmit every concluded job still running. Forgetting waits for a listing of other jobs.
-        if (concludedJobs is not null && jobs.Count > 0)
-        {
-            var listed = jobs.Select(job => job.Id).ToHashSet();
-            foreach (var finishedJob in rememberedBeforeLookup.Where(id => !listed.Contains(id)))
-            {
-                concludedJobs.Remove(finishedJob);
-            }
-        }
-
-        var concluded = concludedJobs?.ToHashSet() ?? [];
+        // The exclusion is read after the lookup, so it covers jobs that concluded while it was in flight. A listing is no
+        // evidence that a concluded job has finished - the jobs manager reports a failed lookup as an empty listing - so
+        // nothing is forgotten here. The filter runs to completion before anything else is awaited.
         jobs = jobs.Where(job =>
             job.Request is TRequest observerRequest &&
             observerRequest.ObserverKey == request.ObserverKey &&
             requestPredicate(observerRequest) &&
-            !concluded.Contains(job.Id)).ToImmutableList();
+            !(concludedJobs?.Contains(job.Id) ?? false)).ToImmutableList();
         var alreadyRunningJob = jobs.FirstOrDefault(job => job.IsPreparingOrRunning);
         if (alreadyRunningJob is not null)
         {
@@ -185,6 +169,14 @@ public static partial class JobsManagerExtensions
         logger.CouldNotStartJob(error);
         return JobId.NotSet;
     }
+
+    /// <summary>
+    /// Gets whether a job with the given status has finished for good - the statuses <see cref="GetUnfinishedJobs"/> never lists.
+    /// </summary>
+    /// <param name="status">The <see cref="JobStatus"/> to check.</param>
+    /// <returns>True if the job has finished; false if it is preparing, running or stopped.</returns>
+    internal static bool HasFinished(this JobStatus status) => !_unfinishedStatuses.Contains(status);
+
     [LoggerMessage(LogLevel.Debug, "Found already running job {JobId}")]
     static partial void FoundRunningJob(this ILogger logger, JobId jobId);
 

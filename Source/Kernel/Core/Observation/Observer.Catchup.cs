@@ -88,6 +88,33 @@ public partial class Observer
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
+        // From the moment the reporting job stops counting as an owner until routing has asked for its successor, the
+        // handover itself owns catch-up. The watchdog interleaves with this call and must not rescue in that window.
+        _catchUpHandoversInFlight++;
+        try
+        {
+            await HandOverCaughtUpJob(jobId, lastHandledEventSequenceNumber);
+        }
+        finally
+        {
+            _catchUpHandoversInFlight--;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        if (IsRetired || _removed) return;
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
+        State.CatchingUpPartitions.Remove(partition);
+        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        await WriteStateAsync();
+        await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
+    }
+
+    async Task HandOverCaughtUpJob(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber)
+    {
         // The job reports back before it is finalized, so it is still listed as running while routing decides
         // whether the observer is behind. Finding it there must not count as an owner: it has done its work and will
         // never report back again, which would leave an event appended at that boundary without anyone to handle it.
@@ -104,18 +131,6 @@ public partial class Observer
 
         if (IsRetired || _removed) return;
         await TransitionTo<Routing>();
-    }
-
-    /// <inheritdoc/>
-    public async Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
-    {
-        if (IsRetired || _removed) return;
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
-        State.CatchingUpPartitions.Remove(partition);
-        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
-        await WriteStateAsync();
-        await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
     }
 
     /// <summary>
@@ -146,6 +161,7 @@ public partial class Observer
 
     async Task<JobId> AcquireCatchUpJob()
     {
+        await ForgetFinishedConcludedCatchUpJobs();
         var subscription = await GetSubscription();
         return await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
             logger,
@@ -233,14 +249,42 @@ public partial class Observer
     /// </summary>
     /// <param name="jobId">The <see cref="JobId"/> of the job that concluded.</param>
     /// <remarks>
-    /// Forgotten only once a catch-up lookup lists other unfinished jobs but no longer this one; an empty listing may be a
-    /// failed lookup and forgets nothing. A job whose finalization is slow or
-    /// failed stays listed, and so stays remembered for as long as it could be mistaken for an owner.
+    /// Forgotten by <see cref="ForgetFinishedConcludedCatchUpJobs"/> once the job store confirms it has finished.
     /// </remarks>
     void RememberConcludedCatchUpJob(JobId jobId)
     {
         if (jobId == JobId.NotSet) return;
         _concludedCatchUpJobs.Add(jobId);
+    }
+
+    /// <summary>
+    /// Forgets the remembered concluded catch-up jobs the job store confirms have finished or no longer exist.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A concluded job is only dangerous while it is unfinished - that is what makes it look like an owner. Once it has
+    /// finished it can be forgotten, which is what keeps the remembered set bounded on an activation that is kept alive.
+    /// Each job is confirmed on its own, because a listing cannot tell a finished job from a failed lookup: the jobs
+    /// manager reports that failure as an empty listing, so an idle namespace never proved anything finished and every
+    /// catch-up left its job behind. A failed lookup forgets nothing, since readmitting a concluded job that is still
+    /// finalizing strands the observer on a job that will never report back again. A job concluding meanwhile is not
+    /// in the snapshot and is judged next time.
+    /// </remarks>
+    async Task ForgetFinishedConcludedCatchUpJobs()
+    {
+        if (_concludedCatchUpJobs.Count == 0) return;
+        var jobStorage = storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Jobs;
+        foreach (var jobId in _concludedCatchUpJobs.ToArray())
+        {
+            var job = await jobStorage.GetJob(jobId);
+            var hasFinished =
+                (job.TryGetError(out var error) && error == Cratis.Orleans.Storage.Jobs.JobError.NotFound) ||
+                (job.TryGetResult(out var state) && state.Status.HasFinished());
+            if (hasFinished)
+            {
+                _concludedCatchUpJobs.Remove(jobId);
+            }
+        }
     }
 
     async Task<Result<bool, GetSequenceNumberError>> NeedsCatchup(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)

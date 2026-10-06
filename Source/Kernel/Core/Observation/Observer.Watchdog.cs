@@ -12,6 +12,11 @@ namespace Cratis.Chronicle.Observation;
 public partial class Observer
 {
     /// <summary>
+    /// Gets the number of consecutive stranded catch-up preparations the watchdog has recovered. This property is for testing purposes only.
+    /// </summary>
+    internal int CatchupRecoveryAttempts => _catchupRecoveryAttempts;
+
+    /// <summary>
     /// Runs all watchdog checks immediately. This method is for testing purposes only.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -153,6 +158,15 @@ public partial class Observer
 
     async Task<bool> HasRunningCatchupJob()
     {
+        // A concluded job being handed over, or a catch-up job still being acquired, owns catch-up although nothing
+        // listed does yet: the concluded job is excluded and its successor is not started. CaughtUp interleaves with the
+        // watchdog, so a tick can land in that window; rescuing there clears a flag the handover still needs and counts
+        // a recovery towards quarantine for a strand that never happened.
+        if (_catchUpHandoversInFlight > 0 || _pendingCatchUpAcquisition is not null)
+        {
+            return true;
+        }
+
         // A concluded job stays listed until it is finalized but owns nothing; counting it would keep a failed
         // replacement from ever being rescued while that finalization is slow or failed.
         var catchupJobs = await _jobsManager.GetUnfinishedJobs();

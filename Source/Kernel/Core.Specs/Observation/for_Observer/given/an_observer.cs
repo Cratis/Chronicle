@@ -17,6 +17,7 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
+using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 using Cratis.Traces;
@@ -60,6 +61,7 @@ public class an_observer : Specification
     protected IChronicleStorage _storage;
     protected IChronicleEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _eventStoreNamespaceStorage;
+    protected IJobStorage _jobStorage;
     protected IInFlightEventsStorage _inFlightEventsStorage;
     protected IObserverHandledCountsStorage _observerHandledCountsStorage;
     protected IEventTypesStorage _eventTypesStorage;
@@ -137,6 +139,15 @@ public class an_observer : Specification
         _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>()).Returns([]);
         _eventStoreNamespaceStorage.ObserverHandledCounts.Returns(_observerHandledCountsStorage);
         _eventStoreNamespaceStorage.GetEventSequence(Arg.Any<EventSequenceId>()).Returns(_eventSequenceStorage);
+
+        // By default, every job looked up individually is still running - so nothing it concluded is forgotten.
+        _jobStorage = Substitute.For<IJobStorage>();
+        _eventStoreNamespaceStorage.Jobs.Returns(_jobStorage);
+        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        {
+            Id = call.Arg<JobId>(),
+            Status = JobStatus.Running
+        }));
         _observerHandledCountsStorage.GetFor(Arg.Any<ObserverId>(), Arg.Any<Key>()).Returns(new Dictionary<EventTypeId, EventCount>());
 
         // By default, no schemas are known — events pass through unchanged.

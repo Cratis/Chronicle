@@ -90,6 +90,7 @@ public partial class Observer(
     IAppendedEventsQueues _appendedEventsQueues = null!;
     IMeterScope<Observer>? _metrics;
     bool _isPreparingCatchup;
+    int _catchUpHandoversInFlight;
     int _catchupRecoveryAttempts;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     int _statePersistenceBatchInterval = 1;
