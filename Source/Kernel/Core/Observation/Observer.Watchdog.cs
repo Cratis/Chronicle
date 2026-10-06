@@ -162,7 +162,7 @@ public partial class Observer
         // listed does yet: the concluded job is excluded and its successor is not started. CaughtUp interleaves with the
         // watchdog, so a tick can land in that window; rescuing there clears a flag the handover still needs and counts
         // a recovery towards quarantine for a strand that never happened.
-        if (_catchUpHandoversInFlight > 0 || _pendingCatchUpAcquisition is not null)
+        if (HasCatchupOwnershipInFlight())
         {
             return true;
         }
@@ -170,12 +170,21 @@ public partial class Observer
         // A concluded job stays listed until it is finalized but owns nothing; counting it would keep a failed
         // replacement from ever being rescued while that finalization is slow or failed.
         var catchupJobs = await _jobsManager.GetUnfinishedJobs();
+
+        // CaughtUp can begin a handover while the lookup is awaited, so ownership must be checked again.
+        if (HasCatchupOwnershipInFlight())
+        {
+            return true;
+        }
+
         return catchupJobs.Any(job =>
             job.Request is CatchUpObserverRequest request &&
             request.ObserverKey == _observerKey &&
             job.IsPreparingOrRunning &&
             !_concludedCatchUpJobs.Contains(job.Id));
     }
+
+    bool HasCatchupOwnershipInFlight() => _catchUpHandoversInFlight > 0 || _pendingCatchUpAcquisition is not null;
 
     async Task<bool> CheckNextSequenceNumber()
     {
