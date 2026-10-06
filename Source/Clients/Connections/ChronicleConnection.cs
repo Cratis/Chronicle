@@ -8,6 +8,7 @@ using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events.Constraints;
+using Cratis.Chronicle.Contracts.EventSources;
 using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
@@ -337,7 +338,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IUsers>(clientFactory),
             callInvoker.CreateGrpcService<IApplications>(clientFactory),
             callInvoker.CreateGrpcService<IServer>(clientFactory),
-            callInvoker.CreateGrpcService<IConnectionService>(clientFactory));
+            callInvoker.CreateGrpcService<IConnectionService>(clientFactory),
+            callInvoker.CreateGrpcService<IEventSources>(clientFactory));
 
         if (_skipKeepAlive)
         {

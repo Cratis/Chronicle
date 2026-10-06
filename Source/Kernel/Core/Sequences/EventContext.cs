@@ -50,4 +50,9 @@ public record EventContext(
     /// Gets the structured named tags associated with this event.
     /// </summary>
     public IEnumerable<NamedTag> NamedTags { get; init; } = [];
+
+    /// <summary>
+    /// Gets the name of the registered event source definition the event was appended through. Empty when it was not.
+    /// </summary>
+    public string EventSource { get; init; } = string.Empty;
 }

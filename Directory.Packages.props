@@ -17,18 +17,18 @@
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
-    <!-- 7.19.6 is the minimum Cratis.Orleans 1.12.2 declares; NU1605 is suppressed, so a lower pin would silently downgrade it. -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.19.6" />
+    <!-- 7.22.0 is the minimum Cratis.Orleans 1.15.2 declares; NU1605 is suppressed, so a lower pin would silently downgrade it. -->
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.22.0" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.19.4" />
     <!-- Keep the Arc runtime packages aligned; Chronicle.Testing declares Arc dependencies for its embedded kernel. -->
-    <PackageVersion Include="Cratis.Arc" Version="22.41.2" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="22.41.2" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.41.2" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.41.2" />
+    <PackageVersion Include="Cratis.Arc" Version="22.48.1" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="22.48.1" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.48.1" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.48.1" />
     <!-- Build-time tool only, kept at 22.23.0: the 22.30.0 generator aborts on Core with "Microsoft.Extensions.Options has already been loaded into this MetadataLoadContext". -->
     <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.23.0" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.41.2" />
-    <PackageVersion Include="Cratis.Arc.Testing" Version="22.41.2" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.48.1" />
+    <PackageVersion Include="Cratis.Arc.Testing" Version="22.48.1" />
     <PackageVersion Include="Cratis.Screenplay" Version="4.16.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
@@ -74,10 +74,10 @@
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.3.1" />
     <PackageVersion Include="OrleansTestKit10" Version="10.0.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.5.0" />
-    <PackageVersion Include="Cratis.Orleans" Version="1.12.2" />
-    <PackageVersion Include="Cratis.Orleans.Storage" Version="1.12.2" />
-    <PackageVersion Include="Cratis.Orleans.Storage.MongoDB" Version="1.12.2" />
-    <PackageVersion Include="Cratis.Orleans.Storage.Sql" Version="1.12.2" />
+    <PackageVersion Include="Cratis.Orleans" Version="1.15.2" />
+    <PackageVersion Include="Cratis.Orleans.Storage" Version="1.15.2" />
+    <PackageVersion Include="Cratis.Orleans.Storage.MongoDB" Version="1.15.2" />
+    <PackageVersion Include="Cratis.Orleans.Storage.Sql" Version="1.15.2" />
     <!-- Open Telemetry -->
     <PackageVersion Include="OpenTelemetry" Version="1.19.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />

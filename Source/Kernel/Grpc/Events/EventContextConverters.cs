@@ -35,7 +35,8 @@ internal static class EventContextConverters
         Hash = context.Hash,
         ObservationState = context.ObservationState.ToContract(),
         Subject = context.Subject?.Value ?? string.Empty,
-        NamedTags = context.NamedTags.Select(tag => new Contracts.Events.NamedTag { Name = tag.Name.Value, Value = tag.Value }).ToList()
+        NamedTags = context.NamedTags.Select(tag => new Contracts.Events.NamedTag { Name = tag.Name.Value, Value = tag.Value }).ToList(),
+        EventSource = context.EventSource.Value
     };
 
     /// <summary>
@@ -61,7 +62,8 @@ internal static class EventContextConverters
         context.ObservationState.ToChronicle(),
         context.ResolveSubject())
     {
-        NamedTags = (context.NamedTags ?? []).Select(tag => new Concepts.Events.NamedTag(new TagName(tag.Name), tag.Value)).ToArray()
+        NamedTags = (context.NamedTags ?? []).Select(tag => new Concepts.Events.NamedTag(new TagName(tag.Name), tag.Value)).ToArray(),
+        EventSource = string.IsNullOrEmpty(context.EventSource) ? EventSourceName.NotSet : new EventSourceName(context.EventSource)
     };
 
     /// <summary>

@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public static class WellKnownCollectionNames
 {
     /// <summary>
+    /// The collection holding retained alert incidents.
+    /// </summary>
+    public const string AlertIncidents = "alert-incidents";
+
+    /// <summary>
     /// The collection that holds <see cref="EventStore"/>.
     /// </summary>
     public const string EventStores = "event-stores";
@@ -107,6 +112,11 @@ public static class WellKnownCollectionNames
     /// The collection that holds webhook definitions.
     /// </summary>
     public const string WebhookDefinitions = "webhooks";
+
+    /// <summary>
+    /// The collection that holds registered event source definitions.
+    /// </summary>
+    public const string EventSources = "event-sources";
 
     /// <summary>
     /// The collection that holds external service definitions.

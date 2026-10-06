@@ -32,7 +32,7 @@ public class ObserverService(
     /// <inheritdoc/>
     public async Task BeginReplayFor(ObserverDetails observerDetails)
     {
-        if (observerDetails.Type != ObserverType.Projection)
+        if (!RebuildsReadModel(observerDetails))
         {
             await ForEachReplayHandler(handler => handler.BeginReplayFor(observerDetails));
             return;
@@ -53,6 +53,13 @@ public class ObserverService(
     {
         var results = await Task.WhenAll(replayHandlers.Select(handler => handler.EndReplayFor(observerDetails)));
         return EnsureReplayFinalized(results);
+    }
+
+    /// <inheritdoc/>
+    public async Task AbandonReplayFor(ObserverDetails observerDetails)
+    {
+        var results = await Task.WhenAll(replayHandlers.Select(handler => handler.AbandonReplayFor(observerDetails)));
+        EnsureReplayAbandoned(results);
     }
 
     /// <inheritdoc/>
@@ -93,6 +100,37 @@ public class ObserverService(
             if (result.TryGetError(out var error) && error != ICanHandleCatchupForObserver.Error.CannotHandle)
             {
                 throw new CatchupFinalizationFailed(error);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets whether a replay of an observer rebuilds a read model into a replay container that has to be promoted.
+    /// </summary>
+    /// <remarks>
+    /// Projections and reducers both rebuild their read model from nothing during a replay. Starting such a replay has to
+    /// succeed on every silo, and ending it has to flush every silo before exactly one of them promotes the result.
+    /// </remarks>
+    /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
+    /// <returns>True if the replay rebuilds a read model; otherwise false.</returns>
+    internal static bool RebuildsReadModel(ObserverDetails observerDetails) =>
+        observerDetails.Type is ObserverType.Projection or ObserverType.Reducer;
+
+    /// <summary>
+    /// Ensure every silo that held a replay abandoned it.
+    /// </summary>
+    /// <param name="results">The results returned by the replay handlers.</param>
+    /// <exception cref="ReplayFinalizationFailed">A handler reported a failure to abandon the replay.</exception>
+    internal static void EnsureReplayAbandoned(IEnumerable<Result<ICanHandleReplayForObserver.Error>> results)
+    {
+        foreach (var result in results)
+        {
+            // Every silo is asked; one that never held the replay context has nothing to abandon.
+            if (result.TryGetError(out var error) &&
+                error != ICanHandleReplayForObserver.Error.CannotHandle &&
+                error != ICanHandleReplayForObserver.Error.CouldNotGetReplayContext)
+            {
+                throw new ReplayFinalizationFailed(error);
             }
         }
     }

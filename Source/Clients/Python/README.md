@@ -22,5 +22,12 @@ python build_package.py
 
 `build_package.py` refuses to build when generated messages or gRPC stubs are absent.
 
+## Distribution
+
+This package is not published to PyPI. While publication is unconfigured, a wheel and sdist built from an exact
+release tag are attached to that tag's GitHub release by the *Attach Python Contract Release Assets* workflow, with
+`SHA256SUMS` and `provenance.json`. Pin the wheel by URL and hash. See
+`Documentation/contributing/clients/python-contract-assets.md`.
+
 This package exposes the generated wire surface. It does not establish support, compatibility, or feature parity
 for an idiomatic Python client.

@@ -106,6 +106,23 @@ class for_parsing_databases(unittest.TestCase):
             matrix._databases(" , ")
 
 
+class for_inherited_storage_specs(unittest.TestCase):
+    def test_counts_the_shared_contract_facts(self):
+        text = (
+            "using Contract = Cratis.Chronicle.Storage.Alerts.for_IAlertIncidentsStorage.when_applying;\n"
+            "public class and_competing_inserts_arrive : Contract.and_competing_inserts_arrive<Harness> {}"
+        )
+        self.assertEqual(1, matrix._inherited_fact_count(text))
+
+    def test_includes_the_sql_server_parity_family_in_executed_filters(self):
+        include = _run("--all-providers")
+        parity = [entry for entry in include if "for_SqlServerAlertIncidentsStorage" in entry["filter"]]
+        self.assertTrue(parity)
+        self.assertEqual({"mssql"}, _databases_of(parity))
+        self.assertEqual(1, len(parity))
+        self.assertTrue(all("and_competing_inserts_arrive" in entry["filter"] for entry in parity))
+
+
 class for_generating_the_matrix(unittest.TestCase):
     """The generated matrix, against the repository's real integration namespaces."""
 
@@ -116,10 +133,14 @@ class for_generating_the_matrix(unittest.TestCase):
         self.assertEqual(set(matrix.ALL_DATABASES), _databases_of(_run("--all-providers")))
 
     def test_the_shards_are_the_same_whatever_the_backends(self):
-        # Backend selection must only add or remove infrastructure legs -- never
-        # change which tests a shard owns.
+        # Backend selection must not change ownership of configurable-runtime shards.
+        # The direct SQL Server contract family exists only in its provider lane (specified above).
         def shards(include):
-            return {(entry["namespace"], entry["shard"], entry["filter"]) for entry in include}
+            return {
+                (entry["namespace"], entry["shard"], entry["filter"])
+                for entry in include
+                if entry["namespace"] != "Cratis.Chronicle.Integration.SqlServerAlertIncidents"
+            }
 
         self.assertEqual(shards(_run()), shards(_run("--all-providers")))
 

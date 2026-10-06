@@ -117,4 +117,10 @@ public class EventContext
     /// </summary>
     [ProtoMember(17)]
     public IList<NamedTag> NamedTags { get; set; } = new List<NamedTag>();
+
+    /// <summary>
+    /// Gets or sets the name of the registered event source definition the event was appended through. Empty when it was not.
+    /// </summary>
+    [ProtoMember(18)]
+    public string EventSource { get; set; } = string.Empty;
 }

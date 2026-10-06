@@ -63,17 +63,12 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
             if (!schemaPropertiesByName.TryGetValue(name, out var schemaProperty) && name == "id")
             {
-                if (schemaPropertiesByName.TryGetValue("Id", out var pascalCaseSchemaProperty))
-                {
-                    schemaProperty = pascalCaseSchemaProperty;
-                    name = "Id";
-                }
-                else
-                {
-                    // Schema has neither 'id' nor 'Id' — keep MongoDB's own '_id' name so that
-                    // callers can distinguish the document primary key from user-defined fields.
-                    name = element.Name;
-                }
+                // Preserve the existing id, then Id precedence before considering other identifier spellings.
+                schemaProperty = schemaPropertiesByName.GetValueOrDefault("Id")
+                    ?? schemaPropertiesByName.Values.FirstOrDefault(property => property.Name.Equals("id", StringComparison.OrdinalIgnoreCase));
+
+                // Without a schema identifier, keep MongoDB's own name to distinguish the primary key.
+                name = schemaProperty?.Name ?? element.Name;
             }
 
             if (schemaProperty is null)

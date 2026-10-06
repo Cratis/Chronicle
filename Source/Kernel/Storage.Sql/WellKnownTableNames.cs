@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Storage.Sql;
 public static class WellKnownTableNames
 {
     /// <summary>
+    /// The table holding retained alert incidents.
+    /// </summary>
+    public const string AlertIncidents = "AlertIncidents";
+
+    /// <summary>
     /// The table that holds <see cref="EventStore"/>.
     /// </summary>
     public const string EventStores = "EventStores";
@@ -207,6 +212,11 @@ public static class WellKnownTableNames
     /// The table that holds external service definitions.
     /// </summary>
     public const string ExternalServiceDefinitions = "ExternalServiceDefinitions";
+
+    /// <summary>
+    /// The table that holds registered event source definitions.
+    /// </summary>
+    public const string EventSourceDefinitions = "EventSourceDefinitions";
 
     /// <summary>
     /// The table that holds saved event sequence queries.

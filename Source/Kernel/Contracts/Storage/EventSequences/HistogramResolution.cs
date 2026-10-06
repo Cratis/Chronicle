@@ -7,28 +7,28 @@
 
 namespace Cratis.Chronicle.Contracts.Storage.EventSequences;
 /// <summary>
-/// Represents the HistogramResolution value.
+/// Defines the time bucket size used when computing an event sequence histogram.
 /// </summary>
 public enum HistogramResolution
 {
     /// <summary>
-    /// Represents the Minute value.
+    /// Group events per minute.
     /// </summary>
     Minute = 0,
     /// <summary>
-    /// Represents the Hour value.
+    /// Group events per hour.
     /// </summary>
     Hour = 1,
     /// <summary>
-    /// Represents the Day value.
+    /// Group events per day.
     /// </summary>
     Day = 2,
     /// <summary>
-    /// Represents the Week value.
+    /// Group events per week.
     /// </summary>
     Week = 3,
     /// <summary>
-    /// Represents the Month value.
+    /// Group events per month.
     /// </summary>
     Month = 4
 }

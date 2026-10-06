@@ -191,6 +191,20 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
         }
     }
 
+    /// <summary>
+    /// Skips wiping the databases between specs.
+    /// </summary>
+    /// <param name="excludePrefixes">Ignored.</param>
+    /// <returns>A completed task.</returns>
+    /// <remarks>
+    /// Dropping every MongoDB database between specs wipes the Chronicle cluster's <c language="csharp">event-stores</c>
+    /// collection, including the System event store registered once when the container starts.
+    /// The already-activated namespace grain never rewrites it, so the next spec to query event
+    /// stores would find System missing. These specs use unique event-store names, so cleanup
+    /// between them is unnecessary.
+    /// </remarks>
+    public override Task RemoveAllDatabases(IEnumerable<string>? excludePrefixes = null) => Task.CompletedTask;
+
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {

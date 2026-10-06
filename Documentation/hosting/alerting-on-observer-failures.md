@@ -29,7 +29,7 @@ Removal and retirement can fail when incident reconciliation or resource cleanup
 
 Automatic recovery, including projection-manager startup, leaves committed retirement intact. Explicit registration can reactivate the observer with a fresh lifecycle after discarding retained failed partitions and retry reminders. It does not reopen ended incident IDs. Probing or retiring an absent observer creates no observer record or alert reminder.
 
-Recording incidents does not itself deliver email or chat notifications; use the monitoring options below for delivery.
+Current recorded incidents are available through [scoped incident queries](/chronicle/hosting/alert-incident-queries/), with bounded pages, lookups, counts and sampled materialization health. Check that health before treating an empty result as no incidents. The query surface does not add incident gauges or deliver email or chat notifications; use the monitoring options below for delivery.
 
 ## Alert from metrics
 

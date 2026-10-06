@@ -41,7 +41,8 @@ internal static class EventToAppendConverters
             @event.NamedTags.Select(tag => tag.ToApi()),
             @event.Occurred,
             @event.Subject,
-            @event.Causation?.ToApi());
+            @event.Causation?.ToApi(),
+            @event.EventSource);
 
     /// <summary>
     /// Converts a contract <see cref="Contracts.Sequences.EventForEventSourceId"/> to an <see cref="EventForEventSourceId"/>.
@@ -59,5 +60,6 @@ internal static class EventToAppendConverters
             @event.Tags,
             @event.Occurred,
             @event.Subject,
-            @event.Causation?.ToApi());
+            @event.Causation?.ToApi(),
+            @event.EventSource);
 }

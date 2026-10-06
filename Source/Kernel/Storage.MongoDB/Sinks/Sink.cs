@@ -950,16 +950,48 @@ public class Sink(
 
     async Task RemoveChildFromAll(ChildRemovedFromAll childRemoved)
     {
-        var childrenProperty = (string)childRemoved.ChildrenProperty.GetChildrenProperty();
-        var identifiedByProperty = (string)childRemoved.IdentifiedByProperty;
-        var propertyValue = childRemoved.Key.ToBsonValue();
-
-        var collection = Collection;
-
+        var segments = childRemoved.ChildrenProperty.Segments.ToArray();
+        var names = segments.Select(segment => segment.Value.ToMongoDBPropertyName()).ToArray();
+        var path = new List<string>();
+        var arrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
         var filter = Builders<BsonDocument>.Filter.Empty;
-        var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, propertyValue);
-        var update = Builders<BsonDocument>.Update.PullFilter(childrenProperty, childFilter);
-        await collection.UpdateManyAsync(filter, update);
+
+        for (var index = 0; index < segments.Length; index++)
+        {
+            path.Add(names[index]);
+            if (segments[index] is not ArrayProperty || index == segments.Length - 1)
+            {
+                continue;
+            }
+
+            if (arrayFilters.Count == 0)
+            {
+                filter = Builders<BsonDocument>.Filter.Type(string.Join('.', names.Take(index + 1)), BsonType.Array);
+            }
+
+            // Each parent element must contain the next array. Missing/null branches are skipped rather
+            // than making MongoDB reject the positional update for the entire document.
+            var nextArray = index + 1;
+            while (nextArray < segments.Length - 1 && segments[nextArray] is not ArrayProperty)
+            {
+                nextArray++;
+            }
+
+            var identifier = $"a{index}";
+            var nextArrayPath = string.Join('.', names.Skip(index + 1).Take(nextArray - index));
+            arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument($"{identifier}.{nextArrayPath}", new BsonDocument("$type", "array"))));
+            path.Add($"$[{identifier}]");
+        }
+
+        if (arrayFilters.Count == 0)
+        {
+            filter = Builders<BsonDocument>.Filter.Type(string.Join('.', path), BsonType.Array);
+        }
+
+        var identifiedByProperty = childRemoved.IdentifiedByProperty.ToMongoDB();
+        var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
+        var update = Builders<BsonDocument>.Update.PullFilter(string.Join('.', path), childFilter);
+        await Collection.UpdateManyAsync(filter, update, new UpdateOptions { ArrayFilters = arrayFilters.Count == 0 ? null : arrayFilters });
     }
 
     IMongoCollection<BsonDocument> Collection => collections.GetCollection();

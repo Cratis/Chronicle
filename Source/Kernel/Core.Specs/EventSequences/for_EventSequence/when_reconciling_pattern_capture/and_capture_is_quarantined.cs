@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_reconciling_pattern_capture;
 
@@ -22,5 +23,5 @@ public class and_capture_is_quarantined : given.an_event_sequence_with_a_capture
     [Fact] async Task should_not_bypass_quarantine() => (await _captureObserver.GetCurrentState()).ShouldBeOfExactType<QuarantinedObserver>();
     [Fact] async Task should_preserve_the_quarantine_marker() => (await _captureObserver.GetState()).RunningState.ShouldEqual(ObserverRunningState.Quarantined);
     [Fact] async Task should_not_write_recovery_state() => await _captureState.DidNotReceive().WriteStateAsync();
-    [Fact] async Task should_not_start_setup() => await _jobsManager.DidNotReceive().GetAllJobs();
+    [Fact] async Task should_not_start_setup() => await _jobsManager.DidNotReceive().GetJobs(Arg.Any<JobQuery>());
 }

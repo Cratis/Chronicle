@@ -42,6 +42,11 @@ public record EventToAppendToStorage(
     Subject? Subject = null)
 {
     /// <summary>
+    /// Gets the name of the registered event source definition the event is appended through.
+    /// </summary>
+    public EventSourceName EventSource { get; init; } = EventSourceName.NotSet;
+
+    /// <summary>
     /// Gets the structured named tags to persist with this event.
     /// </summary>
     public IReadOnlyCollection<NamedTag> NamedTags { get; init; } = [];

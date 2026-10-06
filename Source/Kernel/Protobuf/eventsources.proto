@@ -1,0 +1,79 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.EventSources;
+import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
+
+message AllEventSourcesRequest {
+   string EventStore = 1;
+}
+message CommandResult {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+}
+enum ConcurrencyDimensions {
+   // this is a composite/flags enumeration
+   CONCURRENCY_DIMENSIONS_None = 0;
+   EventSourceId = 1;
+   EventSourceType = 2;
+   EventStreamType = 4;
+   EventStreamId = 8;
+}
+message EventSourceDefinition {
+   string Name = 1;
+   string Description = 2;
+   EventSourceOwner Owner = 3;
+   ConcurrencyDimensions Concurrency = 4;
+   repeated EventStreamDefinition Streams = 5;
+}
+message EventSourceDetailsResponse {
+   string Id = 1;
+   string Name = 2;
+   string Description = 3;
+   EventSourceOwner Owner = 4;
+   ConcurrencyDimensions Concurrency = 5;
+   repeated EventStreamDefinition Streams = 6;
+}
+enum EventSourceOwner {
+   EVENT_SOURCE_OWNER_None = 0;
+   Client = 1;
+   Kernel = 2;
+}
+message EventStreamDefinition {
+   string Name = 1;
+   string Description = 2;
+   ConcurrencyDimensions Concurrency = 3;
+}
+message ObserveEventSourcesRequest {
+   string EventStore = 1;
+}
+message QueryResult_IEnumerable_EventSourceDetailsResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated EventSourceDetailsResponse Data = 6;
+}
+message RegisterEventSourcesRequest {
+   string EventStore = 1;
+   repeated EventSourceDefinition Sources = 2;
+}
+message ValidationResult {
+   ValidationResultSeverity Severity = 1; // default value could not be applied: Error
+   string Message = 2;
+   repeated string Members = 3;
+}
+enum ValidationResultSeverity {
+   Unknown = 0;
+   Information = 1;
+   Warning = 2;
+   Error = 3;
+}
+service EventSources {
+   rpc AllEventSources (AllEventSourcesRequest) returns (QueryResult_IEnumerable_EventSourceDetailsResponse);
+   rpc ObserveEventSources (ObserveEventSourcesRequest) returns (stream QueryResult_IEnumerable_EventSourceDetailsResponse);
+   rpc RegisterEventSources (RegisterEventSourcesRequest) returns (CommandResult);
+}

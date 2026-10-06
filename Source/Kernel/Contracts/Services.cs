@@ -5,6 +5,7 @@ using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events.Constraints;
+using Cratis.Chronicle.Contracts.EventSources;
 using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
@@ -56,6 +57,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Applications"><see cref="IApplications"/> instance.</param>
 /// <param name="Server"><see cref="IServer"/> instance.</param>
 /// <param name="Connections"><see cref="IConnectionService"/> instance.</param>
+/// <param name="EventSources"><see cref="IEventSources"/> instance.</param>
 public sealed record Services(
     ICompliance Compliance,
     IEventStores EventStores,
@@ -83,4 +85,5 @@ public sealed record Services(
     IUsers Users,
     IApplications Applications,
     IServer Server,
-    IConnectionService Connections) : IServices;
+    IConnectionService Connections,
+    IEventSources EventSources) : IServices;

@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
 using Cratis.Chronicle.Storage.Namespaces;
@@ -38,6 +39,11 @@ public interface IEventStoreStorage
     /// Gets the <see cref="IEventTypesStorage"/> for the event store.
     /// </summary>
     IEventTypesStorage EventTypes { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IEventSourcesStorage"/> for registered event source definitions.
+    /// </summary>
+    IEventSourcesStorage EventSources { get; }
 
     /// <summary>
     /// Gets the <see cref="IUniqueConstraintsStorage"/> for the event store.

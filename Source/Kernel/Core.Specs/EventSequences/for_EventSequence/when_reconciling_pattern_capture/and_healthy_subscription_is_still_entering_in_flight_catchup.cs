@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Orleans.Storage.Jobs;
 using NSubstitute.Extensions;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_reconciling_pattern_capture;
@@ -60,5 +61,5 @@ public class and_healthy_subscription_is_still_entering_in_flight_catchup : give
     [Fact] void should_observe_the_healthy_transient_unknown_state() => _observedRunningState.ShouldEqual(ObserverRunningState.Unknown);
     [Fact] async Task should_finish_observing() => (await _captureObserver.GetCurrentState()).ShouldBeOfExactType<Observing>();
     [Fact] async Task should_subscribe_to_the_queue_only_once() => await _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
-    [Fact] async Task should_not_restart_subscription_setup() => await _jobsManager.Received(1).GetAllJobs();
+    [Fact] async Task should_not_restart_subscription_setup() => await _jobsManager.Received(1).GetJobs(Arg.Any<JobQuery>());
 }
