@@ -33,6 +33,7 @@ public class a_sink_with_gated_bulk_writes : Specification
     protected readonly Key _firstKey = new("first", ArrayIndexers.NoIndexers);
     protected readonly Key _secondKey = new("second", ArrayIndexers.NoIndexers);
     protected bool _failLaterBatch;
+    protected bool _failFirstBatch;
     protected bool _holdFirstFlush = true;
     protected IMongoCollection<BsonDocument> _collection;
 
@@ -92,7 +93,7 @@ public class a_sink_with_gated_bulk_writes : Specification
         }
 
         var result = new BulkWriteResult<BsonDocument>.Acknowledged(operations.Length, 0, 0, 0, 0, operations, []);
-        if (_batches.Count > 1 && _failLaterBatch)
+        if ((_batches.Count == 1 && _failFirstBatch) || (_batches.Count > 1 && _failLaterBatch))
         {
             var error = (BulkWriteError)Activator.CreateInstance(typeof(BulkWriteError), BindingFlags.Instance | BindingFlags.NonPublic, null, [0, ServerErrorCategory.DuplicateKey, 11000, "duplicate key", new BsonDocument()], null)!;
             var connection = new ConnectionId(new ServerId(new ClusterId(), new DnsEndPoint("localhost", 27017)));
