@@ -79,13 +79,31 @@ public class JsonSchemaMetadataManager(
         return result;
     }
 
-    static JsonNode RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
+    static JsonNode? RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
     {
+        propertySchema = propertySchema.ActualTypeSchema;
+        var isScalar = propertySchema.Type.HasFlag(JsonObjectType.Integer) ||
+            propertySchema.Type.HasFlag(JsonObjectType.Number) || propertySchema.Type.HasFlag(JsonObjectType.Boolean);
+        if (isScalar && !propertySchema.Type.HasFlag(JsonObjectType.String) &&
+            released is JsonValue scalar && scalar.TryGetValue<string>(out var text))
+        {
+            // The ciphertext format stores scalar text without a JSON type tag. The schema supplies the
+            // missing kind; strings must never be parsed just because their content resembles JSON.
+            if (string.IsNullOrEmpty(text))
+            {
+                return propertySchema.Type.HasFlag(JsonObjectType.Null) || (propertySchema.Format?.EndsWith('?') ?? false)
+                    ? null
+                    : propertySchema.Type.HasFlag(JsonObjectType.Boolean) ? JsonValue.Create(false) : JsonValue.Create(0);
+            }
+
+            return JsonNode.Parse(text);
+        }
+
         // A coarse schema metadata marker on a whole container is blob-encrypted to a single ciphertext string,
         // even though its schema type stays array (a collection) or object (a value object). Releasing it
         // decrypts back to the original JSON text; re-parse that text into the container the schema expects so
         // the read model round-trips into its collection or value-object type rather than a raw string (which
-        // fails to deserialize). A scalar decrypts to a plain string and is left untouched.
+        // fails to deserialize). Genuine string scalars are left untouched.
         var isContainer = propertySchema.IsArray || propertySchema.Type.HasFlag(JsonObjectType.Object);
         if (isContainer &&
             released is JsonValue releasedValue &&
@@ -230,7 +248,8 @@ public class JsonSchemaMetadataManager(
                         {
                             try
                             {
-                                array[i] = await action(handler, identifier, element);
+                                var handled = await action(handler, identifier, element);
+                                array[i] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, itemSchema) : handled;
                             }
                             catch (Exception ex)
                             {
@@ -244,7 +263,7 @@ public class JsonSchemaMetadataManager(
                                 }
 
                                 logger.FailedToReleaseProperty(elementPath, identifier, failure);
-                                array[i] = JsonValue.Create(string.Empty);
+                                array[i] = RestoreReleasedContainerShape(JsonValue.Create(string.Empty), itemSchema);
                             }
                         }
                     }
