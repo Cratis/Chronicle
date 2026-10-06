@@ -22,24 +22,28 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequencesReactor.when_revisin
 public class and_release_fails : Specification
 {
     EventSequencesReactor _reactor;
-    IEventSequence _sequence;
-    IEventSequenceStorage _sequenceStorage;
+    protected IEventSequence _sequence;
+    protected IEventSequenceStorage _sequenceStorage;
     EventRevised _request;
     EventContext _context;
-    Exception _error;
-    JsonObject _original;
-    string _originalText;
+    protected Exception _error;
+    protected JsonObject _original;
+    protected string _originalText;
+
+    protected virtual bool UsesObjectArray => false;
 
     async Task Establish()
     {
-        var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""");
+        var schema = await JsonSchema.FromJsonAsync(UsesObjectArray
+            ? """{"type":"object","properties":{"contacts":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}}}}"""
+            : """{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""");
         var keys = new InMemoryEncryptionKeyStorage();
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(keys, encryption);
         var manager = new JsonSchemaMetadataManager(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, keys, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
-        _original = await manager.Apply("store", "namespace", schema, "owner", new JsonObject { ["name"] = "original" });
+        _original = await manager.Apply("store", "namespace", schema, "owner", JsonNode.Parse(UsesObjectArray ? """{"contacts":[{"name":"original"}]}""" : """{"name":"original"}""")!.AsObject());
         _originalText = _original.ToJsonString();
-        var revision = await manager.Apply("store", "namespace", schema, "owner", new JsonObject { ["name"] = "revised" });
+        var revision = await manager.Apply("store", "namespace", schema, "owner", JsonNode.Parse(UsesObjectArray ? """{"contacts":[{"name":"revised"}]}""" : """{"name":"revised"}""")!.AsObject());
 
         // Missing key material without a recorded erasure is an operational failure, not erasure.
         await keys.DeleteFor("store", "namespace", "owner");

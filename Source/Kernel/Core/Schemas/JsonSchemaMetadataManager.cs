@@ -318,7 +318,7 @@ public class JsonSchemaMetadataManager(
                 // Declared object members have historically been protected individually, including
                 // projection child writes. Only arrays and objects without declared properties need
                 // whole-element protection; preserve the persisted member-level representation.
-                await HandleActionFor(itemSchema, identifier, declaredObject, actionName, action, elementPath);
+                await HandleActionFor(itemSchema, identifier, declaredObject, actionName, action, elementPath, strictRelease);
                 continue;
             }
 
