@@ -27,25 +27,31 @@ public partial class Observer
         {
             // A transition requested while another one is in progress - typically one driven by an interleaved
             // callback such as CaughtUp - is only scheduled, and the state being entered may replace it with its own
-            // next state. The request is therefore held until a replay actually starts, or until the observer
-            // settles somewhere it can not replay from, so the caller gets the job that is really replaying.
-            var pendingReplay = _pendingReplay ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
-            await TransitionTo<Replay>();
-            if (!pendingReplay.Task.IsCompleted)
-            {
-                logger.ReplayDeferred();
-            }
+            // next state. Waiting for the replay state to be entered would hold this call open while that
+            // transition runs, and anything it calls back into the observer would queue behind it. The replay job is
+            // therefore started here, so its id is known up front; entering the replay state adopts the running job.
+            var jobId = await StartOrResumeReplayJob();
 
+            // The request stays raised until the replay state is entered, so a scheduled replay replaced by the
+            // state being entered is entered once the observer settles in Observing - see OnAfterEnteringState.
+            _replayRequested = true;
             try
             {
-                return await pendingReplay.Task.WaitAsync(_pendingReplayTimeout);
+                await TransitionTo<Replay>();
             }
-            catch (TimeoutException)
+            catch
             {
-                logger.RequestedReplayDidNotStart();
-                ConcludePendingReplay(pendingReplay, JobId.NotSet);
-                return JobId.NotSet;
+                _replayRequested = false;
+                throw;
             }
+
+            if (State.RunningState != ObserverRunningState.Replaying)
+            {
+                logger.ReplayDeferred();
+                return jobId;
+            }
+
+            _replayRequested = false;
         }
 
         var states = await GetStates();
@@ -84,14 +90,10 @@ public partial class Observer
     /// <inheritdoc/>
     protected override async Task OnAfterEnteringState(IState<ObserverState> state)
     {
-        if (_pendingReplay is not { } pendingReplay) return;
+        if (!_replayRequested) return;
 
         switch (state)
         {
-            case Replay replay:
-                ConcludePendingReplay(pendingReplay, replay.LastStartedJobId);
-                break;
-
             // The observer settled without replaying - the scheduled replay was replaced by the next state of the
             // transition that was in progress. It is still in a state that can replay, so replay from here; this
             // runs as part of the ongoing transition and is therefore performed as soon as entering it completes.
@@ -101,20 +103,18 @@ public partial class Observer
 
             case Disconnected:
             case QuarantinedObserver:
-                ConcludePendingReplay(pendingReplay, JobId.NotSet);
+                _replayRequested = false;
                 break;
         }
     }
 
-    void ConcludePendingReplay(TaskCompletionSource<JobId> pendingReplay, JobId jobId)
-    {
-        if (ReferenceEquals(_pendingReplay, pendingReplay))
-        {
-            _pendingReplay = null;
-        }
+    Task<JobId> StartOrResumeReplayJob() =>
+        _jobsManager.StartOrResumeObserverJobFor<IReplayObserver, ReplayObserverRequest>(
+            logger,
 
-        pendingReplay.TrySetResult(jobId);
-    }
+            // Routing hands the subscribed event types to the definition as it leaves, before the replay state is
+            // entered, so the request is made with the event types the replay state would use.
+            new(_observerKey, Definition.Type, _subscription.IsSubscribed ? _subscription.EventTypes : Definition.EventTypes));
 
     async Task CompleteReplay(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt)
     {
@@ -156,6 +156,8 @@ public partial class Observer
             }
         }
 
+        // The replay has run, so a request for it that never got the observer into the replay state is moot.
+        _replayRequested = false;
         State = State with
         {
             IsReplaying = false,
