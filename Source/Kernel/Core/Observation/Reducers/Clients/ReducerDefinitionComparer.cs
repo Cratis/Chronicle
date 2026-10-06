@@ -27,7 +27,8 @@ public class ReducerDefinitionComparer(IStorage storage) : IReducerDefinitionCom
         var secondEventTypes = second.EventTypes.OrderBy(_ => _.EventType.Id).ToArray();
         var definitionsAreEqual =
             ReducerDefinitionEvolution.HasSameConfiguration(first, second) &&
-            firstEventTypes.SequenceEqual(secondEventTypes);
+            firstEventTypes.Select(_ => (_.EventType.Id, _.EventType.Generation, _.Key))
+                .SequenceEqual(secondEventTypes.Select(_ => (_.EventType.Id, _.EventType.Generation, _.Key)));
 
         return definitionsAreEqual
             ? ReducerDefinitionCompareResult.Same

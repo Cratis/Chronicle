@@ -32,13 +32,13 @@ internal static class ProjectionReplayRecommendationEvaluator
         var previousEventTypes = GetEventTypes(previousDefinition);
         var currentEventTypes = GetEventTypes(currentDefinition);
 
-        var addedEventTypes = currentEventTypes.Except(previousEventTypes).ToArray();
+        var addedEventTypes = currentEventTypes.Where(_ => !ContainsEventType(previousEventTypes, _)).ToArray();
         if (addedEventTypes.Length == 0)
         {
             return [];
         }
 
-        if (previousEventTypes.Except(currentEventTypes).Any())
+        if (previousEventTypes.Any(_ => !ContainsEventType(currentEventTypes, _)))
         {
             return [];
         }
@@ -75,7 +75,7 @@ internal static class ProjectionReplayRecommendationEvaluator
             currentDefinition.Nested?.Count is > 0 ||
             currentDefinition.FromEvery.Properties.Count > 0 ||
             currentDefinition.FromDerivatives.Any() ||
-            addedEventTypeSet.Any(eventType => !currentDefinition.From.ContainsKey(eventType)) ||
+            addedEventTypeSet.Any(eventType => !ContainsEventType(currentDefinition.From.Keys, eventType)) ||
             currentDefinition.From.Values.Any(from => from.Key.IsSet() || from.ParentKey is not null))
         {
             return false;
@@ -88,7 +88,7 @@ internal static class ProjectionReplayRecommendationEvaluator
             .Select(property => property.Segments.FirstOrDefault()?.Value)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var addedProperties = currentDefinition.From
-            .Where(_ => addedEventTypeSet.Contains(_.Key))
+            .Where(_ => ContainsEventType(addedEventTypeSet, _.Key))
             .SelectMany(_ => _.Value.Properties.Keys)
             .Select(property => property.Segments.FirstOrDefault()?.Value)
             .ToArray();
@@ -172,6 +172,9 @@ internal static class ProjectionReplayRecommendationEvaluator
     static void AddEventTypes(HashSet<EventType> target, IEnumerable<EventType> source)
         => target.UnionWith(source);
 
+    static bool ContainsEventType(IEnumerable<EventType> types, EventType eventType) =>
+        types.Any(_ => _.Id == eventType.Id && _.Generation == eventType.Generation);
+
     static ProjectionDefinition RemoveEventTypes(
         ProjectionDefinition definition,
         HashSet<EventType> eventTypesToExclude) =>
@@ -182,7 +185,7 @@ internal static class ProjectionReplayRecommendationEvaluator
             RemovedWith = FilterByEventType(definition.RemovedWith, eventTypesToExclude),
             RemovedWithJoin = FilterByEventType(definition.RemovedWithJoin, eventTypesToExclude),
             FromDerivatives = definition.FromDerivatives
-                .Select(_ => new FromDerivatives(_.EventTypes.Where(eventType => !eventTypesToExclude.Contains(eventType)).ToArray(), _.From))
+                .Select(_ => new FromDerivatives(_.EventTypes.Where(eventType => !ContainsEventType(eventTypesToExclude, eventType)).ToArray(), _.From))
                 .Where(_ => _.EventTypes.Any())
                 .ToArray(),
             Children = definition.Children.ToDictionary(_ => _.Key, _ => RemoveEventTypes(_.Value, eventTypesToExclude)),
@@ -207,7 +210,7 @@ internal static class ProjectionReplayRecommendationEvaluator
         HashSet<EventType> eventTypesToExclude)
         where TDefinition : class =>
         source
-            .Where(_ => !eventTypesToExclude.Contains(_.Key))
+            .Where(_ => !ContainsEventType(eventTypesToExclude, _.Key))
             .ToDictionary(_ => _.Key, _ => _.Value);
 
     static ProjectionDefinition NormalizeForComparison(ProjectionDefinition definition) =>
@@ -215,6 +218,10 @@ internal static class ProjectionReplayRecommendationEvaluator
         {
             ReadModel = null!,
             InitialModelState = null!,
-            LastUpdated = null
+            LastUpdated = null,
+            FromDerivatives = definition.FromDerivatives.Select(_ => _ with
+            {
+                EventTypes = _.EventTypes.Select(type => type with { Tombstone = false }).ToArray()
+            }).ToArray()
         };
 }

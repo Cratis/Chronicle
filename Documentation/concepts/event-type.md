@@ -29,3 +29,14 @@ the current generation's type — Chronicle resolves the shared event type id fr
 For detailed information on how to define and use migrations — including this attribute, the
 older explicit-id style it replaces, and the operations available for transforming events between
 generations — see [Event Type Migrations](./event-type-migrations).
+
+## Tombstone metadata
+
+In the .NET client, `[Tombstone]` marks an event type with metadata recorded during
+registration. Historical declarations using `[EventTypeGenerationFor<T>]` also carry
+`T`'s marker. The marker does not delete events or read models, change which events
+observers and projections process, or erase personal data.
+
+An event type's identity remains its identifier and generation. Recording the marker
+does not require a new generation. An older client that omits it does not clear a
+marker already recorded by registration.

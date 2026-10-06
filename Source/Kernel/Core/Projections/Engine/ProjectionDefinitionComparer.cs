@@ -52,6 +52,10 @@ public class ProjectionDefinitionComparer(IStorage storage, IObjectComparer obje
             InitialModelState = null!,
             LastUpdated = null,
             Tags = NormalizeTags(definition.Tags),
+            FromDerivatives = definition.FromDerivatives.Select(_ => _ with
+            {
+                EventTypes = _.EventTypes.Select(type => type with { Tombstone = false }).ToArray()
+            }).ToArray(),
             Nested = NormalizeNested(definition.Nested)
         };
 

@@ -58,5 +58,6 @@ public class ReplayEvaluator(
 
     static bool HasDefinitionChanged(ReplayEvaluationContext context) =>
             context.Definition.EventTypes.Count() != context.Subscription.EventTypes.Count() ||
-            !context.Subscription.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(context.Definition.EventTypes.OrderBy(_ => _.Id.Value));
+            !context.Subscription.EventTypes.OrderBy(_ => _.Id.Value).Select(_ => (_.Id, _.Generation))
+                .SequenceEqual(context.Definition.EventTypes.OrderBy(_ => _.Id.Value).Select(_ => (_.Id, _.Generation)));
 }
