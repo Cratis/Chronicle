@@ -32,6 +32,18 @@ public interface IReadModelsCompliance
         ExpandoObject instance);
 
     /// <summary>
+    /// Applies the erasure fence to a notification snapshot without decrypting its plaintext again.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The event store namespace.</param>
+    /// <param name="schema">The read model schema.</param>
+    /// <param name="identifier">The resolved subject identifier.</param>
+    /// <param name="instance">The already-released notification snapshot.</param>
+    /// <returns>The snapshot with erased values removed.</returns>
+    Task<ExpandoObject> ApplyErasureFence(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, ExpandoObject instance) =>
+        Task.FromResult(instance);
+
+    /// <summary>
     /// Release (decrypt) compliance- and security-annotated properties in a read model <see cref="JsonObject"/> using the stored subject.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> the read model belongs to.</param>
