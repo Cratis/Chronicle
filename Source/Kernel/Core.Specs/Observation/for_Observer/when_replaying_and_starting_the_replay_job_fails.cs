@@ -30,7 +30,7 @@ public class when_replaying_and_starting_the_replay_job_fails : given.an_observe
 
     async Task Because()
     {
-        _error = await Cratis.Specifications.Catch.Exception(() => _observer.Replay());
+        _error = await Cratis.Specifications.Catch.Exception(_observer.Replay);
         _replayJobAfterFailure = (await _observer.GetStates()).OfType<Replay>().First().LastStartedJobId;
 
         // Routing afterwards must not pick a replay that was never entered back up.

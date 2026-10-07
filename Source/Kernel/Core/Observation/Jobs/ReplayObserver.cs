@@ -105,10 +105,16 @@ public class ReplayObserver(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The observer resumes a stopped replay job from inside its own Replay transition, so its turn is waiting on this
+    /// job. Waiting on the observer here would hold both until the call timed out and leave the job running with no
+    /// steps started. The observer is asked to replay without waiting: one that is already replaying ignores it, and one
+    /// that is not - after reactivation or an operator resume - enters replay and adopts this running job.
+    /// </remarks>
     protected override async Task OnBeforeResumingJobSteps()
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.Replay();
+        _ = EnsureObserverIsReplaying(observer);
         await replayStateServiceClient.ResumeReplayFor(State.ObserverDetails);
     }
 
@@ -267,6 +273,18 @@ public class ReplayObserver(
         catch (Exception exception)
         {
             logger.ReplayCompletionNotificationFailed(exception);
+        }
+    }
+
+    async Task EnsureObserverIsReplaying(IObserver observer)
+    {
+        try
+        {
+            await observer.Replay();
+        }
+        catch (Exception exception)
+        {
+            logger.RequestingReplayOnResumeFailed(exception);
         }
     }
 
