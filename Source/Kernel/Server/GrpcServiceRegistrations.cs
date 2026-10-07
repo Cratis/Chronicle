@@ -17,7 +17,11 @@ public static class GrpcServiceRegistrations
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddGrpcServices(this IServiceCollection services)
     {
-        services.AddCodeFirstGrpc(options => options.EnableDetailedErrors = true);
+        services.AddCodeFirstGrpc(options =>
+        {
+            options.EnableDetailedErrors = true;
+            options.Interceptors.Add<StreamingCallInterceptor>();
+        });
         services.AddGeneratedGrpcServices();
 
         // Everything below is still hand-written, either because the area has not been converted to Arc
