@@ -60,18 +60,24 @@ public class and_keep_alives_are_sent_on_the_same_channel(context context) : Giv
                 .Select(_ => Task.Run(() => SendKeepAlivesUntilStopped(services, connectionId, stopSending.Token)))
                 .ToArray();
 
-            for (var round = 0; round < Rounds; round++)
+            try
             {
-                var calls = Enumerable.Range(0, ConcurrentReactorCalls)
-                    .Select(_ => ObserveWithInvalidRegistration(services, connectionId));
-                foreach (var outcome in await Task.WhenAll(calls))
+                for (var round = 0; round < Rounds; round++)
                 {
-                    ReactorCallOutcomes.Add(outcome);
+                    var calls = Enumerable.Range(0, ConcurrentReactorCalls)
+                        .Select(_ => ObserveWithInvalidRegistration(services, connectionId));
+                    foreach (var outcome in await Task.WhenAll(calls))
+                    {
+                        ReactorCallOutcomes.Add(outcome);
+                    }
                 }
             }
-
-            await stopSending.CancelAsync();
-            await Task.WhenAll(senders);
+            finally
+            {
+                // Stop the senders before the token source and the client go away, also when a reactor call timed out.
+                await stopSending.CancelAsync();
+                await Task.WhenAll(senders);
+            }
 
             // A final keep-alive after every reactor call has ended must still go through.
             await SendKeepAlive(services, connectionId);

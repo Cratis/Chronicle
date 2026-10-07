@@ -15,6 +15,8 @@ public class a_reader_with_a_read_in_flight : Specification
 
     protected virtual bool ReadEndsWhenCancelled => true;
 
+    protected virtual CancellationToken CallerCancellation => CancellationToken.None;
+
     void Establish()
     {
         _pendingRead = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -30,7 +32,7 @@ public class a_reader_with_a_read_in_flight : Specification
             return _pendingRead.Task;
         });
         _reader = new(_requestStream);
-        _readInFlight = _reader.MoveNext(CancellationToken.None);
+        _readInFlight = _reader.MoveNext(CallerCancellation);
     }
 
     void Destroy() => _reader.Dispose();

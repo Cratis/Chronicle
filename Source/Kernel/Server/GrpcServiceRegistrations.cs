@@ -17,6 +17,8 @@ public static class GrpcServiceRegistrations
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddGrpcServices(this IServiceCollection services)
     {
+        // Stateless, so one instance serves every call rather than grpc-dotnet activating one per call.
+        services.AddSingleton<StreamingCallInterceptor>();
         services.AddCodeFirstGrpc(options =>
         {
             options.EnableDetailedErrors = true;

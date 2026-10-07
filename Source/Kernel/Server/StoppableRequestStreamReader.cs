@@ -38,7 +38,10 @@ internal sealed class StoppableRequestStreamReader<T>(IAsyncStreamReader<T> inne
                 return Task.FromResult(false);
             }
 
-            var read = Read(cancellationToken);
+            // protobuf-net.Grpc reads with CancellationToken.None, so only link when the caller can actually cancel.
+            var read = cancellationToken.CanBeCanceled
+                ? ReadWithCallerCancellation(cancellationToken)
+                : inner.MoveNext(_stopped.Token);
             _read = read;
             return read;
         }
@@ -68,7 +71,7 @@ internal sealed class StoppableRequestStreamReader<T>(IAsyncStreamReader<T> inne
     /// <inheritdoc/>
     public void Dispose() => _stopped.Dispose();
 
-    async Task<bool> Read(CancellationToken cancellationToken)
+    async Task<bool> ReadWithCallerCancellation(CancellationToken cancellationToken)
     {
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _stopped.Token);
         return await inner.MoveNext(cancellation.Token);
