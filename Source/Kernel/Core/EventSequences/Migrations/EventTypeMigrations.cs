@@ -23,7 +23,7 @@ public class EventTypeMigrations(
     IExpandoObjectConverter expandoObjectConverter) : IEventTypeMigrations
 {
     /// <inheritdoc/>
-    public async Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content, ExpandoObject contentAsExpandoObject, Action<JsonObject, JsonSchema, ExpandoObject>? onConverted = null)
+    public async Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content, ExpandoObject contentAsExpandoObject, Action<JsonObject, JsonSchema, ExpandoObject>? onConverted = null, Action<JsonObject, JsonObject>? onMigrating = null)
     {
         var result = new Dictionary<EventTypeGeneration, ExpandoObject>();
         var eventTypesStorage = storage.GetEventStore(eventStore).EventTypes;
@@ -44,10 +44,10 @@ public class EventTypeMigrations(
         result[eventType.Generation] = Convert(content, sourceGenerationDef.Schema, onConverted);
 
         // Upcast to higher generations
-        await UpcastToHigherGenerations(eventType.Generation, content, definition, result, onConverted);
+        await UpcastToHigherGenerations(eventType.Generation, content, definition, result, onConverted, onMigrating);
 
         // Downcast to lower generations
-        await DowncastToLowerGenerations(eventType.Generation, content, definition, result, onConverted);
+        await DowncastToLowerGenerations(eventType.Generation, content, definition, result, onConverted, onMigrating);
 
         return result;
     }
@@ -64,7 +64,8 @@ public class EventTypeMigrations(
         JsonObject sourceContent,
         EventTypeDefinition definition,
         Dictionary<EventTypeGeneration, ExpandoObject> result,
-        Action<JsonObject, JsonSchema, ExpandoObject>? onConverted)
+        Action<JsonObject, JsonSchema, ExpandoObject>? onConverted,
+        Action<JsonObject, JsonObject>? onMigrating)
     {
         var currentContent = sourceContent;
         var currentGeneration = sourceGeneration;
@@ -78,6 +79,7 @@ public class EventTypeMigrations(
         foreach (var migration in migrations.Where(migration => migration.FromGeneration == currentGeneration))
         {
             // Apply the upcast migration
+            onMigrating?.Invoke(migration.UpcastJmesPath, currentContent);
             currentContent = ApplyUpcastMigration(currentContent, migration);
             currentGeneration = migration.ToGeneration;
             var targetGenerationDef = definition.Generations.First(g => g.Generation == currentGeneration);
@@ -92,7 +94,8 @@ public class EventTypeMigrations(
         JsonObject sourceContent,
         EventTypeDefinition definition,
         Dictionary<EventTypeGeneration, ExpandoObject> result,
-        Action<JsonObject, JsonSchema, ExpandoObject>? onConverted)
+        Action<JsonObject, JsonSchema, ExpandoObject>? onConverted,
+        Action<JsonObject, JsonObject>? onMigrating)
     {
         var currentContent = sourceContent;
         var currentGeneration = sourceGeneration;
@@ -106,6 +109,7 @@ public class EventTypeMigrations(
         foreach (var migration in migrations.Where(migration => migration.ToGeneration == currentGeneration))
         {
             // Apply the downcast migration (reverse direction)
+            onMigrating?.Invoke(migration.DowncastJmesPath, currentContent);
             currentContent = ApplyDowncastMigration(currentContent, migration);
             currentGeneration = migration.FromGeneration;
             var targetGenerationDef = definition.Generations.First(g => g.Generation == currentGeneration);

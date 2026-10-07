@@ -109,12 +109,22 @@ public record VerifyContent(
                 var source = expandoObjectConverter.ToExpandoObject(masked, schema.Schema);
                 var lossless = ContentComparison.PreservesConversion(masked, source, schema.Schema);
                 var inspected = new HashSet<ExpandoObject>(ReferenceEqualityComparer.Instance);
-                var migrated = await eventTypeMigrations.MigrateToAllGenerations(EventStore, new(EventType.Id, EventType.Generation, EventType.Tombstone), masked, source, (raw, generationSchema, converted) =>
-                {
-                    lossless &= ContentComparison.PreservesConversion(raw, converted, generationSchema);
-                    inspected.Add(converted);
-                });
-                if (!lossless || migrated.Values.Any(content => !inspected.Contains(content)))
+                var opaque = true;
+                var migrated = await eventTypeMigrations.MigrateToAllGenerations(
+                    EventStore,
+                    new(EventType.Id, EventType.Generation, EventType.Tombstone),
+                    masked,
+                    source,
+                    (raw, generationSchema, converted) =>
+                    {
+                        lossless &= ContentComparison.PreservesConversion(raw, converted, generationSchema);
+                        inspected.Add(converted);
+                    },
+                    (operations, input) => opaque &= MigrationProvenance.CarriesProtectedValuesOpaquely(operations, input));
+
+                // The real append migrates ciphertext: a migration that reads a protected value other than to rename,
+                // move or copy it whole cannot be reproduced on a marker, whether or not the marker survived.
+                if (!opaque || !lossless || migrated.Values.Any(content => !inspected.Contains(content)))
                 {
                     return null;
                 }

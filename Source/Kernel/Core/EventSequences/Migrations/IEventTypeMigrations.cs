@@ -22,6 +22,7 @@ public interface IEventTypeMigrations
     /// <param name="content">The event content as <see cref="JsonObject"/>.</param>
     /// <param name="contentAsExpandoObject">The same content already converted to an <see cref="ExpandoObject"/>, reused directly when the event type has a single generation.</param>
     /// <param name="onConverted">Optional inspection of each raw migration document and its schema-converted content.</param>
+    /// <param name="onMigrating">Optional inspection of each migration's operations together with the document they are applied to.</param>
     /// <returns>A dictionary mapping each generation to its corresponding content.</returns>
-    Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content, ExpandoObject contentAsExpandoObject, Action<JsonObject, JsonSchema, ExpandoObject>? onConverted = null);
+    Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content, ExpandoObject contentAsExpandoObject, Action<JsonObject, JsonSchema, ExpandoObject>? onConverted = null, Action<JsonObject, JsonObject>? onMigrating = null);
 }
