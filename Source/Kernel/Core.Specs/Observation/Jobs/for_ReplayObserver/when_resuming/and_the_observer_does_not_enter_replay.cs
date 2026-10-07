@@ -7,7 +7,7 @@ using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserver.when_resuming;
 
-public class and_requesting_replay_fails : given.a_replay_observer_job
+public class and_the_observer_does_not_enter_replay : given.a_replay_observer_job
 {
     Exception? _error;
 
@@ -15,11 +15,11 @@ public class and_requesting_replay_fails : given.a_replay_observer_job
     {
         _stateStorage.State.Request = _request;
         _observer.GetState().Returns(ObserverState.Empty with { RunningState = ObserverRunningState.Active });
-        _observer.Replay().Returns(Task.FromException<JobId>(new InvalidOperationException("The observer could not replay")));
+        _observer.Replay().Returns(JobId.NotSet);
     }
 
     async Task Because() => _error = await Catch.Exception(() => _job.ResumeForTesting());
 
-    [Fact] void should_fail_to_resume() => _error.ShouldNotBeNull();
+    [Fact] void should_fail_to_resume() => _error.ShouldBeOfExactType<ObserverDidNotEnterReplay>();
     [Fact] async Task should_not_switch_the_sinks_into_replay() => await _replayServiceClient.DidNotReceive().ResumeReplayFor(Arg.Any<ObserverDetails>());
 }
