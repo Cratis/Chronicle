@@ -25,7 +25,9 @@ public class when_appending_unsigned_64_bit_content : given.an_event_sequence_st
             {"type":"object","$defs":{"Counter":{"type":"integer","format":"uint64"}},"properties":{
              "value":{"type":"integer","format":"uint64"},"named":{"$ref":"#/$defs/Counter"},
              "values":{"type":"array","items":{"type":"integer","format":"uint64"}},
-             "small":{"type":"integer","format":"uint64"}}}
+             "small":{"type":"integer","format":"uint64"},
+             "strings":{"type":"array","items":{"type":"string"}},
+             "integers":{"type":"array","items":{"type":"integer","format":"int32"}}}}
             """);
         _content = new ExpandoObject();
         var values = (IDictionary<string, object?>)_content;
@@ -33,6 +35,8 @@ public class when_appending_unsigned_64_bit_content : given.an_event_sequence_st
         values["named"] = new Counter(ulong.MaxValue);
         values["values"] = new[] { ulong.MaxValue };
         values["small"] = (ulong)long.MaxValue;
+        values["strings"] = new[] { "a", "b" };
+        values["integers"] = new[] { 1, 2 };
         var jsonConverter = new Json.ExpandoObjectConverter(new TypeFormats());
         _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()).Returns(
             call => jsonConverter.ToJsonObject(call.Arg<ExpandoObject>(), call.Arg<JsonSchema>()));
@@ -69,6 +73,9 @@ public class when_appending_unsigned_64_bit_content : given.an_event_sequence_st
     [Fact] void should_round_trip_the_scalar() => ((IDictionary<string, object?>)_read.Content)["value"].ShouldEqual(ulong.MaxValue);
     [Fact] void should_round_trip_the_named_primitive() => ((IDictionary<string, object?>)_read.Content)["named"].ShouldEqual(ulong.MaxValue);
     [Fact] void should_round_trip_the_array_element() => ((object[])((IDictionary<string, object?>)_read.Content)["values"]!)[0].ShouldEqual(ulong.MaxValue);
+
+    [Fact] void should_round_trip_ordinary_strings() => ((object[])((IDictionary<string, object?>)_read.Content)["strings"]!)[0].ShouldEqual("a");
+    [Fact] void should_round_trip_ordinary_integers() => ((object[])((IDictionary<string, object?>)_read.Content)["integers"]!)[1].ShouldEqual(2);
 
     record Counter(ulong Value) : ConceptAs<ulong>(Value);
 }
