@@ -26,5 +26,5 @@ public class and_the_steps_read_past_the_last_handled_event : given.a_catch_up_o
     }
 
     [Fact] async Task should_tell_the_observer_what_was_handled_and_how_far_it_read() =>
-        await _observer.Received(1).CaughtUp((EventSequenceNumber)3UL, (EventSequenceNumber)7UL);
+        await _observer.Received(1).CaughtUp(_jobId, (EventSequenceNumber)3UL, (EventSequenceNumber)7UL);
 }

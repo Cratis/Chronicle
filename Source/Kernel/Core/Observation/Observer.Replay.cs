@@ -14,7 +14,7 @@ public partial class Observer
     /// <inheritdoc/>
     /// <remarks>
     /// A transition requested while another is in progress is only scheduled, and a later request replaces it. The only
-    /// call that can be transitioning while this one runs is an interleaving <see cref="CaughtUp"/>, whose routing then
+    /// call that can be transitioning while this one runs is an interleaving <see cref="CaughtUp(JobId, EventSequenceNumber)"/>, whose routing then
     /// picks the next state itself and so silently replaced the replay. Waiting for those handovers to settle lets the
     /// replay transition run here, in this call, so the job id returned is the one this call started or resumed.
     /// </remarks>
