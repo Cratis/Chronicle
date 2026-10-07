@@ -141,7 +141,7 @@ public interface IReducers
     /// Replay a specific reducer.
     /// </summary>
     /// <typeparam name="TReducer">Type of reducer to replay.</typeparam>
-    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reducer is not replayable.</returns>
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reducer is not replayable or its observer is not in a state it can replay from (disconnected, quarantined); reconnect or release it before replaying.</returns>
     Task<JobId> Replay<TReducer>()
         where TReducer : IReducer;
 
@@ -149,6 +149,6 @@ public interface IReducers
     /// Replay a specific reducer by its identifier.
     /// </summary>
     /// <param name="reducerId"><see cref="ReducerId"/> to replay.</param>
-    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reducer is not replayable.</returns>
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reducer is not replayable or its observer is not in a state it can replay from (disconnected, quarantined); reconnect or release it before replaying.</returns>
     Task<JobId> Replay(ReducerId reducerId);
 }
