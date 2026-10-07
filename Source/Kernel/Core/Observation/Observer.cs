@@ -79,6 +79,9 @@ public partial class Observer(
     bool _isQuarantined;
     bool _recoverSubscriptionAfterQuarantine;
     bool _retryRecoveryAfterQuarantine;
+    int _owedRecoveryAttempts;
+    int _recoveryGeneration;
+    int _recoveriesInProgress;
 
     /// <summary>
     /// Set once the observer has been removed, so nothing this activation does afterwards writes it back.
@@ -220,18 +223,7 @@ public partial class Observer(
             // The quarantine ended but recovering its subscription never reached a settled state - recovery or the
             // persistence of a transition failed, dropping the transition that would have carried it on. Clearing
             // again retries that recovery rather than doing nothing.
-            switch (await GetCurrentState())
-            {
-                case Disconnected:
-                    await RecoverAfterQuarantine();
-                    break;
-
-                case Routing or CatchingUpInFlight:
-                    // Stranded in a transient state whose onward transition was dropped. Disconnected owns recovery.
-                    _recoverSubscriptionAfterQuarantine = true;
-                    await TransitionTo<Disconnected>();
-                    break;
-            }
+            await RetryRecoveryAfterQuarantine();
         }
     }
 
@@ -336,8 +328,7 @@ public partial class Observer(
         where TObserverSubscriber : IObserverSubscriber
     {
         ThrowIfSealed();
-        _recoverSubscriptionAfterQuarantine = false;
-        _retryRecoveryAfterQuarantine = false;
+        SupersedeRecoveryAfterQuarantine();
         var owner = GetOwner<TObserverSubscriber>();
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -418,8 +409,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
-        _recoverSubscriptionAfterQuarantine = false;
-        _retryRecoveryAfterQuarantine = false;
+        SupersedeRecoveryAfterQuarantine();
         _subscription = ObserverSubscription.Unsubscribed;
         await PauseJobs();
         await TransitionTo<Disconnected>();
@@ -591,6 +581,7 @@ public partial class Observer(
         if (state is QuarantinedObserver)
         {
             _retryRecoveryAfterQuarantine = false;
+            _owedRecoveryAttempts = 0;
         }
 
         _isQuarantined = state is QuarantinedObserver;
@@ -633,6 +624,7 @@ public partial class Observer(
         {
             // Settled: the observer is driven forward again, so no recovery remains owed.
             _retryRecoveryAfterQuarantine = false;
+            _owedRecoveryAttempts = 0;
             return;
         }
 
@@ -729,8 +721,7 @@ public partial class Observer(
         var leavesQuarantine = !automatic && !recovering;
         if (leavesQuarantine)
         {
-            _recoverSubscriptionAfterQuarantine = false;
-            _retryRecoveryAfterQuarantine = false;
+            SupersedeRecoveryAfterQuarantine();
         }
 
         if (additive)
@@ -954,35 +945,95 @@ public partial class Observer(
         return RecoverSubscribedObserver();
     }
 
-    async Task RecoverSubscribedObserver()
+    /// <summary>
+    /// Cancels any recovery owed after a quarantine ended, including one that is running right now.
+    /// </summary>
+    /// <remarks>
+    /// Unsubscribing, a subscription that may end quarantine, and wiping the world quarantine belonged to all replace
+    /// the subscription that recovery was for. A recovery entered from the <see cref="Disconnected"/> entry hook can
+    /// be running in an interleaved call while one of them happens, so moving the generation on is what stops it from
+    /// resuming jobs, retrying partitions or starting catch-up for a subscription that is no longer there.
+    /// </remarks>
+    void SupersedeRecoveryAfterQuarantine()
     {
-        if (await TransitionToReplayIfNeeded())
-        {
-            return;
-        }
-
-        await ResumeJobs();
-        if (IsQuarantined)
-        {
-            return;
-        }
-
-        // Failed-partition recovery can exceed the subscription's grain-call budget. Recovery runs in bounded
-        // turns of its own, here and after an operator clears quarantine on an already subscribed observer -
-        // see Observer.PartitionRecovery.cs.
-        await TryRecoverAllFailedPartitions();
-        await TransitionTo<CatchingUpInFlight>();
+        _recoverSubscriptionAfterQuarantine = false;
+        _retryRecoveryAfterQuarantine = false;
+        _owedRecoveryAttempts = 0;
+        _recoveryGeneration++;
     }
 
-    async Task ResumeJobs()
+    /// <summary>
+    /// Retries a recovery owed after a quarantine ended that never reached a settled state.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    async Task RetryRecoveryAfterQuarantine()
     {
-        if (IsQuarantined)
+        switch (await GetCurrentState())
+        {
+            case Disconnected:
+                await RecoverAfterQuarantine();
+                break;
+
+            case Routing or CatchingUpInFlight:
+                // Stranded in a transient state whose onward transition was dropped. Disconnected owns recovery.
+                _recoverSubscriptionAfterQuarantine = true;
+                await TransitionTo<Disconnected>();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Gets whether a recovery has been overtaken since it started, so it must not act any further.
+    /// </summary>
+    /// <param name="recovery">The generation the recovery captured when it started.</param>
+    /// <returns>True if the recovery must stop, false if it may carry on.</returns>
+    bool IsRecoverySuperseded(int recovery) =>
+        IsQuarantined || !_subscription.IsSubscribed || recovery != _recoveryGeneration;
+
+    async Task RecoverSubscribedObserver()
+    {
+        // A newer recovery, an unsubscription or a new subscription supersedes this one. Every await below can let
+        // one of those run in between, so the recovery rechecks before each step and before its onward transition.
+        var recovery = ++_recoveryGeneration;
+        _recoveriesInProgress++;
+        try
+        {
+            if (await TransitionToReplayIfNeeded(recovery))
+            {
+                return;
+            }
+
+            await ResumeJobs(recovery);
+            if (IsRecoverySuperseded(recovery))
+            {
+                return;
+            }
+
+            // Recovering failed partitions starts one job per partition through the jobs manager. An observer
+            // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
+            // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
+            // returned: the client timed out, retried, and the observer was recorded as never subscribed.
+            // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards, in
+            // bounded turns of its own that repeated subscribes do not multiply - see Observer.PartitionRecovery.cs.
+            // Clearing quarantine on a subscribed observer owes the same recovery.
+            await TryRecoverAllFailedPartitions();
+            await TransitionTo<CatchingUpInFlight>();
+        }
+        finally
+        {
+            _recoveriesInProgress--;
+        }
+    }
+
+    async Task ResumeJobs(int recovery)
+    {
+        if (IsRecoverySuperseded(recovery))
         {
             return;
         }
 
         var unfilteredJobs = await _jobsManager.GetUnfinishedJobs();
-        if (IsQuarantined)
+        if (IsRecoverySuperseded(recovery))
         {
             return;
         }
@@ -993,7 +1044,7 @@ public partial class Observer(
                           observerJobRequest is not ReplayObserverRequest &&
                           ShouldResumeJob(job.Status) &&
                           observerJobRequest.ObserverKey == _subscription.ObserverKey)
-            .Select(job => IsQuarantined
+            .Select(job => IsRecoverySuperseded(recovery)
                 ? Task.CompletedTask
                 : _jobsManager.Resume(job.Id));
         await Task.WhenAll(resumeTasks);

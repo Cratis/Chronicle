@@ -12,8 +12,9 @@ public class an_observer_explicitly_subscribed_during_quarantine_entry : an_obse
     protected bool _wasQuarantinedAfterSubscription;
     protected List<object?> _recoveryArguments = [];
 
-    void Establish() => _jobsManager.Resume(Arg.Any<JobId>()).Returns(async _ =>
+    void Establish() => _jobsManager.Resume(Arg.Any<JobId>()).Returns(async callInfo =>
     {
+        _resumedJobs.Add(callInfo.Arg<JobId>());
         _recoveryArguments.Add((await _observer.GetSubscription()).Arguments);
         return true;
     });

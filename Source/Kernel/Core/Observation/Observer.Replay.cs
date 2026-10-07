@@ -187,9 +187,9 @@ public partial class Observer
         await WriteStateAsync();
     }
 
-    async Task<bool> TransitionToReplayIfNeeded()
+    async Task<bool> TransitionToReplayIfNeeded(int recovery)
     {
-        if (IsQuarantined)
+        if (IsRecoverySuperseded(recovery))
         {
             return true;
         }
@@ -202,13 +202,13 @@ public partial class Observer
         }
 
         var tailSequenceNumber = await _eventSequence.GetTailSequenceNumber();
-        if (IsQuarantined)
+        if (IsRecoverySuperseded(recovery))
         {
             return true;
         }
 
         var getNextToHandleResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(State.NextEventSequenceNumber, _subscription.EventTypes.ToList());
-        if (IsQuarantined)
+        if (IsRecoverySuperseded(recovery))
         {
             return true;
         }
@@ -222,7 +222,7 @@ public partial class Observer
             _subscription,
             tailSequenceNumber,
             nextUnhandledEventSequenceNumber));
-        if (IsQuarantined)
+        if (IsRecoverySuperseded(recovery))
         {
             return true;
         }
