@@ -101,6 +101,7 @@ public class EventSequence(
     IClosedStreamsConstraintStorage ClosedStreamsStorage => _closedStreamsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetClosedStreamsConstraints(_eventSequenceId);
     ConcurrencyValidator ConcurrencyValidator => new(EventSequenceStorage, concurrencyValidatorLogger);
     IConstraints ConstraintsGrain => GrainFactory.GetGrain<IConstraints>(new ConstraintsKey(_eventSequenceKey.EventStore));
+    ProtectedEventTypeMigrations ProtectedMigrations => new(EventTypesStorage, eventTypeMigrations, jsonComplianceManagerProvider, expandoObjectConverter);
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -367,7 +368,7 @@ public class EventSequence(
                 causedBy,
                 tags,
                 compliantEvent,
-                compliantContent,
+                content,
                 constraintContext,
                 occurred,
                 subject,
@@ -481,7 +482,7 @@ public class EventSequence(
         }
 
         var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-        var contentAsExpandoObject = expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
+        var (contentAsExpandoObject, _) = await MakeEventCompliant(@event.Context.EventSourceId, eventSchema, content, @event.Context.Subject);
         var hash = eventHashCalculator.Calculate(eventType.Id, @event.Context.EventSourceId, contentAsExpandoObject);
 
         await EventSequenceStorage.Revise(
@@ -615,7 +616,8 @@ public class EventSequence(
         foreach (var (eventToAppend, compliantEvent, compliantContent, constraintContext) in validatedEvents)
         {
             constraintContexts.Add(constraintContext);
-            var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(_eventSequenceKey.EventStore, eventToAppend.EventType, compliantContent, compliantEvent);
+            var subject = eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject.Value : eventToAppend.EventSourceId.Value;
+            var migratedContent = await ProtectedMigrations.MigratePlaintext(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventToAppend.EventType, eventToAppend.Content, compliantEvent, subject);
             var contentHashes = migratedContent.ToDictionary(
                 kvp => kvp.Key,
                 kvp => eventHashCalculator.Calculate(eventToAppend.EventType.Id, eventToAppend.EventSourceId, kvp.Value));
@@ -715,7 +717,7 @@ public class EventSequence(
         Identity causedBy,
         IEnumerable<Tag> tags,
         ExpandoObject compliantEvent,
-        JsonObject compliantContent,
+        JsonObject plaintextContent,
         ConstraintValidationContext constraintContext,
         DateTimeOffset? occurred,
         Subject? subject,
@@ -734,8 +736,9 @@ public class EventSequence(
 
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
 
-            // Migrate the event to all generations using the already-compliant content and expando
-            var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(_eventSequenceKey.EventStore, eventType, compliantContent, compliantEvent);
+            // Transform plaintext, then protect every target generation under the original subject.
+            var identifier = subject?.IsSet == true ? subject.Value : eventSourceId.Value;
+            var migratedContent = await ProtectedMigrations.MigratePlaintext(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventType, plaintextContent, compliantEvent, identifier);
 
             // Calculate content hashes for each generation
             var contentHashes = migratedContent.ToDictionary(

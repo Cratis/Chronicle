@@ -9,5 +9,5 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// Represents the event for target headers being set for a webhook.
 /// </summary>
 /// <param name="TargetHeaders">The target headers.</param>
-[EventType]
+[EventType, AllEventStores]
 public record TargetHeadersSetForWebhook(IReadOnlyDictionary<string, string> TargetHeaders);

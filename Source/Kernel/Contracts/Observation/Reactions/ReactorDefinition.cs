@@ -44,4 +44,10 @@ public class ReactorDefinition
     /// </summary>
     [ProtoMember(6)]
     public ObserverFilters Filters { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets whether replay is disabled, even when <see cref="IsReplayable"/> is true.
+    /// </summary>
+    [ProtoMember(7)]
+    public bool IsNotReplayable { get; set; }
 }

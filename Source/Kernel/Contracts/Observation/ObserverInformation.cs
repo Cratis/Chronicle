@@ -80,7 +80,7 @@ public class ObserverInformation
     /// <summary>
     /// Gets or sets a value indicating whether the observer supports replay scenarios.
     /// </summary>
-    [ProtoMember(10)]
+    [ProtoMember(10, IsRequired = true)]
     [DefaultValue(true)]
     public bool IsReplayable { get; set; } = true;
 }

@@ -72,6 +72,7 @@ The complete list of available profiles is defined in [profile-catalog.json](../
 | `cratis/components` | React component library | (no child profiles) |
 | `cratis/fundamentals` | Core primitives (`ConceptAs<T>`, `EventSourceId<T>`) | (no child profiles) |
 | `cratis/specifications` | Specification framework | (no child profiles) |
+| `cratis/specifications/dotnet` | C# specifications and application slice conformance (`cratis-application-slice-conformance`), alongside slice specifications | `cratis/specifications` |
 
 ### Engineering Profiles
 
@@ -111,6 +112,29 @@ Standalone Chronicle client usage (no Arc) for Kotlin and Java is
 `cratis-chronicle-client-kotlin`, reused by `cratis/chronicle/client-java`.
 JVM language conventions are `kotlin.md` and `java.md`.
 
+### Arc for TypeScript on Node.js
+
+Arc for TypeScript (`@cratis/arc.core` with the Express, Fastify, Hono,
+MongoDB, Drizzle, testing and experimental Chronicle packages) brings the same
+model-bound command/query shape to a Node.js server. Its packages are a source
+preview and are not published to npm. It is separate from `@cratis/arc`, the
+published client runtime that generated proxies import in a frontend.
+`cratis/arc/server-typescript` carries the skills; `cratis/arc/typescript` adds
+the TypeScript language conventions, and `cratis/full/typescript` composes it.
+The server skills are opt-in: `cratis/arc`, `cratis/application` and
+`cratis/application/typescript` do not load them, because they target a
+Node.js server and a C# or React-frontend project has no use for them. Select
+`cratis/arc/typescript` (or `cratis/full/typescript`) for a Node.js Arc server.
+
+| Skill | Covers |
+| --- | --- |
+| `cratis-arc-command-typescript` | Project setup from the source preview, `ArcApplication.createBuilder()`, `@command()` with `handle()`/`provide()`, outcomes, authorization, returned Chronicle events, generated metadata and proxies, hosts, `CommandScenario` |
+| `cratis-arc-query-typescript` | `@readModel()` with static `@query()` methods, argument binding, GET and HTTP `QUERY`, paging, RxJS observable queries, MongoDB/Drizzle/Chronicle read models, `QueryScenario`/`ObservableQueryScenario` |
+| `cratis-arc-validation-typescript` | `CommandValidator`/`QueryValidator`/`ConceptValidator`/`ModelValidator`, `readModelForValidation`, `validation()` with `rejected`/`denied`, severity filtering |
+
+Standalone Chronicle client usage (no Arc) in TypeScript is
+`cratis-chronicle-client-typescript`.
+
 ### Specialized Profiles
 
 | Profile ID | Description |
@@ -121,18 +145,47 @@ JVM language conventions are `kotlin.md` and `java.md`.
 | `cratis/studio` | Studio MCP safety guidance |
 | `cratis/cli` | CLI operations |
 | `cratis/lens` | Lens browser extension |
-| `cratis/screenplay` | Event modeling and information-system design with Screenplay — the method and the whole `.play` language |
+| `cratis/screenplay` | Model-first event modeling: lifecycle, phase skills, toolchain, review, render and gap-fill, plus the whole `.play` language |
 | `cratis/stage` | Stage rendering and sandbox |
 | `cratis/modeling/screenplay-stage` | Screenplay + Stage together |
 
 ### Event modeling with Screenplay
 
-`cratis/screenplay` carries the **method** and the **language**, split one skill
-per surface so only the relevant one loads:
+**Model first.** A repository is opted in only when its model root (default
+`.cratis/screenplay/`) holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it) or the project explicitly set
+`mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install output, an
+installed profile or skill, a `.play` file outside the root or an untracked or uncommitted draft is not
+opt-in. An accepted model under the root covering the scope is the contract and the source
+of truth for behavior. Change the model, verify and independently review it, then render
+or gap-fill from its contract; never edit Stage-managed output or weaken protection.
+Otherwise stay code-first; only the entry-point session may propose a model, at most once
+per session. Master definition: `cratis-screenplay-modeling-lifecycle`. Framework and non-opted-in brownfield work remain
+code-first; infrastructure, clients, adapters and code attachments stay in code.
+Application profiles do not automatically compose `cratis/screenplay`.
+
+`cratis/screenplay` carries the **method** and the **language**. Load the lifecycle
+and one phase skill, then the construct skill needed for syntax.
+
+#### Method
 
 | Skill | Covers |
 | --- | --- |
-| `cratis-screenplay-event-modeling` | Domain discovery, the nine-step workflow, the four slice types, model validation |
+| `cratis-screenplay-event-modeling` | Entry point, model-first routing, four slice types and nine-step map |
+| `cratis-screenplay-modeling-lifecycle` | Decision rule, P0–P9 phases, V1–V5 evidence, identity ownership and handoffs |
+| `cratis-screenplay-discovery` | Personas, domain discovery, event timeline and rules register |
+| `cratis-screenplay-slice-design` | Commands, refusals, views, field lineage and slice boundaries |
+| `cratis-screenplay-streams-and-consistency` | Business identities, atomic invariants, concurrency, evolution and ownership |
+| `cratis-screenplay-automations-and-translations` | Follow-up work, external data to our facts, recovery and deduplication |
+| `cratis-screenplay-scenario-coverage` | Coverage matrix, rejection, denial, lifecycle and external-failure scenarios |
+| `cratis-screenplay-model-review` | Independent critique, evidence checklist and business-question explanation |
+| `cratis-screenplay-legacy-extraction` | Evidence-led extraction, expert verification and loss report |
+| `cratis-screenplay-toolchain` | Compiler and CLI versions, verdict commands, diagnostics and executable subsets |
+| `cratis-screenplay-render-and-gap-fill` | Admission, publication, target verification and contract-led hand-written delivery |
+
+#### Language
+
+| Skill | Covers |
+| --- | --- |
 | `cratis-screenplay-command-surface` | `command`, `event`, `validate`, `authorize`, `produces`, `concurrency`, `constraint`, `concept`, `$context` |
 | `cratis-screenplay-projections` | The Projection Declaration Language and the `reducer` escape hatch |
 | `cratis-screenplay-read-surface` | `readmodel`, `query`, `screen`, name resolution |
@@ -140,6 +193,14 @@ per surface so only the relevant one loads:
 | `cratis-screenplay-captures-and-reactions` | The Change Data Capture Language, `reaction`, `trigger` |
 | `cratis-screenplay-specifications` | Given/when/then and the reference execution |
 | `cratis-screenplay-model-authoring` | Typed MCP authoring, model navigation/refactoring, compiler diagnostics, and source-versus-executable readiness |
+
+The canonical agents are **Screenplay Modeler** (`screenplay-modeler.md`) for
+modeling and legacy extraction, **Screenplay Reviewer** (`screenplay-reviewer.md`)
+for read-only critique or explanation, and **Screenplay Renderer**
+(`screenplay-renderer.md`) for render probes and gap-fill handoffs. Hand-written
+scope uses `cratis-application-slice-conformance`, available wherever
+`cratis-application-slice-specifications` is selected through
+`cratis/specifications/dotnet`, to check code against the model and its specs.
 
 The profile also selects the corpus-owned Screenplay MCP declaration from
 `mcp-servers.json`. The Cratis CLI hosts the server as `cratis screenplay mcp`

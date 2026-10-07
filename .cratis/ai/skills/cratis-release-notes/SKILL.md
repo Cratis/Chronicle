@@ -30,14 +30,16 @@ For each change, ask: who uses this path, what happened before, what happens
 now, is action required, and how would they notice? Check changed defaults,
 serialization/schema/data migrations, runtime and dependency compatibility,
 deploy ordering, deprecations/removals, and upgrade/rollback limits. Report
-'not verified' rather than guessing about a supported configuration.
+what was not verified to the requester or in a PR comment; the published note
+states only verified facts and never says 'not verified'.
 
 Cratis products move together at their seams: the Chronicle kernel and its
 clients, Arc and Chronicle, Components and Arc. When a change touches a
-seam, state the pairings you verified (for example, which kernel versions a
-client release was tested against) and say which pairings are unverified.
-There is no central compatibility matrix to defer to, so the release note may
-be the only place a reader learns it. Where a measurement drove the change,
+seam, state supported pairings as facts the reader can act on ('Requires
+Chronicle kernel 19.25 or later'). Which pairings were tested, and against
+which branch or commit, is evidence for the PR comment. There is no central
+compatibility matrix to defer to, so the release note may be the only place
+a reader learns the supported pairings. Where a measurement drove the change,
 such as how many deployments hit a failure, give the number; never estimate
 one to add weight.
 
@@ -126,8 +128,9 @@ Only when asked to fix a release that violates the contract:
    metadata, and explicit `**You do:**` actions.
    Check `sync-upgrade-paths.mjs` and an existing guide before changing that
    structure, then verify the generated picker as well as the page.
-4. Name the checks actually run and the combinations not checked. Do not
-   imply that a green docs build proved an upgrade safe.
+4. Name the checks actually run and the combinations not checked to the
+   requester or in a PR comment, never in the published note. Do not imply
+   that a green docs build proved an upgrade safe.
 
 The pattern is informed by [Wolverine's migration guide](https://wolverinefx.io/guide/migration.html)
 and [Marten's migration guide](https://martendb.io/migration-guide.html),

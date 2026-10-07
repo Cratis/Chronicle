@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
@@ -28,10 +29,16 @@ public class ObserverStateGrainStorageProvider(IStorage storage) : IGrainStorage
         var failedPartitionsStorage = eventStoreNamespace.FailedPartitions;
         var failedPartitions = await failedPartitionsStorage.GetFor(observerKey.ObserverId);
         var actualFailedPartitions = failedPartitions.Partitions.ToArray();
-        actualGrainState.State = await observers.Get(observerKey.ObserverId);
-        actualGrainState.State = actualGrainState.State with
+        var state = await observers.Get(observerKey.ObserverId);
+
+        // The observer mutates its partition sets in place, so it must own them - never share them with the storage
+        // or with another observer's state.
+        actualGrainState.State = state with
         {
             Identifier = observerKey.ObserverId,
+            ReplayingPartitions = new HashSet<Key>(state.ReplayingPartitions),
+            CatchingUpPartitions = new HashSet<Key>(state.CatchingUpPartitions),
+            InFlightPartitions = new HashSet<Key>(state.InFlightPartitions),
             FailedPartitions = actualFailedPartitions,
             FailedPartitionCount = actualFailedPartitions.Length
         };

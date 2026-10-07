@@ -100,6 +100,7 @@ message ReactorDefinition {
    bool IsReplayable = 4; // default value could not be applied: True
    repeated string Tags = 5;
    ObserverFilters Filters = 6;
+   bool IsNotReplayable = 7;
 }
 message ReactorMessage {
    OneOf_RegisterReactor_ReactorResult Content = 1;

@@ -184,6 +184,11 @@ public static class SchemaMetadataExtensions
             hasMatch = HasMatchingSchemaMetadata(actual.Item, category, predicate, visited, depth + 1);
         }
 
+        if (!hasMatch && actual.AdditionalPropertiesSchema is not null)
+        {
+            hasMatch = HasMatchingSchemaMetadata(actual.AdditionalPropertiesSchema, category, predicate, visited, depth + 1);
+        }
+
         return hasMatch;
     }
 
@@ -221,6 +226,11 @@ public static class SchemaMetadataExtensions
         if (!hasMetadata && actual.Item is not null)
         {
             hasMetadata = HasSchemaMetadata(actual.Item, key, visited, depth + 1);
+        }
+
+        if (!hasMetadata && actual.AdditionalPropertiesSchema is not null)
+        {
+            hasMetadata = HasSchemaMetadata(actual.AdditionalPropertiesSchema, key, visited, depth + 1);
         }
 
         return hasMetadata;

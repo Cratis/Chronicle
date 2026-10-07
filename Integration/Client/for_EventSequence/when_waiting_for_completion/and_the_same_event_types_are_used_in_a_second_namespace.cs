@@ -52,13 +52,26 @@ public class and_the_same_event_types_are_used_in_a_second_namespace(context con
             second.IsSuccess.ShouldBeTrue();
             TenantCompletion = await second.WaitForCompletion(TimeSpan.FromSeconds(30));
             TenantModel = await tenantStore.ReadModels.GetInstanceById<CustomerSnapshot>(_customerId);
-            PatternCapture = await ((IChronicleServicesAccessor)tenantStore.Connection).Services.Observers.GetObserverInformation(new()
+
+            // Completion deliberately excludes unsubscribed kernel reactors. Capture can subscribe
+            // after completion returns, so wait for its own subscription and position independently.
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var polling = new PeriodicTimer(TimeSpan.FromMilliseconds(50));
+            do
             {
-                EventStore = tenantStore.Name,
-                Namespace = tenantStore.Namespace,
-                EventSequenceId = EventSequences.EventSequenceId.Log,
-                ObserverId = Patterns.PatternCapture.ObserverIdentifier
-            });
+                PatternCapture = await ((IChronicleServicesAccessor)tenantStore.Connection).Services.Observers.GetObserverInformation(new()
+                {
+                    EventStore = tenantStore.Name,
+                    Namespace = tenantStore.Namespace,
+                    EventSequenceId = EventSequences.EventSequenceId.Log,
+                    ObserverId = Patterns.PatternCapture.ObserverIdentifier
+                }).WaitAsync(deadline.Token);
+                if (PatternCapture.IsSubscribed && PatternCapture.LastHandledEventSequenceNumber == second.SequenceNumber.Value)
+                {
+                    break;
+                }
+            }
+            while (await polling.WaitForNextTickAsync(deadline.Token));
         }
     }
 
@@ -66,6 +79,8 @@ public class and_the_same_event_types_are_used_in_a_second_namespace(context con
     [Fact] void should_complete_in_the_second_namespace() => Context.TenantCompletion.IsSuccess.ShouldBeTrue();
     [Fact] void should_materialize_the_default_read_model() => Context.DefaultModel.CustomerName.ShouldEqual("Default customer");
     [Fact] void should_materialize_the_tenant_read_model() => Context.TenantModel.CustomerName.ShouldEqual("Tenant customer");
+    [Fact] void should_not_time_out_in_the_second_namespace() => Context.TenantCompletion.TimedOut.ShouldBeFalse();
+    [Fact] void should_leave_no_observers_outstanding() => Context.TenantCompletion.OutstandingObservers.ShouldBeEmpty();
     [Fact] void should_subscribe_pattern_capture_in_the_second_namespace() => Context.PatternCapture.IsSubscribed.ShouldBeTrue();
     [Fact] void should_capture_the_first_tenant_event() => Context.PatternCapture.LastHandledEventSequenceNumber.ShouldEqual(0UL);
 }

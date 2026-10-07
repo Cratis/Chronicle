@@ -43,7 +43,7 @@ Readers do not care about repository boundaries — they are building one applic
 
 - The site has **one front door** stating what Cratis is, with a one-sentence definition and a “start here” link for each product.
 - Every product index opens with a **one-sentence definition** and a **“without vs. with” framing** of the problem it removes — lead with the pain, then the relief.
-- **Cross-link at the seams** rather than re-explaining: show how the products meet in the reader's workflow.
+- **Cross-link at the seams** rather than re-explaining: show how the products meet in the reader's workflow. Before a procedure uses another product's command, link its installation procedure as a prerequisite instead of assuming the command is already available. Prefer the canonical procedure over copying installation commands that can drift.
 - Maintain a **glossary** of shared terms and link to it instead of redefining terms per page. One term, one concept, everywhere.
 
 ## Writing style
@@ -72,7 +72,8 @@ The project's voice is **direct, practical, and opinionated**. Write like an exp
 ## Links
 
 - **Link text must describe the destination.** Write `[Event types](...)`, never `[see documentation](...)`, `[here](...)`, or `[click here](...)`. Non-descriptive link text is a defect.
-- Use relative links for internal product-source references. Verify every link resolves — broken links and links to non-existent folders fail review.
+- Named Markdown reference links (`[Install the CLI][cli-installation]` with a same-page `[cli-installation]: /cli/getting-started/` definition) can make cross-product prerequisites readable and reusable. These are page-local labels, not DocFX symbols; verify the target route in the aggregated site.
+- Use relative links for internal product-source references and root-relative site routes (`/arc/backend/commands/`) for another product's pages — not absolute `cratis.io` or GitHub URLs, and not `xref:` symbol links, which the site does not support. Verify every link resolves — broken links and links to non-existent folders fail review.
 
 ## Cover the reader's needs at the product's scale
 

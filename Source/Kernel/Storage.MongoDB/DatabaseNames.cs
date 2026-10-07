@@ -4,6 +4,7 @@
 using System.Buffers;
 using System.Text;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.ProtectedValues;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -21,6 +22,11 @@ public static class DatabaseNames
     /// The maximum length, in bytes, MongoDB allows for a database name.
     /// </summary>
     const int MaximumLengthInBytes = 63;
+
+    /// <summary>
+    /// The reserved physical name space that real event stores, namespaces and prefixes cannot alias.
+    /// </summary>
+    const string ReservedPhysicalMarker = "!chronicle-encrypted!";
 
     /// <summary>
     /// The characters MongoDB does not allow in a database name.
@@ -75,6 +81,15 @@ public static class DatabaseNames
 
     static string Validated(string databaseName, EventStoreName eventStore, EventStoreNamespaceName? @namespace)
     {
+        if (eventStore == EncryptedValueKeyIdentifiers.GlobalEventStore)
+        {
+            databaseName = databaseName.Replace(EncryptedValueKeyIdentifiers.GlobalEventStore.Value, ReservedPhysicalMarker, StringComparison.Ordinal);
+        }
+        else if (databaseName.Contains(ReservedPhysicalMarker, StringComparison.Ordinal))
+        {
+            throw new InvalidDatabaseName(databaseName, "it uses the physical name space reserved for confidentiality keys", eventStore, @namespace?.Value);
+        }
+
         var reason = GetInvalidReason(databaseName);
         if (reason is not null)
         {

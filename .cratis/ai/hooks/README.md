@@ -12,13 +12,16 @@ Three layers:
 | Pattern pass | `PostToolUse` on a write | `scripts/cratis-pattern-scan.sh` | zero tokens until a match | appends a one-line reminder to context, never blocks |
 | Hard block | `PreToolUse` on a write | `scripts/cratis-guard-writes.sh` | zero | exits **2** — the write does not happen |
 | Hard block | `PreToolUse` on `Bash` | `scripts/cratis-guard-store-mutations.sh` | zero; parses only commands that mention `cratis` | exits **2** — the store-changing `cratis chronicle` command does not run |
+| Hard block | `PreToolUse` on `Bash` | `scripts/cratis-guard-pr-body.sh` | fetches shared rules only for `gh pr create/edit` | exits **2** for inline bodies, invalid notes or conflicting release labels; warns and allows when offline with no cache |
 | Quality gate (Claude) | `Stop` | `scripts/cratis-quality-gate.sh` | one build/test run, only when relevant files changed | exits **2** — the turn does not end |
 | Quality gate (Pi) | explicit `cratis_quality_gate` tool | same script | only at a requested verification checkpoint | error on failure; no turn-end hook |
 
 The Claude Code wiring that fires them is tracked here, in
 [`settings.template.json`](./settings.template.json). Claude reads `.claude/settings.json`. In a
 repository set up with `cratis ai install`, that file is a **symlink** to this template and follows
-every `cratis ai update`; there is nothing to copy. Where the corpus is present without the CLI,
+every `cratis ai update`; there is nothing to copy. The template runs each script through `bash`, so
+a checkout or install that lost the scripts' execute bit still enforces every guard. Where the corpus
+is present without the CLI,
 activate the hooks by copying the template once:
 
 ```bash
@@ -35,7 +38,7 @@ they describe what a hook should do for tools that have no wiring yet.
 
 > Hooks are the one surface with no folder adapter: Claude Code reads `.claude/settings.json`;
 > the Pi harness bridges the same scripts to its own events through the `cratis-hooks`
-> extension under `../harnesses/pi/extensions/` (its `bash` tool feeds the store-mutation guard, its
+> extension under `../harnesses/pi/extensions/` (its `bash` tool feeds the store-mutation and PR-body guards, its
 > `write` and `edit` tools the write guard); Copilot would read `.github/hooks/*.json`, and no
 > Copilot wiring ships yet.
 >
@@ -108,6 +111,60 @@ a live store and says a request to diagnose does not authorize a mutation; this 
 A person who has authorized a mutation sets `CRATIS_HOOKS_ALLOW_STORE_MUTATIONS=1` in the
 environment the harness was started from. The hook reads its own environment, so an assignment
 inside the command (`CRATIS_HOOKS_ALLOW_STORE_MUTATIONS=1 cratis …`) changes nothing.
+
+### Pull-request bodies
+
+The Bash guard is a no-op unless **both** target-repository opt-in conditions hold: the target is under
+`github.com/Cratis/`, and its `.github/workflows` contains a reusable Cratis/Workflows
+`verify-release-notes` or `verify-semver-label` caller (including the renamed
+`verify-release-intent` caller). Installing the corpus or `@cratis/pi` alone does not opt in a
+consumer or personal repository. This scope applies to both Claude Code and Pi; the direct checker
+remains available explicitly in any repository. As in `gh`, an edit's PR URL takes priority over
+`--repo` / `-R`, then literal leading or inherited `GH_REPO`, then the current directory's `origin`.
+Cross-repository commands use the target's workflow
+callers, not the checkout's; an unavailable remote opt-in lookup blocks rather than bypassing the guard.
+
+In opted-in repositories, the Bash guard checks literal `gh pr create` and `gh pr edit` commands, also behind leading environment assignments, `env`, `command`, `rtk` or
+following shell separators. Inline `--body` / `-b` is refused: write the body to
+`.ai-work/pr-body.md` and use `--body-file` / `-F`. It applies `--label`, `--add-label` and
+`--remove-label` to the current PR labels and requires exactly one release intent. A label-only
+edit checks the current body too. Variables, aliases, shell functions, nested shell scripts and
+script files are outside its scope; guarded option values must be literal paths or labels.
+Shell comments and here-document payloads are not executable commands. If an earlier redirection
+or `tee` in the same tool command writes the guarded body file, the command is blocked: **write the body
+file first, then run `gh pr create/edit` in a separate command**. The guard reads files before
+execution, so it cannot validate a body that the command has yet to write, even if an older file
+already exists. Dependabot's generated description remains exempt (including GitHub CLI's
+`app/dependabot` bot identity), but its release-intent label is still checked.
+
+Run the same checker directly:
+
+```bash
+node .cratis/ai/hooks/scripts/cratis-check-pr.mjs --body-file .ai-work/pr-body.md --label patch
+node .cratis/ai/hooks/scripts/cratis-check-pr.mjs --body-file .ai-work/pr-body.md --pr 123 --strict
+```
+
+The checker fetches both marked programs from Cratis/Workflows' `verify-release-notes.yml` at
+the immutable commit SHA in the repository's own release-notes caller. If there is no such caller,
+it uses the reviewed pin `40125b4fcae388e62ed9471edfffd0e991422f0a`. Floating callers such as `@main`
+fetch the programs at that ref; if the fetch fails, they use the bundled programs from the reviewed
+pin with a warning, so body validation is never silently skipped. Programs receive only the proposed PR
+metadata and `PATH`, `HOME`, and `LANG`, not inherited credentials or Node runtime options.
+The exact programs are cached by workflow blob SHA under
+`${XDG_CACHE_HOME:-~/.cache}/cratis/release-notes/<ref>/<sha>.cjs`. Offline, the newest complete
+cached copy for that same pin is used with a warning. With no cache it reports **unchecked** and
+exits **3**; the hook passes through with that warning. Successful checks are silent in hook mode;
+real warnings go to Pi's context or Claude Code's JSON `systemMessage` and `additionalContext`. Exit **0** means no violations; **1** means invalid notes or
+release intent. `--strict` makes warnings (including a cached-rule fallback or an unavailable
+diff comparison) fail too. `no-release` bodies may omit the change list (for example, a summary-only
+internal change); other release-note contract violations still fail, rather than being exempted.
+
+The drift program compares committed `HEAD` with `origin/<base>` (default: the repository's
+default branch, normally `main`), so commit the intended changes and fetch the base before the
+final check. Drift is advisory without `--strict`; re-read the note against the diff after
+merging or rebasing main. The local checker requires Node and Git; fetching rules and live PR
+labels also needs authenticated `gh`. Unrelated commands exit before checking for Node; when Node
+is missing, relevant PR commands in locally opted-in repositories warn rather than claiming a pass.
 
 **Flagged** (`PostToolUse`, exit 0 + context):
 
@@ -341,9 +398,25 @@ script. A consuming repository customises all three without forking anything:
 | `scripts/cratis-store-mutations.json` | the store-mutation guard's read-only allowlist and known-mutating list, each entry with its reason or effect, and the CLI options it skips; its header `$comment` documents every field and the CLI version the lists were derived from |
 | `scripts/cratis-store-mutations.local.json` | optional; its lists are appended to the above. It can classify a command a newer CLI adds, or list a shipped read-only command as mutating (a command on the mutating list always blocks); only a replacement file can make a known mutation read-only |
 
-A gate whose `requires.commands` are not on `PATH`, whose `requires.paths` do not exist, or whose
-`workingDirectoryFrom` matches nothing in the repository, is a **no-op with a message on stderr**
+A gate whose `requires.commands` are not on `PATH`, whose `requires.paths` do not exist, whose
+`requires.packageScripts` are not defined in the `package.json` of its working directory (a `g:`
+script may instead be defined in the root `package.json` — this assumes Yarn Berry, where a
+root-defined `g:` script runs from every workspace, and no workspace `package.json` is inspected), or whose `workingDirectoryFrom` matches
+nothing in the repository, is a **no-op with a message on stderr**
 rather than a failure — that is how a repository with no .NET solution or no frontend stays quiet.
+
+An override in `.cratis/ai/quality-gates.project.json` is merged shallowly: a field it states
+replaces the managed one. The one exception is `requires.packageScripts`: an override that sets
+`command` without stating `requires` drops the managed gate's `packageScripts`, because they guard
+the managed command (`yarn g:compile`), not the replacement. Without that, a repository replacing
+`command` would silently turn the gate into a no-op whenever it lacks the managed script. An
+override that does state `requires` replaces it whole, so list `packageScripts` again if the new
+command needs them.
+
+Every shipped gate ignores the managed corpus and adapter trees (`.cratis/**`, `.pi/**`,
+`.claude/**`) through `excludeChanged`, so a `cratis ai update` never runs a repository's application
+gates. A repository whose own source lives there, like this corpus, restates `excludeChanged` for the
+gates it needs in `.cratis/ai/quality-gates.project.json`.
 
 **No shipped gate names a product's file.** A default that did would activate in exactly one
 repository and silently no-op in every other, which is the worst of both: it looks configured and
@@ -399,8 +472,9 @@ Each is an explicit, auditable opt-out — none of them is a default.
   (macOS system bash) — no `mapfile`, no associative arrays, no GNU-only flags, `LC_ALL=C` on
   every sort and compare.
 - **Gate commands are an argv array**, executed directly. They never pass through a shell.
-- **`jq` is the only dependency.** Every script
-  degrades to a silent no-op when it is missing — a hook must never break a session.
+- **`jq` is the dependency for the write, store-mutation, pattern and quality hooks.** They
+  degrade to a silent no-op when it is missing — a hook must never break a session. The
+  PR-body hook uses Node instead, and the checker uses Git and `gh` as described above.
 - **Fail safe.** Malformed config, empty stdin, a missing file, a binary file, a file over 2 MB:
   all exit 0 silently. The one deliberate exception is the store-mutation guard's command lists:
   an unreadable shipped or local list is not an empty allowlist that happens to pass, so every `cratis chronicle`
@@ -427,22 +501,22 @@ pointing them at a repository that *has* the thing under test; where it is absen
 # Run from an application checkout; <Module>/<Feature>/<Slice> is the layout general.md documents.
 jq -nc '{session_id:"t", cwd:"'"$PWD"'", tool_name:"Edit",
          tool_input:{file_path:"'"$PWD"'/Source/<Module>/<Feature>/<Slice>/<Slice>.cs"}}' \
-  | .cratis/ai/hooks/scripts/cratis-pattern-scan.sh; echo "exit=$?"
+  | bash .cratis/ai/hooks/scripts/cratis-pattern-scan.sh; echo "exit=$?"
 
 # Hard block — expect exit 2
 jq -nc '{session_id:"t", cwd:"'"$PWD"'", tool_name:"Edit",
          tool_input:{file_path:"'"$PWD"'/Directory.Packages.props", new_string:"x"}}' \
-  | .cratis/ai/hooks/scripts/cratis-guard-writes.sh; echo "exit=$?"
+  | bash .cratis/ai/hooks/scripts/cratis-guard-writes.sh; echo "exit=$?"
 
 # Store-mutation guard, both directions: expect exit 2, then exit 0 for the read-only neighbor
 jq -nc '{tool_name:"Bash", tool_input:{command:"cratis chronicle observers replay my-observer --yes"}}' \
-  | .cratis/ai/hooks/scripts/cratis-guard-store-mutations.sh; echo "exit=$?"
+  | bash .cratis/ai/hooks/scripts/cratis-guard-store-mutations.sh; echo "exit=$?"
 jq -nc '{tool_name:"Bash", tool_input:{command:"cratis chronicle observers list -o plain"}}' \
-  | .cratis/ai/hooks/scripts/cratis-guard-store-mutations.sh; echo "exit=$?"
+  | bash .cratis/ai/hooks/scripts/cratis-guard-store-mutations.sh; echo "exit=$?"
 
 # Quality gate — show the dispatch plan without running anything
 jq -nc '{session_id:"t", cwd:"'"$PWD"'", stop_hook_active:false}' \
-  | CRATIS_HOOKS_GATE_DRYRUN=1 .cratis/ai/hooks/scripts/cratis-quality-gate.sh
+  | CRATIS_HOOKS_GATE_DRYRUN=1 bash .cratis/ai/hooks/scripts/cratis-quality-gate.sh
 ```
 
 The subpath guard takes corpus roots as arguments, so it is testable in both directions without
@@ -453,10 +527,10 @@ roots. A one-sided test passes vacuously; run both.
 # Negative — expect a warning naming the file and line
 mkdir -p /tmp/scratch-corpus
 echo "import x from '@cratis/components/ThisDoesNotExist';" > /tmp/scratch-corpus/drift.md
-.cratis/ai/hooks/scripts/validate-package-subpaths.sh .cratis/ai/rules /tmp/scratch-corpus
+bash .cratis/ai/hooks/scripts/validate-package-subpaths.sh .cratis/ai/rules /tmp/scratch-corpus
 
 # Positive — expect silence, and the report to show every real reference resolving
-CRATIS_HOOKS_SUBPATH_REPORT=1 .cratis/ai/hooks/scripts/validate-package-subpaths.sh
+CRATIS_HOOKS_SUBPATH_REPORT=1 bash .cratis/ai/hooks/scripts/validate-package-subpaths.sh
 ```
 
 Tier 2 is testable the same way, and wants a third run the subpath guard does not: a probe of names
@@ -468,15 +542,15 @@ a correct one, so prove it stays quiet when it should.
 mkdir -p /tmp/scratch-corpus
 echo "import { CommandDialog, ThisNameDoesNotExist } from '@cratis/components/CommandDialog';" \
   > /tmp/scratch-corpus/drift.md
-.cratis/ai/hooks/scripts/validate-package-imports.sh /tmp/scratch-corpus
+bash .cratis/ai/hooks/scripts/validate-package-imports.sh /tmp/scratch-corpus
 
 # Discrimination — every name real, expect silence
 echo "import { DataPage, MenuItem } from '@cratis/components/DataPage';" \
   > /tmp/scratch-corpus/drift.md
-.cratis/ai/hooks/scripts/validate-package-imports.sh /tmp/scratch-corpus
+bash .cratis/ai/hooks/scripts/validate-package-imports.sh /tmp/scratch-corpus
 
 # Positive — the real corpus, with the report showing every binding resolving
-CRATIS_HOOKS_IMPORT_REPORT=1 .cratis/ai/hooks/scripts/validate-package-imports.sh
+CRATIS_HOOKS_IMPORT_REPORT=1 bash .cratis/ai/hooks/scripts/validate-package-imports.sh
 ```
 
 Tier 3 wants the same three runs, and its negative case is the one that motivated it. Put
@@ -488,15 +562,15 @@ own motivating case is the wrong design.
 mkdir -p /tmp/scratch-corpus
 printf 'A reactor may return a `ReactorSideEffect` to control where the event is appended.\n' \
   > /tmp/scratch-corpus/drift.md
-.cratis/ai/hooks/scripts/validate-type-references.sh /tmp/scratch-corpus
+bash .cratis/ai/hooks/scripts/validate-type-references.sh /tmp/scratch-corpus
 
 # Discrimination — every name real, expect silence
 printf 'Return `EventForEventSourceId`, or a `ReactorSideEffectFailure` from an `IReactor`.\n' \
   > /tmp/scratch-corpus/drift.md
-.cratis/ai/hooks/scripts/validate-type-references.sh /tmp/scratch-corpus
+bash .cratis/ai/hooks/scripts/validate-type-references.sh /tmp/scratch-corpus
 
 # Positive — the real corpus, expect silence, with the report showing how each name resolved
-CRATIS_HOOKS_TYPE_REPORT=1 .cratis/ai/hooks/scripts/validate-type-references.sh
+CRATIS_HOOKS_TYPE_REPORT=1 bash .cratis/ai/hooks/scripts/validate-type-references.sh
 ```
 
 Run `bash -n` on every script and `jq .` on every JSON file before committing. The owning

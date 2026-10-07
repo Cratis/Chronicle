@@ -107,7 +107,7 @@ public class ReducerObserverSubscriber(
                     reducerSubscriberResultTCS);
 
                 var result = await reducerSubscriberResultTCS.Task;
-                tcs.SetResult(result.ObserverResult);
+                tcs.SetResult(AsHandledByThePipeline(result.ObserverResult));
                 return result;
             }) ?? Task.CompletedTask);
 
@@ -118,6 +118,24 @@ public class ReducerObserverSubscriber(
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
         }
     }
+
+    /// <summary>
+    /// Reports only what the read model actually holds.
+    /// </summary>
+    /// <remarks>
+    /// A reducer folds a whole batch into one state, and the pipeline writes that state only for a successful result.
+    /// A failed result can still report a successful prefix of the batch as handled, but nothing of that prefix was
+    /// written. Passing it on would move the observer past events the read model never received, and recovery would
+    /// then start from the failing event on top of the stale state - losing the prefix's fold for good. Reporting no
+    /// events as handled makes the observer record the failure at the batch's first event, so every path that drives
+    /// this subscriber - live handling, catch-up, replay and retry - starts the batch over from the stored state.
+    /// </remarks>
+    /// <param name="result">The <see cref="ObserverSubscriberResult"/> the client reported.</param>
+    /// <returns>The <see cref="ObserverSubscriberResult"/> to report to the observer.</returns>
+    static ObserverSubscriberResult AsHandledByThePipeline(ObserverSubscriberResult result) =>
+        result.State == ObserverSubscriberState.Failed
+            ? result with { LastSuccessfulObservation = EventSequenceNumber.Unavailable }
+            : result;
 
     async Task HandlePipeline()
     {

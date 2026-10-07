@@ -2,7 +2,8 @@
 # Handler shapes and how Arc dispatches them
 
 Verified against `Cratis.Arc.Core` and `Cratis.Arc.Chronicle` `22.16.0` with
-`Cratis.Chronicle` `18.3.0`.
+`Cratis.Chronicle` `18.3.0`. Operation dispatch additions are verified against
+Arc **v22.48.1**, `CommandPipeline` and `CommandOperationExecution`.
 
 ## The pipeline around `Handle`
 
@@ -15,8 +16,11 @@ One command execution runs in this order:
    stopping at the first blocking verdict;
 5. resolve `Handle`'s arguments, which is where `Provide()` runs;
 6. invoke `Handle`;
-7. dispatch the returned value;
-8. complete the execution scopes in reverse order.
+7. classify returned values and preflight operation metadata/dependencies;
+8. dispatch control/other server values (including Chronicle event enrollment),
+   then execute declared operations sequentially while the command is successful;
+9. complete the execution scopes in reverse order, select eligible operation
+   recovery from commitment facts, and finalize backend observations.
 
 If the final result is not successful, the response is **cleared** before it is
 serialized. A caller never receives both a failure and a payload.
@@ -28,7 +32,10 @@ leaving the authorization verdict at its permissive default.
 ## Dispatch
 
 The returned value is dispatched on its **runtime** type, not on the method's
-declared return type.
+declared return type. The one exception is operation participation: Arc decides
+from the **declared** return type whether a command may carry operations, and
+only then dispatches concrete operations by runtime type. An operation hidden
+behind `object` is rejected, and one inside `IEnumerable<object>` is not executed.
 
 - `Task<T>` and `ValueTask<T>` are awaited first, then the inner value is
   dispatched. (`ARC0010` warns when a synchronous result is wrapped in a `Task`
@@ -40,7 +47,18 @@ declared return type.
   conversions, so `return new SomethingHappened(...)` and
   `return ValidationResult.Error("...")` both compile in the same method.
 - A tuple has every non-null element dispatched independently.
-- Anything no handler claims becomes the response payload.
+- `ICommandOperation` and `CommandOperations` are reserved for operation
+  processing, not ordinary response handlers or the client response. Null is
+  absent; raw operation collections are rejected (`ARC0017`).
+- Other unclaimed values become the response payload. When operations
+  participate, control values are reserved for pipeline handling instead.
+
+When operation values participate, Arc flattens tuples and active union branches,
+preflights both operation methods' dependencies, and selects at most one ordinary
+response. Control values are processed before other server values regardless of
+tuple order. Returned events enroll before operations execute, and scopes complete
+afterward. Custom response handlers never receive operation values a second time.
+See `cratis-arc-command-operation` for compensation and unsupported nesting.
 
 ## What claims an event
 
@@ -73,8 +91,9 @@ left alone.
 
 Within a tuple:
 
-1. every element is offered to the handlers;
-2. the elements nothing can handle are candidates for the response;
+1. operations are reserved for their own phase; other elements are classified
+   for response/control handling;
+2. ordinary elements nothing can handle are candidates for the response;
 3. **more than one unhandleable element throws `MultipleUnhandledTupleValues`** —
    Arc cannot decide which one is the response;
 4. the single unhandleable element is set as the response *before* the

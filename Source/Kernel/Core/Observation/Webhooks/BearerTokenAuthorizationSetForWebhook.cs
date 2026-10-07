@@ -10,5 +10,5 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// Represents the event for bearer token authorization being set for a webhook.
 /// </summary>
 /// <param name="Token">The bearer token.</param>
-[EventType]
+[EventType, AllEventStores]
 public record BearerTokenAuthorizationSetForWebhook(Token Token);

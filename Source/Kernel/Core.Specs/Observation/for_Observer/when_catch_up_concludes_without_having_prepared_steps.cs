@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
@@ -23,7 +24,7 @@ public class when_catch_up_concludes_without_having_prepared_steps : given.an_ob
     {
         await _observer.CatchUp();
         _wasPreparingCatchupBefore = await _observer.IsPreparingCatchup();
-        await _observer.CaughtUp(42L);
+        await _observer.CaughtUp(JobId.New(), 42L);
         _isPreparingCatchupAfter = await _observer.IsPreparingCatchup();
     }
 

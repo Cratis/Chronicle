@@ -57,6 +57,18 @@ public partial class Observer(
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable, IDisposable
 {
+    readonly HashSet<JobId> _concludedCatchUpJobs = [];
+
+    /// <summary>
+    /// The catch-up job acquisition currently in flight, if any.
+    /// </summary>
+    /// <remarks>
+    /// A job being started is not listed by the jobs manager until its start completes, so a catch-up arriving in the
+    /// meantime - routing after an interleaved <see cref="CaughtUp"/>, or the appended-events queue triggering one -
+    /// would find no owner and start a second job over the same events. It adopts the outcome of this acquisition instead.
+    /// </remarks>
+    Task<JobId>? _pendingCatchUpAcquisition;
+
     ObserverId _observerId = ObserverId.Unspecified;
     ObserverKey _observerKey = ObserverKey.NotSet;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
@@ -78,6 +90,16 @@ public partial class Observer(
     IAppendedEventsQueues _appendedEventsQueues = null!;
     IMeterScope<Observer>? _metrics;
     bool _isPreparingCatchup;
+    int _catchUpHandoversInFlight;
+
+    /// <summary>
+    /// Counts every time catch-up ownership started moving - a handover entering or an acquisition starting.
+    /// </summary>
+    /// <remarks>
+    /// A handover can both start and finish while the watchdog awaits its job lookup, leaving nothing in flight to
+    /// see afterwards and a listing that predates the successor it started. A changed epoch is what reveals it.
+    /// </remarks>
+    int _catchUpOwnershipEpoch;
     int _catchupRecoveryAttempts;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     int _statePersistenceBatchInterval = 1;

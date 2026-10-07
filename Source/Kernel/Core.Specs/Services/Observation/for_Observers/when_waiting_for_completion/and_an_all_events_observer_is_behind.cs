@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers.when_waiting_for_completion;
@@ -24,6 +25,14 @@ public class and_an_all_events_observer_is_behind : given.all_dependencies
         ]);
         _observerStateStorage.GetAll().Returns([new ObserverState { Identifier = "all-events-observer", LastHandledEventSequenceNumber = 40UL }]);
         _failedPartitionsStorage.GetFor(Arg.Any<IEnumerable<Concepts.Observation.ObserverId>>()).Returns(new Concepts.Observation.FailedPartitions());
+        var observer = Substitute.For<IObserver>();
+        observer.GetSubscription().Returns(new ObserverSubscription(
+            "all-events-observer",
+            new Concepts.Observation.ObserverKey("all-events-observer", "event-store", "event-store-namespace", Concepts.EventSequences.EventSequenceId.Log),
+            [],
+            typeof(IObserverSubscriber),
+            SiloAddress.Zero));
+        _grainFactory.GetGrain<IObserver>(Arg.Any<string>()).Returns(observer);
     }
 
     async Task Because() => _result = await _observers.WaitForCompletion(new WaitForObserverCompletionRequest

@@ -6,7 +6,7 @@ description: Add a business rule or event-store constraint to an existing comman
 
 # Add a Business Rule or Constraint
 
-Enforce a new rule on an existing command. Invoke the **add-business-rule** skill and follow `.cratis/ai/rules/vertical-slices.md` (the decision matrix).
+Enforce a new rule on an existing command. Invoke the **cratis-arc-command-validation** skill, or the **cratis-chronicle-event-constraints** skill for uniqueness and other append-time constraints, and follow `.cratis/ai/rules/vertical-slices.md` (the decision matrix).
 
 ## Confirm first
 

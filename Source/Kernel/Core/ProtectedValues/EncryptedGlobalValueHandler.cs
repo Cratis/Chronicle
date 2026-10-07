@@ -52,6 +52,17 @@ public class EncryptedGlobalValueHandler(
             value);
 
     /// <inheritdoc/>
+    public Task<JsonNode> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        EncryptedValueOperations.Release(
+            encryptionKeyStore,
+            encryption,
+            EncryptedValueKeyIdentifiers.GlobalEventStore,
+            EncryptedValueKeyIdentifiers.GlobalNamespace,
+            EncryptedValueKeyIdentifiers.ForGlobal(),
+            value,
+            strict: true);
+
+    /// <inheritdoc/>
     public Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
         EncryptedValueOperations.Release(
             encryptionKeyStore,

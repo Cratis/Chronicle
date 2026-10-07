@@ -107,7 +107,7 @@ public class ImmediateProjection(
                     return ProjectionResult.Empty with { LastHandledEventSequenceNumber = tail };
                 }
 
-                var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, _readModelDefinition!.GetSchemaForLatestGeneration());
+                var initialStateAsJson = ReadModelSubjects.CopyToJson(_initialState, expandoObjectConverter.ToJsonObject(_initialState, _readModelDefinition!.GetSchemaForLatestGeneration()));
                 return new(initialStateAsJson, 0, tail);
             }
 
@@ -140,7 +140,7 @@ public class ImmediateProjection(
                 };
             }
 
-            var jsonObject = expandoObjectConverter.ToJsonObject(state, _readModelDefinition!.GetSchemaForLatestGeneration());
+            var jsonObject = ReadModelSubjects.CopyToJson(state, expandoObjectConverter.ToJsonObject(state, _readModelDefinition!.GetSchemaForLatestGeneration()));
             return new(jsonObject, projectedEventsCount, _lastHandledEventSequenceNumber);
         }
         catch (Exception ex)
@@ -175,7 +175,7 @@ public class ImmediateProjection(
             };
         }
 
-        var jsonObject = expandoObjectConverter.ToJsonObject(result.State, _readModelDefinition!.GetSchemaForLatestGeneration());
+        var jsonObject = ReadModelSubjects.CopyToJson(result.State, expandoObjectConverter.ToJsonObject(result.State, _readModelDefinition!.GetSchemaForLatestGeneration()));
         return new(jsonObject, result.ProjectedEventsCount, result.Tail);
     }
 

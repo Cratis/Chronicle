@@ -84,6 +84,20 @@ member list. The trap that costs the most time: **`UsingKey`, `UsingParentKey`,
 `UsingCompositeKey`, and `UsingConstantKey` are not on the projection builder.**
 They live on the per-event builder that `From<TEvent>` hands to your callback.
 
+## Choose a bounded projection shape
+
+Project the fields a consumer needs, rather than building a universal entity
+with every detail and historical entry. Children are useful for bounded related
+state, not an invitation to embed an unbounded timeline. Give growing histories
+their own paged read model. A slim summary may combine event facts without
+query-time joins, but there is no framework requirement that a query read only
+one collection. Preserve security/compliance boundaries when choosing the shape.
+
+When replacing a reducer, preserve creation/admission and late-event guards;
+an unconditional `[SetValue<T>]` is not equivalent to guarded state transition
+code. See the reducer skill's conversion guidance. Evaluate variants below when
+shapes diverge; do not mandate them for every status field.
+
 ## Joins are on events, never on read models
 
 Both `[Join<T>]` and the fluent `Join<TEvent>` take an **event** type. Joining on
@@ -228,6 +242,19 @@ Build. Fix every error before completing. Then drive the contributing events
 through the read-model specification for this model and assert the projected
 state — seed each contributing stream with its own event-source setup when the
 projection spans streams.
+
+## Route near misses
+
+- An accepted `.play` model under the model root covers the behavior, or the
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
+  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
+  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
+  say so and do not author `.play` from memory.
+  Edit code here only for infrastructure, clients, adapters, Screenplay code
+  attachments, or gap-fill scope (`cratis-screenplay-render-and-gap-fill`);
+  never edit Stage-managed output.
 
 ## Verify
 

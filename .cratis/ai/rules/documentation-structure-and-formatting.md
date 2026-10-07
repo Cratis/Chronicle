@@ -100,7 +100,20 @@ In MDX, `<Aside type="tip" title="A specific title">…</Aside>` is available wh
 - Use GFM tables with a separator row and a blank line before the table. `remarkGfm` in the Documentation site's Astro config is load-bearing for `.mdx`; raw pipe text in a rendered page indicates that integration is missing or degraded.
 - Keep images beside the source page, use meaningful alt text, and rely on the site's click-to-zoom behavior.
 - In product source, relative links to files keep their real `.md` or `.mdx` extension. The converter strips either extension for the public route. Directory URLs end in `/`.
-- Site-level MDX uses clean root-relative routes such as `/arc/backend/commands/`. Cross-product links are also root-relative.
+- Site-level MDX uses clean root-relative routes such as `/arc/backend/commands/`. Cross-product links are also root-relative: link from a CLI page to an Arc page as `[Browse your embedded event model](/arc/backend/csharp/embedded-event-model/)`. The route is the owning product's key plus the page's source path without its extension, slugified.
+- Do not link another product's page through `https://cratis.io/...` or a GitHub `blob/` URL. Neither is checked by the site build: the first 404s until the next publish when the target is new, and the second sends a reader to raw source instead of the page.
+- Named Markdown reference links are supported, but their labels are local to the page, not a cross-repository symbol registry. Define the target in the same authored page and use the owning product's verified public route:
+
+  ```markdown
+  Before running these commands, [install the Cratis CLI][cli-installation].
+
+  [cli-installation]: /cli/getting-started/
+  ```
+
+  Reuse a label within that page when helpful. Do not assume another repository's reference definitions or frontmatter `uid` are imported. Verify the generated route and any heading anchor with the full site's rendered-link check.
+- There are no DocFX symbol links. DocFX `[text](xref:UID)` and `<xref:UID>` are converted to plain text or inline code, never to a link, and `lint-docs.mjs` reports any `xref:` left in the synced output. Link to a page route; name an API type in inline code.
+- A product's own link gate cannot resolve root-relative links to other products. It skips them by rule, not by product name - with linkinator, skip the local-server URLs outside `/Documentation/` (`^https?://(localhost|127\.0\.0\.1):[0-9]+/(?!Documentation/)`). A name such as `arc/` would also match a product's own `Documentation/arc/` folder and silently stop checking its internal links. The Documentation site's `check-links.mjs` verifies every rendered root-relative link against the built site.
+- Content published outside the site - a repository README, a package readme, pull request descriptions and release notes - is not rewritten, so it uses absolute `https://` URLs.
 - Link text describes the destination; `here`, `click here`, and `see documentation` are hard lint errors.
 - Use `mermaid` for architecture, sequence, flow, and state diagrams. Use `eventmodeling` for EventModeling diagrams. Both are pre-rendered to responsive SVG at build time.
 
