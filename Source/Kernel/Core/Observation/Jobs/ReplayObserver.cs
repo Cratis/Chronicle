@@ -106,15 +106,34 @@ public class ReplayObserver(
 
     /// <inheritdoc/>
     /// <remarks>
-    /// The observer resumes a stopped replay job from inside its own Replay transition, so its turn is waiting on this
-    /// job. Waiting on the observer here would hold both until the call timed out and leave the job running with no
-    /// steps started. The observer is asked to replay without waiting: one that is already replaying ignores it, and one
-    /// that is not - after reactivation or an operator resume - enters replay and adopts this running job.
+    /// <para>
+    /// The sinks pick their container from replay mode alone, so they must not be switched into replay while the observer
+    /// may still be handling live events, or a live write lands in the replay container.
+    /// </para>
+    /// <para>
+    /// The observer resumes a stopped replay job from inside its own Replay transition, and has already marked itself
+    /// replaying before doing so. Its turn is waiting on this job, so waiting on it from here would hold both until the
+    /// call timed out; the interleaving state query tells that case apart and it is not waited on. Any other resume - an
+    /// operator's, or one beside an observer whose replay entry was interrupted - waits for the observer to enter replay
+    /// and adopt this job before the sinks are switched and the steps start. That cannot deadlock: the observer then finds
+    /// this job already running and does not call back into it. If the observer does not enter replay with this job, the
+    /// resume fails rather than run steps beside live handling.
+    /// </para>
     /// </remarks>
+    /// <exception cref="ObserverDidNotEnterReplay">The observer did not enter replay with this job.</exception>
     protected override async Task OnBeforeResumingJobSteps()
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        _ = EnsureObserverIsReplaying(observer);
+        var observerState = await observer.GetState();
+        if (observerState.RunningState != ObserverRunningState.Replaying)
+        {
+            var replayJobId = await observer.Replay();
+            if (replayJobId != JobId)
+            {
+                throw new ObserverDidNotEnterReplay(Request.ObserverKey, JobId, replayJobId);
+            }
+        }
+
         await replayStateServiceClient.ResumeReplayFor(State.ObserverDetails);
     }
 
@@ -273,18 +292,6 @@ public class ReplayObserver(
         catch (Exception exception)
         {
             logger.ReplayCompletionNotificationFailed(exception);
-        }
-    }
-
-    async Task EnsureObserverIsReplaying(IObserver observer)
-    {
-        try
-        {
-            await observer.Replay();
-        }
-        catch (Exception exception)
-        {
-            logger.RequestingReplayOnResumeFailed(exception);
         }
     }
 
