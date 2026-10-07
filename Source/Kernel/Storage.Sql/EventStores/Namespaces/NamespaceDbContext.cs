@@ -19,6 +19,11 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     public DbSet<Observers.ObserverState> Observers { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets retained alert incidents.
+    /// </summary>
+    public DbSet<Alerts.AlertIncidentEntity> AlertIncidents { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets the changesets DbSet.
     /// </summary>
     public DbSet<Changesets.Changeset> Changesets { get; set; } = null!;
@@ -104,6 +109,35 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
                 entity.ToTable(WellKnownTableNames.ReplayedReadModels);
                 entity.HasKey(e => new { e.ObserverId, e.Started });
             });
+
+        string incidentCollation;
+        if (Database.IsSqlServer())
+        {
+            incidentCollation = "Latin1_General_100_BIN2";
+        }
+        else if (Database.IsNpgsql())
+        {
+            incidentCollation = "C";
+        }
+        else
+        {
+            incidentCollation = "BINARY";
+        }
+
+        modelBuilder.Entity<Alerts.AlertIncidentEntity>(entity =>
+        {
+            entity.ToTable(WellKnownTableNames.AlertIncidents);
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasMaxLength(32);
+            entity.Property(row => row.EventStore).HasMaxLength(200);
+            entity.Property(row => row.Namespace).HasMaxLength(200);
+            foreach (var property in entity.Metadata.GetProperties().Where(property => property.ClrType == typeof(string)))
+            {
+                entity.Property(property.Name).UseCollation(incidentCollation);
+            }
+            entity.HasIndex(row => new { row.EventStore, row.IsOpen, row.RaisedSequenceNumber, row.Id });
+            entity.HasIndex(row => new { row.EventStore, row.Namespace, row.IsOpen, row.RaisedSequenceNumber, row.Id });
+        });
 
         // Match the column mappings to the provider-native JSON type the migrations create
         // (jsonb on Npgsql), so EF Core sends parameters with the correct OID. PostgreSQL is

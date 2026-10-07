@@ -24,7 +24,7 @@ Your responsibility is to write **comprehensive specs** for vertical slices.
 
 Select from these canonical rules in `.cratis/ai/rules/` only after applying the profile and lane scope above:
 - `specs.md` — folder structure, naming, BDD philosophy
-- `specs.csharp.md` — the in-process scenario family
+- `specs.scenarios.csharp.md` — the in-process scenario family
 - `frontend-testing.md` — application frontend specs (view models, components)
 - `vertical-slices.md` — what each artifact promises (the contract under spec)
 
@@ -33,6 +33,7 @@ Select from these canonical rules in `.cratis/ai/rules/` only after applying the
 ## Inputs you expect
 
 - Feature name, slice name, and slice type (specs are **mandatory for every slice type**)
+- The slice's contract and its specification list: the `.play` slice's specifications, or the agreed outline. Before accepting an outline, apply Phase 0 of `application-profile.md` (an accepted model under the model root covers the scope, or the repository is opted in, meaning the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it) or the project explicitly set `mcpServers.screenplay.root` in `.cratis/ai.json`: the contract is the `.play` slice's specifications; if the model lacks the behaviour, request it be added; check skill availability separately). Without opt-in, an agreed outline is the contract and code-first work is preserved. Existing code is not the contract.
 - The complete slice file (`<Slice>.cs`) so you understand what behaviors to specify
 - Any business rules or constraints that must be validated
 - The namespace root (read from existing source files)
@@ -85,15 +86,17 @@ public class and_all_information_is_valid : Specification
 #endif
 ```
 
-(`CommandScenario` event assertions are extension methods keyed by command + event type — `await _scenario.ShouldHaveAppendedEvent<TCommand, TEvent>(eventSourceId[, predicate])`; seed prior state through `_scenario.Services`, not a `Given` builder.)
+(`CommandScenario` event assertions are extension methods keyed by command + event type — `await _scenario.ShouldHaveAppendedEvent<TCommand, TEvent>(eventSourceId[, predicate])`; seed prior state through `_scenario.Given.ForEventSource(id).Events(...)` or `_scenario.Services`. The mode matters: in legacy mode `Given` materializes an in-memory read-model dictionary only, so constraint preconditions go through `EventScenario`'s `Given`; in `UseDecisionReads()` mode `Given` writes to the scenario's real log and `EventScenario` is unavailable (accessing it throws), so seed everything through `Given`. Check which mode the spec's scenario uses; see `specs.scenarios.csharp.md` and `cratis-application-slice-specifications`.)
 
 ### What to specify
 
+0. **Every contract specification first** — one spec each, named after it, using the contract's example values. Then add the code-derived cases below that the contract lacks and report them as proposals for the contract (the `.play` model when one covers the slice, otherwise the agreed outline); never present them as contract coverage. A `.play` specification maps to the scenario helper for its slice type; never edit, skip or delete a spec derived from the contract to make code pass — change the code or return an edit request.
 1. **Happy path** — succeeds, correct event(s) appended.
-2. **Each validation failure** — assert **both** `ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()`. Never assert on message strings.
+2. **Each validation failure** — assert **both** `ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()`. Never assert on message strings. Violate **only** the rule the spec is named after (build the command valid in every other respect), or a neighbouring rule makes it pass.
 3. **Business-rule violations** — each `Result<,>` rejection / DCB condition.
 4. **Constraint violations** — `ShouldHaveConstraintViolationFor(name)` via `EventScenario`.
 5. **Authorization** — `ShouldNotBeAuthorized()` (an unauthorized result has no validation errors).
+6. **Repeat execution**, when a reactor invokes the command — the same command twice for the same source; specify whether the second is rejected, a no-op, or appends again.
 
 ### Naming
 
@@ -139,6 +142,7 @@ describe('when filtering active projects', () => {
 
 Before handing back:
 
+- [ ] Every contract specification has a spec named after it; code-derived extras are reported as proposals
 - [ ] Specs cover all meaningful outcomes of the slice's behavior
 - [ ] Happy-path spec exists
 - [ ] Each validation/business-rule/constraint failure has a spec (unhappy paths assert both not-successful and has-validation-errors)
@@ -146,3 +150,12 @@ Before handing back:
 - [ ] TypeScript `it()` descriptions use spaces and start with "should"; `.should` assertions only
 - [ ] Specs pass (C# and, when written, frontend)
 - [ ] No spec for a simple property getter or constructor-parameter passthrough
+
+---
+
+## Output
+
+- `Status: done | partial | blocked` (meanings in **cratis-application-slice-conformance**).
+- Specification map: contract specification → spec class; code-derived extras listed separately as proposals.
+- The contract used (`.play` slice path or agreed outline).
+- Spec results (pending or unexecuted specs named honestly), and any open question or model edit request.

@@ -31,8 +31,9 @@ public class Replay(
     public override ObserverRunningState RunningState => ObserverRunningState.Replaying;
 
     /// <summary>
-    /// Gets the <see cref="JobId"/> of the most recent replay job started, resumed, or found running for this observer.
-    /// Returns <see cref="JobId.NotSet"/> if no replay job has been started in the current process lifetime.
+    /// Gets the <see cref="JobId"/> of the replay job started, resumed, or found running when this state was last entered.
+    /// Returns <see cref="JobId.NotSet"/> if no replay job has been started in the current process lifetime, or if the
+    /// last attempt did not get one.
     /// </summary>
     public JobId LastStartedJobId { get; private set; } = JobId.NotSet;
 
@@ -48,6 +49,9 @@ public class Replay(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
+        // Cleared first, so a start that throws or fails never leaves an earlier replay's job id to be reported.
+        LastStartedJobId = JobId.NotSet;
+
         using var scope = logger.BeginReplayScope(state.Identifier, observerKey);
         logger.Entering();
 
@@ -55,7 +59,7 @@ public class Replay(
 
         LastStartedJobId = await jobsManager.StartOrResumeObserverJobFor<IReplayObserver, ReplayObserverRequest>(
             logger,
-            new(observerKey, definitionState.State.Type, definitionState.State.EventTypes),
+            new ReplayObserverRequest(observerKey, definitionState.State.Type, definitionState.State.EventTypes),
             requestPredicate: null,
             () =>
             {

@@ -197,6 +197,19 @@ children.
 | Seeding a required value in `onBeforeExecute` | Use `initialValues` |
 | `pt` applied expecting it to reach the dialog | `pt` targets the stepper; use `dialogPt` |
 
+## Route near misses
+
+- An accepted `.play` model under the model root covers the behavior, or the
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
+  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
+  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
+  say so and do not author `.play` from memory.
+  Edit code here only for infrastructure, clients, adapters, Screenplay code
+  attachments, or gap-fill scope (`cratis-screenplay-render-and-gap-fill`);
+  never edit Stage-managed output.
+
 ## Verify
 
 - Imports come from `@cratis/components/CommandDialog` and

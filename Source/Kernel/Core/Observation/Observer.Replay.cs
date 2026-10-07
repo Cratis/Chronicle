@@ -12,6 +12,12 @@ namespace Cratis.Chronicle.Observation;
 public partial class Observer
 {
     /// <inheritdoc/>
+    /// <remarks>
+    /// A transition requested while another is in progress is only scheduled, and a later request replaces it. The only
+    /// call that can be transitioning while this one runs is an interleaving <see cref="CaughtUp"/>, whose routing then
+    /// picks the next state itself and so silently replaced the replay. Waiting for those handovers to settle lets the
+    /// replay transition run here, in this call, so the job id returned is the one this call started or resumed.
+    /// </remarks>
     public async Task<JobId> Replay()
     {
         ThrowIfSealed();
@@ -20,14 +26,37 @@ public partial class Observer
             return JobId.NotSet;
         }
 
+        while (_catchUpHandoversSettled is { } settled)
+        {
+            logger.WaitingForCatchUpHandoverBeforeReplay();
+            await settled.Task;
+        }
+
+        if (IsRetired || _removed || !Definition.IsReplayable)
+        {
+            return JobId.NotSet;
+        }
+
+        // Nothing from here until the transition has marked itself in progress may yield: CanTransitionTo completes
+        // synchronously and the transition is marked in progress before its first await, so no handover can start
+        // routing in between and replace it.
         if (State.RunningState != ObserverRunningState.Replaying)
         {
+            var canReplay = await CanTransitionTo<Replay>();
             await TransitionTo<Replay>();
+            if (State.RunningState != ObserverRunningState.Replaying)
+            {
+                if (canReplay)
+                {
+                    logger.ReplayTransitionDidNotTakeEffect();
+                }
+
+                return JobId.NotSet;
+            }
         }
 
         var states = await GetStates();
-        var replayState = states.OfType<Replay>().FirstOrDefault();
-        return replayState?.LastStartedJobId ?? JobId.NotSet;
+        return states.OfType<Replay>().First().LastStartedJobId;
     }
 
     /// <inheritdoc/>

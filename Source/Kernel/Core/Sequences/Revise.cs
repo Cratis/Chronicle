@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
@@ -8,6 +9,8 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Events.EventSequences;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -49,24 +52,39 @@ public record Revise(
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to append the revision request through.</param>
     /// <param name="causation">The <see cref="RequestCausation"/> describing the request behind the append.</param>
     /// <param name="principalAccessor">The <see cref="ICurrentPrincipalAccessor"/> resolving who is revising.</param>
+    /// <param name="storage">Storage for the original event and revision schema.</param>
+    /// <param name="metadataManager">The metadata manager protecting the revision request.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// A reactor picks up the resulting <see cref="EventRevised"/> and performs the actual in-place update, rather
     /// than the revision happening synchronously here.
     /// </remarks>
-    public Task Handle(
+    /// <exception cref="InvalidRevisionEventType">The revision type differs from the original event type.</exception>
+    public async Task Handle(
         IGrainFactory grainFactory,
         RequestCausation causation,
-        ICurrentPrincipalAccessor principalAccessor)
+        ICurrentPrincipalAccessor principalAccessor,
+        IStorage storage,
+        IJsonSchemaMetadataManager metadataManager)
     {
+        var eventStore = storage.GetEventStore(EventStore);
+        var original = await eventStore.GetNamespace(Namespace).GetEventSequence(EventSequenceId).GetEventAt(SequenceNumber);
+        if (original.Context.EventType.Id != EventType.Id)
+        {
+            throw new InvalidRevisionEventType(SequenceNumber, original.Context.EventType.Id, EventType.Id);
+        }
+
+        var schema = await eventStore.EventTypes.GetFor(EventType.Id, EventType.Generation);
+        var subject = original.Context.Subject?.IsSet == true ? original.Context.Subject.Value : original.Context.EventSourceId.Value;
+        var protectedContent = await metadataManager.Apply(EventStore, Namespace, schema.Schema, subject, JsonNode.Parse(Content)!.AsObject());
         var systemEventSequence = grainFactory.GetSystemEventSequence(EventStore, Namespace);
-        return systemEventSequence.Append(
+        await systemEventSequence.Append(
             (EventSourceId)EventSequenceId.Value,
             new EventRevised(
                 EventSequenceId,
                 SequenceNumber,
                 EventType.ToChronicle(),
-                Content),
+                protectedContent.ToJsonString()),
             correlationId: Guid.NewGuid(),
             causation: Causation?.ToChronicle() ?? causation.GetCurrentChain(),
             causedBy: CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity());

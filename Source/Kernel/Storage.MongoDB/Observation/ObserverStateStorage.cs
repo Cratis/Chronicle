@@ -39,7 +39,7 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
 
         if (state is null)
         {
-            return Chronicle.Storage.Observation.ObserverState.Empty;
+            return new Chronicle.Storage.Observation.ObserverState();
         }
 
         if (state.HandledEventCountPerPartition.Count > 0)

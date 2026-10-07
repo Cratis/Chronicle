@@ -18,7 +18,7 @@ public class with_existing_webhook_and_target_url_changed : given.a_webhook_regi
 
     void Establish()
     {
-        _eventSequence = Substitute.For<IEventSequence>();
+        _eventSequence = AnEventSequenceThatAppendsSuccessfully();
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_eventSequence);
 
         var existingDefinition = new WebhookDefinition(

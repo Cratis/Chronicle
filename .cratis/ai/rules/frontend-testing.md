@@ -124,4 +124,4 @@ Run the project's frontend test gate (e.g. `yarn test`) for frontend changes; it
 - [react.md](./react.md) — MVVM, view-model testability, Arc hooks.
 - [frontend-quality.md](./frontend-quality.md) — the engineering bar these specs serve.
 - [specs.md](./specs.md) — the backend BDD language this mirrors.
-- skill: **write-specs-frontend** — the step-by-step workflow that applies these conventions.
+- skill: **cratis-application-react-specifications** — the step-by-step workflow that applies these conventions.

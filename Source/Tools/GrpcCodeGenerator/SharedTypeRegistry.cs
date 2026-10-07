@@ -84,6 +84,30 @@ public static class SharedTypeRegistry
     }
 
     /// <summary>
+    /// Discovers every shared type reachable through the registered types' wire properties before documentation is rendered.
+    /// </summary>
+    public static void CompleteDiscovery()
+    {
+        var visited = new HashSet<Type>();
+        while (_discovered.Keys.Except(visited).ToList() is { Count: > 0 } pending)
+        {
+            foreach (var type in pending)
+            {
+                visited.Add(type);
+                if (type.IsEnum)
+                {
+                    continue;
+                }
+
+                foreach (var property in type.GetProperties().Where(property => property.CanRead && property.GetIndexParameters().Length == 0))
+                {
+                    TypeHelper.GetTypeName(property.PropertyType);
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// Maps a Core namespace onto the contract namespace it mirrors into, using the same skip/base transform the
     /// per-service generation already applies - so a type Core places under (for example)
     /// <c language="csharp">Cratis.Chronicle.Jobs</c> lands under <c language="csharp">Cratis.Chronicle.Contracts.Jobs</c>, exactly where it already

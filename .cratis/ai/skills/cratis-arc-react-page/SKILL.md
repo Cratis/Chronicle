@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-react-page
-description: Build a React page in a Cratis Arc application with Cratis Components — DataPage lists, columns, toolbar menu items, command dialogs, confirmation and busy-indicator dialogs, row selection, details panes, snapshot and observable queries, paging, and MVVM view models. Use when building or changing a page that lists or displays data, wiring Add/Edit/Delete actions, connecting a component to a generated Arc query or command proxy, or asking the user to confirm something. Do not use for a multi-step wizard dialog alone, for a canvas tool palette, or for backend command and read-model work.
+description: "Build a React page in a Cratis Arc application with Cratis Components — DataPage lists, columns, toolbar menu items, command dialogs, confirmation and busy-indicator dialogs, row selection, details panes, snapshot and observable queries, paging, and MVVM view models. Use when building or changing a page that lists or displays data, wiring Add/Edit/Delete actions, connecting a component to a generated Arc query or command proxy, asking the user to confirm something, or implementing a `.play` screen or form as a page. Not for: a multi-step wizard dialog alone (use `cratis-components-stepper-command-dialog`), a canvas tool palette (use `cratis-components-toolbar`), theming (use `cratis-components-styling`), backend commands and read models (use `cratis-arc-command`, `cratis-chronicle-read-model`), or editing the `.play` model itself (use `cratis-screenplay-event-modeling`)."
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-react-page/SKILL.md -->
@@ -62,7 +62,31 @@ import { DialogProps, DialogResult, useDialog } from '@cratis/arc.react/dialogs'
 
   See the **cratis-components-styling** skill for the full theming contract.
 
-## Step 2 — The DataPage shell
+## Step 2 — Trace every field to its origin
+
+Before writing JSX, list every value the page shows or captures, and where it
+comes from. A value with no origin gets faked on the client or invented as a
+proxy property, so find the gap before the page exists.
+
+| Origin | Written as | Bound through |
+| --- | --- | --- |
+| Query result | `<Query>.<property>` | `DataPage` `query`, `Column field`, `detailsComponent` |
+| Command input | `<Command>.<property>` | a `CommandForm` field `value` accessor |
+| Route parameter | `route:<name>` | the view model's route parameters (Step 9) |
+| Display-only calculation | `derived:<expression>` | a view-model getter, with a spec |
+
+- The caller's identity is never a command input. Take it on the server, not
+  from a form field.
+- A value with no origin is a gap in the backend or the model, not in the page.
+  Do not compute it from other queries on the client and do not add a property to
+  a generated proxy. Stop building that part of the page and add the property to
+  the read model or command first (`cratis-arc-command`,
+  `cratis-chronicle-read-model`) or, where one exists, to the `.play` model.
+- A component that shows one part of a page lists only that part's fields.
+- When the page implements a `.play` screen or form, the model is the source of
+  the list: follow [from-screenplay.md](references/from-screenplay.md).
+
+## Step 3 — The DataPage shell
 
 `DataPage` owns the query subscription, paging, selection, action menubar, and
 the optional details split. Do not pre-fetch rows and pass an array.
@@ -93,7 +117,7 @@ See [data-page.md](references/data-page.md) for every prop, and
 [data-tables.md](references/data-tables.md) when you need a table without the
 page chrome.
 
-## Step 3 — Toolbar actions
+## Step 4 — Toolbar actions
 
 Menu items go in `<DataPage.MenuItems>`. `MenuItem` takes `command`, not
 `onClick`, and its `icon` is a **React component type**, not an icon class
@@ -122,7 +146,7 @@ const [CreateAccountWrapper, showCreateAccount] = useDialog(CreateAccountDialog)
 Render the wrapper returned by `useDialog` once in the tree. See
 [dialogs.md](references/dialogs.md) for the full dialog contract.
 
-## Step 4 — Command dialogs
+## Step 5 — Command dialogs
 
 A dialog that runs a command is its own component built on `CommandDialog`.
 Bind each input with a `CommandForm` field whose `value` accessor selects the
@@ -155,7 +179,7 @@ command dialog for a command value — it is not bound to the command, so
 validation never re-runs and the submit button stays disabled. Seed values that must be present for validity with
 `initialValues`, not `onBeforeExecute`.
 
-## Step 5 — Confirming, and showing that work is in progress
+## Step 6 — Confirming, and showing that work is in progress
 
 Do not build a confirmation or busy dialog into a page. `ConfirmationDialog` and
 `BusyIndicatorDialog` are registered once at the app root through
@@ -190,7 +214,7 @@ showBusy();
 try { await importEverything(); } finally { closeBusy(); }
 ```
 
-## Step 6 — Row selection and a details pane
+## Step 7 — Row selection and a details pane
 
 `selection` and `onSelectionChange` are controlled. The change event carries
 `value`, which is `null` when the selection is cleared.
@@ -217,7 +241,7 @@ const [selected, setSelected] = useState<AccountSummary | null>(null);
 `detailsComponent` receives `IDetailsComponentProps<T>` — `{ item, onRefresh? }`
 — and renders beside the table for the selected row.
 
-## Step 7 — Snapshot or observable query
+## Step 8 — Snapshot or observable query
 
 The **same `query` prop** takes a snapshot query or an observable query. There
 is no separate `observableQuery` prop: `DataPage` inspects the query prototype
@@ -229,7 +253,7 @@ Read [queries-and-commands.md](references/queries-and-commands.md) for the
 generated proxy hooks, their exact return tuples, paging, and how to read a
 command result.
 
-## Step 8 — MVVM for pages with real logic
+## Step 9 — MVVM for pages with real logic
 
 Extract a view model as soon as the component has three or more `useState`
 calls, a state-synchronizing `useEffect`, or derived values. Keep the component
@@ -274,6 +298,7 @@ props handling, and teardown.
 | Multi-step wizard dialog | the **cratis-components-stepper-command-dialog** skill |
 | Canvas tool palette | the **cratis-components-toolbar** skill |
 | Complex page state | `withViewModel` |
+| A `.play` `screen` or `form` is the spec | [from-screenplay.md](references/from-screenplay.md) |
 
 ## Verify
 
@@ -291,5 +316,40 @@ props handling, and teardown.
 - Confirmations and busy indicators are raised by hook, registered once at the
   app root.
 - Every `showBusy()` has a matching close in a `finally`.
+- Every displayed or captured value has an origin from the Step 2 table; none
+  is computed from another query on the client.
+- Each page's states are designed: empty (`emptyMessage`), loading, a command
+  that fails (read through the granular `CommandResult` flags in
+  [queries-and-commands.md](references/queries-and-commands.md)), denied (a
+  persona that can reach the page but whose policy refuses the action), and the
+  state after success.
+- When a `.play` model describes the page, the page matches it element by
+  element and adds no data or action the model lacks
+  ([from-screenplay.md](references/from-screenplay.md)).
 - No generated proxy file was edited.
 - Lint, the frontend test gate, and the TypeScript build all pass.
+
+## Route near misses
+
+- A multi-step wizard dialog: `cratis-components-stepper-command-dialog`.
+- A canvas tool palette: `cratis-components-toolbar`.
+- Colors, tokens and theming: `cratis-components-styling`.
+- The backend command or read model behind the page: `cratis-arc-command`,
+  `cratis-chronicle-read-model`.
+- Specifying page behavior with specs: `cratis-application-react-specifications`.
+- An accepted `.play` model under the model root covers the behavior, or the
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
+  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
+  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
+  say so and do not author `.play` from memory.
+  Read the model's `screen` and `form` with
+  [from-screenplay.md](references/from-screenplay.md). Edit code here only for
+  infrastructure, clients, adapters, Screenplay code attachments, or gap-fill
+  scope (`cratis-screenplay-render-and-gap-fill`); never edit Stage-managed
+  output.
+
+## Lineage
+
+See [references/provenance.md](references/provenance.md).

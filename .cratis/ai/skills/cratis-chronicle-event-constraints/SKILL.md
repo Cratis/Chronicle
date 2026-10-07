@@ -38,6 +38,16 @@ memory.
   `cratis-chronicle-read-model`.
 - You are writing the specification and want the `EventScenario` mechanics in
   depth: use `cratis-chronicle-event-specifications`.
+- An accepted `.play` model under the model root covers the behavior, or the
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
+  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
+  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
+  say so and do not author `.play` from memory.
+  Edit code here only for infrastructure, clients, adapters, Screenplay code
+  attachments, or gap-fill scope (`cratis-screenplay-render-and-gap-fill`);
+  never edit Stage-managed output.
 
 ## Step 1 — Pick the mechanism
 

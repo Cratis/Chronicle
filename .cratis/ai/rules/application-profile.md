@@ -20,8 +20,8 @@ Pick exactly one type per slice folder — determined by what the slice *does*.
 | --- | --- | --- |
 | **State Change** | Accepts a command, appends events | Command + validator + event(s); optional `[Passive]` read model for command-side decisions |
 | **State View** | Projects events into a queryable read model | `[ReadModel]` + model-bound projection + static query method(s) |
-| **Automation** | Reacts to events, calls external systems / `ICommandPipeline` | Reactor only |
-| **Translation** | Reacts to events and appends follow-up events to another stream | Reactor only |
+| **Automation** | Reacts to events, calls external systems / `ICommandPipeline`, or returns follow-up commands/events (including to another stream) | Reactor only |
+| **Translation** | Takes data from outside our own facts (an external system or another service) and records it as our facts | An adapter at the boundary, often a reactor |
 
 ## Slice Naming (convention)
 
@@ -49,9 +49,15 @@ Tagged **[contract]** (framework-enforced) or **[convention]** (house default). 
 16. **[convention] Use the Cratis dialogs** — `CommandDialog` from `@cratis/components/CommandDialog`, `Dialog` from `@cratis/components/Dialogs`; never a vendor or hand-rolled modal. The default frontend stack is Cratis Components **4.x** (Components-owned markup, `--cratis-*` tokens, `pt`/`data-cratis-part` parts; no PrimeReact dependency) — **not** Tailwind (Tailwind is one supported way to write the token-mapping CSS, not the generic default).
 17. **[convention] One slice is one unit** — creating/renaming/moving/deleting a slice means doing the same to every artifact (the `.cs`, every `when_*/`, every `.tsx`, the composition import/JSX, the route).
 
+**[convention]** Return immediate external work chosen by a command as a command operation, not a service write inside `Handle()`; durable after-commit work belongs in reactors. Direct service calls remain supported when the decision needs their result. Audit custom `ICommandExecutionScope`s first — every one must implement `ICommandOperationExecutionScope` or operation-bearing commands are rejected. See **cratis-arc-command-operation** (verified at Arc v22.48.1).
+
 ## Implementation Workflow
 
-- **Phase 0 — Model.** Confirm Module/Feature, slice name, slice type, domain rules; for new behavior or unclear event vocabulary run the **event-modeling** skill first.
+- **Phase 0 — Find the contract / choose the level.** Before writing slice code, find what the code must match, and choose the level once for the whole scope.
+  1. **Look for a Screenplay model** under the model root (default `.cratis/screenplay/`, or the root set by `mcpServers.screenplay.root` in `.cratis/ai.json`; search `**/*.play`) for the slice, command, event and read-model names. A `.play` file outside the root, an untracked or uncommitted draft, an empty directory, or an installed profile or skill is not opt-in; the repository is opted in only when the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it) or the project set that root explicitly (master definition: **cratis-screenplay-modeling-lifecycle**, "Decide the level first").
+  2. **Model level** — an accepted model under the root covers the scope, or the repository is opted in and this scope has no model yet. The `.play` slice and its specs are the contract: change the model first (new behavior starts in discovery), verify it (V1–V3), get an independent review, then render with Stage or gap-fill by hand only what the renderer rejects. Hand-written code stays checked against the model (**cratis-application-slice-conformance**). Never edit Stage-managed output, never implement behavior the model does not state, never change the model to match existing code, never weaken protection to make it compile or render. Start with **cratis-screenplay-event-modeling** (decision rule), then **cratis-screenplay-modeling-lifecycle**. If the Screenplay skills are not installed, say so; do not author `.play` from memory.
+  3. **Code level** — infrastructure (hosting, DI composition, identity wiring, CI, deployment), clients, Screenplay code attachments and handlers, adapters in the render's customization area, and scope Stage cannot render yet (the model remains the contract). Framework repositories and brownfield work that is not opted in also stay code-first. Only the entry-point session may propose a model, at most once per session and never for trivial, bug-fix, infrastructure, client, framework or brownfield-maintenance work; if declined, do not ask again. Confirm Module/Feature, slice name, slice type and domain requirements as before; for new behavior or unclear event vocabulary run **cratis-chronicle-event-modeling** first, and record the agreed outline (fields, events, rules, scenarios) where the team tracks work, if anywhere. If you write code first where a model exists, say the model now lags.
+  4. **Trivial changes** keep the proportional-delegation policy; Phases 1–3 below apply to code you write at either level.
 - **Phase 1 — Backend.** Implement a coherent slice change. **Gate:** incremental Debug build of the affected project (regenerates proxies, compiles `#if DEBUG` spec code).
 - **Phase 2 — Specs.** Mandatory for every slice type, in-process scenario family first (`CommandScenario<T>`, `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>`). **Gate:** tests pass.
 - **Phase 3 — Frontend.** Build from the generated proxies, register in the composition page, wire routing. **Gate:** lint, conditional test, build.

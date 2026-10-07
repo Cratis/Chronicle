@@ -96,6 +96,16 @@ def _namespaces_with_facts():
     return namespaces
 
 
+def _inherited_fact_count(text):
+    """Count the facts a thin provider wrapper inherits from the shared storage contract."""
+    alias = re.search(r"using Contract = Cratis\.Chronicle\.Storage\.([\w.]+);", text)
+    base = re.search(r": Contract\.(\w+)<", text)
+    if not alias or not base:
+        return 0
+    path = os.path.join("Source", "Kernel", "Storage.Specs", *alias.group(1).split("."), base.group(1) + ".cs")
+    return _read(path).count("[Fact]")
+
+
 def _test_class_counts(namespace_dir):
     """Map each test class fully-qualified name to its number of [Fact] tests.
 
@@ -109,7 +119,7 @@ def _test_class_counts(namespace_dir):
             if not filename.endswith(".cs"):
                 continue
             text = _read(os.path.join(dirpath, filename))
-            facts = text.count("[Fact]")
+            facts = text.count("[Fact]") + _inherited_fact_count(text)
             if not facts:
                 continue
             namespace = _NAMESPACE_RE.search(text)
@@ -152,11 +162,14 @@ def _shards_for(namespace):
     """Return a list of (shard_label, test_filter) for a namespace."""
     fully_qualified = NAMESPACE_PREFIX + namespace
     shard_count = SHARD_COUNTS.get(namespace, 1)
+    counts = _test_class_counts(os.path.join(CLIENT_ROOT, namespace))
     if shard_count <= 1:
-        # Identical to the historical behavior: one job, one namespace filter.
-        return [("all", f"FullyQualifiedName~{fully_qualified}")]
+        # Retain the normal namespace filter; moved parity wrappers can keep their kernel namespace.
+        if all(name.startswith(fully_qualified + ".") for name in counts):
+            return [("all", f"FullyQualifiedName~{fully_qualified}")]
+        return [("all", "|".join(f"FullyQualifiedName~{name}." for name in sorted(counts)))]
 
-    groups = _group_by_ancestor(_test_class_counts(os.path.join(CLIENT_ROOT, namespace)))
+    groups = _group_by_ancestor(counts)
     buckets = _pack(groups, shard_count)
     shards = []
     for index, bucket in enumerate(buckets, start=1):
@@ -209,9 +222,14 @@ def main():
 
     include = []
     for namespace in _namespaces_with_facts():
+        # This family exercises a provider directly, not the configurable Chronicle runtime.
+        # Run it once in the SQL Server lane instead of starting SQL Server in every backend lane.
+        namespace_configs = configs
+        if namespace == "SqlServerAlertIncidents":
+            namespace_configs = [config for config in configs if config[1] == "mssql"]
         fully_qualified = NAMESPACE_PREFIX + namespace
         for shard_label, test_filter in _shards_for(namespace):
-            for mode, database, needs_docker in configs:
+            for mode, database, needs_docker in namespace_configs:
                 include.append(
                     {
                         "namespace": fully_qualified,

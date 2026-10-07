@@ -67,6 +67,7 @@ public class CatchUpObserver(
             // Only a catch-up whose every step completed may move the observer past events it read but did not
             // handle; a step that stopped early can leave events behind the furthest point another step reached.
             _ = observer.CaughtUp(
+                JobId,
                 State.LastHandledEventSequenceNumber,
                 AllStepsCompletedSuccessfully ? State.LastScannedEventSequenceNumber : EventSequenceNumber.Unavailable);
         }

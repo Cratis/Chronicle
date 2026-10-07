@@ -104,7 +104,7 @@ public class and_event_has_nested_compliant_enum_values : Specification
     [Fact] void should_release_the_nullable_valued_enum() => Profile["nullableValuedStatus"].ShouldEqual(1);
     [Fact] void should_keep_the_nullable_null_value_absent() => Profile.ContainsKey("nullableStatus").ShouldBeFalse();
     [Fact] void should_keep_the_event_readable_after_crypto_shredding() =>
-        ((IDictionary<string, object?>)((IDictionary<string, object?>)_shredded.Content)["profile"]!)["zeroStatus"].ShouldEqual(string.Empty);
+        ((IDictionary<string, object?>)((IDictionary<string, object?>)_shredded.Content)["profile"]!)["zeroStatus"].ShouldEqual(0);
 
     IDictionary<string, object?> Content => _released.Content;
     IDictionary<string, object?> Profile => (IDictionary<string, object?>)Content["profile"]!;

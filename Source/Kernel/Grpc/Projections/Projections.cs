@@ -159,7 +159,11 @@ internal sealed class Projections(
                 await projection.SetDefinition(definition);
 
                 IEnumerable<EventType> eventTypes;
-                if (isInferredReadModel || (draftDefinition is not null && readModelDefinition.Identifier == draftDefinition.Identifier))
+                if (definition.SubscribesToAllEvents)
+                {
+                    eventTypes = [];
+                }
+                else if (isInferredReadModel || (draftDefinition is not null && readModelDefinition.Identifier == draftDefinition.Identifier))
                 {
                     eventTypes = await projection.GetEventTypesForPreview(readModelDefinition);
                 }
@@ -422,7 +426,10 @@ internal sealed class Projections(
         IEnumerable<EventTypeSchema> eventTypeSchemas,
         string title)
     {
-        var schema = new JsonSchema { Type = JsonObjectType.Object, Title = title };
+        // Build the backing JSON directly: the Properties IDictionary setter does not synchronize additions.
+        var properties = new JsonObject();
+        var definitions = new JsonObject();
+        var schema = new JsonSchema(new JsonObject { ["properties"] = properties, ["$defs"] = definitions }) { Type = JsonObjectType.Object, Title = title };
 
         // Track seen property names to take only the first occurrence of each.
         // Type compatibility is already validated by the compiler before reaching this point.
@@ -436,17 +443,80 @@ internal sealed class Projections(
                 continue;
             }
 
+            // Isolate each event's definitions so identical reference names from different events cannot collide.
+            var definitionName = $"event{definitions.Count}";
+            var referencePrefix = $"#/$defs/{definitionName}";
+            definitions[definitionName] = CopyInferredSchemaNode(JsonNode.Parse(eventTypeSchema.Schema.ToJson()), eventTypeSchema.Schema, referencePrefix, [], false);
             foreach (var (name, prop) in eventTypeSchema.Schema.Properties)
             {
                 if (seenPropertyNames.Add(name))
                 {
-                    var propType = prop.ActualTypeSchema?.Type ?? prop.Type;
-                    schema.Properties[name] = new JsonSchemaProperty { Type = propType, Format = prop.Format };
+                    properties[name] = CopyInferredSchemaNode(JsonNode.Parse(prop.ToJson()), eventTypeSchema.Schema, referencePrefix, [], true);
                 }
             }
         }
 
         return schema;
+    }
+
+    static JsonNode? CopyInferredSchemaNode(JsonNode? node, JsonSchema sourceRoot, string referencePrefix, HashSet<string> resolvingReferences, bool resolveReferences)
+    {
+        if (node is JsonArray array)
+        {
+            return new JsonArray(array.Select(item => CopyInferredSchemaNode(item, sourceRoot, referencePrefix, resolvingReferences, resolveReferences)).ToArray());
+        }
+
+        if (node is not JsonObject source)
+        {
+            return node?.DeepClone();
+        }
+
+        var result = new JsonObject();
+        var reference = source["$ref"]?.GetValue<string>();
+        var resolved = false;
+        if (resolveReferences && reference?.StartsWith('#') == true && resolvingReferences.Add(reference))
+        {
+            var referencedSchema = new JsonSchema(source, sourceRoot).Reference;
+            if (referencedSchema is not null)
+            {
+                result = (JsonObject)CopyInferredSchemaNode(JsonNode.Parse(referencedSchema.ToJson()), sourceRoot, referencePrefix, resolvingReferences, true)!;
+                resolved = true;
+            }
+            resolvingReferences.Remove(reference);
+        }
+
+        foreach (var (name, value) in source.Where(property => property.Key != "$ref" || !resolved))
+        {
+            // Recursive references remain references into the isolated source schema, not into the inferred root.
+            result[name] = name switch
+            {
+                "$ref" when reference?.StartsWith('#') == true => JsonValue.Create(referencePrefix + reference[1..]),
+                "properties" or "$defs" or "definitions" or "patternProperties" or "dependentSchemas" or "dependencies" when value is JsonObject schemas =>
+                    new JsonObject(schemas.Select(property => new KeyValuePair<string, JsonNode?>(property.Key, CopyInferredSchemaNode(property.Value, sourceRoot, referencePrefix, resolvingReferences, resolveReferences)))),
+                "items" or "additionalProperties" or "additionalItems" or "allOf" or "anyOf" or "oneOf" or "not" or "if" or "then" or "else" or "contains" or "propertyNames" or "unevaluatedItems" or "unevaluatedProperties" =>
+                    CopyInferredSchemaNode(value, sourceRoot, referencePrefix, resolvingReferences, resolveReferences),
+                _ => value?.DeepClone()
+            };
+        }
+
+        if (resolveReferences && result["type"] is null)
+        {
+            var sourceSchema = new JsonSchema(source, sourceRoot);
+            var effectiveSchema = sourceSchema.ActualTypeSchema;
+            var scalarType = effectiveSchema.Type & ~JsonObjectType.Null;
+            if (scalarType is JsonObjectType.String or JsonObjectType.Boolean or JsonObjectType.Integer or JsonObjectType.Number)
+            {
+                // Keep the composition, but expose its runtime scalar shape to schema-based conversion.
+                var runtimeSchema = new JsonSchema(result) { Type = effectiveSchema.Type };
+                runtimeSchema.Format ??= effectiveSchema.Format;
+                if (sourceSchema.AnyOf.Any(branch => branch.ActualTypeSchema.Type.HasFlag(JsonObjectType.Null)))
+                {
+                    runtimeSchema.Type |= JsonObjectType.Null;
+                }
+            }
+        }
+
+        return result;
     }
 
     /// <summary>

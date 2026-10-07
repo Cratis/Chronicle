@@ -7,6 +7,8 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Events.EventSequences;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
+using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -18,8 +20,10 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for deserializing event content.</param>
 /// <param name="logger">The <see cref="ILogger{EventSequencesReactor}"/> for logging.</param>
+/// <param name="storage">Storage for the original event and revision schema.</param>
+/// <param name="metadataManager">The metadata manager releasing protected revision requests.</param>
 [Reactor(eventSequence: WellKnownEventSequences.System, systemEventStoreOnly: false, defaultNamespaceOnly: false)]
-public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOptions jsonSerializerOptions, ILogger<EventSequencesReactor> logger) : Reactor
+public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOptions jsonSerializerOptions, ILogger<EventSequencesReactor> logger, IStorage storage, IJsonSchemaMetadataManager metadataManager) : Reactor
 {
     /// <summary>
     /// Performs the actual redaction of a single event when an <see cref="EventRedactionRequested"/> system event is observed.
@@ -78,10 +82,17 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
         var content = (JsonSerializer.Deserialize<JsonNode>(@event.Content, jsonSerializerOptions)
             ?? throw new InvalidOperationException($"Revision content for event at sequence {(ulong)@event.SequenceNumber} is null or invalid JSON."))
             .AsObject();
+        var eventStore = storage.GetEventStore(context.EventStore);
+        var original = await eventStore.GetNamespace(context.Namespace).GetEventSequence(@event.Sequence).GetEventAt(@event.SequenceNumber);
+        var schema = await eventStore.EventTypes.GetFor(@event.EventType.Id, @event.EventType.Generation);
+        var subject = original.Context.Subject?.IsSet == true ? original.Context.Subject.Value : original.Context.EventSourceId.Value;
+
+        // Revision requests own protected content. Release it here; Revise owns protection for storage.
+        var releasedContent = await metadataManager.ReleaseStrict(context.EventStore, context.Namespace, schema.Schema, subject, content);
         await eventSequence.Revise(
             @event.SequenceNumber,
             @event.EventType,
-            content,
+            releasedContent,
             context.CorrelationId,
             context.Causation,
             context.CausedBy);

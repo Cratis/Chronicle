@@ -19,7 +19,7 @@ internal static class ReducerDefinitionConverters
         new(
             reducerDefinition.ReducerId,
             reducerDefinition.EventSequenceId,
-            reducerDefinition.EventTypes.Select(_ => _.ToChronicle()),
+            reducerDefinition.EventTypes.Select(_ => _.ToChronicle()).ToArray(),
             reducerDefinition.ReadModel,
             reducerDefinition.IsActive,
             reducerDefinition.Tags,
