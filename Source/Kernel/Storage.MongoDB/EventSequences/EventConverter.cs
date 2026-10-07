@@ -86,7 +86,7 @@ public class EventConverter(
     }
 
     static JsonObject ParseContent(IDictionary<string, BsonDocument> content, string generationKey)
-        => (JsonNode.Parse(EventContentBson.ToJson(content[generationKey])) as JsonObject)!;
+        => EventContentBson.ToJsonObject(content[generationKey]);
 
     static ExpandoObject ConvertToRawExpandoObject(JsonObject document)
     {
