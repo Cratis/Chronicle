@@ -29,7 +29,12 @@ namespace Cratis.Chronicle.Integration.for_Reactors.when_a_reactor_registration_
 [Collection(ChronicleCollection.Name)]
 public class and_keep_alives_are_sent_on_the_same_channel(context context) : Given<context>(context)
 {
-    public const int Rounds = 50;
+    /// <summary>
+    /// The number of rounds of concurrent reactor calls. Kestrel keeps a stream the server ended while the client still had
+    /// its request stream open for a few seconds, and refuses new streams (ENHANCE_YOUR_CALM) once a connection tracks more
+    /// than 200 - so the total stays well below that.
+    /// </summary>
+    public const int Rounds = 20;
     public const int ConcurrentReactorCalls = 4;
     public const int KeepAliveSenders = 8;
 
@@ -153,6 +158,6 @@ public class and_keep_alives_are_sent_on_the_same_channel(context context) : Giv
 
     [Fact] void should_end_every_reactor_call() => Context.ReactorCallOutcomes.Count.ShouldEqual(Rounds * ConcurrentReactorCalls);
     [Fact] void should_end_every_reactor_call_with_an_error() => Context.ReactorCallOutcomes.All(outcome => outcome is not null).ShouldBeTrue();
-    [Fact] void should_not_fail_any_keep_alive() => Context.KeepAliveFailures.Select(_ => _.Message).ShouldBeEmpty();
+    [Fact] void should_not_fail_any_keep_alive() => string.Join(Environment.NewLine, Context.KeepAliveFailures.Select(_ => _.Message)).ShouldEqual(string.Empty);
     [Fact] void should_send_keep_alives() => Context.KeepAlivesSucceeded.ShouldBeGreaterThan(0);
 }
