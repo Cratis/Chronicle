@@ -17,7 +17,7 @@ public class JsonElementSerializer(JsonSerializerOptions jsonSerializerOptions) 
     /// <inheritdoc/>
     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, JsonElement value)
     {
-        var document = BsonDocument.Parse(value.GetRawText());
+        var document = EventContentBson.FromJson(value.GetRawText());
         var serializer = BsonSerializer.LookupSerializer<BsonDocument>();
         serializer.Serialize(context, document);
     }
@@ -27,6 +27,6 @@ public class JsonElementSerializer(JsonSerializerOptions jsonSerializerOptions) 
     {
         var serializer = BsonSerializer.LookupSerializer<BsonDocument>();
         var document = serializer.Deserialize(context, args);
-        return JsonSerializer.Deserialize<JsonElement>(document.ToJson(), jsonSerializerOptions);
+        return JsonSerializer.Deserialize<JsonElement>(EventContentBson.ToJson(document), jsonSerializerOptions);
     }
 }
