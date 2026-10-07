@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_catchup_completes;
 
@@ -19,7 +20,7 @@ public class and_the_observer_is_quarantined : given.a_quarantined_observer
 
     async Task Because()
     {
-        await _observer.CaughtUp(42UL);
+        await _observer.CaughtUp(JobId.NotSet, 42UL);
         await RunWatchdogTicks();
     }
 

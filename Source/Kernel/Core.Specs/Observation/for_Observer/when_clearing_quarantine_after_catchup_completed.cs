@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
@@ -10,7 +11,7 @@ public class when_clearing_quarantine_after_catchup_completed : given.a_quaranti
 {
     async Task Establish()
     {
-        await _observer.CaughtUp(42UL);
+        await _observer.CaughtUp(JobId.NotSet, 42UL);
         _jobsManager.ClearReceivedCalls();
     }
 

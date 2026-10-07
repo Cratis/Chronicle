@@ -37,5 +37,5 @@ public class and_cleanup_fails_before_an_explicit_subscription : given.an_observ
     [Fact] void should_subscribe_to_the_queue_once() => _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
     [Fact] void should_resume_the_stopped_catchup_job_once() => _jobsManager.Received(1).Resume(_catchupJobId);
     [Fact] void should_resume_the_stopped_retry_job_once() => _jobsManager.Received(1).Resume(_retryJobId);
-    [Fact] void should_retry_the_failed_partition_once() => _jobsManager.Received(1).Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Is<RetryFailedPartitionRequest>(request => request.Key == _retryablePartition));
+    [Fact] void should_not_start_a_duplicate_retry_job() => _jobsManager.DidNotReceive().Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Is<RetryFailedPartitionRequest>(request => request.Key == _retryablePartition));
 }

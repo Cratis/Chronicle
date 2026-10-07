@@ -126,6 +126,7 @@ public partial class Observer
         RememberConcludedCatchUpJob(jobId);
 
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        State.CatchingUpPartitions.Clear();
         await WriteStateAsync();
 
         _isPreparingCatchup = false;

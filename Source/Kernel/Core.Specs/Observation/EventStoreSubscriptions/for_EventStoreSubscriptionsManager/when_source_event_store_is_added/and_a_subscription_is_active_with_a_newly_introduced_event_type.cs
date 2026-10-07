@@ -71,5 +71,6 @@ public class and_a_subscription_is_active_with_a_newly_introduced_event_type : S
             Arg.Any<object?>(),
             Arg.Any<bool>(),
             Arg.Any<ObserverFilters?>(),
-            true);
+            true,
+            automatic: true);
 }

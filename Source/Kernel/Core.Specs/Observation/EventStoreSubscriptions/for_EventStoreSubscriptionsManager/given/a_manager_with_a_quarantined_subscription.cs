@@ -39,7 +39,8 @@ public class a_manager_with_a_quarantined_subscription : Specification
             Arg.Any<object?>(),
             Arg.Any<bool>(),
             Arg.Any<ObserverFilters?>(),
-            true).Returns(call =>
+            true,
+            automatic: true).Returns(call =>
             {
                 _observer.IsSubscribed().Returns(true);
                 _observer.GetEventTypes().Returns(call.Arg<IEnumerable<EventType>>());
@@ -62,5 +63,5 @@ public class a_manager_with_a_quarantined_subscription : Specification
         Times.Exactly(count));
 
     protected void ShouldSubscribe(IObserver observer) => observer.Received(1)
-        .Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), TargetEventStore, Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), true);
+        .Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), TargetEventStore, Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), true, automatic: true);
 }

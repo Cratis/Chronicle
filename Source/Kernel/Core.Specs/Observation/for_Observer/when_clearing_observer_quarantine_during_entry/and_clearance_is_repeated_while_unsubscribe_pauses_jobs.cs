@@ -18,7 +18,7 @@ public class and_clearance_is_repeated_while_unsubscribe_pauses_jobs : given.an_
     void Establish()
     {
         _stateStorage.State.InFlightPartitions.Add((Key)"in-flight-partition");
-        _jobsManager.GetAllJobs().Returns(_ => _pauseEntered.TrySetResult() ? _pauseJobs.Task : Task.FromResult(_jobs));
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => _pauseEntered.TrySetResult() ? _pauseJobs.Task : Task.FromResult(_jobs));
     }
 
     async Task Because()

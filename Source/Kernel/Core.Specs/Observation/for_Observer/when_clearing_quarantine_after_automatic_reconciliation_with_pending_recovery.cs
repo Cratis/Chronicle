@@ -17,6 +17,7 @@ public class when_clearing_quarantine_after_automatic_reconciliation_with_pendin
 {
     readonly JobId _catchupJobId = JobId.New();
     readonly JobId _retryJobId = JobId.New();
+    readonly HashSet<JobId> _resumedJobs = [];
     readonly Key _inFlightPartition = "partition-in-flight";
     readonly Key _catchingUpPartition = "partition-catching-up";
     FailedPartition _failedPartition;
@@ -36,19 +37,29 @@ public class when_clearing_quarantine_after_automatic_reconciliation_with_pendin
             CatchingUpPartitions = new HashSet<Key>([_catchingUpPartition]),
             FailedPartitionCount = 2
         };
-        _jobsManager.GetAllJobs().Returns(ImmutableList.Create(
-            new JobState
-            {
-                Id = _catchupJobId,
-                Status = JobStatus.Stopped,
-                Request = new CatchUpObserverRequest(_observerKey, ObserverType.External, EventSequenceNumber.First, [EventType.Unknown])
-            },
-            new JobState
-            {
-                Id = _retryJobId,
-                Status = JobStatus.Stopped,
-                Request = new RetryFailedPartitionRequest(_observerKey, ObserverType.External, _failedPartition.Partition, EventSequenceNumber.First, [EventType.Unknown])
-            }));
+        JobState catchupJob = new()
+        {
+            Id = _catchupJobId,
+            Status = JobStatus.Stopped,
+            Request = new CatchUpObserverRequest(_observerKey, ObserverType.External, EventSequenceNumber.First, [EventType.Unknown])
+        };
+        JobState retryJob = new()
+        {
+            Id = _retryJobId,
+            Status = JobStatus.Stopped,
+            Request = new RetryFailedPartitionRequest(_observerKey, ObserverType.External, _failedPartition.Partition, EventSequenceNumber.First, [EventType.Unknown])
+        };
+
+        // The jobs manager reports a resumed job as running from then on, so the failed-partition recovery
+        // after the clear finds the retry job it already resumed running, instead of dispatching onto the
+        // stopped job a second time.
+        _jobsManager.Resume(Arg.Any<JobId>()).Returns(callInfo =>
+        {
+            _resumedJobs.Add(callInfo.Arg<JobId>());
+            return Task.FromResult(true);
+        });
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult<IImmutableList<JobState>>(
+            ImmutableList.Create(AsReportingResumed(catchupJob), AsReportingResumed(retryJob))));
         _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>())
             .Returns(Result<JobId, StartJobError>.Success(JobId.New()));
         await _observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, [EventType.Unknown], SiloAddress.Zero, "target", automatic: true);
@@ -66,7 +77,7 @@ public class when_clearing_quarantine_after_automatic_reconciliation_with_pendin
     [Fact] void should_be_active() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_resume_the_stopped_catchup_job() => _jobsManager.Received(1).Resume(_catchupJobId);
     [Fact] void should_resume_the_stopped_retry_job() => _jobsManager.Received(1).Resume(_retryJobId);
-    [Fact] void should_recover_the_retryable_failed_partition() => _jobsManager.Received(1)
+    [Fact] void should_not_duplicate_the_stopped_retry_job() => _jobsManager.DidNotReceive()
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Is<RetryFailedPartitionRequest>(request => request.Key == _failedPartition.Partition));
     [Fact] void should_leave_the_individually_quarantined_partition_alone() => _jobsManager.DidNotReceive()
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Is<RetryFailedPartitionRequest>(request => request.Key == _quarantinedPartition.Partition));
@@ -74,4 +85,8 @@ public class when_clearing_quarantine_after_automatic_reconciliation_with_pendin
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(request => request.Key == _inFlightPartition));
     [Fact] void should_not_duplicate_existing_partition_catchup() => _jobsManager.DidNotReceive()
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(request => request.Key == _catchingUpPartition));
+
+    JobState AsReportingResumed(JobState job) => _resumedJobs.Contains(job.Id)
+        ? new JobState { Id = job.Id, Status = JobStatus.Running, Request = job.Request }
+        : job;
 }

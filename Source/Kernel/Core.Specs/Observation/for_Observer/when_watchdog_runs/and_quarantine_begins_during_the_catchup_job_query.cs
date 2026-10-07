@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Orleans.Storage.Jobs;
 
@@ -16,11 +15,11 @@ public class and_quarantine_begins_during_the_catchup_job_query : for_Observer.g
     void Establish()
     {
         _stateStorage.State.CatchingUpPartitions.Add(_partition);
-        _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>().Returns(_ =>
-        {
-            _probeEntered.TrySetResult();
-            return _query.Task;
-        });
+
+        // JobQuery carries no job-type discriminator, so the first job listing after this point - the
+        // catch-up query - is the probe; later listings (quarantine-entry cleanup) return empty.
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ =>
+            _probeEntered.TrySetResult() ? _query.Task : Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
     }
 
     async Task Because() => await QuarantineDuringProbe(_observer.RunWatchdogAsync(), () => _query.SetResult(ImmutableList<JobState>.Empty));

@@ -146,6 +146,10 @@ public partial class Observer
             // A leave requested during quarantine's OnEnter is only scheduled. Resume recovery from the
             // Disconnected entry hook, not from the return of the transition request.
             _recoverSubscriptionAfterQuarantine = true;
+
+            // An operator's clear stays a clear: claim the ending before the subscription-flow leave can
+            // relabel the exit as a revival.
+            RememberQuarantineEnding(AlertClearedReason.Cleared);
             await LeaveQuarantineForSubscription();
             return;
         }
@@ -178,7 +182,14 @@ public partial class Observer
 
         _isPreparingCatchup = false;
         _catchupRecoveryAttempts = 0;
-        RememberQuarantineEnding(AlertClearedReason.Revived);
+
+        // Only a leave the subscription flow itself initiated is a revival; an operator's clear has already
+        // claimed its ending.
+        if (_quarantineEpisodeId is { } episode && !_alertEndings.ContainsKey(new(episode)))
+        {
+            RememberQuarantineEnding(AlertClearedReason.Revived);
+        }
+
         await quarantined.LeaveForSubscription();
     }
 }

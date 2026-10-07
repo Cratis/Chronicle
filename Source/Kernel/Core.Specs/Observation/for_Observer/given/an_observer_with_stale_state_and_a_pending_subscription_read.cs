@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.given;
 
@@ -52,7 +53,7 @@ public class an_observer_with_stale_state_and_a_pending_subscription_read : an_o
             _reloadableStateStorage.ReleaseRead.SetResult();
             await readStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
             _runningStateWhileReadIsPending = _stateStorage.State.RunningState;
-            await _observer.CaughtUp(84UL);
+            await _observer.CaughtUp(JobId.NotSet, 84UL);
             _persistedStateAfterCompletion = _reloadableStateStorage.PersistedState.RunningState;
         }
         finally

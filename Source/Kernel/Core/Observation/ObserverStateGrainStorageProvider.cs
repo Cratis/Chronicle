@@ -30,7 +30,7 @@ public class ObserverStateGrainStorageProvider(IStorage storage) : IGrainStorage
         var failedPartitions = await failedPartitionsStorage.GetFor(observerKey.ObserverId);
         var actualFailedPartitions = failedPartitions.Partitions.ToArray();
         var storedState = await observers.Get(observerKey.ObserverId);
-        var recordExists = !ReferenceEquals(storedState, ObserverState.Empty);
+        var recordExists = IsStoredRecord(storedState);
         actualGrainState.RecordExists = recordExists;
 
         // The observer mutates its partition sets in place, so it must own them - never share them with the storage
@@ -56,4 +56,27 @@ public class ObserverStateGrainStorageProvider(IStorage storage) : IGrainStorage
         var observers = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).Observers;
         await observers.Save(actualGrainState.State!);
     }
+
+    /// <summary>
+    /// Gets whether the stored state is an actual record, rather than the empty state the storage reports
+    /// when no record exists.
+    /// </summary>
+    /// <param name="state">The state as reported by the storage.</param>
+    /// <returns>True when the state carries anything a stored record carries; false when it is empty.</returns>
+    /// <remarks>
+    /// <see cref="ObserverState.Empty"/> is a per-access factory and the record's synthesized equality compares
+    /// the partition sets by reference, so emptiness is recognized field by field rather than by equality
+    /// against a fresh empty state.
+    /// </remarks>
+    static bool IsStoredRecord(ObserverState state) =>
+        state.Identifier != ObserverId.Unspecified
+        || state.LastHandledEventSequenceNumber.IsActualValue
+        || state.RunningState != ObserverRunningState.Unknown
+        || state.FailedPartitionCount != FailedPartitionCount.Zero
+        || state.IsReplaying
+        || state.SubscribesToAllEvents
+        || state.ReplayingPartitions.Count > 0
+        || state.CatchingUpPartitions.Count > 0
+        || state.InFlightPartitions.Count > 0
+        || state.FailedPartitions.Any();
 }

@@ -25,7 +25,7 @@ public class and_quarantine_begins_during_automatic_job_resumption : given.an_ob
             Status = JobStatus.Running,
             Request = new RetryFailedPartitionRequest(_observerKey, ObserverType.External, _partition, EventSequenceNumber.First, [EventType.Unknown])
         });
-        _jobsManager.GetAllJobs().Returns(_ => _probeEntered.TrySetResult() ? _query.Task : Task.FromResult(_jobs));
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => _probeEntered.TrySetResult() ? _query.Task : Task.FromResult(_jobs));
     }
 
     async Task Because() => await QuarantineDuringProbe(ReconcileSubscription(), () => _query.SetResult(_jobs));

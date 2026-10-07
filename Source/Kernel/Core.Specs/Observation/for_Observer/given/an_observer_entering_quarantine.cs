@@ -21,6 +21,7 @@ public class an_observer_entering_quarantine : an_observer_with_subscription
     protected readonly JobId _retryJobId = JobId.New();
     protected readonly Key _recoveredPartition = "recovered-partition";
     protected readonly Key _retryablePartition = "retryable-partition";
+    protected readonly HashSet<JobId> _resumedJobs = [];
     protected IImmutableList<JobState> _jobs;
     protected Task _quarantineEntry;
 
@@ -45,7 +46,18 @@ public class an_observer_entering_quarantine : an_observer_with_subscription
                 Status = JobStatus.Stopped,
                 Request = new RetryFailedPartitionRequest(_observerKey, ObserverType.External, _retryablePartition, EventSequenceNumber.First, [EventType.Unknown])
             });
-        _jobsManager.GetAllJobs().Returns(_ => _cleanupEntered.TrySetResult() ? _cleanupJobs.Task : Task.FromResult(_jobs));
+
+        // The jobs manager reports a resumed job as running from then on, so the failed-partition recovery
+        // after the quarantine exit finds the jobs it already resumed running, instead of dispatching onto
+        // the stopped jobs a second time.
+        _jobsManager.Resume(Arg.Any<JobId>()).Returns(callInfo =>
+        {
+            _resumedJobs.Add(callInfo.Arg<JobId>());
+            return Task.FromResult(true);
+        });
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => _cleanupEntered.TrySetResult()
+            ? _cleanupJobs.Task
+            : Task.FromResult<IImmutableList<JobState>>(_jobs.Select(AsReportingResumed).ToImmutableList()));
         _jobsManager.ClearReceivedCalls();
         _appendedEventsQueues.ClearReceivedCalls();
 
@@ -53,4 +65,8 @@ public class an_observer_entering_quarantine : an_observer_with_subscription
         _quarantineEntry = _observer.FailedPartitionRecovered(_recoveredPartition, 42UL);
         await _cleanupEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
     }
+
+    JobState AsReportingResumed(JobState job) => _resumedJobs.Contains(job.Id)
+        ? new JobState { Id = job.Id, Status = JobStatus.Running, Request = job.Request }
+        : job;
 }
