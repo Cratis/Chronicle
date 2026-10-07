@@ -470,7 +470,10 @@ public static class BsonValueExtensions
                 break;
 
             case TypeCode.UInt64:
-                result = (ulong)value.ToDecimal();
+                var unsigned = value.ToDecimal();
+
+                // Older writers narrowed UInt64 through Int64 before storing Decimal128.
+                result = unsigned < 0 ? unchecked((ulong)value.ToInt64()) : (ulong)unsigned;
                 break;
 
             case TypeCode.Single:
