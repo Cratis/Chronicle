@@ -125,7 +125,9 @@ public class EventTypes : IEventTypes
 
             var registration = new EventTypeRegistration
             {
-                Type = latestEventType.ToContract(),
+                // The tombstone marker is registration metadata only. It travels on the registration and nowhere else,
+                // so the event types used for appends, subscriptions and definitions stay identical to older clients.
+                Type = (latestEventType with { Tombstone = orderedGroup.Exists(_ => Attribute.IsDefined(_.Value, typeof(TombstoneAttribute))) }).ToContract(),
                 Schema = latestSchema.ToJson(),
                 EventStore = eventStoreAttribute?.EventStore ?? string.Empty
             };

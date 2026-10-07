@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
@@ -160,8 +161,9 @@ internal static class ReadModelSnapshotReader
 
         // Decrypt the stored events before projecting and returning them - both the projected read
         // model and the events it carries must be released so no PII leaves encrypted.
-        var eventTypeSchemas = await storage.GetEventStore(eventStore).EventTypes.GetFor(allEvents.Select(_ => _.Context.EventType).Distinct());
-        var releasedEvents = await eventCompliance.Release(allEvents, eventTypeSchemas.ToDictionary(_ => _.Type));
+        var eventTypeSchemas = new Dictionary<Concepts.Events.EventType, EventTypeSchema>();
+        await storage.GetEventStore(eventStore).EventTypes.EnsureSchemasFor(eventTypeSchemas, allEvents);
+        var releasedEvents = await eventCompliance.Release(allEvents, eventTypeSchemas);
 
         return new(projection, readModelDefinition, [.. releasedEvents.OrderBy(_ => _.Context.SequenceNumber)]);
     }
