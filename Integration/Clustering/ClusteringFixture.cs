@@ -240,7 +240,7 @@ public class ClusteringFixture : IAsyncLifetime
     /// </summary>
     /// <remarks>
     /// Equivalent to the subset of <c language="csharp">ChronicleServerStartupTask</c> that the warmup requires:
-    /// system namespace creation, system reactor registration (so <c language="csharp">EventStoreAdded</c> events are
+    /// system namespace creation, system event-type and reactor registration (so <c language="csharp">EventStoreAdded</c> events are
     /// handled), and user event store namespace creation + reactor registration.
     /// </remarks>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -254,6 +254,8 @@ public class ClusteringFixture : IAsyncLifetime
         var userEventStore = (string)(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore;
 
         await grainFactory.GetGrain<KernelCore::Cratis.Chronicle.Namespaces.INamespaces>(systemEventStore).EnsureDefault();
+        await services.GetRequiredService<KernelCore::Cratis.Chronicle.EventTypes.IEventTypes>()
+            .DiscoverAndRegister(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System);
         await kernelReactors.DiscoverAndRegister(
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System,
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);

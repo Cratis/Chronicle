@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Storage.Seeding;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Namespaces.for_NamespacesReactor;
 
@@ -30,7 +31,7 @@ public class when_namespace_is_added : Specification
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IResultAwareEventSeeding>(Arg.Any<string>(), Arg.Any<string>()).Returns(seeding);
 
-        _reactor = new(grainFactory, _patternCapture);
+        _reactor = new(grainFactory, _patternCapture, NullLogger<NamespacesReactor>.Instance);
     }
 
     async Task Because() => await _reactor.Added(new NamespaceAdded("some-store", "some-namespace"), null!);
