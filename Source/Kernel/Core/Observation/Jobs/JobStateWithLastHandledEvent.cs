@@ -90,15 +90,21 @@ public class JobStateWithLastHandledEvent : JobState
 
         // A step can report success without carrying a result at all, so the annotation on TryGetFullResult is
         // not enough on its own — there is nothing to record when the step did not come back with one.
-        if (handleEventsResult is null || !IsNewerThanRecorded(handleEventsResult.LastHandledEventSequenceNumber))
+        if (handleEventsResult is null)
         {
             return;
         }
 
-        LastHandledEventSequenceNumber = handleEventsResult.LastHandledEventSequenceNumber;
+        // Completion is the step's own status, independent of whether the handled watermark moves: a resumed step
+        // that finds everything left excluded by filters completes with the watermark it already had.
         if (isFullResult)
         {
             HandledAllEvents = true;
+        }
+
+        if (IsNewerThanRecorded(handleEventsResult.LastHandledEventSequenceNumber))
+        {
+            LastHandledEventSequenceNumber = handleEventsResult.LastHandledEventSequenceNumber;
         }
     }
 

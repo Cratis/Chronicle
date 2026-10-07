@@ -244,7 +244,7 @@ public partial class Observer
             concludedJobs: _concludedCatchUpJobs);
     }
 
-    async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead = false)
     {
         if (State.RunningState == ObserverRunningState.Replaying)
         {
@@ -256,15 +256,18 @@ public partial class Observer
             logger.PartitionToCatchUpIsFailing(partition);
             return;
         }
-        if (!lastHandledEventSequenceNumber.IsActualValue)
+        if (!lastHandledEventSequenceNumber.IsActualValue && !fromStartWhenNothingRead)
         {
             logger.LastHandledEventIsNotActualValue();
             return;
         }
-        var needCatchupResult = await NeedsCatchup(partition, lastHandledEventSequenceNumber);
+
+        // With no read position the partition has no known position beyond its start, so catch-up begins there.
+        var fromSequenceNumber = lastHandledEventSequenceNumber.IsActualValue ? lastHandledEventSequenceNumber.Next() : EventSequenceNumber.First;
+        var needCatchupResult = await NeedsCatchup(partition, fromSequenceNumber);
         await needCatchupResult.Match(
             needCatchup => needCatchup
-                ? StartCatchupJob(partition, lastHandledEventSequenceNumber)
+                ? StartCatchupJob(partition, fromSequenceNumber)
                 : Task.CompletedTask,
             error =>
             {
@@ -274,15 +277,14 @@ public partial class Observer
                         logger.LastHandledEventForPartitionUnavailable(partition);
                         return Task.CompletedTask;
                     default:
-                        return PartitionFailed(partition, lastHandledEventSequenceNumber.Next(), ["Event Sequence storage error caused partition to try recover"], string.Empty);
+                        return PartitionFailed(partition, fromSequenceNumber, ["Event Sequence storage error caused partition to try recover"], string.Empty);
                 }
             });
     }
 
-    async Task StartCatchupJob(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    async Task StartCatchupJob(Key partition, EventSequenceNumber nextEventSequenceNumber)
     {
         if (IsRetired || _removed) return;
-        var nextEventSequenceNumber = lastHandledEventSequenceNumber.Next();
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);
         await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes));
@@ -332,9 +334,9 @@ public partial class Observer
         }
     }
 
-    async Task<Result<bool, GetSequenceNumberError>> NeedsCatchup(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    async Task<Result<bool, GetSequenceNumberError>> NeedsCatchup(Key partition, EventSequenceNumber fromSequenceNumber)
     {
-        var nextSequenceNumber = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(lastHandledEventSequenceNumber.Next(), _subscription.EventTypes, partition);
+        var nextSequenceNumber = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(fromSequenceNumber, _subscription.EventTypes, partition);
         return nextSequenceNumber.Match<Result<bool, GetSequenceNumberError>>(
             number => number.IsActualValue,
             error => error);
