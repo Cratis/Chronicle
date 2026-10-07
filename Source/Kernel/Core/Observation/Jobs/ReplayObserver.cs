@@ -98,17 +98,57 @@ public class ReplayObserver(
     }
 
     /// <inheritdoc/>
-    protected override Task<bool> CanResume()
+    /// <remarks>
+    /// A quarantined or disconnected observer cannot enter replay, so resuming beside it would fail only after the job is
+    /// recorded as running, leaving it running with no steps for the observer to adopt and wait on forever. Refusing here
+    /// keeps the job stopped; the observer resumes it from its own replay entry once it can replay again. Only the
+    /// interleaving state query is used - asking the observer to replay from here would wait on it while it may be
+    /// resuming this job.
+    /// </remarks>
+    protected override async Task<bool> CanResume()
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        return observer.IsSubscribed();
+        if (!await observer.IsSubscribed())
+        {
+            return false;
+        }
+
+        var observerState = await observer.GetState();
+        return observerState.RunningState is not (ObserverRunningState.Quarantined or ObserverRunningState.Disconnected);
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// The sinks pick their container from replay mode alone, so they must not be switched into replay while the observer
+    /// may still be handling live events, or a live write lands in the replay container.
+    /// </para>
+    /// <para>
+    /// The observer resumes a stopped replay job from inside its own Replay transition, and has already marked itself
+    /// replaying before doing so. Its turn is waiting on this job, so waiting on it from here would hold both until the
+    /// call timed out; the interleaving state query tells that case apart and it is not waited on. Any other resume - an
+    /// operator's, or one beside an observer whose replay entry was interrupted - waits for the observer to enter replay
+    /// and adopt this job before the sinks are switched and the steps start. That cannot deadlock: the observer then finds
+    /// this job already running and does not call back into it. If the observer does not enter replay with this job, the
+    /// resume fails rather than run steps beside live handling. <see cref="CanResume"/> already refuses an observer that
+    /// cannot replay, so this is left for an observer that changed state in between; the job is then left running with no
+    /// steps until the job framework reverts a failed resume (Cratis/Orleans#62).
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ObserverDidNotEnterReplay">The observer did not enter replay with this job.</exception>
     protected override async Task OnBeforeResumingJobSteps()
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.Replay();
+        var observerState = await observer.GetState();
+        if (observerState.RunningState != ObserverRunningState.Replaying)
+        {
+            var replayJobId = await observer.Replay();
+            if (replayJobId != JobId)
+            {
+                throw new ObserverDidNotEnterReplay(Request.ObserverKey, JobId, replayJobId);
+            }
+        }
+
         await replayStateServiceClient.ResumeReplayFor(State.ObserverDetails);
     }
 

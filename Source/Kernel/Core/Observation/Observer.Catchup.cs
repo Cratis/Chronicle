@@ -92,6 +92,7 @@ public partial class Observer
         // From the moment the reporting job stops counting as an owner until routing has asked for its successor, the
         // handover itself owns catch-up. The watchdog interleaves with this call and must not rescue in that window.
         _catchUpHandoversInFlight++;
+        _catchUpHandoversSettled ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
         _catchUpOwnershipEpoch++;
         try
         {
@@ -99,7 +100,11 @@ public partial class Observer
         }
         finally
         {
-            _catchUpHandoversInFlight--;
+            if (--_catchUpHandoversInFlight == 0 && _catchUpHandoversSettled is { } settled)
+            {
+                _catchUpHandoversSettled = null;
+                settled.SetResult();
+            }
         }
     }
 
