@@ -18,6 +18,5 @@ public abstract class an_observer_in_running_state : for_ReplayObserver.given.a_
         _observer.IsSubscribed().Returns(true);
         _observer.GetState().Returns(_ => ObserverState.Empty with { RunningState = RunningState });
     }
-
-    async Task Because() => _canResume = await _job.CanResumeForTesting();
 }
+
