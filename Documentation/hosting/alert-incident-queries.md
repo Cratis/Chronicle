@@ -5,7 +5,7 @@ description: Look up recorded open observer incidents within an affected event s
 
 Use the alert incident queries to inspect recorded open incidents without reading the full System event sequence. Every query requires the **affected event store**, even though Chronicle stores the incident rows alongside the transition history in the System store's Default namespace.
 
-These queries use the kernel's normal authenticated query surface. They do not send notifications, expose an unscoped enumeration, or add incident gauges. Recorded incidents are neither a notification outbox nor a complete failure audit; see [recorded incidents](/chronicle/hosting/alerting-on-observer-failures/#understand-recorded-incidents).
+These queries use the kernel's normal authenticated query surface. They do not send notifications, expose an unscoped enumeration, or publish metrics; for gauges, see [open alert incident metrics](/chronicle/hosting/configuration/open-telemetry/#open-alert-incident-metrics). Recorded incidents are neither a notification outbox nor a complete failure audit; see [recorded incidents](/chronicle/hosting/alerting-on-observer-failures/#understand-recorded-incidents).
 
 ## Query surface
 

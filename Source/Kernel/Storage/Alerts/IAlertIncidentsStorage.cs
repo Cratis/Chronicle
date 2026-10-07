@@ -46,6 +46,14 @@ public interface IAlertIncidentsStorage
     Task<IEnumerable<AlertIncidentCount>> GetOpenCounts(AlertIncidentScope scope, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Counts the complete open population across all affected stores, grouped by observer, condition and severity.
+    /// Internal; this is not a public query. Keys are compared exactly (ordinal).
+    /// </summary>
+    /// <param name="cancellationToken">CancellationToken.</param>
+    /// <returns>The confirmed result.</returns>
+    Task<IEnumerable<AlertIncidentObserverCount>> GetOpenCountsByObserver(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Enumerates open incidents internally; this is not a public query.
     /// </summary>
     /// <param name="after">After.</param>

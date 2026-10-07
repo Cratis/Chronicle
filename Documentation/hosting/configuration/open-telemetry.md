@@ -99,6 +99,22 @@ An observer has a series on these instruments from its first failure, not before
 
 The SDK limits each instrument to 500 series. Beyond that it folds the excess into one series without the tags, which can no longer be attributed to an observer. That takes more than 500 observer instances in one process, counted across observers, namespaces and event stores.
 
+### Open alert incident metrics
+
+Chronicle publishes the number of open alert incidents on the `Cratis.Chronicle` meter. The `chronicle-alerts-open-incidents` gauge is exported to Prometheus as `chronicle_alerts_open_incidents` (a gauge has no `_total` suffix). It has one series per bucket, tagged `EventStore`, `Namespace`, `ObserverId`, `EventSequenceId`, `Condition` and `Severity`, and no others. The `Severity` tag holds the incident's severity (`Warning` or `Critical`).
+
+The value is sampled from incident storage, not counted from live events. One owner grain in the cluster aggregates the open incident rows every 30 seconds and publishes the result; a scrape reads that snapshot and does no storage I/O. An escalation moves an incident between `Severity` buckets without changing the total.
+
+- A snapshot older than 90 seconds publishes nothing, rather than zero. The same applies to a refresh that cannot run: while incident materialization is catching up or degraded, or storage fails, Chronicle keeps the previous snapshot until it ages out. Absence of the series therefore means "unknown", not "no incidents".
+- A bucket that empties reports `0` for 5 minutes and is then retired.
+- `chronicle-alerts-open-incidents-available` (`chronicle_alerts_open_incidents_available`, no tags) is `1` while the instance that owns the snapshot has a fresh one and `0` while its snapshot is missing or stale. Instances that do not own the snapshot report no series.
+
+Aggregate across instances with `max`, never `sum`. A silo that is partitioned or hung can keep publishing its last snapshot for up to 90 seconds after another instance has taken ownership, so more than one instance can report a series for a short time. Summing would double count; `max by (EventStore, Namespace, ObserverId, EventSequenceId, Condition, Severity)` does not.
+
+When the silo that owns the snapshot dies, another silo re-activates the owner within about 30 seconds. The new owner starts with no memory of the buckets that were retiring, so a series can disappear without ever reporting `0`, and a backend's lookback can keep returning the last value briefly. Do not depend on seeing a `0` before a series ends.
+
+Like the other instruments, this gauge is limited to 500 series per process. The series count is the number of observers with incidents, times the conditions and severities they hold.
+
 To be alerted when an observer's partitions keep failing or run out of retries, see [Get alerted when observers stop processing](../alerting-on-observer-failures.md).
 
 ## Traces instrumented
