@@ -118,7 +118,7 @@ message ObserverInformation {
    uint64 LastHandledEventSequenceNumber = 7;
    ObserverRunningState RunningState = 8;
    bool IsSubscribed = 9;
-   bool IsReplayable = 10; // default value could not be applied: True
+   bool IsReplayable = 10;
    uint64 TailEventSequenceNumber = 11;
    uint64 HandledEventCount = 12;
 }
