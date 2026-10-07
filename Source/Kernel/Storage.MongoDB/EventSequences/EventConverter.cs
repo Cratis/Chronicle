@@ -39,7 +39,7 @@ public class EventConverter(
         var revisions = await ResolveRevisions(@event);
 
         var originalContent = @event.Revisions.Any() && @event.Content.TryGetValue(EventTypeGeneration.First.ToString(), out var originalBson)
-            ? originalBson.ToString()
+            ? EventContentBson.ToJson(originalBson)
             : string.Empty;
 
         var generationalContent = BuildGenerationalContent(@event);
@@ -86,7 +86,7 @@ public class EventConverter(
     }
 
     static JsonObject ParseContent(IDictionary<string, BsonDocument> content, string generationKey)
-        => (JsonNode.Parse(content[generationKey].ToString()) as JsonObject)!;
+        => (JsonNode.Parse(EventContentBson.ToJson(content[generationKey])) as JsonObject)!;
 
     static ExpandoObject ConvertToRawExpandoObject(JsonObject document)
     {
@@ -104,6 +104,7 @@ public class EventConverter(
         JsonArray array => array.Select(ConvertJsonNodeToClrType).ToArray(),
         JsonValue value when value.TryGetValue<bool>(out var b) => b,
         JsonValue value when value.TryGetValue<long>(out var l) => l,
+        JsonValue value when value.TryGetValue<ulong>(out var u) => u,
         JsonValue value when value.TryGetValue<double>(out var d) => d,
         JsonValue value when value.TryGetValue<string>(out var s) => s,
         _ => node.ToString()
@@ -115,7 +116,7 @@ public class EventConverter(
         foreach (var (key, value) in @event.Content)
         {
             if (int.TryParse(key, out var generation))
-                result[generation] = value.ToString();
+                result[generation] = EventContentBson.ToJson(value);
         }
         return result;
     }
@@ -165,7 +166,7 @@ public class EventConverter(
             var causedBy = await identityStorage.GetFor([revision.CausedBy]);
             var revisionKey = revision.EventTypeGeneration.ToString();
             var revisionContentJson = revision.Content.TryGetValue(revisionKey, out var contentBson)
-                ? contentBson.ToString()
+                ? EventContentBson.ToJson(contentBson)
                 : string.Empty;
 
             result.Add(new ConceptsEventRevision(

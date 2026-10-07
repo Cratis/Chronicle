@@ -98,7 +98,7 @@ public static class BsonValueExtensions
                 return new BsonInt64(actualValue);
 
             case ulong actualValue:
-                return new BsonDecimal128((long)actualValue);
+                return new BsonDecimal128((decimal)actualValue);
 
             case float actualValue:
                 return new BsonDouble(actualValue);
@@ -470,7 +470,7 @@ public static class BsonValueExtensions
                 break;
 
             case TypeCode.UInt64:
-                result = (ulong)value.ToInt64();
+                result = (ulong)value.ToDecimal();
                 break;
 
             case TypeCode.Single:
