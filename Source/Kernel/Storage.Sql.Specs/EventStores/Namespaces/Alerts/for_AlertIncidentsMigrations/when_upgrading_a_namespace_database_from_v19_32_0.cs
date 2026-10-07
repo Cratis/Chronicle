@@ -57,6 +57,7 @@ public class when_upgrading_a_namespace_database_from_v19_32_0 : given.an_unmigr
 
     static async Task<bool> IndexExists(NamespaceDbContext context, string name)
     {
+        await context.Database.OpenConnectionAsync();
         var connection = context.Database.GetDbConnection();
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = $name";
