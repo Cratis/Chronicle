@@ -4,7 +4,6 @@
 using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
@@ -30,7 +29,7 @@ public class and_unsigned_integers_exceed_int64 : Specification
             """);
         _json = JsonNode.Parse("""{"value":18446744073709551615,"values":[9223372036854775808,18446744073709551615]}""")!.AsObject();
         _content = new ExpandoObject();
-        var converter = Substitute.For<IExpandoObjectConverter>();
+        var converter = Substitute.For<Json.IExpandoObjectConverter>();
         converter.ToJsonObject(_content, _schema).Returns(_json);
         _sequence = new("store", "tenant", "log", Substitute.For<IEventStoreNamespaceDatabase>(), Substitute.For<IEventConverter>(), Substitute.For<IEventTypesStorage>(), Substitute.For<IIdentityStorage>(), converter, new JsonSerializerOptions(), NullLogger<EventSequenceStorage>.Instance);
 
