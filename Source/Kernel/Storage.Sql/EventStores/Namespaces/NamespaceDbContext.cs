@@ -137,6 +137,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             }
             entity.HasIndex(row => new { row.EventStore, row.IsOpen, row.RaisedSequenceNumber, row.Id });
             entity.HasIndex(row => new { row.EventStore, row.Namespace, row.IsOpen, row.RaisedSequenceNumber, row.Id });
+            entity.HasIndex(row => new { row.IsOpen, row.EventStore, row.Namespace });
         });
 
         // Match the column mappings to the provider-native JSON type the migrations create
