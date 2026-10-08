@@ -89,6 +89,85 @@ public class EventSequence(
     public ITransactionalEventSequence Transactional => new TransactionalEventSequence(this, unitOfWorkManager);
 
     /// <inheritdoc/>
+    public async Task<PreparedEvent> Prepare(object @event)
+    {
+        var type = @event.GetType();
+        ThrowIfUnknownEventType(eventTypes, type);
+        return new(this, @event, eventTypes.GetEventTypeFor(type), (await eventSerializer.Serialize(@event)).ToJsonString(), SubjectResolver.ResolveFrom(@event), type.GetTags().ToImmutableList());
+    }
+
+    /// <inheritdoc/>
+    public Task<AppendResult> AppendPrepared(
+        EventSourceId eventSourceId,
+        PreparedEvent preparedEvent,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
+    {
+        ThrowIfNotOwner(preparedEvent);
+        return AppendCore(eventSourceId, preparedEvent.Event, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject, preparedEvent: preparedEvent);
+    }
+
+    /// <inheritdoc/>
+    public Task<AppendResult> AppendPreparedThroughEventSource(
+        Type eventSource,
+        EventSourceId eventSourceId,
+        PreparedEvent preparedEvent,
+        string? eventStream = default,
+        EventStreamId? eventStreamId = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
+    {
+        ThrowIfNotOwner(preparedEvent);
+        var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
+        return AppendCore(
+            eventSourceId,
+            preparedEvent.Event,
+            [],
+            routing.StreamType,
+            eventStreamId,
+            routing.SourceType,
+            correlationId,
+            tags,
+            concurrencyScope,
+            occurred,
+            subject,
+            routing,
+            preparedEvent);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ContentVerificationResult> VerifyContent(EventSequenceNumber sequenceNumber, PreparedEvent preparedEvent, EventSourceId? eventSourceId = default)
+    {
+        ThrowIfNotOwner(preparedEvent);
+        var result = await _servicesAccessor.Services.Sequences.VerifyContent(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SequenceNumber = sequenceNumber,
+            EventType = preparedEvent.EventType.ToSequencesContract(),
+            Content = preparedEvent.Content,
+            EventSourceId = eventSourceId?.Value
+        }).EnsureSuccess();
+
+        return result.Result switch
+        {
+            Contracts.Sequences.ContentVerificationResult.Equal => ContentVerificationResult.Equal,
+            Contracts.Sequences.ContentVerificationResult.Different => ContentVerificationResult.Different,
+            _ => ContentVerificationResult.Unavailable
+        };
+    }
+
+    /// <inheritdoc/>
     public Task<AppendResult> Append(
         EventSourceId eventSourceId,
         object @event,
@@ -433,6 +512,14 @@ public class EventSequence(
     static Contracts.Primitives.SerializableDateTimeOffset ToWireOccurred(DateTimeOffset? occurred) =>
         (Contracts.Primitives.SerializableDateTimeOffset?)occurred ?? new Contracts.Primitives.SerializableDateTimeOffset();
 
+    void ThrowIfNotOwner(PreparedEvent preparedEvent)
+    {
+        if (!ReferenceEquals(preparedEvent.Owner, this))
+        {
+            throw new PreparedEventBelongsToAnotherSequence();
+        }
+    }
+
     async Task<AppendResult> AppendCore(
         EventSourceId eventSourceId,
         object @event,
@@ -445,7 +532,8 @@ public class EventSequence(
         ConcurrencyScope? concurrencyScope = default,
         DateTimeOffset? occurred = default,
         Subject? subject = default,
-        ResolvedEventRouting? routing = default)
+        ResolvedEventRouting? routing = default,
+        PreparedEvent? preparedEvent = default)
     {
         var resolvedEventStreamType = ResolveEventStreamType(eventStreamType);
         var resolvedEventStreamId = ResolveEventStreamId(eventStreamId);
@@ -457,25 +545,22 @@ public class EventSequence(
             resolvedEventSourceType.Value,
             eventSourceId.Value);
 
-        var eventClrType = @event.GetType();
         correlationId ??= correlationIdAccessor.Current;
         if (concurrencyScope is null || concurrencyScope == ConcurrencyScope.NotSet)
         {
             concurrencyScope = await GetScopeFor(routing, eventSourceId, resolvedEventStreamType, resolvedEventStreamId, resolvedEventSourceType);
         }
 
-        ThrowIfUnknownEventType(eventTypes, eventClrType);
+        preparedEvent ??= await Prepare(@event);
+        subject ??= preparedEvent.Subject;
 
-        subject ??= SubjectResolver.ResolveFrom(@event);
-
-        var eventType = eventTypes.GetEventTypeFor(eventClrType);
-        var content = (await eventSerializer.Serialize(@event)).ToJsonString();
+        var eventType = preparedEvent.EventType;
+        var content = preparedEvent.Content;
         var causation = causationManager.GetCurrentChain();
         var identity = identityProvider.GetCurrent();
 
         // Merge static tags from the event type with dynamic tags
-        var staticTags = eventClrType.GetTags();
-        var allTags = staticTags.Concat(tags ?? []).Distinct().ToList();
+        var allTags = preparedEvent.Tags.Concat(tags ?? []).Distinct().ToList();
 
         var resolvedNamedTags = NamedTagConverters.Merge([], namedTags);
         var request = new Contracts.Sequences.AppendRequest

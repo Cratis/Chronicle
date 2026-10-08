@@ -171,6 +171,15 @@ message CommandResult_CompleteStreamResponse {
    string AuthorizationFailureReason = 6;
    CompleteStreamResponse Response = 7;
 }
+message CommandResult_VerifyContentResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   VerifyContentResponse Response = 7;
+}
 enum CompleteStreamError {
    COMPLETE_STREAM_ERROR_None = 0;
    AlreadyCompleted = 1;
@@ -216,6 +225,11 @@ message ConstraintViolation {
    string ConstraintName = 4;
    string Message = 5;
    map<string,string> Details = 6;
+}
+enum ContentVerificationResult {
+   Unavailable = 0;
+   Equal = 1;
+   Different = 2;
 }
 message EndOfRequest {
    SerializableDateTimeOffset Start = 1;
@@ -565,6 +579,18 @@ enum ValidationResultSeverity {
    Warning = 2;
    Error = 3;
 }
+message VerifyContentRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   uint64 SequenceNumber = 4;
+   EventType EventType = 5;
+   string Content = 6;
+   string EventSourceId = 7;
+}
+message VerifyContentResponse {
+   ContentVerificationResult Result = 1;
+}
 service EventSequences {
    rpc AllEventSequences (AllEventSequencesRequest) returns (QueryResult_IEnumerable_EventSequenceNamesResponse);
    rpc Append (AppendRequest) returns (CommandResult_AppendResponse);
@@ -589,4 +615,5 @@ service EventSequences {
    rpc SequenceHistogram (SequenceHistogramRequest) returns (QueryResult_IEnumerable_SequenceHistogramBucketResponse);
    rpc SequenceHistogramWithNamedTags (SequenceHistogramWithNamedTagsRequest) returns (QueryResult_IEnumerable_SequenceHistogramBucketResponse);
    rpc TailSequenceNumber (TailSequenceNumberRequest) returns (QueryResult_EventSequenceTailResponse);
+   rpc VerifyContent (VerifyContentRequest) returns (CommandResult_VerifyContentResponse);
 }

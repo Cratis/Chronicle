@@ -81,6 +81,101 @@ public class JsonSchemaMetadataManager(
     }
 
     /// <inheritdoc/>
+    public async Task<JsonObject?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
+    {
+        if (!schema.HasSchemaMetadata())
+        {
+            return (JsonObject)json.DeepClone();
+        }
+
+        try
+        {
+            return await TryTransformForComparison(schema, json, (current, handler, node) =>
+                StrictJsonSchemaRelease.ReleaseValue(current, handler, eventStore, eventStoreNamespace, identifier, node));
+        }
+        catch (Exception exception)
+        {
+            // A failed release is an explicit unavailable result, never a partially released document.
+            logger.FailedToReleaseProperty(string.Empty, identifier, exception);
+            return null;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<JsonObject?> TryPrepareForComparison(JsonSchema schema, JsonObject json, Func<JsonObject, JsonObject?> convert)
+    {
+        var generations = await TryPrepareGenerationsForComparison(schema, json, document =>
+        {
+            var converted = convert(document);
+            return Task.FromResult<IReadOnlyDictionary<int, (JsonSchema Schema, JsonObject Content)>?>(
+                converted is null ? null : new Dictionary<int, (JsonSchema, JsonObject)> { [1] = (schema, converted) });
+        });
+        return generations?[1];
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<int, JsonObject>?> TryPrepareGenerationsForComparison(
+        JsonSchema schema,
+        JsonObject json,
+        Func<JsonObject, Task<IReadOnlyDictionary<int, (JsonSchema Schema, JsonObject Content)>?>> convert,
+        Func<int, JsonSchema, JsonNode, JsonNode?>? convertProtectedValue = null)
+    {
+        // Append protects the attempted generation BEFORE schema conversion; migrated generations convert first.
+        // Use opaque markers, not encryption: verification must never provision keys, and restored values
+        // must be loss-checked against their generation's conversion before comparison.
+        // Markers carry a random nonce per call, so a migration cannot name, synthesize or map another value onto one.
+        // Content that already looks like a marker cannot be told apart from one, so it is never compared.
+        if (VerificationMarkers.AppearIn(json))
+        {
+            return null;
+        }
+
+        var markerPrefix = VerificationMarkers.NewPrefix();
+        var values = new Dictionary<string, JsonNode>();
+        var masked = !schema.HasSchemaMetadata() ? json : await TryTransformForComparison(schema, json, (_, _, node) =>
+        {
+            var marker = $"{markerPrefix}{values.Count}";
+            values.Add(marker, node.DeepClone());
+            return Task.FromResult<JsonNode?>(JsonValue.Create(marker));
+        });
+        var converted = masked is null ? null : await convert(masked);
+        if (converted is null)
+        {
+            return null;
+        }
+
+        var result = new Dictionary<int, JsonObject>();
+        foreach (var (generation, content) in converted)
+        {
+            // Each marker restores at most once per generation, and only at a protected location. A marker that
+            // was duplicated, moved to an unprotected location or embedded in other text means the migration did
+            // something to the protected value that this comparison cannot reproduce: never report it as equal.
+            var restoredMarkers = new HashSet<string>(StringComparer.Ordinal);
+            var restored = !content.Schema.HasSchemaMetadata() ? content.Content : await TryTransformForComparison(content.Schema, content.Content, (boundarySchema, _, node) =>
+            {
+                if (node is not JsonValue scalar || !scalar.TryGetValue<string>(out var marker) ||
+                    !values.TryGetValue(marker, out var value) || !restoredMarkers.Add(marker))
+                {
+                    return Task.FromResult<JsonNode?>(null);
+                }
+
+                // Source values were protected before conversion. Migrated values, however, pass through
+                // the target schema before protection; never restore raw plaintext over a lossy conversion.
+                var restoredValue = value.DeepClone();
+                return Task.FromResult(convertProtectedValue is null ? restoredValue : convertProtectedValue(generation, boundarySchema, restoredValue));
+            });
+            if (restored is null || VerificationMarkers.AppearIn(restored))
+            {
+                return null;
+            }
+
+            result[generation] = restored;
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
     public async Task<JsonObject> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
         if (!schema.HasSchemaMetadata())
@@ -163,8 +258,41 @@ public class JsonSchemaMetadataManager(
         }
     }
 
-    IEnumerable<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> MetadataAcrossCategories(JsonSchema schema) =>
-        _categories.SelectMany(category => schema.GetSchemaMetadata(category).Select(metadata => (category, metadata)));
+    async Task<JsonObject?> TryTransformForComparison(JsonSchema schema, JsonObject json, Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>> transform)
+    {
+        var result = (JsonObject)json.DeepClone();
+        try
+        {
+            // Reuse the append traversal and its protected boundaries, but do not apply display-release
+            // fallbacks or provision keys. A failed boundary invalidates the complete comparison.
+            await HandleActionFor(schema, string.Empty, result, SchemaMetadataActionFailed.ApplyAction, (_, _, node) => Task.FromResult(node), comparisonTransform: transform);
+            return result;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    void ValidateComparisonBoundary(JsonSchema schema, (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata)
+    {
+        if (metadata.Length == 0)
+        {
+            return;
+        }
+
+        // Overlapping handlers have no proven inverse. Unknown handlers and ambiguous scalar kinds
+        // must fail closed even when the normal append traversal would skip an unknown metadata type.
+        if (metadata.Length != 1 || !_propertyValueHandlers.ContainsKey((metadata[0].Category, metadata[0].Metadata.metadataType)) ||
+            !StrictJsonSchemaRelease.HasSupportedType(schema))
+        {
+            throw new InvalidOperationException("Protected boundary cannot be compared.");
+        }
+    }
+
+    IEnumerable<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> MetadataAcrossCategories(JsonSchema schema, bool forComparison = false) =>
+        (forComparison ? _categories.Concat([SchemaMetadataCategory.Compliance, SchemaMetadataCategory.Security]).Distinct() : _categories)
+            .SelectMany(category => schema.GetSchemaMetadata(category).Select(metadata => (category, metadata)));
 
     async Task HandleActionFor(
         JsonSchema schema,
@@ -173,9 +301,10 @@ public class JsonSchemaMetadataManager(
         string actionName,
         Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> action,
         string path = "",
-        bool strictRelease = false)
+        bool strictRelease = false,
+        Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null)
     {
-        var metadataForContainer = MetadataAcrossCategories(schema).ToArray();
+        var metadataForContainer = MetadataAcrossCategories(schema, comparisonTransform is not null).ToArray();
         foreach (var (property, value) in json.ToArray())
         {
             if (schema.Properties is not null && value is not null)
@@ -189,14 +318,22 @@ public class JsonSchemaMetadataManager(
                     schema.AdditionalPropertiesSchema?.ActualSchema ??
                     throw new SchemaPropertyNotFoundInSchema(actionName, propertyPath, identifier, flattenedProperties.Select(_ => _.Name));
 
+                var propertyMetadata = MetadataAcrossCategories(propertySchema, comparisonTransform is not null).Concat(metadataForContainer).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();
+                if (comparisonTransform is not null)
+                {
+                    ValidateComparisonBoundary(propertySchema, propertyMetadata);
+                }
+
                 var handlerApplied = false;
-                foreach (var (category, metadata) in MetadataAcrossCategories(propertySchema).Concat(metadataForContainer).DistinctBy(_ => (_.Category, _.Metadata.metadataType)))
+                foreach (var (category, metadata) in propertyMetadata)
                 {
                     if (_propertyValueHandlers.TryGetValue((category, metadata.metadataType), out var handler))
                     {
                         try
                         {
-                            var handled = await action(handler, identifier, value);
+                            var handled = comparisonTransform is null
+                                ? await action(handler, identifier, value)
+                                : await comparisonTransform(propertySchema, handler, value) ?? throw new InvalidOperationException("Protected value cannot be compared.");
                             json[property] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, propertySchema) : handled;
                             handlerApplied = true;
                         }
@@ -233,14 +370,14 @@ public class JsonSchemaMetadataManager(
                     // property under them for a marker to sit on. Descending would report every one of them as drift
                     // and fail a document that matches its schema. Only the descent is skipped — a value marked
                     // [PII] or [Encrypted] is still handled as a whole above, like any other container.
-                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath, strictRelease);
+                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath, strictRelease, comparisonTransform);
                 }
                 else if (!handlerApplied && value is JsonArray jsonArrayValue)
                 {
                     // The property itself was not encrypted as a whole, so descend into the array and handle
                     // schema metadata that lives on the element type — a [PII]/[Encrypted] scalar concept (e.g.
                     // IReadOnlyList<Email>) or a member marked that way inside element objects.
-                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath, strictRelease);
+                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath, strictRelease, comparisonTransform);
                 }
             }
         }
@@ -253,7 +390,8 @@ public class JsonSchemaMetadataManager(
         string actionName,
         Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> action,
         string path,
-        bool strictRelease = false)
+        bool strictRelease = false,
+        Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null)
     {
         var itemSchema = arraySchema.Item?.ActualSchema;
         if (itemSchema is null)
@@ -261,7 +399,7 @@ public class JsonSchemaMetadataManager(
             return;
         }
 
-        var itemMetadata = MetadataAcrossCategories(itemSchema).ToArray();
+        var itemMetadata = MetadataAcrossCategories(itemSchema, comparisonTransform is not null).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();
         for (var i = 0; i < array.Count; i++)
         {
             var element = array[i];
@@ -276,18 +414,25 @@ public class JsonSchemaMetadataManager(
                 // Declared object members have historically been protected individually, including
                 // projection child writes. Only arrays and objects without declared properties need
                 // whole-element protection; preserve the persisted member-level representation.
-                await HandleActionFor(itemSchema, identifier, declaredObject, actionName, action, elementPath, strictRelease);
+                await HandleActionFor(itemSchema, identifier, declaredObject, actionName, action, elementPath, strictRelease, comparisonTransform);
                 continue;
             }
 
+            if (comparisonTransform is not null)
+            {
+                ValidateComparisonBoundary(itemSchema, itemMetadata);
+            }
+
             var handlerApplied = false;
-            foreach (var (category, metadata) in itemMetadata.DistinctBy(_ => (_.Category, _.Metadata.metadataType)))
+            foreach (var (category, metadata) in itemMetadata)
             {
                 if (_propertyValueHandlers.TryGetValue((category, metadata.metadataType), out var handler))
                 {
                     try
                     {
-                        var handled = await action(handler, identifier, element);
+                        var handled = comparisonTransform is null
+                            ? await action(handler, identifier, element)
+                            : await comparisonTransform(itemSchema, handler, element) ?? throw new InvalidOperationException("Protected value cannot be compared.");
                         var restored = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, itemSchema) : handled;
                         if (!ReferenceEquals(restored, element))
                         {
@@ -317,11 +462,11 @@ public class JsonSchemaMetadataManager(
             // descend into the detached original or decrypt members that were not separately encrypted.
             if (!handlerApplied && element is JsonObject elementObject && !itemSchema.DescribesGeospatialValue())
             {
-                await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath, strictRelease);
+                await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath, strictRelease, comparisonTransform);
             }
             else if (!handlerApplied && element is JsonArray elementArray)
             {
-                await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath, strictRelease);
+                await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath, strictRelease, comparisonTransform);
             }
         }
     }

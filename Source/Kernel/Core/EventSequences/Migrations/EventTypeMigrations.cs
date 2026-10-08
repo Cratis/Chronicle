@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using JsonCons.JmesPath;
 
@@ -22,7 +23,7 @@ public class EventTypeMigrations(
     IExpandoObjectConverter expandoObjectConverter) : IEventTypeMigrations
 {
     /// <inheritdoc/>
-    public async Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content, ExpandoObject contentAsExpandoObject)
+    public async Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content, ExpandoObject contentAsExpandoObject, Action<JsonObject, JsonSchema, ExpandoObject>? onConverted = null, Action<JsonObject, JsonObject>? onMigrating = null)
     {
         var result = new Dictionary<EventTypeGeneration, ExpandoObject>();
         var eventTypesStorage = storage.GetEventStore(eventStore).EventTypes;
@@ -33,28 +34,38 @@ public class EventTypeMigrations(
         // If there's only one generation, reuse the already-built expando instead of re-converting.
         if (!definition.Generations.Skip(1).Any())
         {
+            onConverted?.Invoke(content, definition.Generations.Single(g => g.Generation == eventType.Generation).Schema, contentAsExpandoObject);
             result[eventType.Generation] = contentAsExpandoObject;
             return result;
         }
 
         // Add the source generation
         var sourceGenerationDef = definition.Generations.First(g => g.Generation == eventType.Generation);
-        result[eventType.Generation] = expandoObjectConverter.ToExpandoObject(content, sourceGenerationDef.Schema);
+        result[eventType.Generation] = Convert(content, sourceGenerationDef.Schema, onConverted);
 
         // Upcast to higher generations
-        await UpcastToHigherGenerations(eventType.Generation, content, definition, result);
+        await UpcastToHigherGenerations(eventType.Generation, content, definition, result, onConverted, onMigrating);
 
         // Downcast to lower generations
-        await DowncastToLowerGenerations(eventType.Generation, content, definition, result);
+        await DowncastToLowerGenerations(eventType.Generation, content, definition, result, onConverted, onMigrating);
 
         return result;
+    }
+
+    ExpandoObject Convert(JsonObject content, JsonSchema schema, Action<JsonObject, JsonSchema, ExpandoObject>? onConverted)
+    {
+        var converted = expandoObjectConverter.ToExpandoObject(content, schema);
+        onConverted?.Invoke(content, schema, converted);
+        return converted;
     }
 
     async Task UpcastToHigherGenerations(
         EventTypeGeneration sourceGeneration,
         JsonObject sourceContent,
         EventTypeDefinition definition,
-        Dictionary<EventTypeGeneration, ExpandoObject> result)
+        Dictionary<EventTypeGeneration, ExpandoObject> result,
+        Action<JsonObject, JsonSchema, ExpandoObject>? onConverted,
+        Action<JsonObject, JsonObject>? onMigrating)
     {
         var currentContent = sourceContent;
         var currentGeneration = sourceGeneration;
@@ -68,10 +79,11 @@ public class EventTypeMigrations(
         foreach (var migration in migrations.Where(migration => migration.FromGeneration == currentGeneration))
         {
             // Apply the upcast migration
+            onMigrating?.Invoke(migration.UpcastJmesPath, currentContent);
             currentContent = ApplyUpcastMigration(currentContent, migration);
             currentGeneration = migration.ToGeneration;
             var targetGenerationDef = definition.Generations.First(g => g.Generation == currentGeneration);
-            result[currentGeneration] = expandoObjectConverter.ToExpandoObject(currentContent, targetGenerationDef.Schema);
+            result[currentGeneration] = Convert(currentContent, targetGenerationDef.Schema, onConverted);
         }
 
         await Task.CompletedTask;
@@ -81,7 +93,9 @@ public class EventTypeMigrations(
         EventTypeGeneration sourceGeneration,
         JsonObject sourceContent,
         EventTypeDefinition definition,
-        Dictionary<EventTypeGeneration, ExpandoObject> result)
+        Dictionary<EventTypeGeneration, ExpandoObject> result,
+        Action<JsonObject, JsonSchema, ExpandoObject>? onConverted,
+        Action<JsonObject, JsonObject>? onMigrating)
     {
         var currentContent = sourceContent;
         var currentGeneration = sourceGeneration;
@@ -95,10 +109,11 @@ public class EventTypeMigrations(
         foreach (var migration in migrations.Where(migration => migration.ToGeneration == currentGeneration))
         {
             // Apply the downcast migration (reverse direction)
+            onMigrating?.Invoke(migration.DowncastJmesPath, currentContent);
             currentContent = ApplyDowncastMigration(currentContent, migration);
             currentGeneration = migration.FromGeneration;
             var targetGenerationDef = definition.Generations.First(g => g.Generation == currentGeneration);
-            result[currentGeneration] = expandoObjectConverter.ToExpandoObject(currentContent, targetGenerationDef.Schema);
+            result[currentGeneration] = Convert(currentContent, targetGenerationDef.Schema, onConverted);
         }
 
         await Task.CompletedTask;

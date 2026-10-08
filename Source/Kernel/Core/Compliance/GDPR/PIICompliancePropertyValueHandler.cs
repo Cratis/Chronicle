@@ -58,6 +58,10 @@ public class PIICompliancePropertyValueHandler(
     }
 
     /// <inheritdoc/>
+    public Task<JsonNode?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        ProtectedValueCodec.TryRelease(encryptionKeyStore, encryption, eventStore, eventStoreNamespace, identifier, value);
+
+    /// <inheritdoc/>
     /// <remarks>
     /// Ciphertext that cannot be unwrapped with the current key is unrecoverable either way. For a subject
     /// with recorded erasure, the overwhelmingly likely cause is pre-erasure ciphertext; permanently failing

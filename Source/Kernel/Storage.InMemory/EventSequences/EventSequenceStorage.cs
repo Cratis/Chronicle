@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Monads;
@@ -48,6 +49,12 @@ public class EventSequenceStorage(
             }
         }
     }
+
+    /// <inheritdoc/>
+    public bool SupportsRevisionTracking => true;
+
+    /// <inheritdoc/>
+    public string SerializeContentForVerification(ExpandoObject content, JsonSchema schema) => Serialize(content);
 
     /// <inheritdoc/>
     public Task EnsureIndexes() => Task.CompletedTask;

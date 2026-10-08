@@ -55,6 +55,40 @@ public interface IJsonSchemaMetadataManager
     Task<JsonObject> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json);
 
     /// <summary>
+    /// Releases a document without substituting empty values for unavailable protected content.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="schema">The exact generation's schema.</param>
+    /// <param name="identifier">The protection key identifier.</param>
+    /// <param name="json">The complete stored document.</param>
+    /// <returns>The fully released document, or null if any part cannot be released.</returns>
+    Task<JsonObject?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json) => Task.FromResult<JsonObject?>(null);
+
+    /// <summary>
+    /// Converts attempted content to its stored shape while keeping protected values opaque, as append does.
+    /// </summary>
+    /// <param name="schema">The generation schema.</param>
+    /// <param name="json">The attempted plaintext.</param>
+    /// <param name="convert">The loss-checked backend conversion.</param>
+    /// <returns>The plaintext storage shape, or null if it cannot be established without loss.</returns>
+    Task<JsonObject?> TryPrepareForComparison(JsonSchema schema, JsonObject json, Func<JsonObject, JsonObject?> convert) => Task.FromResult<JsonObject?>(null);
+
+    /// <summary>
+    /// Masks protected values before migration and restores them in every generation's storage shape.
+    /// </summary>
+    /// <param name="schema">The attempted generation schema.</param>
+    /// <param name="json">The attempted plaintext.</param>
+    /// <param name="convert">The loss-checked migration and backend conversion for each generation.</param>
+    /// <param name="convertProtectedValue">Optional loss-checked conversion of a restored protected value for its target generation.</param>
+    /// <returns>Complete plaintext generation content, or null if any generation cannot be prepared.</returns>
+    Task<IReadOnlyDictionary<int, JsonObject>?> TryPrepareGenerationsForComparison(
+        JsonSchema schema,
+        JsonObject json,
+        Func<JsonObject, Task<IReadOnlyDictionary<int, (JsonSchema Schema, JsonObject Content)>?>> convert,
+        Func<int, JsonSchema, JsonNode, JsonNode?>? convertProtectedValue = null) => Task.FromResult<IReadOnlyDictionary<int, JsonObject>?>(null);
+
+    /// <summary>
     /// Releases stored content for persistence, failing on operational errors rather than substituting erased values.
     /// </summary>
     /// <param name="eventStore">The event store.</param>

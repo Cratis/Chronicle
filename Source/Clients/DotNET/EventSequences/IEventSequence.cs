@@ -41,6 +41,83 @@ public interface IEventSequence
     ITransactionalEventSequence Transactional { get; }
 
     /// <summary>
+    /// Snapshots an event using this store's serializer and additional-information providers exactly once.
+    /// </summary>
+    /// <param name="event">The event to prepare.</param>
+    /// <returns>Content reusable for append and verification on this sequence instance.</returns>
+    /// <exception cref="PreparedEventsNotSupported">This implementation does not support preparation.</exception>
+    Task<PreparedEvent> Prepare(object @event) => throw new PreparedEventsNotSupported();
+
+    /// <summary>
+    /// Appends prepared content without serializing the event or running providers again.
+    /// </summary>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="preparedEvent">The content prepared by this sequence.</param>
+    /// <param name="eventStreamType">Optional stream type.</param>
+    /// <param name="eventStreamId">Optional stream id.</param>
+    /// <param name="eventSourceType">Optional source type.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional tags.</param>
+    /// <param name="concurrencyScope">Optional concurrency scope.</param>
+    /// <param name="occurred">Optional occurrence time.</param>
+    /// <param name="subject">Optional subject overriding the prepared event's subject.</param>
+    /// <returns>The append outcome.</returns>
+    /// <exception cref="PreparedEventsNotSupported">This implementation does not support prepared appends.</exception>
+    /// <exception cref="PreparedEventBelongsToAnotherSequence">The content belongs to another sequence instance.</exception>
+    Task<AppendResult> AppendPrepared(
+        EventSourceId eventSourceId,
+        PreparedEvent preparedEvent,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) => throw new PreparedEventsNotSupported();
+
+    /// <summary>
+    /// Appends prepared content through a registered event source definition without serializing the event or running providers again.
+    /// </summary>
+    /// <param name="eventSource">The type of the <see cref="IEventSource"/> to append through.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> of the event source instance.</param>
+    /// <param name="preparedEvent">The content prepared by this sequence.</param>
+    /// <param name="eventStream">Optional name of a stream declared by the event source.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> within the stream. The format is left to the caller.</param>
+    /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event.</param>
+    /// <param name="tags">Optional tags to associate with the event.</param>
+    /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/>. When not set it is narrowed to the dimensions the definition declares.</param>
+    /// <param name="occurred">Optional time the event occurred.</param>
+    /// <param name="subject">Optional subject overriding the prepared event's subject.</param>
+    /// <returns>The append outcome.</returns>
+    /// <exception cref="UnknownEventSource">The type is not a discovered event source.</exception>
+    /// <exception cref="EventStreamDoesNotBelongToEventSource">The stream is not declared by the event source.</exception>
+    /// <exception cref="PreparedEventsNotSupported">This implementation does not support prepared appends.</exception>
+    /// <exception cref="PreparedEventBelongsToAnotherSequence">The content belongs to another sequence instance.</exception>
+    Task<AppendResult> AppendPreparedThroughEventSource(
+        Type eventSource,
+        EventSourceId eventSourceId,
+        PreparedEvent preparedEvent,
+        string? eventStream = default,
+        EventStreamId? eventStreamId = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) => throw new PreparedEventsNotSupported();
+
+    /// <summary>
+    /// Compares prepared content with the complete, strictly released content at an exact sequence number.
+    /// </summary>
+    /// <param name="sequenceNumber">The event to verify.</param>
+    /// <param name="preparedEvent">Content prepared by this sequence, in the generation to compare.</param>
+    /// <param name="eventSourceId">Optional event source to require.</param>
+    /// <returns>Equal, different, or unavailable. Unavailable is never proof of a duplicate.</returns>
+    /// <exception cref="PreparedEventBelongsToAnotherSequence">The content belongs to another sequence instance.</exception>
+    Task<ContentVerificationResult> VerifyContent(EventSequenceNumber sequenceNumber, PreparedEvent preparedEvent, EventSourceId? eventSourceId = default) =>
+        Task.FromResult(ContentVerificationResult.Unavailable);
+
+    /// <summary>
     /// Get all events for a specific <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
