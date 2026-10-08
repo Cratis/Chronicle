@@ -33,11 +33,9 @@ public class a_migrated_event_with_dynamic_and_nested_protected_values : a_store
         provisioner.EnsureKeyFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(key);
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, keys, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
         _first = await JsonSchema.FromJsonAsync("""
-            {"type":"object","properties":{"contacts":{"type":"object","additionalProperties":{"type":"string"}},
-             "groups":{"type":"array","items":{"type":"array","items":{"type":"string"}}}}}
+            {"type":"object","properties":{"contacts":{"type":"object","additionalProperties":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}},
+             "groups":{"type":"array","items":{"type":"array","items":{"type":"string"},"compliance":[{"metadataType":"PII","details":""}]}}}}
             """);
-        Mark(_first.Properties["contacts"].AdditionalPropertiesSchema!);
-        Mark(_first.Properties["groups"].Item!);
         _second = await JsonSchema.FromJsonAsync(_first.ToJson());
         _second.Properties["detail"] = new JsonSchemaProperty("detail", new JsonObject(), _second) { Type = JsonObjectType.String };
         _command = _command with { Content = """{"contacts":{"home":"001","work":"private@example.com"},"groups":[["001","private@example.com"],[]]}""" };
@@ -61,9 +59,4 @@ public class a_migrated_event_with_dynamic_and_nested_protected_values : a_store
         (await cursor.MoveNext()).ShouldBeTrue();
         _stored = cursor.Current.Single();
     }
-
-    static void Mark(JsonSchema schema) => schema.ExtensionData = new Dictionary<string, object?>
-    {
-        [ComplianceJsonSchemaExtensions.ComplianceKey] = new ComplianceSchemaMetadata[] { new(ComplianceMetadataType.PII.Value, string.Empty) }
-    };
 }
