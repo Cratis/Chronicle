@@ -21,6 +21,16 @@ public class JobStateWithLastHandledEvent : JobState
     public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
 
     /// <summary>
+    /// Gets or sets the event sequence number of the last event a completed step read, whether it was handled or
+    /// excluded by the observer's filters.
+    /// </summary>
+    /// <remarks>
+    /// Only steps that completed contribute, so this never runs ahead of an event a step left unhandled. It can be
+    /// ahead of <see cref="LastHandledEventSequenceNumber"/> when the trailing events were excluded by filters.
+    /// </remarks>
+    public EventSequenceNumber LastScannedEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
     /// Gets or sets the value indicating whether the step completed without leaving events behind.
     /// </summary>
     /// <remarks>
@@ -73,17 +83,41 @@ public class JobStateWithLastHandledEvent : JobState
     {
         var isFullResult = result.TryGetFullResult<HandleEventsForPartitionResult>(out var handleEventsResult, out _, jsonSerializerOptions);
 
+        if (isFullResult && handleEventsResult is not null)
+        {
+            RecordScanned(handleEventsResult.LastScannedEventSequenceNumber);
+        }
+
         // A step can report success without carrying a result at all, so the annotation on TryGetFullResult is
         // not enough on its own — there is nothing to record when the step did not come back with one.
-        if (handleEventsResult is null || !IsNewerThanRecorded(handleEventsResult.LastHandledEventSequenceNumber))
+        if (handleEventsResult is null)
         {
             return;
         }
 
-        LastHandledEventSequenceNumber = handleEventsResult.LastHandledEventSequenceNumber;
+        // Completion is the step's own status, independent of whether the handled watermark moves: a resumed step
+        // that finds everything left excluded by filters completes with the watermark it already had.
         if (isFullResult)
         {
             HandledAllEvents = true;
+        }
+
+        if (IsNewerThanRecorded(handleEventsResult.LastHandledEventSequenceNumber))
+        {
+            LastHandledEventSequenceNumber = handleEventsResult.LastHandledEventSequenceNumber;
+        }
+    }
+
+    /// <summary>
+    /// Record how far a completed step read, keeping the furthest any step reached.
+    /// </summary>
+    /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> the step read up to.</param>
+    void RecordScanned(EventSequenceNumber sequenceNumber)
+    {
+        if (sequenceNumber.IsActualValue &&
+            (!LastScannedEventSequenceNumber.IsActualValue || sequenceNumber > LastScannedEventSequenceNumber))
+        {
+            LastScannedEventSequenceNumber = sequenceNumber;
         }
     }
 

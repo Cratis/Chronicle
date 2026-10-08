@@ -85,13 +85,33 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public async Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    public Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) =>
+        FailedPartitionRecovered(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Live delivery skips a failed partition, so an event appended after the recovery read the partition but before
+    /// the failure is cleared reaches the observer only through catch-up. The check for it therefore runs here, after
+    /// the failure is cleared, from the furthest event the recovery read - including events the observer's filters
+    /// exclude, which are never counted as handled.
+    /// </remarks>
+    public async Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber)
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FailingPartitionRecovered(partition);
         await ResolveFailedPartition(partition, lastHandledEventSequenceNumber);
-        await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
+        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+    }
+
+    /// <inheritdoc/>
+    public async Task FailedPartitionNotRecovered(Key partition)
+    {
+        if (IsRetired || _removed || State.RunningState == ObserverRunningState.Quarantined) return;
+        if (!Failures.TryGet(partition, out var failure) || failure.IsQuarantined) return;
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.FailingPartitionNotRecovered(partition);
+        await RegisterRetryReminder(failure);
     }
 
     /// <inheritdoc/>

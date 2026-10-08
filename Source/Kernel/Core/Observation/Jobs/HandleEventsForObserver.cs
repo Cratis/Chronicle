@@ -177,12 +177,14 @@ public class HandleEventsForObserver(
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
 
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
+            var lastScannedEventSequenceNumber = EventSequenceNumber.Unavailable;
             while (await events.MoveNext())
             {
-                var eventsToHandle = SetObservationStateIfSpecified(currentState.EventObservationState, events)
+                var eventsRead = SetObservationStateIfSpecified(currentState.EventObservationState, events)
                     .OrderBy(_ => _.Context.SequenceNumber)
                     .ToArray();
-                eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsToHandle, nonRedactionEventTypeIds);
+                var eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsRead, nonRedactionEventTypeIds);
+                eventsToHandle = _subscription.Filters.Apply(eventsToHandle);
 
                 // Dispatch consecutive same-partition batches sequentially, in global sequence order, and return
                 // immediately on the first failure instead of continuing to later partitions. This is intentional:
@@ -231,6 +233,11 @@ public class HandleEventsForObserver(
                         }
                     }
                 }
+
+                if (eventsRead.Length != 0)
+                {
+                    lastScannedEventSequenceNumber = eventsRead[^1].Context.SequenceNumber;
+                }
             }
 
             if (lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
@@ -242,7 +249,10 @@ public class HandleEventsForObserver(
                 logger.HandledAllEvents(lastSuccessfullyHandledEventSequenceNumber);
             }
 
-            return JobStepResult.Succeeded(CreateResult(lastSuccessfullyHandledEventSequenceNumber));
+            return JobStepResult.Succeeded(CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
+            {
+                LastScannedEventSequenceNumber = lastScannedEventSequenceNumber
+            });
         }
         catch (TaskCanceledException)
         {
