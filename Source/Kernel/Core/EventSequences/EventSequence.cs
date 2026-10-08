@@ -110,8 +110,14 @@ public class EventSequence(
         _eventSequenceId = _eventSequenceKey.EventSequenceId;
         _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
 
-        var namespaces = GrainFactory.GetGrain<INamespaces>(_eventSequenceKey.EventStore);
-        await @namespaces.Ensure(_eventSequenceKey.Namespace);
+        // Bootstrap ensures System/Default before registering its schemas and observers. Calling back
+        // into Namespaces(System) here can deadlock when its Ensure is activating this sequence to append
+        // NamespaceAdded. All other store/namespace combinations still need their normal creation path.
+        if (_eventSequenceKey.EventStore != EventStoreName.System || _eventSequenceKey.Namespace != EventStoreNamespaceName.Default || _eventSequenceId != EventSequenceId.System)
+        {
+            var namespaces = GrainFactory.GetGrain<INamespaces>(_eventSequenceKey.EventStore);
+            await namespaces.Ensure(_eventSequenceKey.Namespace);
+        }
 
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);
 

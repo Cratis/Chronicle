@@ -64,6 +64,12 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Skipping catch-up because observer is replaying")]
     internal static partial void SkippingCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
 
+    [LoggerMessage(LogLevel.Debug, "Waiting for catch-up handover to finish routing before replaying")]
+    internal static partial void WaitingForCatchUpHandoverBeforeReplay(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Replay was allowed but the observer did not enter replay")]
+    internal static partial void ReplayTransitionDidNotTakeEffect(this ILogger<Observer> logger);
+
     [LoggerMessage(LogLevel.Debug, "Skipping partition catch-up because observer is replaying")]
     internal static partial void SkippingPartitionCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
 

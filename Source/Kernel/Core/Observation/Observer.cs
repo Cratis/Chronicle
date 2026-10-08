@@ -99,6 +99,16 @@ public partial class Observer(
     int _catchUpHandoversInFlight;
 
     /// <summary>
+    /// Completes when the last catch-up handover in flight has finished routing; null while no handover is in flight.
+    /// </summary>
+    /// <remarks>
+    /// A handover routes the observer from an interleaving <see cref="CaughtUp"/> call. A transition requested while that
+    /// routing is in progress is only scheduled, and routing's own choice of next state replaces it. <see cref="Replay"/>
+    /// waits on this before transitioning, so its transition runs in its own turn and is never deferred or replaced.
+    /// </remarks>
+    TaskCompletionSource? _catchUpHandoversSettled;
+
+    /// <summary>
     /// Counts every time catch-up ownership started moving - a handover entering or an acquisition starting.
     /// </summary>
     /// <remarks>

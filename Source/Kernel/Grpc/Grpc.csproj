@@ -13,6 +13,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Server.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
         <!-- Cratis.Chronicle.Testing's in-process *Scenario helpers wrap these service implementations
              directly, and Cratis.Chronicle.XUnit.Integration constructs ConnectionService directly - both

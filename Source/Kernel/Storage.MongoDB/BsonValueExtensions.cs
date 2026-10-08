@@ -98,7 +98,7 @@ public static class BsonValueExtensions
                 return new BsonInt64(actualValue);
 
             case ulong actualValue:
-                return new BsonDecimal128((long)actualValue);
+                return new BsonDecimal128((decimal)actualValue);
 
             case float actualValue:
                 return new BsonDouble(actualValue);
@@ -470,7 +470,10 @@ public static class BsonValueExtensions
                 break;
 
             case TypeCode.UInt64:
-                result = (ulong)value.ToInt64();
+                var unsigned = value.ToDecimal();
+
+                // Older writers narrowed UInt64 through Int64 before storing Decimal128.
+                result = unsigned < 0 ? unchecked((ulong)value.ToInt64()) : (ulong)unsigned;
                 break;
 
             case TypeCode.Single:

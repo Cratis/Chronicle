@@ -46,4 +46,16 @@ public class WebhookDefinition
     /// </summary>
     [ProtoMember(6), DefaultValue(true)]
     public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether replay is disabled, even when <see cref="IsReplayable"/> is true.
+    /// </summary>
+    [ProtoMember(7)]
+    public bool IsNotReplayable { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the webhook is inactive, even when <see cref="IsActive"/> is true.
+    /// </summary>
+    [ProtoMember(8)]
+    public bool IsInactive { get; set; }
 }

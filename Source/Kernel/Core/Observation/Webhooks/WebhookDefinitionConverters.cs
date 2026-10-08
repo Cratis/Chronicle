@@ -28,8 +28,8 @@ internal static class WebhookDefinitionConverters
             string.IsNullOrEmpty(webhookDefinition.EventSequenceId) ? EventSequenceId.Log : webhookDefinition.EventSequenceId,
             webhookDefinition.EventTypes.Select(_ => _.ToChronicle()).ToArray(),
             webhookDefinition.Target.ToChronicle(),
-            webhookDefinition.IsReplayable,
-            webhookDefinition.IsActive);
+            webhookDefinition.IsReplayable && !webhookDefinition.IsNotReplayable,
+            webhookDefinition.IsActive && !webhookDefinition.IsInactive);
 
     /// <summary>
     /// Convert from <see cref="Contracts.Observation.Webhooks.WebhookDefinition"/> to <see cref="WebhookDefinition"/>.
@@ -44,6 +44,8 @@ internal static class WebhookDefinitionConverters
             EventTypes = webhookDefinition.EventTypes.Select(type => type.ToContract()).ToList(),
             IsActive = webhookDefinition.IsActive,
             IsReplayable = webhookDefinition.IsReplayable,
+            IsInactive = !webhookDefinition.IsActive,
+            IsNotReplayable = !webhookDefinition.IsReplayable,
             Target = webhookDefinition.Target.ToContract()
         };
 

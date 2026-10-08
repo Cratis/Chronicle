@@ -209,7 +209,7 @@ public interface IObserver : IGrainWithStringKey
     /// <summary>
     /// Rewind the observer.
     /// </summary>
-    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the observer is not replayable.</returns>
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the observer is not replayable or not in a state it can replay from (disconnected, quarantined).</returns>
     Task<JobId> Replay();
 
     /// <summary>

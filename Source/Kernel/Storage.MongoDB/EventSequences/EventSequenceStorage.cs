@@ -236,7 +236,7 @@ public class EventSequenceStorage(
             {
                 var schema = await eventTypesStorage.GetFor(eventType.Id, generation);
                 var jsonObject = expandoObjectConverter.ToJsonObject(expandoContent, schema.Schema);
-                generationalContent[generation.ToString()] = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+                generationalContent[generation.ToString()] = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
             }
 
             var hashesForStorage = contentHashes.ToDictionary(
@@ -273,7 +273,7 @@ public class EventSequenceStorage(
             foreach (var (gen, genDoc) in generationalContent)
             {
                 if (int.TryParse(gen, out var genNumber))
-                    genContentDict[genNumber] = genDoc.ToString();
+                    genContentDict[genNumber] = EventContentBson.ToJson(genDoc);
             }
 
             var eventHash = contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet;
@@ -350,7 +350,7 @@ public class EventSequenceStorage(
                 {
                     var schema = await eventTypesStorage.GetFor(eventToAppend.EventType.Id, generation);
                     var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
-                    generationalContent[generation.ToString()] = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+                    generationalContent[generation.ToString()] = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
                 }
 
                 var hashesForStorage = eventToAppend.ContentHashes.ToDictionary(
@@ -407,7 +407,7 @@ public class EventSequenceStorage(
                     },
                     eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
                 {
-                    GenerationalContent = generationalContent.ToDictionary(kvp => int.Parse(kvp.Key), kvp => kvp.Value.ToString())
+                    GenerationalContent = generationalContent.ToDictionary(kvp => int.Parse(kvp.Key), kvp => EventContentBson.ToJson(kvp.Value))
                 });
             }
 
@@ -449,7 +449,7 @@ public class EventSequenceStorage(
 
         var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
-        var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+        var document = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
 
         var revision = new EventRevision(
             eventType.Generation,
@@ -1026,7 +1026,7 @@ public class EventSequenceStorage(
         {
             var schema = await eventTypesStorage.GetFor(existingEvent.Type, generation);
             var jsonObject = expandoObjectConverter.ToJsonObject(expandoContent, schema.Schema);
-            generationalContent[generation.ToString()] = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+            generationalContent[generation.ToString()] = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
         }
 
         var update = Builders<Event>.Update.Set(e => e.Content, generationalContent);
@@ -1073,7 +1073,7 @@ public class EventSequenceStorage(
         JsonSerializerOptions jsonSerializerOptions)
     {
         var content = CreateRedactionContent(originalRawEvent, reason);
-        var document = BsonDocument.Parse(JsonSerializer.Serialize(content.ToPayload(), jsonSerializerOptions));
+        var document = EventContentBson.FromJson(JsonSerializer.Serialize(content.ToPayload(), jsonSerializerOptions));
         var generationalContent = new Dictionary<string, BsonDocument>
         {
             { EventTypeGeneration.First.ToString(), document }

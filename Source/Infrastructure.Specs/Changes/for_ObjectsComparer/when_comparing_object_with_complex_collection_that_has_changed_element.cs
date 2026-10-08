@@ -25,7 +25,7 @@ public class when_comparing_object_with_complex_collection_that_has_changed_elem
 
     [Fact] void should_not_be_equal() => _result.ShouldBeFalse();
     [Fact] void should_have_one_property_difference() => _differences.Count().ShouldEqual(1);
-    [Fact] void should_have_member_status_property_as_difference() => _differences.First().PropertyPath.Path.ShouldEqual($"{nameof(Team.Members)}.{nameof(Member.Status)}");
-    [Fact] void should_hold_original_member_status_as_difference() => _differences.First().Original.ShouldEqual("pending");
-    [Fact] void should_hold_changed_member_status_as_difference() => _differences.First().Changed.ShouldEqual("approved");
+    [Fact] void should_have_members_property_as_difference() => _differences.First().PropertyPath.Path.ShouldEqual(nameof(Team.Members));
+    [Fact] void should_hold_original_members_as_difference() => _differences.First().Original.ShouldEqual(_left.Members);
+    [Fact] void should_hold_changed_members_as_difference() => _differences.First().Changed.ShouldEqual(_right.Members);
 }
