@@ -32,6 +32,12 @@ public class TestableCatchUpObserver(
     /// <inheritdoc/>
     public Type GrainType => typeof(ICatchUpObserver);
 
+    /// <summary>
+    /// Invokes catch-up completion after preparing its test state.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public Task CompleteForTesting() => OnAllStepsCompleted();
+
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {

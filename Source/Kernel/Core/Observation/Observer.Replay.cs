@@ -14,7 +14,7 @@ public partial class Observer
     /// <inheritdoc/>
     /// <remarks>
     /// A transition requested while another is in progress is only scheduled, and a later request replaces it. The only
-    /// call that can be transitioning while this one runs is an interleaving <see cref="CaughtUp"/>, whose routing then
+    /// call that can be transitioning while this one runs is an interleaving <see cref="CaughtUp(JobId, EventSequenceNumber)"/>, whose routing then
     /// picks the next state itself and so silently replaced the replay. Waiting for those handovers to settle lets the
     /// replay transition run here, in this call, so the job id returned is the one this call started or resumed.
     /// </remarks>
@@ -78,14 +78,18 @@ public partial class Observer
         CompleteReplay(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt);
 
     /// <inheritdoc/>
-    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, []);
+    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, [], EventSequenceNumber.Unavailable);
 
     /// <inheritdoc/>
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes) =>
-        CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes);
+        CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, EventSequenceNumber.Unavailable);
 
     /// <inheritdoc/>
-    public Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, []);
+    public Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, [], EventSequenceNumber.Unavailable);
+
+    /// <inheritdoc/>
+    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes) =>
+        CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, lastScannedEventSequenceNumber);
 
     async Task CompleteReplay(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt)
     {
@@ -133,11 +137,29 @@ public partial class Observer
             LastHandledEventSequenceNumber = lastHandledEventSequenceNumber,
             NextEventSequenceNumber = lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : lastHandledEventSequenceNumber.Next()
         };
+        State.CatchingUpPartitions.Clear();
+        State.ReplayingPartitions.Clear();
         await WriteStateAsync();
-        await TransitionTo<Routing>();
+        if (!IsQuarantined)
+        {
+            await TransitionTo<Routing>();
+        }
     }
 
-    async Task CompletePartitionReplay(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes)
+    /// <summary>
+    /// Ends a partition replay, whether or not it handled anything.
+    /// </summary>
+    /// <param name="partition">The partition that was replayed.</param>
+    /// <param name="lastHandledEventSequenceNumber">The last event the replay handled, or <see cref="EventSequenceNumber.Unavailable"/>.</param>
+    /// <param name="replayedEventTypes">The event types the replay proves it handled, or empty.</param>
+    /// <param name="lastScannedEventSequenceNumber">The last event the replay read, handled or excluded by the observer's filters.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Live delivery holds back a partition while it is replaying, so the replay marker must come down however the
+    /// replay ended - including a replay that read only events the observer's filters exclude and so handled nothing.
+    /// Events held back while it replayed are handed to catch-up from the furthest event the replay read.
+    /// </remarks>
+    async Task CompletePartitionReplay(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes, EventSequenceNumber lastScannedEventSequenceNumber)
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -166,7 +188,7 @@ public partial class Observer
 
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
-        await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
+        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: true);
     }
 
     async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, bool retainOtherCounts)
@@ -211,8 +233,13 @@ public partial class Observer
         await WriteStateAsync();
     }
 
-    async Task<bool> TransitionToReplayIfNeeded()
+    async Task<bool> TransitionToReplayIfNeeded(int recovery)
     {
+        if (IsRecoverySuperseded(recovery))
+        {
+            return true;
+        }
+
         if (State.RunningState == ObserverRunningState.Replaying)
         {
             logger.Replaying();
@@ -221,17 +248,32 @@ public partial class Observer
         }
 
         var tailSequenceNumber = await _eventSequence.GetTailSequenceNumber();
+        if (IsRecoverySuperseded(recovery))
+        {
+            return true;
+        }
+
         var getNextToHandleResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(State.NextEventSequenceNumber, _subscription.EventTypes.ToList());
+        if (IsRecoverySuperseded(recovery))
+        {
+            return true;
+        }
         var nextUnhandledEventSequenceNumber = getNextToHandleResult.Match(eventSequenceNumber => eventSequenceNumber, _ => EventSequenceNumber.Unavailable);
         var replayEvaluator = new ReplayEvaluator(GrainFactory, _subscription.ObserverKey.EventStore, _observerKey.Namespace);
-        if (!await replayEvaluator.Evaluate(new(
-                State.Identifier,
-                _subscription.ObserverKey,
-                Definition,
-                State,
-                _subscription,
-                tailSequenceNumber,
-                nextUnhandledEventSequenceNumber)))
+        var needsReplay = await replayEvaluator.Evaluate(new(
+            State.Identifier,
+            _subscription.ObserverKey,
+            Definition,
+            State,
+            _subscription,
+            tailSequenceNumber,
+            nextUnhandledEventSequenceNumber));
+        if (IsRecoverySuperseded(recovery))
+        {
+            return true;
+        }
+
+        if (!needsReplay)
         {
             return false;
         }

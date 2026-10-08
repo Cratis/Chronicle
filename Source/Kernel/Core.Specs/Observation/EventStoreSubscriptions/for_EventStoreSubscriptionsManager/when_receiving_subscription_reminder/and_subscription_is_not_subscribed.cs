@@ -52,5 +52,8 @@ public class and_subscription_is_not_subscribed : Specification
             Arg.Any<IEnumerable<EventType>>(),
             Arg.Any<SiloAddress>(),
             Arg.Is<object?>(metadata => metadata is string && (string)metadata == TargetEventStore),
-            Arg.Any<bool>());
+            Arg.Any<bool>(),
+            Arg.Any<ObserverFilters?>(),
+            true,
+            automatic: true);
 }
