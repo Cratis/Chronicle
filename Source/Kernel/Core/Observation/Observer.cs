@@ -630,9 +630,12 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override async Task OnAfterEnteringState(IState<ObserverState> state)
     {
-        if (state is Observing or States.Replay)
+        if (state is Observing or States.Replay ||
+            (state is Disconnected && !_recoverSubscriptionAfterQuarantine &&
+             _subscription.IsSubscribed && !_subscription.EventTypes.Any() && !State.SubscribesToAllEvents))
         {
-            // Settled: the observer is driven forward again, so no recovery remains owed.
+            // Settled: the observer is driven forward again, or routing legitimately disconnected an empty
+            // explicitly-typed subscription. The initial Disconnected entry still owes its recovery.
             _retryRecoveryAfterQuarantine = false;
             _owedRecoveryAttempts = 0;
             return;
