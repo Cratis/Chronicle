@@ -97,7 +97,7 @@ internal class ProtectedEventTypeMigrations(
                 continue;
             }
 
-            var json = converter.ToJsonObject(content, schema.Schema);
+            var json = GenerationContentConversion.ToPlaintext(content, schema.Schema, converter);
             var applied = storedContent
                 ? await metadataManager.ApplyToReadModel(eventStore, @namespace, schema.Schema, subject, json)
                 : await metadataManager.Apply(eventStore, @namespace, schema.Schema, subject, json);

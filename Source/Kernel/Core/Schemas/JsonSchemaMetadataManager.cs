@@ -117,10 +117,12 @@ public class JsonSchemaMetadataManager(
     public async Task<IReadOnlyDictionary<int, JsonObject>?> TryPrepareGenerationsForComparison(
         JsonSchema schema,
         JsonObject json,
-        Func<JsonObject, Task<IReadOnlyDictionary<int, (JsonSchema Schema, JsonObject Content)>?>> convert)
+        Func<JsonObject, Task<IReadOnlyDictionary<int, (JsonSchema Schema, JsonObject Content)>?>> convert,
+        Func<int, JsonSchema, JsonNode, JsonNode?>? convertProtectedValue = null)
     {
-        // Append encrypts BEFORE schema conversion. Use opaque markers, not encryption: verification
-        // must neither provision keys nor normalize the plaintext inside a protected container.
+        // Append protects the attempted generation BEFORE schema conversion; migrated generations convert first.
+        // Use opaque markers, not encryption: verification must never provision keys, and restored values
+        // must be loss-checked against their generation's conversion before comparison.
         // Markers carry a random nonce per call, so a migration cannot name, synthesize or map another value onto one.
         // Content that already looks like a marker cannot be told apart from one, so it is never compared.
         if (VerificationMarkers.AppearIn(json))
@@ -149,10 +151,19 @@ public class JsonSchemaMetadataManager(
             // was duplicated, moved to an unprotected location or embedded in other text means the migration did
             // something to the protected value that this comparison cannot reproduce: never report it as equal.
             var restoredMarkers = new HashSet<string>(StringComparer.Ordinal);
-            var restored = !content.Schema.HasSchemaMetadata() ? content.Content : await TryTransformForComparison(content.Schema, content.Content, (_, _, node) => Task.FromResult(
-                node is JsonValue scalar && scalar.TryGetValue<string>(out var marker) && values.TryGetValue(marker, out var value) && restoredMarkers.Add(marker)
-                    ? value.DeepClone()
-                    : null));
+            var restored = !content.Schema.HasSchemaMetadata() ? content.Content : await TryTransformForComparison(content.Schema, content.Content, (boundarySchema, _, node) =>
+            {
+                if (node is not JsonValue scalar || !scalar.TryGetValue<string>(out var marker) ||
+                    !values.TryGetValue(marker, out var value) || !restoredMarkers.Add(marker))
+                {
+                    return Task.FromResult<JsonNode?>(null);
+                }
+
+                // Source values were protected before conversion. Migrated values, however, pass through
+                // the target schema before protection; never restore raw plaintext over a lossy conversion.
+                var restoredValue = value.DeepClone();
+                return Task.FromResult(convertProtectedValue is null ? restoredValue : convertProtectedValue(generation, boundarySchema, restoredValue));
+            });
             if (restored is null || VerificationMarkers.AppearIn(restored))
             {
                 return null;

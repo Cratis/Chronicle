@@ -80,11 +80,13 @@ public interface IJsonSchemaMetadataManager
     /// <param name="schema">The attempted generation schema.</param>
     /// <param name="json">The attempted plaintext.</param>
     /// <param name="convert">The loss-checked migration and backend conversion for each generation.</param>
+    /// <param name="convertProtectedValue">Optional loss-checked conversion of a restored protected value for its target generation.</param>
     /// <returns>Complete plaintext generation content, or null if any generation cannot be prepared.</returns>
     Task<IReadOnlyDictionary<int, JsonObject>?> TryPrepareGenerationsForComparison(
         JsonSchema schema,
         JsonObject json,
-        Func<JsonObject, Task<IReadOnlyDictionary<int, (JsonSchema Schema, JsonObject Content)>?>> convert) => Task.FromResult<IReadOnlyDictionary<int, JsonObject>?>(null);
+        Func<JsonObject, Task<IReadOnlyDictionary<int, (JsonSchema Schema, JsonObject Content)>?>> convert,
+        Func<int, JsonSchema, JsonNode, JsonNode?>? convertProtectedValue = null) => Task.FromResult<IReadOnlyDictionary<int, JsonObject>?>(null);
 
     /// <summary>
     /// Releases stored content for persistence, failing on operational errors rather than substituting erased values.

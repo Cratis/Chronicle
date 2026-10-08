@@ -104,50 +104,69 @@ public record VerifyContent(
                 schemas[generation] = (await eventStore.EventTypes.GetFor(EventType.Id, (uint)generation)).Schema;
             }
 
-            var expected = await metadataManager.TryPrepareGenerationsForComparison(schema.Schema, attempted, async masked =>
-            {
-                var source = expandoObjectConverter.ToExpandoObject(masked, schema.Schema);
-                var lossless = ContentComparison.PreservesConversion(masked, source, schema.Schema);
-                var inspected = new HashSet<ExpandoObject>(ReferenceEqualityComparer.Instance);
-                var opaque = true;
-                var migrated = await eventTypeMigrations.MigrateToAllGenerations(
-                    EventStore,
-                    new(EventType.Id, EventType.Generation, EventType.Tombstone),
-                    masked,
-                    source,
-                    (raw, generationSchema, converted) =>
-                    {
-                        lossless &= ContentComparison.PreservesConversion(raw, converted, generationSchema);
-                        inspected.Add(converted);
-                    },
-                    (operations, input) => opaque &= MigrationProvenance.CarriesProtectedValuesOpaquely(operations, input));
-
-                // Verification keeps protected values opaque even though append migrates plaintext. A migration
-                // that inspects them cannot be reproduced on a marker, whether or not the marker survived.
-                if (!opaque || !lossless || migrated.Values.Any(content => !inspected.Contains(content)))
+            var expected = await metadataManager.TryPrepareGenerationsForComparison(
+                schema.Schema,
+                attempted,
+                async masked =>
                 {
-                    return null;
-                }
+                    var source = expandoObjectConverter.ToExpandoObject(masked, schema.Schema);
+                    var lossless = ContentComparison.PreservesConversion(masked, source, schema.Schema);
+                    var inspected = new HashSet<ExpandoObject>(ReferenceEqualityComparer.Instance);
+                    var opaque = true;
+                    var migrated = await eventTypeMigrations.MigrateToAllGenerations(
+                        EventStore,
+                        new(EventType.Id, EventType.Generation, EventType.Tombstone),
+                        masked,
+                        source,
+                        (raw, generationSchema, converted) =>
+                        {
+                            lossless &= ContentComparison.PreservesConversion(raw, converted, generationSchema);
+                            inspected.Add(converted);
+                        },
+                        (operations, input) => opaque &= MigrationProvenance.CarriesProtectedValuesOpaquely(operations, input));
 
-                var result = new Dictionary<int, (JsonSchema Schema, JsonObject Content)>();
-                foreach (var (generation, generationSchema) in schemas)
-                {
-                    if (!migrated.TryGetValue((uint)generation, out var content))
+                    // Verification keeps protected values opaque even though append migrates plaintext. A migration
+                    // that inspects them cannot be reproduced on a marker, whether or not the marker survived.
+                    if (!opaque || !lossless || migrated.Values.Any(content => !inspected.Contains(content)))
                     {
                         return null;
                     }
 
-                    var prepared = ContentComparison.Prepare(content, generationSchema, expandoObjectConverter, sequence);
-                    if (prepared is null)
+                    var result = new Dictionary<int, (JsonSchema Schema, JsonObject Content)>();
+                    foreach (var (generation, generationSchema) in schemas)
                     {
-                        return null;
+                        if (!migrated.TryGetValue((uint)generation, out var content))
+                        {
+                            return null;
+                        }
+
+                        var prepared = ContentComparison.Prepare(content, generationSchema, expandoObjectConverter, sequence);
+                        if (prepared is null)
+                        {
+                            return null;
+                        }
+
+                        result[generation] = (generationSchema, prepared);
                     }
 
-                    result[generation] = (generationSchema, prepared);
-                }
+                    return result;
+                },
+                (generation, boundarySchema, value) =>
+                {
+                    if (generation == (int)EventType.Generation)
+                    {
+                        // Append protects the attempted generation's raw value before schema conversion.
+                        return value;
+                    }
 
-                return result;
-            });
+                    var converted = GenerationContentConversion.ConvertProtectedValue(value, boundarySchema, schemas[generation], expandoObjectConverter);
+
+                    // Protection encodes the converted node's text, which can differ from its JSON value
+                    // for CLR-backed formatted strings. Match strict release only after proving conversion lossless.
+                    return converted is not null && ContentComparison.Equals(value, converted)
+                        ? GenerationContentConversion.ToReleasedValue(converted)
+                        : null;
+                });
             if (expected is null)
             {
                 return new(ContentVerificationResult.Unavailable);
