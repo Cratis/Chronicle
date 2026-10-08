@@ -64,7 +64,7 @@ public partial class Observer
     /// <returns>True if the preparation was cleared, false if there was nothing stranded.</returns>
     /// <remarks>
     /// The absence of a preparing or running catch-up job is what distinguishes a stranded preparation from a genuine
-    /// one. The watchdog timer does interleave with <see cref="CaughtUp"/>, and through it with the <see cref="CatchUp"/>
+    /// one. The watchdog timer does interleave with <see cref="CaughtUp(Cratis.Orleans.Jobs.JobId, Cratis.Chronicle.Concepts.Events.EventSequenceNumber)"/>, and through it with the <see cref="CatchUp"/>
     /// its routing runs, so a tick can land while a concluded job is being handed over and its successor is not yet
     /// listed. That handover, like any catch-up job acquisition in flight, counts as ownership, as does a catch-up job
     /// that is preparing or running: in each case the flag is doing its job and is left alone. Clearing it inside <see cref="CatchUp"/> instead is not an option: the flag is also what

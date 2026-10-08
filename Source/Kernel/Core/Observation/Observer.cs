@@ -64,7 +64,7 @@ public partial class Observer(
     /// </summary>
     /// <remarks>
     /// A job being started is not listed by the jobs manager until its start completes, so a catch-up arriving in the
-    /// meantime - routing after an interleaved <see cref="CaughtUp"/>, or the appended-events queue triggering one -
+    /// meantime - routing after an interleaved <see cref="CaughtUp(JobId, EventSequenceNumber)"/>, or the appended-events queue triggering one -
     /// would find no owner and start a second job over the same events. It adopts the outcome of this acquisition instead.
     /// </remarks>
     Task<JobId>? _pendingCatchUpAcquisition;
@@ -102,7 +102,7 @@ public partial class Observer(
     /// Completes when the last catch-up handover in flight has finished routing; null while no handover is in flight.
     /// </summary>
     /// <remarks>
-    /// A handover routes the observer from an interleaving <see cref="CaughtUp"/> call. A transition requested while that
+    /// A handover routes the observer from an interleaving <see cref="CaughtUp(JobId, EventSequenceNumber)"/> call. A transition requested while that
     /// routing is in progress is only scheduled, and routing's own choice of next state replaces it. <see cref="Replay"/>
     /// waits on this before transitioning, so its transition runs in its own turn and is never deferred or replaced.
     /// </remarks>

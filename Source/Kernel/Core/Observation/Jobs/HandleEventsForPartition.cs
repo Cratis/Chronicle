@@ -197,6 +197,7 @@ public class HandleEventsForPartition(
             var failureKind = FailureKind.Unknown;
 
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
+            var lastScannedEventSequenceNumber = EventSequenceNumber.Unavailable;
             while (await events.MoveNext())
             {
                 if (cancellationToken.IsCancellationRequested)
@@ -206,7 +207,7 @@ public class HandleEventsForPartition(
                 }
                 var handledCount = EventCount.Zero;
 
-                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds);
+                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds, subscription.Filters);
                 if (handleEventsResult.TryGetException(out var handleEventsException))
                 {
                     failed = true;
@@ -275,6 +276,8 @@ public class HandleEventsForPartition(
                     await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind);
                     return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), exceptionMessages, exceptionStackTrace));
                 }
+
+                lastScannedEventSequenceNumber = GetLastScanned(lastScannedEventSequenceNumber, events);
             }
 
             if (lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
@@ -286,7 +289,10 @@ public class HandleEventsForPartition(
                 logger.HandledAllEvents(currentState.Partition, lastSuccessfullyHandledEventSequenceNumber);
             }
 
-            return JobStepResult.Succeeded(CreateResult(lastSuccessfullyHandledEventSequenceNumber));
+            return JobStepResult.Succeeded(CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
+            {
+                LastScannedEventSequenceNumber = lastScannedEventSequenceNumber
+            });
         }
         catch (TaskCanceledException)
         {
@@ -357,17 +363,32 @@ public class HandleEventsForPartition(
 
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
+    static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, IEventCursor events)
+    {
+        foreach (var @event in events.Current)
+        {
+            if (!lastScanned.IsActualValue || @event.Context.SequenceNumber > lastScanned)
+            {
+                lastScanned = @event.Context.SequenceNumber;
+            }
+        }
+
+        return lastScanned;
+    }
+
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         HandleEventsForPartitionState state,
         IEventCursor events,
         ObserverSubscriberContext subscriberContext,
         TimeSpan subscriberTimeout,
-        HashSet<EventTypeId> nonRedactionEventTypeIds)
+        HashSet<EventTypeId> nonRedactionEventTypeIds,
+        ObserverFilters? filters)
     {
         try
         {
             var eventsToHandle = SetObservationStateIfSpecified(state.EventObservationState, events);
             eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsToHandle, nonRedactionEventTypeIds);
+            eventsToHandle = filters.Apply(eventsToHandle);
             if (eventsToHandle.Length != 0)
             {
                 var decryptedEvents = await DecryptEvents(eventsToHandle);

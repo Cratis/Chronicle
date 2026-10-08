@@ -41,18 +41,16 @@ public class ReplayObserverPartition(
         if (!State.LastHandledEventSequenceNumber.IsActualValue)
         {
             logger.NoEventsWereHandled(nameof(ReplayObserverPartition));
-            return;
         }
 
+        // The observer is always told the replay is over, even when it handled nothing - a replay that read only
+        // events the observer's filters exclude still has to stop holding back live delivery for the partition.
+        // How far it read is only trusted from a replay that completed, so a stopped replay never skips events.
+        var lastScanned = State.HandledAllEvents ? State.LastScannedEventSequenceNumber : EventSequenceNumber.Unavailable;
+
         // A selected-type replay cannot prove that it handled the event which failed for this partition.
-        if (State.HandledAllEvents && Request.ReplaysAllEventTypes)
-        {
-            await observer.PartitionReplayed(Request.Key, State.LastHandledEventSequenceNumber, Request.EventTypes.ToArray());
-        }
-        else
-        {
-            await observer.PartitionReplayPartiallyCompleted(Request.Key, State.LastHandledEventSequenceNumber);
-        }
+        var replayedEventTypes = State.HandledAllEvents && Request.ReplaysAllEventTypes ? Request.EventTypes.ToArray() : [];
+        await observer.PartitionReplayed(Request.Key, State.LastHandledEventSequenceNumber, lastScanned, replayedEventTypes);
     }
 
     /// <inheritdoc/>
