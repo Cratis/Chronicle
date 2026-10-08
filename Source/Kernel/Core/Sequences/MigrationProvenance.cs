@@ -49,7 +49,7 @@ static class MigrationProvenance
         if (expression is JsonValue plain && plain.TryGetValue<string>(out var path))
         {
             // A bare property path is a copy of the whole value. Anything else is an arbitrary JMESPath expression.
-            return IsPropertyPath(path) || !VerificationMarkers.AppearIn(input);
+            return (IsPropertyPath(path) && !DescendsIntoProtectedValue(input, path)) || !VerificationMarkers.AppearIn(input);
         }
 
         if (expression is JsonObject builtIn && builtIn.Count == 1)
@@ -58,7 +58,7 @@ static class MigrationProvenance
             switch (kind)
             {
                 case WellKnownExpressions.Rename:
-                    return configuration is JsonValue;
+                    return configuration is JsonValue renamed && renamed.TryGetValue<string>(out var source) && !DescendsIntoProtectedValue(input, source);
 
                 case WellKnownExpressions.Split:
                 case WellKnownExpressions.MapValues:
@@ -79,8 +79,29 @@ static class MigrationProvenance
     static bool ReadsProtected(JsonObject input, JsonNode? sourceProperty) =>
         sourceProperty is JsonValue value &&
         value.TryGetValue<string>(out var path) &&
-        JsonPropertyPaths.TryResolve(input, path, out var node) &&
-        VerificationMarkers.AppearIn(node);
+        (DescendsIntoProtectedValue(input, path) ||
+            (JsonPropertyPaths.TryResolve(input, path, out var node) && VerificationMarkers.AppearIn(node)));
+
+    static bool DescendsIntoProtectedValue(JsonObject input, string path)
+    {
+        JsonNode? current = input;
+        foreach (var segment in JsonPropertyPaths.Split(path))
+        {
+            // A whole protected object is a scalar marker here. Append can still read its members
+            // from plaintext, so a failed full-path lookup is not proof that no protected value was read.
+            if (current is JsonValue && VerificationMarkers.AppearIn(current))
+            {
+                return true;
+            }
+
+            if (current is not JsonObject obj || !obj.TryGetPropertyValue(segment, out current))
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
 
     static bool IsPropertyPath(string path) =>
         path.Length > 0 &&
