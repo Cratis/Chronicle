@@ -101,7 +101,8 @@
     },
     "resolutions": {
         "@cratis/arc.react": "^22.6.0",
-        "@cratis/arc": "^22.6.0"
+        "@cratis/arc": "^22.6.0",
+        "dompurify": "^3.4.16"
     },
     "packageManager": "yarn@4.17.1"
 }
