@@ -62,7 +62,7 @@ public partial class Observer
     /// </remarks>
     async Task RecoverIfStuck()
     {
-        if (await CheckJobTasks() || await CheckStrandedCatchupPreparation())
+        if (await CheckOwedRecoveryAfterQuarantine() || await CheckJobTasks() || await CheckStrandedCatchupPreparation())
         {
             return;
         }
@@ -70,6 +70,80 @@ public partial class Observer
         if (await CheckNextSequenceNumber())
         {
             await CheckStrandedSubscription();
+        }
+    }
+
+    /// <summary>
+    /// Retries a recovery owed after a quarantine ended that never reached a settled state.
+    /// </summary>
+    /// <returns>True if the watchdog acted on the observer, false if there was nothing owed.</returns>
+    /// <remarks>
+    /// Clearing the quarantine of a subscribed observer, or a subscription arriving while quarantine entry was still
+    /// running, owes the observer the recovery a fresh subscription runs. When that recovery fails, or persisting a
+    /// transition it scheduled fails, the observer is left disconnected - or stranded in a transient state - and no
+    /// longer quarantined. Once the alert reconciliation persists that, nothing shows an operator that clearing again
+    /// would help, so the watchdog retries the recovery itself. A failure that retrying cannot fix would turn that
+    /// into a silent loop, so the attempts are bounded the same way stranded catch-up preparation is, and the observer
+    /// is quarantined again once the bound is exceeded - visible and actionable rather than silently stopped.
+    /// </remarks>
+    async Task<bool> CheckOwedRecoveryAfterQuarantine()
+    {
+        if (!CanRetryOwedRecovery() || await GetCurrentState() is not (Disconnected or Routing or CatchingUpInFlight))
+        {
+            return false;
+        }
+
+        var config = await configurationProvider.GetFor(_observerKey);
+        if (!CanRetryOwedRecovery())
+        {
+            return false;
+        }
+
+        _owedRecoveryAttempts++;
+        if (_owedRecoveryAttempts > config.MaxCatchupRecoveryAttempts)
+        {
+            logger.GivingUpOnRecoveryAfterQuarantine(_owedRecoveryAttempts, config.MaxCatchupRecoveryAttempts);
+            await QuarantineUnrecoverableSubscription();
+            return true;
+        }
+
+        logger.WatchdogRetryingRecoveryAfterQuarantine(_owedRecoveryAttempts, config.MaxCatchupRecoveryAttempts);
+        try
+        {
+            await RetryRecoveryAfterQuarantine();
+        }
+        catch (Exception ex)
+        {
+            // The recovery stays owed and the attempt counted, so the next tick retries it or gives up on it.
+            logger.RetryingRecoveryAfterQuarantineFailed(ex);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Gets whether a recovery owed after quarantine can be retried by the watchdog right now.
+    /// </summary>
+    /// <returns>True if it is owed and nothing is already recovering the subscription, false if not.</returns>
+    bool CanRetryOwedRecovery() =>
+        _retryRecoveryAfterQuarantine &&
+        _recoveriesInProgress == 0 &&
+        !IsQuarantined &&
+        _subscription.IsSubscribed;
+
+    async Task QuarantineUnrecoverableSubscription()
+    {
+        // Only Disconnected may give up on the recovery. A stranded transient state moves there first, without
+        // recovering again on the way.
+        _recoverSubscriptionAfterQuarantine = false;
+        if (await GetCurrentState() is not Disconnected)
+        {
+            await TransitionTo<Disconnected>();
+        }
+
+        if (await GetCurrentState() is Disconnected disconnected)
+        {
+            await disconnected.QuarantineUnrecoverableSubscription();
         }
     }
 
@@ -122,7 +196,7 @@ public partial class Observer
     /// <returns>True if the observer was re-routed, false if it was left alone.</returns>
     async Task<bool> CheckJobTasks()
     {
-        if (!_subscription.IsSubscribed)
+        if (IsQuarantined || !_subscription.IsSubscribed)
         {
             return false;
         }
@@ -133,6 +207,11 @@ public partial class Observer
             (_subscription.EventTypes.Any() || State.SubscribesToAllEvents || State.RunningState == ObserverRunningState.Replaying))
         {
             var replayJobs = await _jobsManager.GetUnfinishedJobs();
+            if (IsQuarantined)
+            {
+                return false;
+            }
+
             var hasRunningReplayJob = replayJobs.Any(job =>
                 job.Request is ReplayObserverRequest req &&
                 req.ObserverKey == _observerKey &&
@@ -146,8 +225,14 @@ public partial class Observer
             }
         }
 
-        if (State.CatchingUpPartitions.Count > 0 && !await HasRunningCatchupJob())
+        if (State.CatchingUpPartitions.Count > 0)
         {
+            var hasRunningCatchupJob = await HasRunningCatchupJob();
+            if (IsQuarantined || hasRunningCatchupJob)
+            {
+                return false;
+            }
+
             logger.WatchdogCatchupJobMissing();
             await TransitionTo<Routing>();
             return true;
@@ -191,7 +276,7 @@ public partial class Observer
 
     async Task<bool> CheckNextSequenceNumber()
     {
-        if (!_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
+        if (IsQuarantined || !_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
         {
             return false;
         }

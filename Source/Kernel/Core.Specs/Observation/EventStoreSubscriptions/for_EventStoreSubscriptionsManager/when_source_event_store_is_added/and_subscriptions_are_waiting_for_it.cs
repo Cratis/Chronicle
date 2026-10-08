@@ -57,5 +57,8 @@ public class and_subscriptions_are_waiting_for_it : Specification
             Arg.Any<IEnumerable<EventType>>(),
             Arg.Any<SiloAddress>(),
             Arg.Is<object?>(metadata => metadata is string && (string)metadata == TargetEventStore),
-            Arg.Any<bool>());
+            Arg.Any<bool>(),
+            Arg.Any<ObserverFilters?>(),
+            true,
+            automatic: true);
 }

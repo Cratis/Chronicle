@@ -183,6 +183,15 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Error, "Observer has failed to recover from a stranded catch-up preparation {Attempts} times in a row (max {MaxAttempts}). Quarantining the observer - starting a catch-up job is repeatedly failing for a reason retrying again is not expected to fix. Manual intervention required to resume processing.")]
     internal static partial void GivingUpOnCatchupPreparationRecovery(this ILogger<Observer> logger, int attempts, int maxAttempts);
 
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that recovering the observer after its quarantine ended never settled. Retrying the recovery (attempt {Attempt}, max {MaxAttempts}).")]
+    internal static partial void WatchdogRetryingRecoveryAfterQuarantine(this ILogger<Observer> logger, int attempt, int maxAttempts);
+
+    [LoggerMessage(LogLevel.Warning, "Retrying the recovery of the observer after its quarantine ended failed. The watchdog retries it again on its next check.")]
+    internal static partial void RetryingRecoveryAfterQuarantineFailed(this ILogger<Observer> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Error, "Observer has failed to recover after its quarantine ended {Attempts} times in a row (max {MaxAttempts}). Quarantining the observer again. Manual intervention required to resume processing.")]
+    internal static partial void GivingUpOnRecoveryAfterQuarantine(this ILogger<Observer> logger, int attempts, int maxAttempts);
+
     [LoggerMessage(LogLevel.Debug, "Skipping failed partition recovery for partition {Partition} because it could not be found among the observer's failed partitions")]
     internal static partial void SkippingFailedPartitionRecoveryBecausePartitionNotFound(this ILogger<Observer> logger, Key partition);
 

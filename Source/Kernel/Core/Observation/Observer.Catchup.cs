@@ -164,6 +164,7 @@ public partial class Observer
         RememberConcludedCatchUpJob(jobId);
 
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        State.CatchingUpPartitions.Clear();
         if (lastScannedEventSequenceNumber.IsActualValue &&
             (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber))
         {
@@ -175,7 +176,10 @@ public partial class Observer
         _catchupRecoveryAttempts = 0;
 
         if (IsRetired || _removed) return;
-        await TransitionTo<Routing>();
+        if (!IsQuarantined)
+        {
+            await TransitionTo<Routing>();
+        }
     }
 
     /// <summary>
