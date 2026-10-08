@@ -7,6 +7,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -47,7 +48,11 @@ public class ResolveFutures(
         }
 
         // Attempt to resolve any pending futures now that we've processed a new event
-        var futures = await projectionFutures.GetFutures();
+        var futures = await GetFutures(projection.Identifier);
+        if (futures is null)
+        {
+            return context;
+        }
 
         if (!futures.Any())
         {
@@ -64,7 +69,11 @@ public class ResolveFutures(
         while (resolvedAny)
         {
             resolvedAny = false;
-            futures = await projectionFutures.GetFutures();
+            futures = await GetFutures(projection.Identifier);
+            if (futures is null)
+            {
+                return context with { Event = latestResolvedEvent };
+            }
 
             foreach (var future in futures)
             {
@@ -456,4 +465,20 @@ public class ResolveFutures(
             IEnumerable enumerable => enumerable.OfType<ExpandoObject>(),
             _ => null
         };
+
+    async Task<IEnumerable<ProjectionFuture>?> GetFutures(ProjectionId projectionId)
+    {
+        try
+        {
+            return await projectionFutures.GetFutures();
+        }
+        catch (Exception ex)
+        {
+            logger.FailedToGetFutures(ex, projectionId);
+
+            // An unavailable futures store is not an empty one. Retry on the next event.
+            futuresTracker.HasPending = true;
+            return null;
+        }
+    }
 }
