@@ -346,7 +346,7 @@ public partial class Observer(
         logger.Subscribing();
         logger.SubscribingToAllEvents();
 
-        await ReadStateAsync();
+        await ReloadObserverState();
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
         if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
@@ -703,6 +703,23 @@ public partial class Observer(
                Equals(left.EventStreamType, right.EventStreamType);
     }
 
+    /// <summary>
+    /// Reloads stored progress without replacing this activation's identity or quarantine.
+    /// </summary>
+    /// <returns>True if storage no longer has a record for this observer, false if it does.</returns>
+    async Task<bool> ReloadObserverState()
+    {
+        await ReadStateAsync();
+        var storageWasReset = State.Identifier == ObserverId.Unspecified;
+        State = State with { Identifier = _observerId };
+        if (IsQuarantined)
+        {
+            State = State with { RunningState = ObserverRunningState.Quarantined };
+        }
+
+        return storageWasReset;
+    }
+
     async Task SubscribeToEventTypes<TObserverSubscriber>(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
@@ -753,16 +770,7 @@ public partial class Observer(
             if (!recovering)
             {
                 var wasQuarantined = IsQuarantined;
-                await ReadStateAsync();
-
-                // Missing records retain the unspecified identifier until the activation supplies its own identity.
-                // An existing record, even a stale Active snapshot, never invalidates activation-owned quarantine.
-                var storageWasReset = State.Identifier == ObserverId.Unspecified;
-                State = State with { Identifier = _observerId };
-                if (IsQuarantined)
-                {
-                    State = State with { RunningState = ObserverRunningState.Quarantined };
-                }
+                var storageWasReset = await ReloadObserverState();
 
                 await observerDefinition.ReadStateAsync();
                 await failures.ReadStateAsync();
