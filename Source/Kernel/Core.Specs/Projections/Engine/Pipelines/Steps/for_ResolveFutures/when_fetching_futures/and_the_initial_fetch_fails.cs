@@ -7,25 +7,16 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_ResolveFutures
 
 public class and_the_initial_fetch_fails : given.a_resolve_futures_step
 {
-    ProjectionEventContext _result;
+    Exception _fetchFailure;
     Exception? _exception;
-    bool _pendingAfterFailure;
 
-    void Establish() => _projectionFutures.GetFutures().Returns(
-        Task.FromException<IEnumerable<ProjectionFuture>>(new InvalidOperationException()),
-        Task.FromResult<IEnumerable<ProjectionFuture>>([]));
-
-    async Task Because() => _exception = await Catch.Exception(async () =>
+    void Establish()
     {
-        _result = await _step.Perform(_projection, _context);
-        _pendingAfterFailure = _tracker.HasPending;
-        await _step.Perform(_projection, _context);
-    });
+        _fetchFailure = new InvalidOperationException();
+        _projectionFutures.GetFutures().Returns(Task.FromException<IEnumerable<ProjectionFuture>>(_fetchFailure));
+    }
 
-    [Fact] void should_not_fail_the_event() => _exception.ShouldBeNull();
-    [Fact] void should_keep_the_event_context_unchanged() => _result.ShouldEqual(_context);
-    [Fact] void should_leave_futures_pending_after_the_failure() => _pendingAfterFailure.ShouldBeTrue();
-    [Fact] void should_retry_on_the_next_event() => _projectionFutures.Received(2).GetFutures();
-    [Fact] void should_clear_pending_after_a_successful_empty_fetch() => _tracker.HasPending.ShouldBeFalse();
-    [Fact] void should_not_resolve_any_future() => _projectionFutures.DidNotReceive().ResolveFuture(Arg.Any<ProjectionFutureId>());
+    async Task Because() => _exception = await Catch.Exception(async () => await _step.Perform(_projection, _context));
+
+    [Fact] void should_propagate_the_fetch_failure() => _exception.ShouldEqual(_fetchFailure);
 }
