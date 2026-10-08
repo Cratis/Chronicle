@@ -340,6 +340,8 @@ These are the building blocks. Each type has a specific role in the vertical sli
 | `IConstraint` | Constraint definition — enforced server-side by Chronicle at append time |
 | `AggregateRoot` | Chronicle aggregate root with `Apply()` and `Commit()` |
 | `ICommandPipeline` | Programmatic command execution from reactors or other code |
+| `ICommandOperation` | `Cratis.Arc.Commands` marker for returned inline work with `Execute` and optional `Compensate`; see **cratis-arc-command-operation** |
+| `CommandOperations` | Explicit ordered server-only operation batch; use instead of bare operation arrays/enumerables |
 | `EventContext` | Event metadata: `Occurred`, `SequenceNumber`, `CorrelationId`, `EventSourceId`, etc. |
 | `ISubject<T>` | Observable query return type — enables real-time push |
 | `IMongoCollection<T>` | MongoDB collection — use `.Observe()` for reactive queries |

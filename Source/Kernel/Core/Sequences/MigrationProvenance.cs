@@ -12,11 +12,11 @@ namespace Cratis.Chronicle.Sequences;
 /// Decides whether the migrations applied during content verification only carried protected values across opaquely.
 /// </summary>
 /// <remarks>
-/// The real append runs migrations on encrypted content, while verification runs them on opaque markers. The two only
+/// Append runs migrations on plaintext, while verification keeps protected values opaque with markers. The two only
 /// agree when a migration never looks inside a protected value. An operation that reads a protected value is
 /// allowed only when it is a plain rename, move or copy of the whole value. Anything else - split, combine, value
-/// map, default, any JMESPath expression or an operation kind this class does not know - could transform the real
-/// ciphertext in a way a marker cannot reproduce, so the outcome of the comparison cannot be trusted.
+/// map, default, any JMESPath expression or an operation kind this class does not know - could transform the original
+/// value in a way a marker cannot reproduce, so the outcome of the comparison cannot be trusted.
 /// </remarks>
 static class MigrationProvenance
 {

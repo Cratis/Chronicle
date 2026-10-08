@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
@@ -23,6 +25,8 @@ namespace Cratis.Chronicle.EventSequences.Migrations;
 /// <param name="eventTypeMigrations"><see cref="IEventTypeMigrations"/> for migrating event content.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="logger">The <see cref="ILogger{MigrateExistingEventsForTypeStep}"/> for logging.</param>
+/// <param name="metadataManager">The metadata manager releasing and protecting event content.</param>
+/// <param name="converter">The schema-guided content converter.</param>
 public class MigrateExistingEventsForTypeStep(
     [PersistentState(nameof(MigrateExistingEventsForTypeStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<MigrateExistingEventsForTypeStepState> state,
@@ -30,7 +34,9 @@ public class MigrateExistingEventsForTypeStep(
     IStorage storage,
     IEventTypeMigrations eventTypeMigrations,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<MigrateExistingEventsForTypeStep> logger) : JobStep<MigrateExistingEventsForTypeRequest, object, MigrateExistingEventsForTypeStepState>(state, throttle, logger), IMigrateExistingEventsForTypeStep
+    ILogger<MigrateExistingEventsForTypeStep> logger,
+    IJsonSchemaMetadataManager metadataManager,
+    IExpandoObjectConverter converter) : JobStep<MigrateExistingEventsForTypeRequest, object, MigrateExistingEventsForTypeStepState>(state, throttle, logger), IMigrateExistingEventsForTypeStep
 {
     IEventSequenceStorage? _eventSequenceStorage;
 
@@ -80,11 +86,15 @@ public class MigrateExistingEventsForTypeStep(
                     var json = JsonSerializer.Serialize(@event.Content, jsonSerializerOptions);
                     var contentAsJson = JsonNode.Parse(json)?.AsObject() ?? new JsonObject();
 
-                    var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(
+                    var subject = @event.Context.Subject?.IsSet == true ? @event.Context.Subject.Value : @event.Context.EventSourceId.Value;
+                    var migrations = new ProtectedEventTypeMigrations(storage.GetEventStore(jobStepKey.Scope).EventTypes, eventTypeMigrations, metadataManager, converter);
+                    var migratedContent = await migrations.Migrate(
                         jobStepKey.Scope,
+                        jobStepKey.Namespace,
                         @event.Context.EventType,
                         contentAsJson,
-                        @event.Content);
+                        @event.Content,
+                        subject);
 
                     await eventSequenceStorage.ReplaceGenerationContent(
                         @event.Context.SequenceNumber,

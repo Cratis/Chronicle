@@ -69,7 +69,7 @@ The Chronicle + Arc stack has clear layer boundaries. Violating them creates cou
 
 **Rules:**
 - Domain types must not reference EF Core, MongoDB, or HTTP concepts directly.
-- Command handlers express intent in domain terms — they delegate persistence and I/O to injected collaborators.
+- Command handlers express intent in domain terms — they delegate persistence and I/O to injected collaborators. For immediate inline work chosen by an Arc command, prefer returned operations over service writes inside `Handle()`; see **cratis-arc-command-operation**. Durable after-commit work remains a reactor/outbox concern.
 - Projections build read models; they must not trigger commands or produce side effects.
 - Reactors handle side effects; they must not directly read or write the event log.
 

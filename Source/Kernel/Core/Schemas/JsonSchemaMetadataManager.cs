@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
@@ -89,7 +90,8 @@ public class JsonSchemaMetadataManager(
 
         try
         {
-            return await new StrictJsonSchemaRelease(_propertyValueHandlers).Release(eventStore, eventStoreNamespace, schema, identifier, json);
+            return await TryTransformForComparison(schema, json, (current, handler, node) =>
+                StrictJsonSchemaRelease.ReleaseValue(current, handler, eventStore, eventStoreNamespace, identifier, node));
         }
         catch (Exception exception)
         {
@@ -128,8 +130,7 @@ public class JsonSchemaMetadataManager(
 
         var markerPrefix = VerificationMarkers.NewPrefix();
         var values = new Dictionary<string, JsonNode>();
-        var walker = new StrictJsonSchemaRelease(_propertyValueHandlers);
-        var masked = !schema.HasSchemaMetadata() ? json : await walker.Transform(schema, json, (_, _, node) =>
+        var masked = !schema.HasSchemaMetadata() ? json : await TryTransformForComparison(schema, json, (_, _, node) =>
         {
             var marker = $"{markerPrefix}{values.Count}";
             values.Add(marker, node.DeepClone());
@@ -148,7 +149,7 @@ public class JsonSchemaMetadataManager(
             // was duplicated, moved to an unprotected location or embedded in other text means the migration did
             // something to the protected value that this comparison cannot reproduce: never report it as equal.
             var restoredMarkers = new HashSet<string>(StringComparer.Ordinal);
-            var restored = !content.Schema.HasSchemaMetadata() ? content.Content : await walker.Transform(content.Schema, content.Content, (_, _, node) => Task.FromResult(
+            var restored = !content.Schema.HasSchemaMetadata() ? content.Content : await TryTransformForComparison(content.Schema, content.Content, (_, _, node) => Task.FromResult(
                 node is JsonValue scalar && scalar.TryGetValue<string>(out var marker) && values.TryGetValue(marker, out var value) && restoredMarkers.Add(marker)
                     ? value.DeepClone()
                     : null));
@@ -163,13 +164,51 @@ public class JsonSchemaMetadataManager(
         return result;
     }
 
-    static JsonNode RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
+    /// <inheritdoc/>
+    public async Task<JsonObject> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
+        if (!schema.HasSchemaMetadata())
+        {
+            return json;
+        }
+
+        var result = (json.DeepClone() as JsonObject)!;
+        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ReleaseAction, async (handler, subject, value) => await handler.ReleaseStrict(eventStore, eventStoreNamespace, subject, value), strictRelease: true);
+        return result;
+    }
+
+    static JsonNode? RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
+    {
+        propertySchema = propertySchema.ActualTypeSchema;
+        var isScalar = propertySchema.Type.HasFlag(JsonObjectType.Integer) ||
+            propertySchema.Type.HasFlag(JsonObjectType.Number) || propertySchema.Type.HasFlag(JsonObjectType.Boolean);
+        if (isScalar && !propertySchema.Type.HasFlag(JsonObjectType.String) &&
+            released is JsonValue scalar && scalar.TryGetValue<string>(out var text))
+        {
+            // The ciphertext format stores scalar text without a JSON type tag. The schema supplies the
+            // missing kind; strings must never be parsed just because their content resembles JSON.
+            if (string.IsNullOrEmpty(text))
+            {
+                if (propertySchema.Type.HasFlag(JsonObjectType.Null) || (propertySchema.Format?.EndsWith('?') ?? false))
+                {
+                    return null;
+                }
+
+                // A parsed JSON number supports every schema numeric format, unlike a JsonValue<int>
+                // which cannot be consumed as a double, long or decimal by the converter.
+                return propertySchema.Type.HasFlag(JsonObjectType.Boolean) ? JsonValue.Create(false) : JsonNode.Parse("0");
+            }
+
+            // Enum names and legacy scalar text must reach the converter unchanged when they do not
+            // match the declared JSON kind. Never pass decrypted parser diagnostics to the release log.
+            return TryParseReleasedScalar(text, propertySchema, out var parsed) ? parsed : released;
+        }
+
         // A coarse schema metadata marker on a whole container is blob-encrypted to a single ciphertext string,
         // even though its schema type stays array (a collection) or object (a value object). Releasing it
         // decrypts back to the original JSON text; re-parse that text into the container the schema expects so
         // the read model round-trips into its collection or value-object type rather than a raw string (which
-        // fails to deserialize). A scalar decrypts to a plain string and is left untouched.
+        // fails to deserialize). Genuine string scalars are left untouched.
         var isContainer = propertySchema.IsArray || propertySchema.Type.HasFlag(JsonObjectType.Object);
         if (isContainer &&
             released is JsonValue releasedValue &&
@@ -189,8 +228,60 @@ public class JsonSchemaMetadataManager(
         return released;
     }
 
-    IEnumerable<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> MetadataAcrossCategories(JsonSchema schema) =>
-        _categories.SelectMany(category => schema.GetSchemaMetadata(category).Select(metadata => (category, metadata)));
+    static bool TryParseReleasedScalar(string text, JsonSchema schema, out JsonNode? parsed)
+    {
+        try
+        {
+            parsed = JsonNode.Parse(text);
+            var kind = parsed?.GetValueKind();
+            return schema.Type.HasFlag(JsonObjectType.Boolean)
+                ? kind is JsonValueKind.True or JsonValueKind.False
+                : kind == JsonValueKind.Number;
+        }
+        catch (JsonException)
+        {
+            // Released text is not a JSON scalar. Preserve it for legacy conversion without exposing
+            // the parser's value-bearing exception message or substituting a fabricated default.
+            parsed = null;
+            return false;
+        }
+    }
+
+    async Task<JsonObject?> TryTransformForComparison(JsonSchema schema, JsonObject json, Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>> transform)
+    {
+        var result = (JsonObject)json.DeepClone();
+        try
+        {
+            // Reuse the append traversal and its protected boundaries, but do not apply display-release
+            // fallbacks or provision keys. A failed boundary invalidates the complete comparison.
+            await HandleActionFor(schema, string.Empty, result, SchemaMetadataActionFailed.ApplyAction, (_, _, node) => Task.FromResult(node), comparisonTransform: transform);
+            return result;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    void ValidateComparisonBoundary(JsonSchema schema, (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata)
+    {
+        if (metadata.Length == 0)
+        {
+            return;
+        }
+
+        // Overlapping handlers have no proven inverse. Unknown handlers and ambiguous scalar kinds
+        // must fail closed even when the normal append traversal would skip an unknown metadata type.
+        if (metadata.Length != 1 || !_propertyValueHandlers.ContainsKey((metadata[0].Category, metadata[0].Metadata.metadataType)) ||
+            !StrictJsonSchemaRelease.HasSupportedType(schema))
+        {
+            throw new InvalidOperationException("Protected boundary cannot be compared.");
+        }
+    }
+
+    IEnumerable<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> MetadataAcrossCategories(JsonSchema schema, bool forComparison = false) =>
+        (forComparison ? _categories.Concat([SchemaMetadataCategory.Compliance, SchemaMetadataCategory.Security]).Distinct() : _categories)
+            .SelectMany(category => schema.GetSchemaMetadata(category).Select(metadata => (category, metadata)));
 
     async Task HandleActionFor(
         JsonSchema schema,
@@ -198,9 +289,11 @@ public class JsonSchemaMetadataManager(
         JsonObject json,
         string actionName,
         Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> action,
-        string path = "")
+        string path = "",
+        bool strictRelease = false,
+        Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null)
     {
-        var metadataForContainer = MetadataAcrossCategories(schema).ToArray();
+        var metadataForContainer = MetadataAcrossCategories(schema, comparisonTransform is not null).ToArray();
         foreach (var (property, value) in json.ToArray())
         {
             if (schema.Properties is not null && value is not null)
@@ -210,17 +303,26 @@ public class JsonSchemaMetadataManager(
 
                 // FirstOrDefault rather than Single: a schema flattened across inheritance can declare the same
                 // property name more than once, and the duplicate is not a reason to fail the whole walk.
-                var propertySchema = flattenedProperties.FirstOrDefault(_ => _.Name == property) ??
+                var propertySchema = (JsonSchema?)flattenedProperties.FirstOrDefault(_ => _.Name == property) ??
+                    schema.AdditionalPropertiesSchema?.ActualSchema ??
                     throw new SchemaPropertyNotFoundInSchema(actionName, propertyPath, identifier, flattenedProperties.Select(_ => _.Name));
 
+                var propertyMetadata = MetadataAcrossCategories(propertySchema, comparisonTransform is not null).Concat(metadataForContainer).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();
+                if (comparisonTransform is not null)
+                {
+                    ValidateComparisonBoundary(propertySchema, propertyMetadata);
+                }
+
                 var handlerApplied = false;
-                foreach (var (category, metadata) in MetadataAcrossCategories(propertySchema).Concat(metadataForContainer).DistinctBy(_ => (_.Category, _.Metadata.metadataType)))
+                foreach (var (category, metadata) in propertyMetadata)
                 {
                     if (_propertyValueHandlers.TryGetValue((category, metadata.metadataType), out var handler))
                     {
                         try
                         {
-                            var handled = await action(handler, identifier, value);
+                            var handled = comparisonTransform is null
+                                ? await action(handler, identifier, value)
+                                : await comparisonTransform(propertySchema, handler, value) ?? throw new InvalidOperationException("Protected value cannot be compared.");
                             json[property] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, propertySchema) : handled;
                             handlerApplied = true;
                         }
@@ -233,7 +335,7 @@ public class JsonSchemaMetadataManager(
                             // entire query, so surface it as empty — the shape an erased subject already produces
                             // — and keep the diagnostic, which names the property, the identifier and the likely
                             // cause, in the log.
-                            if (actionName != SchemaMetadataActionFailed.ReleaseAction)
+                            if (actionName != SchemaMetadataActionFailed.ReleaseAction || strictRelease)
                             {
                                 throw failure;
                             }
@@ -257,14 +359,14 @@ public class JsonSchemaMetadataManager(
                     // property under them for a marker to sit on. Descending would report every one of them as drift
                     // and fail a document that matches its schema. Only the descent is skipped — a value marked
                     // [PII] or [Encrypted] is still handled as a whole above, like any other container.
-                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath);
+                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath, strictRelease, comparisonTransform);
                 }
                 else if (!handlerApplied && value is JsonArray jsonArrayValue)
                 {
                     // The property itself was not encrypted as a whole, so descend into the array and handle
                     // schema metadata that lives on the element type — a [PII]/[Encrypted] scalar concept (e.g.
                     // IReadOnlyList<Email>) or a member marked that way inside element objects.
-                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath);
+                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath, strictRelease, comparisonTransform);
                 }
             }
         }
@@ -276,7 +378,9 @@ public class JsonSchemaMetadataManager(
         JsonArray array,
         string actionName,
         Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> action,
-        string path)
+        string path,
+        bool strictRelease = false,
+        Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null)
     {
         var itemSchema = arraySchema.Item?.ActualSchema;
         if (itemSchema is null)
@@ -284,7 +388,7 @@ public class JsonSchemaMetadataManager(
             return;
         }
 
-        var itemMetadata = MetadataAcrossCategories(itemSchema).ToArray();
+        var itemMetadata = MetadataAcrossCategories(itemSchema, comparisonTransform is not null).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();
         for (var i = 0; i < array.Count; i++)
         {
             var element = array[i];
@@ -294,46 +398,64 @@ public class JsonSchemaMetadataManager(
             }
 
             var elementPath = $"{path}[{i}]";
-            switch (element)
+            if (element is JsonObject declaredObject && itemSchema.GetFlattenedProperties().Any() && !itemSchema.DescribesGeospatialValue())
             {
-                // A geospatial element is a single typed value, not a container of members, so it falls through to
-                // the value branch below — handled as a whole when the element type is marked, left alone when it
-                // is not. Walking into it would report its GeoJSON members as drift, the same as for a property.
-                case JsonObject elementObject when !itemSchema.DescribesGeospatialValue():
-                    await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath);
-                    break;
+                // Declared object members have historically been protected individually, including
+                // projection child writes. Only arrays and objects without declared properties need
+                // whole-element protection; preserve the persisted member-level representation.
+                await HandleActionFor(itemSchema, identifier, declaredObject, actionName, action, elementPath, strictRelease, comparisonTransform);
+                continue;
+            }
 
-                case JsonArray elementArray:
-                    await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath);
-                    break;
+            if (comparisonTransform is not null)
+            {
+                ValidateComparisonBoundary(itemSchema, itemMetadata);
+            }
 
-                default:
-                    foreach (var (category, metadata) in itemMetadata.DistinctBy(_ => (_.Category, _.Metadata.metadataType)))
+            var handlerApplied = false;
+            foreach (var (category, metadata) in itemMetadata)
+            {
+                if (_propertyValueHandlers.TryGetValue((category, metadata.metadataType), out var handler))
+                {
+                    try
                     {
-                        if (_propertyValueHandlers.TryGetValue((category, metadata.metadataType), out var handler))
+                        var handled = comparisonTransform is null
+                            ? await action(handler, identifier, element)
+                            : await comparisonTransform(itemSchema, handler, element) ?? throw new InvalidOperationException("Protected value cannot be compared.");
+                        var restored = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, itemSchema) : handled;
+                        if (!ReferenceEquals(restored, element))
                         {
-                            try
-                            {
-                                array[i] = await action(handler, identifier, element);
-                            }
-                            catch (Exception ex)
-                            {
-                                var failure = new SchemaMetadataActionFailed(actionName, elementPath, identifier, ex);
-
-                                // Same asymmetry as the property walk above — apply fails, release degrades the
-                                // single element so the rest of the array, and the query, still come back.
-                                if (actionName != SchemaMetadataActionFailed.ReleaseAction)
-                                {
-                                    throw failure;
-                                }
-
-                                logger.FailedToReleaseProperty(elementPath, identifier, failure);
-                                array[i] = JsonValue.Create(string.Empty);
-                            }
+                            array[i] = restored;
                         }
+                        handlerApplied = true;
                     }
+                    catch (Exception ex)
+                    {
+                        var failure = new SchemaMetadataActionFailed(actionName, elementPath, identifier, ex);
 
-                    break;
+                        // Same asymmetry as the property walk above — apply fails, release degrades the
+                        // single element so the rest of the array, and the query, still come back.
+                        if (actionName != SchemaMetadataActionFailed.ReleaseAction || strictRelease)
+                        {
+                            throw failure;
+                        }
+
+                        logger.FailedToReleaseProperty(elementPath, identifier, failure);
+                        array[i] = RestoreReleasedContainerShape(JsonValue.Create(string.Empty), itemSchema);
+                        handlerApplied = true;
+                    }
+                }
+            }
+
+            // A classified element is protected as a whole, including collection-valued elements. Never
+            // descend into the detached original or decrypt members that were not separately encrypted.
+            if (!handlerApplied && element is JsonObject elementObject && !itemSchema.DescribesGeospatialValue())
+            {
+                await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath, strictRelease, comparisonTransform);
+            }
+            else if (!handlerApplied && element is JsonArray elementArray)
+            {
+                await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath, strictRelease, comparisonTransform);
             }
         }
     }

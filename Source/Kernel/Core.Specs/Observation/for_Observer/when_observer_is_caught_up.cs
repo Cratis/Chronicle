@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Properties;
+using Cratis.Orleans.Jobs;
 namespace Cratis.Chronicle.Observation.for_Observer;
 
 public class when_observer_is_caught_up : given.an_observer_with_subscription
@@ -16,7 +17,7 @@ public class when_observer_is_caught_up : given.an_observer_with_subscription
         _storageStats.ResetCounts();
     }
 
-    Task Because() => _observer.CaughtUp(42L);
+    Task Because() => _observer.CaughtUp(JobId.New(), 42L);
 
     [Fact] void should_clear_catching_up_observers() => _stateStorage.State.CatchingUpPartitions.ShouldBeEmpty();
     [Fact] void should_write_state() => _storageStats.Writes.ShouldBeGreaterThan(0);

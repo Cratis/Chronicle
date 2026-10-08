@@ -122,8 +122,8 @@ public record VerifyContent(
                     },
                     (operations, input) => opaque &= MigrationProvenance.CarriesProtectedValuesOpaquely(operations, input));
 
-                // The real append migrates ciphertext: a migration that reads a protected value other than to rename,
-                // move or copy it whole cannot be reproduced on a marker, whether or not the marker survived.
+                // Verification keeps protected values opaque even though append migrates plaintext. A migration
+                // that inspects them cannot be reproduced on a marker, whether or not the marker survived.
                 if (!opaque || !lossless || migrated.Values.Any(content => !inspected.Contains(content)))
                 {
                     return null;

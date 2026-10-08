@@ -99,6 +99,8 @@ message WebhookDefinition {
    WebhookTarget Target = 4;
    bool IsReplayable = 5; // default value could not be applied: True
    bool IsActive = 6; // default value could not be applied: True
+   bool IsNotReplayable = 7;
+   bool IsInactive = 8;
 }
 message WebhookDetailsResponse {
    string Identifier = 1;

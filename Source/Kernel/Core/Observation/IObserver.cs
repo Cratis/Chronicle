@@ -207,7 +207,7 @@ public interface IObserver : IGrainWithStringKey
     /// <summary>
     /// Rewind the observer.
     /// </summary>
-    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the observer is not replayable.</returns>
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the observer is not replayable or not in a state it can replay from (disconnected, quarantined).</returns>
     Task<JobId> Replay();
 
     /// <summary>
@@ -388,10 +388,11 @@ public interface IObserver : IGrainWithStringKey
     /// <summary>
     /// Notify that the observer has been caught up.
     /// </summary>
+    /// <param name="jobId">The <see cref="JobId"/> of the catch-up job that has concluded.</param>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
-    Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber);
+    Task CaughtUp(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Notify that the partition was caught.

@@ -63,9 +63,10 @@ public partial class Observer
     /// <returns>True if the preparation was cleared, false if there was nothing stranded.</returns>
     /// <remarks>
     /// The absence of a preparing or running catch-up job is what distinguishes a stranded preparation from a genuine
-    /// one. The watchdog timer does not interleave with grain requests, so it can never observe the brief window
-    /// inside <see cref="CatchUp"/> itself; and while a catch-up job is preparing or running, the flag is doing its
-    /// job and is left alone. Clearing it inside <see cref="CatchUp"/> instead is not an option: the flag is also what
+    /// one. The watchdog timer does interleave with <see cref="CaughtUp"/>, and through it with the <see cref="CatchUp"/>
+    /// its routing runs, so a tick can land while a concluded job is being handed over and its successor is not yet
+    /// listed. That handover, like any catch-up job acquisition in flight, counts as ownership, as does a catch-up job
+    /// that is preparing or running: in each case the flag is doing its job and is left alone. Clearing it inside <see cref="CatchUp"/> instead is not an option: the flag is also what
     /// stops <see cref="Observing"/> from bouncing straight back to <see cref="Routing"/> over the very gap the failed
     /// catch-up was meant to close, which would spin the state machine between the two states. Re-routing through
     /// <see cref="Routing"/> is what makes the retry the job-start path promises actually happen - unconditionally,

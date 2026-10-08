@@ -6,6 +6,8 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Compliance.GDPR;
 
@@ -18,11 +20,24 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 /// <param name="provisioner"><see cref="IManagedEncryptionKeyProvisioner"/> used to provision the subject's key.</param>
 /// <param name="encryptionKeyStore"><see cref="IEncryptionKeyStorage"/> to use for keys.</param>
 /// <param name="encryption"><see cref="IEncryption"/> for performing encryption/decryption.</param>
+/// <param name="logger">The logger for unrecoverable values released after subject erasure.</param>
 public class PIICompliancePropertyValueHandler(
     IManagedEncryptionKeyProvisioner provisioner,
     IEncryptionKeyStorage encryptionKeyStore,
-    IEncryption encryption) : IJsonSchemaMetadataValueHandler
+    IEncryption encryption,
+    ILogger<PIICompliancePropertyValueHandler> logger) : IJsonSchemaMetadataValueHandler
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PIICompliancePropertyValueHandler"/> class without logging.
+    /// </summary>
+    /// <param name="provisioner">The subject key provisioner.</param>
+    /// <param name="encryptionKeyStore">The encryption key store.</param>
+    /// <param name="encryption">The encryption implementation.</param>
+    public PIICompliancePropertyValueHandler(IManagedEncryptionKeyProvisioner provisioner, IEncryptionKeyStorage encryptionKeyStore, IEncryption encryption)
+        : this(provisioner, encryptionKeyStore, encryption, NullLogger<PIICompliancePropertyValueHandler>.Instance)
+    {
+    }
+
     /// <inheritdoc/>
     public SchemaMetadataCategory Category => SchemaMetadataCategory.Compliance;
 
@@ -30,8 +45,14 @@ public class PIICompliancePropertyValueHandler(
     public SchemaMetadataTypeName Type => ComplianceMetadataType.PII.Value;
 
     /// <inheritdoc/>
+    /// <exception cref="PIIIdentifierIsReserved">The identifier is reserved for confidentiality keys.</exception>
     public async Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
+        if (EncryptedValueKeyIdentifiers.IsEncryptedValueIdentifier(identifier))
+        {
+            throw new PIIIdentifierIsReserved(identifier);
+        }
+
         var key = await provisioner.EnsureKeyFor(eventStore, eventStoreNamespace, identifier);
         return ProtectedValueCodec.Encrypt(encryption, key, value);
     }
@@ -39,6 +60,47 @@ public class PIICompliancePropertyValueHandler(
     /// <inheritdoc/>
     public Task<JsonNode?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
         ProtectedValueCodec.TryRelease(encryptionKeyStore, encryption, eventStore, eventStoreNamespace, identifier, value);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Ciphertext that cannot be unwrapped with the current key is unrecoverable either way. For a subject
+    /// with recorded erasure, the overwhelmingly likely cause is pre-erasure ciphertext; permanently failing
+    /// the stored-event migration would block every later event of the type. Only strict release treats such
+    /// unwrap failures as erased. Key-storage failures and authenticated-payload corruption still propagate.
+    /// </remarks>
+    public async Task<JsonNode> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
+    {
+        if (!ProtectedValueCodec.TryDecodeCipherText(encryption, value.ToString(), out var encrypted))
+        {
+            return value;
+        }
+
+        var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier);
+        if (key is not null)
+        {
+            try
+            {
+                return ProtectedValueCodec.Decrypt(encryption, key, encrypted);
+            }
+            catch (EncryptionKeyUnwrapFailed)
+            {
+                if (await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is null)
+                {
+                    throw;
+                }
+
+                logger.UnrecoverableValueAfterErasure(identifier);
+                return JsonValue.Create(string.Empty);
+            }
+        }
+
+        if (await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is not null)
+        {
+            return JsonValue.Create(string.Empty);
+        }
+
+        throw new MissingEncryptionKey(identifier);
+    }
 
     /// <inheritdoc/>
     public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)

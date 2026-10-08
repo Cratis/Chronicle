@@ -9,7 +9,8 @@ license: MIT
 
 A command is a record that carries the user's intent and owns its own handler.
 Arc discovers it, runs authorization and validation, calls `Handle()`, and turns
-whatever `Handle()` returns into appended events, a response, or both.
+whatever `Handle()` returns into events, server-executed operations, a response,
+or a combination.
 
 ## Verified product sources
 
@@ -26,6 +27,8 @@ whatever `Handle()` returns into appended events, a response, or both.
 
 Reverify before claiming support for another version. Arc without Chronicle is a
 supported setup; everything on this page that appends events needs Chronicle.
+Operation guidance below is verified at **Arc v22.48.1**; see
+`cratis-arc-command-operation` for its source and recovery contract.
 
 ## Declare the command
 
@@ -58,6 +61,8 @@ Rules the framework actually enforces:
   when a `[Command]` type has no public instance `Handle`.
 - `ARC0002` warns when a type has `Handle` but no `[Command]`; `ARC0007` warns
   when a command is a `class` rather than a `record`.
+- For returned operations, `ARC0016` checks method shapes, `ARC0017` rejects bare
+  operation collections, and `ARC0018` checks generated-invoker accessibility.
 - Name the command as the action — `OpenDebitAccount`, not
   `OpenDebitAccountCommand`.
 - `Handle` parameters are resolved from DI, so ask for services there rather
@@ -73,7 +78,9 @@ Chronicle-backed identities the `EventSourceId<T>` base — see the
 ## Choose the return shape
 
 `Handle()`'s return value is dispatched by its runtime type. The shape decides
-what is appended and what the caller gets back.
+what is appended and what the caller gets back. Operations are the exception:
+the *declared* return type must name `ICommandOperation`/`CommandOperations`
+(directly or in a tuple, `Task`, `Result`/`OneOf`) for Arc to execute them.
 
 | Return | What Arc does |
 | --- | --- |
@@ -81,6 +88,8 @@ what is appended and what the caller gets back.
 | `IEnumerable<object>` of registered events | Appends each to the command's event source id |
 | `EventForEventSourceId(id, @event)` | Appends that one event to `id` |
 | A collection mixing events and `EventForEventSourceId` | Appends each to its own target, wrappers to their id and plain events to the command's |
+| `ICommandOperation` (or a concrete operation) | Executes server-side after returned events are enrolled; never the response |
+| `CommandOperations` | Executes an explicit batch sequentially after event enrollment; never the response |
 | A tuple | Each element is dispatched on its own; the one element nothing can handle becomes the response |
 | Anything else | Becomes the response payload |
 | `Result<TEvent, ValidationResult>` | Success appends the event; failure becomes a validation failure |
@@ -89,13 +98,24 @@ what is appended and what the caller gets back.
 See [handler shapes](references/handler-shapes.md) for the dispatch order, the
 tuple rule, and the exact failure modes.
 
+For immediate inline side effects chosen by the command, prefer returning an
+operation rather than calling the service inside `Handle()`. Arc executes the
+work and selects optional compensation from the commit facts. Direct service
+calls remain supported when their result is needed for the decision; durable
+after-commit work belongs in reactors/outboxes/workflows. Use
+`cratis-arc-command-operation` rather than a custom response handler or rollback
+stack for this application work.
+
 Two consequences worth knowing before writing the first command:
 
 - **The tuple is how a create command returns its new id.** An
   `EventSourceId`-derived value in the tuple is not appendable, so it becomes the
   response — and the response, when it is an event-source id value, is also what
   the events in that same tuple are appended to. Returning more than one
-  unhandleable element throws `MultipleUnhandledTupleValues`.
+  unhandleable element throws `MultipleUnhandledTupleValues`. When the command
+  also returns an operation keyed by that id, have the caller supply the id
+  instead of calling `New()` in `Handle()`, so a retried request reuses the same
+  ownership key.
 - **Events never carry their own event source.** Cross-stream writes use
   `EventForEventSourceId`; they are not expressed by a property on the event.
 
@@ -266,9 +286,21 @@ Components guidance, not to this skill.
 - Adding or changing a rule on an existing command: the Arc command validation
   guidance.
 - Executing an existing command from backend code: `cratis-arc-command-execution`.
+- Declaring inline work, compensation, or operation specs:
+  `cratis-arc-command-operation`.
 - Append-time uniqueness or concurrency constraints: the Chronicle event
   constraints guidance.
 - Choosing the concept or identity type for a value: `cratis-fundamentals-concept`.
+- An accepted `.play` model under the model root covers the behavior, or the
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
+  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
+  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
+  say so and do not author `.play` from memory.
+  Edit code here only for infrastructure, clients, adapters, Screenplay code
+  attachments, or gap-fill scope (`cratis-screenplay-render-and-gap-fill`);
+  never edit Stage-managed output.
 
 ## Verify
 
@@ -277,6 +309,8 @@ Components guidance, not to this skill.
 - The return shape matches what the command is supposed to do, and any
   cross-stream event is wrapped in `EventForEventSourceId`.
 - At most one tuple element is unhandleable.
+- Inline work follows `cratis-arc-command-operation`: explicit operation return
+  shapes, no duplicate direct write, and tested execution/recovery boundaries.
 - The event source id resolves from exactly one place; `ARCCHR0002` is silent.
 - `[Key]`, where used, is `Cratis.Chronicle.Keys.KeyAttribute`.
 - No `IEventLog` is injected into `Handle`.

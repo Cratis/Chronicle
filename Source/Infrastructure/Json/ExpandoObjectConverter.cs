@@ -165,7 +165,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             return new JsonArray([.. items]);
         }
 
-        if (typeFormats.IsKnown(schemaProperty.Format!))
+        if (typeFormats.IsKnown(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!))
         {
             // A complex formatted value (e.g. a geospatial type) serializes to a JSON object/array
             // through its registered converter (GeoJSON); a scalar formatted value (guid, date, ...)
@@ -189,8 +189,13 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return ConvertToJsonNodeFromUnknownFormat(value, schemaProperty);
     }
 
-    object? ConvertFromJsonNode(JsonNode jsonNode, JsonSchema schemaProperty)
+    object? ConvertFromJsonNode(JsonNode? jsonNode, JsonSchema schemaProperty)
     {
+        if (jsonNode is null)
+        {
+            return null;
+        }
+
         if (jsonNode is JsonObject childObject)
         {
             if (schemaProperty.IsDictionary)
@@ -201,10 +206,10 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             // A JSON object carrying a known format identifies a complex CLR type (e.g. a geospatial
             // type serialized as GeoJSON). Deserialize the whole object into that type so the
             // ExpandoObject holds the typed value rather than a generic nested structure.
-            if (typeFormats.IsKnown(schemaProperty.Format!))
+            if (typeFormats.IsKnown(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!))
             {
                 return jsonNode.Deserialize(
-                    typeFormats.GetTypeForFormat(schemaProperty.Format!),
+                    typeFormats.GetTypeForFormat(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!),
                     Globals.JsonSerializerOptions);
             }
 
@@ -221,10 +226,10 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             {
                 return array.Select(ConvertUnknownSchemaTypeToClrType).ToArray();
             }
-            return array.Select(_ => ConvertFromJsonNode(_!, schemaProperty.Item!)).ToArray();
+            return array.Select(_ => ConvertFromJsonNode(_, schemaProperty.Item!)).ToArray();
         }
 
-        if (typeFormats.IsKnown(schemaProperty.Format!))
+        if (typeFormats.IsKnown(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!))
         {
             try
             {
@@ -467,7 +472,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
     object? ConvertJsonValueToSchemaType(JsonNode jsonNode, JsonSchema schemaProperty)
     {
-        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format!);
+        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!);
         return jsonNode.AsValue().ToTargetTypeValue(targetType);
     }
 
@@ -478,7 +483,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             return null;
         }
 
-        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format!);
+        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!);
         input = TypeConversion.Convert(targetType, input);
         return input.ToJsonValue();
     }

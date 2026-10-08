@@ -577,6 +577,11 @@ public static class EventEntryConverter
                     return l;
                 }
 
+                if (element.TryGetUInt64(out var unsigned))
+                {
+                    return unsigned;
+                }
+
                 return element.GetDouble();
             case JsonValueKind.True:
                 return true;

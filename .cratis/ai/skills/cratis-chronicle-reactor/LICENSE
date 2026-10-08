@@ -1,3 +1,10 @@
 # cratis-ai-managed: skills/cratis-chronicle-reactor/LICENSE
 Copyright (c) Cratis. All rights reserved.
 Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+Third-party notices
+
+This skill adapts material from agentic-engineer by Martin Dilger and Nebulit GmbH
+(https://github.com/Nebulit-GmbH/agentic-engineer, commit 07b0f30648d663cb588d7e2c7aa031af9dfc21f2;
+https://nebulit.de), used with the agreement of Martin Dilger and Nebulit GmbH. That repository
+carries no licence file; the adapted material remains credited to Martin Dilger and Nebulit GmbH.

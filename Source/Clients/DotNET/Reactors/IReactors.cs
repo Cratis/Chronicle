@@ -134,7 +134,7 @@ public interface IReactors
     /// Replay a specific reactor.
     /// </summary>
     /// <typeparam name="TReactor">Type of reactor to replay.</typeparam>
-    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reactor is not replayable.</returns>
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reactor is not replayable or its observer is not in a state it can replay from (disconnected, quarantined); reconnect or release it before replaying.</returns>
     Task<JobId> Replay<TReactor>()
         where TReactor : IReactor;
 
@@ -142,6 +142,6 @@ public interface IReactors
     /// Replay a specific reactor by its identifier.
     /// </summary>
     /// <param name="reactorId"><see cref="ReactorId"/> to replay.</param>
-    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reactor is not replayable.</returns>
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reactor is not replayable or its observer is not in a state it can replay from (disconnected, quarantined); reconnect or release it before replaying.</returns>
     Task<JobId> Replay(ReactorId reactorId);
 }

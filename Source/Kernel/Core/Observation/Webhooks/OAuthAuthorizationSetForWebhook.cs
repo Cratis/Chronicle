@@ -12,5 +12,5 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="Authority">The OAuth authority.</param>
 /// <param name="ClientId">The OAuth client ID.</param>
 /// <param name="ClientSecret">The OAuth client secret.</param>
-[EventType]
+[EventType, AllEventStores]
 public record OAuthAuthorizationSetForWebhook(Authority Authority, ClientId ClientId, ClientSecret ClientSecret);

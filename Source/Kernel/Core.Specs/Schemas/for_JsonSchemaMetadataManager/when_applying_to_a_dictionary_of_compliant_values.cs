@@ -7,10 +7,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaMetadataManager;
 
 /// <summary>
-/// A dictionary declares the shape of its values but never their names, so the walk cannot find a key of it in
-/// the schema and fails. That failure is the contract, not an oversight: the alternative is writing values that
-/// were classified as personal into the store in the clear, which applying must never do. Chronicle does not
-/// classify values inside a dictionary today, and until it does, this has to keep failing where it can be seen.
+/// A dictionary's dynamic keys resolve against its additional-properties schema, so classified values are
+/// protected even though their names are not declared in the schema.
 /// </summary>
 public class when_applying_to_a_dictionary_of_compliant_values : Specification
 {
@@ -21,7 +19,7 @@ public class when_applying_to_a_dictionary_of_compliant_values : Specification
     JsonSchema _schema;
     JsonObject _input;
     JsonSchemaMetadataManager _manager;
-    Exception _exception;
+    JsonObject _result;
 
     async Task Establish()
     {
@@ -52,8 +50,8 @@ public class when_applying_to_a_dictionary_of_compliant_values : Specification
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(valueHandler), NullLogger<JsonSchemaMetadataManager>.Instance);
     }
 
-    async Task Because() => _exception = await Catch.Exception(() => _manager.Apply(string.Empty, string.Empty, _schema, Identifier, _input));
+    async Task Because() => _result = await _manager.Apply(string.Empty, string.Empty, _schema, Identifier, _input);
 
-    [Fact] void should_fail_rather_than_store_the_values_unprotected() => _exception.ShouldBeOfExactType<SchemaPropertyNotFoundInSchema>();
-    [Fact] void should_name_the_key_it_could_not_resolve() => _exception.Message.ShouldContain("contacts.home");
+    [Fact] void should_protect_the_declared_property() => _result["name"]!.GetValue<string>().ShouldEqual("encrypted");
+    [Fact] void should_protect_the_dynamic_dictionary_value() => _result["contacts"]!["home"]!.GetValue<string>().ShouldEqual("encrypted");
 }

@@ -166,6 +166,7 @@ internal sealed class Reactors(
             catch (Exception ex)
             {
                 logger.Disengage(observerId, connectionId, ex);
+                context.RecordFailure(ex);
                 observer.OnError(ex);
             }
             finally

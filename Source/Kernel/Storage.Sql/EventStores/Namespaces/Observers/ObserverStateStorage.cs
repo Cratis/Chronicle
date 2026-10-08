@@ -38,7 +38,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         // changes whether a grain can re-activate.
         if (observerId is null || string.IsNullOrEmpty(observerId.Value))
         {
-            return Observation.ObserverState.Empty;
+            return new Observation.ObserverState();
         }
 
         await using var scope = await database.Namespace(eventStore, @namespace);
@@ -46,7 +46,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         return await scope.DbContext.Observers
             .Where(observer => observer.Id == observerIdValue)
             .Select(observer => observer.ToKernel())
-            .FirstOrDefaultAsync() ?? Observation.ObserverState.Empty;
+            .FirstOrDefaultAsync() ?? new Observation.ObserverState();
     }
 
     /// <inheritdoc/>

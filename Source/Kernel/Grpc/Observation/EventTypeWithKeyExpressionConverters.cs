@@ -16,6 +16,9 @@ internal static class EventTypeWithKeyExpressionConverters
     /// </summary>
     /// <param name="eventTypeWithKeyExpression"><see cref="Contracts.Observation.EventTypeWithKeyExpression"/> to convert from.</param>
     /// <returns>Converted <see cref="EventTypeWithKeyExpression"/>.</returns>
+    /// <exception cref="MissingEventTypeForKeyExpression">Thrown when the client sent no event type.</exception>
     public static EventTypeWithKeyExpression ToChronicle(this Contracts.Observation.EventTypeWithKeyExpression eventTypeWithKeyExpression) =>
-        new(eventTypeWithKeyExpression.EventType.ToChronicle(), eventTypeWithKeyExpression.Key);
+        new(
+            (eventTypeWithKeyExpression.EventType ?? throw new MissingEventTypeForKeyExpression(eventTypeWithKeyExpression.Key)).ToChronicle(),
+            eventTypeWithKeyExpression.Key);
 }

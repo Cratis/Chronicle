@@ -47,4 +47,16 @@ public class TestableReplayObserver(
     /// </summary>
     /// <returns>Awaitable task.</returns>
     public Task CompleteForTesting() => OnAllStepsCompleted();
+
+    /// <summary>
+    /// Invokes the work done before resuming the job's steps.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public Task ResumeForTesting() => OnBeforeResumingJobSteps();
+
+    /// <summary>
+    /// Invokes the check for whether the job can be resumed.
+    /// </summary>
+    /// <returns>True if the job can be resumed.</returns>
+    public Task<bool> CanResumeForTesting() => CanResume();
 }

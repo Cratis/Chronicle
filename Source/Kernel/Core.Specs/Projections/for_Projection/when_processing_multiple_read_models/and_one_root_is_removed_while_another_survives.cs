@@ -58,5 +58,5 @@ public class and_one_root_is_removed_while_another_survives : given.a_projection
     [Fact] void should_return_the_surviving_read_model_identifier() => _survivingReadModel["id"].ShouldEqual(SurvivingKey);
     [Fact] void should_preserve_the_surviving_read_model_name() => _survivingReadModel["Name"].ShouldEqual("The surviving model");
     [Fact] void should_preserve_the_surviving_read_model_sequence_number() => _survivingReadModel[WellKnownProperties.LastHandledEventSequenceNumber].ShouldEqual(2UL);
-    [Fact] void should_return_only_the_complete_surviving_read_model() => _survivingReadModel.Count.ShouldEqual(3);
+    [Fact] void should_return_only_the_complete_surviving_read_model() => _survivingReadModel.Keys.Count(property => property != WellKnownProperties.Subject && property != WellKnownProperties.Subjects).ShouldEqual(3);
 }

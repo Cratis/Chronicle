@@ -45,6 +45,34 @@ repository before claiming support for another version.
   `cratis-chronicle-read-model-specifications`.
 - The question is what the slice *should do*: settle the behavior first. A
   specification records a decision; it does not make one.
+- The scope is model-first (the `specification` blocks of the `.play` slice are
+  the contract for this skill). Decide this with the decision rule in
+  `cratis-screenplay-modeling-lifecycle`: model-first only when an accepted
+  model under the model root covers this scope, or the repository is opted in
+  (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set `mcpServers.screenplay.root`
+  in `.cratis/ai.json`); an empty directory, install output, a `.play` file
+  outside the root or an uncommitted draft does not count, and framework, infrastructure, client, adapter and not-opted-in
+  brownfield work stays code-first. Opted in but no model for this scope: model
+  it first (`cratis-screenplay-discovery`, then `cratis-screenplay-slice-design`)
+  before writing specifications. If those Screenplay skills are not installed,
+  say so and stop; never author `.play` from memory. Never edit Stage-managed
+  output, and never change a model specification to match existing code. Author or change model
+  specifications with `cratis-screenplay-specifications` and
+  `cratis-screenplay-scenario-coverage`; check finished code against the model
+  with `cratis-application-slice-conformance`.
+
+## Step 0 — Take the list from the contract
+
+When the slice has a contract — a `.play` slice with its `specification`
+blocks, or an agreed outline — its specifications are the **minimum list**: each
+one becomes a specification class here, named after it. Steps 3–7 then add what
+the code reveals (each validator rule, each constraint). A rule found in the code
+with no contract specification is a proposal for the contract (the `.play` model when one covers the slice, otherwise the agreed outline), not silent coverage:
+list it in the report and, where a model exists, route it to
+`cratis-screenplay-scenario-coverage`.
+
+Without a contract (code-first scope), derive the list from Step 3 and say that
+you did.
 
 ## Step 1 — Place the files
 
@@ -89,6 +117,17 @@ One specification class for **each** of:
 4. **Each constraint violation** — one class per constraint, written with
    `EventScenario`, because a constraint is enforced at the append and not by
    the command.
+5. **Repeat execution**, when a reactor invokes the command: the same command
+   twice for the same source. Specify whether the second is rejected, a no-op, or
+   appends again — recovery can re-deliver an event, so the answer must be a
+   decision, not an accident.
+
+**Use the contract's example values.** When the contract gives concrete values
+(the `when` and `then` values of a `.play` specification), use them, so the code
+specification and the contract describe the same example. Where isolation needs
+it, substitute a fresh identifier or uniqueness value (see *What breaks*) and keep
+the example's relationships and behavior. Invent values only where the contract
+is silent.
 
 ## Step 4 — `CommandScenario<TCommand>`
 
@@ -156,7 +195,16 @@ the concrete validator itself is discovered automatically.
 
 `ShouldNotBeSuccessful()` alone cannot distinguish a validation rejection from an
 unhandled exception, so both facts are required. **Never assert on a message
-string** — it is presentation text.
+string** — it is presentation text. A `.play` specification may pin the message
+(`then error "<message>"`); the C# specification for the same rejection pins the
+*kind* instead, and the two together cover the rule.
+
+**Isolate the rule.** Each rejection specification violates **only** the rule it
+is named after: build the command valid in every other respect. Otherwise
+`ShouldHaveValidationErrors()` passes when a neighbouring rule fires. Use
+`ShouldHaveValidationErrorBecauseOf(reason)` where the reason distinguishes the
+rule, and always run the "remove the rule, see it go red" check under *How it is
+proven*.
 
 `CommandResult` assertions, from `Cratis.Arc.Testing.Commands`, throwing
 `CommandResultAssertionException`:
@@ -203,6 +251,11 @@ and the `IChronicleSetupFixture` extension in `Cratis.Chronicle.XUnit.Integratio
 Sequence numbers are **zero-based**: the first event is `0`, and the tail after a
 single append is `0`, never `1`.
 
+## Lineage
+
+Step 0, repeat execution and rule isolation are adapted in our own words from
+ideas recorded in `references/provenance.md`.
+
 ## What breaks
 
 - **A specification passes alone and fails in the suite.** A hard-coded value
@@ -216,6 +269,9 @@ single append is `0`, never `1`.
   was never seeded, so the handler saw a default or `null` instance and rejected
   on that instead of on the rule. Seed, then confirm the specification fails when
   the seeding is removed.
+- **A rejection specification stays green when its rule is deleted.** The
+  command was invalid in a second way, so another rule produced the error. Make
+  the command valid except for the one rule, then repeat the red check.
 - **The command scenario reports success but nothing was appended.** The
   assertion is on `CommandResult` only; add a
   `ShouldHaveAppendedEvent<TCommand, TEvent>` fact.

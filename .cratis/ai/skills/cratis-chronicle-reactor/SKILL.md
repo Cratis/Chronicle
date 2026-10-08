@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-reactor
-description: Implement a Chronicle IReactor - an automation that causes an external side effect, or a translation that appends follow-up events. Covers handler dispatch and parameter resolution, every supported return type, targeting another event source, replay handling with [OnceOnly] and [Replay], event filtering, failure and quarantine behavior, and the analyzer rules. Use for event-driven side effects; do not use to populate a read model.
+description: Implement a Chronicle IReactor - an automation that causes an external side effect or appends a follow-up event or command, or the adapter side of a translation of outside data into our own facts. Covers handler dispatch and parameter resolution, every supported return type, targeting another event source, replay handling with [OnceOnly] and [Replay], event filtering, failure and quarantine behavior, and the analyzer rules. Use for event-driven side effects; do not use to populate a read model.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-reactor/SKILL.md -->
@@ -16,8 +16,26 @@ effects. If the answer is "populate a queryable model", it is not a reactor.
 | populate a queryable read model from events | a projection |
 | a current-state-plus-event transition | a reducer |
 | trigger a side effect outside the system | a reactor (**automation**) |
-| append follow-up events elsewhere in the system | a reactor (**translation**) |
+| append a follow-up event or run a follow-up command in response to our own event | a reactor (**automation**: Screenplay `produces` / `invokes`) |
+| record data from an outside system or service as our own facts | an adapter at the boundary, often a reactor (**translation**) |
 | both a model and an effect | one projection *and* one reactor |
+
+A reactor is an **automation** when it answers one of our own events, whatever it
+causes. It is the adapter side of a **translation** only when its input is
+outside data that becomes our own facts.
+
+> **Model first.** If an accepted model under the model root covers this scope, or
+> the repository is opted in (the root, default `.cratis/screenplay/`, holds a
+> committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project explicitly set `mcpServers.screenplay.root` in
+> `.cratis/ai.json`; master definition in `cratis-screenplay-modeling-lifecycle`), the automation is
+> a modeled slice: find it (`Automation` or `Translate`), treat its `produces` /
+> `invokes`, conditions and fields as the contract, and write the reactor only as
+> gap-fill for what the model leaves to code (Stage renders no Automation or
+> Translate slices). Use `cratis-screenplay-automations-and-translations` to
+> change the model; never change the model to fit the reactor, and never leave a
+> modeled rule living only in the reactor. If the repository is not opted in
+> (an empty directory, install output, a `.play` file outside the root or an untracked or uncommitted draft is not consent), stay code-first here
+> (`cratis-chronicle-event-modeling` for a new, unsettled flow); if the Screenplay skills are not installed, say so and do not author `.play` from memory.
 
 ## Verified product sources
 
@@ -278,10 +296,10 @@ await eventStore.EventLog.Append(
 A **projection cannot be filtered at all** — if you need metadata-based
 selection, a reactor or a reducer is where it happens.
 
-## Translation via a command
+## Invoking a command from a reactor
 
-A translation that adapts one area's events into another's intent runs a command
-rather than appending directly. With the Arc Chronicle integration the handler
+An automation that turns one area's events into another area's intent runs a
+command rather than appending directly (Screenplay `invokes`). With the Arc Chronicle integration the handler
 **returns** the command — the same shape as returning an event — and Arc executes
 it through validation and authorization; a denied, invalid or throwing result is a
 side-effect failure that fails the partition rather than being dropped:
@@ -301,6 +319,9 @@ public class <ReactorName> : IReactor
 A reactor runs with **no principal**; `[ExecuteCommandsAsSystem]` (class-level,
 `Cratis.Arc.Chronicle.Reactors`) supplies one for the **returned** commands only.
 A collection return is executed as commands when every element is a command.
+A reactor retry can execute the command's operations again; inline operations
+are not a substitute for reactor/outbox durability (see
+`cratis-arc-command-operation`, verified at Arc v22.48.1).
 
 The imperative form — inject `ICommandPipeline` (`Cratis.Arc.Commands`) and call
 `Execute(command)` — is still supported and is the subject of the
@@ -314,8 +335,10 @@ If a handler throws, or a returned side-effect event fails to append — a
 constraint violation, a concurrency violation, or an error — the failing
 event-source partition **pauses** until the cause is resolved. Repeated failures
 can **quarantine** the observer, which stops retries and suppresses automatic
-recovery. **A quarantined observer does not resume on reconnect**; an operator
-must clear the quarantine explicitly.
+recovery. **A quarantine ends when an operator clears it
+(`ClearObserverQuarantine()`), or when the observer is subscribed again** — for an
+application observer that is when the client connects again, for example after a
+redeploy; Kernel-owned observers are subscribed again when the Kernel starts.
 
 Do not throw to reject a malformed inbound event. A reactor is not a data-quality
 gate; invalid payloads belong at the command or append site. When a malformed
@@ -323,6 +346,26 @@ cross-service fact arrives, append a clear failure or dead-letter event, or
 surface it through the operational failure path, and skip the partial side
 effect. Throwing just to reject it pauses the partition and can quarantine the
 whole observer.
+
+### Domain failures must leave a visible state
+
+A recorded failure fact is not complete handling if the user-facing workflow
+still looks running indefinitely. Give each terminal failure a reliable owner
+that transitions the affected attempt/workflow promptly to failed, retryable, or
+another explicit outcome, and project a safe reason for the reader. Keep secrets
+and raw provider payloads out of public failure details.
+
+This is an application reliability convention, **not** a requirement for a
+separate failure reactor. An existing reliable state machine that consumes the
+failure event and owns the transition is sufficient; adding another consumer can
+race or duplicate it. Add a reactor only when the transition/effect has no owner.
+Use a watchdog for missing signals or lost work, not as the normal consumer of a
+failure already known. Distinguish domain failure from an observer partition
+failure: the latter also needs operational monitoring and recovery.
+
+Specify failure-to-visible-state, repeated delivery, stale failure from an older
+attempt, and recovery/retry behavior. Prove the normal failure transition without
+waiting for the watchdog timeout.
 
 ## Keep the reactor stateless
 
@@ -339,6 +382,29 @@ handlers that return events, assert the resulting appends through the scenario's
 event store. Cover the replay path separately when the reactor has `[OnceOnly]`
 or `[Replay]` handlers.
 
+Specify the contract, not only the happy path:
+
+- **Field lineage.** For each returned command or event, a specification asserts
+  every field value against the trigger event, the injected read model, or the
+  mapping the contract states. Use distinct values per source so a swapped or
+  defaulted field fails.
+- **Contract-authorized filtering.** A reactor skips an event only for a
+  condition the contract states. Give each stated condition a specification
+  that shows the skip, and one showing the neighbouring case that does act. Do
+  not add a skip nobody specified.
+- **Repeated delivery.** Recovery re-delivers the same event even with
+  `[OnceOnly]`, so specify what the reactor does the second time (one effect, an
+  idempotent write, or a receipt keyed by `ReactorDelivery`). The scenario gives
+  every event it delivers its own sequence number, so firing the same event twice
+  through `Given` is two deliveries, not a re-delivery; to prove the
+  re-delivery guard, call the handler twice with the same `ReactorDelivery`, or
+  assert it on the collaborator that holds the receipt.
+- **Unrelated events.** `WithStrictEventSubscription()` belongs to
+  `ReadModelScenario<T>` and only fails a specification that *seeds* an event the
+  projection does not subscribe to; it does not prove a subscription set, and
+  `ReactorScenario<T>` has no equivalent. For a reactor, show with a
+  specification that an event outside its handlers causes no effect.
+
 ## Verify
 
 - The class implements `IReactor` and is not generic.
@@ -350,10 +416,21 @@ or `[Replay]` handlers.
 - No `IEventLog` is injected; side-effect events are returned instead.
 - Handlers returning events carry `[OnceOnly]`.
 - Side effects are idempotent even with `[OnceOnly]`, because recovery
-  re-delivers.
+  re-delivers, and a specification covers repeated delivery.
+- Every field of a returned command or event comes from the trigger event, an
+  injected read model, or a mapping the contract states; none is invented or
+  defaulted.
+- Every condition that skips an event is stated in the contract; none is
+  invented.
+- A modeled automation (an opted-in scope) matches its `.play` slice (events, `produces` /
+  `invokes`, conditions); the model was not edited to match the reactor.
 - `[EventStore]` is not combined with an explicit event sequence.
 - No filter attribute is placed where it is inert.
 - The reactor holds no mutable state and injects no storage primitive.
 - The build is clean with no `CHR0004`, `CHR0005`, `CHR0008`, `CHR0013`,
   `CHR0022`, `CHR0031`, or `CHR0032` outstanding, and the reactor
   specifications pass.
+
+## Lineage
+
+The specification checklist (field lineage, contract-authorized filtering, repeated delivery) follows an idea from Martin Dilger and Nebulit GmbH's reactor build checklist, credited in `references/provenance.md`.

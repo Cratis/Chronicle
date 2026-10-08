@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/frontend.md -->
 # Frontend identity
 
-Verified against `@cratis/arc` and `@cratis/arc.react` `22.16.0`.
+Verified against `@cratis/arc` and `@cratis/arc.react` `22.41.1`.
 
 ## `@cratis/arc/identity`
 
@@ -51,6 +51,11 @@ interface IIdentityContext<TDetails = object> extends IIdentity<TDetails> {
 `httpHeadersCallback`, and `detailsType` (a constructor, for type-safe details).
 It seeds `isLoading: true` and fetches on mount. The root `<Arc>` component takes
 the same `detailsType` prop and renders this provider for you.
+
+When a refresh finds that an identity which was set is now unset (the server-side
+session ended), the React `IdentityProvider` reloads the page with a full
+top-level navigation rather than leaving the tab signed out and stuck. Do not rely
+on a signed-out render surviving a refresh.
 
 `useIdentity` has two overloads:
 

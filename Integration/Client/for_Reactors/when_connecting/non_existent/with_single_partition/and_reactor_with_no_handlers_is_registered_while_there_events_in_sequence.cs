@@ -29,6 +29,11 @@ public class and_reactor_with_no_handlers_is_registered_while_there_events_in_se
         async Task Because()
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutHandlers>();
+
+            // A brand new observer reports Disconnected before its subscription has run too, so waiting for
+            // the state alone can observe that transient and then read the observer mid-subscription, while
+            // it routes and reports Unknown. Subscribed is what distinguishes the settled state.
+            await reactor.WaitTillSubscribed();
             await reactor.WaitForState(ObserverRunningState.Disconnected);
             ReactorState = await reactor.GetState();
         }

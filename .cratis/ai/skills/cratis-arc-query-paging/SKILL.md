@@ -56,7 +56,7 @@ return type.
 | `T`, `T?`, `IEnumerable<T>`, `List<T>`, `T[]` | No | Nothing narrows the result |
 | `IQueryable<T>` | **Yes** | The query renderer counts, orders, then applies `Skip`/`Take` |
 | `Task<IQueryable<T>>` | **Yes** | Awaited first, then rendered as the queryable it unwraps to |
-| `ISubject<IEnumerable<T>>` | **Yes** | Not by the renderer — the storage `Observe()` helpers read the ambient query context and page at the source, reapplying on every change |
+| `ISubject<IEnumerable<T>>` | **Yes, with a paging-aware storage helper** | Not by the renderer — the helper reads the ambient query context; a custom subject does not page automatically |
 | `ISubject<IQueryable<T>>` | **No** | No `Observe` overload returns it, and the renderer matches on the outer type |
 
 There is exactly one query renderer, and it is for `IQueryable`. Everything else
@@ -83,7 +83,7 @@ For a live paged list, return what `Observe` returns:
 
 ```csharp
 public static ISubject<IEnumerable<<ReadModel>>> AllLive(<Collection> collection) =>
-    collection.Observe(_ => _.Find(item => !item.<IsArchived>));
+    collection.Observe(item => !item.<IsArchived>);
 ```
 
 `ARC0001` is an **error** when a query method's return type is none of the
@@ -91,6 +91,11 @@ allowed shapes for its read model, and `ARC0014` is an error when a
 query-shaped method on a read model is generic — a generic method is registered
 and routed but can never be invoked, because there is nothing to close its type
 parameters with.
+
+For MongoDB `Observe` cost, distinguish the initial retained result, incremental
+membership updates, and page-refill queries from an application callback that
+explicitly re-runs a query. It does not always fetch the whole collection per
+change. See the read-model skill's [versioned query-cost guidance](../cratis-chronicle-read-model/references/queries.md#cost-and-composition).
 
 ## Page the source, not the answer
 
@@ -177,3 +182,13 @@ pinning, keep it in a method a specification can supply arguments to.
 - Creating the read model or its projection: the Chronicle read-model guidance.
 - Inspecting an observable query over HTTP: `cratis-arc-observable-query-http`.
 - Whole-slice performance work: the performance review guidance.
+- An accepted `.play` model under the model root covers the behavior, or the
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
+  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
+  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
+  say so and do not author `.play` from memory.
+  Edit code here only for infrastructure, clients, adapters, Screenplay code
+  attachments, or gap-fill scope (`cratis-screenplay-render-and-gap-fill`);
+  never edit Stage-managed output.
