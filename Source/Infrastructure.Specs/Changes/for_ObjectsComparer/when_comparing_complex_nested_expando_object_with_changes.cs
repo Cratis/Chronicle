@@ -75,10 +75,8 @@ public class when_comparing_complex_nested_expando_object_with_changes : given.a
     [Fact] void should_hold_original_value_for_second_property_on_third_level() => _differences.ToArray()[5].Original.ShouldEqual((int)_left.Second.Third.IntValue);
     [Fact] void should_hold_changed_value_for_second_property_on_third_level() => _differences.ToArray()[5].Changed.ShouldEqual((int)_right.Second.Third.IntValue);
 
-    [Fact] void should_have_seventh_difference_be_the_first_property_on_child() => _differences.ToArray()[6].PropertyPath.Path.ShouldEqual("[Collection].StringValue");
-    [Fact] void should_have_seventh_difference_be_the_second_property_on_child() => _differences.ToArray()[7].PropertyPath.Path.ShouldEqual("[Collection].IntValue");
-    [Fact] void should_hold_original_value_for_first_property_on_child() => _differences.ToArray()[6].Original.ShouldEqual((string)_leftChild.StringValue);
-    [Fact] void should_hold_changed_value_for_first_property_on_child() => _differences.ToArray()[6].Changed.ShouldEqual((string)_rightChild.StringValue);
-    [Fact] void should_hold_original_value_for_second_property_on_child() => _differences.ToArray()[7].Original.ShouldEqual((int)_leftChild.IntValue);
-    [Fact] void should_hold_changed_value_for_second_property_on_child() => _differences.ToArray()[7].Changed.ShouldEqual((int)_rightChild.IntValue);
+    [Fact] void should_have_seven_differences() => _differences.Count().ShouldEqual(7);
+    [Fact] void should_have_seventh_difference_be_the_collection() => _differences.ToArray()[6].PropertyPath.Path.ShouldEqual("[Collection]");
+    [Fact] void should_hold_original_collection_for_the_collection() => _differences.ToArray()[6].Original.ShouldEqual((object)_left.Collection);
+    [Fact] void should_hold_changed_collection_for_the_collection() => _differences.ToArray()[6].Changed.ShouldEqual((object)_right.Collection);
 }
