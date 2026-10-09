@@ -43,7 +43,9 @@ public class registrations : Specification
 
     async Task Destroy() => await _reactors.DisposeAsync();
 
-    static IReactorDefinitionsStorage Definitions(ConcurrentDictionary<ReactorId, ReactorDefinition> persisted)
+    protected virtual ReactorDefinition RoundTrip(ReactorDefinition definition) => definition;
+
+    IReactorDefinitionsStorage Definitions(ConcurrentDictionary<ReactorId, ReactorDefinition> persisted)
     {
         var definitions = Substitute.For<IReactorDefinitionsStorage>();
         definitions.Has(Arg.Any<ReactorId>()).Returns(call => persisted.ContainsKey(call.Arg<ReactorId>()));
@@ -51,7 +53,7 @@ public class registrations : Specification
         definitions.Save(Arg.Any<ReactorDefinition>()).Returns(call =>
         {
             var definition = call.Arg<ReactorDefinition>();
-            persisted[definition.Identifier] = definition;
+            persisted[definition.Identifier] = RoundTrip(definition);
             return Task.CompletedTask;
         });
         return definitions;

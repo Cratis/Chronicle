@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Storage;
@@ -116,7 +117,11 @@ public class Reactors(
                 existing.EventSequenceId != reactorDefinition.EventSequenceId ||
                 existing.IsReplayable != reactorDefinition.IsReplayable ||
                 !existing.EventTypes.SequenceEqual(reactorDefinition.EventTypes) ||
-                existing.Tags is not null || existing.Filters is not null)
+                (existing.Tags?.Any() ?? false) ||
+                (existing.Filters is { } filters &&
+                    (filters.Tags.Any() ||
+                     (filters.EventSourceType is not null && filters.EventSourceType != EventSourceType.Unspecified) ||
+                     filters.EventStreamType is { IsAll: false })))
             {
                 await definitions.Save(reactorDefinition);
             }
