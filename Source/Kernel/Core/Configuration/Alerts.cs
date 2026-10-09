@@ -14,6 +14,12 @@ public class Alerts
     public bool Enabled { get; init; } = true;
 
     /// <summary>
+    /// Gets whether open incident gauges are produced and incident storage is sampled for metrics.
+    /// Defaults to true. Set to false on every silo and restart to disable incident metrics without disabling alerting.
+    /// </summary>
+    public bool IncidentMetricsEnabled { get; init; } = true;
+
+    /// <summary>
     /// Gets the settings per condition, keyed by the hyphenated name of the condition, for example
     /// <c language="csharp">partition-failing</c>, <c language="csharp">partition-retries-exhausted</c> and <c language="csharp">observer-quarantined</c>.
     /// </summary>
