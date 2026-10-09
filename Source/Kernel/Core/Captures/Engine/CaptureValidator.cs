@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Captures;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.ExternalServices;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
@@ -25,7 +26,7 @@ public class CaptureValidator(IStorage storage) : ICaptureValidator
 
         await ValidateSource(eventStoreStorage, definition.Source, messages);
         ValidateScopes(definition, messages);
-        await ValidateAppends(eventStoreStorage, definition.Appends, messages);
+        await ValidateAppends(eventStoreStorage, definition, messages);
 
         return messages;
     }
@@ -55,6 +56,12 @@ public class CaptureValidator(IStorage storage) : ICaptureValidator
 
     static async Task ValidateSource(IEventStoreStorage eventStoreStorage, SourceDefinition source, List<CaptureValidationMessage> messages)
     {
+        if (source.Type == SourceType.Events)
+        {
+            await ValidateEventsSource(eventStoreStorage, source, messages);
+            return;
+        }
+
         if (source.Type != SourceType.Api)
         {
             messages.Add(new($"'{source.Type.ToString().ToLowerInvariant()}' sources are not supported by the capturing engine yet"));
@@ -89,13 +96,53 @@ public class CaptureValidator(IStorage storage) : ICaptureValidator
         }
     }
 
-    static async Task ValidateAppends(IEventStoreStorage eventStoreStorage, IReadOnlyList<AppendDefinition> appends, List<CaptureValidationMessage> messages)
+    static async Task ValidateEventsSource(IEventStoreStorage eventStoreStorage, SourceDefinition source, List<CaptureValidationMessage> messages)
     {
-        foreach (var append in appends)
+        var events = source.Events ?? [];
+        if (events.Count == 0)
         {
+            messages.Add(new("An events source must name at least one public event type to capture from, e.g. 'from ShipmentDispatched'"));
+        }
+
+        var schemas = new List<EventTypeSchema>();
+        foreach (var eventType in events.Distinct())
+        {
+            if (await eventStoreStorage.EventTypes.HasFor(new EventTypeId(eventType)))
+            {
+                schemas.Add(await eventStoreStorage.EventTypes.GetFor(new EventTypeId(eventType)));
+            }
+            else
+            {
+                messages.Add(new($"There is no event type named '{eventType}' to capture from"));
+            }
+        }
+
+        messages.AddRange(EventsCaptureSequence.Resolve(source.Sequence, schemas, out _).Select(error => new CaptureValidationMessage(error)));
+
+        if (!string.IsNullOrWhiteSpace(source.Poll))
+        {
+            messages.Add(new("An events source is observed, not polled - remove the poll interval"));
+        }
+    }
+
+    static async Task ValidateAppends(IEventStoreStorage eventStoreStorage, CaptureDefinition definition, List<CaptureValidationMessage> messages)
+    {
+        var sourceEvents = definition.Source.Type == SourceType.Events ? (definition.Source.Events ?? []) : [];
+        foreach (var append in definition.Appends)
+        {
+            if (sourceEvents.Contains(append.EventType))
+            {
+                messages.Add(new($"'{append.EventType}' is a public event captured from the inbox and cannot also be appended - appended events must be private events of this event store"));
+            }
+
             if (!await eventStoreStorage.EventTypes.HasFor(new EventTypeId(append.EventType)))
             {
                 messages.Add(new($"There is no event type named '{append.EventType}'"));
+            }
+            else if (definition.Source.Type == SourceType.Events &&
+                (await eventStoreStorage.EventTypes.GetFor(new EventTypeId(append.EventType))).Visibility == EventTypeVisibility.Public)
+            {
+                messages.Add(new($"'{append.EventType}' is a public event type - a capture appends private events of this event store, and appending a public event would publish it from the capture"));
             }
 
             if (append.When.Type == WhenClauseType.Expression)
@@ -104,11 +151,15 @@ public class CaptureValidator(IStorage storage) : ICaptureValidator
             }
 
             messages.AddRange(append.FieldAssignments
-                .Where(assignment => IsUnsupportedExpression(assignment.Value))
+                .Where(assignment => IsUnsupportedExpression(assignment.Value, definition.Source.Type))
                 .Select(assignment => new CaptureValidationMessage($"The expression '{assignment.Value}' is not supported by the capturing engine yet")));
         }
     }
 
-    static bool IsUnsupportedExpression(string expression) =>
-        (expression.StartsWith('$') && !expression.StartsWith("$.", StringComparison.Ordinal)) || expression.StartsWith('`');
+    static bool IsUnsupportedExpression(string expression, SourceType sourceType) =>
+        (expression.StartsWith('$') && !expression.StartsWith("$.", StringComparison.Ordinal) && !IsEventContextExpression(expression, sourceType)) || expression.StartsWith('`');
+
+    static bool IsEventContextExpression(string expression, SourceType sourceType) =>
+        sourceType == SourceType.Events &&
+        (expression == WellKnownExpressions.EventSourceId || expression.StartsWith("$context.", StringComparison.Ordinal));
 }

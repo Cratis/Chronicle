@@ -17,6 +17,7 @@ public interface ICaptureContentMapper
     /// </summary>
     /// <param name="append">The <see cref="AppendDefinition"/> holding the field assignments.</param>
     /// <param name="change">The <see cref="CaptureChange"/> holding the item.</param>
+    /// <param name="context">Optional event context for event-sourced captures, resolved by $context.&lt;path&gt; and $eventSourceId expressions.</param>
     /// <returns>The mapped event content.</returns>
-    JsonObject Map(AppendDefinition append, CaptureChange change);
+    JsonObject Map(AppendDefinition append, CaptureChange change, JsonObject? context = default);
 }

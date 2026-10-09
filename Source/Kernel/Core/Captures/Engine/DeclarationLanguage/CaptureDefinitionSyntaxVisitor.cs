@@ -41,13 +41,16 @@ internal class CaptureDefinitionSyntaxVisitor : ICaptureSyntaxVisitor<CaptureDef
         Poll: GetSetting(source, "poll"),
         Route: GetSetting(source, "route"),
         Path: GetSetting(source, "path"),
-        Topic: GetSetting(source, "topic"));
+        Topic: GetSetting(source, "topic"),
+        Sequence: GetSetting(source, "sequence"),
+        Events: [.. source.Settings.Where(setting => setting.Name == "from").Select(setting => setting.Value).OfType<string>()]);
 
     static SourceType ConvertSourceType(CaptureSourceSyntax source) => source.Kind switch
     {
         "api" => SourceType.Api,
         "webhook" => SourceType.Webhook,
         "message" => SourceType.Message,
+        "events" => SourceType.Events,
         _ => throw new UnsupportedCaptureSyntax(source)
     };
 
