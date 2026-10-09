@@ -98,7 +98,8 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
             await targetReactorB.WaitTillActive(reactorActivationTimeout);
 
             Tracker.Prepare(TenantANamespace);
-            await sourceTenantA.GetEventSequence(EventSequenceId.Outbox).Append("tenant-a-user", new AdminUserInvited("tenant-a@chronicle.dev"));
+            var tenantAAppendResult = await sourceTenantA.GetEventSequence(EventSequenceId.Outbox).Append("tenant-a-user", new AdminUserInvited("tenant-a@chronicle.dev"));
+            tenantAAppendResult.IsSuccess.ShouldBeTrue();
             await WaitForInboxTailSequenceNumber(TenantANamespace, Concepts.Events.EventSequenceNumber.First);
             await Tracker.WaitFor(TenantANamespace);
 
@@ -107,7 +108,8 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
             TenantBInboxTailAfterTenantAEvent = await GetInboxTailSequenceNumber(TenantBNamespace);
 
             Tracker.Prepare(TenantBNamespace);
-            await sourceTenantB.GetEventSequence(EventSequenceId.Outbox).Append("tenant-b-user", new AdminUserInvited("tenant-b@chronicle.dev"));
+            var tenantBAppendResult = await sourceTenantB.GetEventSequence(EventSequenceId.Outbox).Append("tenant-b-user", new AdminUserInvited("tenant-b@chronicle.dev"));
+            tenantBAppendResult.IsSuccess.ShouldBeTrue();
             await WaitForInboxTailSequenceNumber(TenantBNamespace, Concepts.Events.EventSequenceNumber.First);
             await Tracker.WaitFor(TenantBNamespace);
 
@@ -182,7 +184,12 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
     void should_have_one_reactor_handled_event_for_tenant_b() =>
         Context.Tracker.GetHandledCount(context.TenantBNamespace).ShouldEqual(1);
 
+    /// <summary>
+    /// The public fact an admin event store forwards to lobby event stores via the outbox.
+    /// </summary>
+    /// <param name="EmailAddress">The invited admin's email address.</param>
     [EventType]
+    [Public]
     public record AdminUserInvited(string EmailAddress);
 
     [DependencyInjection.IgnoreConvention]

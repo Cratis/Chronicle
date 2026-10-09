@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventStoreSubscriptions;
@@ -65,7 +66,7 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
         public string PiiOfTheErasedEventAfterAuthorizing { get; private set; } = string.Empty;
         public string PiiOfTheNewEventAfterAuthorizing { get; private set; } = string.Empty;
 
-        public override IEnumerable<Type> EventTypes => [typeof(PersonRegistered)];
+        public override IEnumerable<Type> EventTypes => [typeof(PersonRegisteredInOutbox)];
 
         async Task Because()
         {
@@ -80,9 +81,10 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
 
             // The subject's key is minted in the source store by the append, and the forwarding
             // subscriber copies it into the target store before it appends to the target's inbox.
-            await sourceEventStore.GetEventSequence(EventSequenceId.Outbox).Append(
+            var appendResult = await sourceEventStore.GetEventSequence(EventSequenceId.Outbox).Append(
                 EventSourceId,
-                new PersonRegistered(Subject, "Jane Doe", SocialSecurityNumber));
+                new PersonRegisteredInOutbox(Subject, "Jane Doe", SocialSecurityNumber));
+            appendResult.IsSuccess.ShouldBeTrue();
             await WaitForInboxTail(TargetEventStoreName, SourceEventStoreName);
 
             var sourceKey = await keys.TryGetFor(SourceEventStoreName, Concepts.EventStoreNamespaceName.Default, Subject.Value);
@@ -125,7 +127,7 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
         {
             var events = await eventStore.GetEventSequence(sequenceId).GetFromSequenceNumber(EventSequenceNumber.First);
             var appended = events.FirstOrDefault(_ => _.Context.SequenceNumber == sequenceNumber);
-            return appended is null ? string.Empty : ((PersonRegistered)appended.Content).SocialSecurityNumber;
+            return appended is null ? string.Empty : ((PersonRegisteredInOutbox)appended.Content).SocialSecurityNumber;
         }
 
         async Task<bool> TryAppendPersonalData(IEventStore eventStore, string socialSecurityNumber)
@@ -137,7 +139,7 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
             {
                 var result = await eventStore.GetEventSequence(EventSequenceId.Outbox).Append(
                     EventSourceId,
-                    new PersonRegistered(Subject, "Jane Doe", socialSecurityNumber));
+                    new PersonRegisteredInOutbox(Subject, "Jane Doe", socialSecurityNumber));
                 succeeded = result.IsSuccess;
             });
 
@@ -149,7 +151,7 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
             await targetEventStore.Subscriptions.Subscribe(
                 new EventStoreSubscriptionId(subscriptionId),
                 sourceEventStoreName,
-                builder => builder.WithEventType<PersonRegistered>());
+                builder => builder.WithEventType<PersonRegisteredInOutbox>());
 
             var systemLog = targetEventStore.GetEventSequence(EventSequenceId.System);
             var systemTail = await systemLog.GetTailSequenceNumber();
@@ -242,4 +244,18 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
     [Fact]
     void should_read_back_the_pii_written_after_the_new_lifecycle_began() =>
         Context.PiiOfTheNewEventAfterAuthorizing.ShouldEqual(Context.NewSocialSecurityNumber);
+
+    /// <summary>
+    /// The public fact this spec forwards across event stores through the outbox - a dedicated event type so
+    /// marking it public does not affect <see cref="PersonRegistered"/>, which other specs append to the event log.
+    /// </summary>
+    /// <param name="PersonId">The subject the PII is encrypted under.</param>
+    /// <param name="Name">A non-PII value that must survive right-to-erasure.</param>
+    /// <param name="SocialSecurityNumber">The PII value that must become unreadable after erasure.</param>
+    [EventType]
+    [Public]
+    public record PersonRegisteredInOutbox(
+        [Subject] string PersonId,
+        string Name,
+        [property: PII] string SocialSecurityNumber);
 }
