@@ -7,7 +7,11 @@ using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
 namespace Cratis.Chronicle.Services.Projections.for_Projections.when_registering;
 
-public class and_the_registration_is_the_full_set : Specification
+/// <summary>
+/// Applications sharing an event store each claim a full set. A client that does not identify itself cannot be
+/// attributed, so its full set must not retire anything - otherwise it would retire every other application's projections.
+/// </summary>
+public class and_the_full_set_has_no_registrant : Specification
 {
     Chronicle.Projections.IProjectionsManager _projectionsManager;
     Projections _service;
@@ -31,7 +35,6 @@ public class and_the_registration_is_the_full_set : Specification
         EventStore = "event-store",
         Owner = ProjectionOwner.Client,
         FullSet = true,
-        Registrant = "the-app",
         Projections =
         [
             new ProjectionDefinition
@@ -46,9 +49,9 @@ public class and_the_registration_is_the_full_set : Specification
     });
 
     [Fact]
-    void should_register_as_the_full_set_for_the_owner() =>
+    void should_not_retire_anything() =>
         _projectionsManager.Received(1).Register(
             Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(),
-            Concepts.Projections.ProjectionOwner.Client,
-            "the-app");
+            null,
+            null);
 }
