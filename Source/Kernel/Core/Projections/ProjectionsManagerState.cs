@@ -14,4 +14,13 @@ public class ProjectionsManagerState
     /// Gets or sets the projection definitions.
     /// </summary>
     public IEnumerable<ProjectionDefinition> Projections { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the registrant that last registered each projection, keyed by projection identifier.
+    /// </summary>
+    /// <remarks>
+    /// Several applications share one event store and each registers its own full set. Retirement is scoped to the
+    /// registrant so one application's full set never retires another's projections.
+    /// </remarks>
+    public IDictionary<string, string> Registrants { get; set; } = new Dictionary<string, string>();
 }

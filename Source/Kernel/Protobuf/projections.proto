@@ -186,6 +186,7 @@ message RegisterRequest {
    ProjectionOwner Owner = 2;
    repeated ProjectionDefinition Projections = 3;
    bool FullSet = 4;
+   string Registrant = 5;
 }
 message RemovedWithDefinition {
    string Key = 1;
