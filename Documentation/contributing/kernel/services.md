@@ -16,3 +16,20 @@ be marked as `internal`, since integration testing can host the client and kerne
 This is required by our [internalization](../clients/internalization.md) process for client assemblies.
 
 Service implementations are built on top of the Grains exposed by the Kernel.
+
+## Registration and startup
+
+Client replicas can register the same read models concurrently during a restart. Keep registration mutations
+serialized: making the entire manager reentrant would allow overlapping definition changes and writes.
+The read-model and projection managers' `Ensure()` methods only activate their grains. They interleave with
+registration because they neither read registration state nor promise that registration has completed.
+
+Read-model registration compares schema content and indexes, not collection identity. Once a definition has
+been persisted, accepted by its read-model grain, and its affected pipelines reconciled in this activation,
+registering equal content again skips those operations. A fresh manager activation reconciles submitted
+persisted definitions once; persisted metadata alone does not prove that a previous attempt finished.
+Failed persistence, definition propagation, or eviction remains a registration failure and is retried.
+
+This avoids redundant registration work; it does not clear failed observer partitions or guarantee that a
+storage outage will recover. Diagnose those failures independently rather than interpreting successful
+activation as successful registration or observer recovery.
