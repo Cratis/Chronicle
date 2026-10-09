@@ -21,7 +21,6 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
 {
     readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _completed = new();
     readonly HashSet<ReadModelIdentifier> _pendingEvictions = new();
-    bool _stateNeedsWrite;
 
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
@@ -41,9 +40,10 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
         // cannot prove that SetDefinition and pipeline eviction completed during a previous attempt.
         definitions = definitions.Where(definition => !_completed.TryGetValue(definition.Identifier, out var completed) ||
             !ReadModelDefinitionComparison.Equals(completed, definition)).ToArray();
-        if (!definitions.Any() && !_stateNeedsWrite) return;
+        if (!definitions.Any()) return;
 
         var readModels = State.ReadModels.ToList();
+        var modified = new List<ReadModelDefinition>();
         foreach (var definition in definitions)
         {
             _completed.Remove(definition.Identifier);
@@ -58,14 +58,12 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
             }
 
             readModels.Add(definition);
-            _stateNeedsWrite = true;
+            modified.Add(definition);
         }
 
-        State.ReadModels = readModels;
-        if (_stateNeedsWrite)
+        if (modified.Count > 0)
         {
-            await WriteStateAsync();
-            _stateNeedsWrite = false;
+            await Persist(readModels, modified);
         }
 
         foreach (var definition in definitions)
@@ -100,6 +98,25 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
 
     /// <inheritdoc/>
     public Task<IEnumerable<ReadModelDefinition>> GetDefinitions() => Task.FromResult(State.ReadModels);
+
+    async Task Persist(List<ReadModelDefinition> readModels, IEnumerable<ReadModelDefinition> modified)
+    {
+        // A failed write must not leave the in-memory state ahead of storage: the definition would then compare as
+        // unchanged on the client's retry and never be persisted.
+        var previous = State.ReadModels;
+        State.ReadModels = readModels;
+        State.Modified = modified.ToArray();
+        try
+        {
+            await WriteStateAsync();
+        }
+        catch
+        {
+            State.ReadModels = previous;
+            State.Modified = [];
+            throw;
+        }
+    }
 
     /// <summary>
     /// Refuses definitions that would make two targets publish the same event type to the same event sequence.
