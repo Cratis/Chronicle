@@ -62,7 +62,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the <see cref="ConcurrencyValidator"/> created per append.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 [EventSequencePlacement]
-public class EventSequence(
+public partial class EventSequence(
     IStorage storage,
     IConstraintValidationFactory constraintValidatorSetFactory,
     IEventTypeMigrations eventTypeMigrations,
@@ -77,6 +77,7 @@ public class EventSequence(
     ILogger<EventSequence> logger,
     ILogger<ConcurrencyValidator> concurrencyValidatorLogger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
+    readonly HashSet<EventTypeId> _unspecifiedVisibilityWarned = [];
     IEventSequenceStorage? _eventSequenceStorage;
     IEventTypesStorage? _eventTypesStorage;
     IIdentityStorage? _identityStorage;
@@ -331,57 +332,8 @@ public class EventSequence(
         DateTimeOffset? occurred,
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags,
-        EventSourceName? eventSource = null)
-    {
-        try
-        {
-            await RefreshConstraintsIfChanged();
-            var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventSource, eventSourceType, eventStreamType, correlationId);
-            if (resolvedEventSourceType.TryGetError(out var eventSourceError))
-            {
-                return eventSourceError;
-            }
-
-            eventSourceType = resolvedEventSourceType.AsT0;
-            var getValidAndCompliantEvent = await GetValidAndCompliantEvent(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, subject);
-            if (getValidAndCompliantEvent.TryGetError(out var error))
-            {
-                return error;
-            }
-
-            var (compliantEvent, compliantContent, constraintContext) = getValidAndCompliantEvent.AsT0;
-            var concurrencyCheckPerformed = concurrencyScope.ShouldBeValidated;
-            var maybeConcurrencyViolation = await ConcurrencyValidator.Validate(eventSourceId, concurrencyScope);
-            if (maybeConcurrencyViolation.TryGetValue(out var concurrencyViolation))
-            {
-                return AppendResult.Failed(correlationId, concurrencyViolation).ReportingConcurrencyCheck(concurrencyCheckPerformed);
-            }
-
-            var appendResult = await AppendValidAndCompliantEvent(
-                eventSourceType,
-                eventSourceId,
-                eventStreamType,
-                eventStreamId,
-                eventType,
-                correlationId,
-                causation,
-                causedBy,
-                tags,
-                compliantEvent,
-                content,
-                constraintContext,
-                occurred,
-                subject,
-                namedTags,
-                eventSource);
-
-            return appendResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
-        }
-        catch (Exception ex)
-        {
-            return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
-        }
-    }
+        EventSourceName? eventSource = null) =>
+        await AppendValidated(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, namedTags, eventSource);
 
     /// <inheritdoc/>
     public async Task<AppendManyResult> AppendMany(
@@ -722,7 +674,8 @@ public class EventSequence(
         DateTimeOffset? occurred,
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags,
-        EventSourceName? eventSource)
+        EventSourceName? eventSource,
+        EventPublication? publication)
     {
         using var span = activitySource.Append();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
@@ -756,6 +709,32 @@ public class EventSequence(
                     eventType,
                     eventSourceId,
                     State.SequenceNumber);
+
+                if (publication is not null)
+                {
+                    appendResult = await AppendPublicationToStorage(publication, new EventToAppendToStorage(
+                        State.SequenceNumber,
+                        eventSourceType,
+                        eventSourceId,
+                        eventStreamType,
+                        eventStreamId,
+                        eventType,
+                        correlationId,
+                        CausationForStorage(causation),
+                        identity,
+                        tags,
+                        eventOccurred,
+                        compliantEvent,
+                        contentHashes[eventType.Generation],
+                        subject)
+                    {
+                        NamedTags = namedTags,
+                        EventSource = eventSource ?? EventSourceName.NotSet,
+                        GenerationalContent = migratedContent,
+                        ContentHashes = contentHashes
+                    });
+                    continue;
+                }
 
                 if (eventSource?.IsSet == true)
                 {
@@ -819,9 +798,15 @@ public class EventSequence(
             }
             while (!appendResult.IsSuccess);
 
-            var appendedSequenceNumber = State.SequenceNumber;
-            State.SequenceNumber = appendedSequenceNumber.Next();
-            State.TailSequenceNumberPerEventType[eventType.Id] = appendedSequenceNumber;
+            var appendedSequenceNumber = appendResult.AsT0.Context.SequenceNumber;
+            if (State.SequenceNumber <= appendedSequenceNumber)
+            {
+                State.SequenceNumber = appendedSequenceNumber.Next();
+            }
+            if (!State.TailSequenceNumberPerEventType.TryGetValue(eventType.Id, out var tail) || tail < appendedSequenceNumber)
+            {
+                State.TailSequenceNumberPerEventType[eventType.Id] = appendedSequenceNumber;
+            }
 
             _metrics?.AppendedEvent(eventSourceId, eventType.Id);
             var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
@@ -933,6 +918,11 @@ public class EventSequence(
         try
         {
             var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
+            if (EnforceEventTypeVisibility(eventType, eventSchema, correlationId) is { } visibilityViolation)
+            {
+                return visibilityViolation;
+            }
+
             var schemaValidationResult = ValidateAgainstSchema(eventType, content, eventSchema, correlationId);
             if (schemaValidationResult.TryGetError(out var schemaError))
             {
@@ -981,7 +971,7 @@ public class EventSequence(
             State.SequenceNumber,
             ex);
 
-        return AppendResult.Failed(correlationId, [ex.Message]);
+        return AppendResult.Failed(correlationId, [ex is EventPublicationConflict ? AppendError.EventPublicationConflict : ex.Message]);
     }
 
     async Task<(ExpandoObject ExpandoObject, JsonObject CompliantContent)> MakeEventCompliant(EventSourceId eventSourceId, EventTypeSchema eventSchema, JsonObject content, Subject? subject = null)

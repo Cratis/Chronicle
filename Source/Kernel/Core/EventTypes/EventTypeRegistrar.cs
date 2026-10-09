@@ -165,7 +165,11 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
             generations,
             migrations);
 
-        return new(definition, (Concepts.Events.EventTypeSource)(int)eventType.Source);
+        return new(
+            definition,
+            (Concepts.Events.EventTypeSource)(int)eventType.Source,
+            (Concepts.Events.EventTypeVisibility)(int)eventType.Visibility,
+            eventType.EventStore ?? string.Empty);
     }
 
     static Concepts.Events.EventTypeMigrationDefinition CreateMigration(

@@ -6,7 +6,7 @@ import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { SchemaEditor } from '@cratis/components/SchemaEditor';
 import type { JsonSchema } from '@cratis/components/types';
 import { AllTypeFormats } from 'Features/Schemas';
-import { EventTypeSource } from 'Features/Contracts/Events';
+import { EventTypeSource, EventTypeVisibility } from 'Features/Contracts/Events';
 import { EventTypeDetails } from 'Features/EventTypes';
 import { RegisterEventTypes } from 'Features/EventTypes';
 import { AllEventTypeGenerations } from 'Features/EventTypes';
@@ -65,6 +65,8 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeDetails>) => 
         register.types = [{
             type: currentRegistration.type,
             owner: currentRegistration.owner,
+            // Unspecified leaves the visibility the event type was registered with untouched.
+            visibility: EventTypeVisibility.unspecified,
             source: EventTypeSource.user,
             schema: JSON.stringify(schema, null, 2),
             generations: [],

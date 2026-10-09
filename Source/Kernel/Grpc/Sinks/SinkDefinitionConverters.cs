@@ -20,7 +20,18 @@ internal static class SinkDefinitionConverters
         return new()
         {
             ConfigurationId = definition.Configuration,
-            TypeId = definition.Type
+            TypeId = definition.EventSequence is null ? definition.Type : WellKnownSinkTypes.EventSequence,
+            EventSequence = definition.EventSequence is null ? null : new()
+            {
+                EventType = new()
+                {
+                    Id = definition.EventSequence.EventType.Id,
+                    Generation = definition.EventSequence.EventType.Generation,
+                    Tombstone = definition.EventSequence.EventType.Tombstone
+                },
+                EventSequence = definition.EventSequence.Destination,
+                IsPublic = definition.EventSequence.IsPublic
+            }
         };
     }
 
@@ -31,6 +42,12 @@ internal static class SinkDefinitionConverters
     /// <returns>Converted Chronicle version.</returns>
     public static SinkDefinition ToChronicle(this Contracts.Sinks.SinkDefinition contract)
     {
-        return new(new SinkConfigurationId(contract.ConfigurationId), contract.TypeId);
+        var eventSequence = contract.EventSequence;
+        var configuration = eventSequence is null ? null : new EventSequenceSinkConfiguration(
+            new(eventSequence.EventType.Id, eventSequence.EventType.Generation, eventSequence.EventType.Tombstone),
+            eventSequence.EventSequence is null ? null : new(eventSequence.EventSequence),
+            eventSequence.IsPublic);
+
+        return new(new SinkConfigurationId(contract.ConfigurationId), eventSequence is null ? contract.TypeId : WellKnownSinkTypes.EventSequence, configuration);
     }
 }

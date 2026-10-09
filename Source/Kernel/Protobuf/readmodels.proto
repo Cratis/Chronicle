@@ -11,6 +11,16 @@ message DehydrateSessionRequest {
    string ReadModelKey = 5;
    string SessionId = 6;
 }
+message EventSequenceSinkConfiguration {
+   EventType EventType = 1;
+   string EventSequence = 2;
+   bool IsPublic = 3;
+}
+message EventType {
+   string Id = 1;
+   uint32 Generation = 2;
+   bool Tombstone = 3;
+}
 message GetAllInstancesRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -153,6 +163,7 @@ message SerializableDateTimeOffset {
 message SinkDefinition {
    .bcl.Guid ConfigurationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string TypeId = 2;
+   EventSequenceSinkConfiguration EventSequence = 3;
 }
 message UpdateDefinitionRequest {
    string EventStore = 1;

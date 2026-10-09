@@ -52,7 +52,7 @@ public class EventTypesStorage(
     readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
 
     /// <inheritdoc/>
-    public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
+    public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "")
     {
         logger.Registering(type.Id, type.Generation, eventStore);
 
@@ -60,8 +60,10 @@ public class EventTypesStorage(
         var schemaDocument = BsonDocument.Parse(schema.ToJson());
         using var cursor = await GetCollection().FindAsync(_ => _.Id == type.Id).ConfigureAwait(false);
         var existing = await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
+        visibility = EffectiveVisibility(existing, visibility);
         if (existing is not null &&
             existing.Owner == owner && existing.Source == source && existing.Tombstone == type.Tombstone &&
+            existing.Visibility == visibility && (existing.Origin ?? string.Empty) == origin &&
             existing.Schemas.TryGetValue(generationKey, out var storedSchema) &&
             JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema.ToJson(), schemaDocument.ToJson()))
         {
@@ -75,6 +77,8 @@ public class EventTypesStorage(
             .Set(_ => _.Owner, owner)
             .Set(_ => _.Source, source)
             .Set(_ => _.Tombstone, type.Tombstone)
+            .Set(_ => _.Visibility, visibility)
+            .Set(_ => _.Origin, origin)
             .Set($"{nameof(EventType.Schemas).ToCamelCase()}.{generationKey}", schemaDocument);
 
         var result = await GetCollection().UpdateOneAsync(
@@ -157,7 +161,12 @@ public class EventTypesStorage(
     {
         logger.Registering(definition.Id, EventTypeGeneration.First, eventStore);
 
-        var mongoEventType = definition.ToMongoDB();
+        // The full definition carries no visibility, so what is already stored is kept rather than lost on replace.
+        using var existingCursor = await GetCollection().FindAsync(_ => _.Id == definition.Id).ConfigureAwait(false);
+        var existingDocument = await existingCursor.FirstOrDefaultAsync().ConfigureAwait(false);
+        var mongoEventType = definition.ToMongoDB(
+            visibility: existingDocument?.Visibility ?? EventTypeVisibility.Unspecified,
+            origin: existingDocument?.Origin ?? string.Empty);
 
         var result = await GetCollection().ReplaceOneAsync(
             _ => _.Id == definition.Id,
@@ -216,7 +225,7 @@ public class EventTypesStorage(
 
             writes.Add(new UpdateOneModel<EventType>(
                 Builders<EventType>.Filter.Eq(_ => _.Id, definition.Id),
-                BuildUpdate(eventType, schemas, migrations))
+                BuildUpdate(existing, eventType, schemas, migrations))
             {
                 IsUpsert = true
             });
@@ -342,6 +351,8 @@ public class EventTypesStorage(
 
         if (existing.Owner != eventType.Definition.Owner ||
             existing.Source != eventType.Source ||
+            existing.Visibility != EffectiveVisibility(existing, eventType.Visibility) ||
+            (existing.Origin ?? string.Empty) != eventType.Origin ||
             existing.Tombstone != eventType.Definition.Tombstone)
         {
             return true;
@@ -356,7 +367,11 @@ public class EventTypesStorage(
         return migrations.Count > 0 && !migrations.SequenceEqual(existing.Migrations ?? []);
     }
 
+    static EventTypeVisibility EffectiveVisibility(EventType? existing, EventTypeVisibility incoming) =>
+        incoming == EventTypeVisibility.Unspecified && existing is not null ? existing.Visibility : incoming;
+
     static UpdateDefinition<EventType> BuildUpdate(
+        EventType? existing,
         EventTypeToRegister eventType,
         Dictionary<string, BsonDocument> schemas,
         List<EventTypeMigration> migrations)
@@ -364,6 +379,8 @@ public class EventTypesStorage(
         var update = Builders<EventType>.Update
             .Set(_ => _.Owner, eventType.Definition.Owner)
             .Set(_ => _.Source, eventType.Source)
+            .Set(_ => _.Visibility, EffectiveVisibility(existing, eventType.Visibility))
+            .Set(_ => _.Origin, eventType.Origin)
             .Set(_ => _.Tombstone, eventType.Definition.Tombstone);
 
         update = schemas.Aggregate(

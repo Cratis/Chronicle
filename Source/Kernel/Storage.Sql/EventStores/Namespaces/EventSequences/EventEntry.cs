@@ -86,6 +86,23 @@ public class EventEntry
     public string? EventSource { get; set; }
 
     /// <summary>
+    /// Gets or sets the publication identity hash used for binary, collation-independent uniqueness.
+    /// </summary>
+#pragma warning disable CA1819 // EF Core requires byte-array properties for portable binary SQL columns.
+    public byte[]? PublicationIdentityHash { get; set; }
+#pragma warning restore CA1819
+
+    /// <summary>
+    /// Gets or sets the opaque original publication identity. Null for ordinary appends.
+    /// </summary>
+    public string? PublicationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the immutable intent fingerprint, preserved through revision and redaction.
+    /// </summary>
+    public string? PublicationFingerprint { get; set; }
+
+    /// <summary>
     /// Gets or sets the tags for the event, serialized as a JSON array of strings.
     /// </summary>
     public string Tags { get; set; } = string.Empty;

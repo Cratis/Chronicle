@@ -3,7 +3,6 @@
 
 using System.Collections.Frozen;
 using System.Collections.Immutable;
-using System.Reflection;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Events;
@@ -121,13 +120,14 @@ public class EventTypes : IEventTypes
             var latestEventType = latestEntry.Key;
             var latestClrType = latestEntry.Value;
             var latestSchema = _schemasByEventType[latestEventType];
-            var eventStoreAttribute = latestClrType.GetCustomAttribute<EventStoreAttribute>();
+            var eventStoreName = latestClrType.GetEventStoreName();
 
             var registration = new EventTypeRegistration
             {
                 Type = latestEventType.ToContract(),
                 Schema = latestSchema.ToJson(),
-                EventStore = eventStoreAttribute?.EventStore ?? string.Empty
+                EventStore = eventStoreName ?? string.Empty,
+                Visibility = GetVisibility(latestClrType, eventStoreName)
             };
 
             // Pass 1: register the real schema for every CLR type that represents a generation in
@@ -242,4 +242,16 @@ public class EventTypes : IEventTypes
         .Where(_ => _.Key.Id == eventTypeId && _.Key.Generation == generation)
         .Select(_ => _.Value)
         .FirstOrDefault() ?? GetClrTypeFor(eventTypeId);
+
+    /// <summary>
+    /// Gets the visibility to register an event type with: public when declared with <see cref="PublicAttribute"/> or when
+    /// it names an event store through <see cref="EventStoreAttribute"/> on the type or its assembly - its own or another service's - otherwise private.
+    /// </summary>
+    /// <param name="clrType">The CLR type of the event type.</param>
+    /// <param name="eventStoreName">The event store named by an <see cref="EventStoreAttribute"/> on the type or its assembly, if any.</param>
+    /// <returns>The <see cref="EventTypeVisibility"/>.</returns>
+    static EventTypeVisibility GetVisibility(Type clrType, string? eventStoreName) =>
+        eventStoreName is not null || clrType.IsDefined(typeof(PublicAttribute), false)
+            ? EventTypeVisibility.Public
+            : EventTypeVisibility.Private;
 }

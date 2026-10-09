@@ -29,6 +29,17 @@ public class EventType
     public EventTypeSource Source { get; set; }
 
     /// <summary>
+    /// Gets or sets the visibility of the event type. Rows stored before visibility existed read back as unspecified.
+    /// </summary>
+    public EventTypeVisibility Visibility { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the event store the event type originates from when it is not the registering one, otherwise empty.
+    /// </summary>
+    [MaxLength(200)]
+    public string Origin { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets a value indicating whether the event type is a tombstone.
     /// </summary>
     public bool Tombstone { get; set; }

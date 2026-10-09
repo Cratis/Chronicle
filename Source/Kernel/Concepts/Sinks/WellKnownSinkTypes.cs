@@ -9,6 +9,12 @@ namespace Cratis.Chronicle.Concepts.Sinks;
 public static class WellKnownSinkTypes
 {
     /// <summary>
+    /// Gets the event-sequence sink identifier, which publishes state as new events.
+    /// Older kernels reject this unknown type rather than ignoring additive target metadata.
+    /// </summary>
+    public static readonly SinkTypeId EventSequence = "EventSequence";
+
+    /// <summary>
     /// Gets the identifier of the InMemory projection sink.
     /// </summary>
     public static readonly SinkTypeId InMemory = "InMemory";

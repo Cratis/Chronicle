@@ -53,4 +53,14 @@ public record Event(
     /// Missing, or null, in historic documents and in events not appended through a definition.
     /// </summary>
     public EventSourceName? EventSource { get; init; }
+
+    /// <summary>
+    /// Gets the opaque publication identity, atomically stored with the event. Absent for ordinary appends.
+    /// </summary>
+    public string? PublicationId { get; init; }
+
+    /// <summary>
+    /// Gets the immutable publication intent fingerprint. Preserved through revision and redaction.
+    /// </summary>
+    public string? PublicationFingerprint { get; init; }
 }

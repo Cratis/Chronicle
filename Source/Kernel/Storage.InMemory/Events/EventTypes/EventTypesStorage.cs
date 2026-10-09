@@ -29,15 +29,25 @@ public class EventTypesStorage : IEventTypesStorage, IDisposable
 {
     readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitions = new();
     readonly ConcurrentDictionary<EventTypeId, EventTypeSource> _sources = new();
+    readonly ConcurrentDictionary<EventTypeId, EventTypeVisibility> _visibilities = new();
+    readonly ConcurrentDictionary<EventTypeId, string> _origins = new();
     readonly Subject<IEnumerable<EventTypeSchema>> _changes = new();
 
     readonly Lock _publishing = new();
 
     /// <inheritdoc/>
-    public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
+    public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "")
     {
         var sourceChanged = !_sources.TryGetValue(type.Id, out var previousSource) || previousSource != source;
         _sources[type.Id] = source;
+
+        // Unspecified means the client said nothing, which must not undo what a newer client declared.
+        _visibilities.TryGetValue(type.Id, out var previousVisibility);
+        var effectiveVisibility = visibility == EventTypeVisibility.Unspecified ? previousVisibility : visibility;
+        _origins.TryGetValue(type.Id, out var previousOrigin);
+        sourceChanged |= previousVisibility != effectiveVisibility || (previousOrigin ?? string.Empty) != origin;
+        _visibilities[type.Id] = effectiveVisibility;
+        _origins[type.Id] = origin;
 
         return RegisterDefinition(new EventTypeDefinition(type.Id, owner, type.Tombstone, [new EventTypeGenerationDefinition(type.Generation, schema)], []), sourceChanged);
     }
@@ -212,5 +222,7 @@ public class EventTypesStorage : IEventTypesStorage, IDisposable
             new EventType(definition.Id, generation.Generation, definition.Tombstone),
             definition.Owner,
             _sources.TryGetValue(definition.Id, out var source) ? source : EventTypeSource.Code,
-            generation.Schema);
+            generation.Schema,
+            _visibilities.TryGetValue(definition.Id, out var visibility) ? visibility : EventTypeVisibility.Unspecified,
+            _origins.TryGetValue(definition.Id, out var origin) ? origin : string.Empty);
 }

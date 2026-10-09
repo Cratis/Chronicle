@@ -23,20 +23,28 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
-    public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
+    public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "")
     {
         await using var scope = await database.EventStore(eventStore);
 
         var existingEventType = await scope.DbContext.EventTypes.FirstOrDefaultAsync(_ => _.Id == type.Id);
+
+        // Unspecified means the client said nothing, which must not undo what a newer client declared.
+        if (visibility == EventTypeVisibility.Unspecified && existingEventType is not null)
+        {
+            visibility = existingEventType.Visibility;
+        }
+
         if (existingEventType is not null &&
             existingEventType.Owner == owner && existingEventType.Source == source && existingEventType.Tombstone == type.Tombstone &&
+            existingEventType.Visibility == visibility && existingEventType.Origin == origin &&
             existingEventType.Schemas.TryGetValue(type.Generation, out var storedSchema) &&
             JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema, schema.ToJson()))
         {
             return false;
         }
 
-        var eventSchema = new EventTypeSchema(type, owner, source, schema);
+        var eventSchema = new EventTypeSchema(type, owner, source, schema, visibility, origin);
         if (_eventTypes.Any(_ => _.Id == type.Id))
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
@@ -59,6 +67,10 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
         var existing = await scope.DbContext.EventTypes.FirstOrDefaultAsync(_ => _.Id == definition.Id);
         if (existing is not null)
         {
+            // The full definition carries no visibility or origin, so what is already stored is kept.
+            eventType.Visibility = existing.Visibility;
+            eventType.Origin = existing.Origin;
+
             // Preserve the stored schema when only CLR titles differ; those titles are not needed to
             // resolve composite keys (which use read-model schemas, not event schemas).
             foreach (var (generation, incomingSchema) in eventType.Schemas.ToArray())
