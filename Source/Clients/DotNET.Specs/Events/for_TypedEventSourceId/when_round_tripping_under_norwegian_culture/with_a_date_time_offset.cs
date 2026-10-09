@@ -8,7 +8,7 @@ public class with_a_date_time_offset : given.a_norwegian_culture
     static readonly DateTimeOffset _input = new DateTimeOffset(2026, 10, 23, 14, 15, 16, TimeSpan.FromHours(2)).AddTicks(1234567);
     EventSourceId<DateTimeOffset> _result;
 
-    void Because() => _result = EventSourceId<DateTimeOffset>.From(new EventSourceId<DateTimeOffset>(_input));
+    void Because() => WithNorwegianCulture(() => _result = EventSourceId<DateTimeOffset>.From(new EventSourceId<DateTimeOffset>(_input)));
 
     [Fact] void should_preserve_the_typed_value() => _result.TypedValue.ShouldEqual(_input);
     [Fact] void should_preserve_the_offset() => _result.TypedValue.Offset.ShouldEqual(TimeSpan.FromHours(2));

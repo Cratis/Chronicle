@@ -7,7 +7,7 @@ public class with_an_int : given.a_norwegian_culture
 {
     EventSourceId<int> _result;
 
-    void Because() => _result = EventSourceId<int>.From(new EventSourceId<int>(12345));
+    void Because() => WithNorwegianCulture(() => _result = EventSourceId<int>.From(new EventSourceId<int>(12345)));
 
     [Fact] void should_preserve_the_typed_value() => _result.TypedValue.ShouldEqual(12345);
 }

@@ -7,20 +7,21 @@ namespace Cratis.Chronicle.Events.for_TypedEventSourceId.given;
 
 public class a_norwegian_culture : Specification
 {
-    CultureInfo _originalCulture;
-    CultureInfo _originalUICulture;
-
-    void Establish()
+    protected static void WithNorwegianCulture(Action action)
     {
-        _originalCulture = CultureInfo.CurrentCulture;
-        _originalUICulture = CultureInfo.CurrentUICulture;
-        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("nb-NO");
-        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("nb-NO");
-    }
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUICulture = CultureInfo.CurrentUICulture;
 
-    void Destroy()
-    {
-        CultureInfo.CurrentCulture = _originalCulture;
-        CultureInfo.CurrentUICulture = _originalUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("nb-NO");
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("nb-NO");
+            action();
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUICulture;
+        }
     }
 }

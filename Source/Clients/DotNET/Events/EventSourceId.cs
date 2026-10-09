@@ -155,6 +155,8 @@ public record EventSourceId<T>(T TypedValue) : ConceptAs<T>(TypedValue)
             DateTime dateTime => dateTime.ToString("O", CultureInfo.InvariantCulture),
             DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("O", CultureInfo.InvariantCulture),
             DateOnly dateOnly => dateOnly.ToString("O", CultureInfo.InvariantCulture),
+            TimeOnly timeOnly => timeOnly.ToString("O", CultureInfo.InvariantCulture),
+            TimeSpan timeSpan => timeSpan.ToString("c", CultureInfo.InvariantCulture),
             IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
             _ when value.IsConcept() => FormatValue(value.GetConceptValue()),
             _ => value.ToString()!
@@ -165,6 +167,8 @@ public record EventSourceId<T>(T TypedValue) : ConceptAs<T>(TypedValue)
         if (targetType == typeof(DateTime)) return DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
         if (targetType == typeof(DateTimeOffset)) return DateTimeOffset.Parse(value, CultureInfo.InvariantCulture);
         if (targetType == typeof(DateOnly)) return DateOnly.Parse(value, CultureInfo.InvariantCulture);
+        if (targetType == typeof(TimeOnly)) return TimeOnly.Parse(value, CultureInfo.InvariantCulture);
+        if (targetType == typeof(TimeSpan)) return TimeSpan.Parse(value, CultureInfo.InvariantCulture);
 
         return Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
     }

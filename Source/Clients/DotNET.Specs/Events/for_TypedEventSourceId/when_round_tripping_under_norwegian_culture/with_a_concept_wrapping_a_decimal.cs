@@ -8,11 +8,11 @@ public class with_a_concept_wrapping_a_decimal : given.a_norwegian_culture
     EventSourceId _untyped;
     EventSourceId<DecimalConcept> _result;
 
-    void Because()
+    void Because() => WithNorwegianCulture(() =>
     {
         _untyped = new EventSourceId<DecimalConcept>(new DecimalConcept(123.45m));
         _result = EventSourceId<DecimalConcept>.From(_untyped);
-    }
+    });
 
     [Fact] void should_use_the_invariant_decimal_separator() => _untyped.Value.ShouldEqual("123.45");
     [Fact] void should_preserve_the_typed_value() => _result.TypedValue.ShouldEqual(new DecimalConcept(123.45m));

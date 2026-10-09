@@ -7,7 +7,7 @@ public class with_a_date_time_offset_under_norwegian_culture : given.a_norwegian
 {
     EventSourceId _result;
 
-    void Because() => _result = new EventSourceId<DateTimeOffset>(new DateTimeOffset(2026, 10, 23, 14, 15, 16, TimeSpan.FromHours(2)).AddTicks(1234567));
+    void Because() => WithNorwegianCulture(() => _result = new EventSourceId<DateTimeOffset>(new DateTimeOffset(2026, 10, 23, 14, 15, 16, TimeSpan.FromHours(2)).AddTicks(1234567)));
 
     [Fact] void should_use_the_invariant_round_trip_format() => _result.Value.ShouldEqual("2026-10-23T14:15:16.1234567+02:00");
 }

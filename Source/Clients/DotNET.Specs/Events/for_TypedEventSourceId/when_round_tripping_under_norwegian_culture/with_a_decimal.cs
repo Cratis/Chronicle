@@ -7,7 +7,7 @@ public class with_a_decimal : given.a_norwegian_culture
 {
     EventSourceId<decimal> _result;
 
-    void Because() => _result = EventSourceId<decimal>.From(new EventSourceId<decimal>(123.45m));
+    void Because() => WithNorwegianCulture(() => _result = EventSourceId<decimal>.From(new EventSourceId<decimal>(123.45m)));
 
     [Fact] void should_preserve_the_typed_value() => _result.TypedValue.ShouldEqual(123.45m);
 }

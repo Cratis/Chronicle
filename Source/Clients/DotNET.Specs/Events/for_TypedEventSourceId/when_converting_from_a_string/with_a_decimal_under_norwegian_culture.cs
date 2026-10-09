@@ -7,7 +7,7 @@ public class with_a_decimal_under_norwegian_culture : given.a_norwegian_culture
 {
     EventSourceId<decimal> _result;
 
-    void Because() => _result = "123.45";
+    void Because() => WithNorwegianCulture(() => _result = "123.45");
 
     [Fact] void should_parse_the_invariant_decimal_separator() => _result.TypedValue.ShouldEqual(123.45m);
 }

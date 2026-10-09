@@ -8,11 +8,11 @@ public class with_a_double : given.a_norwegian_culture
     EventSourceId _untyped;
     EventSourceId<double> _result;
 
-    void Because()
+    void Because() => WithNorwegianCulture(() =>
     {
         _untyped = new EventSourceId<double>(123.45);
         _result = _untyped;
-    }
+    });
 
     [Fact] void should_use_the_invariant_decimal_separator() => _untyped.Value.ShouldEqual("123.45");
     [Fact] void should_preserve_the_typed_value() => _result.TypedValue.ShouldEqual(123.45);

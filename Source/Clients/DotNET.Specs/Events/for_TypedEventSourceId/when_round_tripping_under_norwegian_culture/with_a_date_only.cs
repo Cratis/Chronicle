@@ -8,11 +8,11 @@ public class with_a_date_only : given.a_norwegian_culture
     EventSourceId _untyped;
     EventSourceId<DateOnly> _result;
 
-    void Because()
+    void Because() => WithNorwegianCulture(() =>
     {
         _untyped = new EventSourceId<DateOnly>(new DateOnly(2026, 10, 23));
         _result = EventSourceId<DateOnly>.From(_untyped);
-    }
+    });
 
     [Fact] void should_use_the_invariant_round_trip_format() => _untyped.Value.ShouldEqual("2026-10-23");
     [Fact] void should_preserve_the_typed_value() => _result.TypedValue.ShouldEqual(new DateOnly(2026, 10, 23));

@@ -7,7 +7,7 @@ public class with_a_long : given.a_norwegian_culture
 {
     EventSourceId<long> _result;
 
-    void Because() => _result = EventSourceId<long>.From(new EventSourceId<long>(123456789012345L));
+    void Because() => WithNorwegianCulture(() => _result = EventSourceId<long>.From(new EventSourceId<long>(123456789012345L)));
 
     [Fact] void should_preserve_the_typed_value() => _result.TypedValue.ShouldEqual(123456789012345L);
 }
