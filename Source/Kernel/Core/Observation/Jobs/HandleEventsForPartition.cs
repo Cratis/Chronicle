@@ -75,8 +75,15 @@ public class HandleEventsForPartition(
             _observer = GrainFactory.GetGrain<IObserver>(State.ObserverKey);
             var subscription = await _observer.GetSubscription();
             _eventSourceId = State.Partition.ToString();
-            _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, State.Partition)) as IObserverSubscriber;
-            _isCollapsingProjection = subscription.IsCollapsingProjection;
+
+            // An unsubscribed observer reports a placeholder subscriber type that is not a grain interface, so
+            // resolving it throws and the step can never activate - it would fail and retry forever instead of
+            // reaching PerformStep, which reports the disconnection the job knows how to handle.
+            if (subscription.IsSubscribed)
+            {
+                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, State.Partition)) as IObserverSubscriber;
+                _isCollapsingProjection = subscription.IsCollapsingProjection;
+            }
         }
         await base.OnActivateAsync(cancellationToken);
     }
