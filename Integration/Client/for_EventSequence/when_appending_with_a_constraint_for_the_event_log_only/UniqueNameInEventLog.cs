@@ -9,5 +9,8 @@ public class UniqueNameInEventLog : IConstraint
 {
     public void Define(IConstraintBuilder builder) => builder
         .ForEventLog()
-        .Unique(b => b.On<NameClaimed>(e => e.Name).WithName(nameof(UniqueNameInEventLog)));
+        .Unique(b => b
+            .On<NameClaimed>(e => e.Name)
+            .On<NameClaimedInOutbox>(e => e.Name)
+            .WithName(nameof(UniqueNameInEventLog)));
 }

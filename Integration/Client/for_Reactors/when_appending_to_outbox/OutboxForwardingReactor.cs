@@ -12,8 +12,9 @@ public class OutboxForwardingReactor(TaskCompletionSource tcs, IEventStore event
 {
     public async Task On(SomeEvent @event, EventContext context)
     {
-        await eventStore.GetEventSequence(EventSequenceId.Outbox)
-            .Append(context.EventSourceId, @event);
+        var result = await eventStore.GetEventSequence(EventSequenceId.Outbox)
+            .Append(context.EventSourceId, new SomeEventInOutbox(@event.Number));
+        result.IsSuccess.ShouldBeTrue();
         tcs.TrySetResult();
     }
 }

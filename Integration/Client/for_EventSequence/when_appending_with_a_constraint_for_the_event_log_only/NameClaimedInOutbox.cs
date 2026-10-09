@@ -5,6 +5,10 @@ using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending_with_a_constraint_for_the_event_log_only;
 
+/// <summary>
+/// The public fact forwarded after a name is claimed in the event log.
+/// </summary>
+/// <param name="Name">The claimed name.</param>
 [EventType]
 [Public]
-public record NameClaimedEverywhere(string Name);
+public record NameClaimedInOutbox(string Name);
