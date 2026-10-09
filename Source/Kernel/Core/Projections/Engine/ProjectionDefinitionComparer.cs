@@ -35,7 +35,7 @@ public class ProjectionDefinitionComparer(IStorage storage, IObjectComparer obje
         logger.ComparingDefinitions(projectionKey.ProjectionId);
 
         // Note: Ignore the model and initial model state as they are not relevant for comparison and also have potential for recursive comparison
-        // that can potentially lead to a stack overflow. LastUpdated is also ignored since it is metadata, not structural definition.
+        // that can potentially lead to a stack overflow. LastUpdated and Tags are also ignored since they are metadata, not structural definition.
         // Optional collections are normalized to avoid false positives caused by storage serialization defaults (null vs empty).
         first = Normalize(first);
         second = Normalize(second);
@@ -51,21 +51,9 @@ public class ProjectionDefinitionComparer(IStorage storage, IObjectComparer obje
             ReadModel = null!,
             InitialModelState = null!,
             LastUpdated = null,
-            Tags = NormalizeTags(definition.Tags),
+            Tags = null,
             Nested = NormalizeNested(definition.Nested)
         };
-
-    static string[]? NormalizeTags(IEnumerable<string>? tags)
-    {
-        if (tags is null)
-        {
-            return null;
-        }
-
-        // Tags are metadata; normalize ordering so different insertion order does not trigger a replay.
-        var normalizedTags = tags.Order().ToArray();
-        return normalizedTags.Length == 0 ? null : normalizedTags;
-    }
 
     static IDictionary<PropertyPath, ChildrenDefinition>? NormalizeNested(IDictionary<PropertyPath, ChildrenDefinition>? nested)
     {

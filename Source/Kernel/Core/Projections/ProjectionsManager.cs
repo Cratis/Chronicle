@@ -280,7 +280,10 @@ public partial class ProjectionsManager(
                 new ProjectionKey(definition.Identifier, _eventStoreName),
                 existing,
                 definition);
-            if (compareResult != ProjectionDefinitionCompareResult.Same)
+
+            // Tags do not require evolution, but their metadata still needs to reach the engine and persistent definitions.
+            if (compareResult != ProjectionDefinitionCompareResult.Same ||
+                !(existing.Tags ?? []).SequenceEqual(definition.Tags ?? []))
             {
                 changed.Add(definition);
             }
