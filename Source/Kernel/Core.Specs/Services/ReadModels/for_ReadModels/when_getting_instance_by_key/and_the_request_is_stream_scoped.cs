@@ -20,7 +20,7 @@ public class and_the_request_is_stream_scoped : given.all_dependencies
         _projection.GetModelInstance().Returns(ProjectionResult.Empty);
         _grainFactory.GetGrain<IImmediateProjection>(Arg.Any<string>()).Returns(call =>
         {
-            _key = ImmediateProjectionKey.Parse(call.Arg<string>());
+            _key = ImmediateProjectionKey.Parse(call.ArgAt<string>(0));
             return _projection;
         });
     }

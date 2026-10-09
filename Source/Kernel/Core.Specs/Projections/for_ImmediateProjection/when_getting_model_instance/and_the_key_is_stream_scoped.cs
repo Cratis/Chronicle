@@ -3,9 +3,7 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Schemas;
 
@@ -13,13 +11,14 @@ namespace Cratis.Chronicle.Projections.for_ImmediateProjection.when_getting_mode
 
 public class and_the_key_is_stream_scoped : given.an_immediate_projection
 {
-    async Task Establish()
+    protected override ImmediateProjectionStreamScope StreamScope => new("source-id", "source-type", "stream-type", "stream-id");
+
+    void Establish()
     {
-        var key = new ImmediateProjectionKey(Projection, EventStore, EventStoreNamespaceName.Default, EventSequenceId.Log, "stream-id", StreamScope: new("source-id", "source-type", "stream-type", "stream-id"));
-        _grain = await _silo.CreateGrainAsync<given.TestableImmediateProjection>(key.ToString());
         _projection.GetEventTypes().Returns([new EventType("created", EventTypeGeneration.First)]);
         _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>()).Returns(new ExpandoObject());
-        _eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, (EventSourceId)"source-id", eventSourceType: "source-type", eventStreamType: "stream-type", eventStreamId: "stream-id", eventTypes: Arg.Any<IEnumerable<EventType>>()).Returns(CreateCursor());
+        var cursor = CreateCursor();
+        _eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, (EventSourceId)"source-id", eventSourceType: "source-type", eventStreamType: "stream-type", eventStreamId: "stream-id", eventTypes: Arg.Any<IEnumerable<EventType>>()).Returns(cursor);
     }
 
     async Task Because() => await _grain.GetModelInstance();

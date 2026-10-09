@@ -21,7 +21,7 @@ public static class DecisionReadExtensions
     public static IEnumerable<DecisionConflict> GetDecisionConflicts(this AppendManyResult result, IEnumerable<IDecisionRead> reads)
     {
         var labels = result.ConcurrencyViolations.Select(_ => _.EventSourceId).ToHashSet();
-        return reads.Where(_ => labels.Contains((Events.EventSourceId)_.Key))
+        return reads.Where(_ => labels.Contains(_.EventStreamType is not null || _.EventStreamId is not null ? _.Scope.EventSourceId! : (Events.EventSourceId)_.Key))
             .Select(_ => new DecisionConflict(_.ReadModelType, _.Key)).Distinct().ToArray();
     }
 
