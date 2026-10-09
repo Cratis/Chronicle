@@ -16,6 +16,8 @@ namespace Cratis.Chronicle.Concepts.Captures;
 /// Optional authentication configuration. This is configured in code when the source is configured,
 /// not through the Capture Declaration Language, so that secrets never live in capture text.
 /// </param>
+/// <param name="Sequence">Optional inbox event sequence for events sources, e.g. inbox-fulfillment.</param>
+/// <param name="Events">The names of the public event types an events source captures from.</param>
 public record SourceDefinition(
     SourceType Type,
     string? Api = default,
@@ -23,4 +25,6 @@ public record SourceDefinition(
     string? Route = default,
     string? Path = default,
     string? Topic = default,
-    SourceAuthorization? Authorization = default);
+    SourceAuthorization? Authorization = default,
+    string? Sequence = default,
+    IReadOnlyList<string>? Events = default);
