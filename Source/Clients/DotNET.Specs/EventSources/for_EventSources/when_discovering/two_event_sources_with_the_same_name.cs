@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// Conformance: Screenplay relies on this (Cratis/Chronicle#4658).
 namespace Cratis.Chronicle.EventSources.for_EventSources.when_discovering;
 
 public class two_event_sources_with_the_same_name : given.all_dependencies
