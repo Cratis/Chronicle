@@ -71,6 +71,13 @@ internal sealed class EventSequences(
             response => ToCompleteStreamResponse(response));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse>> CompleteStreamScope(global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamScopeRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.Sequences.CompleteStreamOutcome, global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Sequences.CompleteStreamScope((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.EventStreamId, request.ExpectedTailSequenceNumber),
+            response => ToCompleteStreamResponse(response));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> Redact(global::Cratis.Chronicle.Contracts.Sequences.RedactRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
@@ -144,6 +151,16 @@ internal sealed class EventSequences(
                 return result.Select(ToAppendedEventResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "EventSequences", "QueryEventsWithNamedTags"));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse>>> ClosedStreams(global::Cratis.Chronicle.Contracts.Sequences.ClosedStreamsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Sequences.ClosedStream.ClosedStreams(storage, queryContextManager, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.EventStreamId);
+                return result.Select(ToClosedStreamResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "EventSequences", "ClosedStreams"));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventSequenceNamesResponse>>> AllEventSequences(global::Cratis.Chronicle.Contracts.Sequences.AllEventSequencesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
@@ -225,6 +242,16 @@ internal sealed class EventSequences(
             },
             exception => logger.QueryFailed(exception, "EventSequences", "SequenceHistogramWithNamedTags"));
 
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Sequences.StreamScopeCompletionResponse>> IsStreamScopeCompleted(global::Cratis.Chronicle.Contracts.Sequences.IsStreamScopeCompletedRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Sequences.StreamScopeCompletionResponse>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Sequences.StreamScopeCompletion.IsStreamScopeCompleted(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.EventStreamId);
+                return ToStreamScopeCompletionResponse(result);
+            },
+            exception => logger.QueryFailed(exception, "EventSequences", "IsStreamScopeCompleted"));
+
     static global::Cratis.Chronicle.Contracts.Sequences.AppendResponse ToAppendResponse(global::Cratis.Chronicle.EventSequences.AppendResult source) =>
         new()
         {
@@ -280,6 +307,19 @@ internal sealed class EventSequences(
             GenerationalContent = source.GenerationalContent
         };
 
+    static global::Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse ToClosedStreamResponse(global::Cratis.Chronicle.Sequences.ClosedStream source) =>
+        new()
+        {
+            EventSourceId = source.EventSourceId,
+            EventSourceType = source.EventSourceType,
+            EventStreamType = source.EventStreamType,
+            EventStreamId = source.EventStreamId,
+            Origin = (global::Cratis.Chronicle.Contracts.Sequences.ClosedStreamOrigin)source.Origin,
+            ClosedBy = source.ClosedBy,
+            SequenceNumber = (ulong)source.SequenceNumber,
+            ClosedAt = source.ClosedAt is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.ClosedAt
+        };
+
     static global::Cratis.Chronicle.Contracts.Sequences.EventSequenceNamesResponse ToEventSequenceNamesResponse(global::Cratis.Chronicle.Sequences.EventSequenceNames source) =>
         new()
         {
@@ -320,5 +360,11 @@ internal sealed class EventSequences(
             From = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.From,
             To = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.To,
             Count = source.Count
+        };
+
+    static global::Cratis.Chronicle.Contracts.Sequences.StreamScopeCompletionResponse ToStreamScopeCompletionResponse(global::Cratis.Chronicle.Sequences.StreamScopeCompletion source) =>
+        new()
+        {
+            IsCompleted = source.IsCompleted
         };
 }

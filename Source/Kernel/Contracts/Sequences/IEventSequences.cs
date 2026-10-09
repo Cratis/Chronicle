@@ -76,6 +76,14 @@ public interface IEventSequences
     [Operation]
     Task<CommandResult<CompleteStreamResponse>> CompleteStream(CompleteStreamRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the CompleteStreamScope command.
+    /// </summary>
+    /// <param name = "request">The CompleteStreamScope request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<CompleteStreamResponse>> CompleteStreamScope(CompleteStreamScopeRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the Redact command.
     /// </summary>
     /// <param name = "request">The Redact request.</param>
@@ -148,6 +156,14 @@ public interface IEventSequences
     [Operation]
     Task<QueryResult<IEnumerable<AppendedEventResponse>>> FromSequenceNumber(FromSequenceNumberRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the ClosedStreams query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<ClosedStreamResponse>>> ClosedStreams(ClosedStreamsRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the AllEventSequences query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -211,6 +227,14 @@ public interface IEventSequences
     /// <returns>The query result.</returns>
     [Operation]
     Task<QueryResult<global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset>> EndOf(EndOfRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the IsStreamScopeCompleted query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<StreamScopeCompletionResponse>> IsStreamScopeCompleted(IsStreamScopeCompletedRequest request, CallContext callContext = default);
 }
 
 /// <summary>
@@ -902,6 +926,61 @@ public class CompleteStreamResponse
 }
 
 /// <summary>
+/// Represents the CompleteStreamScopeRequest message.
+/// </summary>
+[ProtoContract]
+public class CompleteStreamScopeRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSourceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string? EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventSourceType.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? EventSourceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventStreamType.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventStreamId.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? EventStreamId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ExpectedTailSequenceNumber.
+    /// </summary>
+    [ProtoMember(8)]
+    public global::System.UInt64? ExpectedTailSequenceNumber { get; set; }
+}
+
+/// <summary>
 /// Represents the RedactRequest message.
 /// </summary>
 [ProtoContract]
@@ -1447,6 +1526,110 @@ public class FromSequenceNumberRequest
 }
 
 /// <summary>
+/// Represents the ClosedStreamResponse message.
+/// </summary>
+[ProtoContract]
+public class ClosedStreamResponse
+{
+    /// <summary>
+    /// Gets or sets the EventSourceId.
+    /// </summary>
+    [ProtoMember(1)]
+    public string? EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventSourceType.
+    /// </summary>
+    [ProtoMember(2)]
+    public string? EventSourceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventStreamType.
+    /// </summary>
+    [ProtoMember(3)]
+    public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventStreamId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string? EventStreamId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Origin.
+    /// </summary>
+    [ProtoMember(5)]
+    public global::Cratis.Chronicle.Contracts.Sequences.ClosedStreamOrigin Origin { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ClosedBy.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? ClosedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SequenceNumber.
+    /// </summary>
+    [ProtoMember(7)]
+    public global::System.UInt64 SequenceNumber { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the ClosedAt.
+    /// </summary>
+    [ProtoMember(8)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset ClosedAt { get; set; }
+}
+
+/// <summary>
+/// Represents the ClosedStreamsRequest message.
+/// </summary>
+[ProtoContract]
+public class ClosedStreamsRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the eventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the eventSourceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string? EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceType.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? EventSourceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStreamType.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStreamId.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? EventStreamId { get; set; }
+}
+
+/// <summary>
 /// Represents the EventSequenceNamesResponse message.
 /// </summary>
 [ProtoContract]
@@ -1955,4 +2138,66 @@ public class EndOfRequest
     /// </summary>
     [ProtoMember(2)]
     public global::Cratis.Chronicle.Contracts.Storage.EventSequences.HistogramResolution Resolution { get; set; }
+}
+
+/// <summary>
+/// Represents the StreamScopeCompletionResponse message.
+/// </summary>
+[ProtoContract]
+public class StreamScopeCompletionResponse
+{
+    /// <summary>
+    /// Gets or sets the IsCompleted.
+    /// </summary>
+    [ProtoMember(1)]
+    public bool IsCompleted { get; set; }
+}
+
+/// <summary>
+/// Represents the IsStreamScopeCompletedRequest message.
+/// </summary>
+[ProtoContract]
+public class IsStreamScopeCompletedRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the eventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the eventSourceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string? EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceType.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? EventSourceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStreamType.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStreamId.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? EventStreamId { get; set; }
 }

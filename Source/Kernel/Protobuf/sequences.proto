@@ -136,6 +136,29 @@ message Causation {
    string Type = 2;
    map<string,string> Properties = 3;
 }
+enum ClosedStreamOrigin {
+   CompleteStream = 0;
+   ClosingEvent = 1;
+}
+message ClosedStreamResponse {
+   string EventSourceId = 1;
+   string EventSourceType = 2;
+   string EventStreamType = 3;
+   string EventStreamId = 4;
+   ClosedStreamOrigin Origin = 5;
+   string ClosedBy = 6;
+   uint64 SequenceNumber = 7;
+   SerializableDateTimeOffset ClosedAt = 8;
+}
+message ClosedStreamsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string EventSourceId = 4;
+   string EventSourceType = 5;
+   string EventStreamType = 6;
+   string EventStreamId = 7;
+}
 message CommandResult {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -184,6 +207,8 @@ enum CompleteStreamError {
    COMPLETE_STREAM_ERROR_None = 0;
    AlreadyCompleted = 1;
    DefaultStreamCannotBeCompleted = 2;
+   EmptyScope = 3;
+   ExpectedTailMismatch = 4;
 }
 message CompleteStreamRequest {
    string EventStore = 1;
@@ -196,6 +221,16 @@ message CompleteStreamResponse {
    bool IsSuccess = 1;
    uint64 SequenceNumber = 2;
    CompleteStreamError Error = 3;
+}
+message CompleteStreamScopeRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string EventSourceId = 4;
+   string EventSourceType = 5;
+   string EventStreamType = 6;
+   string EventStreamId = 7;
+   uint64 ExpectedTailSequenceNumber = 8;
 }
 message ConcurrencyScope {
    uint64 SequenceNumber = 1;
@@ -384,6 +419,15 @@ message Identity {
    string UserName = 3;
    Identity OnBehalfOf = 4;
 }
+message IsStreamScopeCompletedRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string EventSourceId = 4;
+   string EventSourceType = 5;
+   string EventStreamType = 6;
+   string EventStreamId = 7;
+}
 message KeyValuePair_Int32_String {
    int32 Key = 1;
    string Value = 2;
@@ -459,6 +503,14 @@ message QueryResult_IEnumerable_AppendedEventResponse {
    string ExceptionStackTrace = 5;
    repeated AppendedEventResponse Data = 6;
 }
+message QueryResult_IEnumerable_ClosedStreamResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated ClosedStreamResponse Data = 6;
+}
 message QueryResult_IEnumerable_EventSequenceNamesResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -490,6 +542,14 @@ message QueryResult_SerializableDateTimeOffset {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    SerializableDateTimeOffset Data = 6;
+}
+message QueryResult_StreamScopeCompletionResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   StreamScopeCompletionResponse Data = 6;
 }
 message RedactForEventSourceRequest {
    string EventStore = 1;
@@ -558,6 +618,9 @@ message SequenceHistogramWithNamedTagsRequest {
 message SerializableDateTimeOffset {
    string Value = 1;
 }
+message StreamScopeCompletionResponse {
+   bool IsCompleted = 1;
+}
 message TailSequenceNumberRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -600,12 +663,15 @@ service EventSequences {
    rpc AppendManyForEventSourcesWithNamedTags (AppendManyForEventSourcesWithNamedTagsRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyWithNamedTags (AppendManyWithNamedTagsRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendWithNamedTags (AppendWithNamedTagsRequest) returns (CommandResult_AppendResponse);
+   rpc ClosedStreams (ClosedStreamsRequest) returns (QueryResult_IEnumerable_ClosedStreamResponse);
    rpc CompleteStream (CompleteStreamRequest) returns (CommandResult_CompleteStreamResponse);
+   rpc CompleteStreamScope (CompleteStreamScopeRequest) returns (CommandResult_CompleteStreamResponse);
    rpc EndOf (EndOfRequest) returns (QueryResult_SerializableDateTimeOffset);
    rpc ExportEvents (ExportEventsRequest) returns (QueryResult_IEnumerable_ExportedEventResponse);
    rpc ForEventSourceIdAndEventTypes (ForEventSourceIdAndEventTypesRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc FromSequenceNumber (FromSequenceNumberRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc HasEventsForEventSourceId (HasEventsForEventSourceIdRequest) returns (QueryResult_EventSourceEventsResponse);
+   rpc IsStreamScopeCompleted (IsStreamScopeCompletedRequest) returns (QueryResult_StreamScopeCompletionResponse);
    rpc ParseResolution (ParseResolutionRequest) returns (QueryResult_HistogramResolution);
    rpc QueryEvents (QueryEventsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc QueryEventsWithNamedTags (QueryEventsWithNamedTagsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
