@@ -40,7 +40,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class EventSequenceStorage(
+public partial class EventSequenceStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
@@ -50,7 +50,7 @@ public class EventSequenceStorage(
     IIdentityStorage identityStorage,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
+    ILogger<EventSequenceStorage> logger) : IEventSequenceStorage, IEventPublicationStorage
 {
     readonly IMongoCollection<Event> _collection = database.GetEventSequenceCollectionFor(eventSequenceId);
 
@@ -1042,6 +1042,10 @@ public class EventSequenceStorage(
     public async Task EnsureIndexes()
     {
         await database.EnsureIndexesForEventSequence(eventSequenceId).ConfigureAwait(false);
+        await _collection.EnsureIndexesAsync(
+            new CreateIndexModel<Event>(
+                Builders<Event>.IndexKeys.Ascending(e => e.PublicationId),
+                new CreateIndexOptions { Unique = true, Sparse = true, Name = "publication_identity" })).ConfigureAwait(false);
         await _collection.EnsureIndexesAsync(
             new CreateIndexModel<Event>(
                 Builders<Event>.IndexKeys.Ascending(e => e.Subject),

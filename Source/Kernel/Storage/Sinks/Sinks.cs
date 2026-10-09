@@ -29,8 +29,9 @@ public class Sinks(
     /// <inheritdoc/>
     public async Task<ISink> GetFor(ReadModelDefinition readModel)
     {
+        readModel.Sink.EnsureReadModelSupported();
         ThrowIfUnknownSink(readModel.Sink.Type);
-        var key = new SinkKey(readModel.Sink.Type, readModel.Sink.Configuration, readModel.ContainerName);
+        var key = new SinkKey(readModel.Sink.Type, readModel.Sink.Configuration, readModel.ContainerName, readModel.Sink.EventSequence);
         if (_sinks.TryGetValue(key, out var existing)) return existing;
         var sink = _factories[readModel.Sink.Type].CreateFor(eventStoreName, eventStoreNamespaceName, readModel);
         await sink.EnsureIndexes();
@@ -45,5 +46,5 @@ public class Sinks(
         if (!HasType(typeId)) throw new UnknownSink(typeId);
     }
 
-    sealed record SinkKey(SinkTypeId TypeId, SinkConfigurationId ConfigurationId, ReadModelContainerName ContainerName);
+    sealed record SinkKey(SinkTypeId TypeId, SinkConfigurationId ConfigurationId, ReadModelContainerName ContainerName, EventSequenceSinkConfiguration? EventSequence);
 }

@@ -24,11 +24,11 @@ namespace Cratis.Chronicle.Storage.InMemory.EventSequences;
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage serves.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> this storage serves.</param>
 /// <param name="identityStorage">The <see cref="IIdentityStorage"/> for resolving the identity chain that caused an append.</param>
-public class EventSequenceStorage(
+public partial class EventSequenceStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
-    IIdentityStorage identityStorage) : IEventSequenceStorage
+    IIdentityStorage identityStorage) : IEventSequenceStorage, IEventPublicationStorage
 {
     static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
 

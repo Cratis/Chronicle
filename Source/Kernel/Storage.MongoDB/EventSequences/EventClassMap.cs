@@ -16,5 +16,7 @@ public class EventClassMap : IBsonClassMapFor<Event>
     {
         classMap.AutoMap();
         classMap.MapIdProperty(_ => _.SequenceNumber);
+        classMap.GetMemberMap(nameof(Event.PublicationId)).SetIgnoreIfNull(true);
+        classMap.GetMemberMap(nameof(Event.PublicationFingerprint)).SetIgnoreIfNull(true);
     }
 }

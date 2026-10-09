@@ -58,6 +58,19 @@ public class EventSequenceMigrator(
         _ => false
     };
 
+    static void AddPublicationIndex(EventSequenceDbContext context, MigrationBuilder migration, string tableName)
+    {
+        var filter = context.Database.ProviderName?.Contains("SqlServer", StringComparison.Ordinal) == true
+            ? "[PublicationIdentityHash] IS NOT NULL"
+            : "\"PublicationIdentityHash\" IS NOT NULL";
+        migration.CreateIndex(
+            name: $"IX_{tableName}_PublicationIdentityHash",
+            table: tableName,
+            column: nameof(EventEntry.PublicationIdentityHash),
+            unique: true,
+            filter: filter);
+    }
+
     Task EnsureNamedTagsTable(EventSequenceDbContext context) =>
         tableMigrator.EnsureTableMigrated(NamedTagsTable, context, CreateNamedTagsTable, ValidateNamedTagsTable);
 
@@ -129,7 +142,10 @@ public class EventSequenceMigrator(
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
                 Subject = table.StringColumn(migrationBuilder, nullable: true),
                 EventSource = table.StringColumn(migrationBuilder, nullable: true),
-                Tags = table.StringColumn(migrationBuilder)
+                Tags = table.StringColumn(migrationBuilder),
+                PublicationIdentityHash = table.Column<byte[]>(maxLength: 32, nullable: true),
+                PublicationId = table.StringColumn(migrationBuilder, nullable: true),
+                PublicationFingerprint = table.StringColumn(migrationBuilder, nullable: true)
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", x => x.SequenceNumber));
 
@@ -158,11 +174,22 @@ public class EventSequenceMigrator(
             table: tableName,
             columns: ["EventStreamType", "EventStreamId"]);
 
+        AddPublicationIndex(context, migrationBuilder, tableName);
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
     async Task UpgradeTable(EventSequenceDbContext context, string tableName)
     {
+        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.PublicationIdentityHash)))
+        {
+            var publicationMigration = new MigrationBuilder(context.Database.ProviderName);
+            publicationMigration.AddColumn<byte[]>(nameof(EventEntry.PublicationIdentityHash), tableName, maxLength: 32, nullable: true);
+            publicationMigration.AddColumn<string>(nameof(EventEntry.PublicationId), tableName, nullable: true);
+            publicationMigration.AddColumn<string>(nameof(EventEntry.PublicationFingerprint), tableName, nullable: true);
+            AddPublicationIndex(context, publicationMigration, tableName);
+            await tableMigrator.ExecuteMigrationOperations(context, publicationMigration);
+        }
+
         if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Tags)))
         {
             logger.AddingTagsColumn(tableName);

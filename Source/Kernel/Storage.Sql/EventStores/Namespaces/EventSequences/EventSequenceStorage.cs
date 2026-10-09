@@ -27,13 +27,13 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// <param name="database">The <see cref="IDatabase"/> for storage operations.</param>
 /// <param name="identityStorage">The <see cref="IIdentityStorage"/> for managing identities.</param>
 /// <param name="logger">The <see cref="ILogger{EventSequenceStorage}"/> for logging.</param>
-public class EventSequenceStorage(
+public partial class EventSequenceStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
     IDatabase database,
     IIdentityStorage identityStorage,
-    ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
+    ILogger<EventSequenceStorage> logger) : IEventSequenceStorage, IEventPublicationStorage
 {
     /// <inheritdoc/>
     public bool SupportsRevisionTracking => false;
