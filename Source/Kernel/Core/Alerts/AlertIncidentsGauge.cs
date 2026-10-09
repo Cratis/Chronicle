@@ -3,9 +3,11 @@
 
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Configuration;
 using Cratis.DependencyInjection;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Alerts;
 
@@ -16,6 +18,7 @@ namespace Cratis.Chronicle.Alerts;
 public sealed class AlertIncidentsGauge : IAlertIncidentsGauge
 {
     readonly TimeProvider _timeProvider;
+    readonly bool _enabled;
     volatile State _state = State.None;
 
     /// <summary>
@@ -23,9 +26,15 @@ public sealed class AlertIncidentsGauge : IAlertIncidentsGauge
     /// </summary>
     /// <param name="meter">The meter.</param>
     /// <param name="timeProvider">Optional time provider.</param>
-    public AlertIncidentsGauge([FromKeyedServices(WellKnown.MeterName)] IMeter<AlertIncidentsGauge> meter, TimeProvider? timeProvider = null)
+    /// <param name="options">The startup configuration.</param>
+    public AlertIncidentsGauge([FromKeyedServices(WellKnown.MeterName)] IMeter<AlertIncidentsGauge> meter, TimeProvider? timeProvider = null, IOptions<ChronicleOptions>? options = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _enabled = options?.Value.Alerts.IncidentMetricsEnabled ?? true;
+        if (!_enabled)
+        {
+            return;
+        }
 
         // Hand-written until Cratis/Fundamentals#1138 is consumed: the metrics generator passes description as unit.
         meter.ActualMeter?.CreateObservableGauge(
@@ -61,7 +70,7 @@ public sealed class AlertIncidentsGauge : IAlertIncidentsGauge
     /// Gets the current measurements; empty when there is no fresh snapshot.
     /// </summary>
     /// <returns>The measurements.</returns>
-    internal IEnumerable<Measurement<long>> Observe() => Fresh(_state)?.Measurements ?? [];
+    internal IEnumerable<Measurement<long>> Observe() => _enabled ? Fresh(_state)?.Measurements ?? [] : [];
 
     /// <summary>
     /// Gets the availability measurement; empty when this process has no owner.
@@ -70,7 +79,7 @@ public sealed class AlertIncidentsGauge : IAlertIncidentsGauge
     internal IEnumerable<Measurement<int>> ObserveAvailable()
     {
         var state = _state;
-        return state.Owner is null ? [] : [new Measurement<int>(Fresh(state) is null ? 0 : 1)];
+        return !_enabled || state.Owner is null ? [] : [new Measurement<int>(Fresh(state) is null ? 0 : 1)];
     }
 
     AlertIncidentsGaugeSnapshot? Fresh(State state) =>

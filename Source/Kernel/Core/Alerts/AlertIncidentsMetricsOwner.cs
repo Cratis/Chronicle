@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Alerts;
 
@@ -15,13 +17,15 @@ namespace Cratis.Chronicle.Alerts;
 /// <param name="gauge">The process-level gauge holder.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional time provider.</param>
+/// <param name="options">The startup configuration.</param>
 [KeepAlive]
 public sealed class AlertIncidentsMetricsOwner(
     IStorage storage,
     IAlertIncidentsReadiness readiness,
     IAlertIncidentsGauge gauge,
     ILogger<AlertIncidentsMetricsOwner> logger,
-    TimeProvider? timeProvider = null) : Grain, IAlertIncidentsMetricsOwner
+    TimeProvider? timeProvider = null,
+    IOptions<ChronicleOptions>? options = null) : Grain, IAlertIncidentsMetricsOwner
 {
     /// <summary>
     /// The fixed grain key.
@@ -39,6 +43,7 @@ public sealed class AlertIncidentsMetricsOwner(
         Interleave = false
     };
 
+    readonly bool _enabled = options?.Value.Alerts.IncidentMetricsEnabled ?? true;
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     AlertIncidentGaugeBuckets _buckets = AlertIncidentGaugeBuckets.Empty;
     IGrainTimer? _timer;
@@ -46,6 +51,11 @@ public sealed class AlertIncidentsMetricsOwner(
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        if (!_enabled)
+        {
+            return Task.CompletedTask;
+        }
+
         gauge.Activate(this);
         _timer = this.RegisterGrainTimer(_ => RefreshAsync(), TimerOptions);
         return Task.CompletedTask;
@@ -69,6 +79,11 @@ public sealed class AlertIncidentsMetricsOwner(
     /// <returns>Awaitable task.</returns>
     internal async Task RefreshAsync()
     {
+        if (!_enabled)
+        {
+            return;
+        }
+
         try
         {
             var state = await readiness.Get();

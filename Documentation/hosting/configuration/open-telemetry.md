@@ -101,6 +101,30 @@ The SDK limits each instrument to 500 series. Beyond that it folds the excess in
 
 ### Open alert incident metrics
 
+Open alert incident metrics are enabled by default. To opt out, set
+`Cratis__Chronicle__Alerts__IncidentMetricsEnabled=false` on **every silo** and restart
+all silos. Alternatively, set `Alerts.IncidentMetricsEnabled` to `false` in
+`chronicle.json`:
+
+```json
+{
+  "Alerts": {
+    "IncidentMetricsEnabled": false
+  }
+}
+```
+
+This startup setting prevents registration of both incident gauges, owner keepalive
+pings, periodic sampling, and incident-storage reads for metrics. It does not merely
+filter exported data. It leaves alert raising, incident materialization, incident
+queries, observer failure counters, and other telemetry unchanged. Setting
+`Alerts.Enabled=false` controls alert raising, not incident metrics. To restore
+incident metrics, set `IncidentMetricsEnabled` to `true` and restart every silo.
+A mixed cluster can still collect and publish metrics from enabled silos; complete
+the restart before relying on the opt-out. Disable or adjust alerts that depend on
+these gauges, including availability alerts, because disabled gauges are absent,
+not zero.
+
 Chronicle publishes the number of open alert incidents on the `Cratis.Chronicle` meter. The `chronicle-alerts-open-incidents` gauge is exported to Prometheus as `chronicle_alerts_open_incidents` (a gauge has no `_total` suffix). It has one series per bucket, tagged `EventStore`, `Namespace`, `ObserverId`, `EventSequenceId`, `Condition` and `Severity`, and no others. The `Severity` tag holds the incident's severity (`Warning` or `Critical`).
 
 The value is sampled from incident storage, not counted from live events. One owner grain in the cluster aggregates the open incident rows every 30 seconds and publishes the result; a scrape reads that snapshot and does no storage I/O. An escalation moves an incident between `Severity` buckets without changing the total.
