@@ -18,7 +18,11 @@ public class ReactorDefinitionComparer(IStorage storage) : IReactorDefinitionCom
         ReactorDefinition first,
         ReactorDefinition second)
     {
-        if (!await storage.GetEventStore(reactorKey.EventStore).Reactors.Has(reactorKey.ReactorId))
+        // The storage check only proves the reactor id has been registered somewhere in this event store -
+        // it carries no namespace, so a sibling namespace's grain can make it return true while this grain's
+        // own state (first) was never activated with a prior definition. Comparing against that empty first
+        // is meaningless, so treat it as a new registration rather than dereferencing its null EventTypes.
+        if (first.EventTypes is null || !await storage.GetEventStore(reactorKey.EventStore).Reactors.Has(reactorKey.ReactorId))
         {
             return ReactorDefinitionCompareResult.New;
         }
