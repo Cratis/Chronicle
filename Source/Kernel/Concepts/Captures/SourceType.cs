@@ -21,5 +21,10 @@ public enum SourceType
     /// <summary>
     /// A message source.
     /// </summary>
-    Message = 2
+    Message = 2,
+
+    /// <summary>
+    /// An events source - public events arriving in an inbox event sequence.
+    /// </summary>
+    Events = 3
 }
