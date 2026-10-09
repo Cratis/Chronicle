@@ -10,8 +10,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Projections.Migrat
 #pragma warning disable SA1600, SA1402, MA0048
 
 [DbContext(typeof(NamespaceDbContext))]
-[Migration($"NS-{WellKnownTableNames.ProjectionFutures}-{nameof(v19_37_6)}")]
-public class v19_37_6 : Migration
+[Migration($"NS-{WellKnownTableNames.ProjectionFutures}-{nameof(v19_37_8)}")]
+public class v19_37_8 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
