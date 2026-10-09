@@ -89,6 +89,11 @@ public class ReadModels(
                 _ => string.Empty
             };
 
+            if (readModel.ReadModelType.IsEventTypeTarget())
+            {
+                return CreateEventTargetDefinition(readModel.ReadModelType, observerType, observerIdentifier);
+            }
+
             return new ReadModelDefinition
             {
                 Type = new()
@@ -133,6 +138,29 @@ public class ReadModels(
 
         var observerType = ReadModelObserverType.Projection;
         var observerIdentifier = string.Empty;
+
+        if (typeof(TReadModel).IsEventTypeTarget())
+        {
+            var targetHandler = (IHaveReadModel?)projections.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel))
+                ?? reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
+            if (targetHandler is IReducerHandler targetReducer)
+            {
+                observerType = ReadModelObserverType.Reducer;
+                observerIdentifier = targetReducer.Id.Value;
+            }
+            else if (targetHandler is IProjectionHandler targetProjection)
+            {
+                observerIdentifier = targetProjection.Id.Value;
+            }
+
+            await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
+            {
+                EventStore = eventStore.Name,
+                Owner = ReadModelOwner.Client,
+                ReadModels = [CreateEventTargetDefinition(typeof(TReadModel), observerType, observerIdentifier)]
+            });
+            return;
+        }
 
         if (projections.HasFor<TReadModel>())
         {
@@ -447,6 +475,54 @@ public class ReadModels(
         }
 
         return released;
+    }
+
+    /// <summary>
+    /// Creates the registration of an event type that is the target of a projection or reducer. No read model is
+    /// registered for it: the registration names the event type, its schema and the sequence to publish to.
+    /// </summary>
+    /// <param name="eventTargetType">The event type.</param>
+    /// <param name="observerType">Whether a projection or a reducer maintains it.</param>
+    /// <param name="observerIdentifier">The identifier of that projection or reducer.</param>
+    /// <returns>The <see cref="ReadModelDefinition"/> carrying the event sequence sink.</returns>
+    /// <exception cref="TypeIsNotAnEventType">Thrown when the event type is not registered with this client.</exception>
+    /// <exception cref="EventLogIsNotAPublicationTarget">Thrown when the destination is the event log.</exception>
+    /// <exception cref="PrivateEventTypeCannotBePublishedToOutbox">Thrown when the outbox is the destination and the event type is not public.</exception>
+    ReadModelDefinition CreateEventTargetDefinition(Type eventTargetType, ReadModelObserverType observerType, string observerIdentifier)
+    {
+        eventTargetType.ValidateAsEventTarget(eventStore.Name);
+        var eventType = eventTargetType.GetEventType();
+
+        if (!eventTypes.HasFor(eventType.Id))
+        {
+            throw new TypeIsNotAnEventType(eventTargetType);
+        }
+
+        return new ReadModelDefinition
+        {
+            Type = new()
+            {
+                Identifier = eventTargetType.GetReadModelIdentifier(),
+                Generation = ReadModelGeneration.First,
+            },
+            ContainerName = namingPolicy.GetReadModelName(eventTargetType),
+            DisplayName = eventTargetType.Name,
+            Sink = new()
+            {
+                ConfigurationId = Guid.Empty,
+                TypeId = SinkTypeId.EventSequence,
+                EventSequence = new()
+                {
+                    EventType = eventType.ToContract(),
+                    EventSequence = eventTargetType.GetPublishingSequence().Value,
+                    IsPublic = eventTargetType.IsPublicEventType(eventStore.Name)
+                }
+            },
+            Schema = schemaGenerator.Generate(eventTargetType).ToJson(),
+            Indexes = [],
+            ObserverType = observerType,
+            ObserverIdentifier = observerIdentifier
+        };
     }
 
     /// <summary>

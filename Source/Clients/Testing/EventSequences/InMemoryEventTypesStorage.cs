@@ -33,7 +33,7 @@ internal sealed class InMemoryEventTypesStorage(Func<ClientEventTypes> eventType
                 schemaGenerator.Generate(eventTypes().GetClrTypeFor(type.Id, type.Generation)))));
 
     /// <inheritdoc/>
-    public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code) =>
+    public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "") =>
         Task.FromResult(false);
 
     /// <inheritdoc/>
