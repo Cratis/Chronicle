@@ -47,6 +47,11 @@ public class ProjectionFutureEntity
     public string EventContentJson { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the full event context as JSON. Null for futures stored before context was preserved.
+    /// </summary>
+    public string? EventContextJson { get; set; }
+
+    /// <summary>
     /// Gets or sets the parent path.
     /// </summary>
     public string ParentPath { get; set; } = string.Empty;

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
+
 namespace Cratis.Chronicle.Events;
 
 #pragma warning disable SA1402 // File may only contain a single type
@@ -58,8 +60,9 @@ public record EventSourceId(string Value) : ConceptAs<string>(Value)
 /// </summary>
 /// <typeparam name="T">
 /// The type of the underlying value. Supported types are <see cref="string"/>, <see cref="Guid"/>,
-/// <see cref="ConceptAs{T}"/> wrappers over those primitives, and any type whose
-/// <see cref="object.ToString"/> produces a stable string representation.
+/// <see cref="ConceptAs{T}"/> wrappers over supported primitives, and comparable formattable values.
+/// Formattable values use invariant culture, with round-trip formatting for dates and times.
+/// Other types must provide a stable <see cref="object.ToString"/> representation.
 /// </typeparam>
 /// <param name="TypedValue">The typed value that this identifier wraps.</param>
 public record EventSourceId<T>(T TypedValue) : ConceptAs<T>(TypedValue)
@@ -116,15 +119,7 @@ public record EventSourceId<T>(T TypedValue) : ConceptAs<T>(TypedValue)
     /// </summary>
     /// <param name="value">The typed value to convert.</param>
     /// <returns>The string representation of <paramref name="value"/>.</returns>
-    internal static string ConvertToString(T value) =>
-        value switch
-        {
-            string s => s,
-            Guid g => g.ToString(),
-            ConceptAs<string> c => c.Value,
-            ConceptAs<Guid> c => c.Value.ToString(),
-            _ => value!.ToString()!
-        };
+    internal static string ConvertToString(T value) => FormatValue(value);
 
     /// <summary>
     /// Parse a string representation back into <typeparamref name="T"/>.
@@ -144,6 +139,37 @@ public record EventSourceId<T>(T TypedValue) : ConceptAs<T>(TypedValue)
         if (typeof(ConceptAs<Guid>).IsAssignableFrom(targetType))
             return (T)Activator.CreateInstance(targetType, Guid.Parse(value))!;
 
-        return (T)Convert.ChangeType(value, targetType);
+        if (targetType.IsConcept())
+            return (T)Activator.CreateInstance(targetType, ParsePrimitive(value, targetType.GetConceptValueType()))!;
+
+        return (T)ParsePrimitive(value, targetType);
+    }
+
+    static string FormatValue(object value) =>
+        value switch
+        {
+            string s => s,
+            Guid g => g.ToString(),
+            ConceptAs<string> c => c.Value,
+            ConceptAs<Guid> c => c.Value.ToString(),
+            DateTime dateTime => dateTime.ToString("O", CultureInfo.InvariantCulture),
+            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("O", CultureInfo.InvariantCulture),
+            DateOnly dateOnly => dateOnly.ToString("O", CultureInfo.InvariantCulture),
+            TimeOnly timeOnly => timeOnly.ToString("O", CultureInfo.InvariantCulture),
+            TimeSpan timeSpan => timeSpan.ToString("c", CultureInfo.InvariantCulture),
+            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+            _ when value.IsConcept() => FormatValue(value.GetConceptValue()),
+            _ => value.ToString()!
+        };
+
+    static object ParsePrimitive(string value, Type targetType)
+    {
+        if (targetType == typeof(DateTime)) return DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+        if (targetType == typeof(DateTimeOffset)) return DateTimeOffset.Parse(value, CultureInfo.InvariantCulture);
+        if (targetType == typeof(DateOnly)) return DateOnly.Parse(value, CultureInfo.InvariantCulture);
+        if (targetType == typeof(TimeOnly)) return TimeOnly.Parse(value, CultureInfo.InvariantCulture);
+        if (targetType == typeof(TimeSpan)) return TimeSpan.Parse(value, CultureInfo.InvariantCulture);
+
+        return Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
     }
 }
