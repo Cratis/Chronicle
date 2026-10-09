@@ -34,6 +34,7 @@ public class ReducerPipelineFactory(
     {
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
+        readModel.Sink.EnsureReadModelSupported();
         var sink = await namespaceStorage.Sinks.GetFor(readModel);
         return new ReducerPipeline(
             readModel,

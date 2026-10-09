@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections;
@@ -23,6 +25,14 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
     /// <inheritdoc/>
     public async Task Register(IEnumerable<ReadModelDefinition> definitions)
     {
+        definitions = definitions.ToArray();
+        foreach (var definition in definitions)
+        {
+            definition.Sink.EnsureReadModelSupported();
+        }
+
+        EnsureSinglePublisher(definitions);
+
         var readModels = State.ReadModels.ToList();
         var changed = new List<ReadModelDefinition>();
         foreach (var definition in definitions)
@@ -58,6 +68,8 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
     /// <inheritdoc/>
     public async Task RegisterSingle(ReadModelDefinition definition)
     {
+        definition.Sink.EnsureReadModelSupported();
+        EnsureSinglePublisher([definition]);
         var readModels = State.ReadModels.ToList();
         var existing = readModels.Find(_ => _.Identifier == definition.Identifier);
         if (existing is not null)
@@ -81,6 +93,8 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
     /// <inheritdoc/>
     public async Task UpdateDefinition(ReadModelDefinition definition)
     {
+        definition.Sink.EnsureReadModelSupported();
+        EnsureSinglePublisher([definition]);
         var readModels = State.ReadModels.ToList();
         var existing = readModels.Find(_ => _.Identifier == definition.Identifier) ?? throw new ReadModelNotFound(definition.Identifier);
         readModels.Remove(existing);
@@ -99,6 +113,32 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
 
     /// <inheritdoc/>
     public Task<IEnumerable<ReadModelDefinition>> GetDefinitions() => Task.FromResult(State.ReadModels);
+
+    /// <summary>
+    /// Refuses definitions that would make two targets publish the same event type to the same event sequence.
+    /// </summary>
+    /// <param name="incoming">The <see cref="ReadModelDefinition">definitions</see> about to be stored.</param>
+    /// <exception cref="EventPublisherConflict">Thrown when a destination and event type would have two publishers.</exception>
+    void EnsureSinglePublisher(IEnumerable<ReadModelDefinition> incoming)
+    {
+        var incomingList = incoming.ToArray();
+        var incomingIds = incomingList.Select(_ => _.Identifier).ToHashSet();
+        var publishers = State.ReadModels.Where(_ => !incomingIds.Contains(_.Identifier)).Concat(incomingList)
+            .Where(_ => _.Sink.EventSequence is not null)
+            .ToArray();
+        var seen = new Dictionary<(EventSequenceId Destination, EventTypeId EventType), ReadModelIdentifier>();
+        foreach (var publisher in publishers)
+        {
+            var configuration = publisher.Sink.EventSequence!;
+            var key = (configuration.Destination, EventType: configuration.EventType.Id);
+            if (seen.TryGetValue(key, out var first) && first != publisher.Identifier)
+            {
+                throw new EventPublisherConflict(key.Destination, key.EventType, first, publisher.Identifier);
+            }
+
+            seen[key] = publisher.Identifier;
+        }
+    }
 
     /// <summary>
     /// Evicts the cached pipeline of every projection that targets a read model whose definition just

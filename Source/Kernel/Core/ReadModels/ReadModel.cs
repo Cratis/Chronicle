@@ -15,6 +15,7 @@ public class ReadModel : Grain<ReadModelDefinition>, IReadModel
     /// <inheritdoc/>
     public async Task SetDefinition(ReadModelDefinition definition)
     {
+        definition.Sink.EnsureReadModelSupported();
         State = definition;
         await WriteStateAsync();
     }

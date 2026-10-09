@@ -100,6 +100,22 @@ public interface IEventSequence : IGrainWithStringKey
         EventSourceId? eventSourceId = null);
 
     /// <summary>
+    /// Publishes one immutable durable intent through normal validation, compliance and event migration.
+    /// </summary>
+    /// <param name="publicationId">The opaque deterministic identity persisted with the intent, scoped to this destination.</param>
+    /// <param name="intentFingerprint">The persisted digest of the plaintext intent and all append context.</param>
+    /// <param name="event">The event from the durable intent.</param>
+    /// <param name="correlationId">The original correlation identity.</param>
+    /// <param name="causation">The original causation chain.</param>
+    /// <param name="causedBy">The original identity chain.</param>
+    /// <returns>The existing or newly committed sequence number, or an explicit append failure.</returns>
+    /// <remarks>
+    /// Kernel-owned publication only; this does not expose a client registration or gRPC API.
+    /// A retry must reuse the same persisted intent. Replay must allocate a new occurrence identity.
+    /// </remarks>
+    Task<AppendResult> AppendPublication(string publicationId, string intentFingerprint, EventToAppend @event, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
+
+    /// <summary>
     /// Appends an event to the event sequence.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> of the event source.</param>

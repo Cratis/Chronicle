@@ -62,6 +62,7 @@ public class ProjectionFactory(
     /// <inheritdoc/>
     public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
+        readModelDefinition.Sink.EnsureReadModelSupported();
         var eventSequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(definition.EventSequenceId);
 
         // Only a join that releases a stored event needs the schema of the generation it was stored at.
@@ -71,7 +72,7 @@ public class ProjectionFactory(
             eventTypesStorage,
             definition,
             readModelDefinition,
-            readModelDefinition.GetSchemaForLatestGeneration(),
+            readModelDefinition.GetTargetSchema(),
             PropertyPath.Root,
             PropertyPath.Root,
             ProjectionPath.GetRootFor(definition.Identifier),
