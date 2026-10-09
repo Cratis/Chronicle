@@ -49,5 +49,15 @@ public enum DecisionReadRefusalReason
     FoldIncomplete = 13,
 
     /// <summary>The listed kernel definition disagrees with the client definition. This diagnostic does not certify agreement with the executing projection.</summary>
-    DefinitionMismatch = 14
+    DefinitionMismatch = 14,
+
+    /// <summary>
+    /// The reader or kernel does not support event stream scoping.
+    /// </summary>
+    StreamScopeNotSupported = 15,
+
+    /// <summary>
+    /// The projection is keyed by stream identifier and requires a stream-scoped read.
+    /// </summary>
+    StreamKeyRequiresStreamScope = 16
 }

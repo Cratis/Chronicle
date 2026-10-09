@@ -44,4 +44,28 @@ public class DehydrateSessionRequest
     /// </summary>
     [ProtoMember(6)]
     public string SessionId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the optional event source type filter.
+    /// </summary>
+    [ProtoMember(7)]
+    public string EventSourceType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the optional event stream type filter.
+    /// </summary>
+    [ProtoMember(8)]
+    public string EventStreamType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the optional event stream identifier filter.
+    /// </summary>
+    [ProtoMember(9)]
+    public string EventStreamId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event source identifier when different from the model key.
+    /// </summary>
+    [ProtoMember(10)]
+    public string EventSourceId { get; set; } = string.Empty;
 }

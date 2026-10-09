@@ -112,7 +112,14 @@ public class ImmediateProjection(
             }
 
             var modelKey = _projectionKey.ReadModelKey.IsSpecified ? (EventSourceId)_projectionKey.ReadModelKey.Value : null!;
-            using var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(fromSequenceNumber, modelKey, eventTypes: eventTypes);
+            var streamScope = _projectionKey.StreamScope;
+            using var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(
+                fromSequenceNumber,
+                streamScope?.EventSourceId ?? modelKey,
+                eventSourceType: streamScope?.EventSourceType,
+                eventStreamType: streamScope?.EventStreamType,
+                eventStreamId: streamScope?.EventStreamId,
+                eventTypes: eventTypes);
             var projectedEventsCount = 0;
             var state = GetInitialState();
             while (await cursor.MoveNext())
