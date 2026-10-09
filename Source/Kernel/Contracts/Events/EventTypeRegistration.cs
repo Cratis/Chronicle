@@ -53,4 +53,13 @@ public class EventTypeRegistration
     /// </remarks>
     [ProtoMember(5)]
     public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets whether the event type is public, meaning part of the contract the owning event store exposes, or private.
+    /// </summary>
+    /// <remarks>
+    /// Clients that predate visibility send nothing, which is <see cref="EventTypeVisibility.Unspecified"/>.
+    /// </remarks>
+    [ProtoMember(6)]
+    public EventTypeVisibility Visibility { get; set; } = EventTypeVisibility.Unspecified;
 }
