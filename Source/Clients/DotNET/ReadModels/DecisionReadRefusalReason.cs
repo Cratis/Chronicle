@@ -59,5 +59,15 @@ public enum DecisionReadRefusalReason
     /// <summary>
     /// The projection is keyed by stream identifier and requires a stream-scoped read.
     /// </summary>
-    StreamKeyRequiresStreamScope = 16
+    StreamKeyRequiresStreamScope = 16,
+
+    /// <summary>
+    /// A stream-scoped read must select one stream type rather than all stream types.
+    /// </summary>
+    AllStreamsNotSupported = 17,
+
+    /// <summary>
+    /// A stream-keyed projection requires an explicit stream identifier rather than the default wildcard.
+    /// </summary>
+    StreamKeyRequiresExplicitStreamId = 18
 }

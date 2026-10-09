@@ -268,7 +268,16 @@ public sealed class DecisionReads : IDecisionReads
         {
             throw new DecisionReadRefused(DecisionReadRefusalReason.InvalidKey, typeof(T));
         }
-        return UsesStreamKey(definition!) ? scope.EventStreamId.Value : scope.EventSourceId.Value;
+        if (scope.EventStreamType.IsAll)
+        {
+            throw new DecisionReadRefused(DecisionReadRefusalReason.AllStreamsNotSupported, typeof(T));
+        }
+        var streamKeyed = UsesStreamKey(definition!);
+        if (streamKeyed && scope.EventStreamId.IsDefault)
+        {
+            throw new DecisionReadRefused(DecisionReadRefusalReason.StreamKeyRequiresExplicitStreamId, typeof(T));
+        }
+        return streamKeyed ? scope.EventStreamId.Value : scope.EventSourceId.Value;
     }
 
     static bool UsesStreamKey(ProjectionDefinition definition) =>
