@@ -24,6 +24,7 @@ public class ConstraintValidationFactory(IStorage storage) : IConstraintValidati
         var uniqueEventTypeConstraintsStorage = namespaceStorage.GetUniqueEventTypesConstraints(eventSequenceKey.EventSequenceId);
         var closedStreamsStorage = namespaceStorage.GetClosedStreamsConstraints(eventSequenceKey.EventSequenceId);
         var definitions = await eventStore.Constraints.GetDefinitions();
+        var closedStreamDimensions = await closedStreamsStorage.GetDimensionsInUse();
 
         // A constraint that does not apply to this event sequence gets no validator at all, which skips both its
         // validation and the index update that follows a successful append - so the sequence never claims a value
@@ -36,7 +37,7 @@ public class ConstraintValidationFactory(IStorage storage) : IConstraintValidati
                 UniqueEventTypeConstraintDefinition uniqueEventType => new UniqueEventTypeConstraintValidator(uniqueEventType, uniqueEventTypeConstraintsStorage),
                 _ => throw new UnknownConstraintType(_.GetType())
             })
-            .Append(new ClosedStreamConstraintValidator(closedStreamsStorage))
+            .Append(new ClosedStreamConstraintValidator(closedStreamsStorage, closedStreamDimensions))
             .ToArray();
 
         return new ConstraintValidation(validators);

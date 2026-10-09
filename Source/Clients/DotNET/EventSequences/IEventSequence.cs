@@ -440,4 +440,43 @@ public interface IEventSequence
     /// append targeting the same stream results in a constraint violation of type <c language="csharp">StreamClosed</c>.
     /// </remarks>
     Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId);
+
+    /// <summary>
+    /// Manually complete a nonempty scope, optionally guarded by its expected tail.
+    /// </summary>
+    /// <param name="scope">The scope to close.</param>
+    /// <param name="expectedTailSequenceNumber">The expected scope tail, or null for no guard.</param>
+    /// <returns>The sequence tail at closure, or a completion error.</returns>
+    /// <exception cref="ClosedStreamScopesNotSupported">The implementation does not support scopes.</exception>
+    /// <remarks>
+    /// Covering manual closures return AlreadyCompleted. Event-owned coverage alone still writes a manual
+    /// closure, so later reopening events cannot undo the operator's explicit decision.
+    /// </remarks>
+    Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default) =>
+        throw new ClosedStreamScopesNotSupported();
+
+    /// <summary>
+    /// Check whether a scope is covered by a persisted closure.
+    /// </summary>
+    /// <param name="scope">The scope to inspect.</param>
+    /// <returns>True if covered.</returns>
+    /// <exception cref="ClosedStreamScopesNotSupported">The implementation does not support scopes.</exception>
+    Task<bool> IsStreamCompleted(ClosedStreamScope scope) => throw new ClosedStreamScopesNotSupported();
+
+    /// <summary>
+    /// Check whether a stream is covered by a persisted closure.
+    /// </summary>
+    /// <param name="eventStreamType">The stream type.</param>
+    /// <param name="eventStreamId">The stream identifier.</param>
+    /// <returns>True if covered.</returns>
+    Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
+        IsStreamCompleted(ClosedStreamScope.ForStream(eventStreamType, eventStreamId));
+
+    /// <summary>
+    /// Inspect closed scopes within optional dimensions.
+    /// </summary>
+    /// <param name="within">The scope filter, or null for all closures.</param>
+    /// <returns>The matching closed scopes.</returns>
+    /// <exception cref="ClosedStreamScopesNotSupported">The implementation does not support scopes.</exception>
+    Task<IImmutableList<ClosedStream>> GetClosedStreams(ClosedStreamScope? within = default) => throw new ClosedStreamScopesNotSupported();
 }

@@ -89,6 +89,7 @@ public partial class EventSequence(
     IAppendedEventsQueues? _appendedEventsQueues;
     IConstraintValidation? _constraints;
     ConstraintsVersion _constraintsVersion = ConstraintsVersion.NotSet;
+    bool _closedStreamsChanged;
     TimeSpan _constraintsVersionCheckInterval;
     long _lastConstraintsVersionCheck;
     int _statePersistenceInterval = 1;
@@ -515,25 +516,65 @@ public partial class EventSequence(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId)
+    public Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
+        CompleteStream(new ClosedStreamScope(EventStreamType: eventStreamType, EventStreamId: eventStreamId));
+
+    /// <inheritdoc/>
+    public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default)
     {
-        if (eventStreamType == EventStreamType.All && eventStreamId.Value == EventStreamId.Default)
+        scope = scope.Normalized();
+        if (scope.IsEmpty) return CompleteStreamError.EmptyScope;
+        if (scope.IsDefaultStreamOnly) return CompleteStreamError.DefaultStreamCannotBeCompleted;
+
+        var closures = await ClosedStreamsStorage.GetCovering(scope, await ClosedStreamsStorage.GetDimensionsInUse());
+        if (closures.Any(closure => closure.Owner == ClosedStreamOwner.Manual)) return CompleteStreamError.AlreadyCompleted;
+
+        if (expectedTailSequenceNumber is not null && await GetScopeTail(scope) != expectedTailSequenceNumber)
         {
-            return CompleteStreamError.DefaultStreamCannotBeCompleted;
+            return CompleteStreamError.ExpectedTailMismatch;
         }
 
-        if (await ClosedStreamsStorage.IsStreamClosed(eventStreamType, eventStreamId))
-        {
-            return CompleteStreamError.AlreadyCompleted;
-        }
+        var sequenceNumber = State.SequenceNumber - 1;
+        await ClosedStreamsStorage.Close(new(scope, ClosedStreamOwner.Manual, sequenceNumber, DateTimeOffset.UtcNow));
+        _closedStreamsChanged = true;
 
-        await ClosedStreamsStorage.CloseStream(eventStreamType, eventStreamId);
-        return State.SequenceNumber - 1;
+        return sequenceNumber;
     }
 
     /// <inheritdoc/>
     public Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
-        ClosedStreamsStorage.IsStreamClosed(eventStreamType, eventStreamId);
+        IsStreamCompleted(new ClosedStreamScope(EventStreamType: eventStreamType, EventStreamId: eventStreamId));
+
+    /// <inheritdoc/>
+    public async Task<bool> IsStreamCompleted(ClosedStreamScope scope) =>
+        (await ClosedStreamsStorage.GetCovering(scope, await ClosedStreamsStorage.GetDimensionsInUse())).Any();
+
+    /// <summary>
+    /// Read the exact scope tail, preserving sentinel values as participating dimensions.
+    /// </summary>
+    /// <param name="scope">The normalized scope.</param>
+    /// <returns>The matching tail, or unavailable when empty.</returns>
+    internal async Task<EventSequenceNumber> GetScopeTail(ClosedStreamScope scope)
+    {
+        // Storage read criteria treat All/Default as wildcards. A closure treats them as real values,
+        // so sentinel scopes need an exact check on the returned event contexts.
+        if (scope.EventStreamType != EventStreamType.All && scope.EventStreamId?.Value != EventStreamId.Default && scope.EventSourceType != EventSourceType.Default)
+        {
+            return await EventSequenceStorage.GetTailSequenceNumber(eventSourceId: scope.EventSourceId, eventSourceType: scope.EventSourceType, eventStreamId: scope.EventStreamId, eventStreamType: scope.EventStreamType);
+        }
+
+        using var cursor = await EventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, scope.EventSourceId, scope.EventSourceType, scope.EventStreamType, scope.EventStreamId);
+        var tail = EventSequenceNumber.Unavailable;
+        while (await cursor.MoveNext())
+        {
+            foreach (var @event in cursor.Current.Where(@event => scope.Covers(new(@event.Context.EventSourceId, @event.Context.EventSourceType, @event.Context.EventStreamType, @event.Context.EventStreamId))))
+            {
+                if (tail == EventSequenceNumber.Unavailable || @event.Context.SequenceNumber > tail) tail = @event.Context.SequenceNumber;
+            }
+        }
+
+        return tail;
+    }
 
     /// <summary>
     /// Append a set of already validated and compliant events to storage — numbering the batch,
@@ -992,6 +1033,12 @@ public partial class EventSequence(
         EventStreamId? eventStreamId = default,
         ConstraintBatchClaims? batchClaims = default)
     {
+        if (_closedStreamsChanged)
+        {
+            _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+            _closedStreamsChanged = false;
+        }
+
         var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
         var constraintValidationResult = await constraintContext.Validate();
         if (constraintValidationResult.IsValid)

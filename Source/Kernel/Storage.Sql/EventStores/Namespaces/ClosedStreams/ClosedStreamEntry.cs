@@ -30,4 +30,37 @@ public class ClosedStreamEntry
     [Key]
     [MaxLength(255)]
     public string StreamId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event source identifier, or empty when unset.
+    /// </summary>
+    [MaxLength(255)]
+    public string EventSourceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event source type, or empty when unset.
+    /// </summary>
+    [MaxLength(255)]
+    public string EventSourceType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the closure owner, or empty for manual closures.
+    /// </summary>
+    [MaxLength(255)]
+    public string Owner { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the participating dimensions.
+    /// </summary>
+    public int Dimensions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the closing sequence number.
+    /// </summary>
+    public decimal SequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the closing timestamp.
+    /// </summary>
+    public DateTimeOffset? ClosedAt { get; set; }
 }

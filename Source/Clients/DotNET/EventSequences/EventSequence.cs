@@ -469,6 +469,79 @@ public class EventSequence(
         };
     }
 
+    /// <inheritdoc/>
+    public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default)
+    {
+        var response = await _servicesAccessor.Services.Sequences.CompleteStreamScope(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = scope.EventSourceId?.Value,
+            EventSourceType = scope.EventSourceType?.Value,
+            EventStreamType = scope.EventStreamType?.Value,
+            EventStreamId = scope.EventStreamId?.Value,
+            ExpectedTailSequenceNumber = expectedTailSequenceNumber?.Value
+        }).EnsureSuccess();
+
+        return response.IsSuccess
+            ? (EventSequenceNumber)response.SequenceNumber
+            : response.Error switch
+            {
+                ContractCompleteStreamError.DefaultStreamCannotBeCompleted => CompleteStreamError.DefaultStreamCannotBeCompleted,
+                ContractCompleteStreamError.EmptyScope => CompleteStreamError.EmptyScope,
+                ContractCompleteStreamError.ExpectedTailMismatch => CompleteStreamError.ExpectedTailMismatch,
+                _ => CompleteStreamError.AlreadyCompleted
+            };
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> IsStreamCompleted(ClosedStreamScope scope)
+    {
+        var response = await _servicesAccessor.Services.Sequences.IsStreamScopeCompleted(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = scope.EventSourceId?.Value,
+            EventSourceType = scope.EventSourceType?.Value,
+            EventStreamType = scope.EventStreamType?.Value,
+            EventStreamId = scope.EventStreamId?.Value
+        }).EnsureSuccess();
+
+        return response.IsCompleted;
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
+        IsStreamCompleted(ClosedStreamScope.ForStream(eventStreamType, eventStreamId));
+
+    /// <inheritdoc/>
+    public async Task<IImmutableList<ClosedStream>> GetClosedStreams(ClosedStreamScope? within = default)
+    {
+        var response = await _servicesAccessor.Services.Sequences.ClosedStreams(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = within?.EventSourceId?.Value,
+            EventSourceType = within?.EventSourceType?.Value,
+            EventStreamType = within?.EventStreamType?.Value,
+            EventStreamId = within?.EventStreamId?.Value
+        }).EnsureSuccess();
+
+        return response.Select(row => new ClosedStream(
+            new(
+                row.EventSourceId is null ? null : new EventSourceId(row.EventSourceId),
+                row.EventSourceType is null ? null : new EventSourceType(row.EventSourceType),
+                row.EventStreamType is null ? null : new EventStreamType(row.EventStreamType),
+                row.EventStreamId is null ? null : new EventStreamId(row.EventStreamId)),
+            row.Origin == Contracts.Sequences.ClosedStreamOrigin.CompleteStream ? ClosedStreamOrigin.CompleteStream : ClosedStreamOrigin.ClosingEvent,
+            row.ClosedBy is null ? null : new Events.Constraints.ConstraintName(row.ClosedBy),
+            row.SequenceNumber,
+            row.ClosedAt)).ToImmutableList();
+    }
+
     /// <summary>Checks whether this is the event log for the exact decision-read target.</summary>
     /// <param name="store">The expected event store.</param>
     /// <param name="targetNamespace">The expected namespace.</param>

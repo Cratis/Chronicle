@@ -25,7 +25,8 @@ public class and_stream_is_closed : given.a_closed_stream_constraint_validator
             eventStreamType: _streamType,
             eventStreamId: _streamId);
 
-        _storage.IsStreamClosed(_streamType, _streamId).Returns(true);
+        _storage.GetCovering(Arg.Any<ClosedStreamScope>(), Arg.Any<IEnumerable<ClosedStreamDimensions>>())
+            .Returns([new ClosedStream(new(EventStreamType: _streamType, EventStreamId: _streamId), ClosedStreamOwner.Manual, EventSequenceNumber.Unavailable, null)]);
     }
 
     async Task Because() => _result = await _validator.Validate(_context);

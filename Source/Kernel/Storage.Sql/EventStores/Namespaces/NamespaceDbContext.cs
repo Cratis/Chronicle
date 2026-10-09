@@ -97,7 +97,8 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             .Entity<ClosedStreamEntry>(entity =>
             {
                 entity.ToTable(WellKnownTableNames.ClosedStreams);
-                entity.HasKey(e => new { e.EventSequenceId, e.StreamType, e.StreamId });
+                entity.HasKey(e => new { e.EventSequenceId, e.StreamType, e.StreamId, e.EventSourceId, e.EventSourceType, e.Owner, e.Dimensions });
+                entity.Property(e => e.SequenceNumber).HasPrecision(20, 0);
             })
             .Entity<Patterns.BehaviorPattern>(entity =>
             {

@@ -140,4 +140,14 @@ internal sealed class NoOpEventLog : IEventLog
     /// <inheritdoc/>
     public Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
         throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
+    public Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default) =>
+        throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
+    public Task<bool> IsStreamCompleted(ClosedStreamScope scope) => throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
+    public Task<IImmutableList<ClosedStream>> GetClosedStreams(ClosedStreamScope? within = default) => throw new EventLogNotAvailableInKernelPipeline();
 }

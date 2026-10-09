@@ -49,7 +49,8 @@ public class when_upgrading_an_existing_namespace : Specification
             foreach (var (id, type) in assembly.Migrations.Where(entry => !entry.Key.Contains("AlertIncidents", StringComparison.Ordinal)))
             {
                 var migration = assembly.CreateMigration(type, context.Database.ProviderName);
-                foreach (var command in sqlGenerator.Generate(migration.UpOperations))
+                var targetModel = context.GetService<IModelRuntimeInitializer>().Initialize(migration.TargetModel, designTime: true);
+                foreach (var command in sqlGenerator.Generate(migration.UpOperations, targetModel))
                 {
                     await context.Database.ExecuteSqlRawAsync(command.CommandText);
                 }
