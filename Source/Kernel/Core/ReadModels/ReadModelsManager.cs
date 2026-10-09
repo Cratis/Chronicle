@@ -33,35 +33,9 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
 
         EnsureSinglePublisher(definitions);
 
-        var readModels = State.ReadModels.ToList();
-        var changed = new List<ReadModelDefinition>();
         foreach (var definition in definitions)
         {
-            var existing = readModels.Find(_ => _.Identifier == definition.Identifier);
-            if (existing is not null)
-            {
-                readModels.Remove(existing);
-                if (existing != definition)
-                {
-                    changed.Add(definition);
-                }
-            }
-
-            readModels.Add(definition);
-        }
-
-        State.ReadModels = readModels;
-        await WriteStateAsync();
-
-        foreach (var definition in definitions)
-        {
-            var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
-            await readModelGrain.SetDefinition(definition);
-        }
-
-        foreach (var definition in changed)
-        {
-            await EvictProjectionsTargeting(definition.Identifier);
+            await RegisterDefinition(definition);
         }
     }
 
@@ -70,24 +44,7 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
     {
         definition.Sink.EnsureReadModelSupported();
         EnsureSinglePublisher([definition]);
-        var readModels = State.ReadModels.ToList();
-        var existing = readModels.Find(_ => _.Identifier == definition.Identifier);
-        if (existing is not null)
-        {
-            readModels.Remove(existing);
-        }
-
-        readModels.Add(definition);
-        State.ReadModels = readModels;
-        await WriteStateAsync();
-
-        var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
-        await readModelGrain.SetDefinition(definition);
-
-        if (existing is not null && existing != definition)
-        {
-            await EvictProjectionsTargeting(definition.Identifier);
-        }
+        await RegisterDefinition(definition);
     }
 
     /// <inheritdoc/>
@@ -95,24 +52,36 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
     {
         definition.Sink.EnsureReadModelSupported();
         EnsureSinglePublisher([definition]);
-        var readModels = State.ReadModels.ToList();
-        var existing = readModels.Find(_ => _.Identifier == definition.Identifier) ?? throw new ReadModelNotFound(definition.Identifier);
-        readModels.Remove(existing);
-        readModels.Add(definition);
-        State.ReadModels = readModels;
-        await WriteStateAsync();
-
-        var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
-        await readModelGrain.SetDefinition(definition);
-
-        if (existing != definition)
+        if (!State.ReadModels.Any(_ => _.Identifier == definition.Identifier))
         {
-            await EvictProjectionsTargeting(definition.Identifier);
+            throw new ReadModelNotFound(definition.Identifier);
         }
+
+        await RegisterDefinition(definition);
     }
 
     /// <inheritdoc/>
     public Task<IEnumerable<ReadModelDefinition>> GetDefinitions() => Task.FromResult(State.ReadModels);
+
+    async Task RegisterDefinition(ReadModelDefinition definition)
+    {
+        var existing = State.ReadModels.FirstOrDefault(_ => _.Identifier == definition.Identifier);
+        if (ReadModelDefinitions.AreEqual(existing, definition))
+        {
+            return;
+        }
+
+        // The manager is rehydrated from the same documents the individual read-model grains persist.
+        // Writing its whole state would rewrite every unrelated definition, then write this one twice.
+        await GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString()).SetDefinition(definition);
+        if (existing is not null)
+        {
+            await EvictProjectionsTargeting(definition.Identifier);
+        }
+
+        // Publish accepted state only after all required side effects succeeded, so a retry repairs failures.
+        State.ReadModels = State.ReadModels.Where(_ => _.Identifier != definition.Identifier).Append(definition).ToArray();
+    }
 
     /// <summary>
     /// Refuses definitions that would make two targets publish the same event type to the same event sequence.
