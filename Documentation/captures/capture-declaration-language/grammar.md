@@ -36,9 +36,9 @@ SourceBlock      = "source", SourceType, NL,
                      { SourceProperty },
                    DEDENT ;
 
-SourceType       = "api" | "webhook" | "message" ;
+SourceType       = "api" | "webhook" | "message" | "events" ;
 
-SourceProperty   = ("api" | "route" | "poll" | "path" | "topic"), LineValue, NL ;
+SourceProperty   = ("api" | "route" | "poll" | "path" | "topic" | "sequence" | "from"), LineValue, NL ;
 
 KeyDirective     = "key", LineValue, NL ;
 
