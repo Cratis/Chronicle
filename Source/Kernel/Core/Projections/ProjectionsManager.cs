@@ -107,9 +107,10 @@ public partial class ProjectionsManager(
     }
 
     /// <inheritdoc/>
-    public async Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null)
+    public async Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null)
     {
         var definitionList = definitions.ToList();
+        var registrantsChanged = RecordRegistrant(definitionList, registrant);
 
         // Same-version client replicas re-register identical definitions on every startup and reconnect. Handling
         // only what actually changed makes such a re-registration near-free, and because this grain is non-reentrant
@@ -124,6 +125,10 @@ public partial class ProjectionsManager(
         if (changedDefinitions.Count == 0)
         {
             logger.AllDefinitionsUnchanged();
+            if (registrantsChanged)
+            {
+                await WriteStateAsync();
+            }
         }
         else
         {
@@ -159,7 +164,7 @@ public partial class ProjectionsManager(
 
         if (fullSetOwner is not null)
         {
-            await RetireUnregisteredProjections(definitionList, fullSetOwner.Value, failures);
+            await RetireUnregisteredProjections(definitionList, fullSetOwner.Value, registrant, failures);
         }
 
         if (failures.Count > 0)
@@ -203,6 +208,30 @@ public partial class ProjectionsManager(
 
         streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Records which registrant last registered each of the definitions, so a full set can later retire only what
+    /// the same registrant registered. Several applications share one event store, each registering its own full set.
+    /// </summary>
+    /// <param name="definitions">The definitions in the registration.</param>
+    /// <param name="registrant">The registrant, if the client identified itself.</param>
+    /// <returns><see langword="true"/> if the recorded registrants changed and state needs writing.</returns>
+    bool RecordRegistrant(IEnumerable<ProjectionDefinition> definitions, string? registrant)
+    {
+        if (string.IsNullOrEmpty(registrant)) return false;
+
+        var changed = false;
+        var registrants = new Dictionary<string, string>(State.Registrants);
+        foreach (var definition in definitions)
+        {
+            if (registrants.TryGetValue(definition.Identifier.Value, out var current) && current == registrant) continue;
+            registrants[definition.Identifier.Value] = registrant;
+            changed = true;
+        }
+
+        if (changed) State.Registrants = registrants;
+        return changed;
     }
 
     async Task OnNamespaceAdded(NamespaceAdded added)

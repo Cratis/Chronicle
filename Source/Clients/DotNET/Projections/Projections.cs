@@ -277,6 +277,7 @@ public class Projections(
             // artifact produced a definition. An artifact whose definition could not be built is excluded from the
             // batch, and claiming a full set then would make the kernel retire a projection that still exists in
             // the client.
+            Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
             FullSet = _discovered && ArtifactRegistrations.All(registration => registration.IsRegistered)
         });
         Registered?.Invoke();
@@ -402,6 +403,7 @@ public class Projections(
                 EventStore = eventStore.Name,
                 Owner = ProjectionOwner.Client,
                 Projections = [registration.Definition],
+                Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
                 FullSet = false
             });
             Registered?.Invoke();

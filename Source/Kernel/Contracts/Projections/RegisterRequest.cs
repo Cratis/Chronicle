@@ -36,4 +36,12 @@ public class RegisterRequest
     /// </summary>
     [ProtoMember(4)]
     public bool FullSet { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identity of the application registering. A full set only retires projections that the same
+    /// registrant registered, so applications sharing an event store do not retire each other's projections. A full
+    /// set without a registrant retires nothing.
+    /// </summary>
+    [ProtoMember(5)]
+    public string Registrant { get; set; } = string.Empty;
 }

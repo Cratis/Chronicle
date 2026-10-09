@@ -33,9 +33,45 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
 
         EnsureSinglePublisher(definitions);
 
+        // A reconnecting client re-registers every read model it has, nearly always unchanged. Only definitions that
+        // are new or differ by value are persisted and pushed to their read model grain; doing it for the whole set
+        // on every call made registration O(read models) in Mongo writes and grain calls, and with this grain being
+        // non-reentrant the stacked retries of every client could never drain.
+        var readModels = State.ReadModels.ToList();
+        var modified = new List<ReadModelDefinition>();
+        var changed = new List<ReadModelDefinition>();
         foreach (var definition in definitions)
         {
-            await RegisterDefinition(definition);
+            var existing = readModels.Find(_ => _.Identifier == definition.Identifier);
+            if (existing is not null)
+            {
+                if (existing.IsEquivalentTo(definition))
+                {
+                    continue;
+                }
+
+                readModels.Remove(existing);
+                changed.Add(definition);
+            }
+
+            readModels.Add(definition);
+            modified.Add(definition);
+        }
+
+        if (modified.Count > 0)
+        {
+            await Persist(readModels, modified);
+        }
+
+        foreach (var definition in modified)
+        {
+            var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
+            await readModelGrain.SetDefinition(definition);
+        }
+
+        foreach (var definition in changed)
+        {
+            await EvictProjectionsTargeting(definition.Identifier);
         }
     }
 
@@ -44,7 +80,28 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
     {
         definition.Sink.EnsureReadModelSupported();
         EnsureSinglePublisher([definition]);
-        await RegisterDefinition(definition);
+        var readModels = State.ReadModels.ToList();
+        var existing = readModels.Find(_ => _.Identifier == definition.Identifier);
+        if (existing?.IsEquivalentTo(definition) == true)
+        {
+            return;
+        }
+
+        if (existing is not null)
+        {
+            readModels.Remove(existing);
+        }
+
+        readModels.Add(definition);
+        await Persist(readModels, [definition]);
+
+        var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
+        await readModelGrain.SetDefinition(definition);
+
+        if (existing is not null)
+        {
+            await EvictProjectionsTargeting(definition.Identifier);
+        }
     }
 
     /// <inheritdoc/>
@@ -52,35 +109,41 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
     {
         definition.Sink.EnsureReadModelSupported();
         EnsureSinglePublisher([definition]);
-        if (!State.ReadModels.Any(_ => _.Identifier == definition.Identifier))
-        {
-            throw new ReadModelNotFound(definition.Identifier);
-        }
+        var readModels = State.ReadModels.ToList();
+        var existing = readModels.Find(_ => _.Identifier == definition.Identifier) ?? throw new ReadModelNotFound(definition.Identifier);
+        readModels.Remove(existing);
+        readModels.Add(definition);
+        await Persist(readModels, [definition]);
 
-        await RegisterDefinition(definition);
+        var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
+        await readModelGrain.SetDefinition(definition);
+
+        if (!existing.IsEquivalentTo(definition))
+        {
+            await EvictProjectionsTargeting(definition.Identifier);
+        }
     }
 
     /// <inheritdoc/>
     public Task<IEnumerable<ReadModelDefinition>> GetDefinitions() => Task.FromResult(State.ReadModels);
 
-    async Task RegisterDefinition(ReadModelDefinition definition)
+    async Task Persist(List<ReadModelDefinition> readModels, IEnumerable<ReadModelDefinition> modified)
     {
-        var existing = State.ReadModels.FirstOrDefault(_ => _.Identifier == definition.Identifier);
-        if (ReadModelDefinitions.AreEqual(existing, definition))
+        // A failed write must not leave the in-memory state ahead of storage: the definition would then compare as
+        // unchanged on the client's retry and never be persisted.
+        var previous = State.ReadModels;
+        State.ReadModels = readModels;
+        State.Modified = modified.ToArray();
+        try
         {
-            return;
+            await WriteStateAsync();
         }
-
-        // The manager is rehydrated from the same documents the individual read-model grains persist.
-        // Writing its whole state would rewrite every unrelated definition, then write this one twice.
-        await GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString()).SetDefinition(definition);
-        if (existing is not null)
+        catch
         {
-            await EvictProjectionsTargeting(definition.Identifier);
+            State.ReadModels = previous;
+            State.Modified = [];
+            throw;
         }
-
-        // Publish accepted state only after all required side effects succeeded, so a retry repairs failures.
-        State.ReadModels = State.ReadModels.Where(_ => _.Identifier != definition.Identifier).Append(definition).ToArray();
     }
 
     /// <summary>
