@@ -439,6 +439,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             // A server from before the check moved server-side does not have this method. Fall back to the older
             // exchange it does have, so upgrading the client does not silently drop the check against those servers.
+            // Such a server predates the capabilities handshake, so it is known to advertise no capabilities.
+            CapabilitiesAreKnown = true;
             await CheckCompatibilityAgainstOlderServer(connectionService);
             return;
         }
