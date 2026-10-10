@@ -14,6 +14,7 @@ public class and_the_kernel_supports_closing_constraints : given.a_closing_const
     {
         var connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor, IKernelCapabilities>();
         ((IKernelCapabilities)connection).Capabilities.Returns([KernelCapabilities.ClosesStreamConstraints]);
+        ((IKernelCapabilities)connection).CapabilitiesAreKnown.Returns(true);
         ((IChronicleServicesAccessor)connection).Services.Returns(_services);
         _eventStore.Connection.Returns(connection);
         _constraints = new(_eventStore, _constraintsProviders);

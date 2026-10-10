@@ -156,6 +156,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <inheritdoc/>
     public IReadOnlyCollection<string> Capabilities { get; private set; } = [];
 
+    /// <inheritdoc/>
+    public bool CapabilitiesAreKnown { get; private set; }
+
     /// <summary>
     /// Gets the <see cref="ChronicleServerAddress"/> the connection is currently using, or the
     /// first configured address when no connection has been established yet.
@@ -419,6 +422,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     async Task CheckCompatibility(IConnectionService connectionService)
     {
         Capabilities = [];
+        CapabilitiesAreKnown = false;
         CompatibilityResponse response;
 
         try
@@ -459,6 +463,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
 
         Capabilities = response.Capabilities.ToArray();
+        CapabilitiesAreKnown = true;
         _logger.CompatibilityCheckPassed(ChronicleClientIdentity.Version, ChronicleClientIdentity.ProtocolVersion, response.ServerVersion, response.ServerProtocolVersion);
     }
 

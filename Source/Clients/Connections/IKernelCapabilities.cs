@@ -15,4 +15,10 @@ public interface IKernelCapabilities
     /// Gets the behaviors advertised by the current kernel. Older kernels advertise none.
     /// </summary>
     IReadOnlyCollection<string> Capabilities { get; }
+
+    /// <summary>
+    /// Gets whether the kernel's capabilities were received, rather than left unknown by a skipped or failed check.
+    /// Existing implementations expose an already known set by default.
+    /// </summary>
+    bool CapabilitiesAreKnown => true;
 }

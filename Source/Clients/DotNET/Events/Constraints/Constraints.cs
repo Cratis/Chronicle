@@ -46,8 +46,8 @@ public class Constraints(
     public Task Register()
     {
         if (_constraints.Exists(_ => _ is ClosesStreamConstraintDefinition) &&
-            !(eventStore.Connection is IKernelCapabilities capabilities &&
-              capabilities.Capabilities.Contains(KernelCapabilities.ClosesStreamConstraints)))
+            eventStore.Connection is IKernelCapabilities { CapabilitiesAreKnown: true } capabilities &&
+            !capabilities.Capabilities.Contains(KernelCapabilities.ClosesStreamConstraints))
         {
             throw new ClosesStreamConstraintsNotSupported("The connected kernel does not support closing stream constraints. Upgrade the kernel before registering closing declarations.");
         }
