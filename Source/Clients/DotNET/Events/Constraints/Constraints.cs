@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Collections;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -23,7 +22,7 @@ public class Constraints(
     public Task Discover()
     {
         _constraints.Clear();
-        constraintsProviders.ForEach(provider => _constraints.AddRange(provider.Provide()));
+        _constraints.AddRange(ClosesStreamDeclarations.Merge(constraintsProviders.SelectMany(provider => provider.Provide())));
 
         return Task.CompletedTask;
     }

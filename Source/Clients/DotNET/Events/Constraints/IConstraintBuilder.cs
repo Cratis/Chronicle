@@ -104,6 +104,19 @@ public interface IConstraintBuilder
     IConstraintBuilder RemovedWith<TRemovalEventType>();
 
     /// <summary>
+    /// Declare an event that closes a stream scope, configured inside the callback.
+    /// </summary>
+    /// <typeparam name="TEvent">The closing event type.</typeparam>
+    /// <param name="configure">Optional scope and reopening configuration.</param>
+    /// <param name="name">Optional owner name, defaulting to the event type identifier.</param>
+    /// <returns>The builder for continuation.</returns>
+    /// <exception cref="ClosesStreamConstraintsNotSupported">The implementation does not support closing events.</exception>
+    /// <exception cref="PropertyDoesNotExistOnEventType">A closing or reopening type lacks the configured property.</exception>
+    /// <exception cref="MissingNameForClosesStreamConstraint">The configured owner name is reserved for manual closures.</exception>
+    IConstraintBuilder ClosesStreamOn<TEvent>(Action<IClosesStreamBuilder<TEvent>>? configure = default, ConstraintName? name = default) =>
+        throw new ClosesStreamConstraintsNotSupported();
+
+    /// <summary>
     /// Add a constraint to the builder.
     /// </summary>
     /// <param name="constraint"><see cref="Constraint"/> to add.</param>

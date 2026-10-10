@@ -25,6 +25,12 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="complianceManager"><see cref="IJsonSchemaMetadataManager"/> for releasing (decrypting) PII before hashing.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between ExpandoObject and JsonObject.</param>
 /// <param name="logger">The logger.</param>
+/// <remarks>
+/// Closing constraints rebuild only when explicitly named by the job. Their transitions are staged before
+/// deleting rows. If a redacted property-sourced closing or reopening event has no recoverable scope in the
+/// existing snapshot, that entire owner's rows stay untouched and a structured warning identifies the
+/// constraint and event position. Other constraints still rebuild; no reopening tombstones are retained.
+/// </remarks>
 public class ReindexConstraintsStep(
     [PersistentState(nameof(ReindexConstraintsStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<ReindexConstraintsStepState> state,
@@ -116,7 +122,12 @@ public class ReindexConstraintsStep(
             var uniqueConstraintsStorage = namespaceStorage.GetUniqueConstraintsStorage(currentState.EventSequenceId);
             var eventTypesStorage = eventStoreStorage.EventTypes;
 
-            var allConstraintDefinitions = await eventStoreStorage.Constraints.GetDefinitions();
+            var allConstraintDefinitions = (await eventStoreStorage.Constraints.GetDefinitions()).ToArray();
+            var requestedNames = currentState.Changes.Select(change => change.Name).ToHashSet();
+            var closingDefinitions = allConstraintDefinitions.OfType<ClosesStreamConstraintDefinition>()
+                .Where(definition => requestedNames.Contains(definition.Name) && definition.AppliesTo(currentState.EventSequenceId)).ToArray();
+            var closingReindexer = new ClosesStreamConstraintReindexer(namespaceStorage.GetClosedStreamsConstraints(currentState.EventSequenceId), logger);
+            await closingReindexer.Initialize(closingDefinitions);
             var constraintsByName = allConstraintDefinitions
                 .OfType<UniqueConstraintDefinition>()
                 .ToDictionary(_ => _.Name);
@@ -132,7 +143,7 @@ public class ReindexConstraintsStep(
                 .Where(_ => _.AppliesTo(currentState.EventSequenceId))
                 .ToArray();
 
-            if (changedDefinitions.Length == 0)
+            if (changedDefinitions.Length == 0 && closingDefinitions.Length == 0)
             {
                 return JobStepResult.Succeeded(null);
             }
@@ -158,6 +169,7 @@ public class ReindexConstraintsStep(
                     // PII before establishing the validation context. The append-time index write already uses
                     // plaintext; reindexing must match it or a rebuilt PII index would diverge from new appends.
                     var content = await ReleaseContent(jobStepKey.Scope, jobStepKey.Namespace, @event, eventSchema);
+                    closingReindexer.Include(@event, content);
 
                     foreach (var definition in changedDefinitions)
                     {
@@ -165,6 +177,8 @@ public class ReindexConstraintsStep(
                     }
                 }
             }
+
+            await closingReindexer.Commit(cancellationToken);
 
             return JobStepResult.Succeeded(null);
         }

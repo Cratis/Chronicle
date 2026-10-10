@@ -62,4 +62,10 @@ public class Constraint
     /// </remarks>
     [ProtoMember(6)]
     public IList<string> EventSequences { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the closing-event declaration without changing the existing definition union.
+    /// </summary>
+    [ProtoMember(7)]
+    public ClosesStreamConstraintDefinition? ClosesStream { get; set; }
 }

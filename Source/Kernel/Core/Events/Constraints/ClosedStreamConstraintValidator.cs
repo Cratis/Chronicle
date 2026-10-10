@@ -11,8 +11,9 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// Represents an <see cref="IConstraintValidator"/> that rejects appends covered by closed scopes.
 /// </summary>
 /// <param name="storage">The closure storage.</param>
-/// <param name="dimensionsInUse">The known masks in storage.</param>
-public class ClosedStreamConstraintValidator(IClosedStreamsConstraintStorage storage, IEnumerable<ClosedStreamDimensions> dimensionsInUse) : IConstraintValidator
+/// <param name="dimensionsInUse">The known masks in storage and active closing declarations.</param>
+/// <param name="closingDefinitions">The active declarations defining reopening exemptions.</param>
+public class ClosedStreamConstraintValidator(IClosedStreamsConstraintStorage storage, IEnumerable<ClosedStreamDimensions> dimensionsInUse, IEnumerable<ClosesStreamConstraintDefinition>? closingDefinitions = default) : IConstraintValidator
 {
     readonly ClosedStreamDimensions[] _dimensionsInUse = dimensionsInUse.Distinct().ToArray();
 
@@ -28,7 +29,11 @@ public class ClosedStreamConstraintValidator(IClosedStreamsConstraintStorage sto
         if (_dimensionsInUse.Length == 0) return ConstraintValidationResult.Success;
 
         var scope = new ClosedStreamScope(context.EventSourceId, context.EventSourceType, context.EventStreamType, context.EventStreamId);
-        var closures = await storage.GetCovering(scope, _dimensionsInUse);
+        var persisted = await storage.GetCovering(scope, _dimensionsInUse);
+        var closures = context.BatchClaims?.GetBatchClosuresCovering(scope, persisted) ?? persisted;
+        var exemptOwners = (closingDefinitions ?? []).Where(definition => definition.ReopenedBy.Contains(context.EventTypeId))
+            .Select(definition => new ClosedStreamOwner(definition.Name.Value)).ToHashSet();
+        closures = closures.Where(closure => closure.Owner == ClosedStreamOwner.Manual || !exemptOwners.Contains(closure.Owner));
 
         return new()
         {

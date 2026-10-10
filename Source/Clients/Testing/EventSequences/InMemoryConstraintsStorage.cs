@@ -25,8 +25,7 @@ internal sealed class InMemoryConstraintsStorage(ClientConstraints.ICanProvideCo
     /// <inheritdoc/>
     public Task<IEnumerable<KernelConstraints::IConstraintDefinition>> GetDefinitions()
     {
-        _kernelDefinitions ??= clientConstraintProvider
-            .Provide()
+        _kernelDefinitions ??= ClientConstraints.ClosesStreamDeclarations.Merge(clientConstraintProvider.Provide())
             .Select(ToKernel)
             .OfType<KernelConstraints::IConstraintDefinition>()
             .ToList();
@@ -66,6 +65,19 @@ internal sealed class InMemoryConstraintsStorage(ClientConstraints.ICanProvideCo
                 ToKernelScope(uniqueType.Scope))
             {
                 EventSequences = ToKernelEventSequenceIds(uniqueType.EventSequences)
+            };
+        }
+
+        if (client is ClientConstraints.ClosesStreamConstraintDefinition closing)
+        {
+            return new KernelConstraints::ClosesStreamConstraintDefinition(
+                closing.Name.Value,
+                ToKernelEventTypeIds(closing.EventTypeIds),
+                (KernelConstraints::ClosedStreamDimensions)closing.Dimensions,
+                ToKernelEventTypeIds(closing.ReopenedBy),
+                closing.EventStreamIdFrom)
+            {
+                EventSequences = ToKernelEventSequenceIds(closing.EventSequences)
             };
         }
 

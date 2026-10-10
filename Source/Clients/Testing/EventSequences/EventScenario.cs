@@ -302,7 +302,8 @@ public class EventScenario(
                 namingPolicy),
             new UniqueEventTypeConstraintsProvider(
                 defaults.ClientArtifactsProvider,
-                defaults.EventTypes));
+                defaults.EventTypes),
+            new ClosesStreamConstraintsProvider(defaults.ClientArtifactsProvider, defaults.EventTypes, namingPolicy));
     }
 
     sealed class CompositeConstraintProvider(params ICanProvideConstraints[] providers) : ICanProvideConstraints
