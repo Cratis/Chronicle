@@ -313,6 +313,17 @@ public interface IEventSequence : IGrainWithStringKey
     Task<bool> IsStreamCompleted(ClosedStreamScope scope);
 
     /// <summary>
+    /// Repairs an exact manual closure after durably auditing the operator's decision.
+    /// </summary>
+    /// <param name="scope">The exact scope to reopen.</param>
+    /// <param name="reason">The repair reason.</param>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The authenticated operator.</param>
+    /// <returns>Success or the reason the repair was rejected.</returns>
+    Task<Result<Sequences.ReopenStreamScopeError>> ReopenCompletedStream(ClosedStreamScope scope, string reason, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
+
+    /// <summary>
     /// Check whether or not the supplied stream has been completed.
     /// </summary>
     /// <param name="eventStreamType">The <see cref="EventStreamType"/> identifying the stream's type.</param>

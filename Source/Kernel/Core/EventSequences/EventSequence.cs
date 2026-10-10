@@ -553,6 +553,28 @@ public partial class EventSequence(
     public async Task<bool> IsStreamCompleted(ClosedStreamScope scope) =>
         (await ClosedStreamsStorage.GetCovering(scope, await ClosedStreamsStorage.GetDimensionsInUse())).Any();
 
+    /// <inheritdoc/>
+    public async Task<Result<Sequences.ReopenStreamScopeError>> ReopenCompletedStream(ClosedStreamScope scope, string reason, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy)
+    {
+        scope = scope.Normalized();
+        var exactClosures = (await ClosedStreamsStorage.GetAll()).Where(closure => closure.Scope == scope).ToArray();
+        if (!exactClosures.Any(closure => closure.Owner == ClosedStreamOwner.Manual))
+        {
+            return exactClosures.Length > 0 ? Sequences.ReopenStreamScopeError.ClosedByEvent : Sequences.ReopenStreamScopeError.NotCompleted;
+        }
+
+        var audit = new Events.EventSequences.StreamScopeReopened(_eventSequenceId, scope.EventSourceId?.Value, scope.EventSourceType?.Value, scope.EventStreamType?.Value, scope.EventStreamId?.Value, reason);
+        var systemSequence = _eventSequenceId == EventSequenceId.System
+            ? this
+            : GrainFactory.GetSystemEventSequence(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+        var appended = await systemSequence.Append((EventSourceId)_eventSequenceId.Value, audit, correlationId, causation, causedBy);
+        if (!appended.IsSuccess) throw new Sequences.ReopenStreamScopeAuditFailed();
+        if (!await ClosedStreamsStorage.Reopen(ClosedStreamOwner.Manual, scope)) return Sequences.ReopenStreamScopeError.NotCompleted;
+        _closedStreamsChanged = true;
+
+        return Result<Sequences.ReopenStreamScopeError>.Success();
+    }
+
     /// <summary>
     /// Read the exact scope tail, preserving sentinel values as participating dimensions.
     /// </summary>
