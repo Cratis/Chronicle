@@ -41,7 +41,8 @@ public class when_two_clients_ensure_the_same_event_store : Specification, IDisp
             _database,
             Substitute.For<IInstancesOf<ISinkFactory>>(),
             Substitute.For<Orleans.Storage.IJobsStorage>(),
-            new JsonSerializerOptions());
+            new JsonSerializerOptions(),
+            Substitute.For<Json.IExpandoObjectConverter>());
     }
 
     async Task Because()
