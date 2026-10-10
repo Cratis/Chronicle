@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -15,6 +16,8 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </summary>
 internal static class EventContentBson
 {
+    static readonly ConditionalWeakTable<JsonSchema, DecimalSchema> _decimalSchemas = new();
+
     /// <summary>
     /// Parses event JSON using Decimal128 for decimal-formatted values and integers outside Int64's range.
     /// </summary>
@@ -23,7 +26,7 @@ internal static class EventContentBson
     /// <returns>The lossless BSON content.</returns>
     internal static BsonDocument FromJson(string json, JsonSchema? schema = null)
     {
-        if (schema is not null)
+        if (schema is not null && _decimalSchemas.GetValue(schema, value => new(HasDecimal(value, new(ReferenceEqualityComparer.Instance)))).HasDecimal)
         {
             return BsonDocument.Parse(PrepareForBson(JsonNode.Parse(json), schema)!.ToJsonString());
         }
@@ -32,9 +35,9 @@ internal static class EventContentBson
         {
             if (reader.TokenType is JsonTokenType.Number &&
                 ((reader.TryGetUInt64(out var unsigned) && unsigned > long.MaxValue) ||
-                 RequiresDecimal(Encoding.UTF8.GetString(reader.ValueSpan))))
+                 (schema is null && RequiresDecimal(Encoding.UTF8.GetString(reader.ValueSpan)))))
             {
-                return BsonDocument.Parse(PrepareForBson(JsonNode.Parse(json))!.ToJsonString());
+                return BsonDocument.Parse(PrepareForBson(JsonNode.Parse(json), schema)!.ToJsonString());
             }
         }
         return BsonDocument.Parse(json);
@@ -58,6 +61,19 @@ internal static class EventContentBson
     {
         var node = JsonNode.Parse(document.ToString())!.AsObject();
         return (JsonObject)RestoreDecimals(document, node)!;
+    }
+
+    static bool HasDecimal(JsonSchema schema, HashSet<JsonSchema> visited)
+    {
+        if (!visited.Add(schema)) return false;
+        if (schema.Format?.TrimEnd('?') == "decimal") return true;
+        var actual = schema.ActualTypeSchema;
+        if (!ReferenceEquals(actual, schema) && HasDecimal(actual, visited)) return true;
+
+        return schema.Properties.Values.Any(property => HasDecimal(property, visited)) ||
+            schema.AllOf.Concat(schema.AnyOf).Concat(schema.OneOf).Any(child => HasDecimal(child, visited)) ||
+            (schema.Item is not null && HasDecimal(schema.Item, visited)) ||
+            (schema.AdditionalPropertiesSchema is not null && HasDecimal(schema.AdditionalPropertiesSchema, visited));
     }
 
     static bool ContainsDecimals(BsonValue value) => value switch
@@ -157,4 +173,6 @@ internal static class EventContentBson
         }
         return node;
     }
+
+    sealed record DecimalSchema(bool HasDecimal);
 }
