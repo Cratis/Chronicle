@@ -35,6 +35,35 @@ public partial class EventSequenceStorage(
     IIdentityStorage identityStorage,
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage, IEventPublicationStorage
 {
+    readonly Chronicle.Storage.EventTypes.IEventTypesStorage _eventTypesStorage = new Cratis.Chronicle.Storage.Sql.EventStores.EventTypes.EventTypesStorage(eventStore, database);
+    readonly Json.IExpandoObjectConverter _expandoObjectConverter = new Json.ExpandoObjectConverter(new TypeFormats());
+
+    /// <summary>
+    /// Initializes storage with shared schema dependencies.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="database">The database.</param>
+    /// <param name="identityStorage">The identity storage.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="eventTypesStorage">The event schemas.</param>
+    /// <param name="converter">The schema-aware content converter.</param>
+    public EventSequenceStorage(
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EventSequenceId eventSequenceId,
+        IDatabase database,
+        IIdentityStorage identityStorage,
+        ILogger<EventSequenceStorage> logger,
+        Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage,
+        Json.IExpandoObjectConverter converter)
+        : this(eventStore, @namespace, eventSequenceId, database, identityStorage, logger)
+    {
+        _eventTypesStorage = eventTypesStorage;
+        _expandoObjectConverter = converter;
+    }
+
     /// <inheritdoc/>
     public bool SupportsRevisionTracking => false;
 
@@ -736,7 +765,7 @@ public partial class EventSequenceStorage(
 
         query = ApplyTagsFilter(query, tags);
 
-        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return CreateCursor(query, scope, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -785,7 +814,7 @@ public partial class EventSequenceStorage(
 
         query = ApplyTagsFilter(query, tags);
 
-        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return CreateCursor(query, scope, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -829,7 +858,7 @@ public partial class EventSequenceStorage(
 
         query = query.Take(limit);
 
-        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return CreateCursor(query, scope, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -868,7 +897,7 @@ public partial class EventSequenceStorage(
         var events = new List<AppendedEvent>(entries.Count);
         foreach (var entry in entries)
         {
-            events.Add(await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber)));
+            events.Add(await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber), _eventTypesStorage, _expandoObjectConverter));
         }
 
         return new MaterializedEventCursor(events);
@@ -1001,10 +1030,16 @@ public partial class EventSequenceStorage(
             : EventSequenceNumber.First;
     }
 
+    EventCursor CreateCursor(IQueryable<EventEntry> query, DbContextScope<EventSequenceDbContext> scope, CancellationToken cancellationToken) =>
+        new(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken)
+        {
+            ConvertEntry = (entry, tags) => EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, tags, _eventTypesStorage, _expandoObjectConverter)
+        };
+
     async Task<AppendedEvent> ToAppendedEvent(EventEntry entry, DbContextScope<EventSequenceDbContext> scope)
     {
         var namedTags = await NamedTagEntries.LoadFor(scope.DbContext, eventSequenceId.Value, [entry.SequenceNumber]);
-        return await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber));
+        return await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber), _eventTypesStorage, _expandoObjectConverter);
     }
 
     async Task<AppendedEvent> BuildAppendedEventFromRedactionEntry(EventEntry redactionEntry, DbContextScope<EventSequenceDbContext> scope)

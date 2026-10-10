@@ -40,5 +40,7 @@ public class a_publication_storage : an_event_sequence_storage
         _eventSequenceId,
         _database,
         _identityStorage,
-        Substitute.For<ILogger<EventSequenceStorage>>());
+        Substitute.For<ILogger<EventSequenceStorage>>(),
+        _eventTypesStorage,
+        new Json.ExpandoObjectConverter(new Schemas.TypeFormats()));
 }

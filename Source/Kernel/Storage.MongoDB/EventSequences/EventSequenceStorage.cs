@@ -454,7 +454,7 @@ public partial class EventSequenceStorage(
 
         var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
-        var document = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+        var document = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions), schema.Schema);
 
         var revision = new EventRevision(
             eventType.Generation,
@@ -1031,7 +1031,7 @@ public partial class EventSequenceStorage(
         {
             var schema = await eventTypesStorage.GetFor(existingEvent.Type, generation);
             var jsonObject = expandoObjectConverter.ToJsonObject(expandoContent, schema.Schema);
-            generationalContent[generation.ToString()] = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+            generationalContent[generation.ToString()] = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions), schema.Schema);
         }
 
         var update = Builders<Event>.Update.Set(e => e.Content, generationalContent);
@@ -1177,7 +1177,7 @@ public partial class EventSequenceStorage(
     }
 
     BsonDocument SerializeContent(ExpandoObject content, JsonSchema schema) =>
-        EventContentBson.FromJson(JsonSerializer.Serialize(expandoObjectConverter.ToJsonObject(content, schema), jsonSerializerOptions));
+        EventContentBson.FromJson(JsonSerializer.Serialize(expandoObjectConverter.ToJsonObject(content, schema), jsonSerializerOptions), schema);
 
     async Task<DuplicateEventSequenceNumber> AbortAndResolveNextAvailableSequenceNumber(IClientSessionHandle session)
     {

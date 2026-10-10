@@ -276,7 +276,10 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             case BsonType.Int64:
                 return value.AsInt64;
             case BsonType.Decimal128:
-                return (ulong)value.AsDecimal;
+                var decimalValue = value.AsDecimal;
+                return decimalValue >= 0 && decimalValue <= ulong.MaxValue && decimal.Truncate(decimalValue) == decimalValue
+                    ? (object)(ulong)decimalValue
+                    : decimalValue;
         }
 
         return null;
@@ -309,7 +312,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 return value.ToInt32();
 
             case JsonObjectType.Number:
-                return value.ToDouble();
+                return value is BsonDecimal128 ? value.ToDecimal() : value.ToDouble();
         }
 
         return null!;
