@@ -11,6 +11,12 @@
     },
     "layout": {
         "topBar": {
+            "help": {
+                "title": "Help",
+                "documentation": "Chronicle documentation",
+                "discord": "Questions? Ask on Discord",
+                "communityDescription": "Ask questions and get help from the Cratis team and other developers."
+            },
             "profile": {
                 "myAccount": "My account",
                 "logout": "Logout",
