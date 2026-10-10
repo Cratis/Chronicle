@@ -1,0 +1,46 @@
+---
+title: Close the books
+description: End a period, version or batch with a domain fact, then continue in the next stream without a rollover race.
+---
+
+**Goal:** a ledger, a monthly report or a billing run works in periods. When a period is finished, nothing more may be appended to it, and new facts must go to the next period.
+
+This recipe uses closing streams and gives the kernel no rollover policy. You decide what the next stream is called. The kernel guarantees that the old one stays closed.
+
+## The shape
+
+1. The closing fact (or a carry-over fact) ends the old scope. It is an event type declared with `[ClosesStream]`, so the append and the closure happen in the same step.
+2. The application derives the next stream id. It can come from the period itself (`2026-05`), from a counter, or from a read model that tracks the current open instance.
+3. The first fact in the new stream carries over what the old one ended with, for example the closing balance.
+
+## Close the period and open the next
+
+The closing event takes the stream id from its `Period` property, so it closes the period it names whichever stream it is appended to:
+
+<ChronicleClientTabs snippet="scenarios/close-the-books/close-and-open-next" />
+
+After the first append succeeds, every append to `ledger` / `2026-04` for that ledger is refused with `StreamClosed`. Other ledgers and the `2026-05` stream are unaffected. The two appends are separate calls. If the process stops between them, the old period is closed and the new one is not open yet. Make the second step safe to repeat: before opening the new period, check whether it already has its opening fact.
+
+## Keep appending to the right period
+
+Producers that post entries need the current period. Take it from a read model of the open instance rather than from the clock, so a late-closing period keeps accepting entries until it is actually closed.
+
+A read model lags the log slightly. Right after a rollover, a producer can still read the old period and append to it. The kernel then rejects the append with `StreamClosed`. Treat that as a normal outcome: read the current period again and retry.
+
+<ChronicleClientTabs snippet="scenarios/close-the-books/retry-on-closed" />
+
+The rejection is the safety net. Without the closure the late entry would be committed to a period that is already final.
+
+## Allow a correction
+
+If a closed period sometimes needs a correction, declare a reopening event with `ReopenedBy`. It is a fact in the log with its own reason, and it lifts only the closure that the closing event wrote. See [Closing events](../closing-streams/closing-events.mdx#reopen-with-an-event). A period that an operator closed manually with `CompleteStream` stays closed.
+
+## Carry-over and mementos
+
+Today the carry-over is an ordinary event, as in the first example. A memento, a snapshot of the old stream's state written as the first event of the new one, is planned and tracked in [Chronicle issue 1370](https://github.com/Cratis/Chronicle/issues/1370). It will replace the hand-written carry-over fact, not the closing step.
+
+## See also
+
+- [Closing events](../closing-streams/closing-events.mdx): dimensions, `EventStreamIdFrom`, reopening.
+- [Closing streams](../closing-streams/index.mdx): the guarantees and limits.
+- [Enforce a unique value](enforce-a-unique-value.md): the other constraint recipe.

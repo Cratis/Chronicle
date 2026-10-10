@@ -1,0 +1,45 @@
+---
+title: Closing stream constraint
+description: Declare in an IConstraint class that appending an event type closes a stream scope, and which events reopen it.
+---
+
+Use `ClosesStreamOn<TEvent>` on the constraint builder to close a stream scope whenever an event of that type is appended. The closure is written in the same step as the event, and later appends inside the scope are rejected with a `StreamClosed` violation. For the concept and the guarantees, see [Closing events](../../closing-streams/closing-events.mdx). For the attribute style, see the [model-bound closing stream constraint](../model-bound/closing-stream.mdx).
+
+## Defining a closing constraint
+
+Choose the dimensions with the `Per...` methods on the configuration callback:
+
+<ChronicleClientTabs snippet="constraints/declarative/closing-stream/basic" />
+
+| Method | Adds the dimension |
+|---|---|
+| `PerEventSourceId()` | Event source id |
+| `PerEventSourceType()` | Event source type |
+| `PerEventStreamType()` | Event stream type |
+| `PerEventStreamId()` | Event stream id |
+
+If you call none of them, the scope is event source id, stream type and stream id of the append.
+
+## Take the stream id from a property
+
+`EventStreamIdFrom` reads the stream id from an event property and implies the stream id dimension:
+
+<ChronicleClientTabs snippet="constraints/declarative/closing-stream/event-stream-id-from" />
+
+The property must have a non-empty value on every append. The kernel refuses an append where it is missing, null or empty. Avoid a nullable property; the analyzer [CHR0012](../../code-analysis/CHR0012.mdx) warns on nullable event properties.
+
+## Reopening events and the constraint name
+
+`ReopenedBy<T>()` names an event type that removes this constraint's closure for the exact scope it resolves to. The optional `name` argument sets the owner of the closure and defaults to the event type name:
+
+<ChronicleClientTabs snippet="constraints/declarative/closing-stream/reopened-by" />
+
+The reopening event type must carry the same property as the closing event when `EventStreamIdFrom` is used.
+
+## Several closing events, one constraint
+
+Declarations that share a name merge into one constraint, so a scope can be closed by more than one event type. They must use the same dimensions and stream id property, otherwise the client throws `ConflictingClosesStreamDeclarations`:
+
+<ChronicleClientTabs snippet="constraints/declarative/closing-stream/several-events" />
+
+Registering or changing the declaration does not close anything that is already in the log.

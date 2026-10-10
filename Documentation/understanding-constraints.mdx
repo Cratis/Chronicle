@@ -53,6 +53,10 @@ Read it top to bottom and it says exactly what the rule is: one named constraint
 
 Like the attributes, `IConstraint` implementations are **discovered automatically** when the client starts — no registration call. And crucially, both styles compile down to the *same* kernel-side constraint; which one you pick is purely about where the rule reads best. The full builder surface — names, messages, message callbacks, removal — is in the [declarative constraints reference](/chronicle/constraints/declarative/).
 
+## Constraints that close streams
+
+Uniqueness is not the only rule the kernel can hold for you. A **closing constraint** declares that appending a particular event type ends a stream scope: the event is committed, the scope is closed in the same step, and every later append inside it is rejected with a `StreamClosed` violation. A fact such as `BooksClosed` can then end a period without a second call that another append could slip in front of. See [Closing events](/chronicle/closing-streams/closing-events/) and, for the attribute and builder forms, the [model-bound](/chronicle/constraints/model-bound/closing-stream/) and [declarative](/chronicle/constraints/declarative/closing-stream/) references.
+
 ## What a violation looks like
 
 A violated constraint surfaces as a **failed append** — the result tells you which constraint fired and carries the message you declared. A command turns that into a friendly "that email's taken" on the form, instead of a 500. The step-by-step recipe, including handling the failure, is [Enforce a unique value](/chronicle/scenarios/enforce-a-unique-value/).
