@@ -534,7 +534,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default)
     {
-        var response = await _servicesAccessor.Services.Sequences.CompleteStreamScope(new()
+        var response = await WithClosedStreamScopeSupport(() => _servicesAccessor.Services.Sequences.CompleteStreamScope(new()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
@@ -544,7 +544,7 @@ public class EventSequence(
             EventStreamType = scope.EventStreamType?.Value,
             EventStreamId = scope.EventStreamId?.Value,
             ExpectedTailSequenceNumber = expectedTailSequenceNumber?.Value
-        }).EnsureSuccess();
+        }).EnsureSuccess());
 
         return response.IsSuccess
             ? (EventSequenceNumber)response.SequenceNumber
@@ -561,7 +561,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<bool> IsStreamCompleted(ClosedStreamScope scope)
     {
-        var response = await _servicesAccessor.Services.Sequences.IsStreamScopeCompleted(new()
+        var response = await WithClosedStreamScopeSupport(() => _servicesAccessor.Services.Sequences.IsStreamScopeCompleted(new()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
@@ -570,7 +570,7 @@ public class EventSequence(
             EventSourceType = scope.EventSourceType?.Value,
             EventStreamType = scope.EventStreamType?.Value,
             EventStreamId = scope.EventStreamId?.Value
-        }).EnsureSuccess();
+        }).EnsureSuccess());
 
         return response.IsCompleted;
     }
@@ -584,7 +584,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<IImmutableList<ClosedStream>> GetClosedStreams(ClosedStreamScope? within = default)
     {
-        var response = await _servicesAccessor.Services.Sequences.ClosedStreams(new()
+        var response = await WithClosedStreamScopeSupport(() => _servicesAccessor.Services.Sequences.ClosedStreams(new()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
@@ -593,7 +593,7 @@ public class EventSequence(
             EventSourceType = within?.EventSourceType?.Value,
             EventStreamType = within?.EventStreamType?.Value,
             EventStreamId = within?.EventStreamId?.Value
-        }).EnsureSuccess();
+        }).EnsureSuccess());
 
         return response.Select(row => new ClosedStream(
             new(
@@ -613,6 +613,18 @@ public class EventSequence(
     /// <returns>Whether this sequence belongs to the target.</returns>
     internal bool MatchesTarget(EventStoreName store, EventStoreNamespaceName targetNamespace) =>
         eventStoreName == store && @namespace == targetNamespace && eventSequenceId == EventSequenceId.Log;
+
+    static async Task<TResult> WithClosedStreamScopeSupport<TResult>(Func<Task<TResult>> call)
+    {
+        try
+        {
+            return await call();
+        }
+        catch (RpcException exception) when (exception.StatusCode == StatusCode.Unimplemented)
+        {
+            throw new ClosedStreamScopesNotSupported();
+        }
+    }
 
     static EventSourceType ResolveEventSourceType(EventSourceType? value) =>
         string.IsNullOrEmpty(value?.Value) ? EventSourceType.Default : value;
