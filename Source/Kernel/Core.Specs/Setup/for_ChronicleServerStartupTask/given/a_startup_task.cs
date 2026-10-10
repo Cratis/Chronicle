@@ -76,6 +76,8 @@ public class a_startup_task : Specification
         _storage = Substitute.For<IStorage>();
         _eventTypes = Substitute.For<IEventTypes>();
         _reactors = Substitute.For<IReactors>();
+        _reactors.DiscoverAndRegister(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<CancellationToken>())
+            .Returns(call => _reactors.DiscoverAndRegister(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1)));
         _patternCapture = Substitute.For<IPatternCapture>();
         _projectionsServiceClient = Substitute.For<IProjectionsServiceClient>();
         _kernelProjections = Substitute.For<IKernelProjections>();
@@ -161,10 +163,12 @@ public class a_startup_task : Specification
         _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([_namespace]));
     }
 
-    protected Task Execute()
+    protected Task Execute() => Execute(CancellationToken.None);
+
+    protected Task Execute(CancellationToken cancellationToken)
     {
         var execute = typeof(ChronicleServerStartupTask).GetMethod("Execute", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        return (Task)execute.Invoke(_startupTask, [CancellationToken.None])!;
+        return (Task)execute.Invoke(_startupTask, [cancellationToken])!;
     }
 
     protected static ProjectionDefinition CreateProjectionDefinition(ProjectionId identifier, ReadModelIdentifier readModel) => new(

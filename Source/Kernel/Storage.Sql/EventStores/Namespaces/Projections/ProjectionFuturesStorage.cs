@@ -39,6 +39,7 @@ public class ProjectionFuturesStorage(EventStoreName eventStore, EventStoreNames
             entity.EventTypeGeneration = updated.EventTypeGeneration;
             entity.EventSourceId = updated.EventSourceId;
             entity.EventContentJson = updated.EventContentJson;
+            entity.EventContextJson = updated.EventContextJson;
             entity.ParentPath = updated.ParentPath;
             entity.ChildPath = updated.ChildPath;
             entity.IdentifiedByProperty = updated.IdentifiedByProperty;

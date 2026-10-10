@@ -17,4 +17,14 @@ public interface IReactors
     /// <param name="namespaceName">The namespace name.</param>
     /// <returns>Awaitable task.</returns>
     Task DiscoverAndRegister(EventStoreName eventStore, EventStoreNamespaceName namespaceName);
+
+    /// <summary>
+    /// Discovers and registers kernel reactors with cancellable startup admission.
+    /// </summary>
+    /// <param name="eventStore">The event store name.</param>
+    /// <param name="namespaceName">The namespace name.</param>
+    /// <param name="cancellationToken">Token for cancelling registration admission during shutdown.</param>
+    /// <returns>Awaitable task.</returns>
+    Task DiscoverAndRegister(EventStoreName eventStore, EventStoreNamespaceName namespaceName, CancellationToken cancellationToken) =>
+        DiscoverAndRegister(eventStore, namespaceName).WaitAsync(cancellationToken);
 }
