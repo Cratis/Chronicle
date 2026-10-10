@@ -94,6 +94,24 @@ public class AddSeedEntryRequest
     /// </summary>
     [ProtoMember(6)]
     public bool IsGlobal { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventSourceType.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? EventSourceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventStreamType.
+    /// </summary>
+    [ProtoMember(8)]
+    public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventStreamId.
+    /// </summary>
+    [ProtoMember(9)]
+    public string? EventStreamId { get; set; }
 }
 
 /// <summary>

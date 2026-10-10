@@ -21,7 +21,7 @@ internal sealed class EventSeeding(
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AddSeedEntry(global::Cratis.Chronicle.Contracts.Seeding.AddSeedEntryRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
-            new global::Cratis.Chronicle.Seeding.AddSeedEntry((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId, (global::Cratis.Chronicle.Concepts.Events.EventTypeId)request.EventTypeId, request.Content, request.IsGlobal));
+            new global::Cratis.Chronicle.Seeding.AddSeedEntry((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId, (global::Cratis.Chronicle.Concepts.Events.EventTypeId)request.EventTypeId, request.Content, request.IsGlobal, (request.EventSourceType is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventSourceType)request.EventSourceType), (request.EventStreamType is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventStreamType)request.EventStreamType), (request.EventStreamId is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventStreamId)request.EventStreamId)));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SeedEvents(global::Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>

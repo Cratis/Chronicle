@@ -280,6 +280,22 @@ message EventForEventSourceIdWithNamedTags {
    repeated Causation Causation = 11;
    string EventSource = 12;
 }
+message EventMetadataResponse {
+   uint64 SequenceNumber = 1;
+   string EventTypeId = 2;
+   string EventSourceType = 3;
+   string EventSourceId = 4;
+   string EventStreamType = 5;
+   string EventStreamId = 6;
+   SerializableDateTimeOffset Occurred = 7;
+   .bcl.Guid CorrelationId = 8; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   repeated Causation Causation = 9;
+   ResolvedIdentity CausedBy = 10;
+   InitiatorType InitiatorType = 11;
+   repeated string Tags = 12;
+   string Subject = 13;
+   string EventSourceName = 14;
+}
 enum EventObservationState {
    EVENT_OBSERVATION_STATE_None = 0;
    Initial = 1;
@@ -384,9 +400,28 @@ message Identity {
    string UserName = 3;
    Identity OnBehalfOf = 4;
 }
+enum IdentityResolution {
+   Resolved = 0;
+   NameUnavailable = 1;
+   Missing = 2;
+   NotSet = 3;
+   IDENTITY_RESOLUTION_System = 4;
+}
+enum InitiatorType {
+   INITIATOR_TYPE_Unknown = 0;
+   User = 1;
+   Agent = 2;
+   INITIATOR_TYPE_System = 3;
+}
 message KeyValuePair_Int32_String {
    int32 Key = 1;
    string Value = 2;
+}
+message MetadataAtRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   repeated uint64 SequenceNumbers = 4 [packed = false];
 }
 message NamedTag {
    string Name = 1;
@@ -459,6 +494,14 @@ message QueryResult_IEnumerable_AppendedEventResponse {
    string ExceptionStackTrace = 5;
    repeated AppendedEventResponse Data = 6;
 }
+message QueryResult_IEnumerable_EventMetadataResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated EventMetadataResponse Data = 6;
+}
 message QueryResult_IEnumerable_EventSequenceNamesResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -509,6 +552,13 @@ message RedactRequest {
    string Reason = 5;
    repeated Causation Causation = 6;
    Identity CausedBy = 7;
+}
+message ResolvedIdentity {
+   string Subject = 1;
+   string Name = 2;
+   string UserName = 3;
+   IdentityResolution Resolution = 4;
+   ResolvedIdentity OnBehalfOf = 5;
 }
 message ReviseRequest {
    string EventStore = 1;
@@ -606,6 +656,7 @@ service EventSequences {
    rpc ForEventSourceIdAndEventTypes (ForEventSourceIdAndEventTypesRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc FromSequenceNumber (FromSequenceNumberRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc HasEventsForEventSourceId (HasEventsForEventSourceIdRequest) returns (QueryResult_EventSourceEventsResponse);
+   rpc MetadataAt (MetadataAtRequest) returns (QueryResult_IEnumerable_EventMetadataResponse);
    rpc ParseResolution (ParseResolutionRequest) returns (QueryResult_HistogramResolution);
    rpc QueryEvents (QueryEventsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc QueryEventsWithNamedTags (QueryEventsWithNamedTagsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);

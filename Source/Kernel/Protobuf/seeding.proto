@@ -9,6 +9,9 @@ message AddSeedEntryRequest {
    string EventTypeId = 4;
    string Content = 5;
    bool IsGlobal = 6;
+   string EventSourceType = 7;
+   string EventStreamType = 8;
+   string EventStreamId = 9;
 }
 message CommandResult {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -61,6 +64,9 @@ message SeedingEntry {
    string EventTypeId = 2;
    string Content = 3;
    repeated string Tags = 4;
+   string EventSourceType = 5;
+   string EventStreamType = 6;
+   string EventStreamId = 7;
 }
 message ValidationResult {
    ValidationResultSeverity Severity = 1; // default value could not be applied: Error
