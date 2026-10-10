@@ -27,6 +27,8 @@ Reducers are ideal when you need to:
 
 <ChronicleClientTabs snippet="reducers/index/basic-example" />
 
+In .NET, a reducer class must target only one read model. Implementing two closed `IReducerFor<TReadModel>` interfaces, including through inheritance, throws `TypeImplementsMultipleReducerInterfaces` during default artifact discovery. Split the class into one reducer per read model. [CHR0057](../code-analysis/CHR0057) reports this before runtime.
+
 ## Topics
 
 - [Getting Started](getting-started) - Learn how to create your first reducer
