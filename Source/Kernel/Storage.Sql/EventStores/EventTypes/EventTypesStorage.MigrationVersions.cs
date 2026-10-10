@@ -18,9 +18,14 @@ public partial class EventTypesStorage
         await using var scope = await database.EventStore(eventStore);
 
         // Compare-and-swap retains both versions if different silos record concurrently.
-        while (true)
+        for (var attempt = 0; attempt < MaxMigrationVersionAttempts; attempt++)
         {
-            var stored = await scope.DbContext.EventTypes.AsNoTracking().FirstAsync(_ => _.Id == eventTypeId);
+            var stored = await scope.DbContext.EventTypes.AsNoTracking().FirstOrDefaultAsync(_ => _.Id == eventTypeId);
+            if (stored is null)
+            {
+                return;
+            }
+
             var observed = stored.MigrationVersionsJson;
             var versions = JsonSerializer.Deserialize<Dictionary<string, EventTypeMigrationDefinition[]>>(observed, _migrationVersionOptions)!;
             if (!versions.TryAdd(version.Value, definitions))
@@ -36,6 +41,8 @@ public partial class EventTypesStorage
                 return;
             }
         }
+
+        _logger.MigrationsVersionContended(eventTypeId);
     }
 
     /// <inheritdoc/>

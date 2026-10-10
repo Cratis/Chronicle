@@ -9,6 +9,8 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 
@@ -17,8 +19,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public partial class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage
+/// <param name="logger">Optional <see cref="ILogger{EventTypesStorage}"/> for logging.</param>
+public partial class EventTypesStorage(EventStoreName eventStore, IDatabase database, ILogger<EventTypesStorage>? logger = null) : IEventTypesStorage
 {
+    const int MaxMigrationVersionAttempts = 5;
+    readonly ILogger<EventTypesStorage> _logger = logger ?? NullLogger<EventTypesStorage>.Instance;
     readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
     ConcurrentBag<EventType> _eventTypes = new();
 

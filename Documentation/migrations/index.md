@@ -61,13 +61,13 @@ Append gen 1 event
 
 Current generation backfills are **add-only**: they produce missing representations alongside stored generations without replacing their content. Events backfilled by earlier releases may already have been overwritten; upgrading cannot recover those originals. SQL revisions also overwrite a generation's content in place, so backfill can preserve only the content still stored there.
 
-This is what makes running multiple versions of the same software against the same event store safe. Service A on the latest code reads generation 2; Service B on the previous release reads generation 1. Both read from the same physical storage. Neither service needs to know about the other, and no upgrade coordination is required.
+This is what makes running multiple versions of the same software against the same event store safe. Service A on the latest code reads generation 2; Service B on the previous release reads generation 1. Both read from the same physical storage. Neither service needs to know about the other, and no upgrade coordination is required between client services. Upgrading the kernel is separate: see the rollout rule below.
 
 ### Background upcasting for new generations
 
 Registering a new generation automatically starts a background job for that event type in the **default namespace's event log only**. Other namespaces and event sequences are not backfilled by this job.
 
-The source is the known appended generation's base content, never a separate revision. If the appended generation is unknown, the job uses the highest stored base generation and records it as a derived source; the appended generation stays unknown. Each added generation records its source and the content-addressed migration-definition version that produced it. Content, hash, and provenance are written atomically only if the event has not been concurrently revised, redacted, or populated by another worker.
+The source is the known appended generation's base content, never a separate revision. If the appended generation is unknown, the job uses the highest stored base generation and records it as a derived source; the appended generation stays unknown. The same fallback applies when the appended generation is known but its content is missing: the backfill uses the highest stored generation and logs a warning. Each added generation records its source and the content-addressed migration-definition version that produced it. Content, hash, and provenance are written atomically only if the event has not been concurrently revised, redacted, or populated by another worker.
 
 On a conflict the job re-reads the event and retries once. If the retry also conflicts, it logs and skips that event without failing the step. Already-stored generations remain unchanged, including when migration definitions change. Changing a migration alone does not start another backfill.
 

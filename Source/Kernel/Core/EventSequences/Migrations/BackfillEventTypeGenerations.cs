@@ -3,13 +3,15 @@
 
 using System.Collections.Immutable;
 using Cratis.Orleans.Jobs;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.EventSequences.Migrations;
 
 /// <summary>
 /// Represents an add-only backfill job with a distinct grain identity for rolling upgrades.
 /// </summary>
-public class BackfillEventTypeGenerations : Job<BackfillEventTypeGenerationsRequest, BackfillEventTypeGenerationsState>, IBackfillEventTypeGenerations
+/// <param name="logger">The <see cref="ILogger{BackfillEventTypeGenerations}"/> for logging.</param>
+public class BackfillEventTypeGenerations(ILogger<BackfillEventTypeGenerations> logger) : Job<BackfillEventTypeGenerationsRequest, BackfillEventTypeGenerationsState>, IBackfillEventTypeGenerations
 {
     /// <inheritdoc/>
     protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(BackfillEventTypeGenerationsRequest request) =>
@@ -17,6 +19,21 @@ public class BackfillEventTypeGenerations : Job<BackfillEventTypeGenerationsRequ
 
     /// <inheritdoc/>
     protected override JobDetails GetJobDetails() => $"Backfill generations for type {Request.EventTypeId}";
+
+    /// <inheritdoc/>
+    protected override Task OnAllStepsCompleted()
+    {
+        if (AllStepsCompletedSuccessfully)
+        {
+            logger.BackfillCompleted(Request.EventTypeId);
+        }
+        else
+        {
+            logger.BackfillFailed(Request.EventTypeId);
+        }
+
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     protected override Task<bool> CanResume() => Task.FromResult(true);

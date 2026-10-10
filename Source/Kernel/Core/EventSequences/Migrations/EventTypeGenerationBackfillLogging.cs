@@ -13,4 +13,13 @@ internal static partial class EventTypeGenerationBackfillLogging
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Skipping backfill for event {SequenceNumber} of type {EventTypeId} after two concurrent write conflicts")]
     internal static partial void BackfillConflicted(this ILogger logger, EventSequenceNumber sequenceNumber, EventTypeId eventTypeId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Skipping backfill for event {SequenceNumber} of type {EventTypeId}; source generation {Generation} is not in the event type definition")]
+    internal static partial void SourceGenerationNotDefined(this ILogger logger, EventSequenceNumber sequenceNumber, EventTypeId eventTypeId, EventTypeGeneration generation);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Generation backfill completed successfully for event type {EventTypeId}")]
+    internal static partial void BackfillCompleted(this ILogger logger, EventTypeId eventTypeId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Generation backfill completed with failures for event type {EventTypeId}")]
+    internal static partial void BackfillFailed(this ILogger logger, EventTypeId eventTypeId);
 }

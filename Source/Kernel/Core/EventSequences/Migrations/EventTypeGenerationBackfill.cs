@@ -94,8 +94,15 @@ internal class EventTypeGenerationBackfill(
                 logger.AppendedContentMissing(number, observed.AppendedGeneration);
             }
 
+            var sourceDefinition = definition.Generations.FirstOrDefault(_ => _.Generation == source);
+            if (sourceDefinition is null)
+            {
+                logger.SourceGenerationNotDefined(number, definition.Id, source);
+                return;
+            }
+
             var json = JsonNode.Parse(observed.Content[source])!.AsObject();
-            var schema = definition.Generations.Single(_ => _.Generation == source).Schema;
+            var schema = sourceDefinition.Schema;
             var protectedEvent = converter.ToExpandoObject(json, schema);
             var subject = observed.Subject.IsSet ? observed.Subject.Value : observed.EventSourceId.Value;
             var content = await protectedMigrations.Migrate(eventStore, @namespace, new EventType(definition.Id, source), json, protectedEvent, subject, definition);
