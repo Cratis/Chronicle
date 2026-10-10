@@ -824,7 +824,7 @@ public partial class EventSequenceStorage(
         }
         var filter = Builders<Event>.Filter.In(_ => _.SequenceNumber, numbers);
         var projection = Builders<Event>.Projection.Exclude(_ => _.Content).Exclude(_ => _.ContentHashes).Exclude(_ => _.Revisions);
-        var events = await _collection.Find(filter).Project<Event>(projection).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var events = await _collection.Find(filter).SortBy(_ => _.SequenceNumber).Project<Event>(projection).ToListAsync(cancellationToken).ConfigureAwait(false);
         return events.Select(_ => new StoredEventMetadata(
             _.SequenceNumber,
             _.Type,

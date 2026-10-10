@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Seeding.for_EventSeeding;
+namespace Cratis.Chronicle.Seeding.for_EventSeeding.when_registering_routed_entries;
 
-public class when_registering_routed_entries : given.a_seeding_builder
+public class and_the_kernel_confirms_support : given.a_seeding_builder
 {
     async Task Because()
     {

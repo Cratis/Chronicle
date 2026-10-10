@@ -5,9 +5,11 @@ using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Commands;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSources;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Seeding;
@@ -157,6 +159,7 @@ public class EventSeeding(
     }
 
     /// <inheritdoc/>
+    /// <exception cref="EventSeedingRoutingNotSupported">Thrown before sending entries when routing support is not confirmed by the kernel.</exception>
     public async Task Register()
     {
         if (_entries.Count == 0)
@@ -165,6 +168,24 @@ public class EventSeeding(
         }
 
         var servicesAccessor = (IChronicleServicesAccessor)_connection;
+        if (_entries.Exists(entry =>
+            (!string.IsNullOrEmpty(entry.EventSourceType?.Value) && entry.EventSourceType != EventSourceType.Default) ||
+            (!string.IsNullOrEmpty(entry.EventStreamType?.Value) && entry.EventStreamType != EventStreamType.All) ||
+            (!string.IsNullOrEmpty(entry.EventStreamId?.Value) && entry.EventStreamId.Value != EventStreamId.Default)))
+        {
+            try
+            {
+                var support = await servicesAccessor.Services.Seeding.GetSeedingSupport().EnsureSuccess();
+                if (!support.RoutingSupported)
+                {
+                    throw new EventSeedingRoutingNotSupported();
+                }
+            }
+            catch (RpcException exception) when (exception.StatusCode == StatusCode.Unimplemented)
+            {
+                throw new EventSeedingRoutingNotSupported();
+            }
+        }
 
         // Organize entries into global and namespaced groups
         var globalEntries = _entries.Where(e => e.IsGlobal).ToList();

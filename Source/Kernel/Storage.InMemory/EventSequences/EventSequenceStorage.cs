@@ -449,7 +449,7 @@ public partial class EventSequenceStorage(
         lock (_lock)
         {
             var result = new List<StoredEventMetadata>();
-            foreach (var locator in sequenceNumbers.Distinct())
+            foreach (var locator in sequenceNumbers.Distinct().OrderBy(_ => _.Value))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (_metadata.TryGetValue(locator, out var metadata))

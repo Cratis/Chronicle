@@ -24,6 +24,7 @@ public class when_getting_metadata_at(MongoDBFixture fixture) : Indexing.given.a
     IdentityId _identityId;
     IReadOnlyList<StoredEventMetadata> _before;
     IReadOnlyList<StoredEventMetadata> _after;
+    IReadOnlyList<StoredEventMetadata> _sorted;
 
     async Task Establish()
     {
@@ -44,10 +45,12 @@ public class when_getting_metadata_at(MongoDBFixture fixture) : Indexing.given.a
         _before = await _storage.GetMetadataAt([1UL, 100000UL, 1UL]);
         await _database.GetEventSequenceCollectionFor(EventSequenceId.Log).InsertManyAsync(Enumerable.Range(2, 10000).Select(_ => AnEvent((ulong)_)));
         _after = await _storage.GetMetadataAt([1UL, 100000UL]);
+        _sorted = await _storage.GetMetadataAt([10001UL, 1UL, 5000UL, 1UL, 100000UL]);
     }
 
     [Fact] void should_read_metadata_without_deserializing_content() => _before.Count.ShouldEqual(1);
     [Fact] void should_stay_bounded_after_ten_thousand_more_events() => _after.Count.ShouldEqual(1);
+    [Fact] void should_return_metadata_in_sequence_order() => _sorted.Select(_ => _.SequenceNumber.Value).SequenceEqual([1UL, 5000UL, 10001UL]).ShouldBeTrue();
     [Fact] void should_preserve_the_identity_chain() => _after.Single().CausedByChain.ShouldContainOnly(_identityId);
     [Fact] void should_not_resolve_or_release_event_content() => _converter.ReceivedCalls().ShouldBeEmpty();
 

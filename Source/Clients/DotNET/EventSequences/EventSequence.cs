@@ -339,7 +339,15 @@ public class EventSequence(
             EventSequenceId = eventSequenceId,
             SequenceNumbers = locators.Select(_ => _.Value).Distinct().ToArray()
         };
-        var result = await _servicesAccessor.Services.Sequences.MetadataAt(request, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
+        IEnumerable<Contracts.Sequences.EventMetadataResponse> result;
+        try
+        {
+            result = await _servicesAccessor.Services.Sequences.MetadataAt(request, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
+        }
+        catch (RpcException exception) when (exception.StatusCode == StatusCode.Unimplemented)
+        {
+            throw new EventMetadataReadsNotSupported();
+        }
         return result.Select(entry => new EventMetadata(
             entry.SequenceNumber,
             entry.EventTypeId,

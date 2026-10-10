@@ -675,6 +675,7 @@ public partial class EventSequenceStorage(
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
         var entries = await scope.DbContext.Events.AsNoTracking()
             .Where(_ => numbers.Contains(_.SequenceNumber))
+            .OrderBy(_ => _.SequenceNumber)
             .Select(_ => new EventEntry
             {
                 SequenceNumber = _.SequenceNumber,

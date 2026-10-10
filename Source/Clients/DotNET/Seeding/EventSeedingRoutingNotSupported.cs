@@ -4,6 +4,6 @@
 namespace Cratis.Chronicle.Seeding;
 
 /// <summary>
-/// Thrown when a seeding builder does not support routed events.
+/// The exception that is thrown when a seeding builder or kernel does not support routed events.
 /// </summary>
 public class EventSeedingRoutingNotSupported() : Exception("This event seeding implementation does not support event routing.");
