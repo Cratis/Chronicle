@@ -102,7 +102,26 @@ BODY_SNIPPETS = {
     "troubleshooting/clear-reactor-partition-quarantine": """
         IEventStore eventStore = default!;
     """,
+    "site-concepts/projections-and-read-models/get-instance": """
+        IEventStore eventStore = default!;
+        ReadModelKey bookId = new("book-42");
+    """,
 }
+
+# The cratis.io Concepts guides (site-concepts/<page>/...) reuse type names such as
+# BookBorrowed and DepositMade across pages with different shapes, and the snippets of one
+# page reference each other. Each page therefore compiles in a generator-only namespace of
+# its own, so the rendered snippets keep the exact type names the page's prose uses.
+SITE_CONCEPTS_PREFIX = "site-concepts/"
+SITE_CONCEPTS_NAMESPACE_ROOT = "Cratis.Chronicle.Docs.SiteConcepts"
+
+
+def site_concepts_namespace(relative_path: str) -> str | None:
+    if not relative_path.startswith(SITE_CONCEPTS_PREFIX):
+        return None
+
+    page = relative_path[len(SITE_CONCEPTS_PREFIX):].split("/", 1)[0]
+    return f"{SITE_CONCEPTS_NAMESPACE_ROOT}.{''.join(part.capitalize() for part in page.split('-'))}"
 
 # This excerpt is from an ASP.NET Core action. Supply only the action context
 # and a final response in the compiler harness; keep the public snippet intact.
@@ -265,7 +284,16 @@ def generate_source() -> str:
             if relative_path != ACTION_SNIPPET or using != "using Microsoft.AspNetCore.Http;"
         )
 
-        if relative_path == "read-models/decision-reads/detached-read":
+        site_namespace = site_concepts_namespace(relative_path)
+        if site_namespace is not None:
+            if relative_path in BODY_SNIPPETS:
+                body = (
+                    "public static class Example_" + re.sub(r"[^A-Za-z0-9_]", "_", relative_path) + "\n{\n"
+                    + method(relative_path, BODY_SNIPPETS[relative_path], body)
+                    + "\n}"
+                )
+            declarations.append(f"namespace {site_namespace}\n{{\n{textwrap.indent(body, '    ')}\n}}")
+        elif relative_path == "read-models/decision-reads/detached-read":
             declarations.append(
                 "namespace DecisionReadExample\n{\n"
                 "    public record OrderPlaced;\n"
