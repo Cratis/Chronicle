@@ -23,6 +23,8 @@ public class and_once : given.an_event_sequence_storage
         _revisedEvent = await _storage.GetEventAt(EventSequenceNumber.First);
     }
 
+    [Fact] void should_record_the_revision_generation() => _revisedEvent.RevisedGeneration.ShouldEqual(_eventType.Generation);
+    [Fact] void should_identify_the_event_as_revised() => _revisedEvent.IsRevised.ShouldBeTrue();
     [Fact] void should_persist_the_revised_hash() => _revisedEvent.Context.Hash.ShouldEqual(_revisedHash);
     [Fact] void should_not_return_the_original_hash() => _revisedEvent.Context.Hash.ShouldNotEqual(_originalHash);
     [Fact] void should_return_the_revised_content() => ((IDictionary<string, object?>)_revisedEvent.Content)["value"].ShouldEqual("revised");

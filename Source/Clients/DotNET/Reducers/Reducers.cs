@@ -105,6 +105,11 @@ public class Reducers : IReducers
         _logger = logger;
     }
 
+    /// <summary>
+    /// Gets the generation delivery policy supplied by the event store.
+    /// </summary>
+    internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
     /// <inheritdoc/>
     public Task Discover()
     {
@@ -406,6 +411,11 @@ public class Reducers : IReducers
 
     void RegisterReducer(IReducerHandler handler)
     {
+        if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
+        {
+            GenerationDeliveryValidation.Validate(handler.EventTypes);
+        }
+
         _logger.RegisterReducer(
             handler.Id,
             handler.EventSequenceId);
@@ -418,6 +428,7 @@ public class Reducers : IReducers
             Namespace = _eventStore.Namespace,
             Reducer = new ReducerDefinition
             {
+                GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,
                 ReducerId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),

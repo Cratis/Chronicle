@@ -44,6 +44,11 @@ public class EventEntry
     public uint? AppendedGeneration { get; set; }
 
     /// <summary>
+    /// Gets or sets the most recently revised generation. Null for unrevised or legacy rows.
+    /// </summary>
+    public uint? RevisedGeneration { get; set; }
+
+    /// <summary>
     /// Gets or sets the time the event occurred.
     /// </summary>
     public DateTimeOffset Occurred { get; set; }

@@ -304,11 +304,13 @@ public partial class EventSequenceStorage(
                     eventHash,
                     Subject: resolvedSubject)
                 {
-                    NamedTags = namedTags
+                    NamedTags = namedTags,
+                    AppendedGeneration = eventType.Generation
                 },
                 returnContent)
             {
-                GenerationalContent = genContentDict
+                GenerationalContent = genContentDict,
+                GenerationalHashes = contentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
             });
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
@@ -410,11 +412,13 @@ public partial class EventSequenceStorage(
                         Subject: resolvedSubject)
                     {
                         NamedTags = eventToAppend.NamedTags,
-                        EventSource = eventToAppend.EventSource
+                        EventSource = eventToAppend.EventSource,
+                        AppendedGeneration = eventToAppend.EventType.Generation
                     },
                     eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
                 {
-                    GenerationalContent = generationalContent.ToDictionary(kvp => int.Parse(kvp.Key), kvp => EventContentBson.ToJson(kvp.Value))
+                    GenerationalContent = generationalContent.ToDictionary(kvp => int.Parse(kvp.Key), kvp => EventContentBson.ToJson(kvp.Value)),
+                    GenerationalHashes = eventToAppend.ContentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
                 });
             }
 

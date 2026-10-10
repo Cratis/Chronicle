@@ -211,10 +211,14 @@ public partial class EventSequenceStorage(
                 await identityStorage.GetFor(causedByChain),
                 tags,
                 eventHash,
-                Subject: resolvedSubject) { NamedTags = namedTags };
+                Subject: resolvedSubject) { NamedTags = namedTags, AppendedGeneration = eventType.Generation };
 
             var generationalContent = EventEntryConverter.BuildGenerationalContent(content);
-            return new AppendedEvent(eventContext, returnContent) { GenerationalContent = generationalContent };
+            return new AppendedEvent(eventContext, returnContent)
+            {
+                GenerationalContent = generationalContent,
+                GenerationalHashes = contentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
+            };
         }
         catch (Exception ex)
         {
@@ -245,6 +249,7 @@ public partial class EventSequenceStorage(
 
         EventEntryConverter.UpdateContentForGeneration(eventEntry, eventType.Generation, content);
         EventEntryConverter.UpdateHashForGeneration(eventEntry, eventType.Generation, hash);
+        eventEntry.RevisedGeneration = eventType.Generation.Value;
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
     }
@@ -338,12 +343,14 @@ public partial class EventSequenceStorage(
                     Subject: resolvedSubject)
                 {
                     NamedTags = eventToAppend.NamedTags,
-                    EventSource = eventToAppend.EventSource
+                    EventSource = eventToAppend.EventSource,
+                    AppendedGeneration = eventToAppend.EventType.Generation
                 };
 
                 appendedEvents.Add(new AppendedEvent(eventContext, eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
                 {
-                    GenerationalContent = EventEntryConverter.BuildGenerationalContent(eventToAppend.GenerationalContent)
+                    GenerationalContent = EventEntryConverter.BuildGenerationalContent(eventToAppend.GenerationalContent),
+                    GenerationalHashes = eventToAppend.ContentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
                 });
             }
 

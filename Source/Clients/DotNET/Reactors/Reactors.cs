@@ -115,6 +115,11 @@ public class Reactors : IReactors, IReactorPartitionRecovery
         };
     }
 
+    /// <summary>
+    /// Gets the generation delivery policy supplied by the event store.
+    /// </summary>
+    internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
     /// <inheritdoc/>
     public Task Discover()
     {
@@ -529,6 +534,11 @@ public class Reactors : IReactors, IReactorPartitionRecovery
     void RegisterReactor(ReactorRegistration registration)
     {
         var handler = registration.Handler;
+        if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
+        {
+            GenerationDeliveryValidation.Validate(handler.EventTypes);
+        }
+
         _logger.RegisteringReactor(handler.Id);
         var request = new RegisterReactor
         {
@@ -537,6 +547,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             Namespace = _eventStore.Namespace,
             Reactor = new ReactorDefinition
             {
+                GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,
                 ReactorId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),

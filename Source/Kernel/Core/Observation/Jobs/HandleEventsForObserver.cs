@@ -31,6 +31,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
 /// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for getting the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 public class HandleEventsForObserver(
     [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
@@ -40,7 +41,8 @@ public class HandleEventsForObserver(
     IGrainFactory grainFactory,
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
-    ILogger<HandleEventsForObserver> logger) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
+    ILogger<HandleEventsForObserver> logger,
+    IEventGenerationRelease? eventGenerationRelease = null) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
@@ -49,6 +51,8 @@ public class HandleEventsForObserver(
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     IEventTypesStorage? _eventTypes;
+    EventType[] _generationPins = [];
+    EventStoreName _generationEventStore = EventStoreName.NotSet;
 
     IHandleEventsForObserver _selfGrainReference = null!;
 
@@ -151,6 +155,8 @@ public class HandleEventsForObserver(
             var eventTypesToRead = requestedEventTypes.Length != 0
                 ? requestedEventTypes
                 : await ResolveFallbackEventTypesToRead(_subscription.EventTypes);
+            _generationPins = eventTypesToRead.ToArray();
+            _generationEventStore = currentState.ObserverKey.EventStore;
             var nonRedactionEventTypeIds = eventTypesToRead
                 .Where(et => et.Id != GlobalEventTypes.Redaction)
                 .Select(et => et.Id)
@@ -467,6 +473,11 @@ public class HandleEventsForObserver(
 
     async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
     {
+        if (_subscription.GenerationDelivery == EventGenerationDelivery.Pinned)
+        {
+            return await (eventGenerationRelease ?? throw new EventGenerationDeliveryNotSupported()).Release(_generationEventStore, _generationPins, _eventTypeSchemas, events);
+        }
+
         // The schemas read up front are those of the generations the observer subscribes to, while the events carry the
         // generation they were stored at - the schema of that generation is what says what to decrypt.
         var eventsToDecrypt = events as AppendedEvent[] ?? events.ToArray();

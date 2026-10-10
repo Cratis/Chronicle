@@ -350,6 +350,11 @@ public partial class Observer
 
     async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
     {
+        if (_subscription.GenerationDelivery == EventGenerationDelivery.Pinned)
+        {
+            return await (eventGenerationRelease ?? throw new EventGenerationDeliveryNotSupported()).Release(_observerKey.EventStore, _subscription.EventTypes, _eventTypeSchemas, events);
+        }
+
         var eventsToDecrypt = events as AppendedEvent[] ?? events.ToArray();
         await storage.GetEventStore(_observerKey.EventStore).EventTypes.EnsureSchemasFor(_eventTypeSchemas, eventsToDecrypt);
         return await eventCompliance.Release(eventsToDecrypt, _eventTypeSchemas);

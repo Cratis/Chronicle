@@ -35,7 +35,8 @@ internal static class EventContextConverters
         ObservationState = context.ObservationState.ToContract(),
         Subject = context.Subject?.Value ?? string.Empty,
         NamedTags = context.NamedTags.Select(_ => new Contracts.Events.NamedTag { Name = _.Name.Value, Value = _.Value }).ToList(),
-        EventSource = context.EventSource?.Value ?? string.Empty
+        EventSource = context.EventSource?.Value ?? string.Empty,
+        AppendedGeneration = context.AppendedGeneration is { } generation ? generation.Value : 0
     };
 
     /// <summary>
@@ -62,7 +63,8 @@ internal static class EventContextConverters
         Subject: ResolveSubject(context.Subject, context.EventSourceId))
     {
         NamedTags = (context.NamedTags ?? []).Select(tag => new NamedTag(tag.Name, tag.Value)).ToArray(),
-        EventSource = ResolveEventSource(context.EventSource)
+        EventSource = ResolveEventSource(context.EventSource),
+        AppendedGeneration = context.AppendedGeneration == 0 ? null : new EventTypeGeneration(context.AppendedGeneration)
     };
 
     /// <summary>

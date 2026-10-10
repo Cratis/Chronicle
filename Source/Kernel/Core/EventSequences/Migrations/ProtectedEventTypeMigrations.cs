@@ -119,6 +119,40 @@ internal class ProtectedEventTypeMigrations(
         return protectedGenerations;
     }
 
+    /// <summary>
+    /// Releases protected source content and migrates it for one delivery without storing plaintext.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="definition">The definition snapshot.</param>
+    /// <param name="source">The protected source generation.</param>
+    /// <param name="protectedContent">The protected content.</param>
+    /// <param name="subject">The compliance subject.</param>
+    /// <param name="target">The pinned target generation.</param>
+    /// <returns>The migrated plaintext.</returns>
+    /// <exception cref="Events.PinnedEventTypeGenerationUnavailable">The target cannot be reached.</exception>
+    internal async Task<ExpandoObject> ReleaseAndMigrateTo(
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EventTypeDefinition definition,
+        EventType source,
+        JsonObject protectedContent,
+        string subject,
+        EventTypeGeneration target)
+    {
+        var sourceSchema = definition.Generations.Single(_ => _.Generation == source.Generation).Schema;
+        var plaintext = await metadataManager.ReleaseStrict(eventStore, @namespace, sourceSchema, subject, protectedContent);
+        NormalizeEnumValues(plaintext, sourceSchema);
+        var content = converter.ToExpandoObject(plaintext, sourceSchema);
+        var generations = await migrations.MigrateToAllGenerations(definition, source, plaintext, content);
+        if (!generations.TryGetValue(target, out var migrated))
+        {
+            throw new Events.PinnedEventTypeGenerationUnavailable(new(source.Id, target));
+        }
+
+        return migrated;
+    }
+
     static JsonNode? NormalizeEnumValues(JsonNode? value, JsonSchema schema)
     {
         schema = schema.ActualTypeSchema;

@@ -47,7 +47,16 @@ public partial class EventSequenceStorage(
         {
             lock (_lock)
             {
-                return _events.ToImmutableList();
+                return _events.Select(@event => @event with
+                {
+                    Context = @event.Context with
+                    {
+                        AppendedGeneration = _appendedGenerations.TryGetValue(@event.Context.SequenceNumber, out var generation) ? new EventTypeGeneration(generation) : null
+                    },
+                    GenerationalHashes = _generationHashes.TryGetValue(@event.Context.SequenceNumber, out var hashes)
+                        ? hashes.ToImmutableDictionary(_ => (int)_.Key.Value, _ => _.Value)
+                        : new Dictionary<int, EventHash>()
+                }).ToImmutableList();
             }
         }
     }
@@ -190,7 +199,10 @@ public partial class EventSequenceStorage(
             }
 
             var hash = contentHashes.TryGetValue(eventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
-            var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, tags, occurred, content, hash, subject, namedTags);
+            var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, tags, occurred, content, hash, subject, namedTags) with
+            {
+                GenerationalHashes = contentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
+            };
             _events.Add(appended);
             _originalCausedByChains[sequenceNumber] = causedByChain.ToArray();
             TrackMetadata(appended, _originalCausedByChains[sequenceNumber]);
@@ -250,7 +262,10 @@ public partial class EventSequenceStorage(
                     hash,
                     e.Subject,
                     e.NamedTags,
-                    e.EventSource);
+                    e.EventSource) with
+                {
+                    GenerationalHashes = e.ContentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
+                };
 
                 _events.Add(appendedEvent);
                 _originalCausedByChains[e.SequenceNumber] = e.CausedByChain.ToArray();
@@ -810,7 +825,8 @@ public partial class EventSequenceStorage(
             Subject: subject?.IsSet is true ? subject : new Subject(eventSourceId.Value))
         {
             NamedTags = namedTags ?? [],
-            EventSource = eventSource ?? EventSourceName.NotSet
+            EventSource = eventSource ?? EventSourceName.NotSet,
+            AppendedGeneration = eventType.Generation
         };
 
         var eventContent = content.TryGetValue(eventType.Generation, out var generationContent)

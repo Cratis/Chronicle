@@ -109,6 +109,35 @@ public interface IObserver : IGrainWithStringKey
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
+    /// Subscribes with an explicit generation delivery policy without changing the legacy grain method.
+    /// </summary>
+    /// <typeparam name="TObserverSubscriber">The subscriber type.</typeparam>
+    /// <param name="type">The observer type.</param>
+    /// <param name="eventTypes">The subscribed event types.</param>
+    /// <param name="siloAddress">The subscriber's silo.</param>
+    /// <param name="generationDelivery">The generation delivery policy.</param>
+    /// <param name="subscriberArgs">The subscriber arguments.</param>
+    /// <param name="isReplayable">Whether the observer supports replay.</param>
+    /// <param name="filters">The observation filters.</param>
+    /// <param name="reactivateRetired">Whether retired observers may reactivate.</param>
+    /// <param name="automatic">Whether registration is automatic.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SubscribeWithGenerationDelivery<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        EventGenerationDelivery generationDelivery,
+        object? subscriberArgs = default,
+        bool isReplayable = true,
+        ObserverFilters? filters = default,
+        bool reactivateRetired = true,
+        bool automatic = false)
+        where TObserverSubscriber : IObserverSubscriber =>
+        generationDelivery == EventGenerationDelivery.Compatibility
+            ? Subscribe<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, reactivateRetired, automatic)
+            : Task.FromException(new EventGenerationDeliveryNotSupported());
+
+    /// <summary>
     /// Subscribe a kernel observer additively, retaining the highest generation of every already subscribed type.
     /// </summary>
     /// <typeparam name="TObserverSubscriber">The kernel-owned subscriber type.</typeparam>

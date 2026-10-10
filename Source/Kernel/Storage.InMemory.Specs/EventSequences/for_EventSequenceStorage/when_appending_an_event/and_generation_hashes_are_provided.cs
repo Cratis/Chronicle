@@ -31,6 +31,10 @@ public class and_generation_hashes_are_provided : given.an_event_sequence_storag
         _readBack = await _storage.GetEventAt(EventSequenceNumber.First);
     }
 
+    [Fact] void should_expose_the_appended_generation_live() => _acknowledged.Context.AppendedGeneration!.Value.ShouldEqual(2U);
+    [Fact] void should_expose_the_appended_generation_on_read() => _readBack.Context.AppendedGeneration!.Value.ShouldEqual(2U);
+    [Fact] void should_expose_the_hash_per_generation_live() => _acknowledged.GenerationalHashes[1].Value.ShouldEqual("first-hash");
+    [Fact] void should_expose_the_hash_per_generation_on_read() => _readBack.GenerationalHashes[2].Value.ShouldEqual("second-hash");
     [Fact] void should_acknowledge_the_appended_generations_hash() => _acknowledged.Context.Hash.ShouldEqual((EventHash)"second-hash");
     [Fact] void should_preserve_the_hash_on_read_back() => _readBack.Context.Hash.ShouldEqual(_acknowledged.Context.Hash);
 }
