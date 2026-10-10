@@ -235,6 +235,12 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     public Task ReplaceGenerationContent(EventSequenceNumber sequenceNumber, IDictionary<EventTypeGeneration, ExpandoObject> content) =>
         inner.ReplaceGenerationContent(sequenceNumber, content);
 
+    /// <inheritdoc/>
+    public Task<StoredEventGenerations?> GetStoredGenerations(EventSequenceNumber sequenceNumber) => inner.GetStoredGenerations(sequenceNumber);
+
+    /// <inheritdoc/>
+    public Task<bool> TryAddGenerations(StoredEventGenerations observed, IEnumerable<GenerationToAdd> generations) => inner.TryAddGenerations(observed, generations);
+
     static string BuildKey(EventSourceId? eventSourceId, IEnumerable<string>? eventTypeTokens)
     {
         var source = eventSourceId?.Value ?? "*";

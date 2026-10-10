@@ -387,11 +387,25 @@ public interface IEventSequenceStorage
 
     /// <summary>
     /// Replace the generational content for an event at a specific sequence number.
-    /// Used during event type migration when new generations are added and existing events
-    /// need their content updated with the migrated content for all generations.
+    /// Retained for compatibility; generation backfill uses the guarded, add-only operation instead.
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to update.</param>
     /// <param name="content">The new content per <see cref="EventTypeGeneration"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task ReplaceGenerationContent(EventSequenceNumber sequenceNumber, IDictionary<EventTypeGeneration, ExpandoObject> content);
+
+    /// <summary>
+    /// Reads protected base content independently of revision delivery.
+    /// </summary>
+    /// <param name="sequenceNumber">The event to read.</param>
+    /// <returns>The stored generations, or null when the event does not exist.</returns>
+    Task<StoredEventGenerations?> GetStoredGenerations(EventSequenceNumber sequenceNumber);
+
+    /// <summary>
+    /// Atomically adds missing generations, hashes and provenance without replacing existing content.
+    /// </summary>
+    /// <param name="observed">The snapshot to guard against concurrent revision, redaction or source changes.</param>
+    /// <param name="generations">The generations to add.</param>
+    /// <returns>True if all generations were added; false on a conflict or an existing target.</returns>
+    Task<bool> TryAddGenerations(StoredEventGenerations observed, IEnumerable<GenerationToAdd> generations);
 }

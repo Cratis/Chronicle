@@ -195,6 +195,7 @@ public partial class EventSequenceStorage(
             _originalCausedByChains[sequenceNumber] = causedByChain.ToArray();
             TrackMetadata(appended, _originalCausedByChains[sequenceNumber]);
             _appendedGenerations[sequenceNumber] = eventType.Generation.Value;
+            _generationHashes[sequenceNumber] = new Dictionary<EventTypeGeneration, EventHash>(contentHashes);
 
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(appended);
         }
@@ -255,6 +256,7 @@ public partial class EventSequenceStorage(
                 _originalCausedByChains[e.SequenceNumber] = e.CausedByChain.ToArray();
                 TrackMetadata(appendedEvent, _originalCausedByChains[e.SequenceNumber]);
                 _appendedGenerations[e.SequenceNumber] = e.EventType.Generation.Value;
+                _generationHashes[e.SequenceNumber] = new Dictionary<EventTypeGeneration, EventHash>(e.ContentHashes);
                 appended.Add(appendedEvent);
             }
         }
@@ -329,6 +331,8 @@ public partial class EventSequenceStorage(
             _events[index] = Redacted(original, reason, correlationId, causation, occurred, _originalCausedByChains[sequenceNumber]);
             _originalCausedByChains.Remove(sequenceNumber);
             RedactMetadata(sequenceNumber, correlationId, causation, causedByChain, occurred);
+            _generationHashes.Remove(sequenceNumber);
+            _derivedGenerations.Remove(sequenceNumber);
             return Task.FromResult(original);
         }
     }
@@ -362,6 +366,8 @@ public partial class EventSequenceStorage(
                 _events[index] = Redacted(original, reason, correlationId, causation, occurred, _originalCausedByChains[original.Context.SequenceNumber]);
                 _originalCausedByChains.Remove(original.Context.SequenceNumber);
                 RedactMetadata(original.Context.SequenceNumber, correlationId, causation, causedByChain, occurred);
+                _generationHashes.Remove(original.Context.SequenceNumber);
+                _derivedGenerations.Remove(original.Context.SequenceNumber);
             }
         }
 

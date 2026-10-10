@@ -10,6 +10,7 @@ using Cratis.Types;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster;
@@ -28,7 +29,8 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// <param name="jobsStorage">The <see cref="Orleans.Storage.IJobsStorage"/> the job system resolves through.</param>
 /// <param name="jsonSerializerOptions">The configured <see cref="JsonSerializerOptions"/> including all concept converters.</param>
 /// <param name="converter">The schema-aware content converter.</param>
-public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Json.IExpandoObjectConverter converter) : IClusterStorage, IDisposable
+/// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> for the storage created for each event store.</param>
+public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Json.IExpandoObjectConverter converter, ILoggerFactory? loggerFactory = null) : IClusterStorage, IDisposable
 {
     readonly Subject<IEnumerable<EventStoreName>> _eventStoresSubject = new();
 
@@ -58,7 +60,7 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
     /// <inheritdoc/>
     public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory)
     {
-        return new EventStoreStorage(eventStore, database, sinkFactories, jobsStorage, jsonSerializerOptions, converter);
+        return new EventStoreStorage(eventStore, database, sinkFactories, jobsStorage, jsonSerializerOptions, converter, loggerFactory);
     }
 
     /// <inheritdoc/>

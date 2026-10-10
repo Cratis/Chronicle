@@ -90,7 +90,7 @@ When an event is appended to the event store:
 This ensures that:
 - Older consumers can still read events in their expected format
 - Newer consumers can read events with the latest schema
-- The generation an event was appended as is stored as written, so the original content is never overwritten. The other generations hold only what the migrations produce: the example above splits a name on spaces, so for "Mary Ann Smith" the upcast generation 2 keeps "Mary" and "Ann" and drops "Smith". Write migrations that keep every part a consumer needs.
+- The generation an event was appended as is stored as written. Current backfills only add missing generations; they do not overwrite stored ones. Earlier backfills may already have overwritten content, and SQL revisions still replace content in place. The other generations hold only what the migrations produce: the example above splits a name on spaces, so for "Mary Ann Smith" the upcast generation 2 keeps "Mary" and "Ann" and drops "Smith". Write migrations that keep every part a consumer needs.
 
 ## Protected values
 
@@ -110,8 +110,19 @@ subject was supplied. This also protects default values in classified target pro
 Keep the appropriate metadata on every target property that carries personal or
 confidential data; a migration does not replace that schema declaration.
 
-When a new generation is added for existing events, Chronicle releases the stored source
-content under its original subject before transforming it. Erasing that subject's PII
+When a new generation is registered, backfill covers the **default namespace's event log only**.
+It migrates from the known appended generation's base content, not a separate revision. For
+legacy events whose appended generation is unknown, it uses the highest stored base generation
+without inferring an appended generation. Each added generation records that source, whether
+it is the known appended generation, and a content-addressed migration-definition version.
+Content, hash, and provenance are written together, guarded against concurrent revision or
+redaction. A conflicting write is re-read and retried once; a second conflict is logged and skipped.
+Changing a migration alone does not rewrite existing generations.
+
+Register new generations **only after every kernel silo has been upgraded**. Older workers can
+still run replace-all backfills during a rolling upgrade.
+
+Before transforming the source, Chronicle releases its content under the original subject. Erasing that subject's PII
 keys also makes protected PII in the generated generations unavailable; independent
 confidentiality keys are not erased by a PII erasure request.
 

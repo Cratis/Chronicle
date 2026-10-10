@@ -34,6 +34,7 @@ internal class ProtectedEventTypeMigrations(
     /// <param name="protectedContent">The stored JSON content.</param>
     /// <param name="protectedEvent">The stored event content.</param>
     /// <param name="subject">The original event's compliance subject.</param>
+    /// <param name="definition">Optional definition snapshot for versioned backfill.</param>
     /// <returns>Protected content for every generation.</returns>
     internal async Task<IDictionary<EventTypeGeneration, ExpandoObject>> Migrate(
         EventStoreName eventStore,
@@ -41,20 +42,23 @@ internal class ProtectedEventTypeMigrations(
         EventType eventType,
         JsonObject protectedContent,
         ExpandoObject protectedEvent,
-        string subject)
+        string subject,
+        EventTypeDefinition? definition = null)
     {
-        var sourceSchema = await eventTypes.GetFor(eventType.Id, eventType.Generation);
+        var sourceSchema = definition is null
+            ? (await eventTypes.GetFor(eventType.Id, eventType.Generation)).Schema
+            : definition.Generations.Single(_ => _.Generation == eventType.Generation).Schema;
         var plaintext = protectedContent;
-        if (sourceSchema.Schema.HasSchemaMetadata())
+        if (sourceSchema.HasSchemaMetadata())
         {
-            plaintext = await metadataManager.ReleaseStrict(eventStore, @namespace, sourceSchema.Schema, subject, protectedContent);
+            plaintext = await metadataManager.ReleaseStrict(eventStore, @namespace, sourceSchema, subject, protectedContent);
 
             // Protected integer enums can release as either numeric text or names, depending on the
             // writer. Migration value maps use the schema's numbers, not its display names.
-            NormalizeEnumValues(plaintext, sourceSchema.Schema);
+            NormalizeEnumValues(plaintext, sourceSchema);
         }
 
-        return await MigratePlaintext(eventStore, @namespace, eventType, plaintext, protectedEvent, subject, storedContent: true);
+        return await MigratePlaintext(eventStore, @namespace, eventType, plaintext, protectedEvent, subject, storedContent: true, definition: definition);
     }
 
     /// <summary>
@@ -67,6 +71,7 @@ internal class ProtectedEventTypeMigrations(
     /// <param name="protectedEvent">The already-protected source generation.</param>
     /// <param name="subject">The original event's compliance subject.</param>
     /// <param name="storedContent">Whether the source is already stored and must honor prior subject erasure.</param>
+    /// <param name="definition">Optional definition snapshot for versioned backfill.</param>
     /// <returns>Protected content for every generation.</returns>
     internal async Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigratePlaintext(
         EventStoreName eventStore,
@@ -75,11 +80,16 @@ internal class ProtectedEventTypeMigrations(
         JsonObject plaintext,
         ExpandoObject protectedEvent,
         string subject,
-        bool storedContent = false)
+        bool storedContent = false,
+        EventTypeDefinition? definition = null)
     {
-        var sourceSchema = await eventTypes.GetFor(eventType.Id, eventType.Generation);
-        var plaintextEvent = converter.ToExpandoObject(plaintext, sourceSchema.Schema);
-        var generations = await migrations.MigrateToAllGenerations(eventStore, eventType, plaintext, plaintextEvent);
+        var sourceSchema = definition is null
+            ? (await eventTypes.GetFor(eventType.Id, eventType.Generation)).Schema
+            : definition.Generations.Single(_ => _.Generation == eventType.Generation).Schema;
+        var plaintextEvent = converter.ToExpandoObject(plaintext, sourceSchema);
+        var generations = definition is null
+            ? await migrations.MigrateToAllGenerations(eventStore, eventType, plaintext, plaintextEvent)
+            : await migrations.MigrateToAllGenerations(definition, eventType, plaintext, plaintextEvent);
         var protectedGenerations = new Dictionary<EventTypeGeneration, ExpandoObject>();
         foreach (var (generation, content) in generations)
         {
@@ -90,18 +100,20 @@ internal class ProtectedEventTypeMigrations(
                 continue;
             }
 
-            var schema = await eventTypes.GetFor(eventType.Id, generation);
-            if (!schema.Schema.HasSchemaMetadata())
+            var schema = definition is null
+                ? (await eventTypes.GetFor(eventType.Id, generation)).Schema
+                : definition.Generations.Single(_ => _.Generation == generation).Schema;
+            if (!schema.HasSchemaMetadata())
             {
                 protectedGenerations[generation] = content;
                 continue;
             }
 
-            var json = GenerationContentConversion.ToPlaintext(content, schema.Schema, converter);
+            var json = GenerationContentConversion.ToPlaintext(content, schema, converter);
             var applied = storedContent
-                ? await metadataManager.ApplyToReadModel(eventStore, @namespace, schema.Schema, subject, json)
-                : await metadataManager.Apply(eventStore, @namespace, schema.Schema, subject, json);
-            protectedGenerations[generation] = converter.ToExpandoObject(applied, schema.Schema);
+                ? await metadataManager.ApplyToReadModel(eventStore, @namespace, schema, subject, json)
+                : await metadataManager.Apply(eventStore, @namespace, schema, subject, json);
+            protectedGenerations[generation] = converter.ToExpandoObject(applied, schema);
         }
 
         return protectedGenerations;
