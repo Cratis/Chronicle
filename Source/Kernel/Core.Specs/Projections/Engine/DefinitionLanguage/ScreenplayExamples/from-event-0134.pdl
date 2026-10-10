@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from UserCreated
+    Name = name          # Indented
+    Email = email        # Indented
+    IsActive = true      # Indented

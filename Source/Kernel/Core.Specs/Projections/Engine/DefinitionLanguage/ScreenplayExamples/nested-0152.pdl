@@ -1,0 +1,12 @@
+projection Slice => SliceReadModel
+  from SliceCreated
+    Name = name
+
+  nested command
+    automap
+
+    from CommandSetForSlice
+    from CommandRenamed
+      Name = newName
+
+    clear with CommandClearedForSlice

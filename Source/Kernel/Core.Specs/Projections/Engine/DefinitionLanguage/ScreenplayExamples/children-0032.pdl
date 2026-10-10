@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  children orders identified by orderId
+  children members identified by userId
+  children items identified by itemNumber

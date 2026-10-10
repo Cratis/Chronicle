@@ -1,0 +1,11 @@
+projection User => UserReadModel
+  from UserRegistered
+    # AutoMap enabled (default)
+    IsActive = true
+
+  join Profile on ProfileId
+    with UserProfileUpdated
+      no automap
+      # Must map everything explicitly
+      Name = fullName
+      Email = emailAddress

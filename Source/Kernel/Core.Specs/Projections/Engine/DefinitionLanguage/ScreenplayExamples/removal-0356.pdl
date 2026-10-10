@@ -1,0 +1,16 @@
+projection Order => OrderReadModel
+  from OrderPlaced
+    CustomerId = customerId
+
+  join Customer on CustomerId
+    with CustomerCreated
+      CustomerName = name
+
+  children items identified by itemId
+    from ItemAdded key itemId
+      parent orderId
+      ProductId = productId
+
+    remove via join on ProductDiscontinued
+
+  remove via join on CustomerAccountClosed

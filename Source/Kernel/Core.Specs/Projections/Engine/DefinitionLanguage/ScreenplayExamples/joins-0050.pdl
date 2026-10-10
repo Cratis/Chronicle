@@ -1,0 +1,12 @@
+projection Doc => DocReadModel
+  join Product on ProductId
+    with ProductCreated
+      ProductName = name
+      ProductDescription = description
+      ProductPrice = price
+      LastProductUpdate = $eventContext.occurred
+    with ProductUpdated
+      ProductName = name
+      ProductDescription = description
+      ProductPrice = price
+      LastProductUpdate = $eventContext.occurred

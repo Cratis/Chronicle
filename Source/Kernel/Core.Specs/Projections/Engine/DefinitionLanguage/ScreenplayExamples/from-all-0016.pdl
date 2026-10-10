@@ -1,0 +1,4 @@
+projection EventCounter => EventCounterReadModel
+  all
+    count totalEvents
+    lastOccurred = $eventContext.occurred

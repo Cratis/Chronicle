@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from OrderPlaced
+    PlacedBy = $eventContext.causedBy.subject
+    PlacedByName = $eventContext.causedBy.name

@@ -1,0 +1,28 @@
+projection Project => ProjectReadModel
+  from ProjectCreated
+    Name = name
+    Status = "Active"
+
+  children tasks identified by taskId
+    every
+      LastModified = $eventContext.occurred
+
+    from TaskAdded key taskId
+      parent projectId
+      Title = title
+      AssignedTo = assigneeId
+      Status = "Open"
+      CreatedAt = $eventContext.occurred
+
+    from TaskCompleted key taskId
+      parent projectId
+      Status = "Completed"
+      CompletedAt = $eventContext.occurred
+
+    from TaskAssigned key taskId
+      parent projectId
+      AssignedTo = assigneeId
+
+    join User on AssignedTo
+      with UserCreated
+        AssigneeName = name

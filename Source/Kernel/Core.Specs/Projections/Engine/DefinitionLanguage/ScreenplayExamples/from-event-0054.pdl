@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from UserAssignedToGroup key userId
+    GroupId = $eventContext.eventSourceId
+    AssignedAt = $eventContext.occurred

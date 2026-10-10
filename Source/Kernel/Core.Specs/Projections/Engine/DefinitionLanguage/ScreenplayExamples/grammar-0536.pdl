@@ -1,0 +1,35 @@
+projection Order => OrderReadModel
+  every
+    LastUpdated = $eventContext.occurred
+    exclude children
+
+  from OrderPlaced key orderId
+    OrderNumber = orderNumber
+    CustomerId = customerId
+    Total = total
+    Status = "Pending"
+
+  from OrderShipped
+    Status = "Shipped"
+    ShippedAt = $eventContext.occurred
+
+  join Customer on CustomerId
+    with CustomerCreated
+      CustomerName = name
+    with CustomerUpdated
+      CustomerName = name
+
+  children items identified by lineNumber
+    every
+      UpdatedAt = $eventContext.occurred
+
+    from LineItemAdded key lineNumber
+      parent orderId
+      ProductId = productId
+      Quantity = quantity
+      UnitPrice = price
+
+    remove with LineItemRemoved key lineNumber
+      parent orderId
+
+  remove with OrderCancelled

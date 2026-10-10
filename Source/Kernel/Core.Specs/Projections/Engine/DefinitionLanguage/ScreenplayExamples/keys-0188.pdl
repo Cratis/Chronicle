@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from OrderPlaced
+    key literal "global"
+    count TotalOrders

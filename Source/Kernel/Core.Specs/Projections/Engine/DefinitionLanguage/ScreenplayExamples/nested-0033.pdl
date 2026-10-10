@@ -1,0 +1,6 @@
+projection Doc => DocReadModel
+  nested command
+    from CommandSetForSlice
+      Name = commandName
+      Schema = schema
+      Rules = validationRules

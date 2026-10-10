@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from PaymentReceived
+    add Balance by amount
+    LastPayment = $eventContext.occurred

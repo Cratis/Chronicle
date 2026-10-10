@@ -1,0 +1,12 @@
+projection Product => ProductReadModel
+  from ProductListed
+    Name = name
+    BasePrice = price
+
+  nested promotion
+    from PromotionApplied
+      Label = promotionName
+      DiscountPercent = discount
+      ValidUntil = expiresAt
+
+    clear with PromotionRemoved

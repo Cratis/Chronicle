@@ -1,0 +1,8 @@
+projection Doc => DocReadModel
+  children items identified by itemId
+    from ItemAdded
+      ProductId = productId
+
+    join Product on ProductId
+      with ProductCreated
+        ProductName = name

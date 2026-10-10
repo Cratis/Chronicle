@@ -1,0 +1,16 @@
+projection Invoice => InvoiceReadModel
+  from InvoiceIssued
+    InvoiceNumber = number
+    CustomerId = customerId
+    Amount = amount
+    Balance = amount
+
+  children payments identified by paymentId
+    from PaymentReceived key paymentId
+      parent invoiceNumber
+      Amount = amount
+      ReceivedAt = $eventContext.occurred
+      Method = paymentMethod
+
+  from PaymentReceived
+    subtract Balance by amount

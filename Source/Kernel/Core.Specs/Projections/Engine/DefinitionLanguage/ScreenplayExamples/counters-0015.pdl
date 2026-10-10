@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from PageViewed
+    count ViewCount
+    LastViewedAt = $eventContext.occurred

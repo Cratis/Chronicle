@@ -1,0 +1,9 @@
+projection Doc => DocReadModel
+  from LineItemAdded
+    key LineItemKey
+      OrderId = orderId
+      LineNumber = lineNumber
+      SequenceNumber = $eventContext.sequenceNumber
+      CreatedBy = $eventContext.causedBy.subject
+    Product = productName
+    Quantity = quantity

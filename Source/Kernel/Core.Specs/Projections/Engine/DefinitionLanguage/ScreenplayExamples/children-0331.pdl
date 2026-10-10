@@ -1,0 +1,11 @@
+projection Doc => DocReadModel
+  children members identified by userId
+    automap
+
+    from UserAdded key userId
+      parent groupId
+      # Name, Email, etc. are auto-mapped
+
+    from UserUpdated key userId
+      parent groupId
+      # Updates are auto-mapped

@@ -34,5 +34,6 @@
         <PackageReference Include="protobuf-net.Grpc.Reflection" />
     </ItemGroup>
     <ItemGroup>
+        <None Update="Projections/Engine/DefinitionLanguage/ScreenplayExamples/*.pdl;Projections/Engine/DefinitionLanguage/ScreenplayExamples/*.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>

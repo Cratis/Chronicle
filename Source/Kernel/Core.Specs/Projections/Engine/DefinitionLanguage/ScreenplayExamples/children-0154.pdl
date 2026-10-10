@@ -1,0 +1,18 @@
+projection Group => GroupReadModel
+  from GroupCreated
+    Name = name
+    Description = description
+
+  children members identified by userId
+    automap
+
+    from UserAddedToGroup key userId
+      parent groupId
+      AddedAt = $eventContext.occurred
+
+    from UserRoleChanged key userId
+      parent groupId
+      Role = role
+
+    remove with UserRemovedFromGroup key userId
+      parent groupId

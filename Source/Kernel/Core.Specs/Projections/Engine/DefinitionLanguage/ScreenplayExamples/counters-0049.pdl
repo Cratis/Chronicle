@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from ItemConsumed
+    decrement RemainingStock
+    LastConsumed = $eventContext.occurred

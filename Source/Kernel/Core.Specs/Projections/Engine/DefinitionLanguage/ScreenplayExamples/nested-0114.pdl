@@ -1,0 +1,11 @@
+projection Doc => DocReadModel
+  nested command
+    from CommandSetForSlice
+      Name = commandName
+
+    nested validation
+      from ValidationConfigured
+        Rules = rules
+      clear with ValidationRemoved
+
+    clear with CommandClearedForSlice

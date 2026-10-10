@@ -1,0 +1,6 @@
+projection Doc => DocReadModel
+  join Group on GroupId
+    with GroupCreated
+      automap
+    with GroupRenamed
+      automap

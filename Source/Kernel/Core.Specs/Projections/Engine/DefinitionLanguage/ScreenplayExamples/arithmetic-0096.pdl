@@ -1,0 +1,14 @@
+projection Product => ProductReadModel
+  from ProductCreated
+    Name = name
+    StockLevel = initialStock
+
+  from StockAdded
+    add StockLevel by quantity
+    LastRestocked = $eventContext.occurred
+
+  from StockSold
+    subtract StockLevel by quantity
+
+  from StockAdjusted
+    add StockLevel by adjustmentAmount
