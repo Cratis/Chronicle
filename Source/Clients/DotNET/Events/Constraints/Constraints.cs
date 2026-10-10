@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints;
@@ -43,6 +45,13 @@ public class Constraints(
     /// <inheritdoc/>
     public Task Register()
     {
+        if (_constraints.Exists(_ => _ is ClosesStreamConstraintDefinition) &&
+            !(eventStore.Connection is IKernelCapabilities capabilities &&
+              capabilities.Capabilities.Contains(KernelCapabilities.ClosesStreamConstraints)))
+        {
+            throw new ClosesStreamConstraintsNotSupported("The connected kernel does not support closing stream constraints. Upgrade the kernel before registering closing declarations.");
+        }
+
         var request = new RegisterConstraintsRequest
         {
             EventStore = eventStore.Name,

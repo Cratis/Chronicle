@@ -12,4 +12,9 @@ public static class KernelCapabilities
     /// The kernel accepts precise schemas for defaulted event properties without changing their generation.
     /// </summary>
     public const string PreciseEventTypeSchemas = "precise-event-type-schemas";
+
+    /// <summary>
+    /// The kernel accepts event-driven closing and reopening constraint definitions.
+    /// </summary>
+    public const string ClosesStreamConstraints = "closes-stream-constraints";
 }
