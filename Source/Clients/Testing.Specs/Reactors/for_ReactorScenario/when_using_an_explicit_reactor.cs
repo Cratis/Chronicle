@@ -22,8 +22,7 @@ public class when_using_an_explicit_reactor : Specification
             _definitionCount++;
             builder.On<ThingTouched>(async (@event, context) =>
             {
-                await Task.Yield();
-                _notes.Add(@event.Note);
+                await Task.Run(() => _notes.Add(@event.Note));
                 _contexts.Add(context);
             });
         });
