@@ -12,6 +12,36 @@ namespace Cratis.Chronicle.Storage.Events.Constraints;
 public interface IUniqueConstraintsStorage
 {
     /// <summary>
+    /// Saves a constraint value using its retention mode.
+    /// </summary>
+    /// <param name="eventSourceId">The claiming event source.</param>
+    /// <param name="definition">The constraint definition.</param>
+    /// <param name="sequenceNumber">The claim's sequence number.</param>
+    /// <param name="value">The hashed value.</param>
+    /// <param name="scopeKey">Optional resolved scope.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "");
+
+    /// <summary>
+    /// Releases every value held by the source for this constraint and scope.
+    /// </summary>
+    /// <param name="eventSourceId">The owning event source.</param>
+    /// <param name="definition">The constraint definition.</param>
+    /// <param name="scopeKey">Optional resolved scope.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Remove(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "");
+
+    /// <summary>
+    /// Releases one retained value only if the event source owns it.
+    /// </summary>
+    /// <param name="eventSourceId">The owning event source.</param>
+    /// <param name="definition">The constraint definition.</param>
+    /// <param name="value">The hashed value to release.</param>
+    /// <param name="scopeKey">Optional resolved scope.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RemoveValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "");
+
+    /// <summary>
     /// Check if a constraint value exists.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to check for.</param>
@@ -23,24 +53,4 @@ public interface IUniqueConstraintsStorage
     /// Returns <see cref="EventSequenceNumber.Unavailable"/> if it doesn't exist.
     /// </returns>
     Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "");
-
-    /// <summary>
-    /// Save a constraint value.
-    /// </summary>
-    /// <param name="eventSourceId"><see cref="EventSourceId"/> to save for.</param>
-    /// <param name="name"><see cref="ConstraintName"/> to save for.</param>
-    /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> the value exists at.</param>
-    /// <param name="value"><see cref="UniqueConstraintValue"/>to save.</param>
-    /// <param name="scopeKey">Optional scope key for scoped constraints.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "");
-
-    /// <summary>
-    /// Remove a constraint value.
-    /// </summary>
-    /// <param name="eventSourceId"><see cref="EventSourceId"/> to remove for.</param>
-    /// <param name="name"><see cref="ConstraintName"/> to remove for.</param>
-    /// <param name="scopeKey">Optional scope key for scoped constraints.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Remove(EventSourceId eventSourceId, ConstraintName name, string scopeKey = "");
 }

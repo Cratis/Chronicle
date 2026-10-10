@@ -14,6 +14,16 @@ A unique property value belongs to an event source, not to a single append. The 
 
 Do not constrain a property containing the event source's own id to prevent a second event on that source: it will re-claim its own value and pass. To allow an event type only once per event source, use a [unique event type constraint](unique-event-type) instead.
 
+## Keeping every value
+
+If one project accumulates many version ids, retaining only its latest id lets another project reuse an earlier one. Set `Mode = UniqueConstraintMode.PerValue` to reserve every value until you explicitly release it. The default, `PerEventSource`, keeps the replacement behavior described above. Per-value mode is available through the .NET client for now.
+
+<ChronicleClientTabs snippet="constraints/model-bound/unique/per-value" />
+
+Appending two different version ids for the same project now keeps both reserved. Another project cannot claim either; the original project may append either again without a violation. `ScheduleVersionRemoved` releases only the id carried by that event, and only if its event source owns that value. `ScheduleVersionsRemoved`, which declares no removal properties, releases all values held by that event source in the constraint's scope.
+
+For a composite value, list removal properties in the same order as the constrained properties. A value-carrying event with no constrained properties present claims nothing and does not release earlier values. Properties sharing a constraint name must declare the same mode.
+
 ## Strongly-typed properties
 
 `[Unique]` works on `ConceptAs<T>` properties — the idiomatic way to model a domain value in Cratis. Chronicle treats the concept as the underlying primitive it wraps (`string`, `Guid`, and so on), so a uniqueness rule on a strongly-typed `EmailAddress` or `OrganizationNumber` behaves exactly like one on the raw primitive, and registers and enforces identically through the [declarative](../declarative/unique) form too:

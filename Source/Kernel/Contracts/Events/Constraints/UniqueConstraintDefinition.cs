@@ -20,4 +20,16 @@ public class UniqueConstraintDefinition
     /// </summary>
     [ProtoMember(2)]
     public bool IgnoreCasing { get; set; }
+
+    /// <summary>
+    /// Gets or sets how claimed values are retained, defaulting to one per event source.
+    /// </summary>
+    [ProtoMember(3)]
+    public UniqueConstraintMode Mode { get; set; }
+
+    /// <summary>
+    /// Gets or sets removal events and the properties identifying the value to release.
+    /// </summary>
+    [ProtoMember(4)]
+    public IList<UniqueConstraintEventDefinition> RemovalEventDefinitions { get; set; } = [];
 }

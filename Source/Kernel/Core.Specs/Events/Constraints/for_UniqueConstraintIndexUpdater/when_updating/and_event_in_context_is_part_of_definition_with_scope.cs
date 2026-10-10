@@ -37,5 +37,5 @@ public class and_event_in_context_is_part_of_definition_with_scope : Specificati
 
     async Task Because() => await _updater.Update(_eventSequenceNumber);
 
-    [Fact] void should_save_to_storage_with_scope_key() => _storage.Received(1).Save(_context.EventSourceId, _definition.Name, Arg.Any<EventSequenceNumber>(), _expectedHashedValue, "est:MySourceType");
+    [Fact] void should_save_to_storage_with_scope_key() => _storage.Received(1).Save(_context.EventSourceId, _definition, Arg.Any<EventSequenceNumber>(), _expectedHashedValue, "est:MySourceType");
 }

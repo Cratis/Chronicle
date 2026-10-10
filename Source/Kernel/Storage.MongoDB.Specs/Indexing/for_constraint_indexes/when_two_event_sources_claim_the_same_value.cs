@@ -28,11 +28,12 @@ public class when_two_event_sources_claim_the_same_value(MongoDBFixture fixture)
     async Task Because()
     {
         var storage = new UniqueConstraintsStorage(_database, EventSequenceId.Log, Substitute.For<ILogger<UniqueConstraintsStorage>>());
-        await storage.Save((EventSourceId)"es-1", ConstraintName, 0, _value);
+        var definition = new UniqueConstraintDefinition(ConstraintName, []);
+        await storage.Save((EventSourceId)"es-1", definition, 0, _value);
 
         try
         {
-            await storage.Save((EventSourceId)"es-2", ConstraintName, 1, _value);
+            await storage.Save((EventSourceId)"es-2", definition, 1, _value);
         }
         catch (Exception ex)
         {

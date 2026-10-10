@@ -59,7 +59,7 @@ public class ReindexConstraintsStep(
 
         if (seen.Add((@event.Context.EventSourceId, scopeKey)))
         {
-            await uniqueConstraintsStorage.Remove(@event.Context.EventSourceId, definition.Name, scopeKey);
+            await uniqueConstraintsStorage.Remove(@event.Context.EventSourceId, definition, scopeKey);
         }
 
         var context = new ConstraintValidationContext(

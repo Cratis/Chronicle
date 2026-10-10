@@ -61,6 +61,15 @@ public interface IDatabase
     Task<DbContextScope<UniqueConstraintDbContext>> UniqueConstraintTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string constraintName);
 
     /// <summary>
+    /// Gets a database context scope for a per-value unique constraint table.
+    /// </summary>
+    /// <param name="eventStore">The name of the event store.</param>
+    /// <param name="namespace">The name of the namespace.</param>
+    /// <param name="constraintName">The table name.</param>
+    /// <returns>The database context scope.</returns>
+    Task<DbContextScope<UniqueConstraintValuesDbContext>> UniqueConstraintValuesTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string constraintName);
+
+    /// <summary>
     /// Gets a database context scope for a specific event sequence table within a namespace.
     /// </summary>
     /// <param name="eventStore">The name of the event store.</param>

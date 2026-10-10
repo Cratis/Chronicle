@@ -26,5 +26,5 @@ public class and_event_in_context_is_not_part_of_definition : Specification
 
     async Task Because() => await _updater.Update(EventSequenceNumber.First);
 
-    [Fact] void should_not_save_to_storage() => _storage.DidNotReceive().Save(Arg.Any<EventSourceId>(), Arg.Any<ConstraintName>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>());
+    [Fact] void should_not_save_to_storage() => _storage.DidNotReceive().Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>());
 }

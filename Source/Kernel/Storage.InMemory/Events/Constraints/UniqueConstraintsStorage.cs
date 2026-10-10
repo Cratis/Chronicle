@@ -12,31 +12,27 @@ namespace Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 /// Represents an in-memory implementation of <see cref="IUniqueConstraintsStorage"/>.
 /// </summary>
 /// <remarks>
-/// The index holds at most one entry per event source for a given constraint and scope, mirroring the
-/// document-per-event-source shape of the MongoDB and SQL implementations. Saving a new value for an event source
-/// therefore replaces its previous claim and releases the value it held, making that value claimable by others.
+/// Per-event-source mode replaces the source's previous claim. Per-value mode retains each value separately,
+/// with one owner per constraint and scope, until a removal event releases it.
 /// </remarks>
 public class UniqueConstraintsStorage : IUniqueConstraintsStorage
 {
-    /// <summary>
-    /// Index keyed by (EventSourceId, ConstraintName, ScopeKey) to the claimed value and its <see cref="EventSequenceNumber"/>.
-    /// </summary>
     readonly ConcurrentDictionary<(string EventSourceId, string ConstraintName, string ScopeKey), (string Value, EventSequenceNumber SequenceNumber)> _index = [];
+    readonly ConcurrentDictionary<(string ConstraintName, string ScopeKey, string Value), (string EventSourceId, EventSequenceNumber SequenceNumber)> _values = [];
 
     /// <inheritdoc/>
-    public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(
-        EventSourceId eventSourceId,
-        UniqueConstraintDefinition definition,
-        UniqueConstraintValue value,
-        string scopeKey = "")
+    public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
     {
-        // Note: Case-insensitive comparison is handled by hashing the value with case normalization
-        // before it reaches the storage layer, so we can use a simple equality check here.
+        if (definition.Mode == UniqueConstraintMode.PerValue)
+        {
+            return Task.FromResult(_values.TryGetValue((definition.Name.Value, scopeKey, value.Value), out var entry)
+                ? (entry.EventSourceId == eventSourceId.Value, entry.SequenceNumber)
+                : (true, EventSequenceNumber.Unavailable));
+        }
+
         foreach (var (key, entry) in _index)
         {
-            if (key.ConstraintName != definition.Name.Value ||
-                key.ScopeKey != scopeKey ||
-                entry.Value != value.Value)
+            if (key.ConstraintName != definition.Name.Value || key.ScopeKey != scopeKey || entry.Value != value.Value)
             {
                 continue;
             }
@@ -47,25 +43,73 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
         return Task.FromResult((true, EventSequenceNumber.Unavailable));
     }
 
-    /// <inheritdoc/>
-    public Task Save(
-        EventSourceId eventSourceId,
-        ConstraintName name,
-        EventSequenceNumber sequenceNumber,
-        UniqueConstraintValue value,
-        string scopeKey = "")
+    /// <summary>
+    /// Saves a claim using the definition's retention mode.
+    /// </summary>
+    /// <param name="eventSourceId">The owner.</param>
+    /// <param name="definition">The constraint.</param>
+    /// <param name="sequenceNumber">The claim's sequence number.</param>
+    /// <param name="value">The hashed value.</param>
+    /// <param name="scopeKey">The resolved scope.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="DuplicateUniqueConstraintValue">Another event source owns the value.</exception>
+    public Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "")
     {
-        _index[(eventSourceId.Value, name.Value, scopeKey)] = (value.Value, sequenceNumber);
+        if (definition.Mode != UniqueConstraintMode.PerValue)
+        {
+            _index[(eventSourceId.Value, definition.Name.Value, scopeKey)] = (value.Value, sequenceNumber);
+            return Task.CompletedTask;
+        }
+
+        var key = (definition.Name.Value, scopeKey, value.Value);
+        var entry = _values.GetOrAdd(key, (eventSourceId.Value, sequenceNumber));
+        if (entry.EventSourceId != eventSourceId.Value)
+        {
+            throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
+        }
+
         return Task.CompletedTask;
     }
 
-    /// <inheritdoc/>
-    public Task Remove(
-        EventSourceId eventSourceId,
-        ConstraintName name,
-        string scopeKey = "")
+    /// <summary>
+    /// Releases every value held by the event source in the selected scope.
+    /// </summary>
+    /// <param name="eventSourceId">The owner.</param>
+    /// <param name="definition">The constraint.</param>
+    /// <param name="scopeKey">The resolved scope.</param>
+    /// <returns>Awaitable task.</returns>
+    public Task Remove(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "")
     {
-        _index.TryRemove((eventSourceId.Value, name.Value, scopeKey), out _);
+        if (definition.Mode != UniqueConstraintMode.PerValue)
+        {
+            _index.TryRemove((eventSourceId.Value, definition.Name.Value, scopeKey), out _);
+            return Task.CompletedTask;
+        }
+
+        foreach (var entry in _values.Where(_ => _.Key.ConstraintName == definition.Name.Value && _.Key.ScopeKey == scopeKey && _.Value.EventSourceId == eventSourceId.Value))
+        {
+            _values.TryRemove(entry);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Releases one value only if the source owns it.
+    /// </summary>
+    /// <param name="eventSourceId">The owner.</param>
+    /// <param name="definition">The constraint.</param>
+    /// <param name="value">The value to release.</param>
+    /// <param name="scopeKey">The resolved scope.</param>
+    /// <returns>Awaitable task.</returns>
+    public Task RemoveValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
+    {
+        var key = (definition.Name.Value, scopeKey, value.Value);
+        if (_values.TryGetValue(key, out var entry) && entry.EventSourceId == eventSourceId.Value)
+        {
+            _values.TryRemove(new KeyValuePair<(string, string, string), (string, EventSequenceNumber)>(key, entry));
+        }
+
         return Task.CompletedTask;
     }
 }

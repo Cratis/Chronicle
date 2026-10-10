@@ -78,6 +78,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<NamespaceDbContext>> _namespaceOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext>> _jobsOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<UniqueConstraintDbContext>> _uniqueConstraintOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<UniqueConstraintValuesDbContext>> _uniqueConstraintValuesOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<EventSequenceDbContext>> _eventSequenceOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ReadModelDbContext>> _readModelOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _migratedKeys = new();
@@ -157,6 +158,15 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             constraintName,
             _uniqueConstraintOptions,
             (options, name) => new UniqueConstraintDbContext(options, name, uniqueConstraintMigrator));
+
+    /// <inheritdoc/>
+    public Task<DbContextScope<UniqueConstraintValuesDbContext>> UniqueConstraintValuesTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string constraintName) =>
+        GetOrCreateTableDbContext(
+            eventStore,
+            @namespace,
+            constraintName,
+            _uniqueConstraintValuesOptions,
+            (options, name) => new UniqueConstraintValuesDbContext(options, name, uniqueConstraintMigrator));
 
     /// <inheritdoc/>
     public Task<DbContextScope<EventSequenceDbContext>> EventSequenceTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string eventSequenceName) =>
