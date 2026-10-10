@@ -1512,7 +1512,7 @@ public class Sink : ISink
                     return i;
                 }
 
-                return element.GetDouble();
+                return element.TryGetDecimal(out var decimalValue) ? decimalValue : element.GetDouble();
 
             case JsonValueKind.True:
                 return true;

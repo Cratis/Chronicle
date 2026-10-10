@@ -138,7 +138,8 @@ internal sealed class ConnectionService(
         var response = new CompatibilityResponse
         {
             ServerVersion = ServerVersion.Version,
-            ServerProtocolVersion = Contracts.ProtocolVersion.Current
+            ServerProtocolVersion = Contracts.ProtocolVersion.Current,
+            Capabilities = [KernelCapabilities.PreciseEventTypeSchemas]
         };
 
         try

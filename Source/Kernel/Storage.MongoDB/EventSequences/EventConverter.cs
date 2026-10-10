@@ -106,6 +106,7 @@ public class EventConverter(
         JsonValue value when value.TryGetValue<long>(out var l) => l,
         JsonValue value when value.TryGetValue<ulong>(out var u) => u,
         JsonValue value when value.TryGetValue<double>(out var d) => d,
+        JsonValue value when value.TryGetValue<decimal>(out var decimalValue) => decimalValue,
         JsonValue value when value.TryGetValue<string>(out var s) => s,
         _ => node.ToString()
     };

@@ -39,7 +39,7 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/>.
 /// </summary>
-public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor
+public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor, IKernelCapabilities
 {
     readonly ChronicleConnectionString _connectionString;
     readonly int _connectTimeout;
@@ -152,6 +152,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     /// <inheritdoc/>
     public IConnectionLifecycle Lifecycle { get; }
+
+    /// <inheritdoc/>
+    public IReadOnlyCollection<string> Capabilities { get; private set; } = [];
 
     /// <summary>
     /// Gets the <see cref="ChronicleServerAddress"/> the connection is currently using, or the
@@ -415,6 +418,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// </remarks>
     async Task CheckCompatibility(IConnectionService connectionService)
     {
+        Capabilities = [];
         CompatibilityResponse response;
 
         try
@@ -454,6 +458,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             throw new IncompatibleServerException(message);
         }
 
+        Capabilities = response.Capabilities.ToArray();
         _logger.CompatibilityCheckPassed(ChronicleClientIdentity.Version, ChronicleClientIdentity.ProtocolVersion, response.ServerVersion, response.ServerProtocolVersion);
     }
 

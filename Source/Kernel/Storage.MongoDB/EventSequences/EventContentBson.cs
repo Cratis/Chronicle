@@ -5,22 +5,28 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Schemas;
 using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
-/// Converts event JSON to BSON without narrowing unsigned 64-bit integers.
+/// Converts event content without narrowing decimals or unsigned 64-bit integers.
 /// </summary>
 internal static class EventContentBson
 {
     /// <summary>
-    /// Parse event JSON, using Decimal128 only for integers outside Int64's range.
+    /// Parses event JSON using Decimal128 for decimal-formatted values and integers outside Int64's range.
     /// </summary>
     /// <param name="json">The serialized event content.</param>
+    /// <param name="schema">The registered generation schema, when available.</param>
     /// <returns>The lossless BSON content.</returns>
-    internal static BsonDocument FromJson(string json)
+    internal static BsonDocument FromJson(string json, JsonSchema? schema = null)
     {
+        if (schema is not null)
+        {
+            return BsonDocument.Parse(PrepareForBson(JsonNode.Parse(json), schema)!.ToJsonString());
+        }
         var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(json));
         while (reader.Read())
         {
@@ -29,35 +35,34 @@ internal static class EventContentBson
                 return BsonDocument.Parse(PrepareForBson(JsonNode.Parse(json))!.ToJsonString());
             }
         }
-
         return BsonDocument.Parse(json);
     }
 
     /// <summary>
-    /// Render large unsigned integers as ordinary JSON numbers, not extended JSON objects.
+    /// Renders Decimal128 values as ordinary JSON numbers, not extended JSON objects.
     /// </summary>
     /// <param name="document">The stored event content.</param>
     /// <returns>The event JSON for schema-based conversion and clients.</returns>
-    internal static string ToJson(BsonDocument document) => ContainsUnsignedIntegers(document)
+    internal static string ToJson(BsonDocument document) => ContainsDecimals(document)
         ? ToJsonObject(document).ToJsonString()
         : document.ToString();
 
     /// <summary>
-    /// Restore stored content as a JSON object without serializing the restored tree again.
+    /// Restores content without serializing the restored tree again.
     /// </summary>
     /// <param name="document">The stored event content.</param>
-    /// <returns>The event content with ordinary unsigned JSON numbers.</returns>
+    /// <returns>The content with ordinary decimal and unsigned JSON numbers.</returns>
     internal static JsonObject ToJsonObject(BsonDocument document)
     {
         var node = JsonNode.Parse(document.ToString())!.AsObject();
-        return (JsonObject)RestoreUnsignedIntegers(document, node)!;
+        return (JsonObject)RestoreDecimals(document, node)!;
     }
 
-    static bool ContainsUnsignedIntegers(BsonValue value) => value switch
+    static bool ContainsDecimals(BsonValue value) => value switch
     {
-        BsonDecimal128 number => IsLargeUnsignedInteger(number),
-        BsonDocument document => document.Elements.Any(element => ContainsUnsignedIntegers(element.Value)),
-        BsonArray array => array.Any(ContainsUnsignedIntegers),
+        BsonDecimal128 => true,
+        BsonDocument document => document.Elements.Any(element => ContainsDecimals(element.Value)),
+        BsonArray array => array.Any(ContainsDecimals),
         _ => false
     };
 
@@ -66,29 +71,48 @@ internal static class EventContentBson
         number.Value <= new Decimal128(ulong.MaxValue) &&
         number.Value == new Decimal128(Decimal128.ToUInt64(number.Value));
 
-    static JsonNode? PrepareForBson(JsonNode? node) => node switch
+    static JsonNode? PrepareForBson(JsonNode? node, JsonSchema? schema = null)
     {
-        null => null,
-        JsonObject document => new JsonObject(document.Select(property => new KeyValuePair<string, JsonNode?>(property.Key, PrepareForBson(property.Value)))),
-        JsonArray array => new JsonArray(array.Select(PrepareForBson).ToArray()),
-        JsonValue value when value.TryGetValue<ulong>(out var unsigned) && unsigned > long.MaxValue =>
-            new JsonObject { ["$numberDecimal"] = unsigned.ToString(CultureInfo.InvariantCulture) },
-        _ => node.DeepClone()
-    };
-
-    static JsonNode? RestoreUnsignedIntegers(BsonValue bson, JsonNode? node)
-    {
-        if (bson is BsonDecimal128 number && IsLargeUnsignedInteger(number))
+        var actual = schema?.ActualTypeSchema;
+        if (node is JsonObject document)
         {
-            return JsonValue.Create(Decimal128.ToUInt64(number.Value));
+            var properties = actual?.GetFlattenedProperties().ToDictionary(property => property.Name, StringComparer.OrdinalIgnoreCase);
+            return new JsonObject(document.Select(property => new KeyValuePair<string, JsonNode?>(
+                property.Key,
+                PrepareForBson(property.Value, properties?.GetValueOrDefault(property.Key) ?? actual?.AdditionalPropertiesSchema))));
         }
+        if (node is JsonArray array)
+        {
+            return new JsonArray(array.Select(item => PrepareForBson(item, actual?.Item)).ToArray());
+        }
+        if (node is JsonValue value)
+        {
+            if ((schema?.Format ?? actual?.Format)?.TrimEnd('?') == "decimal" && value.GetValueKind() == JsonValueKind.Number)
+            {
+                return new JsonObject { ["$numberDecimal"] = value.ToJsonString() };
+            }
+            if (value.TryGetValue<ulong>(out var unsigned) && unsigned > long.MaxValue)
+            {
+                return new JsonObject { ["$numberDecimal"] = unsigned.ToString(CultureInfo.InvariantCulture) };
+            }
+        }
+        return node?.DeepClone();
+    }
 
+    static JsonNode? RestoreDecimals(BsonValue bson, JsonNode? node)
+    {
+        if (bson is BsonDecimal128 number)
+        {
+            return IsLargeUnsignedInteger(number)
+                ? JsonValue.Create(Decimal128.ToUInt64(number.Value))
+                : JsonValue.Create(Decimal128.ToDecimal(number.Value));
+        }
         if (bson is BsonDocument document && node is JsonObject jsonObject)
         {
             foreach (var element in document)
             {
                 var original = jsonObject[element.Name];
-                var restored = RestoreUnsignedIntegers(element.Value, original);
+                var restored = RestoreDecimals(element.Value, original);
                 if (!ReferenceEquals(restored, original))
                 {
                     jsonObject[element.Name] = restored;
@@ -100,14 +124,13 @@ internal static class EventContentBson
             for (var index = 0; index < array.Count; index++)
             {
                 var original = jsonArray[index];
-                var restored = RestoreUnsignedIntegers(array[index], original);
+                var restored = RestoreDecimals(array[index], original);
                 if (!ReferenceEquals(restored, original))
                 {
                     jsonArray[index] = restored;
                 }
             }
         }
-
         return node;
     }
 }
