@@ -491,7 +491,8 @@ public class EventSequence(
                 ContractCompleteStreamError.DefaultStreamCannotBeCompleted => CompleteStreamError.DefaultStreamCannotBeCompleted,
                 ContractCompleteStreamError.EmptyScope => CompleteStreamError.EmptyScope,
                 ContractCompleteStreamError.ExpectedTailMismatch => CompleteStreamError.ExpectedTailMismatch,
-                _ => CompleteStreamError.AlreadyCompleted
+                ContractCompleteStreamError.AlreadyCompleted => CompleteStreamError.AlreadyCompleted,
+                _ => throw new UnknownCompleteStreamError((int)response.Error)
             };
     }
 
@@ -514,7 +515,9 @@ public class EventSequence(
 
     /// <inheritdoc/>
     public Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
-        IsStreamCompleted(ClosedStreamScope.ForStream(eventStreamType, eventStreamId));
+        IsStreamCompleted(ClosedStreamScope.ForStream(
+            eventStreamType.Value.Length == 0 ? EventStreamType.All : eventStreamType,
+            eventStreamId.Value.Length == 0 ? EventStreamId.Default : eventStreamId));
 
     /// <inheritdoc/>
     public async Task<IImmutableList<ClosedStream>> GetClosedStreams(ClosedStreamScope? within = default)

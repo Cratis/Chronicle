@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 
 /// <summary>
@@ -21,5 +24,5 @@ public record ClosedStreamDocument(
     string? EventSourceType = default,
     string? Owner = default,
     int? Dimensions = default,
-    ulong? SequenceNumber = default,
+    [property: BsonRepresentation(BsonType.Decimal128)] ulong? SequenceNumber = default,
     DateTimeOffset? ClosedAt = default);

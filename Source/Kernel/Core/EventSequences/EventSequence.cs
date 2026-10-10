@@ -517,7 +517,9 @@ public partial class EventSequence(
 
     /// <inheritdoc/>
     public Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
-        CompleteStream(new ClosedStreamScope(EventStreamType: eventStreamType, EventStreamId: eventStreamId));
+        CompleteStream(new ClosedStreamScope(
+            EventStreamType: eventStreamType.Value.Length == 0 ? EventStreamType.All : eventStreamType,
+            EventStreamId: eventStreamId.Value.Length == 0 ? EventStreamId.Default : eventStreamId));
 
     /// <inheritdoc/>
     public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default)
@@ -534,7 +536,7 @@ public partial class EventSequence(
             return CompleteStreamError.ExpectedTailMismatch;
         }
 
-        var sequenceNumber = State.SequenceNumber - 1;
+        var sequenceNumber = State.SequenceNumber == EventSequenceNumber.First ? EventSequenceNumber.Unavailable : State.SequenceNumber - 1;
         await ClosedStreamsStorage.Close(new(scope, ClosedStreamOwner.Manual, sequenceNumber, DateTimeOffset.UtcNow));
         _closedStreamsChanged = true;
 
@@ -543,7 +545,9 @@ public partial class EventSequence(
 
     /// <inheritdoc/>
     public Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
-        IsStreamCompleted(new ClosedStreamScope(EventStreamType: eventStreamType, EventStreamId: eventStreamId));
+        IsStreamCompleted(new ClosedStreamScope(
+            EventStreamType: eventStreamType.Value.Length == 0 ? EventStreamType.All : eventStreamType,
+            EventStreamId: eventStreamId.Value.Length == 0 ? EventStreamId.Default : eventStreamId));
 
     /// <inheritdoc/>
     public async Task<bool> IsStreamCompleted(ClosedStreamScope scope) =>

@@ -470,7 +470,9 @@ public interface IEventSequence
     /// <param name="eventStreamId">The stream identifier.</param>
     /// <returns>True if covered.</returns>
     Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
-        IsStreamCompleted(ClosedStreamScope.ForStream(eventStreamType, eventStreamId));
+        IsStreamCompleted(ClosedStreamScope.ForStream(
+            eventStreamType.Value.Length == 0 ? EventStreamType.All : eventStreamType,
+            eventStreamId.Value.Length == 0 ? EventStreamId.Default : eventStreamId));
 
     /// <summary>
     /// Inspect closed scopes within optional dimensions.

@@ -32,10 +32,11 @@ public record ClosedStreamScope(
     public bool IsEmpty => Dimensions == ClosedStreamDimensions.None;
 
     /// <summary>
-    /// Gets whether only default stream dimensions participate, without an event source dimension.
+    /// Gets whether the scope covers only default stream values without a specific event source.
     /// </summary>
     public bool IsDefaultStreamOnly => !IsEmpty &&
-        (Dimensions & (ClosedStreamDimensions.EventSourceId | ClosedStreamDimensions.EventSourceType)) == ClosedStreamDimensions.None &&
+        (EventSourceId is null || EventSourceId == Events.EventSourceId.Unspecified) &&
+        EventSourceType?.IsDefaultOrUnspecified != false &&
         (string.IsNullOrEmpty(EventStreamType?.Value) || EventStreamType == Events.EventStreamType.All) &&
         (string.IsNullOrEmpty(EventStreamId?.Value) || EventStreamId?.Value == Events.EventStreamId.Default);
 

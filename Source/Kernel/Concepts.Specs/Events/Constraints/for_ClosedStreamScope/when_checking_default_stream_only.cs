@@ -14,9 +14,13 @@ public class when_checking_default_stream_only : Specification
         new(EventStreamType: EventStreamType.All, EventStreamId: EventStreamId.Default),
         new(EventSourceId: "source", EventStreamType: EventStreamType.All, EventStreamId: EventStreamId.Default),
         new(EventSourceType: EventSourceType.Default),
+        new(EventSourceType: EventSourceType.Default, EventStreamType: EventStreamType.All, EventStreamId: EventStreamId.Default),
+        new(EventSourceType: EventSourceType.Unspecified, EventStreamType: EventStreamType.All),
+        new(EventSourceType: "account", EventStreamType: EventStreamType.All),
+        new(EventSourceType: EventSourceType.Default, EventStreamType: "transactions"),
         new(EventStreamType: "transactions"),
         new()
     }.Select(scope => scope.IsDefaultStreamOnly).ToArray();
 
-    [Fact] void should_refuse_only_default_stream_dimensions_without_a_source() => _results.ShouldEqual([true, true, true, false, false, false, false]);
+    [Fact] void should_refuse_only_default_stream_dimensions_without_a_source() => _results.ShouldEqual([true, true, true, false, true, true, true, false, false, false, false]);
 }
