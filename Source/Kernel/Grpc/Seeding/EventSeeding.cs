@@ -30,6 +30,16 @@ internal sealed class EventSeeding(
             new global::Cratis.Chronicle.Seeding.SeedEvents((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.GlobalByEventType, request.GlobalByEventSource, request.NamespacedEntries));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Seeding.EventSeedingSupportResponse>> GetSeedingSupport(global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Seeding.EventSeedingSupportResponse>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Seeding.EventSeedingSupport.GetSeedingSupport();
+                return ToEventSeedingSupportResponse(result);
+            },
+            exception => logger.QueryFailed(exception, "EventSeeding", "GetSeedingSupport"));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>> GetGlobalSeedData(global::Cratis.Chronicle.Contracts.Seeding.GetGlobalSeedDataRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>(
             async () =>
@@ -48,6 +58,12 @@ internal sealed class EventSeeding(
                 return ToSeedDataResponse(result);
             },
             exception => logger.QueryFailed(exception, "EventSeeding", "GetNamespaceSeedData"));
+
+    static global::Cratis.Chronicle.Contracts.Seeding.EventSeedingSupportResponse ToEventSeedingSupportResponse(global::Cratis.Chronicle.Seeding.EventSeedingSupport source) =>
+        new()
+        {
+            RoutingSupported = source.RoutingSupported
+        };
 
     static global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse ToSeedDataResponse(global::Cratis.Chronicle.Seeding.SeedData source) =>
         new()

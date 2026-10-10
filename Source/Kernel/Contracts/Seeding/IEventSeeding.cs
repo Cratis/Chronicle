@@ -36,6 +36,13 @@ public interface IEventSeeding
     [Operation]
     Task<CommandResult> SeedEvents(SeedEventsRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the GetSeedingSupport query.
+    /// </summary>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<EventSeedingSupportResponse>> GetSeedingSupport(CallContext callContext = default);
+    /// <summary>
     /// Executes the GetGlobalSeedData query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -143,6 +150,19 @@ public class SeedEventsRequest
     /// </summary>
     [ProtoMember(4)]
     public IEnumerable<global::Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries> NamespacedEntries { get; set; } = new List<global::Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries>();
+}
+
+/// <summary>
+/// Represents the EventSeedingSupportResponse message.
+/// </summary>
+[ProtoContract]
+public class EventSeedingSupportResponse
+{
+    /// <summary>
+    /// Gets or sets the RoutingSupported.
+    /// </summary>
+    [ProtoMember(1)]
+    public bool RoutingSupported { get; set; }
 }
 
 /// <summary>
