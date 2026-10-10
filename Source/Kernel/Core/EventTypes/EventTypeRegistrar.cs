@@ -85,6 +85,8 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
         foreach (var eventTypeId in mutated)
         {
+            var definition = await eventTypesStorage.GetDefinition(eventTypeId);
+            await eventTypesStorage.RecordMigrationsVersion(eventTypeId, EventTypeMigrationsVersion.For(definition.Migrations), definition.Migrations);
             await eventTypesCacheClient.Invalidate(eventStore, eventTypeId);
         }
 

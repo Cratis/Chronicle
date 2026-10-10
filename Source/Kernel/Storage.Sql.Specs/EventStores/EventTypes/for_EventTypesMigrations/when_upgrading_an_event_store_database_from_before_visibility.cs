@@ -31,7 +31,7 @@ public class when_upgrading_an_event_store_database_from_before_visibility : Spe
         await context.Database.ExecuteSqlRawAsync(history.GetCreateIfNotExistsScript());
 
         // Construct the database as it was before this migration existed, with every earlier migration applied.
-        foreach (var (id, type) in assembly.Migrations.Where(entry => entry.Key != Added))
+        foreach (var (id, type) in assembly.Migrations.Where(entry => string.CompareOrdinal(entry.Key, Added) < 0))
         {
             var migration = assembly.CreateMigration(type, context.Database.ProviderName);
             foreach (var command in sqlGenerator.Generate(migration.UpOperations))

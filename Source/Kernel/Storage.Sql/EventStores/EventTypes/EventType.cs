@@ -54,4 +54,9 @@ public class EventType
     /// Gets or sets the migrations for the event type as a JSON string.
     /// </summary>
     public string MigrationsJson { get; set; } = "[]";
+
+    /// <summary>
+    /// Gets or sets the immutable migration definitions keyed by their content-addressed version.
+    /// </summary>
+    public string MigrationVersionsJson { get; set; } = "{}";
 }

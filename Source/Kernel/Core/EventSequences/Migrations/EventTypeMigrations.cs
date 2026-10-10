@@ -25,11 +25,15 @@ public class EventTypeMigrations(
     /// <inheritdoc/>
     public async Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content, ExpandoObject contentAsExpandoObject, Action<JsonObject, JsonSchema, ExpandoObject>? onConverted = null, Action<JsonObject, JsonObject>? onMigrating = null)
     {
-        var result = new Dictionary<EventTypeGeneration, ExpandoObject>();
-        var eventTypesStorage = storage.GetEventStore(eventStore).EventTypes;
+        var definition = await storage.GetEventStore(eventStore).EventTypes.GetDefinition(eventType.Id);
 
-        // Get the event type definition with all generations and migrations
-        var definition = await eventTypesStorage.GetDefinition(eventType.Id);
+        return await MigrateToAllGenerations(definition, eventType, content, contentAsExpandoObject, onConverted, onMigrating);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventTypeDefinition definition, EventType eventType, JsonObject content, ExpandoObject contentAsExpandoObject, Action<JsonObject, JsonSchema, ExpandoObject>? onConverted = null, Action<JsonObject, JsonObject>? onMigrating = null)
+    {
+        var result = new Dictionary<EventTypeGeneration, ExpandoObject>();
 
         // If there's only one generation, reuse the already-built expando instead of re-converting.
         if (!definition.Generations.Skip(1).Any())

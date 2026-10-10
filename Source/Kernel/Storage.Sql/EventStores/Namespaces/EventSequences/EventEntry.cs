@@ -80,6 +80,11 @@ public class EventEntry
     public string ContentHashes { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the JSON provenance of generations added by backfill. Null for legacy and append-derived content.
+    /// </summary>
+    public string? DerivedGenerations { get; set; }
+
+    /// <summary>
     /// Gets or sets the subject that identifies the compliance target for the event.
     /// </summary>
     public string? Subject { get; set; }

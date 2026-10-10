@@ -20,6 +20,8 @@ using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.SequenceQueries;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores;
 
@@ -31,7 +33,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions) : IEventStoreStorage
+/// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> used for logging inside the storages.</param>
+public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, ILoggerFactory? loggerFactory = null) : IEventStoreStorage
 {
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore.Value;
@@ -40,7 +43,7 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     public INamespaceStorage Namespaces { get; } = new Namespaces.NamespaceStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, database);
+    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, database, loggerFactory?.CreateLogger<EventTypes.EventTypesStorage>() ?? NullLogger<EventTypes.EventTypesStorage>.Instance);
 
     /// <inheritdoc/>
     public IEventSourcesStorage EventSources { get; } = new EventSources.EventSourcesStorage(eventStore, database);
