@@ -168,6 +168,10 @@ internal sealed class ReadModels(
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
         var streamScoped = !string.IsNullOrEmpty(request.EventStreamType) || !string.IsNullOrEmpty(request.EventStreamId);
+        if (streamScoped && (string.IsNullOrEmpty(request.EventStreamType) || ((EventStreamType)request.EventStreamType).IsAll))
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, "Stream-scoped decision reads require an explicit event stream type."));
+        }
         if (streamScoped && definition.ObserverType != Concepts.ReadModels.ReadModelObserverType.Projection)
         {
             throw new RpcException(new Status(StatusCode.FailedPrecondition, "Stream-scoped decision reads require a projection."));
