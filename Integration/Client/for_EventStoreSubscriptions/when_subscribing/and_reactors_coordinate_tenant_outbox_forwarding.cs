@@ -183,6 +183,7 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
         Context.Tracker.GetHandledCount(context.TenantBNamespace).ShouldEqual(1);
 
     [EventType]
+    [Public]
     public record AdminUserInvited(string EmailAddress);
 
     [DependencyInjection.IgnoreConvention]

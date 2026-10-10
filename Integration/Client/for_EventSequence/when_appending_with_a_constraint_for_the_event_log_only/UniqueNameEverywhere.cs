@@ -8,5 +8,8 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending_with_a_c
 public class UniqueNameEverywhere : IConstraint
 {
     public void Define(IConstraintBuilder builder) => builder
-        .Unique(b => b.On<NameClaimedEverywhere>(e => e.Name).WithName(nameof(UniqueNameEverywhere)));
+        .Unique(b => b
+            .On<NameClaimedEverywhere>(e => e.Name)
+            .On<PublicNameClaimedEverywhere>(e => e.Name)
+            .WithName(nameof(UniqueNameEverywhere)));
 }
