@@ -38,10 +38,10 @@ public class and_the_constrained_properties_have_no_value : Specification
 
     [Fact] void should_not_save_anything() => _storage.DidNotReceive().Save(
         Arg.Any<EventSourceId>(),
-        Arg.Any<ConstraintName>(),
+        Arg.Any<UniqueConstraintDefinition>(),
         Arg.Any<EventSequenceNumber>(),
         Arg.Any<UniqueConstraintValue>(),
         Arg.Any<string>());
 
-    [Fact] void should_remove_the_previous_claim_of_the_event_source() => _storage.Received(1).Remove(_context.EventSourceId, _definition.Name, string.Empty);
+    [Fact] void should_remove_the_previous_claim_of_the_event_source() => _storage.Received(1).Remove(_context.EventSourceId, _definition, string.Empty);
 }

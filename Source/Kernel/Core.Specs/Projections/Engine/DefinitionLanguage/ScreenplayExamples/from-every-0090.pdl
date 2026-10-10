@@ -1,0 +1,16 @@
+projection User => UserReadModel
+  every
+    LastUpdated = $eventContext.occurred
+    LastSequenceNumber = $eventContext.sequenceNumber
+    exclude children
+
+  from UserRegistered
+    Name = name
+    Email = email
+    CreatedAt = $eventContext.occurred
+
+  from UserEmailChanged
+    Email = email
+
+  from UserNameChanged
+    Name = name

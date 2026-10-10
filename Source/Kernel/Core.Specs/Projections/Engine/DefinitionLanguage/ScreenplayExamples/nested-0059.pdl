@@ -1,0 +1,13 @@
+projection Doc => DocReadModel
+  nested command
+    from CommandSetForSlice
+      Name = commandName
+      Schema = schema
+
+    from CommandRenamed
+      Name = newName
+
+    from CommandSchemaUpdated
+      Schema = updatedSchema
+
+    clear with CommandClearedForSlice

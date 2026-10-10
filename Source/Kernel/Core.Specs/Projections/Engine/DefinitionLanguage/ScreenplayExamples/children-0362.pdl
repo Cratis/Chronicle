@@ -1,0 +1,12 @@
+projection Doc => DocReadModel
+  children items identified by itemId
+    from ItemAdded key itemId
+      parent parentId
+      # properties
+
+    from ItemUpdated key itemId
+      parent parentId
+      # updated properties
+
+    remove with ItemRemoved key itemId
+      parent parentId

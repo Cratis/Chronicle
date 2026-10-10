@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from ProductCreated key productId
+    Name = name
+    Price = price

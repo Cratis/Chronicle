@@ -1,0 +1,16 @@
+projection Employee => EmployeeReadModel
+  from EmployeeHired
+    Name = name
+    Department = department
+
+  nested activeContract
+    from ContractStarted
+      ContractId = contractId
+      StartDate = startDate
+      EndDate = endDate
+      Type = contractType
+
+    from ContractExtended
+      EndDate = newEndDate
+
+    clear with ContractEnded

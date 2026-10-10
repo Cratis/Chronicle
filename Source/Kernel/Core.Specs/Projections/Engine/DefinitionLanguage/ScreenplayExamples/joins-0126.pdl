@@ -1,0 +1,16 @@
+projection Group => GroupReadModel
+  from GroupCreated
+    Name = name
+
+  children members identified by userId
+    from UserAddedToGroup
+      UserId = userId
+      Role = role
+
+    join User on UserId
+      with UserCreated
+        UserName = name
+        UserEmail = email
+      with UserUpdated
+        UserName = name
+        UserEmail = email

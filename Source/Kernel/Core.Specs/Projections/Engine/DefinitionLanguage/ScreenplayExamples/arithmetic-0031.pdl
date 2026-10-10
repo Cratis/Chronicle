@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from WithdrawalMade
+    subtract Balance by amount
+    LastWithdrawal = $eventContext.occurred

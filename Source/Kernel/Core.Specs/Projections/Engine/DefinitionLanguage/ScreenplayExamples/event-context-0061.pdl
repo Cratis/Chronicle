@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from UserRegistered
+    Name = name
+    CreatedAt = $eventContext.occurred

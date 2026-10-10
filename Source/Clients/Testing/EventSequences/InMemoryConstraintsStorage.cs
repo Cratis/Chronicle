@@ -53,7 +53,12 @@ internal sealed class InMemoryConstraintsStorage(ClientConstraints.ICanProvideCo
                 unique.IgnoreCasing,
                 ToKernelScope(unique.Scope))
             {
-                EventSequences = ToKernelEventSequenceIds(unique.EventSequences)
+                EventSequences = ToKernelEventSequenceIds(unique.EventSequences),
+                Mode = (KernelConstraints::UniqueConstraintMode)unique.Mode,
+                RemovalEventDefinitions = unique.RemovalEventDefinitions.Select(e =>
+                    new KernelConstraints::UniqueConstraintEventDefinition(
+                        (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId)e.EventTypeId.Value,
+                        e.Properties)).ToArray()
             };
         }
 

@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from OrderPlaced key order.id
+    Total = order.total
+    CustomerId = customerId

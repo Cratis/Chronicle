@@ -35,6 +35,7 @@ public class a_projections_manager_grain : Specification
     protected Recommendations.IRecommendationsManager _recommendationsManager;
     protected Storage.Observation.IFailedPartitionsStorage _failedPartitionsStorage;
     protected ProjectionsManagerState _state;
+    protected IStorage<ProjectionsManagerState> _stateStorage;
     protected Storage.Observation.IObserverStateStorage _observerStates;
     protected IEnumerable<ReadModelDefinition> _readModelDefinitions = [];
 
@@ -103,9 +104,9 @@ public class a_projections_manager_grain : Specification
         _silo.AddProbe(_ => _recommendationsManager);
 
         _state = new ProjectionsManagerState();
-        var stateStorage = Substitute.For<IStorage<ProjectionsManagerState>>();
-        stateStorage.State = _state;
-        _silo.Options.StorageFactory = _ => stateStorage;
+        _stateStorage = Substitute.For<IStorage<ProjectionsManagerState>>();
+        _stateStorage.State = _state;
+        _silo.Options.StorageFactory = _ => _stateStorage;
 
         _grain = await _silo.CreateGrainAsync<ProjectionsManager>(EventStore);
     }

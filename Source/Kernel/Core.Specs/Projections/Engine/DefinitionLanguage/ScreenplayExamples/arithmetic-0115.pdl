@@ -1,0 +1,13 @@
+projection Budget => BudgetReadModel
+  from BudgetCreated
+    Category = category
+    AllocatedAmount = amount
+    RemainingAmount = amount
+
+  from ExpenseRecorded
+    subtract RemainingAmount by cost
+    add TotalSpent by cost
+
+  from BudgetIncreased
+    add AllocatedAmount by additionalAmount
+    add RemainingAmount by additionalAmount

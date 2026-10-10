@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  every
+    LastModified = $eventContext.occurred
+    LastSequenceNumber = $eventContext.sequenceNumber
+    LastCorrelationId = $eventContext.correlationId

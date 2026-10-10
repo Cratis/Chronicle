@@ -1,0 +1,7 @@
+projection Doc => DocReadModel
+  children orderLines identified by lineNumber
+    from LineItemAdded key lineNumber
+      parent orderId
+      Product = productName
+      Quantity = quantity
+      Price = price

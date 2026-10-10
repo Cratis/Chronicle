@@ -22,6 +22,8 @@ public class UniqueConstraintBuilder(
     readonly List<UniqueConstraintEventDefinition> _eventTypesAndProperties = [];
     readonly Dictionary<EventTypeId, JsonSchema> _eventTypeSchemas = [];
     readonly List<EventTypeId> _removedWith = [];
+    readonly List<UniqueConstraintEventDefinition> _removalEventDefinitions = [];
+    UniqueConstraintMode _mode;
     ConstraintName? _name;
     ConstraintViolationMessageProvider? _messageProvider;
     bool _ignoreCasing;
@@ -44,6 +46,35 @@ public class UniqueConstraintBuilder(
 
         _eventTypesAndProperties.Add(new UniqueConstraintEventDefinition(eventType.Id, properties));
         _eventTypeSchemas[eventType.Id] = schema;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IUniqueConstraintBuilder WithMode(UniqueConstraintMode mode)
+    {
+        _mode = mode;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IUniqueConstraintBuilder RemovedWith<TEventType>(params Expression<Func<TEventType, object>>[] properties) =>
+        RemovedWith(eventTypes.GetEventTypeFor(typeof(TEventType)), properties.Select(_ => _.GetPropertyPath().Path).ToArray());
+
+    /// <inheritdoc/>
+    public IUniqueConstraintBuilder RemovedWith(EventType eventType, string[] properties)
+    {
+        properties = properties.Select(_ => namingPolicy.GetPropertyName(new PropertyPath(_))).ToArray();
+        if (properties.Length > 0)
+        {
+            ThrowIfPropertyIsMissing(eventType, eventTypes.GetSchemaFor(eventType.Id), properties);
+        }
+
+        RemovedWith(eventType);
+        if (properties.Length > 0)
+        {
+            _removalEventDefinitions.Add(new(eventType.Id, properties));
+        }
+
         return this;
     }
 
@@ -83,6 +114,7 @@ public class UniqueConstraintBuilder(
     /// </remarks>
     public IUniqueConstraintBuilder RemovedWith(EventType eventType)
     {
+        _removalEventDefinitions.RemoveAll(_ => _.EventTypeId == eventType.Id);
         if (!_removedWith.Contains(eventType.Id))
         {
             _removedWith.Add(eventType.Id);
@@ -106,7 +138,11 @@ public class UniqueConstraintBuilder(
             messageProvider,
             [.. _eventTypesAndProperties],
             [.. _removedWith],
-            _ignoreCasing);
+            _ignoreCasing)
+        {
+            Mode = _mode,
+            RemovalEventDefinitions = [.. _removalEventDefinitions]
+        };
     }
 
     void ThrowIfNoEventTypesAdded()

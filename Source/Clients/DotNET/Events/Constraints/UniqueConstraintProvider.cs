@@ -43,6 +43,12 @@ public class UniqueConstraintProvider(
                 .Where(t => t.GetRemoveConstraints().Any(a => constraint.Key == (ConstraintName)a.ConstraintName))
                 .ToArray();
 
+            var modes = constraint.Select(_ => _.Property.GetConstraintMode()).Distinct().ToArray();
+            if (modes.Length > 1)
+            {
+                throw new ConflictingUniqueConstraintModes(constraint.Key);
+            }
+
             var builder = new ConstraintBuilder(eventTypes, namingPolicy);
 
             // Several properties can share one constraint name, so the event sequences each of them declares are
@@ -51,7 +57,7 @@ public class UniqueConstraintProvider(
             builder.ForEventSequences([.. ConstraintEventSequences.Combine(constraint.Select(_ => _.Property.GetConstraintEventSequences()))]);
             builder.Unique(unique =>
             {
-                unique.WithName(constraint.Key);
+                unique.WithName(constraint.Key).WithMode(modes[0]);
 
                 // The message the author wrote, where the name is already read. It used to be dropped here and
                 // nowhere else - the class-level provider reads the same argument off the same attribute - so a
@@ -81,7 +87,8 @@ public class UniqueConstraintProvider(
 
                 foreach (var removalEventType in removalEventTypes)
                 {
-                    unique.RemovedWith(eventTypes.GetEventTypeFor(removalEventType));
+                    var removal = removalEventType.GetRemoveConstraints().First(_ => constraint.Key == (ConstraintName)_.ConstraintName);
+                    unique.RemovedWith(eventTypes.GetEventTypeFor(removalEventType), removal.Properties);
                 }
             });
             constraints.AddRange(builder.Build());

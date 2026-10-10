@@ -33,10 +33,16 @@ message RegisterConstraintsRequest {
 message UniqueConstraintDefinition {
    repeated UniqueConstraintEventDefinition EventDefinitions = 1;
    bool IgnoreCasing = 2;
+   UniqueConstraintMode Mode = 3;
+   repeated UniqueConstraintEventDefinition RemovalEventDefinitions = 4;
 }
 message UniqueConstraintEventDefinition {
    string EventTypeId = 1;
    repeated string Properties = 2;
+}
+enum UniqueConstraintMode {
+   PerEventSource = 0;
+   PerValue = 1;
 }
 message UniqueEventTypeConstraintDefinition {
    reserved 1;

@@ -53,8 +53,9 @@ public class LanguageService(
             return errors;
         }
 
-        // Unsupported blocks must be reported even when no schemas are available for semantic validation.
+        // Unsupported syntax must be reported even when no schemas are available for semantic validation.
         ProjectionValidator.ValidateSupportedBlocks(syntax.Blocks, errors);
+        new ProjectionSyntaxSupport(errors).VisitProjection(syntax);
         if (errors.HasErrors)
         {
             return errors;

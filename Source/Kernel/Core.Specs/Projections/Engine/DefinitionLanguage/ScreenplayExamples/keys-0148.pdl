@@ -1,0 +1,9 @@
+projection OrderLine => OrderLineReadModel
+  from LineItemAdded
+    key OrderLineKey {
+      OrderId = orderId
+      ProductId = productId
+    }
+    Quantity = quantity
+    UnitPrice = unitPrice
+    LineTotal = total

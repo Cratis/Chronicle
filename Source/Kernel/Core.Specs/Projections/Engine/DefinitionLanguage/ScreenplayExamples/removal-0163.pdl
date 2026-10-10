@@ -1,0 +1,24 @@
+projection Order => OrderReadModel
+  from OrderPlaced
+    OrderNumber = orderNumber
+    Total = 0
+
+  children items identified by lineNumber
+    from LineItemAdded key lineNumber
+      parent orderId
+      ProductId = productId
+      Quantity = quantity
+      LineTotal = total
+
+    from LineItemQuantityChanged key lineNumber
+      parent orderId
+      Quantity = quantity
+
+    remove with LineItemRemoved key lineNumber
+      parent orderId
+
+  from LineItemAdded
+    add Total by total
+
+  from LineItemRemoved
+    subtract Total by total

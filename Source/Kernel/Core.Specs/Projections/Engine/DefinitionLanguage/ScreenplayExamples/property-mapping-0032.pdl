@@ -1,0 +1,7 @@
+projection Doc => DocReadModel
+  from UserRegistered
+    Name = name
+    IsActive = true
+    Status = "Pending"
+    Priority = 5
+    CreatedAt = null

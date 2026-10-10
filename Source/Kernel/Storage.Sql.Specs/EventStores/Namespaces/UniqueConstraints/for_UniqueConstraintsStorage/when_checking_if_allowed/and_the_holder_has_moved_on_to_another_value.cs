@@ -26,8 +26,8 @@ public class and_the_holder_has_moved_on_to_another_value : given.a_unique_const
 
     async Task Because()
     {
-        await _storage.Save(_holder, ConstraintNameValue, EventSequenceNumber.First, _releasedValue);
-        await _storage.Save(_holder, ConstraintNameValue, _claimedAt, _currentValue);
+        await _storage.Save(_holder, _definition, EventSequenceNumber.First, _releasedValue);
+        await _storage.Save(_holder, _definition, _claimedAt, _currentValue);
 
         (_isAllowedToClaimReleasedValue, _) = await _storage.IsAllowed(_otherEventSourceId, _definition, _releasedValue);
         (_isAllowedToClaimCurrentValue, _) = await _storage.IsAllowed(_otherEventSourceId, _definition, _currentValue);

@@ -19,4 +19,13 @@ public sealed class RemoveConstraintAttribute(string constraintName) : Attribute
     /// Gets the name of the constraint to release.
     /// </summary>
     public string ConstraintName { get; } = constraintName;
+
+    /// <summary>
+    /// Gets or sets the properties carrying the value to release in per-value mode.
+    /// </summary>
+    /// <remarks>
+    /// List composite properties in the same order as the constrained properties. Empty releases every value held
+    /// by the event source in the constraint's scope. Per-event-source mode always releases its one claim.
+    /// </remarks>
+    public string[] Properties { get; set; } = [];
 }

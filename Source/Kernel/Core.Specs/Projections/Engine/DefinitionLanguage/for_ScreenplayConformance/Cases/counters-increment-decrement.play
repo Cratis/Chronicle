@@ -1,0 +1,26 @@
+// increment and decrement
+// Screenplay documentation: Documentation/screenplay/projections/counters.mdx
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event ItemAdded
+        itemId String
+        amount Decimal
+        count Int
+      event ItemRemoved
+        itemId String
+        amount Decimal
+      readmodel Summary
+        summaryId String
+        items Int
+        total Decimal
+        count Int
+      query SummaryById => Summary?
+        by summaryId String
+      projection Summaries => Summary
+        no automap
+        from ItemAdded
+          increment items
+        from ItemRemoved
+          decrement items

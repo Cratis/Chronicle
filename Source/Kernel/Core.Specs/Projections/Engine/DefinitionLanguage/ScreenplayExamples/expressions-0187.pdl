@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from UserCreated
+    Name = name           # References event.name
+    Email = email         # References event.email

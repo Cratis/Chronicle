@@ -22,6 +22,6 @@ public class and_the_subject_key_was_erased : given.a_unique_constraint_to_reind
 
     async Task Because() => await ReindexConstraintsStep.ReindexEvent(_definition, EventFor(_eventSourceId), _content, _seen, _validator, _storage);
 
-    [Fact] void should_clear_any_existing_index_entry() => _storage.Received(1).Remove(_eventSourceId, _definition.Name, Arg.Any<string>());
-    [Fact] void should_not_index_a_hash_of_the_empty_value() => _storage.DidNotReceive().Save(Arg.Any<EventSourceId>(), Arg.Any<ConstraintName>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>());
+    [Fact] void should_clear_any_existing_index_entry() => _storage.Received(1).Remove(_eventSourceId, _definition, Arg.Any<string>());
+    [Fact] void should_not_index_a_hash_of_the_empty_value() => _storage.DidNotReceive().Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>());
 }

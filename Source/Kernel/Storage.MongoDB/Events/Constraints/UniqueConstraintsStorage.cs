@@ -26,8 +26,21 @@ public class UniqueConstraintsStorage(
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
 
     /// <inheritdoc/>
+    public async Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "") =>
+        await GetValuesCollectionFor(definition.Name, scopeKey).DeleteManyAsync(Builders<UniqueConstraintValueIndex>.Filter.Empty);
+
+    /// <inheritdoc/>
     public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
     {
+        if (definition.Mode == UniqueConstraintMode.PerValue)
+        {
+            var values = GetValuesCollectionFor(definition.Name, scopeKey);
+            await EnsureOwnerIndex(values);
+            using var found = await values.FindAsync(_ => _.Value == value);
+            var entry = await found.FirstOrDefaultAsync();
+            return entry is null ? (true, EventSequenceNumber.Unavailable) : (entry.EventSourceId == eventSourceId, entry.SequenceNumber);
+        }
+
         var collection = GetCollectionFor(definition.Name, scopeKey);
         await EnsureIndex(collection).ConfigureAwait(false);
 
@@ -45,20 +58,84 @@ public class UniqueConstraintsStorage(
         return (true, EventSequenceNumber.Unavailable);
     }
 
-    /// <inheritdoc/>
-    /// <remarks>
-    /// The unique index on the value is what settles a claim that two event sources make concurrently, and it
-    /// reports the loser as a duplicate-key write error. That is a constraint violation, not a storage malfunction,
-    /// so it is translated into <see cref="DuplicateUniqueConstraintValue"/> rather than surfacing a driver
-    /// exception callers would have to recognize. The translation is diagnostic only - see the remarks on
-    /// <see cref="DuplicateUniqueConstraintValue"/> for what a caller can and cannot do with it.
-    /// <para>
-    /// It also only fires while the index is genuinely unique. <see cref="EnsureIndex"/> falls back to a non-unique
-    /// index when the collection already holds duplicate values from before uniqueness was enforced, and while that
-    /// fallback is in place the store settles nothing and no duplicate-key error is ever raised.
-    /// </para>
-    /// </remarks>
-    public async Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "")
+    /// <summary>
+    /// Saves a claim using the definition's retention mode.
+    /// </summary>
+    /// <param name="eventSourceId">The owner.</param>
+    /// <param name="definition">The constraint.</param>
+    /// <param name="sequenceNumber">The claim's sequence number.</param>
+    /// <param name="value">The hashed value.</param>
+    /// <param name="scopeKey">The resolved scope.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="DuplicateUniqueConstraintValue">Another event source owns the value.</exception>
+    public async Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "")
+    {
+        if (definition.Mode != UniqueConstraintMode.PerValue)
+        {
+            await SavePerEventSource(eventSourceId, definition.Name, sequenceNumber, value, scopeKey);
+            return;
+        }
+
+        var collection = GetValuesCollectionFor(definition.Name, scopeKey);
+        await EnsureOwnerIndex(collection);
+        try
+        {
+            await collection.UpdateOneAsync(
+                _ => _.Value == value && _.EventSourceId == eventSourceId,
+                Builders<UniqueConstraintValueIndex>.Update
+                    .SetOnInsert(_ => _.Value, value)
+                    .SetOnInsert(_ => _.EventSourceId, eventSourceId)
+                    .SetOnInsert(_ => _.SequenceNumber, sequenceNumber),
+                new UpdateOptions { IsUpsert = true });
+        }
+        catch (MongoWriteException error) when (error.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            using var found = await collection.FindAsync(_ => _.Value == value);
+            var winner = await found.FirstOrDefaultAsync();
+            if (winner?.EventSourceId != eventSourceId)
+            {
+                throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Releases every claim held by the source in the selected scope.
+    /// </summary>
+    /// <param name="eventSourceId">The owner.</param>
+    /// <param name="definition">The constraint.</param>
+    /// <param name="scopeKey">The resolved scope.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task Remove(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "")
+    {
+        if (definition.Mode == UniqueConstraintMode.PerValue)
+        {
+            await GetValuesCollectionFor(definition.Name, scopeKey).DeleteManyAsync(_ => _.EventSourceId == eventSourceId);
+        }
+        else
+        {
+            await GetCollectionFor(definition.Name, scopeKey).DeleteOneAsync(_ => _.EventSourceId == eventSourceId);
+        }
+    }
+
+    /// <summary>
+    /// Releases one value only if the source owns it.
+    /// </summary>
+    /// <param name="eventSourceId">The owner.</param>
+    /// <param name="definition">The constraint.</param>
+    /// <param name="value">The value to release.</param>
+    /// <param name="scopeKey">The resolved scope.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task RemoveValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "") =>
+        await GetValuesCollectionFor(definition.Name, scopeKey).DeleteOneAsync(_ => _.Value == value && _.EventSourceId == eventSourceId);
+
+    static Task<string> CreateValueIndex(IMongoCollection<UniqueConstraintIndex> collection, bool unique) =>
+        collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<UniqueConstraintIndex>(
+                Builders<UniqueConstraintIndex>.IndexKeys.Ascending(_ => _.Value),
+                new CreateIndexOptions { Name = ValueIndexName, Unique = unique, Background = true }));
+
+    async Task SavePerEventSource(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey)
     {
         var collection = GetCollectionFor(name, scopeKey);
         await EnsureIndex(collection).ConfigureAwait(false);
@@ -75,18 +152,23 @@ public class UniqueConstraintsStorage(
         }
     }
 
-    /// <inheritdoc/>
-    public async Task Remove(EventSourceId eventSourceId, ConstraintName name, string scopeKey = "")
-    {
-        var collection = GetCollectionFor(name, scopeKey);
-        await collection.DeleteOneAsync(u => u.EventSourceId == eventSourceId);
-    }
+    IMongoCollection<UniqueConstraintValueIndex> GetValuesCollectionFor(ConstraintName name, string scopeKey) =>
+        eventStoreNamespaceDatabase.GetCollection<UniqueConstraintValueIndex>(string.IsNullOrEmpty(scopeKey)
+            ? $"{eventSequenceId}+{name}+values+constraint"
+            : $"{eventSequenceId}+{name}+{scopeKey}+values+constraint");
 
-    static Task<string> CreateValueIndex(IMongoCollection<UniqueConstraintIndex> collection, bool unique) =>
-        collection.Indexes.CreateOneAsync(
-            new CreateIndexModel<UniqueConstraintIndex>(
-                Builders<UniqueConstraintIndex>.IndexKeys.Ascending(_ => _.Value),
-                new CreateIndexOptions { Name = ValueIndexName, Unique = unique, Background = true }));
+    async Task EnsureOwnerIndex(IMongoCollection<UniqueConstraintValueIndex> collection)
+    {
+        if (_ensuredIndexes.ContainsKey(collection.CollectionNamespace.FullName))
+        {
+            return;
+        }
+
+        await collection.Indexes.CreateOneAsync(new CreateIndexModel<UniqueConstraintValueIndex>(
+            Builders<UniqueConstraintValueIndex>.IndexKeys.Ascending(_ => _.EventSourceId),
+            new CreateIndexOptions { Name = "owner" }));
+        _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);
+    }
 
     IMongoCollection<UniqueConstraintIndex> GetCollectionFor(ConstraintName constraintName, string scopeKey = "")
     {

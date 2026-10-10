@@ -1,0 +1,37 @@
+// A child collection keyed by an event property with a parent key
+// Screenplay documentation: Documentation/screenplay/projections/children.mdx
+
+type OrderLine
+  lineNumber Int
+  sku String
+module Conformance
+  feature Cases
+    slice StateView Case
+      event LineAdded
+        orderId String
+        lineNumber Int
+        sku String
+        quantity Int
+      event LineChanged
+        orderId String
+        lineNumber Int
+        sku String
+      event LineRemoved
+        orderId String
+        lineNumber Int
+      event ProductDiscontinued
+        sku String
+      event ProductRenamed
+        sku String
+        title String
+      readmodel OrderView
+        orderId String
+        lines OrderLine[]
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        children lines identified by lineNumber
+          from LineAdded key lineNumber
+            parent orderId
+            sku = sku

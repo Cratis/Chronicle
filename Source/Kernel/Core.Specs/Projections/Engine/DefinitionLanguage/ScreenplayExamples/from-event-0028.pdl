@@ -1,0 +1,3 @@
+projection TransportRoute => TransportRouteReadModel
+  automap
+  from HubRouteAdded key id, WarehouseRouteAdded key id

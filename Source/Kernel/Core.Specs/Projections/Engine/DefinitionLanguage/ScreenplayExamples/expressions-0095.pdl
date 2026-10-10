@@ -1,0 +1,9 @@
+projection Doc => DocReadModel
+  from OrderPlaced
+    CreatedBySubject = $eventContext.causedBy.subject
+    CreatedByName = $eventContext.causedBy.name
+    CreatedByUser = $eventContext.causedBy.userName
+
+  from DocumentUpdated
+    UpdatedBy = `${$eventContext.causedBy.name} (${$eventContext.causedBy.userName})`
+    UpdatedById = $eventContext.causedBy.subject

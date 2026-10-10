@@ -11,6 +11,29 @@ namespace Cratis.Chronicle.Events.Constraints;
 public interface IUniqueConstraintBuilder
 {
     /// <summary>
+    /// Specifies how claimed values are retained; the default keeps one value per event source.
+    /// </summary>
+    /// <param name="mode">The retention mode.</param>
+    /// <returns>Builder for continuation.</returns>
+    IUniqueConstraintBuilder WithMode(UniqueConstraintMode mode);
+
+    /// <summary>
+    /// Declares a removal event carrying the value to release in per-value mode.
+    /// </summary>
+    /// <param name="properties">Properties in the same order as the constrained properties; empty releases all values.</param>
+    /// <typeparam name="TEventType">Type of removal event.</typeparam>
+    /// <returns>Builder for continuation.</returns>
+    IUniqueConstraintBuilder RemovedWith<TEventType>(params Expression<Func<TEventType, object>>[] properties);
+
+    /// <summary>
+    /// Declares a removal event carrying the value to release in per-value mode.
+    /// </summary>
+    /// <param name="eventType">The removal event type.</param>
+    /// <param name="properties">Property names in constrained-property order; empty releases all values.</param>
+    /// <returns>Builder for continuation.</returns>
+    IUniqueConstraintBuilder RemovedWith(EventType eventType, string[] properties);
+
+    /// <summary>
     /// Defines the name of the unique constraint.
     /// </summary>
     /// <param name="name">Name to use.</param>

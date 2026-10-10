@@ -16,7 +16,7 @@ public class and_value_is_saved_for_a_different_event_source : given.a_unique_co
 
     async Task Because()
     {
-        await _storage.Save(_savedEventSourceId, ConstraintNameValue, EventSequenceNumber.First, _value);
+        await _storage.Save(_savedEventSourceId, _definition, EventSequenceNumber.First, _value);
         (_isAllowedForOther, _) = await _storage.IsAllowed(_otherEventSourceId, _definition, _value);
         (_isAllowedForSame, _) = await _storage.IsAllowed(_savedEventSourceId, _definition, _value);
     }

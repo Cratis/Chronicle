@@ -1,0 +1,15 @@
+projection ForumUser => ForumUserReadModel
+  from UserJoined
+    Username = username
+
+  from QuestionPosted
+    count QuestionsPosted
+
+  from AnswerPosted
+    count AnswersPosted
+
+  from UpvoteReceived
+    increment Reputation
+
+  from DownvoteReceived
+    decrement Reputation
