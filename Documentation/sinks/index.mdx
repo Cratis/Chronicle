@@ -96,6 +96,16 @@ The SQL sink does not create the indexes a read model declares with `[Index]`; o
 
 This allows teams using SQL databases (SQL Server, PostgreSQL, SQLite) to take advantage of Chronicle projections without maintaining a MongoDB instance.
 
+### Decimal columns
+
+Decimal-formatted read-model properties use NUMERIC on PostgreSQL, DECIMAL(38,18) on SQL Server,
+and invariant decimal text in SQLite TEXT columns. MongoDB stores them as Decimal128. Double
+and float properties keep their floating-point storage types.
+
+Existing SQL column types are not altered in place. Replay the read model to create a table with
+the new mapping. SQL Server values outside its column precision are refused rather than rounded;
+see [Exact decimal values](../events/schema-representation#exact-decimal-values) for limits and upgrade requirements.
+
 ### Enabling the SQL Sink
 
 Set `DefaultSinkTypeId` in `ChronicleOptions`:

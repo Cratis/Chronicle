@@ -94,6 +94,12 @@ This ensures that:
 
 ## Protected values
 
+Adding protection metadata within an existing generation affects future appends only. Creating a
+new generation also leaves the original generation's stored content untouched. Neither approach
+encrypts historical plaintext in place; see
+[Adding PII to an existing event type](../compliance/pii#adding-pii-to-an-existing-event-type) and
+[Event redaction](../events/redaction) for the policy and remedy.
+
 Migration expressions operate on plaintext, including values protected by `[PII]` or
 `[Encrypted]`. Split, combine, and value-map operations therefore see the original
 values rather than ciphertext.
