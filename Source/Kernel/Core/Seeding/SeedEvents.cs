@@ -78,7 +78,10 @@ public record SeedEvents(
                 _.EventSourceId,
                 _.EventTypeId,
                 _.Content,
-                _.Tags?.Select(tag => new Concepts.Events.Tag(tag)).ToArray() ?? []))
+                _.Tags?.Select(tag => new Concepts.Events.Tag(tag)).ToArray() ?? [],
+                SeedRouting.SourceType(_.EventSourceType),
+                SeedRouting.StreamType(_.EventStreamType),
+                SeedRouting.StreamId(_.EventStreamId)))
         ]);
     }
 }

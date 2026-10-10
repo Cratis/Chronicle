@@ -172,6 +172,14 @@ public interface IEventSequences
     [Operation]
     Task<QueryResult<IEnumerable<ClosedStreamResponse>>> ClosedStreams(ClosedStreamsRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the MetadataAt query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<EventMetadataResponse>>> MetadataAt(MetadataAtRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the AllEventSequences query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -1721,6 +1729,128 @@ public class ClosedStreamsRequest
     /// </summary>
     [ProtoMember(7)]
     public string? EventStreamId { get; set; }
+}
+
+/// <summary>
+/// Represents the EventMetadataResponse message.
+/// </summary>
+[ProtoContract]
+public class EventMetadataResponse
+{
+    /// <summary>
+    /// Gets or sets the SequenceNumber.
+    /// </summary>
+    [ProtoMember(1)]
+    public global::System.UInt64 SequenceNumber { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the EventTypeId.
+    /// </summary>
+    [ProtoMember(2)]
+    public string EventTypeId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSourceType.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSourceType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSourceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string EventSourceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventStreamType.
+    /// </summary>
+    [ProtoMember(5)]
+    public string EventStreamType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventStreamId.
+    /// </summary>
+    [ProtoMember(6)]
+    public string EventStreamId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Occurred.
+    /// </summary>
+    [ProtoMember(7)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the CorrelationId.
+    /// </summary>
+    [ProtoMember(8)]
+    public Guid CorrelationId { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Causation.
+    /// </summary>
+    [ProtoMember(9)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.Causation> Causation { get; set; } = new List<global::Cratis.Chronicle.Contracts.Sequences.Causation>();
+
+    /// <summary>
+    /// Gets or sets the CausedBy.
+    /// </summary>
+    [ProtoMember(10)]
+    public global::Cratis.Chronicle.Contracts.Sequences.ResolvedIdentity CausedBy { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the InitiatorType.
+    /// </summary>
+    [ProtoMember(11)]
+    public global::Cratis.Chronicle.Contracts.Patterns.InitiatorType InitiatorType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Tags.
+    /// </summary>
+    [ProtoMember(12)]
+    public IEnumerable<string> Tags { get; set; } = new List<string>();
+
+    /// <summary>
+    /// Gets or sets the Subject.
+    /// </summary>
+    [ProtoMember(13)]
+    public string Subject { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSourceName.
+    /// </summary>
+    [ProtoMember(14)]
+    public string EventSourceName { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the MetadataAtRequest message.
+/// </summary>
+[ProtoContract]
+public class MetadataAtRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the eventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the sequenceNumbers.
+    /// </summary>
+    [ProtoMember(4)]
+    public IEnumerable<global::System.UInt64> SequenceNumbers { get; set; } = new List<global::System.UInt64>();
 }
 
 /// <summary>

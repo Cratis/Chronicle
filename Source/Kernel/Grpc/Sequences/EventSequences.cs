@@ -170,6 +170,16 @@ internal sealed class EventSequences(
             exception => logger.QueryFailed(exception, "EventSequences", "ClosedStreams"));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse>>> MetadataAt(global::Cratis.Chronicle.Contracts.Sequences.MetadataAtRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Sequences.EventMetadata.MetadataAt(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.SequenceNumbers);
+                return result.Select(ToEventMetadataResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "EventSequences", "MetadataAt"));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventSequenceNamesResponse>>> AllEventSequences(global::Cratis.Chronicle.Contracts.Sequences.AllEventSequencesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventSequenceNamesResponse>>(
             async () =>
@@ -332,6 +342,25 @@ internal sealed class EventSequences(
             ClosedBy = source.ClosedBy,
             SequenceNumber = (ulong)source.SequenceNumber,
             ClosedAt = source.ClosedAt is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.ClosedAt
+        };
+
+    static global::Cratis.Chronicle.Contracts.Sequences.EventMetadataResponse ToEventMetadataResponse(global::Cratis.Chronicle.Sequences.EventMetadata source) =>
+        new()
+        {
+            SequenceNumber = (ulong)source.SequenceNumber,
+            EventTypeId = (string)source.EventTypeId,
+            EventSourceType = (string)source.EventSourceType,
+            EventSourceId = (string)source.EventSourceId,
+            EventStreamType = (string)source.EventStreamType,
+            EventStreamId = (string)source.EventStreamId,
+            Occurred = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.Occurred,
+            CorrelationId = (global::System.Guid)source.CorrelationId,
+            Causation = source.Causation.Select(element0 => element0.ToContract()).ToList(),
+            CausedBy = source.CausedBy.ToContract(),
+            InitiatorType = (global::Cratis.Chronicle.Contracts.Patterns.InitiatorType)source.InitiatorType,
+            Tags = source.Tags.Select(element0 => (string)element0).ToList(),
+            Subject = (string)source.Subject,
+            EventSourceName = (string)source.EventSourceName
         };
 
     static global::Cratis.Chronicle.Contracts.Sequences.EventSequenceNamesResponse ToEventSequenceNamesResponse(global::Cratis.Chronicle.Sequences.EventSequenceNames source) =>

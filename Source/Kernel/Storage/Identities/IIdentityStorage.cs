@@ -57,6 +57,15 @@ public interface IIdentityStorage
     Task<Identity> GetSingleFor(IdentityId identityId);
 
     /// <summary>
+    /// Reads the requested identities directly from storage, bypassing caches. Missing ids are omitted.
+    /// </summary>
+    /// <param name="identityIds">The bounded collection of identity identifiers.</param>
+    /// <returns>The identities keyed by identifier.</returns>
+    /// <exception cref="IdentityBatchReadsNotSupported">The provider does not support uncached identity reads.</exception>
+    Task<IReadOnlyDictionary<IdentityId, Identity>> GetByIds(IEnumerable<IdentityId> identityIds)
+        => throw new IdentityBatchReadsNotSupported();
+
+    /// <summary>
     /// Rename the display name of the <see cref="Identity"/> identified by the given subject.
     /// </summary>
     /// <param name="subject">The subject that uniquely identifies the <see cref="Identity"/> to rename.</param>

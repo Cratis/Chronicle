@@ -665,6 +665,50 @@ public partial class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+    {
+        var numbers = sequenceNumbers.Select(_ => _.Value).Distinct().ToArray();
+        if (numbers.Length == 0)
+        {
+            return [];
+        }
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+        var entries = await scope.DbContext.Events.AsNoTracking()
+            .Where(_ => numbers.Contains(_.SequenceNumber))
+            .OrderBy(_ => _.SequenceNumber)
+            .Select(_ => new EventEntry
+            {
+                SequenceNumber = _.SequenceNumber,
+                Type = _.Type,
+                EventSourceType = _.EventSourceType,
+                EventSourceId = _.EventSourceId,
+                EventStreamType = _.EventStreamType,
+                EventStreamId = _.EventStreamId,
+                Occurred = _.Occurred,
+                CorrelationId = _.CorrelationId,
+                Causation = _.Causation,
+                CausedBy = _.CausedBy,
+                Tags = _.Tags,
+                Subject = _.Subject,
+                EventSource = _.EventSource
+            }).ToListAsync(cancellationToken);
+        return entries.Select(_ => new StoredEventMetadata(
+            _.SequenceNumber,
+            _.Type,
+            _.EventSourceType,
+            _.EventSourceId,
+            _.EventStreamType,
+            _.EventStreamId,
+            _.Occurred,
+            new CorrelationId(Guid.Parse(_.CorrelationId)),
+            EventEntryConverter.GetCausation(_),
+            EventEntryConverter.GetCausedBy(_),
+            EventEntryConverter.GetTags(_),
+            new Subject(_.Subject ?? _.EventSourceId.Value),
+            new EventSourceName(_.EventSource ?? string.Empty))).ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber)
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);

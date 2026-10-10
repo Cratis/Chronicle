@@ -5,7 +5,11 @@ using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Commands;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSources;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Seeding;
@@ -43,6 +47,67 @@ public class EventSeeding(
     readonly IClientArtifactsActivator _artifactActivator = artifactActivator;
     readonly ILogger<EventSeeding> _logger = logger;
     readonly List<SeedingEntry> _entries = [];
+    readonly IEventSources? _eventSources;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventSeeding"/> class with typed routing support.
+    /// </summary>
+    /// <param name="eventStoreName">The event store name.</param>
+    /// <param name="connection">The Chronicle connection.</param>
+    /// <param name="eventTypes">The event types.</param>
+    /// <param name="eventSerializer">The event serializer.</param>
+    /// <param name="clientArtifactsProvider">The client artifacts provider.</param>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="artifactActivator">The artifact activator.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="eventSources">The event source definitions.</param>
+    public EventSeeding(
+        EventStoreName eventStoreName,
+        IChronicleConnection connection,
+        IEventTypes eventTypes,
+        IEventSerializer eventSerializer,
+        IClientArtifactsProvider clientArtifactsProvider,
+        IServiceProvider serviceProvider,
+        IClientArtifactsActivator artifactActivator,
+        ILogger<EventSeeding> logger,
+        IEventSources? eventSources)
+        : this(eventStoreName, connection, eventTypes, eventSerializer, clientArtifactsProvider, serviceProvider, artifactActivator, logger)
+    {
+        _eventSources = eventSources;
+    }
+
+    /// <inheritdoc/>
+    public IEventSeedingBuilder For<TEvent>(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, IEnumerable<TEvent> events, EventSourceType? eventSourceType = default)
+        where TEvent : class
+    {
+        var routed = events.Select(@event => new EventForEventSourceId(eventSourceId, @event)
+        {
+            EventSourceType = eventSourceType ?? EventSourceType.Default,
+            EventStreamType = eventStreamType,
+            EventStreamId = eventStreamId
+        });
+        AddRoutedEntries(routed, true, EventStoreNamespaceName.NotSet, _eventTypes.GetEventTypeFor(typeof(TEvent)).Id);
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IEventSeedingBuilder ForEventSource(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, IEnumerable<object> events, EventSourceType? eventSourceType = default)
+    {
+        var routed = events.Select(@event => new EventForEventSourceId(eventSourceId, @event)
+        {
+            EventSourceType = eventSourceType ?? EventSourceType.Default,
+            EventStreamType = eventStreamType,
+            EventStreamId = eventStreamId
+        });
+        return ForEvents(routed);
+    }
+
+    /// <inheritdoc/>
+    public IEventSeedingBuilder ForEvents(IEnumerable<EventForEventSourceId> events)
+    {
+        AddRoutedEntries(events, true, EventStoreNamespaceName.NotSet);
+        return this;
+    }
 
     /// <inheritdoc/>
     public IEventSeedingBuilder For<TEvent>(EventSourceId eventSourceId, IEnumerable<TEvent> events)
@@ -94,6 +159,7 @@ public class EventSeeding(
     }
 
     /// <inheritdoc/>
+    /// <exception cref="EventSeedingRoutingNotSupported">Thrown before sending entries when routing support is not confirmed by the kernel.</exception>
     public async Task Register()
     {
         if (_entries.Count == 0)
@@ -102,6 +168,24 @@ public class EventSeeding(
         }
 
         var servicesAccessor = (IChronicleServicesAccessor)_connection;
+        if (_entries.Exists(entry =>
+            (!string.IsNullOrEmpty(entry.EventSourceType?.Value) && entry.EventSourceType != EventSourceType.Default) ||
+            (!string.IsNullOrEmpty(entry.EventStreamType?.Value) && entry.EventStreamType != EventStreamType.All) ||
+            (!string.IsNullOrEmpty(entry.EventStreamId?.Value) && entry.EventStreamId.Value != EventStreamId.Default)))
+        {
+            try
+            {
+                var support = await servicesAccessor.Services.Seeding.GetSeedingSupport().EnsureSuccess();
+                if (!support.RoutingSupported)
+                {
+                    throw new EventSeedingRoutingNotSupported();
+                }
+            }
+            catch (RpcException exception) when (exception.StatusCode == StatusCode.Unimplemented)
+            {
+                throw new EventSeedingRoutingNotSupported();
+            }
+        }
 
         // Organize entries into global and namespaced groups
         var globalEntries = _entries.Where(e => e.IsGlobal).ToList();
@@ -126,7 +210,10 @@ public class EventSeeding(
                     EventSourceId = entry.EventSourceId.Value,
                     EventTypeId = entry.EventTypeId.Value,
                     Content = JsonSerializer.Serialize(content),
-                    Tags = tags
+                    Tags = tags,
+                    EventSourceType = entry.EventSourceType?.Value ?? EventSourceType.Default.Value,
+                    EventStreamType = entry.EventStreamType?.Value ?? EventStreamType.All.Value,
+                    EventStreamId = entry.EventStreamId?.Value ?? EventStreamId.Default
                 };
 
                 if (!globalByEventType.TryGetValue(entry.EventTypeId, out var eventTypeList))
@@ -172,7 +259,10 @@ public class EventSeeding(
                     EventSourceId = entry.EventSourceId.Value,
                     EventTypeId = entry.EventTypeId.Value,
                     Content = JsonSerializer.Serialize(content),
-                    Tags = tags
+                    Tags = tags,
+                    EventSourceType = entry.EventSourceType?.Value ?? EventSourceType.Default.Value,
+                    EventStreamType = entry.EventStreamType?.Value ?? EventStreamType.All.Value,
+                    EventStreamId = entry.EventStreamId?.Value ?? EventStreamId.Default
                 };
 
                 if (!namespacedByEventType.TryGetValue(entry.EventTypeId, out var eventTypeList))
@@ -229,17 +319,70 @@ public class EventSeeding(
         _clientArtifactsProvider,
         _serviceProvider,
         _artifactActivator,
-        _logger);
+        _logger,
+        _eventSources);
+
+    void AddRoutedEntries(IEnumerable<EventForEventSourceId> events, bool isGlobal, EventStoreNamespaceName targetNamespace, EventTypeId? explicitEventTypeId = default)
+    {
+        foreach (var entry in events)
+        {
+            var routing = entry.EventSource is not null
+                ? ResolvedEventRouting.Resolve(_eventSources, entry.EventSource, entry.EventStream, entry.EventSourceType, entry.EventStreamType)
+                : null;
+            var eventTypeId = explicitEventTypeId ?? _eventTypes.GetEventTypeFor(entry.Event.GetType()).Id;
+            var tags = entry.Event.GetType().GetTags().Concat(entry.Tags).Distinct().Select(tag => (Tag)tag);
+            _entries.Add(new SeedingEntry(entry.EventSourceId, eventTypeId, entry.Event, tags, isGlobal, targetNamespace, routing?.SourceType ?? entry.EventSourceType, routing?.StreamType ?? entry.EventStreamType, entry.EventStreamId));
+        }
+    }
 
     void AddScopedEntry(EventSourceId eventSourceId, EventTypeId eventTypeId, object @event, IEnumerable<Tag> tags, bool isGlobal, EventStoreNamespaceName targetNamespace)
     {
         _entries.Add(new SeedingEntry(eventSourceId, eventTypeId, @event, tags, isGlobal, targetNamespace));
     }
 
-    record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, object Event, IEnumerable<Tag> Tags, bool IsGlobal, EventStoreNamespaceName TargetNamespace);
+    record SeedingEntry(
+        EventSourceId EventSourceId,
+        EventTypeId EventTypeId,
+        object Event,
+        IEnumerable<Tag> Tags,
+        bool IsGlobal,
+        EventStoreNamespaceName TargetNamespace,
+        EventSourceType? EventSourceType = default,
+        EventStreamType? EventStreamType = default,
+        EventStreamId? EventStreamId = default);
 
     class EventSeedingScopeBuilder(EventSeeding parent, bool isGlobal, EventStoreNamespaceName targetNamespace) : IEventSeedingScopeBuilder
     {
+        public IEventSeedingScopeBuilder For<TEvent>(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, IEnumerable<TEvent> events, EventSourceType? eventSourceType = default)
+            where TEvent : class
+        {
+            var routed = events.Select(@event => new EventForEventSourceId(eventSourceId, @event)
+            {
+                EventSourceType = eventSourceType ?? EventSourceType.Default,
+                EventStreamType = eventStreamType,
+                EventStreamId = eventStreamId
+            });
+            parent.AddRoutedEntries(routed, isGlobal, targetNamespace, parent._eventTypes.GetEventTypeFor(typeof(TEvent)).Id);
+            return this;
+        }
+
+        public IEventSeedingScopeBuilder ForEventSource(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, IEnumerable<object> events, EventSourceType? eventSourceType = default)
+        {
+            var routed = events.Select(@event => new EventForEventSourceId(eventSourceId, @event)
+            {
+                EventSourceType = eventSourceType ?? EventSourceType.Default,
+                EventStreamType = eventStreamType,
+                EventStreamId = eventStreamId
+            });
+            return ForEvents(routed);
+        }
+
+        public IEventSeedingScopeBuilder ForEvents(IEnumerable<EventForEventSourceId> events)
+        {
+            parent.AddRoutedEntries(events, isGlobal, targetNamespace);
+            return this;
+        }
+
         public IEventSeedingScopeBuilder For<TEvent>(EventSourceId eventSourceId, IEnumerable<TEvent> events)
             where TEvent : class
         {

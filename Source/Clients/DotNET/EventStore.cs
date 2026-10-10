@@ -282,7 +282,8 @@ public class EventStore : IEventStore
             clientArtifactsProvider,
             serviceProvider,
             artifactActivator,
-            loggerFactory.CreateLogger<EventSeeding>());
+            loggerFactory.CreateLogger<EventSeeding>(),
+            EventSources);
 
         Patterns = new Patterns.Patterns(this);
 

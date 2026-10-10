@@ -32,4 +32,22 @@ public class SeedingEntry
     /// </summary>
     [ProtoMember(4, IsRequired = true)]
     public IList<string> Tags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the event source type. Empty means the default type.
+    /// </summary>
+    [ProtoMember(5)]
+    public string EventSourceType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event stream type. Empty means all streams.
+    /// </summary>
+    [ProtoMember(6)]
+    public string EventStreamType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event stream identifier. Empty means the default stream.
+    /// </summary>
+    [ProtoMember(7)]
+    public string EventStreamId { get; set; } = string.Empty;
 }
