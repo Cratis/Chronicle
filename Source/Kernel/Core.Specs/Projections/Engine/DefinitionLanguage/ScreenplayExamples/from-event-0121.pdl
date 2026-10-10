@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from UserLoggedIn
+    LastLogin = $eventContext.occurred
+    LastSequenceNumber = $eventContext.sequenceNumber
+    count LoginCount

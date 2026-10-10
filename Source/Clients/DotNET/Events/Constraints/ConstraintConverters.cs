@@ -60,7 +60,13 @@ internal static class ConstraintConverters
                 EventTypeId = _.EventTypeId,
                 Properties = _.Properties,
             }).ToList(),
-            IgnoreCasing = definition.IgnoreCasing
+            IgnoreCasing = definition.IgnoreCasing,
+            Mode = (Contracts.Events.Constraints.UniqueConstraintMode)definition.Mode,
+            RemovalEventDefinitions = definition.RemovalEventDefinitions.Select(_ => new Contracts.Events.Constraints.UniqueConstraintEventDefinition
+            {
+                EventTypeId = _.EventTypeId,
+                Properties = _.Properties
+            }).ToList()
         }),
         Scope = definition.Scope?.ToContract(),
         EventSequences = [.. definition.EventSequences.Select(_ => _.Value).Distinct()]

@@ -1,0 +1,25 @@
+// A variant group
+// Screenplay documentation: Documentation/screenplay/projections/variants.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event IssueCreated
+        title String
+      event PullRequestCreated
+        title String
+      readmodel BacklogItem
+        itemId String
+        title String
+      query BacklogItemById => BacklogItem?
+        by itemId String
+      readmodel PullRequestItem
+        itemId String
+        title String
+      query PullRequestItemById => PullRequestItem?
+        by itemId String
+      projection WorkItem
+        variant BacklogItem
+          enters on IssueCreated
+        variant PullRequestItem
+          enters on PullRequestCreated

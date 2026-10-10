@@ -1,0 +1,17 @@
+projection Subscription => SubscriptionReadModel
+  from SubscriptionCreated
+    UserId = userId
+    PlanId = planId
+    StartDate = startDate
+
+  join SubscriptionPlan on PlanId
+    with PlanCreated
+      PlanName = name
+      Price = price
+    with PlanUpdated
+      PlanName = name
+      Price = price
+
+  remove with SubscriptionCancelled
+
+  remove via join on PlanDiscontinued

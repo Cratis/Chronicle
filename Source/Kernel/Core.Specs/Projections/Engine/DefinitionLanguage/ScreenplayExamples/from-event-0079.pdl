@@ -1,0 +1,13 @@
+projection User => UserReadModel
+  from UserRegistered
+    Name = name
+    Email = email
+    CreatedAt = $eventContext.occurred
+
+  from UserEmailChanged
+    Email = email
+    UpdatedAt = $eventContext.occurred
+
+  from UserDeactivated
+    IsActive = false
+    DeactivatedAt = $eventContext.occurred

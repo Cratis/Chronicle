@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from OrderPlaced
+    OrderNumber = orderNumber
+    CorrelationId = $eventContext.correlationId
+    PlacedAt = $eventContext.occurred

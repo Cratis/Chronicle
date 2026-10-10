@@ -46,7 +46,7 @@ public class ReindexConstraintsStep(
     /// <param name="definition">The <see cref="UniqueConstraintDefinition"/> being reindexed.</param>
     /// <param name="event">The <see cref="AppendedEvent"/> being processed.</param>
     /// <param name="content">The released (plaintext) content of the event.</param>
-    /// <param name="seen">The set of already-cleared (event source, scope) entries for this definition.</param>
+    /// <param name="seen">The already-cleared entries: per source and scope in per-event-source mode, or per scope with an unspecified source in per-value mode.</param>
     /// <param name="validator">The <see cref="UniqueConstraintValidator"/> that updates the index.</param>
     /// <param name="uniqueConstraintsStorage">The <see cref="IUniqueConstraintsStorage"/> to update.</param>
     /// <returns>Awaitable task.</returns>
@@ -63,9 +63,20 @@ public class ReindexConstraintsStep(
             @event.Context.EventStreamType,
             @event.Context.EventStreamId);
 
-        if (seen.Add((@event.Context.EventSourceId, scopeKey)))
+        // One step owns the complete sequence for every changed definition. Retained values must be cleared
+        // for the whole scope before its first event is replayed, not as each owner is encountered: a later
+        // owner may still hold a value that an earlier owner claimed and released in the history being rebuilt.
+        var sourceToClear = definition.Mode == UniqueConstraintMode.PerValue ? EventSourceId.Unspecified : @event.Context.EventSourceId;
+        if (seen.Add((sourceToClear, scopeKey)))
         {
-            await uniqueConstraintsStorage.Remove(@event.Context.EventSourceId, definition.Name, scopeKey);
+            if (definition.Mode == UniqueConstraintMode.PerValue)
+            {
+                await uniqueConstraintsStorage.ClearValues(definition, scopeKey);
+            }
+            else
+            {
+                await uniqueConstraintsStorage.Remove(@event.Context.EventSourceId, definition, scopeKey);
+            }
         }
 
         var context = new ConstraintValidationContext(
@@ -152,6 +163,8 @@ public class ReindexConstraintsStep(
             var validators = changedDefinitions.ToDictionary(_ => _.Name, _ => new UniqueConstraintValidator(_, uniqueConstraintsStorage));
             var schemaCache = new Dictionary<EventType, EventTypeSchema>();
 
+            // GetFromSequenceNumber supplies an ascending sequence-number cursor in every provider. Consume
+            // its batches and events sequentially so releases precede subsequent claims, including on retry.
             using var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, cancellationToken: cancellationToken);
             while (await cursor.MoveNext())
             {

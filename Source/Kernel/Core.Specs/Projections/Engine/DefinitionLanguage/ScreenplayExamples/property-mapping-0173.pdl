@@ -1,0 +1,9 @@
+projection Doc => DocReadModel
+  from CompanyRegistered
+    CompanyName = name
+    Email = contactInfo.email
+    Phone = contactInfo.phone
+    Street = address.street
+    City = address.city
+    State = address.state
+    ZipCode = address.zipCode

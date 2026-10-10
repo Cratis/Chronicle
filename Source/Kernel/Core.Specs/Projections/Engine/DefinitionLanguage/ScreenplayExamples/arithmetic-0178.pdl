@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from TransactionProcessed
+    add Balance by transaction.amount
+    add TotalTransactions by 1

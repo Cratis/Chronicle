@@ -1,0 +1,9 @@
+projection Doc => DocReadModel
+  from ReservationMade
+    key ReservationKey {
+      HotelId = hotelId
+      RoomNumber = roomNumber
+      CheckInDate = checkInDate
+    }
+    GuestName = guestName
+    Nights = nights

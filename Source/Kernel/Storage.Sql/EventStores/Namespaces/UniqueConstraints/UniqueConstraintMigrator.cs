@@ -15,9 +15,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 /// Represents an implementation of <see cref="IUniqueConstraintMigrator"/>.
 /// </summary>
 /// <param name="tableMigrator">The <see cref="ITableMigrator{TContext}"/> for migrating tables.</param>
+/// <param name="valuesTableMigrator">The migrator for per-value tables.</param>
 /// <param name="logger">The <see cref="ILogger{UniqueConstraintMigrator}"/> for logging.</param>
 public class UniqueConstraintMigrator(
     ITableMigrator<UniqueConstraintDbContext> tableMigrator,
+    ITableMigrator<UniqueConstraintValuesDbContext> valuesTableMigrator,
     ILogger<UniqueConstraintMigrator> logger) : IUniqueConstraintMigrator
 {
     static readonly ConcurrentDictionary<string, bool> _columnMigrations = new();
@@ -30,9 +32,14 @@ public class UniqueConstraintMigrator(
     }
 
     /// <inheritdoc/>
+    public Task EnsureValuesTableMigrated(string tableName, UniqueConstraintValuesDbContext context) =>
+        valuesTableMigrator.EnsureTableMigrated(tableName, context, CreateValuesTable);
+
+    /// <inheritdoc/>
     public void ClearMigrationCache(string connectionStringPrefix)
     {
         tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
+        valuesTableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
         foreach (var key in _columnMigrations.Keys.Where(k => k.StartsWith(connectionStringPrefix, StringComparison.OrdinalIgnoreCase)))
         {
             _columnMigrations.TryRemove(key, out _);
@@ -78,6 +85,22 @@ public class UniqueConstraintMigrator(
         {
             await connection.CloseAsync();
         }
+    }
+
+    async Task CreateValuesTable(UniqueConstraintValuesDbContext context, string tableName)
+    {
+        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+        migrationBuilder.CreateTable(
+            name: tableName,
+            columns: table => new
+            {
+                Value = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                EventSourceId = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false)
+            },
+            constraints: table => table.PrimaryKey("PK_" + tableName, _ => _.Value));
+        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_EventSourceId", table: tableName, column: "EventSourceId");
+        await valuesTableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
     async Task CreateTable(UniqueConstraintDbContext context, string tableName)

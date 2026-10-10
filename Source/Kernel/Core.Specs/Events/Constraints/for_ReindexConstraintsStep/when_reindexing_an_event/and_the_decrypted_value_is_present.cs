@@ -23,6 +23,6 @@ public class and_the_decrypted_value_is_present : given.a_unique_constraint_to_r
 
     async Task Because() => await ReindexConstraintsStep.ReindexEvent(_definition, EventFor(_eventSourceId), _content, _seen, _validator, _storage);
 
-    [Fact] void should_clear_any_existing_index_entry() => _storage.Received(1).Remove(_eventSourceId, _definition.Name, Arg.Any<string>());
-    [Fact] void should_save_the_hash_of_the_decrypted_value() => _storage.Received(1).Save(_eventSourceId, _definition.Name, Arg.Any<EventSequenceNumber>(), _expectedHashedValue, Arg.Any<string>());
+    [Fact] void should_clear_any_existing_index_entry() => _storage.Received(1).Remove(_eventSourceId, _definition, Arg.Any<string>());
+    [Fact] void should_save_the_hash_of_the_decrypted_value() => _storage.Received(1).Save(_eventSourceId, _definition, Arg.Any<EventSequenceNumber>(), _expectedHashedValue, Arg.Any<string>());
 }

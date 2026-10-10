@@ -1,0 +1,16 @@
+projection Document => DocumentReadModel
+  every
+    CurrentVersion = $eventContext.sequenceNumber
+    LastUpdated = $eventContext.occurred
+    LastCorrelation = $eventContext.correlationId
+    exclude children
+
+  from DocumentCreated
+    Title = title
+    Content = content
+
+  from DocumentUpdated
+    Content = content
+
+  from DocumentRenamed
+    Title = title

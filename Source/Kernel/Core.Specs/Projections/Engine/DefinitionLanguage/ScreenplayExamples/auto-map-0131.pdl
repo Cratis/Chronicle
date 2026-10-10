@@ -1,0 +1,8 @@
+projection Order => OrderReadModel
+  no automap
+
+  from OrderPlaced
+    OrderId = orderId
+    CustomerId = customerId
+    Total = total
+    Status = "Pending"

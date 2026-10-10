@@ -1,0 +1,20 @@
+// A dotted target path into a composite read-model property
+// Screenplay documentation: Documentation/screenplay/projections/property-mapping.md
+
+type Address
+  city String
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+        city String
+      readmodel OrderView
+        orderId String
+        address Address
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced
+          address.city = city

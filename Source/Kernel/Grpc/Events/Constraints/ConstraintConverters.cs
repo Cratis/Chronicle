@@ -33,7 +33,9 @@ internal static class ConstraintConverters
                     constraint.Definition.Value0!.IgnoreCasing,
                     scope)
                 {
-                    EventSequences = eventSequences
+                    EventSequences = eventSequences,
+                    Mode = (UniqueConstraintMode)constraint.Definition.Value0!.Mode,
+                    RemovalEventDefinitions = constraint.Definition.Value0!.RemovalEventDefinitions.Select(_ => _.ToChronicle()).ToArray()
                 },
 
             Contracts.Events.Constraints.ConstraintType.UniqueEventType =>

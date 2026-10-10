@@ -1,0 +1,8 @@
+projection User => UserReadModel
+  from UserCreated
+    Name = name
+    IsDeleted = false
+
+  from UserDeleted
+    IsDeleted = true
+    DeletedAt = $eventContext.occurred

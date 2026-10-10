@@ -1,0 +1,8 @@
+projection Doc => DocReadModel
+  join User on UserId
+    with UserRegistered
+      UserName = name
+      UserAvatar = avatarUrl
+    with UserProfileUpdated
+      UserName = name
+      UserAvatar = avatarUrl

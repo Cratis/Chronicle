@@ -31,6 +31,10 @@ namespace Cratis.Chronicle.Registrations;
 /// observe rather than assume. <see cref="ArtifactRegistration.IsRegistered"/> means the client built a definition for
 /// the artifact and the kernel accepted the batch it travelled in; the registration operation itself returns no
 /// per-definition verdict, so a finer-grained claim than that would be invented.
+/// For newly registered active projections, success also means the kernel subscribed their observers in the event
+/// store's existing namespaces. It does not mean an event appended afterwards is already reflected in materialized
+/// read models. For read-your-writes, use <see cref="Observation.AppendResultWaitForCompletionExtensions.WaitForCompletion"/>
+/// on the append result before reading, or use a passive read model.
 /// </para>
 /// <para>
 /// <b>What it deliberately does not cover: reactors and reducers.</b> Their <c language="csharp">Register()</c> only opens a duplex

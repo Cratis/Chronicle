@@ -1,0 +1,11 @@
+projection Document => DocumentReadModel
+  from DocumentCreated
+    Title = title
+    OwnerId = ownerId
+
+  join User on OwnerId
+    with UserCreated
+      OwnerName = name
+
+  remove with DocumentDeleted
+  remove via join on UserAccountClosed

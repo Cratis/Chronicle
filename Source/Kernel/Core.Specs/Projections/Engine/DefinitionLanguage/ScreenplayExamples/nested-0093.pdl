@@ -1,0 +1,13 @@
+projection Doc => DocReadModel
+  nested command
+    every
+      LastModified = $eventContext.occurred
+
+    from CommandSetForSlice
+      Name = commandName
+      Schema = schema
+
+    from CommandUpdated
+      Schema = updatedSchema
+
+    clear with CommandClearedForSlice

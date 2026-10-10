@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from DocEvent
+    Email = contact.email
+    Phone = contact.phoneNumbers.primary
+    City = addresses.shipping.city

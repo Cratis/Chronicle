@@ -27,6 +27,13 @@ public static class RegistrationWaitExtensions
     /// succeeded: the returned outcome still has to be asked whether every artifact registered.
     /// </para>
     /// <para>
+    /// For newly registered active projections, a successful outcome means the kernel has registered their artifacts
+    /// and subscribed their observers in the event store's existing namespaces. It does not mean that events appended
+    /// afterwards are already reflected in materialized read models. For read-your-writes, use
+    /// <see cref="Observation.AppendResultWaitForCompletionExtensions.WaitForCompletion"/> on the append result before
+    /// reading, or use a passive read model.
+    /// </para>
+    /// <para>
     /// A run that failed returns here too, carrying its <see cref="RegistrationOutcome.Failure"/> - the timeout is for
     /// a registration that never finished, not for one that finished badly. Ask <see cref="RegistrationOutcome"/> what
     /// happened rather than reading a returned value as success.

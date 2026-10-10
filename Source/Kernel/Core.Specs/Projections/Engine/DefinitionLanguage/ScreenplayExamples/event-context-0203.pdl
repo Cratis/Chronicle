@@ -1,0 +1,6 @@
+projection Doc => DocReadModel
+  children members identified by userId
+    from UserAddedToGroup key userId
+      parent $eventContext.eventSourceId
+      Role = role
+      AddedAt = $eventContext.occurred

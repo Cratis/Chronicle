@@ -1,0 +1,13 @@
+projection Project => ProjectReadModel
+  from ProjectCreated
+    Name = name
+
+  from TaskAdded
+    increment TotalTasks
+
+  from TaskCompleted
+    increment CompletedTasks
+    decrement RemainingTasks
+
+  from TaskAdded
+    increment RemainingTasks

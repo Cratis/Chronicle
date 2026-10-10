@@ -1,0 +1,19 @@
+projection UserProfile => UserProfileReadModel
+  from ProfileCreated
+    UserId = userId
+    Bio = bio
+    Avatar = avatarUrl
+
+  from ProfileUpdated
+    Bio = bio
+    UpdatedAt = $eventContext.occurred
+
+  join User on UserId
+    with UserRegistered
+      Name = name
+      Email = email
+    with UserUpdated
+      Name = name
+      Email = email
+
+  remove via join on UserAccountDeleted

@@ -1,0 +1,5 @@
+projection User => UserReadModel
+  from UserRegistered
+    Name = name
+    Email = email
+    IsActive = true

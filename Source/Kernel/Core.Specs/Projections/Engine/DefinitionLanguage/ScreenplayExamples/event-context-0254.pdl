@@ -1,0 +1,11 @@
+projection Document => DocumentReadModel
+  from DocumentCreated
+    Title = title
+    Content = content
+    Version = $eventContext.sequenceNumber
+    CreatedAt = $eventContext.occurred
+
+  from DocumentUpdated
+    Content = content
+    Version = $eventContext.sequenceNumber
+    UpdatedAt = $eventContext.occurred

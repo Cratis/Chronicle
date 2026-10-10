@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from UserCreated
+    CreatedAt = $eventContext.occurred
+    CreatedBy = $eventContext.eventSourceId

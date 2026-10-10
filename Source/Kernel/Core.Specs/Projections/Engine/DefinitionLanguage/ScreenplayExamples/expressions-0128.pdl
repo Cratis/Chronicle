@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from DocEvent
+    Count = 0
+    Price = 99.99
+    Tax = 0.08

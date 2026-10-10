@@ -1,0 +1,12 @@
+projection Order => OrderReadModel
+  from OrderPlaced
+    OrderNumber = orderNumber
+    CustomerId = customerId
+    Total = total
+    PlacedAt = $eventContext.occurred
+
+  join Customer on CustomerId
+    with CustomerCreated
+      automap
+    with CustomerUpdated
+      automap

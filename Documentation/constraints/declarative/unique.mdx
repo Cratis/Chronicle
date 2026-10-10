@@ -16,6 +16,16 @@ A unique property value belongs to an event source, not to a single append. The 
 
 Do not constrain a property containing the event source's own id to prevent a second event on that source: it will re-claim its own value and pass. To allow an event type only once per event source, use a [unique event type constraint](unique-event-type) instead.
 
+## Keeping every value
+
+When one event source accumulates many identifiers, call `.WithMode(UniqueConstraintMode.PerValue)` to keep all of them reserved. The default, `PerEventSource`, keeps only the source's current value. Per-value mode is available through the .NET client for now.
+
+<ChronicleClientTabs snippet="constraints/declarative/unique/per-value" />
+
+Each mapping version id remains unavailable to other event sources even after the project registers another version. The owning source may reclaim any of its values without a violation. `.RemovedWith<MappingVersionRemoved>(e => e.VersionId)` releases only the value carried by the removal event, provided that source owns it. `.RemovedWith<MappingVersionsRemoved>()` releases all values that source holds in the constraint's scope.
+
+For a composite value, pass removal-property expressions in the same order as the constrained properties. An event with no constrained properties present claims nothing and leaves earlier values reserved. `.IgnoreCasing()` applies to both claiming and releasing values.
+
 ## Uniqueness across multiple event types
 
 Use multiple `.On` calls when several event types each contribute to the same logical uniqueness rule. The constraint fires if any of the tracked events would introduce a duplicate value:

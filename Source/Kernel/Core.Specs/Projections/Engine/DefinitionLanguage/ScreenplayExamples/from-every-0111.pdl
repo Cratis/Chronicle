@@ -1,0 +1,10 @@
+projection Product => ProductReadModel
+  every
+    automap
+    LastModified = $eventContext.occurred
+
+  from ProductCreated
+    IsActive = true
+
+  from ProductDeactivated
+    IsActive = false

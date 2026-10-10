@@ -1,0 +1,28 @@
+// A joined event auto-maps same-named properties it has not used as a source
+// Screenplay documentation: Documentation/screenplay/projections/joins.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+        customerId String
+        total Decimal
+      event CustomerRegistered
+        name String
+        email String
+      event CustomerRenamed
+        name String
+      readmodel OrderView
+        orderId String
+        customerId String
+        customerName String
+        email String
+        total Decimal
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        from OrderPlaced
+        join customer on customerId
+          with CustomerRegistered
+            customerName = name

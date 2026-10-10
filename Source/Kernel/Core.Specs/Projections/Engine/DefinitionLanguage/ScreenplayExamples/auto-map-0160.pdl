@@ -1,0 +1,11 @@
+projection User => UserReadModel
+  no automap
+
+  from UserRegistered
+    Name = name
+    Email = email
+
+  from UserDeactivated
+    # Still disabled - no automap is inherited
+    IsActive = false
+    DeactivatedAt = $eventContext.occurred

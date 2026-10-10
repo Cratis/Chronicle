@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from NoteCleared
+    clear Note
+    ClearedAt = $eventContext.occurred

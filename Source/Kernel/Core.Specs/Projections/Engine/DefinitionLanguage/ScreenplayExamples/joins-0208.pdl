@@ -1,0 +1,17 @@
+projection Task => TaskReadModel
+  from TaskCreated
+    Title = title
+    Description = description
+    AssignedTo = assigneeId
+
+  from TaskAssigned
+    AssignedTo = assigneeId
+    AssignedAt = $eventContext.occurred
+
+  join User on AssignedTo
+    with UserRegistered
+      AssigneeName = name
+      AssigneeEmail = email
+    with UserUpdated
+      AssigneeName = name
+      AssigneeEmail = email

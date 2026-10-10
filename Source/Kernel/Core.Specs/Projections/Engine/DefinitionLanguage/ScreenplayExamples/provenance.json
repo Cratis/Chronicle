@@ -1,0 +1,1448 @@
+{
+  "version": "4.111.0",
+  "tag": "v4.111.0",
+  "commit": "5bedf429b052a743df08b752dfe2bf8de5e07966",
+  "examples": [
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 15,
+      "file": "arithmetic-0015.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 31,
+      "file": "arithmetic-0031.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 49,
+      "file": "arithmetic-0049.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 60,
+      "file": "arithmetic-0060.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 80,
+      "file": "arithmetic-0080.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 96,
+      "file": "arithmetic-0096.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 115,
+      "file": "arithmetic-0115.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 133,
+      "file": "arithmetic-0133.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 156,
+      "file": "arithmetic-0156.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 178,
+      "file": "arithmetic-0178.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 188,
+      "file": "arithmetic-0188.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 11,
+      "file": "auto-map-0011.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 27,
+      "file": "auto-map-0027.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 42,
+      "file": "auto-map-0042.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 55,
+      "file": "auto-map-0055.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 69,
+      "file": "auto-map-0069.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 82,
+      "file": "auto-map-0082.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 99,
+      "file": "auto-map-0099.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 122,
+      "file": "auto-map-0122.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 131,
+      "file": "auto-map-0131.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 144,
+      "file": "auto-map-0144.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 160,
+      "file": "auto-map-0160.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 176,
+      "file": "auto-map-0176.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/auto-map.mdx",
+      "line": 192,
+      "file": "auto-map-0192.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 14,
+      "file": "children-0014.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 32,
+      "file": "children-0032.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 42,
+      "file": "children-0042.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 55,
+      "file": "children-0055.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 67,
+      "file": "children-0067.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 83,
+      "file": "children-0083.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 102,
+      "file": "children-0102.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 122,
+      "file": "children-0122.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 138,
+      "file": "children-0138.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 154,
+      "file": "children-0154.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 177,
+      "file": "children-0177.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 203,
+      "file": "children-0203.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 236,
+      "file": "children-0236.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 257,
+      "file": "children-0257.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 291,
+      "file": "children-0291.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 317,
+      "file": "children-0317.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 331,
+      "file": "children-0331.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 362,
+      "file": "children-0362.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 378,
+      "file": "children-0378.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 395,
+      "file": "children-0395.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 15,
+      "file": "counters-0015.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 33,
+      "file": "counters-0033.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 49,
+      "file": "counters-0049.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 68,
+      "file": "counters-0068.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 79,
+      "file": "counters-0079.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 95,
+      "file": "counters-0095.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 115,
+      "file": "counters-0115.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 136,
+      "file": "counters-0136.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 153,
+      "file": "counters-0153.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 173,
+      "file": "counters-0173.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 61,
+      "file": "event-context-0061.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 69,
+      "file": "event-context-0069.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 78,
+      "file": "event-context-0078.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 87,
+      "file": "event-context-0087.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 97,
+      "file": "event-context-0097.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 106,
+      "file": "event-context-0106.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 118,
+      "file": "event-context-0118.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 127,
+      "file": "event-context-0127.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 136,
+      "file": "event-context-0136.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 167,
+      "file": "event-context-0167.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 181,
+      "file": "event-context-0181.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 192,
+      "file": "event-context-0192.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 203,
+      "file": "event-context-0203.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 215,
+      "file": "event-context-0215.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 239,
+      "file": "event-context-0239.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 254,
+      "file": "event-context-0254.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 270,
+      "file": "event-context-0270.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 288,
+      "file": "event-context-0288.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 21,
+      "file": "expressions-0021.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 50,
+      "file": "expressions-0050.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 71,
+      "file": "expressions-0071.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 95,
+      "file": "expressions-0095.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 114,
+      "file": "expressions-0114.pdl",
+      "kind": "mapping block"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 121,
+      "file": "expressions-0121.pdl",
+      "kind": "mapping block"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 128,
+      "file": "expressions-0128.pdl",
+      "kind": "mapping block"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 136,
+      "file": "expressions-0136.pdl",
+      "kind": "mapping block"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 144,
+      "file": "expressions-0144.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 187,
+      "file": "expressions-0187.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 197,
+      "file": "expressions-0197.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 235,
+      "file": "expressions-0235.pdl",
+      "kind": "mapping block"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 244,
+      "file": "expressions-0244.pdl",
+      "kind": "mapping block"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 254,
+      "file": "expressions-0254.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 265,
+      "file": "expressions-0265.pdl",
+      "kind": "mapping block"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 286,
+      "file": "expressions-0286.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 303,
+      "file": "expressions-0303.pdl",
+      "kind": "mapping block"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 320,
+      "file": "expressions-0320.pdl",
+      "kind": "mapping block"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 334,
+      "file": "expressions-0334.pdl",
+      "kind": "child mapping"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 348,
+      "file": "expressions-0348.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 368,
+      "file": "expressions-0368.pdl",
+      "kind": "mapping block"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 385,
+      "file": "expressions-0385.pdl",
+      "kind": "mapping block"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 393,
+      "file": "expressions-0393.pdl",
+      "kind": "mapping block"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-all.md",
+      "line": 16,
+      "file": "from-all-0016.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-all.md",
+      "line": 29,
+      "file": "from-all-0029.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-all.md",
+      "line": 51,
+      "file": "from-all-0051.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-all.md",
+      "line": 64,
+      "file": "from-all-0064.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 14,
+      "file": "from-event-0014.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 28,
+      "file": "from-event-0028.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 36,
+      "file": "from-event-0036.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 45,
+      "file": "from-event-0045.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 54,
+      "file": "from-event-0054.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 66,
+      "file": "from-event-0066.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 79,
+      "file": "from-event-0079.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 99,
+      "file": "from-event-0099.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 121,
+      "file": "from-event-0121.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 134,
+      "file": "from-event-0134.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 145,
+      "file": "from-event-0145.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 162,
+      "file": "from-event-0162.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 170,
+      "file": "from-event-0170.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 178,
+      "file": "from-event-0178.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 14,
+      "file": "from-every-0014.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 34,
+      "file": "from-every-0034.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 45,
+      "file": "from-every-0045.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 59,
+      "file": "from-every-0059.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 70,
+      "file": "from-every-0070.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 80,
+      "file": "from-every-0080.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 90,
+      "file": "from-every-0090.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 111,
+      "file": "from-every-0111.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 126,
+      "file": "from-every-0126.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 147,
+      "file": "from-every-0147.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 177,
+      "file": "from-every-0177.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 187,
+      "file": "from-every-0187.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 196,
+      "file": "from-every-0196.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/grammar.md",
+      "line": 239,
+      "file": "grammar-0239.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/grammar.md",
+      "line": 261,
+      "file": "grammar-0261.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/grammar.md",
+      "line": 497,
+      "file": "grammar-0497.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/grammar.md",
+      "line": 536,
+      "file": "grammar-0536.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 17,
+      "file": "joins-0017.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 38,
+      "file": "joins-0038.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 50,
+      "file": "joins-0050.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 68,
+      "file": "joins-0068.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 83,
+      "file": "joins-0083.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 105,
+      "file": "joins-0105.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 126,
+      "file": "joins-0126.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 151,
+      "file": "joins-0151.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 168,
+      "file": "joins-0168.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 186,
+      "file": "joins-0186.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 208,
+      "file": "joins-0208.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 230,
+      "file": "joins-0230.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 262,
+      "file": "joins-0262.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 314,
+      "file": "joins-0314.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 328,
+      "file": "joins-0328.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 342,
+      "file": "joins-0342.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 9,
+      "file": "keys-0009.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 21,
+      "file": "keys-0021.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 31,
+      "file": "keys-0031.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 39,
+      "file": "keys-0039.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 49,
+      "file": "keys-0049.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 72,
+      "file": "keys-0072.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 87,
+      "file": "keys-0087.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 94,
+      "file": "keys-0094.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 103,
+      "file": "keys-0103.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 124,
+      "file": "keys-0124.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 132,
+      "file": "keys-0132.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 140,
+      "file": "keys-0140.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 148,
+      "file": "keys-0148.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 162,
+      "file": "keys-0162.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 175,
+      "file": "keys-0175.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 188,
+      "file": "keys-0188.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 200,
+      "file": "keys-0200.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 209,
+      "file": "keys-0209.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/nested.mdx",
+      "line": 15,
+      "file": "nested-0015.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/nested.mdx",
+      "line": 33,
+      "file": "nested-0033.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/nested.mdx",
+      "line": 45,
+      "file": "nested-0045.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/nested.mdx",
+      "line": 59,
+      "file": "nested-0059.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/nested.mdx",
+      "line": 80,
+      "file": "nested-0080.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/nested.mdx",
+      "line": 93,
+      "file": "nested-0093.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/nested.mdx",
+      "line": 114,
+      "file": "nested-0114.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/nested.mdx",
+      "line": 131,
+      "file": "nested-0131.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/nested.mdx",
+      "line": 152,
+      "file": "nested-0152.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/nested.mdx",
+      "line": 169,
+      "file": "nested-0169.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/nested.mdx",
+      "line": 190,
+      "file": "nested-0190.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 9,
+      "file": "property-mapping-0009.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 21,
+      "file": "property-mapping-0021.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 32,
+      "file": "property-mapping-0032.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 58,
+      "file": "property-mapping-0058.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 66,
+      "file": "property-mapping-0066.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 97,
+      "file": "property-mapping-0097.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 107,
+      "file": "property-mapping-0107.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 121,
+      "file": "property-mapping-0121.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 135,
+      "file": "property-mapping-0135.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 148,
+      "file": "property-mapping-0148.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 173,
+      "file": "property-mapping-0173.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 186,
+      "file": "property-mapping-0186.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 15,
+      "file": "removal-0015.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 30,
+      "file": "removal-0030.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 42,
+      "file": "removal-0042.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 64,
+      "file": "removal-0064.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 80,
+      "file": "removal-0080.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 88,
+      "file": "removal-0088.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 109,
+      "file": "removal-0109.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 125,
+      "file": "removal-0125.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 146,
+      "file": "removal-0146.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 163,
+      "file": "removal-0163.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 192,
+      "file": "removal-0192.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 216,
+      "file": "removal-0216.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 240,
+      "file": "removal-0240.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 262,
+      "file": "removal-0262.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 291,
+      "file": "removal-0291.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 310,
+      "file": "removal-0310.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 341,
+      "file": "removal-0341.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 356,
+      "file": "removal-0356.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 379,
+      "file": "removal-0379.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/variants.md",
+      "line": 43,
+      "file": "variants-0043.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/variants.md",
+      "line": 58,
+      "file": "variants-0058.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/variants.md",
+      "line": 76,
+      "file": "variants-0076.pdl",
+      "kind": "projection"
+    }
+  ],
+  "skipped": [
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 9,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/arithmetic.md",
+      "line": 25,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 7,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 9,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 27,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 43,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 9,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/event-context.md",
+      "line": 229,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 11,
+      "reason": "Expression vocabulary, not a declaration (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 32,
+      "reason": "Expression vocabulary, not a declaration (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 63,
+      "reason": "Expression vocabulary, not a declaration (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 81,
+      "reason": "Expression vocabulary, not a declaration (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 156,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 169,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 207,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 271,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 280,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 294,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 313,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 328,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 342,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/expressions.mdx",
+      "line": 377,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-all.md",
+      "line": 9,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 7,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-event.md",
+      "line": 154,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/from-every.md",
+      "line": 7,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/joins.md",
+      "line": 7,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/keys.md",
+      "line": 59,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/nested.mdx",
+      "line": 7,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 52,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 81,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 159,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 9,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/removal.md",
+      "line": 58,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/variants.md",
+      "line": 9,
+      "reason": "Expression vocabulary, not a declaration (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/variants.md",
+      "line": 27,
+      "reason": "Expression vocabulary, not a declaration (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/variants.md",
+      "line": 34,
+      "reason": "Expression vocabulary, not a declaration (upstream DocumentationExamples.Classify)"
+    }
+  ]
+}

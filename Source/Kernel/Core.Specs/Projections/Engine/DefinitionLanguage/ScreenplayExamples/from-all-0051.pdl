@@ -1,0 +1,10 @@
+# Uses 'every' — only runs for UserRegistered and UserEmailChanged
+projection UserProfile => UserProfileModel
+  every
+    LastUpdated = $eventContext.occurred
+
+  from UserRegistered
+    Name = name
+
+  from UserEmailChanged
+    Email = email

@@ -1,0 +1,11 @@
+projection User => UserReadModel
+  from UserRegistered
+    Name = name
+    Email = email
+
+  from UserLoggedIn
+    count LoginCount
+    LastLogin = $eventContext.occurred
+
+  from UserProfileViewed
+    increment ProfileViewCount

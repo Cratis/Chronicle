@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from OrderPlaced
+    increment TotalOrders
+    count OrderCount
+    add TotalRevenue by total

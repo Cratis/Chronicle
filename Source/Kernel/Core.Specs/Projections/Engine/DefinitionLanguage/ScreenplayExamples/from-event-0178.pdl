@@ -1,0 +1,8 @@
+projection Doc => DocReadModel
+  from OrderPlaced key orderId
+    CustomerId = customerId
+    OrderNumber = orderNumber
+    Total = total
+    Status = "Pending"
+    PlacedAt = $eventContext.occurred
+    increment TotalOrders

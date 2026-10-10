@@ -1,0 +1,11 @@
+projection Order => OrderReadModel
+  from OrderPlaced
+    # AutoMap enabled
+
+  join Customer on CustomerId
+    with CustomerCreated
+      no automap
+      CustomerName = name
+    with CustomerUpdated
+      no automap
+      CustomerName = name
