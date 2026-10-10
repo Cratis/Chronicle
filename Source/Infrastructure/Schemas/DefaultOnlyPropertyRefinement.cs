@@ -14,7 +14,7 @@ internal static class DefaultOnlyPropertyRefinement
     static readonly string[] _maps = ["properties", "$defs", "definitions", "patternProperties", "dependentSchemas"];
     static readonly string[] _children = ["items", "additionalProperties", "unevaluatedProperties", "contains", "propertyNames", "not", "if", "then", "else"];
     static readonly string[] _arrays = ["allOf", "anyOf", "oneOf", "prefixItems", "items"];
-    static readonly string[] _refinementKeys = ["default", "title", "type", "format", "compliance", "security"];
+    static readonly string[] _refinementKeys = ["default", "title", "type", "format", "compliance", "security", "items", "enum", "x-enumNames", "$comment", "pattern", "minLength", "maxLength", "properties", "required", "additionalProperties", "oneOf", "anyOf", "$ref"];
 
     /// <summary>
     /// Walks matching schema declarations, excluding maps and arbitrary data.
@@ -104,10 +104,13 @@ internal static class DefaultOnlyPropertyRefinement
             }
             if (property && (IsRefinement(previous, incoming) || IsRefinement(incoming, previous)))
             {
-                previous.Remove("type");
-                previous.Remove("format");
-                incoming.Remove("type");
-                incoming.Remove("format");
+                // The legacy declaration had no representation at all. Erase the newly supplied
+                // representation, not constraints on declarations that were already typed.
+                foreach (var key in _refinementKeys.Where(key => key != "default"))
+                {
+                    previous.Remove(key);
+                    incoming.Remove(key);
+                }
             }
         }
         return true;

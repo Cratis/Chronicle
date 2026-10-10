@@ -32,14 +32,25 @@ and protection metadata, as well as its default. Older generators could emit onl
 for an optional concept constructor parameter. Values supplied for that property are still preserved
 when the kernel encounters the older untyped schema.
 
-A default-only property may gain only its type, format and compliance or security metadata within
-an existing event generation, without changing its default. Registration tolerates the corresponding
-legacy shape in the opposite direction and retains the more precise stored schema. A changed
-default, constraint or payload shape still requires a new generation.
+A default-only property may gain its generated representation within an existing event generation,
+without changing its default. This includes type, format, array items, enum members, string patterns
+and lengths, nested object properties, and compliance or security metadata. Registration tolerates
+the corresponding legacy shape in the opposite direction and retains the more precise stored schema,
+including its protection metadata. A changed default or a changed already-typed property still
+requires a new generation.
 
 The .NET client sends the precise event schema only when the kernel advertises
 `precise-event-type-schemas` during connection. Against an older kernel it registers the legacy
-shape instead. Read-model schemas always use the precise shape.
+shape instead. Event-sequence sink definitions use the same capability gate; ordinary read-model
+schemas always use the precise shape.
+
+Registrations that supply only `Schema`, without a `Generations` list, are also checked for
+compatibility with the stored generation. They can no longer overwrite an incompatible schema.
+
+If you implement a custom `IJsonSchemaGenerator`, implement `GenerateLegacyEventType` as well as
+`Generate`. The client calls it for kernels without the capability and for connections that do not
+implement `IKernelCapabilities`, including testing or wrapped connections. Its default implementation
+throws `LegacyEventTypeSchemasNotSupported`; it does not silently reuse the precise schema.
 
 Adding protection metadata affects future appends, not historical plaintext; see
 [Adding PII to an existing event type](../compliance/pii#adding-pii-to-an-existing-event-type).
@@ -82,7 +93,8 @@ Chronicle refuses a value that cannot fit exactly instead of allowing SQL Server
 Values requiring a larger fractional scale can remain exact in event content, but cannot populate
 that scalar read-model column. Choose a suitable read-model representation for those values.
 SQL Server returns decimals at its column's fixed scale; Chronicle removes redundant trailing zeros
-when reading them. Numerical precision is retained, but arbitrary input trailing-zero scale is not.
+when reading them. Numerical precision is retained, but arbitrary input trailing-zero scale is not:
+`193.580` reads back as `193.58`, so `decimal.GetBits` can differ even though the values are equal.
 
 ### Upgrading existing SQL read models
 
@@ -90,6 +102,11 @@ The SQL migrator adds missing columns; it does not alter existing column types. 
 SQL read models before relying on exact decimal writes. Replay creates a fresh table with the new
 mapping and replaces the old table when the replay succeeds. This is required for SQLite's former
 REAL columns and SQL Server's former DECIMAL(18,2) columns.
+
+SQLite's new TEXT columns preserve decimal digits but compare and sort lexicographically, not
+numerically: `"10"` sorts before `"9"`. Do not use their native ordering or range comparisons as
+numeric decimal operations. Existing REAL-affinity columns can coerce invariant decimal text back
+to a binary floating-point value until replay replaces the table.
 
 Replay cannot undo precision already lost from the original event content. Check the source events
 before assuming that a replay will recover an amount.

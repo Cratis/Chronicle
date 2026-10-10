@@ -552,7 +552,7 @@ public static class EventEntryConverter
     /// <param name="namespace">The namespace.</param>
     /// <param name="identityStorage">The identity storage.</param>
     /// <param name="namedTags">The named tags.</param>
-    /// <param name="eventTypesStorage">The event type storage.</param>
+    /// <param name="resolveSchema">Resolves a generation schema within the current read.</param>
     /// <param name="converter">The schema-aware JSON converter.</param>
     /// <returns>The appended event.</returns>
     public static async Task<AppendedEvent> ToAppendedEvent(
@@ -561,22 +561,25 @@ public static class EventEntryConverter
         EventStoreNamespaceName @namespace,
         IIdentityStorage identityStorage,
         IReadOnlyCollection<NamedTag>? namedTags,
-        Cratis.Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage,
+        Func<EventType, Task<Cratis.Chronicle.Schemas.JsonSchema?>> resolveSchema,
         Cratis.Chronicle.Json.IExpandoObjectConverter converter)
     {
         var result = await ToAppendedEvent(entry, eventStore, @namespace, identityStorage, namedTags);
-        if (result.Context.EventType.Id == GlobalEventTypes.Redaction ||
-            !await eventTypesStorage.HasFor(result.Context.EventType.Id, result.Context.EventType.Generation))
+        if (result.Context.EventType.Id == GlobalEventTypes.Redaction)
         {
             return result;
         }
-        var schema = await eventTypesStorage.GetFor(result.Context.EventType.Id, result.Context.EventType.Generation);
+        var schema = await resolveSchema(result.Context.EventType);
+        if (schema is null)
+        {
+            return result;
+        }
         var content = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
         if (content?.TryGetValue(result.Context.EventType.Generation.ToString(), out var element) != true)
         {
             return result;
         }
-        return result with { Content = converter.ToExpandoObject(System.Text.Json.Nodes.JsonNode.Parse(element.GetRawText())!.AsObject(), schema.Schema) };
+        return result with { Content = converter.ToExpandoObject(System.Text.Json.Nodes.JsonNode.Parse(element.GetRawText())!.AsObject(), schema) };
     }
 
     static ExpandoObject ConvertJsonObjectToExpando(JsonElement element)

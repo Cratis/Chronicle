@@ -27,43 +27,18 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// <param name="database">The <see cref="IDatabase"/> for storage operations.</param>
 /// <param name="identityStorage">The <see cref="IIdentityStorage"/> for managing identities.</param>
 /// <param name="logger">The <see cref="ILogger{EventSequenceStorage}"/> for logging.</param>
+/// <param name="eventTypesStorage">The shared event type storage.</param>
+/// <param name="converter">The schema-aware content converter.</param>
 public partial class EventSequenceStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
     IDatabase database,
     IIdentityStorage identityStorage,
-    ILogger<EventSequenceStorage> logger) : IEventSequenceStorage, IEventPublicationStorage
+    ILogger<EventSequenceStorage> logger,
+    Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage,
+    Json.IExpandoObjectConverter converter) : IEventSequenceStorage, IEventPublicationStorage
 {
-    readonly Chronicle.Storage.EventTypes.IEventTypesStorage _eventTypesStorage = new Cratis.Chronicle.Storage.Sql.EventStores.EventTypes.EventTypesStorage(eventStore, database);
-    readonly Json.IExpandoObjectConverter _expandoObjectConverter = new Json.ExpandoObjectConverter(new TypeFormats());
-
-    /// <summary>
-    /// Initializes storage with shared schema dependencies.
-    /// </summary>
-    /// <param name="eventStore">The event store.</param>
-    /// <param name="namespace">The namespace.</param>
-    /// <param name="eventSequenceId">The event sequence.</param>
-    /// <param name="database">The database.</param>
-    /// <param name="identityStorage">The identity storage.</param>
-    /// <param name="logger">The logger.</param>
-    /// <param name="eventTypesStorage">The event schemas.</param>
-    /// <param name="converter">The schema-aware content converter.</param>
-    public EventSequenceStorage(
-        EventStoreName eventStore,
-        EventStoreNamespaceName @namespace,
-        EventSequenceId eventSequenceId,
-        IDatabase database,
-        IIdentityStorage identityStorage,
-        ILogger<EventSequenceStorage> logger,
-        Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage,
-        Json.IExpandoObjectConverter converter)
-        : this(eventStore, @namespace, eventSequenceId, database, identityStorage, logger)
-    {
-        _eventTypesStorage = eventTypesStorage;
-        _expandoObjectConverter = converter;
-    }
-
     /// <inheritdoc/>
     public bool SupportsRevisionTracking => false;
 
@@ -939,9 +914,10 @@ public partial class EventSequenceStorage(
         // handing it to EventCursor - that cursor re-sorts ascending as it batches.
         var namedTags = await NamedTagEntries.LoadFor(scope.DbContext, eventSequenceId.Value, entries.Select(entry => entry.SequenceNumber), cancellationToken);
         var events = new List<AppendedEvent>(entries.Count);
+        var schemas = new EventSchemaResolver(eventTypesStorage);
         foreach (var entry in entries)
         {
-            events.Add(await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber), _eventTypesStorage, _expandoObjectConverter));
+            events.Add(await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber), schemas.GetFor, converter));
         }
 
         return new MaterializedEventCursor(events);
@@ -1074,16 +1050,20 @@ public partial class EventSequenceStorage(
             : EventSequenceNumber.First;
     }
 
-    EventCursor CreateCursor(IQueryable<EventEntry> query, DbContextScope<EventSequenceDbContext> scope, CancellationToken cancellationToken) =>
-        new(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken)
+    EventCursor CreateCursor(IQueryable<EventEntry> query, DbContextScope<EventSequenceDbContext> scope, CancellationToken cancellationToken)
+    {
+        var schemas = new EventSchemaResolver(eventTypesStorage);
+        return new(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken)
         {
-            ConvertEntry = (entry, tags) => EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, tags, _eventTypesStorage, _expandoObjectConverter)
+            ConvertEntry = (entry, tags) => EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, tags, schemas.GetFor, converter)
         };
+    }
 
     async Task<AppendedEvent> ToAppendedEvent(EventEntry entry, DbContextScope<EventSequenceDbContext> scope)
     {
         var namedTags = await NamedTagEntries.LoadFor(scope.DbContext, eventSequenceId.Value, [entry.SequenceNumber]);
-        return await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber), _eventTypesStorage, _expandoObjectConverter);
+        var schemas = new EventSchemaResolver(eventTypesStorage);
+        return await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber), schemas.GetFor, converter);
     }
 
     async Task<AppendedEvent> BuildAppendedEventFromRedactionEntry(EventEntry redactionEntry, DbContextScope<EventSequenceDbContext> scope)
