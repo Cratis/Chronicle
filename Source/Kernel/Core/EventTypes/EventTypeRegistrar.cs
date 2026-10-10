@@ -176,11 +176,12 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
             {
                 continue;
             }
-            if (!stored.Schema.HasCompatibleProtectionMetadata(incoming.Schema))
+            var refined = stored.Schema.MorePrecise(incoming.Schema);
+            if (!stored.Schema.HasCompatibleProtectionMetadata(refined))
             {
                 throw new EventTypeSchemaChanged(eventType.Type.Id, incoming.Generation.Value);
             }
-            generations[index] = incoming with { Schema = stored.Schema.MorePrecise(incoming.Schema) };
+            generations[index] = incoming with { Schema = refined };
         }
 
         var migrations = eventType.Migrations
@@ -430,7 +431,8 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
             // that only gained members or had members renamed - neither moves an existing member off the
             // underlying value a stored payload carries. Everything else, including a member that disappeared or
             // was renumbered, still needs a new generation.
-            if (!existingGeneration.Schema.IsCompatibleWith(newSchema))
+            var refined = existingGeneration.Schema.MorePrecise(newSchema);
+            if (!existingGeneration.Schema.IsCompatibleWith(refined))
             {
                 throw new EventTypeSchemaChanged(eventType.Type.Id, genDef.Generation);
             }

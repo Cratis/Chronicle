@@ -30,7 +30,7 @@ public static class JsonSchemaCompatibilityExtensions
     public static bool IsCompatibleWith(this JsonSchema stored, JsonSchema generated)
     {
         var storedNode = JsonNode.Parse(stored.ToJson());
-        var generatedNode = JsonNode.Parse(generated.ToJson());
+        var generatedNode = JsonNode.Parse(stored.MorePrecise(generated).ToJson());
         StripNullableFormatMarkers(storedNode);
         StripNullableFormatMarkers(generatedNode);
         StripTitles(storedNode);
@@ -78,7 +78,7 @@ public static class JsonSchemaCompatibilityExtensions
     public static bool HasCompatibleProtectionMetadata(this JsonSchema stored, JsonSchema generated)
     {
         var storedNode = JsonNode.Parse(stored.ToJson());
-        var generatedNode = JsonNode.Parse(generated.ToJson());
+        var generatedNode = JsonNode.Parse(stored.MorePrecise(generated).ToJson());
         var incoming = DefaultOnlyPropertyRefinement.Pairs(storedNode, generatedNode).ToDictionary(pair => pair.Path, pair => pair.Generated);
         foreach (var (previous, _, _, path) in DefaultOnlyPropertyRefinement.Pairs(storedNode, storedNode))
         {
