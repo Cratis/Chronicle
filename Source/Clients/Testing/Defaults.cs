@@ -48,7 +48,7 @@ public class Defaults
         JsonSchemaGenerator = testingStore.JsonSchemaGenerator;
         ClientArtifactsProvider = testingStore.ClientArtifactsProvider;
         Options = testingStore.ClientOptions;
-        ScenarioOptions = options ?? (serviceProvider is null ? null : Options);
+        ScenarioOptions = options;
         EventTypes = testingStore.EventTypes;
         EventSerializer = testingStore.EventSerializer;
     }
@@ -84,7 +84,7 @@ public class Defaults
     public IEventSerializer EventSerializer { get; }
 
     /// <summary>
-    /// Gets settings explicitly supplied to this run, leaving scenario-local DI settings available otherwise.
+    /// Gets the settings explicitly supplied to this run, or <see langword="null"/> so each scenario resolves its own settings as before.
     /// </summary>
     internal ChronicleOptions? ScenarioOptions { get; }
 }
