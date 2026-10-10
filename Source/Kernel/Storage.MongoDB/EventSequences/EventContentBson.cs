@@ -26,7 +26,7 @@ internal static class EventContentBson
     /// <returns>The lossless BSON content.</returns>
     internal static BsonDocument FromJson(string json, JsonSchema? schema = null)
     {
-        if (schema is not null && _decimalSchemas.GetValue(schema, value => new(HasDecimal(value, new(ReferenceEqualityComparer.Instance)))).HasDecimal)
+        if (schema is not null && _decimalSchemas.GetValue(schema, value => new(HasDecimal(value))).HasDecimal)
         {
             return BsonDocument.Parse(PrepareForBson(JsonNode.Parse(json), schema)!.ToJsonString());
         }
@@ -35,7 +35,7 @@ internal static class EventContentBson
         {
             if (reader.TokenType is JsonTokenType.Number &&
                 ((reader.TryGetUInt64(out var unsigned) && unsigned > long.MaxValue) ||
-                 (schema is null && RequiresDecimal(Encoding.UTF8.GetString(reader.ValueSpan)))))
+                 RequiresDecimal(Encoding.UTF8.GetString(reader.ValueSpan))))
             {
                 return BsonDocument.Parse(PrepareForBson(JsonNode.Parse(json), schema)!.ToJsonString());
             }
@@ -63,18 +63,22 @@ internal static class EventContentBson
         return (JsonObject)RestoreDecimals(document, node)!;
     }
 
-    static bool HasDecimal(JsonSchema schema, HashSet<JsonSchema> visited)
+    static bool HasDecimal(JsonSchema schema)
     {
-        if (!visited.Add(schema)) return false;
-        if (schema.Format?.TrimEnd('?') == "decimal") return true;
-        var actual = schema.ActualTypeSchema;
-        if (!ReferenceEquals(actual, schema) && HasDecimal(actual, visited)) return true;
-
-        return schema.Properties.Values.Any(property => HasDecimal(property, visited)) ||
-            schema.AllOf.Concat(schema.AnyOf).Concat(schema.OneOf).Any(child => HasDecimal(child, visited)) ||
-            (schema.Item is not null && HasDecimal(schema.Item, visited)) ||
-            (schema.AdditionalPropertiesSchema is not null && HasDecimal(schema.AdditionalPropertiesSchema, visited));
+        // Scan the finite schema document, including definitions, without resolving recursive references.
+        var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(schema.ToJson()));
+        while (reader.Read())
+        {
+            if (reader.TokenType is JsonTokenType.PropertyName && reader.ValueTextEquals("format") &&
+                reader.Read() && reader.TokenType is JsonTokenType.String && IsDecimalFormat(reader.GetString()))
+            {
+                return true;
+            }
+        }
+        return false;
     }
+
+    static bool IsDecimalFormat(string? format) => format?.TrimEnd('?') == "decimal";
 
     static bool ContainsDecimals(BsonValue value) => value switch
     {
@@ -109,7 +113,7 @@ internal static class EventContentBson
         }
         if (node is JsonValue value)
         {
-            if ((actual?.Format ?? schema?.Format)?.TrimEnd('?') == "decimal" && value.GetValueKind() == JsonValueKind.Number)
+            if (IsDecimalFormat(actual?.Format ?? schema?.Format) && value.GetValueKind() == JsonValueKind.Number)
             {
                 return new JsonObject { ["$numberDecimal"] = value.ToJsonString() };
             }
