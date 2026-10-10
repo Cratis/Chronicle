@@ -194,6 +194,15 @@ message CommandResult_CompleteStreamResponse {
    string AuthorizationFailureReason = 6;
    CompleteStreamResponse Response = 7;
 }
+message CommandResult_ReopenStreamScopeResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   ReopenStreamScopeResponse Response = 7;
+}
 message CommandResult_VerifyContentResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -571,6 +580,27 @@ message RedactRequest {
    repeated Causation Causation = 6;
    Identity CausedBy = 7;
 }
+enum ReopenStreamScopeError {
+   REOPEN_STREAM_SCOPE_ERROR_None = 0;
+   NotCompleted = 1;
+   ClosedByEvent = 2;
+}
+message ReopenStreamScopeRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string Reason = 4;
+   string EventSourceId = 5;
+   string EventSourceType = 6;
+   string EventStreamType = 7;
+   string EventStreamId = 8;
+   repeated Causation Causation = 9;
+   Identity CausedBy = 10;
+}
+message ReopenStreamScopeResponse {
+   bool IsSuccess = 1;
+   ReopenStreamScopeError Error = 2;
+}
 message ReviseRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -678,6 +708,7 @@ service EventSequences {
    rpc QueryEventsWithNamedTags (QueryEventsWithNamedTagsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc Redact (RedactRequest) returns (CommandResult);
    rpc RedactForEventSource (RedactForEventSourceRequest) returns (CommandResult);
+   rpc ReopenStreamScope (ReopenStreamScopeRequest) returns (CommandResult_ReopenStreamScopeResponse);
    rpc Revise (ReviseRequest) returns (CommandResult);
    rpc SequenceHistogram (SequenceHistogramRequest) returns (QueryResult_IEnumerable_SequenceHistogramBucketResponse);
    rpc SequenceHistogramWithNamedTags (SequenceHistogramWithNamedTagsRequest) returns (QueryResult_IEnumerable_SequenceHistogramBucketResponse);

@@ -100,6 +100,14 @@ public interface IEventSequences
     [Operation]
     Task<CommandResult> RedactForEventSource(RedactForEventSourceRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the ReopenStreamScope command.
+    /// </summary>
+    /// <param name = "request">The ReopenStreamScope request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<ReopenStreamScopeResponse>> ReopenStreamScope(ReopenStreamScopeRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the Revise command.
     /// </summary>
     /// <param name = "request">The Revise request.</param>
@@ -1082,6 +1090,92 @@ public class RedactForEventSourceRequest
     /// </summary>
     [ProtoMember(8)]
     public global::Cratis.Chronicle.Contracts.Sequences.Identity? CausedBy { get; set; }
+}
+
+/// <summary>
+/// Represents the ReopenStreamScopeRequest message.
+/// </summary>
+[ProtoContract]
+public class ReopenStreamScopeRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Reason.
+    /// </summary>
+    [ProtoMember(4)]
+    public string Reason { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSourceId.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventSourceType.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? EventSourceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventStreamType.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventStreamId.
+    /// </summary>
+    [ProtoMember(8)]
+    public string? EventStreamId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Causation.
+    /// </summary>
+    [ProtoMember(9)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.Causation>? Causation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CausedBy.
+    /// </summary>
+    [ProtoMember(10)]
+    public global::Cratis.Chronicle.Contracts.Sequences.Identity? CausedBy { get; set; }
+}
+
+/// <summary>
+/// Represents the ReopenStreamScopeResponse message.
+/// </summary>
+[ProtoContract]
+public class ReopenStreamScopeResponse
+{
+    /// <summary>
+    /// Gets or sets the IsSuccess.
+    /// </summary>
+    [ProtoMember(1)]
+    public bool IsSuccess { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Error.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeError Error { get; set; }
 }
 
 /// <summary>

@@ -90,6 +90,13 @@ internal sealed class EventSequences(
             new global::Cratis.Chronicle.Sequences.RedactForEventSource((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId, request.Reason, request.EventTypes, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse>> ReopenStreamScope(global::Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.Sequences.ReopenStreamScopeOutcome, global::Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Sequences.ReopenStreamScope((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.Reason, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.EventStreamId, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()),
+            response => ToReopenStreamScopeResponse(response));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> Revise(global::Cratis.Chronicle.Contracts.Sequences.ReviseRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
@@ -288,6 +295,13 @@ internal sealed class EventSequences(
             IsSuccess = source.IsSuccess,
             SequenceNumber = (ulong)source.SequenceNumber,
             Error = (global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamError)source.Error
+        };
+
+    static global::Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeResponse ToReopenStreamScopeResponse(global::Cratis.Chronicle.Sequences.ReopenStreamScopeOutcome source) =>
+        new()
+        {
+            IsSuccess = source.IsSuccess,
+            Error = (global::Cratis.Chronicle.Contracts.Sequences.ReopenStreamScopeError)source.Error
         };
 
     static global::Cratis.Chronicle.Contracts.Sequences.VerifyContentResponse ToVerifyContentResponse(global::Cratis.Chronicle.Sequences.ContentVerification source) =>
