@@ -549,7 +549,7 @@ public class EventStoreForTesting : IEventStore
             ])),
             new ReactorMethodArgumentsResolver(),
             NullLogger<ReactorsImpl>.Instance,
-            new NullLoggerFactory());
+            Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         ClientOptions.ExplicitArtifacts.ApplyTo(reactors);
         if (ClientOptions.ExplicitArtifacts.Reactors.Any())
         {
