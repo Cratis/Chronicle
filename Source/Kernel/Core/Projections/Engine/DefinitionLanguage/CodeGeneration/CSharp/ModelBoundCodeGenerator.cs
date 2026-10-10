@@ -41,7 +41,7 @@ public class ModelBoundCodeGenerator
 
         var compilationUnit = CompilationUnit()
             .WithUsings(List(usings))
-            .WithMembers(SingletonList<MemberDeclarationSyntax>(CreateRecordDeclaration(readModelName, schema, definition)))
+            .WithMembers(List<MemberDeclarationSyntax>(CreateRecordDeclarations(readModelName, schema, definition)))
             .NormalizeWhitespace();
 
         // Normalizing puts the whole parameter list on one line, and for a model-bound read model that
@@ -51,20 +51,7 @@ public class ModelBoundCodeGenerator
 
     static string GetEventPropertyName(string expression)
     {
-        if (expression == WellKnownExpressions.EventSourceId) return "Id";
         return expression;
-    }
-
-    static string GetCSharpType(JsonSchemaProperty propertySchema)
-    {
-        return propertySchema.Type switch
-        {
-            JsonObjectType.String => "string",
-            JsonObjectType.Integer => "int",
-            JsonObjectType.Number => "decimal",
-            JsonObjectType.Boolean => "bool",
-            _ => "object"
-        };
     }
 
     static string NormalizeExpression(string expression)
@@ -100,14 +87,19 @@ public class ModelBoundCodeGenerator
     RecordDeclarationSyntax CreateRecordDeclaration(
         string readModelName,
         JsonSchema schema,
-        ProjectionDefinition definition)
+        ProjectionDefinition definition,
+        bool isCollection,
+        string? keyProperty,
+        string scope)
     {
-        var attributes = CreateClassLevelAttributes(definition);
-        var parameters = CreateRecordParameters(schema, definition);
+        var attributes = ModelBoundRelationships.ClassAttributes(definition, isCollection)
+            .Select(attribute => AttributeList(SingletonSeparatedList(attribute))).ToList();
+        var parameters = CreateRecordParameters(schema, definition, isCollection, keyProperty, scope);
 
         var recordDecl = RecordDeclaration(Token(SyntaxKind.RecordKeyword), readModelName)
             .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
-            .WithParameterList(ParameterList(SeparatedList(parameters)));
+            .WithParameterList(ParameterList(SeparatedList(parameters)))
+            .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
 
         if (attributes.Count > 0)
         {
@@ -117,46 +109,55 @@ public class ModelBoundCodeGenerator
         return recordDecl;
     }
 
-    List<AttributeListSyntax> CreateClassLevelAttributes(ProjectionDefinition definition) =>
-        definition.From
-            .Select(from =>
+    IEnumerable<RecordDeclarationSyntax> CreateRecordDeclarations(string name, JsonSchema schema, ProjectionDefinition definition, bool isCollection = false, string? keyProperty = null, bool isNested = false, string? scope = null)
+    {
+        if (!isNested && keyProperty is null)
+        {
+            keyProperty = schema.Properties.Keys.FirstOrDefault(property => property.Equals("Id", StringComparison.OrdinalIgnoreCase)) ?? schema.Properties.Keys.FirstOrDefault();
+        }
+        yield return CreateRecordDeclaration(name, schema, definition, isCollection, keyProperty, scope ?? $"projection '{name}'");
+
+        foreach (var property in schema.Properties)
+        {
+            var collection = property.Value.ActualSchema.Type == JsonObjectType.Array;
+            var childSchema = collection ? property.Value.Item?.ActualSchema : property.Value.ActualSchema;
+            if (childSchema?.Type != JsonObjectType.Object)
             {
-                var eventTypeName = from.Key.Id.Value;
-                var attribute = Attribute(
-                    GenericName("FromEvent")
-                        .WithTypeArgumentList(
-                            TypeArgumentList(
-                                SingletonSeparatedList<TypeSyntax>(
-                                    IdentifierName(eventTypeName)))));
+                continue;
+            }
+            var childDefinition = CSharpDefinitionSupport.ChildDefinition(definition, property.Key);
+            var childName = CSharpDefinitionSupport.RecordName(childSchema, name + property.Key);
+            foreach (var record in CreateRecordDeclarations(childName, childSchema, childDefinition, collection, collection ? childDefinition.IdentifiedBy.Path : null, !collection, $"{(collection ? "children" : "nested")} '{property.Key}'"))
+            {
+                yield return record;
+            }
+        }
+    }
 
-                return AttributeList(SingletonSeparatedList(attribute));
-            })
-            .ToList();
-
-    List<ParameterSyntax> CreateRecordParameters(JsonSchema schema, ProjectionDefinition definition)
+    List<ParameterSyntax> CreateRecordParameters(JsonSchema schema, ProjectionDefinition definition, bool isCollection, string? keyProperty, string scope)
     {
         var parameters = new List<ParameterSyntax>();
 
         if (schema.Properties?.Count > 0)
         {
             var propertyInfos = CollectPropertyMappings(definition);
-            var isFirst = true;
 
             foreach (var schemaProp in schema.Properties)
             {
                 var propName = schemaProp.Key;
-                var propType = GetCSharpType(schemaProp.Value);
-                var attributes = new List<AttributeSyntax>();
+                var propType = CSharpDefinitionSupport.ModelType(schemaProp.Value, schema.Title + propName);
+                var childSchema = schemaProp.Value.Item?.ActualSchema ?? schemaProp.Value.ActualSchema;
+                var childType = CSharpDefinitionSupport.RecordName(childSchema, schema.Title + propName);
+                var attributes = ModelBoundRelationships.PropertyAttributes(definition, propName, childType, isCollection).ToList();
 
-                if (isFirst)
+                if (propName == keyProperty)
                 {
                     attributes.Add(Attribute(IdentifierName("Key")));
-                    isFirst = false;
                 }
 
                 if (propertyInfos.TryGetValue(propName, out var propInfo))
                 {
-                    attributes.AddRange(CreatePropertyAttributes(propInfo, propName));
+                    attributes.AddRange(CreatePropertyAttributes(propInfo, propName, definition.SubscribesToAllEvents, definition.AutoMap == AutoMap.Disabled));
                 }
 
                 var parameter = Parameter(Identifier(propName))
@@ -164,11 +165,15 @@ public class ModelBoundCodeGenerator
 
                 if (attributes.Count > 0)
                 {
-                    parameter = parameter.WithAttributeLists(
-                        SingletonList(AttributeList(SeparatedList(attributes))));
+                    parameter = parameter.WithAttributeLists(List(attributes.Select(attribute =>
+                        AttributeList(SingletonSeparatedList(attribute)).WithTarget(attribute.Name.ToString() == "FromAll"
+                            ? AttributeTargetSpecifier(Token(SyntaxKind.PropertyKeyword))
+                            : null))));
                 }
 
-                parameters.Add(parameter);
+                var comments = ModelBoundLimitations.Comments(definition, propName, scope)
+                    .SelectMany(comment => new[] { Comment(comment), ElasticCarriageReturnLineFeed });
+                parameters.Add(parameter.WithLeadingTrivia(comments));
             }
         }
 
@@ -241,15 +246,16 @@ public class ModelBoundCodeGenerator
         }
 
         // Add FromAll/FromEvery mappings (only plain properties, not dynamic dictionary keys)
-        if (definition.SubscribesToAllEvents && definition.FromEvery.Properties.Count > 0)
+        if (definition.FromEvery.Properties.Count > 0)
         {
             foreach (var prop in definition.FromEvery.Properties)
             {
                 var propertyName = prop.Key.Path;
                 var normalizedExpression = NormalizeExpression(prop.Value);
 
-                // Skip dynamic dictionary keys (not supported in model-bound yet)
-                if (propertyName.Contains($".{WellKnownExpressions.EventContext}."))
+                // Unsupported mappings are documented at their read-model parameter instead of emitting
+                // an attribute that compiles but means something different.
+                if (!ModelBoundLimitations.CanMapEvery(definition, propertyName, normalizedExpression))
                 {
                     continue;
                 }
@@ -258,6 +264,14 @@ public class ModelBoundCodeGenerator
                 {
                     propInfo = new PropertyInfo { PropertyName = propertyName };
                     propertyInfos[propertyName] = propInfo;
+                }
+
+                // Child and nested context mappings are expanded over their local subscriptions because
+                // the client's [FromEvery] annotations are collected on the root definition.
+                if (definition.Owner == Concepts.Projections.ProjectionOwner.Parent && ProjectionExpressions.ReadValue(normalizedExpression).Kind is ProjectionValueKind.EventContextProperty or ProjectionValueKind.EventSourceId)
+                {
+                    propInfo.SetFroms.AddRange(definition.From.Keys.Select(eventType => (eventType.Id.Value, normalizedExpression)));
+                    continue;
                 }
 
                 // Check what expression it is and mark for FromAll attribute
@@ -275,7 +289,7 @@ public class ModelBoundCodeGenerator
                 }
                 else if (normalizedExpression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
                 {
-                    propInfo.FromAllContextProperty = normalizedExpression[(WellKnownExpressions.EventContext.Length + 1)..^1];
+                    propInfo.FromAllContextProperty = CSharpDefinitionSupport.ContextPath(normalizedExpression[(WellKnownExpressions.EventContext.Length + 1)..^1]);
                 }
                 else
                 {
@@ -288,34 +302,34 @@ public class ModelBoundCodeGenerator
         return propertyInfos;
     }
 
-    List<AttributeSyntax> CreatePropertyAttributes(PropertyInfo propInfo, string propName)
+    List<AttributeSyntax> CreatePropertyAttributes(PropertyInfo propInfo, string propName, bool fromAll, bool noAutoMap)
     {
         var attributes = new List<AttributeSyntax>();
 
         // FromAll attributes come first
         if (propInfo.FromAllCount)
         {
-            attributes.Add(CreateFromAllAttribute("count"));
+            attributes.Add(CreateEveryAttribute(fromAll, "count"));
         }
 
         if (propInfo.FromAllIncrement)
         {
-            attributes.Add(CreateFromAllAttribute("increment"));
+            attributes.Add(CreateEveryAttribute(fromAll, "increment"));
         }
 
         if (propInfo.FromAllDecrement)
         {
-            attributes.Add(CreateFromAllAttribute("decrement"));
+            attributes.Add(CreateEveryAttribute(fromAll, "decrement"));
         }
 
         if (propInfo.FromAllContextProperty is not null)
         {
-            attributes.Add(CreateFromAllAttribute(null, propInfo.FromAllContextProperty));
+            attributes.Add(CreateEveryAttribute(fromAll, null, propInfo.FromAllContextProperty));
         }
 
-        if (propInfo.FromAllProperty is not null && propInfo.FromAllProperty != propName)
+        if (propInfo.FromAllProperty is not null)
         {
-            attributes.Add(CreateFromAllAttribute(propInfo.FromAllProperty, null));
+            attributes.Add(CreateEveryAttribute(fromAll, propInfo.FromAllProperty, null));
         }
 
         foreach (var addFrom in propInfo.AddFroms)
@@ -347,7 +361,7 @@ public class ModelBoundCodeGenerator
         // When they match, AutoMap handles it through the class-level [FromEvent<>] attribute
         foreach (var setFrom in propInfo.SetFroms)
         {
-            if (setFrom.EventPropertyName != propName)
+            if (setFrom.EventPropertyName != propName || noAutoMap)
             {
                 attributes.Add(CreateMappingAttribute("SetFrom", setFrom.EventTypeName, setFrom.EventPropertyName, propName));
             }
@@ -371,6 +385,14 @@ public class ModelBoundCodeGenerator
 
     AttributeSyntax CreateMappingAttribute(string attributeName, string eventTypeName, string eventPropertyName, string propName)
     {
+        var source = ProjectionExpressions.ReadValue(eventPropertyName);
+        if (attributeName == "SetFrom" && source.Kind is ProjectionValueKind.EventContextProperty or ProjectionValueKind.EventSourceId)
+        {
+            var contextProperty = source.Kind == ProjectionValueKind.EventSourceId ? "EventSourceId" : CSharpDefinitionSupport.ContextPath(source.Value);
+            return CreateSimpleAttribute("SetFromContext", eventTypeName).WithArgumentList(AttributeArgumentList(
+                SingletonSeparatedList(AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(contextProperty))))));
+        }
+
         var attribute = GenericName(attributeName)
             .WithTypeArgumentList(
                 TypeArgumentList(
@@ -411,31 +433,22 @@ public class ModelBoundCodeGenerator
         return Attribute(attribute);
     }
 
-    AttributeSyntax CreateFromAllAttribute(string? property = null, string? contextProperty = null)
+    AttributeSyntax CreateEveryAttribute(bool fromAll, string? property = null, string? contextProperty = null)
     {
-        if (property is null && contextProperty is null)
-        {
-            return Attribute(IdentifierName("FromAll"));
-        }
-
+        var attribute = Attribute(IdentifierName(fromAll ? "FromAll" : "FromEvery"));
         var arguments = new List<AttributeArgumentSyntax>();
-
         if (contextProperty is not null)
         {
-            arguments.Add(
-                AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(contextProperty)))
-                    .WithNameEquals(NameEquals(IdentifierName("contextProperty"))));
+            arguments.Add(AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(contextProperty)))
+                .WithNameColon(NameColon(IdentifierName("contextProperty"))));
         }
-
         if (property is not null)
         {
-            arguments.Add(
-                AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(property)))
-                    .WithNameEquals(NameEquals(IdentifierName("property"))));
+            arguments.Add(AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(property)))
+                .WithNameColon(NameColon(IdentifierName("property"))));
         }
 
-        return Attribute(IdentifierName("FromAll"))
-            .WithArgumentList(AttributeArgumentList(SeparatedList(arguments)));
+        return arguments.Count == 0 ? attribute : attribute.WithArgumentList(AttributeArgumentList(SeparatedList(arguments)));
     }
 
     AttributeSyntax CreateSetValueAttribute(string eventTypeName, string value, bool isText)
