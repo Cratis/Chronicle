@@ -16,6 +16,8 @@ public class and_capture_fails_in_one_namespace : Patterns.for_PatternCapture.gi
     {
         _eventTypes.GetAllDefinitions().Returns([]);
         _eventTypes.Register(Arg.Any<IEnumerable<EventTypeToRegister>>()).Returns([new EventTypeId("CustomerNamed")]);
+        _eventTypes.GetDefinition(Arg.Any<EventTypeId>()).Returns(call =>
+            new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.Client, false, [], []));
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(Substitute.For<IEventSequence>());
     }
 
