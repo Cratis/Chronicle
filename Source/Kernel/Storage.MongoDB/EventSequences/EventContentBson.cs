@@ -30,7 +30,9 @@ internal static class EventContentBson
         var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(json));
         while (reader.Read())
         {
-            if (reader.TokenType is JsonTokenType.Number && reader.TryGetUInt64(out var unsigned) && unsigned > long.MaxValue)
+            if (reader.TokenType is JsonTokenType.Number &&
+                ((reader.TryGetUInt64(out var unsigned) && unsigned > long.MaxValue) ||
+                 RequiresDecimal(Encoding.UTF8.GetString(reader.ValueSpan))))
             {
                 return BsonDocument.Parse(PrepareForBson(JsonNode.Parse(json))!.ToJsonString());
             }
@@ -74,6 +76,10 @@ internal static class EventContentBson
     static JsonNode? PrepareForBson(JsonNode? node, JsonSchema? schema = null)
     {
         var actual = schema?.ActualTypeSchema;
+        if (actual?.OneOf.Count > 0)
+        {
+            actual = actual.OneOf.FirstOrDefault(alternative => alternative.Type != JsonObjectType.Null)?.ActualTypeSchema ?? actual;
+        }
         if (node is JsonObject document)
         {
             var properties = actual?.GetFlattenedProperties().ToDictionary(property => property.Name, StringComparer.OrdinalIgnoreCase);
@@ -87,7 +93,11 @@ internal static class EventContentBson
         }
         if (node is JsonValue value)
         {
-            if ((schema?.Format ?? actual?.Format)?.TrimEnd('?') == "decimal" && value.GetValueKind() == JsonValueKind.Number)
+            if ((actual?.Format ?? schema?.Format)?.TrimEnd('?') == "decimal" && value.GetValueKind() == JsonValueKind.Number)
+            {
+                return new JsonObject { ["$numberDecimal"] = value.ToJsonString() };
+            }
+            if (schema is null && value.GetValueKind() == JsonValueKind.Number && RequiresDecimal(value.ToJsonString()))
             {
                 return new JsonObject { ["$numberDecimal"] = value.ToJsonString() };
             }
@@ -99,13 +109,27 @@ internal static class EventContentBson
         return node?.DeepClone();
     }
 
+    static bool RequiresDecimal(string literal) =>
+        !long.TryParse(literal, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) &&
+        decimal.TryParse(literal, NumberStyles.Float, CultureInfo.InvariantCulture, out _) &&
+        (!double.TryParse(literal, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ||
+         !string.Equals(literal, value.ToString("R", CultureInfo.InvariantCulture), StringComparison.Ordinal));
+
     static JsonNode? RestoreDecimals(BsonValue bson, JsonNode? node)
     {
         if (bson is BsonDecimal128 number)
         {
-            return IsLargeUnsignedInteger(number)
-                ? JsonValue.Create(Decimal128.ToUInt64(number.Value))
-                : JsonValue.Create(Decimal128.ToDecimal(number.Value));
+            try
+            {
+                return IsLargeUnsignedInteger(number)
+                    ? JsonValue.Create(Decimal128.ToUInt64(number.Value))
+                    : JsonValue.Create(Decimal128.ToDecimal(number.Value));
+            }
+            catch (OverflowException)
+            {
+                // Imported BSON can carry values outside CLR decimal's range, including non-finite values.
+                return JsonValue.Create(number.Value.ToString());
+            }
         }
         if (bson is BsonDocument document && node is JsonObject jsonObject)
         {
