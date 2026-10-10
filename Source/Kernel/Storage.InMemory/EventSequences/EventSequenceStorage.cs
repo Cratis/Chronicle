@@ -193,6 +193,7 @@ public partial class EventSequenceStorage(
             _events.Add(appended);
             _originalCausedByChains[sequenceNumber] = causedByChain.ToArray();
             _appendedGenerations[sequenceNumber] = eventType.Generation.Value;
+            _generationHashes[sequenceNumber] = new Dictionary<EventTypeGeneration, EventHash>(contentHashes);
 
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(appended);
         }
@@ -252,6 +253,7 @@ public partial class EventSequenceStorage(
                 _events.Add(appendedEvent);
                 _originalCausedByChains[e.SequenceNumber] = e.CausedByChain.ToArray();
                 _appendedGenerations[e.SequenceNumber] = e.EventType.Generation.Value;
+                _generationHashes[e.SequenceNumber] = new Dictionary<EventTypeGeneration, EventHash>(e.ContentHashes);
                 appended.Add(appendedEvent);
             }
         }

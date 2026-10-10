@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage
+public partial class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage
 {
     readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
     ConcurrentBag<EventType> _eventTypes = new();
@@ -50,6 +50,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
         }
         var eventType = eventSchema.ToSql();
+        eventType.MigrationVersionsJson = existingEventType?.MigrationVersionsJson ?? "{}";
         _eventTypes.Add(eventType);
 
         await scope.DbContext.EventTypes.Upsert(eventType);
@@ -70,6 +71,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
             // The full definition carries no visibility or origin, so what is already stored is kept.
             eventType.Visibility = existing.Visibility;
             eventType.Origin = existing.Origin;
+            eventType.MigrationVersionsJson = existing.MigrationVersionsJson;
 
             // Preserve the stored schema when only CLR titles differ; those titles are not needed to
             // resolve composite keys (which use read-model schemas, not event schemas).

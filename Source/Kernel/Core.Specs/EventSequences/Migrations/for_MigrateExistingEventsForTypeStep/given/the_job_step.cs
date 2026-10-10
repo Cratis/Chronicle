@@ -22,6 +22,7 @@ public class the_job_step : Specification
     protected JobStepKey _jobStepKey;
     protected IStorage _storage;
     protected IEventTypeMigrations _eventTypeMigrations;
+    protected IExpandoObjectConverter _converter;
     protected EventTypeId _eventTypeId;
     protected MigrateExistingEventsForTypeRequest _request;
 
@@ -36,7 +37,9 @@ public class the_job_step : Specification
         _silo.AddService(_storage);
         _silo.AddService(_eventTypeMigrations);
         _silo.AddService(Substitute.For<IJsonSchemaMetadataManager>());
-        _silo.AddService(Substitute.For<IExpandoObjectConverter>());
+        _converter = Substitute.For<IExpandoObjectConverter>();
+        _silo.AddService(_converter);
+        _silo.AddService<IEventHashCalculator>(new EventHashCalculator());
         _silo.AddService(new JsonSerializerOptions());
         _silo.AddService(Substitute.For<IJobStepThrottle>());
 
