@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Seeding;
 
@@ -29,6 +30,41 @@ public interface IEventSeedingBuilder
     /// <param name="events">Collection of events to seed.</param>
     /// <returns>The builder for continuation.</returns>
     IEventSeedingBuilder ForEventSource(EventSourceId eventSourceId, IEnumerable<object> events);
+
+    /// <summary>
+    /// Seeds events of one type onto an event stream.
+    /// </summary>
+    /// <typeparam name="TEvent">The event type.</typeparam>
+    /// <param name="eventSourceId">The event source identifier.</param>
+    /// <param name="eventStreamType">The stream type.</param>
+    /// <param name="eventStreamId">The stream identifier.</param>
+    /// <param name="events">The events to seed.</param>
+    /// <param name="eventSourceType">The optional source type.</param>
+    /// <returns>The builder for continuation.</returns>
+    /// <exception cref="EventSeedingRoutingNotSupported">The implementation does not support routing.</exception>
+    IEventSeedingBuilder For<TEvent>(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, IEnumerable<TEvent> events, EventSourceType? eventSourceType = default)
+        where TEvent : class => throw new EventSeedingRoutingNotSupported();
+
+    /// <summary>
+    /// Seeds events onto an event stream.
+    /// </summary>
+    /// <param name="eventSourceId">The event source identifier.</param>
+    /// <param name="eventStreamType">The stream type.</param>
+    /// <param name="eventStreamId">The stream identifier.</param>
+    /// <param name="events">The events to seed.</param>
+    /// <param name="eventSourceType">The optional source type.</param>
+    /// <returns>The builder for continuation.</returns>
+    /// <exception cref="EventSeedingRoutingNotSupported">The implementation does not support routing.</exception>
+    IEventSeedingBuilder ForEventSource(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, IEnumerable<object> events, EventSourceType? eventSourceType = default)
+        => throw new EventSeedingRoutingNotSupported();
+
+    /// <summary>
+    /// Seeds individually routed events, merging their tags with event-type tags.
+    /// </summary>
+    /// <param name="events">The routed events.</param>
+    /// <returns>The builder for continuation.</returns>
+    /// <exception cref="EventSeedingRoutingNotSupported">The implementation does not support routing.</exception>
+    IEventSeedingBuilder ForEvents(IEnumerable<EventForEventSourceId> events) => throw new EventSeedingRoutingNotSupported();
 
     /// <summary>
     /// Configure seed data to be specific to a namespace.

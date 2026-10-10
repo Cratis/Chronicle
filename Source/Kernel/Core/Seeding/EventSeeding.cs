@@ -221,10 +221,10 @@ public class EventSeeding(
             return new SeedableEvent(
                 _.Seeded,
                 new EventToAppend(
-                    EventSourceType.Default,
+                    _.Seeded.EventSourceType,
                     _.Entry.EventSourceId,
-                    EventStreamType.All,
-                    EventStreamId.Default,
+                    _.Seeded.EventStreamType,
+                    _.Seeded.EventStreamId,
                     new EventType(_.Entry.EventTypeId, EventTypeGeneration.First),
                     _.Entry.Tags ?? [],
                     content));
@@ -251,7 +251,12 @@ public class EventSeeding(
         foreach (var entry in entriesList)
         {
             var tags = entry.Tags?.Select(t => t.Value) ?? [];
-            var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, tags);
+            var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, tags)
+            {
+                EventSourceType = SeedRouting.SourceType(entry.EventSourceType?.Value),
+                EventStreamType = SeedRouting.StreamType(entry.EventStreamType?.Value),
+                EventStreamId = SeedRouting.StreamId(entry.EventStreamId?.Value)
+            };
 
             if (!stillAccountedFor.TryGetValue(seededEntry, out var remaining))
             {
@@ -329,11 +334,14 @@ public class EventSeeding(
              y is not null &&
              x.EventSourceId == y.EventSourceId &&
              x.EventTypeId == y.EventTypeId &&
+             SeedRouting.SourceType(x.EventSourceType?.Value) == SeedRouting.SourceType(y.EventSourceType?.Value) &&
+             SeedRouting.StreamType(x.EventStreamType?.Value) == SeedRouting.StreamType(y.EventStreamType?.Value) &&
+             SeedRouting.StreamId(x.EventStreamId?.Value) == SeedRouting.StreamId(y.EventStreamId?.Value) &&
              string.Equals(x.Content, y.Content, StringComparison.Ordinal) &&
              TagsOf(x).SetEquals(TagsOf(y)));
 
         public int GetHashCode(SeededEventEntry obj) =>
-            HashCode.Combine(obj.EventSourceId, obj.EventTypeId, obj.Content, TagsOf(obj).Count);
+            HashCode.Combine(obj.EventSourceId, obj.EventTypeId, obj.Content, TagsOf(obj).Count, SeedRouting.SourceType(obj.EventSourceType?.Value), SeedRouting.StreamType(obj.EventStreamType?.Value), SeedRouting.StreamId(obj.EventStreamId?.Value));
 
         static HashSet<string> TagsOf(SeededEventEntry entry) => new(entry.Tags ?? [], StringComparer.Ordinal);
     }

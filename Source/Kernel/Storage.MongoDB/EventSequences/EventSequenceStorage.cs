@@ -815,6 +815,33 @@ public partial class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+    {
+        var numbers = sequenceNumbers.Distinct().ToArray();
+        if (numbers.Length == 0)
+        {
+            return [];
+        }
+        var filter = Builders<Event>.Filter.In(_ => _.SequenceNumber, numbers);
+        var projection = Builders<Event>.Projection.Exclude(_ => _.Content).Exclude(_ => _.ContentHashes).Exclude(_ => _.Revisions);
+        var events = await _collection.Find(filter).Project<Event>(projection).ToListAsync(cancellationToken).ConfigureAwait(false);
+        return events.Select(_ => new StoredEventMetadata(
+            _.SequenceNumber,
+            _.Type,
+            _.EventSourceType,
+            _.EventSourceId,
+            _.EventStreamType,
+            _.EventStreamId,
+            _.Occurred,
+            _.CorrelationId,
+            _.Causation,
+            _.CausedBy,
+            _.Tags.Select(tag => new Concepts.Events.Tag(tag)).ToArray(),
+            _.Subject ?? new Subject(_.EventSourceId.Value),
+            _.EventSource ?? EventSourceName.NotSet)).ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber)
     {
         logger.GettingEventAtSequenceNumber(eventSequenceId, sequenceNumber);

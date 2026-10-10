@@ -298,7 +298,8 @@ public class EventStoreForTesting : IEventStore
             ClientArtifactsProvider,
             _serviceProvider,
             _artifactActivator,
-            NullLogger<EventSeeding>.Instance));
+            NullLogger<EventSeeding>.Instance,
+            EventSources));
         _pii = new Lazy<IPIIManager>(() => new PIIManager(Name, Namespace, Connection));
         _identities = new Lazy<IIdentityManager>(() => new IdentityManager(Name, Namespace, Connection));
     }

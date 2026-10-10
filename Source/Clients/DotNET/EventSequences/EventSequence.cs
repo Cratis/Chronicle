@@ -20,6 +20,8 @@ using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.Transactions;
 using Cratis.Monads;
 using Cratis.Traces;
+using Grpc.Core;
+using ProtoBuf.Grpc;
 using ContractCompleteStreamError = Cratis.Chronicle.Contracts.Sequences.CompleteStreamError;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -309,6 +311,58 @@ public class EventSequence(
             EventSequenceId = eventSequenceId,
             EventSourceId = eventSourceId
         }).EnsureSuccess()).HasEvents;
+
+    /// <inheritdoc/>
+    public async Task<EventMetadata?> GetMetadataAt(EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default)
+    {
+        var metadata = await GetMetadataAt([sequenceNumber], cancellationToken);
+        return metadata.GetValueOrDefault(sequenceNumber);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IImmutableDictionary<EventSequenceNumber, EventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var locators = sequenceNumbers.Take(EventMetadata.MaxLocators + 1).ToArray();
+        if (locators.Length > EventMetadata.MaxLocators)
+        {
+            throw new TooManyEventLocators();
+        }
+        if (locators.Length == 0)
+        {
+            return ImmutableDictionary<EventSequenceNumber, EventMetadata>.Empty;
+        }
+        var request = new Contracts.Sequences.MetadataAtRequest
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SequenceNumbers = locators.Select(_ => _.Value).Distinct().ToArray()
+        };
+        var result = await _servicesAccessor.Services.Sequences.MetadataAt(request, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
+        return result.Select(entry => new EventMetadata(
+            entry.SequenceNumber,
+            entry.EventTypeId,
+            entry.EventSourceType,
+            entry.EventSourceId,
+            entry.EventStreamType,
+            entry.EventStreamId,
+            entry.Occurred,
+            entry.CorrelationId,
+            entry.Causation.Select(cause => new Causation(cause.Occurred, cause.Type, cause.Properties)).ToImmutableList(),
+            ResolveMetadataIdentity(entry.CausedBy),
+            (InitiatorType)entry.InitiatorType,
+            entry.Tags.Select(tag => new Tag(tag)).ToImmutableList(),
+            entry.Subject,
+            entry.EventSourceName)).ToImmutableDictionary(_ => _.SequenceNumber);
+
+        static ResolvedIdentity ResolveMetadataIdentity(Contracts.Sequences.ResolvedIdentity identity) => new(
+            identity.Subject,
+            identity.Name,
+            identity.UserName,
+            (IdentityResolution)identity.Resolution,
+            identity.OnBehalfOf is null ? null : ResolveMetadataIdentity(identity.OnBehalfOf));
+    }
 
     /// <inheritdoc/>
     public async Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(

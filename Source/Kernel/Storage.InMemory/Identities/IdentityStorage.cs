@@ -104,6 +104,23 @@ public class IdentityStorage : IIdentityStorage
     }
 
     /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<IdentityId, Identity>> GetByIds(IEnumerable<IdentityId> identityIds)
+    {
+        lock (_lock)
+        {
+            var result = new Dictionary<IdentityId, Identity>();
+            foreach (var id in identityIds.Distinct())
+            {
+                if (_identitiesByIdentityId.TryGetValue(id, out var identity))
+                {
+                    result[id] = identity;
+                }
+            }
+            return Task.FromResult<IReadOnlyDictionary<IdentityId, Identity>>(result);
+        }
+    }
+
+    /// <inheritdoc/>
     public Task Rename(string subject, string name)
     {
         lock (_lock)

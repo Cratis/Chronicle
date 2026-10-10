@@ -57,6 +57,7 @@ public partial class EventSequenceStorage
             var receipt = new EventPublicationReceipt(@event.SequenceNumber);
             _events.Add(appended);
             _originalCausedByChains[@event.SequenceNumber] = @event.CausedByChain.ToArray();
+            TrackMetadata(appended, _originalCausedByChains[@event.SequenceNumber]);
             _publications.Add(publication.Id, (publication.Fingerprint, receipt));
             return receipt;
         }

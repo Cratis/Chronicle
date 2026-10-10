@@ -100,7 +100,11 @@ internal static class SeedingConverters
         {
             EventSourceId = seeded.EventSourceId.Value,
             EventTypeId = seeded.EventTypeId.Value,
-            Content = seeded.Content
+            Content = seeded.Content,
+            Tags = [.. seeded.Tags ?? []],
+            EventSourceType = SeedRouting.SourceType(seeded.EventSourceType?.Value).Value,
+            EventStreamType = SeedRouting.StreamType(seeded.EventStreamType?.Value).Value,
+            EventStreamId = SeedRouting.StreamId(seeded.EventStreamId?.Value).Value
         };
 
     /// <summary>
@@ -118,11 +122,14 @@ internal static class SeedingConverters
              y is not null &&
              string.Equals(x.EventSourceId, y.EventSourceId, StringComparison.Ordinal) &&
              string.Equals(x.EventTypeId, y.EventTypeId, StringComparison.Ordinal) &&
+             SeedRouting.SourceType(x.EventSourceType) == SeedRouting.SourceType(y.EventSourceType) &&
+             SeedRouting.StreamType(x.EventStreamType) == SeedRouting.StreamType(y.EventStreamType) &&
+             SeedRouting.StreamId(x.EventStreamId) == SeedRouting.StreamId(y.EventStreamId) &&
              string.Equals(x.Content, y.Content, StringComparison.Ordinal) &&
              TagsOf(x).SetEquals(TagsOf(y)));
 
         public int GetHashCode(Contracts.Seeding.SeedingEntry obj) =>
-            HashCode.Combine(obj.EventSourceId, obj.EventTypeId, obj.Content, TagsOf(obj).Count);
+            HashCode.Combine(obj.EventSourceId, obj.EventTypeId, obj.Content, TagsOf(obj).Count, SeedRouting.SourceType(obj.EventSourceType), SeedRouting.StreamType(obj.EventStreamType), SeedRouting.StreamId(obj.EventStreamId));
 
         static HashSet<string> TagsOf(Contracts.Seeding.SeedingEntry entry) => new(entry.Tags ?? [], StringComparer.Ordinal);
     }
