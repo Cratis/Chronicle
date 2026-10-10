@@ -20,7 +20,7 @@ public class and_the_same_value_is_forwarded_to_the_outbox(context context) : Gi
     public class context(ChronicleFixture fixture) : Specification(fixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueNameInEventLog)];
-        public override IEnumerable<Type> EventTypes => [typeof(NameClaimed)];
+        public override IEnumerable<Type> EventTypes => [typeof(NameClaimed), typeof(PublicNameClaimed)];
 
         public IAppendResult FirstInEventLog { get; private set; }
         public IAppendResult FirstInOutbox { get; private set; }
@@ -31,12 +31,13 @@ public class and_the_same_value_is_forwarded_to_the_outbox(context context) : Gi
         {
             var outbox = EventStore.GetEventSequence(EventSequenceId.Outbox);
             var @event = new NameClaimed("acme");
+            var forwarded = new PublicNameClaimed(@event.Name);
             var first = Guid.NewGuid().ToString();
             var second = Guid.NewGuid().ToString();
 
             FirstInEventLog = await EventStore.EventLog.Append(first, @event);
-            FirstInOutbox = await outbox.Append(first, @event);
-            SecondInOutbox = await outbox.Append(second, @event);
+            FirstInOutbox = await outbox.Append(first, forwarded);
+            SecondInOutbox = await outbox.Append(second, forwarded);
             SecondInEventLog = await EventStore.EventLog.Append(second, @event);
         }
     }
