@@ -61,6 +61,7 @@ public partial class EventSequenceStorage
             [],
             @event.Subject?.IsSet == true ? @event.Subject : null)
         {
+            AppendedGeneration = @event.EventType.Generation.Value,
             PublicationId = publication.Id,
             PublicationFingerprint = publication.Fingerprint,
             EventSource = @event.EventSource.IsSet ? @event.EventSource : null,

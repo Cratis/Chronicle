@@ -39,6 +39,11 @@ public class EventEntry
     public EventTypeId Type { get; set; } = EventTypeId.Unknown;
 
     /// <summary>
+    /// Gets or sets the generation of the original append. Null for historic rows where it is unknown.
+    /// </summary>
+    public uint? AppendedGeneration { get; set; }
+
+    /// <summary>
     /// Gets or sets the time the event occurred.
     /// </summary>
     public DateTimeOffset Occurred { get; set; }
