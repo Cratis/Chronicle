@@ -336,6 +336,10 @@ public sealed class DecisionReads : IDecisionReads
             return Refuse(DecisionReadRefusalReason.NotEventSourceKeyed);
         }
         var routedKeys = definition.From.Values.Select(_ => _.Key).Concat(definition.RemovedWith.Values.Select(_ => _.Key));
+        if (definition.All.Properties.Count != 0)
+        {
+            routedKeys = routedKeys.Append(definition.All.Key);
+        }
         if (UsesStreamKey(definition) && routedKeys.Any(_ => _ != "$eventContext(eventStreamId)"))
         {
             return Refuse(DecisionReadRefusalReason.NotEventSourceKeyed);
