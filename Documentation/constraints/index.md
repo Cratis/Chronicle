@@ -24,12 +24,13 @@ A constraint is checked within the event sequence an event is appended to, in th
 
 ## Constraint types
 
-Chronicle supports two types of uniqueness constraints:
+Chronicle supports two types of uniqueness constraints and a constraint that closes streams:
 
 | Type | Description |
 |---|---|
 | **Unique property** | Enforces that a property value is unique across all events of one or more types |
 | **Unique event type** | Enforces that only one event of a specific type can ever be appended per event source |
+| **Closing stream** | Closes a stream scope when an event of a specific type is appended, so later appends inside the scope are rejected. See [Closing streams](../closing-streams/index.mdx) |
 
 ## Defining constraints
 

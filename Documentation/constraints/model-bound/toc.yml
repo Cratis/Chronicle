@@ -4,3 +4,5 @@
   href: unique.mdx
 - name: Unique event type constraint
   href: unique-event-type.mdx
+- name: Closing stream constraint
+  href: closing-stream.mdx

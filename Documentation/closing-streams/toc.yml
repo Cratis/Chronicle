@@ -1,2 +1,8 @@
 - name: Closing Streams
   href: index.mdx
+- name: Scoped closing
+  href: scoped-closing.mdx
+- name: Closing events
+  href: closing-events.mdx
+- name: Inspecting and repairing
+  href: inspecting-and-repairing.mdx

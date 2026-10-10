@@ -54,6 +54,24 @@ The returned value is an `AppendResult`, so every [append assertion](assertions)
 
 <ChronicleClientTabs snippet="testing/events/scenario/append-many" />
 
+## Closing and reopening streams
+
+`EventScenario` runs the same closed-stream check as the kernel. A scope closed with `EventSequence.CompleteStream`, or by an event type declared with `[ClosesStream]`, rejects later appends to it with a constraint violation named `closed-stream`.
+
+Closing event types are found by the same discovery as other constraints. Append the closing event and assert on the rejection of a covered event:
+
+<ChronicleClientTabs snippet="testing/events/scenario/closing-event" />
+
+Seed a closed state with `Given`, append the reopening event with `When`, and assert that the scope accepts events again:
+
+<ChronicleClientTabs snippet="testing/events/scenario/reopening-event" />
+
+Manual closure goes through `EventSequence`. `GetClosedStreams` shows what is closed and by whom:
+
+<ChronicleClientTabs snippet="testing/events/scenario/manual-close" />
+
+Within one `AppendMany`, a covered event after a closing event is refused, and close, reopen, then a covered event succeeds. A manual closure on the same scope also refuses the reopening event, because a `ReopenedBy` event only lifts its own constraint's closure. See [Closing streams](../../closing-streams/index.mdx) for the rules.
+
 ## PII compliance
 
 A `[PII]` value on an appended event passes through the kernel's encryption handler before entering in-memory event storage. Reads release that protection using the same scenario-local subject keys. The schema comes from discovered compliance metadata providers and the **stored event generation**, not the latest generation's markings. An undiscovered generation raises `EventSchemaNotDiscovered` rather than silently borrowing another schema. A discovered provider that cannot be activated fails explicitly with its identity and underlying cause.
