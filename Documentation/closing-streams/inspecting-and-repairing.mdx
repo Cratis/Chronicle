@@ -37,7 +37,7 @@ The Workbench has a read-only list of closed streams for each event sequence. It
 
 ## Repair a mistaken close
 
-Closing is meant to be final, so the client interface has no reopen call. An operator can repair a mistaken manual close through the kernel's `ReopenStreamScope` command on the event sequences service, which the CLI and other kernel contract clients can call.
+Closing is meant to be final, so the client interface has no reopen call. An operator can repair a mistaken manual close through the kernel's `ReopenStreamScope` command on the event sequences gRPC service. Call it from a tool that talks to the kernel contracts; it is not part of the .NET client.
 
 The command:
 
