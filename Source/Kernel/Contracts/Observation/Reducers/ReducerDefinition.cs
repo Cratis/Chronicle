@@ -56,4 +56,10 @@ public class ReducerDefinition
     /// </summary>
     [ProtoMember(9)]
     public string Hash { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event generation delivery policy.
+    /// </summary>
+    [ProtoMember(10)]
+    public EventGenerationDelivery GenerationDelivery { get; set; }
 }
