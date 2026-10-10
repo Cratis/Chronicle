@@ -39,6 +39,14 @@ internal sealed class NoOpEventLog : IEventLog
         throw new EventLogNotAvailableInKernelPipeline();
 
     /// <inheritdoc/>
+    public Task<EventMetadata?> GetMetadataAt(EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default)
+        => throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
+    public Task<IImmutableDictionary<EventSequenceNumber, EventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+        => throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
     public Task<bool> HasEventsFor(EventSourceId eventSourceId) => throw new EventLogNotAvailableInKernelPipeline();
 
     /// <inheritdoc/>
@@ -140,4 +148,14 @@ internal sealed class NoOpEventLog : IEventLog
     /// <inheritdoc/>
     public Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
         throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
+    public Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default) =>
+        throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
+    public Task<bool> IsStreamCompleted(ClosedStreamScope scope) => throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
+    public Task<IImmutableList<ClosedStream>> GetClosedStreams(ClosedStreamScope? within = default) => throw new EventLogNotAvailableInKernelPipeline();
 }

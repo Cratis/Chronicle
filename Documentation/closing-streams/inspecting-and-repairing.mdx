@@ -1,0 +1,58 @@
+---
+title: Inspecting and repairing
+description: Check whether a scope is closed, list the closures of an event sequence, and repair a mistaken manual close.
+---
+
+When an append is rejected with `StreamClosed`, you need to know what closed the scope, when, and whether that was intended. The client, the kernel contract and the Workbench all answer that.
+
+## Check a scope
+
+`IsStreamCompleted` returns true when any closure covers the scope:
+
+<ChronicleClientTabs snippet="closing-streams/inspecting-and-repairing/is-completed" />
+
+It uses coverage, the same rule as an append. A scope is closed when a closure with equal or fewer dimensions matches its values, so asking about a stream of a closed event source returns true. The two-argument overload `IsStreamCompleted(streamType, streamId)` asks the same question for a stream type and id pair, with empty values mapped to `All` and `Default`.
+
+## List closures
+
+`GetClosedStreams` returns every closure of the event sequence, or those inside the scope you pass:
+
+<ChronicleClientTabs snippet="closing-streams/inspecting-and-repairing/list-closed-streams" />
+
+Each `ClosedStream` has:
+
+| Property | Meaning |
+|---|---|
+| `Scope` | The closed dimensions |
+| `Origin` | `CompleteStream` for a manual closure, `ClosingEvent` for an event-driven one |
+| `ClosedBy` | The closing constraint's name. Null for a manual closure |
+| `SequenceNumber` | The sequence number at closure. `EventSequenceNumber.Unavailable` for a closure written by an earlier version |
+| `ClosedAt` | The closing time. Null for a closure written by an earlier version |
+
+The client call is not paged. It returns every match, so pass a scope to narrow it on a large event sequence.
+
+## See closures in the Workbench
+
+The Workbench has a read-only list of closed streams for each event sequence. It shows the same fields as `GetClosedStreams` and is the quickest way to find out why an append was refused. See the [Workbench](../workbench/index.mdx).
+
+## Repair a mistaken close
+
+Closing is meant to be final, so the client interface has no reopen call. An operator can repair a mistaken manual close through the kernel's `ReopenStreamScope` command on the event sequences gRPC service. Call it from a tool that talks to the kernel contracts; it is not part of the .NET client.
+
+The command:
+
+- removes only an exact manual closure for the scope you give. It does not narrow, widen or split a closure;
+- needs a reason, and an authenticated principal that has a subject. The kernel has no role model, so who may call it is decided by your authentication and network setup;
+- appends a `StreamScopeReopened` event to the system event sequence before it removes the closure. The event holds the event sequence, the scope, the reason and the actor, so the repair stays visible;
+- returns `NotCompleted` when no manual closure matches, and `ClosedByEvent` when the closure belongs to a closing constraint.
+
+:::caution[`StreamScopeReopened` copies the event source id]
+The audit event contains the event source id of the scope. If that id identifies a person, handle the system event sequence with the same care as a redaction request.
+:::
+
+An event-driven closure is not repaired this way. Append one of its `ReopenedBy` events instead, see [Closing events](closing-events.mdx#reopen-with-an-event).
+
+## Related
+
+- [Closing streams](index.mdx) for the policy: manual closures are final, event-driven closures reopen with events.
+- [Scoped closing](scoped-closing.mdx) to close with an expected tail so you do not need to repair.

@@ -3,7 +3,9 @@
 
 using System.Collections.Frozen;
 using System.Collections.Immutable;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.Migrations;
@@ -109,6 +111,11 @@ public class EventTypes : IEventTypes
     /// <inheritdoc/>
     public async Task Register()
     {
+        var precise = _eventStore.Connection is IKernelCapabilities capabilities &&
+            capabilities.Capabilities.Contains(KernelCapabilities.PreciseEventTypeSchemas);
+        _schemasByEventType = _typesByEventType.ToFrozenDictionary(entry => entry.Key, entry => precise
+            ? _jsonSchemaGenerator.Generate(entry.Value)
+            : _jsonSchemaGenerator.GenerateLegacyEventType(entry.Value));
         var registrations = new List<EventTypeRegistration>();
 
         // Group all CLR types by event type ID so that all generations of the same event

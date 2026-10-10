@@ -61,6 +61,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     IEnumerable<Type> _uniqueConstraints = [];
     IEnumerable<Type> _uniqueEventTypeConstraints = [];
     IEnumerable<Type> _removeConstraintEventTypes = [];
+    IEnumerable<Type> _closesStreamEventTypes = [];
     IEnumerable<Type> _eventSeeders = [];
     IEnumerable<Type> _eventTypeMigrators = [];
     IEnumerable<Type> _eventSources = [];
@@ -226,6 +227,16 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     }
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> ClosesStreamEventTypes
+    {
+        get
+        {
+            EnsureInitialized();
+            return _closesStreamEventTypes;
+        }
+    }
+
+    /// <inheritdoc/>
     public virtual IEnumerable<Type> EventSeeders
     {
         get
@@ -290,6 +301,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
                 _uniqueConstraints = _eventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();
                 _uniqueEventTypeConstraints = _eventTypes.Where(_ => _.HasAttribute<UniqueAttribute>()).ToArray();
                 _removeConstraintEventTypes = _eventTypes.Where(_ => _.HasAttribute<RemoveConstraintAttribute>()).ToArray();
+                _closesStreamEventTypes = _eventTypes.Where(_ => _.HasAttribute<ClosesStreamAttribute>()).ToArray();
                 _eventSeeders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanSeedEvents>()).ToArray();
                 _eventSources = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IEventSource>() && _.IsClass && !_.IsAbstract && !_.IsGenericTypeDefinition).ToArray();
                 _eventTypeMigrators = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IEventTypeMigrationFor<>))).ToArray();

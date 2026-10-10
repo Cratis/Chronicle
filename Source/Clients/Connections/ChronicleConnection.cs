@@ -39,7 +39,7 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/>.
 /// </summary>
-public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor
+public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor, IKernelCapabilities
 {
     readonly ChronicleConnectionString _connectionString;
     readonly int _connectTimeout;
@@ -152,6 +152,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     /// <inheritdoc/>
     public IConnectionLifecycle Lifecycle { get; }
+
+    /// <inheritdoc/>
+    public IReadOnlyCollection<string> Capabilities { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public bool CapabilitiesAreKnown { get; private set; }
 
     /// <summary>
     /// Gets the <see cref="ChronicleServerAddress"/> the connection is currently using, or the
@@ -415,6 +421,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// </remarks>
     async Task CheckCompatibility(IConnectionService connectionService)
     {
+        Capabilities = [];
+        CapabilitiesAreKnown = false;
         CompatibilityResponse response;
 
         try
@@ -431,6 +439,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             // A server from before the check moved server-side does not have this method. Fall back to the older
             // exchange it does have, so upgrading the client does not silently drop the check against those servers.
+            // Such a server predates the capabilities handshake, so it is known to advertise no capabilities.
+            CapabilitiesAreKnown = true;
             await CheckCompatibilityAgainstOlderServer(connectionService);
             return;
         }
@@ -454,6 +464,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             throw new IncompatibleServerException(message);
         }
 
+        Capabilities = response.Capabilities.ToArray();
+        CapabilitiesAreKnown = true;
         _logger.CompatibilityCheckPassed(ChronicleClientIdentity.Version, ChronicleClientIdentity.ProtocolVersion, response.ServerVersion, response.ServerProtocolVersion);
     }
 

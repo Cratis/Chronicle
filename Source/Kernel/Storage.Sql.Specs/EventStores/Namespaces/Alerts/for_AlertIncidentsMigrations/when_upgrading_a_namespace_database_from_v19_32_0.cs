@@ -30,7 +30,8 @@ public class when_upgrading_a_namespace_database_from_v19_32_0 : given.an_unmigr
         foreach (var (id, type) in assembly.Migrations.Where(entry => entry.Key != $"NS-{WellKnownTableNames.AlertIncidents}-{nameof(v19_33_0)}"))
         {
             var migration = assembly.CreateMigration(type, context.Database.ProviderName);
-            foreach (var command in sqlGenerator.Generate(migration.UpOperations))
+            var targetModel = context.GetService<IModelRuntimeInitializer>().Initialize(migration.TargetModel, designTime: true);
+            foreach (var command in sqlGenerator.Generate(migration.UpOperations, targetModel))
             {
                 await context.Database.ExecuteSqlRawAsync(command.CommandText);
             }

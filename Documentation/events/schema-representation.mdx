@@ -24,3 +24,91 @@ handling.
 :::note[Client coverage]
 `JsonSchemaType` is currently C#-only.
 :::
+
+## Defaulted concept properties
+
+The .NET schema generator describes a defaulted concept property with its underlying type, format
+and protection metadata, as well as its default. Older generators could emit only `{"default":null}`
+for an optional concept constructor parameter. Values supplied for that property are still preserved
+when the kernel encounters the older untyped schema.
+
+A default-only property may gain its generated representation within an existing event generation,
+without changing its default. This includes type, format, array items, enum members, string patterns
+and lengths, nested object properties, and compliance or security metadata. Registration tolerates
+the corresponding legacy shape in the opposite direction and retains the more precise stored schema,
+including its protection metadata. A changed default or a changed already-typed property still
+requires a new generation.
+
+The .NET client sends the precise event schema only when the kernel advertises
+`precise-event-type-schemas` during connection. Against an older kernel it registers the legacy
+shape instead. Event-sequence sink definitions use the same capability gate; ordinary read-model
+schemas always use the precise shape.
+
+Registrations that supply only `Schema`, without a `Generations` list, are also checked for
+compatibility with the stored generation. They can no longer overwrite an incompatible schema.
+
+If you implement a custom `IJsonSchemaGenerator`, implement `GenerateLegacyEventType` as well as
+`Generate`. The client calls it for kernels without the capability and for connections that do not
+implement `IKernelCapabilities`, including testing or wrapped connections. Its default implementation
+throws `LegacyEventTypeSchemasNotSupported`; it does not silently reuse the precise schema.
+
+Adding protection metadata affects future appends, not historical plaintext; see
+[Adding PII to an existing event type](../compliance/pii#adding-pii-to-an-existing-event-type).
+
+## Exact decimal values
+
+Use a decimal-formatted event property for amounts and other values that must retain decimal digits.
+Chronicle carries these values as decimals through event storage, projections and read-model sinks;
+it does not route them through a binary floating-point value. A concept wrapping a decimal has the
+same representation as the decimal itself.
+
+### Storage representation
+
+| Provider | Event content | Decimal read-model property |
+| --- | --- | --- |
+| MongoDB | Decimal128 | Decimal128 |
+| PostgreSQL | JSON decimal literal | NUMERIC |
+| SQL Server | JSON decimal literal | DECIMAL(38,18) |
+| SQLite | JSON decimal literal | Invariant decimal text in a TEXT column |
+| In-memory | CLR decimal | CLR decimal |
+
+The JSON payload on the wire remains a number, not an extended JSON object or a floating-point
+approximation. Ordinary double and float properties keep their existing floating-point behavior.
+An untyped BSON Decimal128 containing a fraction is read as a decimal, never truncated to an integer.
+
+### Existing double values
+
+When a decimal-formatted property was stored as a double by an older kernel, Chronicle reads the
+double through its shortest round-trip text. For example, the stored double whose text is `193.58`
+becomes the decimal `193.58`. This avoids introducing extra binary rounding digits on read. It
+cannot recover significant digits that an earlier writer already lost.
+
+Replay a read model to rebuild it from the event history. MongoDB read-model values written as
+doubles are replaced with Decimal128 when the replay writes the decimal-formatted values.
+
+### SQL Server limits
+
+A SQL Server scalar decimal column supports at most 20 integer digits and 18 fractional digits.
+Chronicle rounds scalar read-model values to 18 fractional digits, with midpoints rounded away
+from zero, matching SQL Server's rounding. Computed values such as `1m / 3m` therefore project
+successfully. Only values whose integer part exceeds 20 digits are refused. Event content retains
+its original decimal precision. Existing DECIMAL(18,2) columns round the value further to their
+own scale until replay replaces the table.
+SQL Server returns decimals at its column's fixed scale; Chronicle removes redundant trailing zeros
+when reading them. Numerical precision is retained, but arbitrary input trailing-zero scale is not:
+`193.580` reads back as `193.58`, so `decimal.GetBits` can differ even though the values are equal.
+
+### Upgrading existing SQL read models
+
+The SQL migrator adds missing columns; it does not alter existing column types. Replay existing
+SQL read models before relying on exact decimal writes. Replay creates a fresh table with the new
+mapping and replaces the old table when the replay succeeds. This is required for SQLite's former
+REAL columns and SQL Server's former DECIMAL(18,2) columns.
+
+SQLite's new TEXT columns preserve decimal digits but compare and sort lexicographically, not
+numerically: `"10"` sorts before `"9"`. Do not use their native ordering or range comparisons as
+numeric decimal operations. Existing REAL-affinity columns can coerce invariant decimal text back
+to a binary floating-point value until replay replaces the table.
+
+Replay cannot undo precision already lost from the original event content. Check the source events
+before assuming that a replay will recover an amount.

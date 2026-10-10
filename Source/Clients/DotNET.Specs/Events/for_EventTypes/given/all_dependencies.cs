@@ -20,7 +20,8 @@ public class all_dependencies : Specification
 
     void Establish()
     {
-        var connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
+        var connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor, IKernelCapabilities>();
+        ((IKernelCapabilities)connection).Capabilities.Returns([Contracts.Clients.KernelCapabilities.PreciseEventTypeSchemas]);
         _servicesAccessor = connection as IChronicleServicesAccessor;
         _services = Substitute.For<IServices>();
         _eventTypesService = Substitute.For<Contracts.EventTypes.IEventTypes>();

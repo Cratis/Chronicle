@@ -1,0 +1,46 @@
+---
+title: Closing stream constraint
+description: Adorn an event type with [ClosesStream] so that appending it closes a stream scope, and name the events that reopen it.
+---
+
+Adorn the event type class with `[ClosesStream]` to close a stream scope whenever an event of that type is appended. The closure is written in the same step as the event, and later appends inside the scope are rejected with a `StreamClosed` violation. For the concept, the guarantees and when to prefer it over `CompleteStream`, see [Closing events](../../closing-streams/closing-events.mdx).
+
+Chronicle discovers `[ClosesStream]`-adorned types automatically and registers the constraints with the Kernel when the client starts.
+
+## Defining a closing constraint
+
+Choose the dimensions that make up the closed scope:
+
+<ChronicleClientTabs snippet="constraints/model-bound/closing-stream/basic" />
+
+`Dimensions` is a `ClosedStreamDimensions` flags value: `EventSourceId`, `EventSourceType`, `EventStreamType` and `EventStreamId`. Without it the scope is event source id, stream type and stream id of the append.
+
+## Take the stream id from a property
+
+Set `EventStreamIdFrom` to the name of an event property to use its value as the stream id. This implies the `EventStreamId` dimension:
+
+<ChronicleClientTabs snippet="constraints/model-bound/closing-stream/event-stream-id-from" />
+
+The property must have a non-empty value on every append. The kernel refuses an append where it is missing, null or empty. Avoid a nullable property; the analyzer [CHR0012](../../code-analysis/CHR0012.mdx) warns on nullable event properties.
+
+## Name and reopening events
+
+`Name` sets the owner of the closure and defaults to the event type name. `ReopenedBy` lists the event types that remove this constraint's closure for the exact scope they resolve to:
+
+<ChronicleClientTabs snippet="constraints/model-bound/closing-stream/reopened-by" />
+
+A reopening event type must carry the `EventStreamIdFrom` property too, or the client throws `PropertyDoesNotExistOnEventType` when it discovers the constraint.
+
+## Attribute reference
+
+| Property | Meaning |
+|---|---|
+| `Dimensions` | Dimensions of the closed scope. Defaults to event source id, stream type and stream id |
+| `EventStreamIdFrom` | Payload property that provides the stream id |
+| `ReopenedBy` | Event types that reopen this constraint's scope |
+| `Name` | Owner name. Defaults to the event type name. Cannot be empty |
+| `EventSequences` | Event sequences the declaration applies to. Empty means all |
+
+Declarations that share a `Name` merge into one constraint and must use the same dimensions and stream id property, otherwise the client throws `ConflictingClosesStreamDeclarations`.
+
+Registering or changing the declaration does not close anything that is already in the log.

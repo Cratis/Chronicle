@@ -275,6 +275,16 @@ public interface IEventSequenceStorage
     Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber);
 
     /// <summary>
+    /// Reads only metadata at the supplied sequence locators. Missing events are omitted.
+    /// </summary>
+    /// <param name="sequenceNumbers">The bounded collection of locators.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The stored metadata, without event content.</returns>
+    /// <exception cref="EventMetadataReadsNotSupported">The provider does not support metadata-only reads.</exception>
+    Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+        => throw new EventMetadataReadsNotSupported();
+
+    /// <summary>
     /// Get the last instance of the specified event types for a specific event source.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>

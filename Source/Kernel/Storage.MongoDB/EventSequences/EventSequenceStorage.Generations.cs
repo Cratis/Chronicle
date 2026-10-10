@@ -47,7 +47,8 @@ public partial class EventSequenceStorage
         var contentField = nameof(Event.Content).ToCamelCase();
         foreach (var (generation, content) in observed.Content)
         {
-            filter &= builder.Eq($"{contentField}.{generation.Value}", EventContentBson.FromJson(content));
+            var schema = await eventTypesStorage.GetFor(observed.EventTypeId, generation);
+            filter &= builder.Eq($"{contentField}.{generation.Value}", EventContentBson.FromJson(content, schema.Schema));
         }
 
         var updates = new List<UpdateDefinition<Event>>();

@@ -192,7 +192,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
             return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generation)).ToKernel(generation);
         }
         var eventType = await GetSpecificEventType(type) ?? throw new UnknownEventType(eventStore, type);
-        if (eventType.Schemas.Count == 0)
+        if (!eventType.Schemas.ContainsKey(generation))
         {
             throw new MissingEventSchemaForEventType(
                 eventStore,

@@ -22,6 +22,32 @@ Implement `ICanSeedEvents` and use `IEventSeedingBuilder` to define events to ap
 
 <ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/seed-mixed-types" />
 
+## Seed onto an event stream
+
+Pass an event stream type and identifier to `For` or `ForEventSource` to route seeds onto a
+specific stream. The optional event source type defaults to `Default`. These overloads also
+work on the builder returned by `ForNamespace`.
+
+<ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/stream-routed" />
+
+Use `ForEvents` for per-event routing. Its `EventForEventSourceId` entries can specify an
+`EventSource` definition type and an `EventStream` name; Chronicle resolves their routing
+from the discovered definition and rejects contradictory explicit types. Entry tags are
+combined with static event-type tags. Set `EventSource` whenever you use a typed `EventStream`:
+without `EventSource`, the stream name is ignored and only the explicit `EventStreamType`
+and `EventStreamId` determine stream routing. `ForEvents` uses the wrapper's routing and tags,
+not its append-specific occurred time, subject, causation or structured named tags.
+
+Routing is part of seed identity: identical payloads on different streams are separate seed
+entries. Omitting routing preserves the defaults used by previously stored seed definitions,
+so adopting this API does not append legacy seeds again.
+
+Non-default routing requires a kernel that confirms seeding routing support. Against an
+older kernel, `Register()` throws `EventSeedingRoutingNotSupported` before sending any
+seed entries, including unrouted entries in the same buffer. Upgrade the kernel before
+retrying that buffer. A buffer containing only default routing still registers against
+older kernels.
+
 ## Development-only seeding
 
 If seed data should only run in development, use conditional compilation or runtime configuration:

@@ -7,8 +7,7 @@ using Cratis.Chronicle.Json;
 namespace Cratis.Chronicle.Schemas;
 
 /// <summary>
-/// Extension methods for deciding whether a newly generated <see cref="JsonSchema"/> still describes the data an
-/// already stored one describes.
+/// Compares schema evolution without changing the meaning of stored event generations.
 /// </summary>
 public static class JsonSchemaCompatibilityExtensions
 {
@@ -18,204 +17,131 @@ public static class JsonSchemaCompatibilityExtensions
     const string TitleKey = "title";
 
     /// <summary>
-    /// Determines whether a newly generated schema is a compatible evolution of an already stored one.
+    /// Determines whether a generated schema still describes the stored data.
     /// </summary>
-    /// <param name="stored">The stored <see cref="JsonSchema"/>.</param>
-    /// <param name="generated">The newly generated <see cref="JsonSchema"/> to check against it.</param>
-    /// <returns><see langword="true"/> when the generated schema still describes the stored data; otherwise <see langword="false"/>.</returns>
+    /// <param name="stored">The stored schema.</param>
+    /// <param name="generated">The incoming schema.</param>
+    /// <returns>Whether the schemas are compatible.</returns>
     /// <remarks>
-    /// Everything outside the two tolerances below has to match exactly - a stored event's payload is interpreted
-    /// through the schema registered for its generation, so a change to the shape silently changes the meaning of
-    /// history and must go through a new generation instead.
-    /// <para>
-    /// The first tolerance is a nullability marker (a trailing <c language="csharp">?</c> on a <c language="csharp">format</c> value). It only refines
-    /// how an unset value materializes, and a Chronicle upgrade can introduce it on a schema that was stored before
-    /// the marker existed.
-    /// </para>
-    /// <para>
-    /// The second is an enumeration that only gained members or had members renamed. Neither changes what an already
-    /// stored value means: the member a stored value denotes keeps its underlying value, and its name is frequently
-    /// not the owning application's to control in the first place - an enumeration mirroring an external system
-    /// grows and gets renamed on that system's schedule. Members that <em>disappear</em> or are renumbered are a
-    /// different matter, because a stored value then denotes nothing or something else, so those stay a breaking
-    /// change that needs a new generation and a value map to state what the old values now mean.
-    /// </para>
-    /// <para>
-    /// The third is the <c language="csharp">title</c>, which the client derives from the CLR type name. It says nothing about the
-    /// shape of a stored payload - the event type identifier names the type and the properties describe the data -
-    /// so comparing it made the CLR name load-bearing, which is exactly what pinning an identifier with
-    /// <c language="csharp">[EventType("...")]</c> is documented to prevent. Renaming a record while pinning its identifier read as a
-    /// breaking schema change, and so did the documented generational escape hatch, whose previous generation has to
-    /// be a separate and therefore differently named type (#3926).
-    /// </para>
+    /// Titles, nullable format markers, growing or renamed enumerations and default-only property refinements
+    /// are tolerated. Protection metadata may be added, but existing metadata may not be removed or changed.
+    /// Other changes require a new generation. Default-only refinements work in both directions for rolling upgrades.
     /// </remarks>
     public static bool IsCompatibleWith(this JsonSchema stored, JsonSchema generated)
     {
         var storedNode = JsonNode.Parse(stored.ToJson());
-        var generatedNode = JsonNode.Parse(generated.ToJson());
-
+        var generatedNode = JsonNode.Parse(stored.MorePrecise(generated).ToJson());
         StripNullableFormatMarkers(storedNode);
         StripNullableFormatMarkers(generatedNode);
-
         StripTitles(storedNode);
         StripTitles(generatedNode);
-
-        return TryEraseCompatibleEnumerations(storedNode, generatedNode) &&
-            storedNode?.ToJsonString() == generatedNode?.ToJsonString();
+        return DefaultOnlyPropertyRefinement.EraseCompatibleDifferences(storedNode, generatedNode) &&
+            TryEraseCompatibleEnumerations(storedNode, generatedNode) &&
+            JsonNode.DeepEquals(storedNode, generatedNode);
     }
 
     /// <summary>
-    /// Compares two serialized schemas without treating CLR type titles as a stored schema change.
+    /// Compares schemas without treating CLR titles as a stored schema change.
     /// </summary>
     /// <param name="stored">The stored schema JSON.</param>
     /// <param name="incoming">The incoming schema JSON.</param>
-    /// <returns><see langword="true"/> if the schemas differ only by titles, or are identical.</returns>
-    /// <remarks>
-    /// Unlike <see cref="IsCompatibleWith"/>, this is a strict equality check: a new enumeration member
-    /// or nullability marker still changes the stored representation.
-    /// </remarks>
+    /// <returns>Whether the schemas differ only by titles.</returns>
     public static bool EqualsIgnoringTitles(string stored, string incoming)
     {
         var storedNode = JsonNode.Parse(stored);
         var incomingNode = JsonNode.Parse(incoming);
         StripTitles(storedNode);
         StripTitles(incomingNode);
-
-        return storedNode?.ToJsonString() == incomingNode?.ToJsonString();
+        return JsonNode.DeepEquals(storedNode, incomingNode);
     }
 
     /// <summary>
-    /// Strips every <c language="csharp">title</c> declaration from a schema node.
+    /// Retains typed defaulted properties when a legacy client submits their default-only representation.
     /// </summary>
-    /// <param name="node">The <see cref="JsonNode"/> to strip, which may be <see langword="null"/>.</param>
-    /// <remarks>
-    /// The title carries the CLR type name, not anything about the payload, so it is removed from both sides rather
-    /// than compared. It stays in the stored schema for the tooling that reads it.
-    /// </remarks>
-    internal static void StripTitles(JsonNode? node)
+    /// <param name="stored">The stored schema.</param>
+    /// <param name="generated">The incoming schema.</param>
+    /// <returns>The incoming schema with more precise stored properties retained.</returns>
+    public static JsonSchema MorePrecise(this JsonSchema stored, JsonSchema generated)
     {
-        switch (node)
-        {
-            case JsonObject jsonObject:
-                jsonObject.Remove(TitleKey);
-
-                foreach (var property in jsonObject.ToArray())
-                {
-                    StripTitles(property.Value);
-                }
-
-                break;
-
-            case JsonArray jsonArray:
-                foreach (var item in jsonArray.ToArray())
-                {
-                    StripTitles(item);
-                }
-
-                break;
-        }
+        var storedNode = JsonNode.Parse(stored.ToJson());
+        var generatedNode = JsonNode.Parse(generated.ToJson())!.AsObject();
+        DefaultOnlyPropertyRefinement.RetainPreciseProperties(storedNode, generatedNode);
+        return new JsonSchema(generatedNode);
     }
 
     /// <summary>
-    /// Strips every nullability marker - a trailing <c language="csharp">?</c> appended to a <c language="csharp">format</c> value - from a schema node.
+    /// Checks whether existing protection metadata is retained in an incoming schema.
     /// </summary>
-    /// <param name="node">The <see cref="JsonNode"/> to strip, which may be <see langword="null"/>.</param>
-    internal static void StripNullableFormatMarkers(JsonNode? node)
+    /// <param name="stored">The stored schema.</param>
+    /// <param name="generated">The incoming schema.</param>
+    /// <returns>Whether no existing protection declaration was removed or changed.</returns>
+    public static bool HasCompatibleProtectionMetadata(this JsonSchema stored, JsonSchema generated)
     {
-        switch (node)
+        var storedNode = JsonNode.Parse(stored.ToJson());
+        var generatedNode = JsonNode.Parse(stored.MorePrecise(generated).ToJson());
+        var incoming = DefaultOnlyPropertyRefinement.Pairs(storedNode, generatedNode).ToDictionary(pair => pair.Path, pair => pair.Generated);
+        foreach (var (previous, _, _, path) in DefaultOnlyPropertyRefinement.Pairs(storedNode, storedNode))
         {
-            case JsonObject jsonObject:
-                if (jsonObject[FormatKey] is JsonValue formatValue &&
-                    formatValue.TryGetValue<string>(out var format) &&
-                    format.EndsWith('?'))
-                {
-                    jsonObject[FormatKey] = format[..^1];
-                }
-
-                foreach (var property in jsonObject.ToArray().Where(_ => _.Key != FormatKey))
-                {
-                    StripNullableFormatMarkers(property.Value);
-                }
-
-                break;
-
-            case JsonArray jsonArray:
-                foreach (var item in jsonArray.ToArray())
-                {
-                    StripNullableFormatMarkers(item);
-                }
-
-                break;
+            // A disappeared declaration must not bypass the protection-removal check.
+            var corresponding = incoming.GetValueOrDefault(path);
+            if (!DefaultOnlyPropertyRefinement.MetadataOnlyAdded(previous["compliance"], corresponding?["compliance"]) ||
+                !DefaultOnlyPropertyRefinement.MetadataOnlyAdded(previous["security"], corresponding?["security"]))
+            {
+                return false;
+            }
         }
+        return true;
     }
 
     /// <summary>
-    /// Walks two schema nodes in lockstep and removes every enumeration declaration the two agree on, so that what
-    /// is left can be compared verbatim.
+    /// Finds schema paths that gained compliance or security metadata.
     /// </summary>
-    /// <param name="stored">The node from the stored schema.</param>
-    /// <param name="generated">The node from the generated schema.</param>
-    /// <returns><see langword="false"/> as soon as an enumeration is found that lost or renumbered a member; otherwise <see langword="true"/>.</returns>
-    /// <remarks>
-    /// Only nodes present on both sides are visited. A node present on one side alone is a difference the caller's
-    /// verbatim comparison catches on its own, and erasing an enumeration on one side without the other would hide it.
-    /// </remarks>
+    /// <param name="stored">The stored schema.</param>
+    /// <param name="generated">The incoming schema.</param>
+    /// <returns>The paths with added protection metadata.</returns>
+    public static IEnumerable<string> AddedProtectionMetadataPaths(this JsonSchema stored, JsonSchema generated) =>
+        DefaultOnlyPropertyRefinement.AddedMetadataPaths(JsonNode.Parse(stored.ToJson()), JsonNode.Parse(generated.ToJson()));
+
+    /// <summary>
+    /// Strips titles from schema declarations, without visiting arbitrary default payloads or property maps.
+    /// </summary>
+    /// <param name="node">The schema node.</param>
+    internal static void StripTitles(JsonNode? node) => DefaultOnlyPropertyRefinement.Normalize(node, schema => schema.Remove(TitleKey));
+
+    /// <summary>
+    /// Strips nullable markers from format declarations.
+    /// </summary>
+    /// <param name="node">The schema node.</param>
+    internal static void StripNullableFormatMarkers(JsonNode? node) => DefaultOnlyPropertyRefinement.Normalize(node, schema =>
+    {
+        if (schema[FormatKey] is JsonValue value && value.TryGetValue<string>(out var format) && format.EndsWith('?'))
+        {
+            schema[FormatKey] = format[..^1];
+        }
+    });
+
     static bool TryEraseCompatibleEnumerations(JsonNode? stored, JsonNode? generated)
     {
-        switch (stored)
+        foreach (var (previous, incoming, _, _) in DefaultOnlyPropertyRefinement.Pairs(stored, generated))
         {
-            case JsonObject storedObject when generated is JsonObject generatedObject:
-                if (storedObject.ContainsKey(EnumerationKey) || generatedObject.ContainsKey(EnumerationKey))
-                {
-                    if (!EnumerationOnlyGrewOrWasRenamed(storedObject, generatedObject))
-                    {
-                        return false;
-                    }
-
-                    EraseEnumeration(storedObject);
-                    EraseEnumeration(generatedObject);
-                }
-
-                return storedObject
-                    .ToArray()
-                    .Where(entry => generatedObject.ContainsKey(entry.Key))
-                    .All(entry => TryEraseCompatibleEnumerations(entry.Value, generatedObject[entry.Key]));
-
-            case JsonArray storedArray when generated is JsonArray generatedArray:
-                return Enumerable
-                    .Range(0, Math.Min(storedArray.Count, generatedArray.Count))
-                    .All(index => TryEraseCompatibleEnumerations(storedArray[index], generatedArray[index]));
-
-            default:
-                return true;
+            if (!previous.ContainsKey(EnumerationKey) && !incoming.ContainsKey(EnumerationKey))
+            {
+                continue;
+            }
+            if (previous[EnumerationKey] is not JsonArray storedMembers || incoming[EnumerationKey] is not JsonArray generatedMembers)
+            {
+                return false;
+            }
+            var declared = generatedMembers.Select(JsonValues.Canonical).ToHashSet(StringComparer.Ordinal);
+            if (!storedMembers.Select(JsonValues.Canonical).All(declared.Contains))
+            {
+                return false;
+            }
+            previous.Remove(EnumerationKey);
+            previous.Remove(EnumerationNamesKey);
+            incoming.Remove(EnumerationKey);
+            incoming.Remove(EnumerationNamesKey);
         }
-    }
-
-    /// <summary>
-    /// Gets whether two enumeration declarations differ only by members the generated one added, or by member names.
-    /// </summary>
-    /// <param name="stored">The node from the stored schema.</param>
-    /// <param name="generated">The node from the generated schema.</param>
-    /// <returns><see langword="true"/> when every stored member is still declared; otherwise <see langword="false"/>.</returns>
-    /// <remarks>
-    /// Member names are deliberately not compared at all - the underlying value is what a stored payload carries, so
-    /// a rename leaves every stored value denoting exactly what it denoted before.
-    /// </remarks>
-    static bool EnumerationOnlyGrewOrWasRenamed(JsonObject stored, JsonObject generated)
-    {
-        if (stored[EnumerationKey] is not JsonArray storedMembers ||
-            generated[EnumerationKey] is not JsonArray generatedMembers)
-        {
-            return false;
-        }
-
-        var declared = generatedMembers.Select(JsonValues.Canonical).ToHashSet(StringComparer.Ordinal);
-        return storedMembers.Select(JsonValues.Canonical).All(declared.Contains);
-    }
-
-    static void EraseEnumeration(JsonObject node)
-    {
-        node.Remove(EnumerationKey);
-        node.Remove(EnumerationNamesKey);
+        return true;
     }
 }

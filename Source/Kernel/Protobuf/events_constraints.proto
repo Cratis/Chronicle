@@ -2,6 +2,12 @@ syntax = "proto3";
 package Cratis.Chronicle.Contracts.Events.Constraints;
 import "google/protobuf/empty.proto";
 
+message ClosesStreamConstraintDefinition {
+   repeated string EventTypeIds = 1;
+   uint32 Dimensions = 2;
+   repeated string ReopenedBy = 3;
+   string EventStreamIdFrom = 4;
+}
 message Constraint {
    string Name = 1;
    ConstraintType Type = 2;
@@ -9,6 +15,7 @@ message Constraint {
    OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition Definition = 4;
    ConstraintScope Scope = 5;
    repeated string EventSequences = 6;
+   ClosesStreamConstraintDefinition ClosesStream = 7;
 }
 message ConstraintScope {
    string EventSourceType = 1;
@@ -21,6 +28,7 @@ enum ConstraintType {
    UniqueEventType = 2;
    Schema = 3;
    StreamClosed = 4;
+   ClosesStream = 5;
 }
 message OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition {
    UniqueConstraintDefinition Value0 = 1;

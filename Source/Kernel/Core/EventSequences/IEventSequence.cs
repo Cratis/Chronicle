@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
@@ -291,6 +292,36 @@ public interface IEventSequence : IGrainWithStringKey
     /// <see cref="CompleteStreamError.AlreadyCompleted"/> and leaves the stream in its completed state.
     /// </remarks>
     Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId);
+
+    /// <summary>
+    /// Manually close a nonempty scope in the same grain turn as its optional tail check.
+    /// </summary>
+    /// <param name="scope">The scope to close.</param>
+    /// <param name="expectedTailSequenceNumber">An optional expected scope tail.</param>
+    /// <returns>The sequence tail at closure, or a completion error.</returns>
+    /// <remarks>
+    /// A covering manual closure returns AlreadyCompleted without writing. Coverage only by event-owned
+    /// closures still writes a manual closure, so a later reopening event cannot undo the manual decision.
+    /// </remarks>
+    Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default);
+
+    /// <summary>
+    /// Check whether a scope is covered by any persisted closure.
+    /// </summary>
+    /// <param name="scope">The scope to check.</param>
+    /// <returns>True if covered.</returns>
+    Task<bool> IsStreamCompleted(ClosedStreamScope scope);
+
+    /// <summary>
+    /// Repairs an exact manual closure after durably auditing the operator's decision.
+    /// </summary>
+    /// <param name="scope">The exact scope to reopen.</param>
+    /// <param name="reason">The repair reason.</param>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The authenticated operator.</param>
+    /// <returns>Success or the reason the repair was rejected.</returns>
+    Task<Result<Sequences.ReopenStreamScopeError>> ReopenCompletedStream(ClosedStreamScope scope, string reason, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Check whether or not the supplied stream has been completed.

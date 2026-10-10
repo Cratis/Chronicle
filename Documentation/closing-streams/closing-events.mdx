@@ -1,0 +1,67 @@
+---
+title: Closing events
+description: Declare an event type that closes a stream scope in the same step as its append, and the event types that reopen it.
+---
+
+A manual `CompleteStream` call writes nothing to the log, cannot be rebuilt from events and is a second step after the final append. A closing event removes all three problems. You declare that appending a particular event type closes a scope. The kernel then writes the event and the closure together, and the closure can be rebuilt from the log.
+
+Use it when a domain fact ends something: `ReportDelivered`, `BooksClosed`, `VersionSuperseded`.
+
+## Declare a closing event
+
+With the attribute, the declaration sits on the event:
+
+<ChronicleClientTabs snippet="closing-streams/closing-events/declare-attribute" />
+
+With the builder, the declaration is a constraint class:
+
+<ChronicleClientTabs snippet="closing-streams/closing-events/declare-builder" />
+
+Both forms compile to the same constraint. Details of each style are in the [model-bound](../constraints/model-bound/closing-stream.mdx) and [declarative](../constraints/declarative/closing-stream.mdx) reference pages.
+
+## Choose the scope
+
+By default the closed scope is the appended event's event source id, stream type and stream id, taken from the append. To close something else, choose dimensions. The attribute takes a `Dimensions` value and the builder has `PerEventSourceId()`, `PerEventSourceType()`, `PerEventStreamType()` and `PerEventStreamId()`.
+
+To take the stream id from the event's payload instead of the append, use `EventStreamIdFrom` (attribute) or `EventStreamIdFrom(@event => @event.Period)` (builder). That implies the stream id dimension. This is useful when the closing fact names the period it closes while it is appended somewhere else:
+
+<ChronicleClientTabs snippet="closing-streams/closing-events/event-stream-id-from" />
+
+A scope resolving to only default-stream values is refused for both closing and reopening events; it cannot close the default stream for every event source.
+
+A property-sourced value must be present. If it is missing, null or empty, the kernel refuses the append with a violation naming the property rather than closing something broader. Make the property non-nullable. The analyzer [CHR0012](../code-analysis/CHR0012.mdx) warns on nullable event properties.
+
+## What happens on append
+
+The closing event is accepted. Every later event inside the closed scope is refused with `StreamClosed`, and events elsewhere are not affected:
+
+<ChronicleClientTabs snippet="closing-streams/closing-events/append-after-close" />
+
+Inside one `AppendMany`, events after the closing event that fall inside the scope are refused, and the batch result names them. A batch that closes, reopens and then appends a covered event succeeds for the covered event, because the batch is evaluated in order.
+
+A closing event cannot be appended into a scope that is already closed. The closed-stream check applies to it like to any other event.
+
+## Reopen with an event
+
+Name the event types that lift the closure with `ReopenedBy` (attribute) or `ReopenedBy<T>()` (builder). The reopening fact records who reopened and why in the log, which is the reason to prefer it over a kernel call.
+
+A `ReopenedBy` event:
+
+- removes only the closure owned by its own constraint, for the exact scope it resolves to;
+- is accepted inside the scope it reopens, because it is exempt from its own constraint's closure;
+- is not exempt from a manual closure or from another constraint's closure. If an operator also closed the scope with `CompleteStream`, the reopening event is refused;
+- must carry the same `EventStreamIdFrom` property as the closing event. The client throws `PropertyDoesNotExistOnEventType` when it discovers the constraint if the property is missing.
+
+## Ownership and names
+
+Each closure belongs to its constraint. The constraint name defaults to the event type name. Set `Name` on the attribute or pass `name` to the builder to choose another. Two declarations that share a name merge into one constraint, with their closing and reopening event types combined. They must use the same dimensions and stream id property, otherwise the client throws `ConflictingClosesStreamDeclarations`. The empty name is reserved for manual closures.
+
+Set `EventSequences` on the attribute to restrict a declaration to specific event sequences. Empty means all.
+
+## Not retroactive
+
+Registering or changing a declaration closes nothing in history. Only events appended afterwards close scopes. A reindex that names the constraint rebuilds its closures from the log, see [Closing streams](index.mdx#guarantees-and-limits) for the guarantees, the crash window and the redaction limit. A closing-constraint rebuild must not run while appends to the sequence are in flight.
+
+## Test it
+
+`EventScenario` supports closing and reopening events. See [EventScenario](../testing/events/scenario.mdx#closing-and-reopening-streams).

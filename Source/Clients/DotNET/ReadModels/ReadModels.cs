@@ -518,7 +518,10 @@ public class ReadModels(
                     IsPublic = eventTargetType.IsPublicEventType(eventStore.Name)
                 }
             },
-            Schema = schemaGenerator.Generate(eventTargetType).ToJson(),
+            Schema = (eventStore.Connection is Connections.IKernelCapabilities capabilities &&
+                capabilities.Capabilities.Contains(Contracts.Clients.KernelCapabilities.PreciseEventTypeSchemas)
+                    ? schemaGenerator.Generate(eventTargetType)
+                    : schemaGenerator.GenerateLegacyEventType(eventTargetType)).ToJson(),
             Indexes = [],
             ObserverType = observerType,
             ObserverIdentifier = observerIdentifier

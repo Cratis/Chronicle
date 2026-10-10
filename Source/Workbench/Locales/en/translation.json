@@ -66,6 +66,7 @@
         "failedPartitions": "Failed partitions",
         "readModels": "Read Models",
         "identities": "Identities",
+        "closedStreams": "Closed Streams",
         "general": {
             "groupLabel": "General",
             "eventTypes": "Event Types",
@@ -699,6 +700,24 @@
                     "messages": "Messages",
                     "stackTrace": "Stack trace",
                     "noStackTrace": "No stack trace available"
+                }
+            },
+            "closedStreams": {
+                "title": "Closed Streams",
+                "empty": "No closed streams",
+                "columns": {
+                    "eventSourceId": "Event Source Id",
+                    "eventSourceType": "Event Source Type",
+                    "eventStreamType": "Stream Type",
+                    "eventStreamId": "Stream Id",
+                    "origin": "Origin",
+                    "closedBy": "Closing Constraint",
+                    "sequenceNumber": "Sequence Number",
+                    "closedAt": "Closed At"
+                },
+                "origins": {
+                    "manual": "Manual",
+                    "event": "Closing Event"
                 }
             },
             "identities": {

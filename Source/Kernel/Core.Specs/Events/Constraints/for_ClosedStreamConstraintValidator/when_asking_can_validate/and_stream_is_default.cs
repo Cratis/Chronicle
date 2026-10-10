@@ -23,5 +23,5 @@ public class and_stream_is_default : given.a_closed_stream_constraint_validator
 
     void Because() => _result = _validator.CanValidate(_context);
 
-    [Fact] void should_not_be_able_to_validate() => _result.ShouldBeFalse();
+    [Fact] void should_be_able_to_validate() => _result.ShouldBeTrue();
 }

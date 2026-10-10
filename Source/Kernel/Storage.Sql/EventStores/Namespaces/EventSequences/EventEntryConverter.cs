@@ -546,6 +546,44 @@ public static class EventEntryConverter
         return new AppendedEvent(eventContext, content) { GenerationalContent = GetAllGenerationalContent(entry) };
     }
 
+    /// <summary>
+    /// Converts stored event content using its registered generation schema.
+    /// </summary>
+    /// <param name="entry">The stored event.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="identityStorage">The identity storage.</param>
+    /// <param name="namedTags">The named tags.</param>
+    /// <param name="resolveSchema">Resolves a generation schema within the current read.</param>
+    /// <param name="converter">The schema-aware JSON converter.</param>
+    /// <returns>The appended event.</returns>
+    public static async Task<AppendedEvent> ToAppendedEvent(
+        EventEntry entry,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IIdentityStorage identityStorage,
+        IReadOnlyCollection<NamedTag>? namedTags,
+        Func<EventType, Task<Cratis.Chronicle.Schemas.JsonSchema?>> resolveSchema,
+        Cratis.Chronicle.Json.IExpandoObjectConverter converter)
+    {
+        var result = await ToAppendedEvent(entry, eventStore, @namespace, identityStorage, namedTags);
+        if (result.Context.EventType.Id == GlobalEventTypes.Redaction)
+        {
+            return result;
+        }
+        var schema = await resolveSchema(result.Context.EventType);
+        if (schema is null)
+        {
+            return result;
+        }
+        var content = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
+        if (content?.TryGetValue(result.Context.EventType.Generation.ToString(), out var element) != true)
+        {
+            return result;
+        }
+        return result with { Content = converter.ToExpandoObject(System.Text.Json.Nodes.JsonNode.Parse(element.GetRawText())!.AsObject(), schema) };
+    }
+
     static ExpandoObject ConvertJsonObjectToExpando(JsonElement element)
     {
         var expando = new ExpandoObject();
@@ -584,7 +622,7 @@ public static class EventEntryConverter
                     return unsigned;
                 }
 
-                return element.GetDouble();
+                return element.TryGetDecimal(out var decimalValue) ? decimalValue : element.GetDouble();
             case JsonValueKind.True:
                 return true;
             case JsonValueKind.False:

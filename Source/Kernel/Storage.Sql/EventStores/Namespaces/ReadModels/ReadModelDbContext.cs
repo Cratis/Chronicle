@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Text.Json;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Json;
@@ -45,6 +46,14 @@ public class ReadModelDbContext(
             new PolygonJsonConverter()
         }
     };
+
+    static readonly ValueConverter<decimal, decimal> _sqlServerDecimalConverter = new(
+        value => DecimalColumnValues.ForSqlServer(value),
+        value => DecimalColumnValues.FromSqlServer(value));
+
+    static readonly ValueConverter<decimal, string> _sqliteDecimalConverter = new(
+        value => value.ToString(CultureInfo.InvariantCulture),
+        value => decimal.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture));
 
     static readonly ValueConverter<Guid, string> _sqliteGuidConverter = new(
         v => v.ToString("D"),
@@ -133,6 +142,23 @@ public class ReadModelDbContext(
                     // provider's JSON type at the DB layer. Round-tripping a string is what we want —
                     // the sink serializes to JSON before SetValue and deserializes on read.
                     propertyBuilder.HasColumnType(GetJsonColumnType(databaseType));
+                }
+                else if ((Nullable.GetUnderlyingType(column.ClrType) ?? column.ClrType) == typeof(decimal))
+                {
+                    propertyBuilder.HasColumnType(databaseType switch
+                    {
+                        DatabaseType.PostgreSql => "NUMERIC",
+                        DatabaseType.SqlServer => "DECIMAL(38,18)",
+                        _ => "TEXT"
+                    });
+                    if (databaseType == DatabaseType.Sqlite)
+                    {
+                        propertyBuilder.HasConversion(_sqliteDecimalConverter);
+                    }
+                    if (databaseType == DatabaseType.SqlServer)
+                    {
+                        propertyBuilder.HasConversion(_sqlServerDecimalConverter);
+                    }
                 }
                 else if (column.ClrType == typeof(Guid) && databaseType == DatabaseType.Sqlite)
                 {

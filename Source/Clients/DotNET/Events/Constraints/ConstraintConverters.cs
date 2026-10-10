@@ -21,6 +21,7 @@ internal static class ConstraintConverters
     {
         UniqueEventTypeConstraintDefinition uniqueEventTypeConstraintDefinition => uniqueEventTypeConstraintDefinition.ToContract(),
         UniqueConstraintDefinition uniqueConstraintDefinition => uniqueConstraintDefinition.ToContract(),
+        ClosesStreamConstraintDefinition closing => closing.ToContract(),
         _ => throw new UnknownConstraintType(definition)
     };
 
@@ -69,6 +70,25 @@ internal static class ConstraintConverters
         }),
         Scope = definition.Scope?.ToContract(),
         EventSequences = [.. definition.EventSequences.Select(_ => _.Value).Distinct()]
+    };
+
+    /// <summary>
+    /// Convert a closing declaration without changing the existing definition union.
+    /// </summary>
+    /// <param name="definition">The closing declaration.</param>
+    /// <returns>The contract declaration.</returns>
+    internal static Constraint ToContract(this ClosesStreamConstraintDefinition definition) => new()
+    {
+        Name = definition.Name,
+        Type = Contracts.Events.Constraints.ConstraintType.ClosesStream,
+        ClosesStream = new Contracts.Events.Constraints.ClosesStreamConstraintDefinition
+        {
+            EventTypeIds = definition.EventTypeIds.Select(id => id.Value).ToList(),
+            Dimensions = (uint)definition.Dimensions,
+            ReopenedBy = definition.ReopenedBy.Select(id => id.Value).ToList(),
+            EventStreamIdFrom = definition.EventStreamIdFrom
+        },
+        EventSequences = definition.EventSequences.Select(sequence => sequence.Value).Distinct().ToList()
     };
 
     /// <summary>

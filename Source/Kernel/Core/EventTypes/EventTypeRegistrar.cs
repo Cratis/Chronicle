@@ -11,6 +11,8 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.EventTypes;
 
@@ -25,6 +27,18 @@ namespace Cratis.Chronicle.EventTypes;
 /// </remarks>
 public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 {
+    readonly ILogger<EventTypeRegistrar> _logger = NullLogger<EventTypeRegistrar>.Instance;
+
+    /// <summary>
+    /// Initializes a registrar with structured warnings for protection changes.
+    /// </summary>
+    /// <param name="grainFactory">The grain factory.</param>
+    /// <param name="logger">The logger.</param>
+    public EventTypeRegistrar(IGrainFactory grainFactory, ILogger<EventTypeRegistrar> logger) : this(grainFactory)
+    {
+        _logger = logger;
+    }
+
     /// <summary>
     /// Registers event types into an event store, validating them and recording what changed.
     /// </summary>
@@ -75,13 +89,14 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         foreach (var eventType in typesList)
         {
             newGenerationsPerEventType.Add(GetNewGenerations(eventType, StoredFor(stored, eventType)));
-            eventTypesToRegister.Add(await CreateEventTypeToRegister(eventType, skipValidation));
+            eventTypesToRegister.Add(await CreateEventTypeToRegister(eventType, skipValidation, StoredFor(stored, eventType)));
         }
 
         // Evict the event type cache on every silo whenever a registration actually changed the stored
         // representation - a new generation, or a different owner, source, or tombstone. Idempotent
         // re-registrations report no change, so client reconnects do not trigger cluster-wide eviction.
         var mutated = await eventTypesStorage.Register(eventTypesToRegister);
+        LogAddedProtectionMetadata(eventTypesToRegister, stored);
 
         foreach (var eventTypeId in mutated)
         {
@@ -138,7 +153,7 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         return new(eventTypeId, storedDefinition is not null, generations);
     }
 
-    static async Task<EventTypeToRegister> CreateEventTypeToRegister(EventTypeRegistration eventType, bool skipValidation)
+    static async Task<EventTypeToRegister> CreateEventTypeToRegister(EventTypeRegistration eventType, bool skipValidation, EventTypeDefinition? storedDefinition)
     {
         var generations = new List<Concepts.Events.EventTypeGenerationDefinition>();
         foreach (var genDef in eventType.Generations)
@@ -153,6 +168,22 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
             var schema = await JsonSchema.FromJsonAsync(eventType.Schema);
             schema.EnsureComplianceMetadata();
             generations.Add(new Concepts.Events.EventTypeGenerationDefinition(eventType.Type.ToChronicle().Generation, schema));
+        }
+
+        for (var index = 0; index < generations.Count; index++)
+        {
+            var incoming = generations[index];
+            var stored = storedDefinition?.Generations.FirstOrDefault(_ => _.Generation == incoming.Generation);
+            if (stored is null)
+            {
+                continue;
+            }
+            var refined = stored.Schema.MorePrecise(incoming.Schema);
+            if (!stored.Schema.HasCompatibleProtectionMetadata(refined))
+            {
+                throw new EventTypeSchemaChanged(eventType.Type.Id, incoming.Generation.Value);
+            }
+            generations[index] = incoming with { Schema = refined };
         }
 
         var migrations = eventType.Migrations
@@ -378,7 +409,9 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
             return;
         }
 
-        foreach (var genDef in eventType.Generations)
+        var definitions = eventType.Generations.Count > 0 ? eventType.Generations :
+            [new Contracts.Events.EventTypeGenerationDefinition { Generation = eventType.Type.Generation, Schema = eventType.Schema }];
+        foreach (var genDef in definitions)
         {
             var generation = new EventTypeGeneration(genDef.Generation);
             var existingGeneration = storedDefinition.Generations.FirstOrDefault(_ => _.Generation == generation);
@@ -400,9 +433,30 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
             // that only gained members or had members renamed - neither moves an existing member off the
             // underlying value a stored payload carries. Everything else, including a member that disappeared or
             // was renumbered, still needs a new generation.
-            if (!existingGeneration.Schema.IsCompatibleWith(newSchema))
+            var refined = existingGeneration.Schema.MorePrecise(newSchema);
+            if (!existingGeneration.Schema.IsCompatibleWith(refined))
             {
                 throw new EventTypeSchemaChanged(eventType.Type.Id, genDef.Generation);
+            }
+        }
+    }
+
+    void LogAddedProtectionMetadata(IEnumerable<EventTypeToRegister> registrations, Dictionary<EventTypeId, EventTypeDefinition> stored)
+    {
+        foreach (var registration in registrations)
+        {
+            var previous = stored.GetValueOrDefault(registration.Definition.Id);
+            foreach (var generation in registration.Definition.Generations)
+            {
+                var existing = previous?.Generations.FirstOrDefault(item => item.Generation == generation.Generation);
+                if (existing is null)
+                {
+                    continue;
+                }
+                foreach (var path in existing.Schema.AddedProtectionMetadataPaths(generation.Schema))
+                {
+                    _logger.ComplianceMetadataAddedToExistingGeneration(registration.Definition.Id.Value, generation.Generation.Value, path);
+                }
             }
         }
     }

@@ -33,7 +33,7 @@ public class a_sql_event : a_stored_event
 
         var database = Substitute.For<IDatabase>();
         database.EventSequenceTable("store", "tenant", "log").Returns(_ => new DbContextScope<EventSequenceDbContext>(new EventSequenceDbContext(options, "log", migrator), () => { }));
-        _sql = new("store", "tenant", "log", database, Substitute.For<IIdentityStorage>(), NullLogger<EventSequenceStorage>.Instance);
+        _sql = new("store", "tenant", "log", database, Substitute.For<IIdentityStorage>(), NullLogger<EventSequenceStorage>.Instance, _storage.GetEventStore("store").EventTypes, _converter);
         _storage.GetEventStore("store").GetNamespace("tenant").GetEventSequence("log").Returns(_sql);
         dynamic first = new ExpandoObject();
         first.value = 42;

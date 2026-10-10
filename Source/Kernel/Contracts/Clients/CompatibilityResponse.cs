@@ -37,4 +37,10 @@ public class CompatibilityResponse
     /// </summary>
     [ProtoMember(4)]
     public string ServerProtocolVersion { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets optional behaviors supported by this kernel.
+    /// </summary>
+    [ProtoMember(5)]
+    public IList<string> Capabilities { get; set; } = new List<string>();
 }

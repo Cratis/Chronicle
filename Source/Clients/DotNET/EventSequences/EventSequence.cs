@@ -20,6 +20,8 @@ using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.Transactions;
 using Cratis.Monads;
 using Cratis.Traces;
+using Grpc.Core;
+using ProtoBuf.Grpc;
 using ContractCompleteStreamError = Cratis.Chronicle.Contracts.Sequences.CompleteStreamError;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -311,6 +313,66 @@ public class EventSequence(
         }).EnsureSuccess()).HasEvents;
 
     /// <inheritdoc/>
+    public async Task<EventMetadata?> GetMetadataAt(EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default)
+    {
+        var metadata = await GetMetadataAt([sequenceNumber], cancellationToken);
+        return metadata.GetValueOrDefault(sequenceNumber);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IImmutableDictionary<EventSequenceNumber, EventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var locators = sequenceNumbers.Take(EventMetadata.MaxLocators + 1).ToArray();
+        if (locators.Length > EventMetadata.MaxLocators)
+        {
+            throw new TooManyEventLocators();
+        }
+        if (locators.Length == 0)
+        {
+            return ImmutableDictionary<EventSequenceNumber, EventMetadata>.Empty;
+        }
+        var request = new Contracts.Sequences.MetadataAtRequest
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SequenceNumbers = locators.Select(_ => _.Value).Distinct().ToArray()
+        };
+        IEnumerable<Contracts.Sequences.EventMetadataResponse> result;
+        try
+        {
+            result = await _servicesAccessor.Services.Sequences.MetadataAt(request, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
+        }
+        catch (RpcException exception) when (exception.StatusCode == StatusCode.Unimplemented)
+        {
+            throw new EventMetadataReadsNotSupported();
+        }
+        return result.Select(entry => new EventMetadata(
+            entry.SequenceNumber,
+            entry.EventTypeId,
+            entry.EventSourceType,
+            entry.EventSourceId,
+            entry.EventStreamType,
+            entry.EventStreamId,
+            entry.Occurred,
+            entry.CorrelationId,
+            entry.Causation.Select(cause => new Causation(cause.Occurred, cause.Type, cause.Properties)).ToImmutableList(),
+            ResolveMetadataIdentity(entry.CausedBy),
+            (InitiatorType)entry.InitiatorType,
+            entry.Tags.Select(tag => new Tag(tag)).ToImmutableList(),
+            entry.Subject,
+            entry.EventSourceName)).ToImmutableDictionary(_ => _.SequenceNumber);
+
+        static ResolvedIdentity ResolveMetadataIdentity(Contracts.Sequences.ResolvedIdentity identity) => new(
+            identity.Subject,
+            identity.Name,
+            identity.UserName,
+            (IdentityResolution)identity.Resolution,
+            identity.OnBehalfOf is null ? null : ResolveMetadataIdentity(identity.OnBehalfOf));
+    }
+
+    /// <inheritdoc/>
     public async Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(
         EventSequenceNumber sequenceNumber,
         EventSourceId? eventSourceId = default,
@@ -469,12 +531,100 @@ public class EventSequence(
         };
     }
 
+    /// <inheritdoc/>
+    public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default)
+    {
+        var response = await WithClosedStreamScopeSupport(() => _servicesAccessor.Services.Sequences.CompleteStreamScope(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = scope.EventSourceId?.Value,
+            EventSourceType = scope.EventSourceType?.Value,
+            EventStreamType = scope.EventStreamType?.Value,
+            EventStreamId = scope.EventStreamId?.Value,
+            ExpectedTailSequenceNumber = expectedTailSequenceNumber?.Value
+        }).EnsureSuccess());
+
+        return response.IsSuccess
+            ? (EventSequenceNumber)response.SequenceNumber
+            : response.Error switch
+            {
+                ContractCompleteStreamError.DefaultStreamCannotBeCompleted => CompleteStreamError.DefaultStreamCannotBeCompleted,
+                ContractCompleteStreamError.EmptyScope => CompleteStreamError.EmptyScope,
+                ContractCompleteStreamError.ExpectedTailMismatch => CompleteStreamError.ExpectedTailMismatch,
+                ContractCompleteStreamError.AlreadyCompleted => CompleteStreamError.AlreadyCompleted,
+                _ => throw new UnknownCompleteStreamError((int)response.Error)
+            };
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> IsStreamCompleted(ClosedStreamScope scope)
+    {
+        var response = await WithClosedStreamScopeSupport(() => _servicesAccessor.Services.Sequences.IsStreamScopeCompleted(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = scope.EventSourceId?.Value,
+            EventSourceType = scope.EventSourceType?.Value,
+            EventStreamType = scope.EventStreamType?.Value,
+            EventStreamId = scope.EventStreamId?.Value
+        }).EnsureSuccess());
+
+        return response.IsCompleted;
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
+        IsStreamCompleted(ClosedStreamScope.ForStream(
+            eventStreamType.Value.Length == 0 ? EventStreamType.All : eventStreamType,
+            eventStreamId.Value.Length == 0 ? EventStreamId.Default : eventStreamId));
+
+    /// <inheritdoc/>
+    public async Task<IImmutableList<ClosedStream>> GetClosedStreams(ClosedStreamScope? within = default)
+    {
+        var response = await WithClosedStreamScopeSupport(() => _servicesAccessor.Services.Sequences.ClosedStreams(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = within?.EventSourceId?.Value,
+            EventSourceType = within?.EventSourceType?.Value,
+            EventStreamType = within?.EventStreamType?.Value,
+            EventStreamId = within?.EventStreamId?.Value
+        }).EnsureSuccess());
+
+        return response.Select(row => new ClosedStream(
+            new(
+                row.EventSourceId is null ? null : new EventSourceId(row.EventSourceId),
+                row.EventSourceType is null ? null : new EventSourceType(row.EventSourceType),
+                row.EventStreamType is null ? null : new EventStreamType(row.EventStreamType),
+                row.EventStreamId is null ? null : new EventStreamId(row.EventStreamId)),
+            row.Origin == Contracts.Sequences.ClosedStreamOrigin.CompleteStream ? ClosedStreamOrigin.CompleteStream : ClosedStreamOrigin.ClosingEvent,
+            row.ClosedBy is null ? null : new Events.Constraints.ConstraintName(row.ClosedBy),
+            row.SequenceNumber,
+            row.ClosedAt)).ToImmutableList();
+    }
+
     /// <summary>Checks whether this is the event log for the exact decision-read target.</summary>
     /// <param name="store">The expected event store.</param>
     /// <param name="targetNamespace">The expected namespace.</param>
     /// <returns>Whether this sequence belongs to the target.</returns>
     internal bool MatchesTarget(EventStoreName store, EventStoreNamespaceName targetNamespace) =>
         eventStoreName == store && @namespace == targetNamespace && eventSequenceId == EventSequenceId.Log;
+
+    static async Task<TResult> WithClosedStreamScopeSupport<TResult>(Func<Task<TResult>> call)
+    {
+        try
+        {
+            return await call();
+        }
+        catch (RpcException exception) when (exception.StatusCode == StatusCode.Unimplemented)
+        {
+            throw new ClosedStreamScopesNotSupported();
+        }
+    }
 
     static EventSourceType ResolveEventSourceType(EventSourceType? value) =>
         string.IsNullOrEmpty(value?.Value) ? EventSourceType.Default : value;

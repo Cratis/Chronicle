@@ -17,6 +17,7 @@ Use model-bound constraints when:
 |---|---|
 | [Unique property](unique) | Enforce that a property value is unique across one or more event types |
 | [Unique event type](unique-event-type) | Enforce that only one event of a specific type can be appended per event source |
+| [Closing stream](closing-stream) | Close a stream scope when an event of a specific type is appended |
 
 ## Discovery
 

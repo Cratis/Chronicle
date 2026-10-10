@@ -149,7 +149,8 @@ public class EventStore : IEventStore
             [
                 new ConstraintsByBuilderProvider(clientArtifactsProvider, EventTypes, namingPolicy, artifactActivator, loggerFactory.CreateLogger<ConstraintsByBuilderProvider>()),
                 new UniqueConstraintProvider(clientArtifactsProvider, EventTypes, namingPolicy),
-                new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes)
+                new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes),
+                new ClosesStreamConstraintsProvider(clientArtifactsProvider, EventTypes, namingPolicy)
             ]);
 
         EventLog = new EventLog(
@@ -281,7 +282,8 @@ public class EventStore : IEventStore
             clientArtifactsProvider,
             serviceProvider,
             artifactActivator,
-            loggerFactory.CreateLogger<EventSeeding>());
+            loggerFactory.CreateLogger<EventSeeding>(),
+            EventSources);
 
         Patterns = new Patterns.Patterns(this);
 

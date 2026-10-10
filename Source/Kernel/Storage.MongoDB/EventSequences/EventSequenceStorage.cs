@@ -456,7 +456,7 @@ public partial class EventSequenceStorage(
 
         var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
-        var document = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+        var document = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions), schema.Schema);
 
         var revision = new EventRevision(
             eventType.Generation,
@@ -817,6 +817,33 @@ public partial class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+    {
+        var numbers = sequenceNumbers.Distinct().ToArray();
+        if (numbers.Length == 0)
+        {
+            return [];
+        }
+        var filter = Builders<Event>.Filter.In(_ => _.SequenceNumber, numbers);
+        var projection = Builders<Event>.Projection.Exclude(_ => _.Content).Exclude(_ => _.ContentHashes).Exclude(_ => _.Revisions);
+        var events = await _collection.Find(filter).SortBy(_ => _.SequenceNumber).Project<Event>(projection).ToListAsync(cancellationToken).ConfigureAwait(false);
+        return events.Select(_ => new StoredEventMetadata(
+            _.SequenceNumber,
+            _.Type,
+            _.EventSourceType,
+            _.EventSourceId,
+            _.EventStreamType,
+            _.EventStreamId,
+            _.Occurred,
+            _.CorrelationId,
+            _.Causation,
+            _.CausedBy,
+            _.Tags.Select(tag => new Concepts.Events.Tag(tag)).ToArray(),
+            _.Subject ?? new Subject(_.EventSourceId.Value),
+            _.EventSource ?? EventSourceName.NotSet)).ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber)
     {
         logger.GettingEventAtSequenceNumber(eventSequenceId, sequenceNumber);
@@ -1033,7 +1060,7 @@ public partial class EventSequenceStorage(
         {
             var schema = await eventTypesStorage.GetFor(existingEvent.Type, generation);
             var jsonObject = expandoObjectConverter.ToJsonObject(expandoContent, schema.Schema);
-            generationalContent[generation.ToString()] = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+            generationalContent[generation.ToString()] = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions), schema.Schema);
         }
 
         var update = Builders<Event>.Update.Set(e => e.Content, generationalContent);
@@ -1179,7 +1206,7 @@ public partial class EventSequenceStorage(
     }
 
     BsonDocument SerializeContent(ExpandoObject content, JsonSchema schema) =>
-        EventContentBson.FromJson(JsonSerializer.Serialize(expandoObjectConverter.ToJsonObject(content, schema), jsonSerializerOptions));
+        EventContentBson.FromJson(JsonSerializer.Serialize(expandoObjectConverter.ToJsonObject(content, schema), jsonSerializerOptions), schema);
 
     async Task<DuplicateEventSequenceNumber> AbortAndResolveNextAvailableSequenceNumber(IClientSessionHandle session)
     {

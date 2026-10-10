@@ -37,6 +37,8 @@ public class an_immediate_projection : Specification
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected ILogger<ImmediateProjection> _logger;
 
+    protected virtual ImmediateProjectionStreamScope? StreamScope => null;
+
     async Task Establish()
     {
         _silo = new TestKitSilo();
@@ -74,7 +76,8 @@ public class an_immediate_projection : Specification
             EventStore,
             EventStoreNamespaceName.Default,
             EventSequenceId.Log,
-            ReadModelKey);
+            ReadModelKey,
+            StreamScope: StreamScope);
         _grain = await _silo.CreateGrainAsync<TestableImmediateProjection>(key.ToString());
     }
 

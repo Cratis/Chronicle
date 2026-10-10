@@ -1,0 +1,51 @@
+---
+title: Scoped closing
+description: Close one event source's stream, every stream of an event source, or any other combination of dimensions, and close only when nothing has landed since your last fact.
+---
+
+The two-argument `CompleteStream(streamType, streamId)` closes a stream for every event source that uses that pair. That forces you to make stream ids globally unique just so you can close one. A `ClosedStreamScope` lets you name what you mean instead. For the scope model and its rules, see [Closing streams](index.mdx).
+
+## Close one event source's stream
+
+Set the event source id together with the stream type and stream id. Only that event source's stream is refused. Other reports that use `monthly-report` / `2026-04` stay open:
+
+<ChronicleClientTabs snippet="closing-streams/scoped-closing/close-source-stream" />
+
+The scope has three dimensions set, so an append is refused only when it carries all three values.
+
+## Close every stream of an event source
+
+`ClosedStreamScope.ForEventSource` sets only the event source id. Every stream of that event source is refused, including its default stream. This is how you archive an entity whose events use no stream id at all:
+
+<ChronicleClientTabs snippet="closing-streams/scoped-closing/close-source" />
+
+`ClosedStreamScope.ForStream` is the matching helper for the stream type and stream id pair, and it is what the two-argument overload uses.
+
+## Close only if nothing landed
+
+Appending the last fact and then closing are two calls. Another append can land between them. Pass the sequence number of the last fact you know about as `expectedTailSequenceNumber`. The kernel compares it with the tail of the scope, the sequence number of the last event inside the scope, and closes in the same step. If another event landed, the call returns `ExpectedTailMismatch` and writes nothing:
+
+<ChronicleClientTabs snippet="closing-streams/scoped-closing/close-expected-tail" />
+
+An empty scope has the tail `EventSequenceNumber.Unavailable`. The scope's tail only counts events inside the scope, so events appended elsewhere in the sequence do not cause a mismatch.
+
+A retry is safe. The `AlreadyCompleted` check runs first, so repeating a close that succeeded returns `AlreadyCompleted` instead of a tail mismatch. The example above treats it as success.
+
+:::tip[Prefer a closing event when a domain fact ends the scope]
+If the last fact itself should end the scope, declare it as a [closing event](closing-events.mdx). The closure is then written in the same step as the append, and there is no gap to guard.
+:::
+
+## Handle the errors
+
+<ChronicleClientTabs snippet="closing-streams/scoped-closing/handle-errors" />
+
+| Error | What to do |
+|---|---|
+| `AlreadyCompleted` | A manual closure covers the scope. Usually a success from your point of view |
+| `DefaultStreamCannotBeCompleted` | Add an event source id or another specific dimension |
+| `EmptyScope` | The scope has no dimension set. This is a bug in the caller |
+| `ExpectedTailMismatch` | Read the stream again and decide whether to close |
+
+Event-driven closures alone do not produce `AlreadyCompleted`. The call succeeds and writes a manual closure as well, which a `ReopenedBy` event can no longer undo.
+
+Closing is final for manual closures. If you closed the wrong scope, see [Inspecting and repairing](inspecting-and-repairing.mdx).

@@ -41,6 +41,11 @@ public class EventCursor(
     /// <inheritdoc/>
     public IEnumerable<AppendedEvent> Current { get; private set; } = [];
 
+    /// <summary>
+    /// Gets the generation-aware content conversion supplied by storage.
+    /// </summary>
+    internal Func<EventEntry, IReadOnlyCollection<NamedTag>, Task<AppendedEvent>>? ConvertEntry { get; init; }
+
     /// <inheritdoc/>
     public async Task<bool> MoveNext()
     {
@@ -66,7 +71,10 @@ public class EventCursor(
         var appendedEvents = new List<AppendedEvent>();
         foreach (var eventEntry in eventEntries)
         {
-            appendedEvents.Add(await EventEntryConverter.ToAppendedEvent(eventEntry, _eventStore, _namespace, _identityStorage, NamedTagEntries.At(namedTags, eventEntry.SequenceNumber)));
+            var tags = NamedTagEntries.At(namedTags, eventEntry.SequenceNumber);
+            appendedEvents.Add(ConvertEntry is not null
+                ? await ConvertEntry(eventEntry, tags)
+                : await EventEntryConverter.ToAppendedEvent(eventEntry, _eventStore, _namespace, _identityStorage, tags));
         }
 
         Current = appendedEvents;
