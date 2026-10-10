@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Integration.for_Reactors.when_generation_is_pinned;
 [Collection(ChronicleCollection.Name)]
 public class and_an_earlier_generation_has_personal_data(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture fixture) : Specification<ChronicleFixture>(fixture)
+    public class context(ChronicleFixture fixture) : given.a_pinned_client(fixture)
     {
         readonly TaskCompletionSource<(PinnedPersonRegistered Event, EventContext Context)> _live = new(TaskCreationOptions.RunContinuationsAsynchronously);
         readonly TaskCompletionSource<(PinnedPersonRegistered Event, EventContext Context)> _replay = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -25,19 +25,18 @@ public class and_an_earlier_generation_has_personal_data(context context) : Give
 
         protected override void ConfigureServices(IServiceCollection services)
         {
-            services.PostConfigure<ChronicleOptions>(options => options.EventGenerationDelivery = EventGenerationDelivery.Pinned);
             services.AddSingleton(new PinnedReactor(_live, _replay));
         }
 
         async Task Because()
         {
-            await EventStore.Reactors.GetHandlerFor<PinnedReactor>().WaitTillSubscribed();
-            var append = await EventStore.EventLog.Append($"person-{Guid.NewGuid()}", new PinnedPersonRegisteredV1("Ada Lovelace"));
+            await _pinnedStore.Reactors.GetHandlerFor<PinnedReactor>().WaitTillSubscribed();
+            var append = await _pinnedStore.EventLog.Append($"person-{Guid.NewGuid()}", new PinnedPersonRegisteredV1("Ada Lovelace"));
             (await append.WaitForCompletion()).IsSuccess.ShouldBeTrue();
             Live = await _live.Task.WaitAsync(TimeSpan.FromSeconds(30));
-            var replay = await EventStore.Reactors.Replay<PinnedReactor>();
+            var replay = await _pinnedStore.Reactors.Replay<PinnedReactor>();
             Replayed = await _replay.Task.WaitAsync(TimeSpan.FromSeconds(30));
-            await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(replay, TimeSpan.FromSeconds(30));
+            await _pinnedStore.Jobs.WaitTillJobCompletesOrIsDeleted(replay, TimeSpan.FromSeconds(30));
         }
     }
 
