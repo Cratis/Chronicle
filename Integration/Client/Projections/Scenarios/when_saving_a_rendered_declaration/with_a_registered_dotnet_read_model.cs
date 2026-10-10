@@ -38,6 +38,8 @@ public class with_a_registered_dotnet_read_model(context context) : Given<contex
             });
             SaveResult.Errors.ShouldBeEmpty();
             await Projection.WaitTillSubscribed();
+            EventSourceId = Guid.NewGuid().ToString();
+            ReadModelId = EventSourceId.Value;
             var appended = await EventStore.EventLog.Append(EventSourceId, new OrderPlaced("After save"));
             await WaitForProjectionAndSetResult(appended.SequenceNumber, requireMaterialized: true);
             AfterSave = Result;
