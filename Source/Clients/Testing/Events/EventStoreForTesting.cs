@@ -126,11 +126,14 @@ public class EventStoreForTesting : IEventStore
     /// </summary>
     /// <param name="serviceProvider">Optional service provider for resolving artifacts, options, and logging.</param>
     /// <param name="clientArtifactsProvider">Artifacts to discover.</param>
-    /// <param name="options">Optional settings for the unit-of-work lifecycle policy.</param>
+    /// <param name="options">Optional Chronicle settings, including explicit artifacts and the unit-of-work lifecycle policy.</param>
 #pragma warning disable CA2000 // Dispose objects before losing scope
     public EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options)
     {
         _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
+        var configuredOptions = options ?? (_serviceProvider is DefaultServiceProvider ? null :
+            _serviceProvider.GetService<IOptions<ChronicleOptions>>()?.Value);
+        ClientOptions = configuredOptions ?? new ChronicleOptions();
         _jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
         ClientArtifactsProvider = clientArtifactsProvider;
         _namingPolicy = new CamelCaseNamingPolicy();
@@ -183,6 +186,7 @@ public class EventStoreForTesting : IEventStore
             _artifactActivator,
             _jsonSerializerOptions,
             NullLogger<Projections.Projections>.Instance);
+        ClientOptions.ExplicitArtifacts.ApplyTo(_projections);
         _projections.Discover().GetAwaiter().GetResult();
 
         _reducers = new Reducers.Reducers(
@@ -235,37 +239,46 @@ public class EventStoreForTesting : IEventStore
         _constraintProvider = CreateConstraintProvider(_artifactActivator);
 
         _constraints = new Lazy<IConstraints>(() => new Constraints(this, [_constraintProvider]));
-        _reactors = new Lazy<IReactors>(() => new ReactorsImpl(
-            this,
-            _eventTypes,
-            ClientArtifactsProvider,
-            _serviceProvider,
-            _artifactActivator,
-            new ReactorMiddlewaresActivator(ClientArtifactsProvider, _artifactActivator, NullLogger<ReactorMiddlewaresActivator>.Instance),
-            EventSerializer,
-            new CausationManager(),
-            new BaseIdentityProvider(),
-            new ActivitySource<ReactorsImpl>(),
-            new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>(
-            [
-                new EventResultHandler(),
-                new EventsResultHandler(),
-                new EventForEventSourceIdResultHandler(),
-                new EventsForEventSourceIdResultHandler(),
-                new MixedSideEffectsResultHandler(),
-                new EventsWithConcurrencyScopesResultHandler()
-            ])),
-            new ReactorContextValuesBuilder(new KnownInstancesOf<IReactorContextValuesProvider>(
-            [
-                new EventSourceIdValuesProvider(),
-                new EventStreamIdValuesProvider(),
-                new EventStreamTypeValuesProvider(),
-                new EventSourceTypeValuesProvider(),
-                new SubjectValuesProvider()
-            ])),
-            new ReactorMethodArgumentsResolver(),
-            NullLogger<ReactorsImpl>.Instance,
-            new NullLoggerFactory()));
+        _reactors = new Lazy<IReactors>(() =>
+        {
+            var reactors = new ReactorsImpl(
+                this,
+                _eventTypes,
+                ClientArtifactsProvider,
+                _serviceProvider,
+                _artifactActivator,
+                new ReactorMiddlewaresActivator(ClientArtifactsProvider, _artifactActivator, NullLogger<ReactorMiddlewaresActivator>.Instance),
+                EventSerializer,
+                new CausationManager(),
+                new BaseIdentityProvider(),
+                new ActivitySource<ReactorsImpl>(),
+                new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>(
+                [
+                    new EventResultHandler(),
+                    new EventsResultHandler(),
+                    new EventForEventSourceIdResultHandler(),
+                    new EventsForEventSourceIdResultHandler(),
+                    new MixedSideEffectsResultHandler(),
+                    new EventsWithConcurrencyScopesResultHandler()
+                ])),
+                new ReactorContextValuesBuilder(new KnownInstancesOf<IReactorContextValuesProvider>(
+                [
+                    new EventSourceIdValuesProvider(),
+                    new EventStreamIdValuesProvider(),
+                    new EventStreamTypeValuesProvider(),
+                    new EventSourceTypeValuesProvider(),
+                    new SubjectValuesProvider()
+                ])),
+                new ReactorMethodArgumentsResolver(),
+                NullLogger<ReactorsImpl>.Instance,
+                new NullLoggerFactory());
+            ClientOptions.ExplicitArtifacts.ApplyTo(reactors);
+            if (ClientOptions.ExplicitArtifacts.Reactors.Any())
+            {
+                reactors.Discover().GetAwaiter().GetResult();
+            }
+            return reactors;
+        });
         _webhooks = new Lazy<IWebhooks>(() => new WebhooksImpl(_eventTypes, this, NullLogger<WebhooksImpl>.Instance));
         _externalServices = new Lazy<IExternalServices>(() => new ExternalServicesImpl(this, NullLogger<ExternalServicesImpl>.Instance));
         _subscriptions = new Lazy<IEventStoreSubscriptions>(() => new EventStoreSubscriptionsImpl(
@@ -280,8 +293,6 @@ public class EventStoreForTesting : IEventStore
         // Worker hosts configure ChronicleClientOptions instead. IOptions<T> can resolve an
         // unconfigured default, so falling back must consider the policy, not just nullability.
         // DefaultServiceProvider cannot resolve unregistered interfaces.
-        var configuredOptions = options ?? (_serviceProvider is DefaultServiceProvider ? null :
-            _serviceProvider.GetService<IOptions<ChronicleOptions>>()?.Value);
         var lifecyclePolicy = configuredOptions?.UnitOfWorkLifecyclePolicy ?? UnitOfWorkLifecyclePolicy.Compatibility;
         if (options is null && lifecyclePolicy == UnitOfWorkLifecyclePolicy.Compatibility && _serviceProvider is not DefaultServiceProvider)
         {
@@ -380,6 +391,11 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public RegistrationOutcome Registration { get; private set; } = RegistrationOutcome.NotRun;
+
+    /// <summary>
+    /// Gets the settings used to configure this test store.
+    /// </summary>
+    internal ChronicleOptions ClientOptions { get; }
 
     /// <summary>
     /// Gets the <see cref="IJsonSchemaGenerator"/> used by this event store.

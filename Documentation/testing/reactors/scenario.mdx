@@ -66,6 +66,24 @@ The optional service provider, side-effect handlers, and event store can still b
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/per-run-artifacts" />
 
+## Fluent registrations (.NET)
+
+For a reactor configured with `ChronicleOptions.ExplicitArtifacts.RegisterReactor(id, define)`, use
+`ReactorScenario(id, defaults)` without a type argument. Construct the defaults with your
+`IClientArtifactsProvider`, optional service provider, and options as its three arguments.
+`InMemoryClientArtifactsProvider` lets you supply just the event types and other artifacts needed
+by that run, without assembly discovery.
+
+The scenario builds the named fluent definition once against the run's event types. Drive it with
+`Given.ForEventSource(id).Events(...)`; each call awaits every applicable callback and keeps event
+sequence numbers contiguous across calls. Assert on the effects captured by your callbacks or test
+doubles. An unknown reactor identifier throws `UnknownReactorId`, and a callback failure propagates
+to the caller.
+
+This scenario tests fluent handler behavior, not observer delivery, replay, quarantine, or transport
+registration. Use a kernel-backed integration test for those boundaries. The existing generic
+`ReactorScenario<TReactor>` remains the choice for class-based reactors and its produced-side-effect assertions.
+
 ## Seeding read models
 
 A reactor can take a read model as a handler-method parameter, which Chronicle materializes for the event source when the reactor runs. Seed the expected read-model state with `Given.ForEventSourceId(id).ReadModel(...)`, then drive the triggering event:

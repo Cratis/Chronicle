@@ -220,15 +220,8 @@ public class EventStore : IEventStore
 
         // Registrations made with the client while it was being configured belong to every event store it creates.
         // They are built by discovery, which is when the event types they refer to become known.
-        foreach (var projection in options.Value.ExplicitArtifacts.Projections)
-        {
-            projections.Add(projection);
-        }
-
-        foreach (var (reactorId, define) in options.Value.ExplicitArtifacts.Reactors)
-        {
-            reactors.Add(reactorId, define);
-        }
+        options.Value.ExplicitArtifacts.ApplyTo(projections);
+        options.Value.ExplicitArtifacts.ApplyTo(reactors);
 
         Webhooks = new Webhooks.Webhooks(EventTypes, this, loggerFactory.CreateLogger<Webhooks.Webhooks>());
         ExternalServices = new ExternalServices.ExternalServices(this, loggerFactory.CreateLogger<ExternalServices.ExternalServices>());

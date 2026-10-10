@@ -81,6 +81,25 @@ scenario and takes precedence over discovered projections and reducers; it does 
 the projection process-wide. TypeScript selects the projection from the catalog passed to the
 scenario instead.
 
+## Explicit registrations (.NET)
+
+Use `InMemoryClientArtifactsProvider` when you want to supply artifact lists without assembly discovery.
+Its settable collections default to empty; include every event type your scenario uses in `EventTypes`.
+You can also supply projection, model-bound projection, reducer, reactor, middleware, constraint,
+migration, seeding, event-source, compliance, and security provider types through their corresponding collections.
+
+Pass `ChronicleOptions` as the third argument to `new Defaults(artifacts, serviceProvider, options)`;
+use `null` for the service provider when you do not need dependency injection. Configure
+`options.ExplicitArtifacts.RegisterProjection<TReadModel>(...)` or `RegisterReadModel<TReadModel>()`
+before constructing the defaults. Explicit projections use the same discovery recipes as the client
+and do not need a projection class or an entry in the provider's projection collections.
+
+`ReadModelScenario<TReadModel>(null, defaults)` selects the explicitly registered projection before
+discovered handlers. `WithProjection` still takes precedence over it. Pass the same defaults to
+`EventScenario` or `ReactorScenario<TReactor>` to retain the run's artifact catalog and settings.
+The test event store applies registrations in-process; appending through an event scenario does not
+start observer delivery or automatically run those projections and reactors.
+
 ## Auto-detection
 
 In .NET, `ReadModelScenario<TReadModel>` looks up a handler in the client artifacts registry. By default, Chronicle's
