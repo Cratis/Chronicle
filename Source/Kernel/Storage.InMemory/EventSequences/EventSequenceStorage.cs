@@ -35,6 +35,7 @@ public partial class EventSequenceStorage(
     readonly List<AppendedEvent> _events = [];
     readonly Dictionary<EventSequenceNumber, IdentityId[]> _originalCausedByChains = [];
     readonly Dictionary<EventSequenceNumber, StoredEventMetadata> _metadata = [];
+    readonly Dictionary<EventSequenceNumber, uint> _appendedGenerations = [];
     readonly object _lock = new();
 
     /// <summary>
@@ -53,6 +54,19 @@ public partial class EventSequenceStorage(
 
     /// <inheritdoc/>
     public bool SupportsRevisionTracking => true;
+
+    /// <summary>
+    /// Gets the generation of the original append, independently of the generation currently read.
+    /// </summary>
+    /// <param name="sequenceNumber">The sequence number of the event.</param>
+    /// <returns>The appended generation, or null if it was not recorded.</returns>
+    public uint? GetAppendedGeneration(EventSequenceNumber sequenceNumber)
+    {
+        lock (_lock)
+        {
+            return _appendedGenerations.TryGetValue(sequenceNumber, out var generation) ? generation : null;
+        }
+    }
 
     /// <inheritdoc/>
     public string SerializeContentForVerification(ExpandoObject content, JsonSchema schema) => Serialize(content);
@@ -180,6 +194,7 @@ public partial class EventSequenceStorage(
             _events.Add(appended);
             _originalCausedByChains[sequenceNumber] = causedByChain.ToArray();
             TrackMetadata(appended, _originalCausedByChains[sequenceNumber]);
+            _appendedGenerations[sequenceNumber] = eventType.Generation.Value;
 
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(appended);
         }
@@ -239,6 +254,7 @@ public partial class EventSequenceStorage(
                 _events.Add(appendedEvent);
                 _originalCausedByChains[e.SequenceNumber] = e.CausedByChain.ToArray();
                 TrackMetadata(appendedEvent, _originalCausedByChains[e.SequenceNumber]);
+                _appendedGenerations[e.SequenceNumber] = e.EventType.Generation.Value;
                 appended.Add(appendedEvent);
             }
         }

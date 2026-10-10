@@ -266,6 +266,7 @@ public partial class EventSequenceStorage(
                 [],
                 subject?.IsSet == true ? subject : null)
             {
+                AppendedGeneration = eventType.Generation.Value,
                 NamedTags = namedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value)).ToArray()
             };
             var collection = _collection;
@@ -382,6 +383,7 @@ public partial class EventSequenceStorage(
                     [],
                     Subject: eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null)
                 {
+                    AppendedGeneration = eventToAppend.EventType.Generation.Value,
                     NamedTags = eventToAppend.NamedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value)).ToArray(),
                     EventSource = eventToAppend.EventSource.IsSet ? eventToAppend.EventSource : null
                 };

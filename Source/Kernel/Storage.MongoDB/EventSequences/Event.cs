@@ -44,6 +44,11 @@ public record Event(
     Subject? Subject = null)
 {
     /// <summary>
+    /// Gets the generation of the original append. Null for historic documents where it is unknown.
+    /// </summary>
+    public uint? AppendedGeneration { get; init; }
+
+    /// <summary>
     /// Gets the structured named tags. Missing in historic documents.
     /// </summary>
     public IEnumerable<NamedTagDocument> NamedTags { get; init; } = [];

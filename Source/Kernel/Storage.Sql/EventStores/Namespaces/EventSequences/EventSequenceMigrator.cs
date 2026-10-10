@@ -132,6 +132,7 @@ public class EventSequenceMigrator(
                 Causation = table.StringColumn(migrationBuilder),
                 CausedBy = table.StringColumn(migrationBuilder),
                 Type = table.StringColumn(migrationBuilder, maxLength: 200),
+                AppendedGeneration = table.Column<uint>(nullable: true),
                 Occurred = table.Column<DateTimeOffset>(nullable: false),
                 EventSourceType = table.StringColumn(migrationBuilder, maxLength: 200),
                 EventSourceId = table.StringColumn(migrationBuilder, maxLength: 200),
@@ -180,6 +181,13 @@ public class EventSequenceMigrator(
 
     async Task UpgradeTable(EventSequenceDbContext context, string tableName)
     {
+        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.AppendedGeneration)))
+        {
+            var generationMigration = new MigrationBuilder(context.Database.ProviderName);
+            generationMigration.AddColumn<uint>(nameof(EventEntry.AppendedGeneration), tableName, nullable: true);
+            await tableMigrator.ExecuteMigrationOperations(context, generationMigration);
+        }
+
         if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.PublicationIdentityHash)))
         {
             var publicationMigration = new MigrationBuilder(context.Database.ProviderName);
