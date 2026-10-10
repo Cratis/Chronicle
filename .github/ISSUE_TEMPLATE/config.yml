@@ -1,0 +1,10 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+contact_links:
+  - name: Questions and help
+    url: https://discord.gg/kt4AMpV8WV
+    about: Ask questions and get help from the Cratis team and other developers on Discord
+  - name: GitHub Discussions
+    url: https://github.com/Cratis/Chronicle/discussions
+    about: Longer-form questions and ideas
