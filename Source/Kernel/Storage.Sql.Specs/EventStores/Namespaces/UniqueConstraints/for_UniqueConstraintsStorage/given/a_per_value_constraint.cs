@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.
 public class a_per_value_constraint : Specification
 {
     protected UniqueConstraintsStorage _storage;
+    protected IDatabase _database;
     protected UniqueConstraintDefinition _definition;
     protected EventSourceId _owner;
     protected EventSourceId _otherOwner;
@@ -30,15 +31,15 @@ public class a_per_value_constraint : Specification
             new TableMigrator<UniqueConstraintValuesDbContext>(Substitute.For<ILogger<TableMigrator<UniqueConstraintValuesDbContext>>>()),
             Substitute.For<ILogger<UniqueConstraintMigrator>>());
 
-        var database = Substitute.For<IDatabase>();
-        database.UniqueConstraintValuesTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>())
+        _database = Substitute.For<IDatabase>();
+        _database.UniqueConstraintValuesTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>())
             .Returns(async call =>
             {
                 var context = CreateContext(call.ArgAt<string>(2));
                 await context.EnsureTableExists();
                 return new DbContextScope<UniqueConstraintValuesDbContext>(context, () => { });
             });
-        _storage = new("store", "namespace", EventSequenceId.Log, database);
+        _storage = new("store", "namespace", EventSequenceId.Log, _database);
         _definition = new("versions", []) { Mode = UniqueConstraintMode.PerValue };
         _owner = EventSourceId.New();
         _otherOwner = EventSourceId.New();

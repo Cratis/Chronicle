@@ -21,6 +21,17 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
     readonly ConcurrentDictionary<(string ConstraintName, string ScopeKey, string Value), (string EventSourceId, EventSequenceNumber SequenceNumber)> _values = [];
 
     /// <inheritdoc/>
+    public Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "")
+    {
+        foreach (var entry in _values.Where(_ => _.Key.ConstraintName == definition.Name.Value && _.Key.ScopeKey == scopeKey))
+        {
+            _values.TryRemove(entry);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
     {
         if (definition.Mode == UniqueConstraintMode.PerValue)

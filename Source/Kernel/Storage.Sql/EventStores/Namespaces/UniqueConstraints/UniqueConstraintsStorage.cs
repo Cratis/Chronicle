@@ -27,6 +27,13 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IDatabase database) : IUniqueConstraintsStorage
 {
     /// <inheritdoc/>
+    public async Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "")
+    {
+        await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
+        await scope.DbContext.Entries.ExecuteDeleteAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
     {
         if (definition.Mode == UniqueConstraintMode.PerValue)
@@ -200,8 +207,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
     }
 
     string GetValuesTableName(ConstraintName name, string scopeKey) => string.IsNullOrEmpty(scopeKey)
-        ? $"{eventSequenceId}_{name}_values_constraint"
-        : $"{eventSequenceId}_{name}_{scopeKey}_values_constraint";
+        ? $"{eventSequenceId}_{name}_constraint_values"
+        : $"{eventSequenceId}_{name}_{scopeKey}_constraint_values";
 
     string GetTableName(ConstraintName constraintName, string scopeKey = "")
     {

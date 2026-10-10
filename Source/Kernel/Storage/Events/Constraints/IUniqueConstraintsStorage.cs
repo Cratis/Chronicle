@@ -12,6 +12,14 @@ namespace Cratis.Chronicle.Storage.Events.Constraints;
 public interface IUniqueConstraintsStorage
 {
     /// <summary>
+    /// Clears every retained per-value claim in a constraint's scope before rebuilding its index.
+    /// </summary>
+    /// <param name="definition">The constraint definition.</param>
+    /// <param name="scopeKey">The resolved scope to clear.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "");
+
+    /// <summary>
     /// Saves a constraint value using its retention mode.
     /// </summary>
     /// <param name="eventSourceId">The claiming event source.</param>
