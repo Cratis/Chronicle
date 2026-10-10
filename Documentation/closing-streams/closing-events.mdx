@@ -27,6 +27,8 @@ To take the stream id from the event's payload instead of the append, use `Event
 
 <ChronicleClientTabs snippet="closing-streams/closing-events/event-stream-id-from" />
 
+A scope resolving to only default-stream values is refused for both closing and reopening events; it cannot close the default stream for every event source.
+
 A property-sourced value must be present. If it is missing, null or empty, the kernel refuses the append with a violation naming the property rather than closing something broader. Make the property non-nullable. The analyzer [CHR0012](../code-analysis/CHR0012.mdx) warns on nullable event properties.
 
 ## What happens on append
@@ -58,7 +60,7 @@ Set `EventSequences` on the attribute to restrict a declaration to specific even
 
 ## Not retroactive
 
-Registering or changing a declaration closes nothing in history. Only events appended afterwards close scopes. A reindex that names the constraint rebuilds its closures from the log, see [Closing streams](index.mdx#guarantees-and-limits) for the guarantees, the crash window and the redaction limit.
+Registering or changing a declaration closes nothing in history. Only events appended afterwards close scopes. A reindex that names the constraint rebuilds its closures from the log, see [Closing streams](index.mdx#guarantees-and-limits) for the guarantees, the crash window and the redaction limit. A closing-constraint rebuild must not run while appends to the sequence are in flight.
 
 ## Test it
 

@@ -18,7 +18,7 @@ internal static class ClosesStreamConstraintDefinitionExtensions
     /// <param name="definition">The declaration.</param>
     /// <param name="context">The event context and payload.</param>
     /// <param name="scope">The resolved scope.</param>
-    /// <returns>False if a participating value is missing or the mask is invalid.</returns>
+    /// <returns>False if a participating value is missing, the mask is invalid, or the scope is default-stream-only.</returns>
     internal static bool TryResolveScope(this ClosesStreamConstraintDefinition definition, ConstraintValidationContext context, out ClosedStreamScope scope)
     {
         const ClosedStreamDimensions all = ClosedStreamDimensions.EventSourceId | ClosedStreamDimensions.EventSourceType | ClosedStreamDimensions.EventStreamType | ClosedStreamDimensions.EventStreamId;
@@ -36,6 +36,6 @@ internal static class ClosesStreamConstraintDefinitionExtensions
 
         scope = ClosedStreamScope.ForAppend(context.EventSourceId, context.EventSourceType ?? EventSourceType.Default, context.EventStreamType ?? EventStreamType.All, streamId, definition.Dimensions);
 
-        return !scope.IsEmpty && scope.Dimensions == definition.Dimensions;
+        return !scope.IsEmpty && scope.Dimensions == definition.Dimensions && !scope.IsDefaultStreamOnly;
     }
 }

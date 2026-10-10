@@ -24,11 +24,12 @@ public class ClosesStreamConstraintValidator(ClosesStreamConstraintDefinition de
     /// <inheritdoc/>
     public Task<ConstraintValidationResult> Validate(ConstraintValidationContext context)
     {
-        if (definition.TryResolveScope(context, out _)) return Task.FromResult(ConstraintValidationResult.Success);
+        if (definition.TryResolveScope(context, out var scope)) return Task.FromResult(ConstraintValidationResult.Success);
         var message = definition.EventStreamIdFrom is null
             ? "A closing stream scope must have every participating dimension set"
             : $"Closing stream property '{definition.EventStreamIdFrom}' must have a non-empty value";
         if (definition.Name.Value.Length == 0) message = "A closing constraint must have a non-empty owner name";
+        if (scope.IsDefaultStreamOnly) message = "The default stream cannot be closed or reopened by a closing constraint";
 
         return Task.FromResult(new ConstraintValidationResult
         {

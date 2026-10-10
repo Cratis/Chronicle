@@ -18,6 +18,8 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// A redacted property-sourced transition can be reconstructed only from a closure snapshot at the same
 /// sequence number. If none exists, this entire owner's rebuild is skipped without modifying its rows.
 /// Other constraints continue rebuilding. Staging stores only the resulting scopes, not the event history.
+/// A closing-constraint rebuild must not run while appends to the sequence are in flight:
+/// installing the rebuilt index is not serialized with appends.
 /// </remarks>
 internal sealed class ClosesStreamConstraintReindexer(IClosedStreamsConstraintStorage storage, ILogger<ReindexConstraintsStep> logger)
 {
