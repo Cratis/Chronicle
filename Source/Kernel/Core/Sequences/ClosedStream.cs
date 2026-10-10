@@ -38,7 +38,7 @@ public record ClosedStream(
     /// List closed scopes within optional dimensions.
     /// </summary>
     /// <param name="storage">The storage.</param>
-    /// <param name="queryContextManager">The query context holding paging.</param>
+    /// <param name="queryContextManager">The query context holding paging and totals.</param>
     /// <param name="eventStore">The event store.</param>
     /// <param name="namespace">The namespace.</param>
     /// <param name="eventSequenceId">The event sequence.</param>
@@ -60,9 +60,13 @@ public record ClosedStream(
     {
         var closures = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetClosedStreamsConstraints(eventSequenceId);
         var scope = ClosedStreamConverters.ToScope(eventSourceId, eventSourceType, eventStreamType, eventStreamId);
-        var paging = queryContextManager.Current.Paging;
-        var rows = await closures.GetAll(scope.IsEmpty ? null : scope, paging.IsPaged ? paging.Skip : 0, paging.IsPaged ? paging.Size.Value : null);
 
-        return rows.Select(ClosedStreamConverters.ToReadModel).ToArray();
+        var rows = (await closures.GetAll(scope.IsEmpty ? null : scope)).ToArray();
+        var queryContext = queryContextManager.Current;
+        queryContext.TotalItems = rows.Length;
+        var paging = queryContext.Paging;
+        var page = paging.IsPaged ? rows.Skip(paging.Skip).Take(paging.Size.Value) : rows;
+
+        return page.Select(ClosedStreamConverters.ToReadModel).ToArray();
     }
 }

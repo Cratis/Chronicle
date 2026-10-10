@@ -15,6 +15,7 @@ import { FailedPartitions } from "./Namespaces/FailedPartitions/FailedPartitions
 import { Recommendations } from "./Namespaces/Recommendations/Recommendations";
 import { Jobs } from './Namespaces/Jobs/Jobs';
 import { Identities } from './Namespaces/Identities/Identities';
+import { ClosedStreams } from './Namespaces/ClosedStreams/ClosedStreams';
 import { Sequences as GeneralSequences } from './General/Sequences/Sequences';
 import { Sinks } from './General/Sinks/Sinks';
 import { Reducers } from './General/Reducers/Reducers';
@@ -62,6 +63,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.failedPartitions, url: ':namespace/failed-partitions', icon: mdIcons.MdErrorOutline },
                 { label: strings.mainMenu.readModels, url: ':namespace/read-models', icon: mdIcons.MdTableView },
                 { label: strings.mainMenu.identities, url: ':namespace/identities', icon: mdIcons.MdPeople },
+                { label: strings.mainMenu.closedStreams, url: ':namespace/closed-streams', icon: mdIcons.MdLock },
                 { label: strings.mainMenu.general.seedData, url: ':namespace/seed-data', icon: mdIcons.MdGrain },
             ]
         },
@@ -142,6 +144,7 @@ export const EventStore = () => {
                     <Route path={'read-models/*'} element={<ReadModels />} />
                     <Route path={'projections'} element={<Projections />} />
                     <Route path={'identities'} element={<Identities />} />
+                    <Route path={'closed-streams'} element={<ClosedStreams />} />
                     <Route path={'seed-data'} element={<NamespacedEventsSeeding />} />
                 </Route>
             </Route>
