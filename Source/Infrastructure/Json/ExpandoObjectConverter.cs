@@ -561,8 +561,15 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                     return JsonValue.Create(decimalValue);
                 }
                 return JsonValue.Create<double>(value is double actualDouble ? actualDouble : double.Parse(value.ToString()!));
+
+            case JsonObjectType.None:
+                // A default-only property ({"default": null}) describes no type, so keep the value as it is.
+                return ConvertUnknownSchemaTypeToJsonValue(value);
         }
 
-        return ConvertUnknownSchemaTypeToJsonValue(value);
+        // The schema declares a type the value does not have - for instance a composite key that a
+        // storage provider hands back flattened to a string for an object-typed property. Emitting the
+        // mismatched value would make the instance unreadable for the client, so leave it out.
+        return null;
     }
 }
