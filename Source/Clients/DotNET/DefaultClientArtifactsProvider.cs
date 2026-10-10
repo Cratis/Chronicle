@@ -12,6 +12,7 @@ using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Reducers.Validators;
 using Cratis.Chronicle.Seeding;
 using Cratis.Reflection;
 using Cratis.Types;
@@ -289,7 +290,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     /// </summary>
     /// <exception cref="ReentrantClientArtifactsInitialization">Artifact access reenters initialization on the initializing thread.</exception>
     /// <exception cref="TypeImplementsMultipleProjectionInterfaces">A type targets multiple projection read models.</exception>
-    /// <exception cref="TypeImplementsMultipleReducerInterfaces">A type targets multiple reducer read models.</exception>
+    /// <exception cref="TypeMustImplementOnlyOneReducer">A type implements more than one reducer interface.</exception>
     void EnsureInitialized()
     {
         if (_initialized) return;
@@ -315,7 +316,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
                 _reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
                 _readModelReactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReadModelReactor>() && !_.IsGenericType).ToArray();
                 _reactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();
-                _reducers = FindArtifacts(assembliesProvider.DefinedTypes.Where(_ => !_.IsGenericType), typeof(IReducerFor<>), (type, models) => new TypeImplementsMultipleReducerInterfaces(type, models));
+                _reducers = FindArtifacts(assembliesProvider.DefinedTypes.Where(_ => !_.IsGenericType), typeof(IReducerFor<>), (type, _) => new TypeMustImplementOnlyOneReducer(type));
                 _additionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanProvideAdditionalEventInformation>()).ToArray();
                 _constraintTypes = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IConstraint) && _.IsAssignableTo(typeof(IConstraint))).ToArray();
                 _uniqueConstraints = _eventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();
