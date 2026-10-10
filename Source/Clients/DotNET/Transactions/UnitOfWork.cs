@@ -238,7 +238,7 @@ public class UnitOfWork(
             DecisionReadScopes.Validate(read, eventStore.Name, eventStore.Namespace, EventSequenceId.Log);
             ValidateLegacyEventSequenceIdsForOrderedBatch(EventSequenceId.Log);
             EnsureEventSequenceCanBeUsed(EventSequenceId.Log);
-            var label = (EventSourceId)read.Key;
+            var label = read.Scope.EventSourceId!;
             if (_decisionScopes.TryGetValue(label, out var existing))
             {
                 _decisionScopes[label] = DecisionReadScopes.Merge(existing, read.Scope);

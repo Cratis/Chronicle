@@ -109,6 +109,7 @@ internal static class ProjectionReadModelProcessor
     /// silently skipped, matching the production engine. When <see langword="true"/>, such an event raises
     /// <see cref="UnsubscribedEventSeeded"/> instead.
     /// </param>
+    /// <param name="eventContexts">Optional original contexts carrying event stream routing.</param>
     /// <returns>
     /// A tuple of the primary projected read model (the instance for the first key resolved, exposed as
     /// <c language="csharp">Instance</c>, or <see langword="null"/> if the projection did not apply any changes) and a
@@ -125,7 +126,8 @@ internal static class ProjectionReadModelProcessor
         IEventSerializer eventSerializer,
         IJsonSchemaGenerator jsonSchemaGenerator,
         TReadModel? initialState = null,
-        bool strictEventSubscription = false)
+        bool strictEventSubscription = false,
+        IReadOnlyList<EventContext>? eventContexts = null)
         where TReadModel : class
     {
         var readModelType = typeof(TReadModel);
@@ -158,6 +160,9 @@ internal static class ProjectionReadModelProcessor
             {
                 EventType = kernelEventType,
                 EventSourceId = eventSourceId,
+                EventSourceType = eventContexts is null ? KernelConceptsNs::Events.EventSourceType.Default : (KernelConceptsNs::Events.EventSourceType)eventContexts[index].EventSourceType.Value,
+                EventStreamType = eventContexts is null ? KernelConceptsNs::Events.EventStreamType.All : (KernelConceptsNs::Events.EventStreamType)eventContexts[index].EventStreamType.Value,
+                EventStreamId = eventContexts is null ? KernelConceptsNs::Events.EventStreamId.Default : (KernelConceptsNs::Events.EventStreamId)eventContexts[index].EventStreamId.Value,
                 SequenceNumber = (KernelConceptsNs::Events.EventSequenceNumber)(uint)index,
 
                 // Give each event a distinct, monotonically increasing occurred time so time-based

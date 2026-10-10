@@ -47,6 +47,14 @@ public class DecisionReadRefused(DecisionReadRefusalReason reason, Type readMode
             "The fold did not reach the latest matching event. Try again.",
         DecisionReadRefusalReason.DefinitionMismatch =>
             "Chronicle has no matching projection definition registered for the read model, or the registered one differs from the client's. Register the current definitions, for example by restarting the client.",
+        DecisionReadRefusalReason.StreamScopeNotSupported =>
+            "The reader or kernel does not support stream-scoped decision reads. Use a reader and kernel that acknowledge the requested stream scope.",
+        DecisionReadRefusalReason.StreamKeyRequiresStreamScope =>
+            "The projection is keyed by event stream id. Use the stream-scoped read overload with an event source id, stream type and stream id.",
+        DecisionReadRefusalReason.AllStreamsNotSupported =>
+            "A stream-scoped decision read cannot select all stream types. Supply a specific event stream type, or use a source-wide read for an event-source-keyed projection.",
+        DecisionReadRefusalReason.StreamKeyRequiresExplicitStreamId =>
+            "A stream-keyed projection cannot use the default stream id because it does not narrow the fold to one instance key. Supply an explicit event stream id.",
         _ => string.Empty
     };
 }
