@@ -239,46 +239,7 @@ public class EventStoreForTesting : IEventStore
         _constraintProvider = CreateConstraintProvider(_artifactActivator);
 
         _constraints = new Lazy<IConstraints>(() => new Constraints(this, [_constraintProvider]));
-        _reactors = new Lazy<IReactors>(() =>
-        {
-            var reactors = new ReactorsImpl(
-                this,
-                _eventTypes,
-                ClientArtifactsProvider,
-                _serviceProvider,
-                _artifactActivator,
-                new ReactorMiddlewaresActivator(ClientArtifactsProvider, _artifactActivator, NullLogger<ReactorMiddlewaresActivator>.Instance),
-                EventSerializer,
-                new CausationManager(),
-                new BaseIdentityProvider(),
-                new ActivitySource<ReactorsImpl>(),
-                new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>(
-                [
-                    new EventResultHandler(),
-                    new EventsResultHandler(),
-                    new EventForEventSourceIdResultHandler(),
-                    new EventsForEventSourceIdResultHandler(),
-                    new MixedSideEffectsResultHandler(),
-                    new EventsWithConcurrencyScopesResultHandler()
-                ])),
-                new ReactorContextValuesBuilder(new KnownInstancesOf<IReactorContextValuesProvider>(
-                [
-                    new EventSourceIdValuesProvider(),
-                    new EventStreamIdValuesProvider(),
-                    new EventStreamTypeValuesProvider(),
-                    new EventSourceTypeValuesProvider(),
-                    new SubjectValuesProvider()
-                ])),
-                new ReactorMethodArgumentsResolver(),
-                NullLogger<ReactorsImpl>.Instance,
-                new NullLoggerFactory());
-            ClientOptions.ExplicitArtifacts.ApplyTo(reactors);
-            if (ClientOptions.ExplicitArtifacts.Reactors.Any())
-            {
-                reactors.Discover().GetAwaiter().GetResult();
-            }
-            return reactors;
-        });
+        _reactors = new Lazy<IReactors>(CreateReactors);
         _webhooks = new Lazy<IWebhooks>(() => new WebhooksImpl(_eventTypes, this, NullLogger<WebhooksImpl>.Instance));
         _externalServices = new Lazy<IExternalServices>(() => new ExternalServicesImpl(this, NullLogger<ExternalServicesImpl>.Instance));
         _subscriptions = new Lazy<IEventStoreSubscriptions>(() => new EventStoreSubscriptionsImpl(
@@ -555,6 +516,47 @@ public class EventStoreForTesting : IEventStore
             }
             return activated.AsT0;
         }).ToArray();
+
+    ReactorsImpl CreateReactors()
+    {
+        var reactors = new ReactorsImpl(
+            this,
+            _eventTypes,
+            ClientArtifactsProvider,
+            _serviceProvider,
+            _artifactActivator,
+            new ReactorMiddlewaresActivator(ClientArtifactsProvider, _artifactActivator, NullLogger<ReactorMiddlewaresActivator>.Instance),
+            EventSerializer,
+            new CausationManager(),
+            new BaseIdentityProvider(),
+            new ActivitySource<ReactorsImpl>(),
+            new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>(
+            [
+                new EventResultHandler(),
+                new EventsResultHandler(),
+                new EventForEventSourceIdResultHandler(),
+                new EventsForEventSourceIdResultHandler(),
+                new MixedSideEffectsResultHandler(),
+                new EventsWithConcurrencyScopesResultHandler()
+            ])),
+            new ReactorContextValuesBuilder(new KnownInstancesOf<IReactorContextValuesProvider>(
+            [
+                new EventSourceIdValuesProvider(),
+                new EventStreamIdValuesProvider(),
+                new EventStreamTypeValuesProvider(),
+                new EventSourceTypeValuesProvider(),
+                new SubjectValuesProvider()
+            ])),
+            new ReactorMethodArgumentsResolver(),
+            NullLogger<ReactorsImpl>.Instance,
+            new NullLoggerFactory());
+        ClientOptions.ExplicitArtifacts.ApplyTo(reactors);
+        if (ClientOptions.ExplicitArtifacts.Reactors.Any())
+        {
+            reactors.Discover().GetAwaiter().GetResult();
+        }
+        return reactors;
+    }
 
     CompositeConstraintProvider CreateConstraintProvider(IClientArtifactsActivator artifactActivator) =>
         new(
