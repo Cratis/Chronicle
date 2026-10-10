@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_Dec
 
 public class when_a_value_exceeds_sql_server_scale : Specification
 {
-    Exception _exception;
+    decimal _result;
 
-    void Because() => _exception = Catch.Exception(() => DecimalColumnValues.ForSqlServer(0.0000000000000000001m));
+    void Because() => _result = DecimalColumnValues.ForSqlServer(1m / 3m);
 
-    [Fact] void should_refuse_silent_rounding() => _exception.ShouldBeOfExactType<DecimalValueExceedsColumnPrecision>();
+    [Fact] void should_round_to_the_column_scale() => _result.ShouldEqual(0.333333333333333333m);
 }

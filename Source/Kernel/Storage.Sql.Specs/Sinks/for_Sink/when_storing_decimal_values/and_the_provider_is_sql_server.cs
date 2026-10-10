@@ -12,6 +12,7 @@ public class and_the_provider_is_sql_server(SqlServerFixture fixture) : given.a_
 
     Task Because() => Store();
 
+    [Fact] void should_project_a_computed_value_at_column_scale() => ((decimal)_read["computed"]!).ShouldEqual(0.333333333333333333m);
     [Fact] void should_preserve_amount_bits() => decimal.GetBits((decimal)_read["amount"]!).ShouldEqual(decimal.GetBits(193.58m));
     [Fact] void should_preserve_all_significant_digits() => decimal.GetBits((decimal)_read["precise"]!).ShouldEqual(decimal.GetBits(1234567890.123456789012345678m));
 }

@@ -25,7 +25,7 @@ public abstract class a_decimal_sink : Specification
     void Establish()
     {
         _harness = CreateHarness();
-        var schema = JsonSchema.FromJson("""{"type":"object","properties":{"id":{"type":"string"},"amount":{"type":"number","format":"decimal"},"precise":{"type":"number","format":"decimal"}}}""");
+        var schema = JsonSchema.FromJson("""{"type":"object","properties":{"id":{"type":"string"},"amount":{"type":"number","format":"decimal"},"precise":{"type":"number","format":"decimal"},"computed":{"type":"number","format":"decimal"}}}""");
         _sink = _harness.CreateSink(new ReadModelDefinition("decimal", "decimal_values", "Decimal", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "decimal-projection", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, []));
     }
 
@@ -33,7 +33,7 @@ public abstract class a_decimal_sink : Specification
     {
         var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
         changeset.InitialState.Returns(new ExpandoObject());
-        changeset.Changes.Returns([new PropertiesChanged<ExpandoObject>(new ExpandoObject(), [new PropertyDifference("amount", null, 193.58m), new PropertyDifference("precise", null, 1234567890.123456789012345678m)])]);
+        changeset.Changes.Returns([new PropertiesChanged<ExpandoObject>(new ExpandoObject(), [new PropertyDifference("amount", null, 193.58m), new PropertyDifference("precise", null, 1234567890.123456789012345678m), new PropertyDifference("computed", null, 1m / 3m)])]);
         (await _sink.ApplyChanges(_key, changeset, 1UL)).ShouldBeEmpty();
         _read = (await _sink.FindOrDefault(_key))!;
     }

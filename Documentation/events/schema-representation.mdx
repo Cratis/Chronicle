@@ -89,9 +89,11 @@ doubles are replaced with Decimal128 when the replay writes the decimal-formatte
 ### SQL Server limits
 
 A SQL Server scalar decimal column supports at most 20 integer digits and 18 fractional digits.
-Chronicle refuses a value that cannot fit exactly instead of allowing SQL Server to round it.
-Values requiring a larger fractional scale can remain exact in event content, but cannot populate
-that scalar read-model column. Choose a suitable read-model representation for those values.
+Chronicle rounds scalar read-model values to 18 fractional digits, with midpoints rounded away
+from zero, matching SQL Server's rounding. Computed values such as `1m / 3m` therefore project
+successfully. Only values whose integer part exceeds 20 digits are refused. Event content retains
+its original decimal precision. Existing DECIMAL(18,2) columns round the value further to their
+own scale until replay replaces the table.
 SQL Server returns decimals at its column's fixed scale; Chronicle removes redundant trailing zeros
 when reading them. Numerical precision is retained, but arbitrary input trailing-zero scale is not:
 `193.580` reads back as `193.58`, so `decimal.GetBits` can differ even though the values are equal.

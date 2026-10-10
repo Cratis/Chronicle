@@ -11,18 +11,18 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 internal static class DecimalColumnValues
 {
     /// <summary>
-    /// Refuses values that SQL Server would round or overflow.
+    /// Rounds to SQL Server's column scale and refuses integer overflow.
     /// </summary>
     /// <param name="value">The decimal value.</param>
-    /// <returns>The value unchanged.</returns>
-    /// <exception cref="DecimalValueExceedsColumnPrecision">The value cannot be stored exactly.</exception>
+    /// <returns>The value rounded to 18 fractional digits, with midpoints rounded away from zero.</returns>
+    /// <exception cref="DecimalValueExceedsColumnPrecision">The integer part cannot fit the column.</exception>
     internal static decimal ForSqlServer(decimal value)
     {
-        if (decimal.Round(value, 18) != value || value <= -100000000000000000000m || value >= 100000000000000000000m)
+        if (value <= -100000000000000000000m || value >= 100000000000000000000m)
         {
             throw new DecimalValueExceedsColumnPrecision(value);
         }
-        return value;
+        return decimal.Round(value, 18, MidpointRounding.AwayFromZero);
     }
 
     /// <summary>

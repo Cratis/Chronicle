@@ -100,10 +100,12 @@ This allows teams using SQL databases (SQL Server, PostgreSQL, SQLite) to take a
 
 Decimal-formatted read-model properties use NUMERIC on PostgreSQL, DECIMAL(38,18) on SQL Server,
 and invariant decimal text in SQLite TEXT columns. MongoDB stores them as Decimal128. Double
-and float properties keep their floating-point storage types.
+and float properties keep their floating-point storage types. SQLite TEXT decimal columns sort
+and compare lexicographically, not numerically.
 
 Existing SQL column types are not altered in place. Replay the read model to create a table with
-the new mapping. SQL Server values outside its column precision are refused rather than rounded;
+the new mapping. SQL Server values are rounded to scale 18 with midpoints rounded away from zero;
+only integer parts exceeding 20 digits are refused. Existing DECIMAL(18,2) columns round further;
 see [Exact decimal values](../events/schema-representation#exact-decimal-values) for limits and upgrade requirements.
 
 ### Enabling the SQL Sink
