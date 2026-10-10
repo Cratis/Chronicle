@@ -1,0 +1,33 @@
+// remove via join at the projection level
+// Screenplay documentation: Documentation/screenplay/projections/removal.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+        customerId String
+        total Decimal
+      event CustomerRegistered
+        name String
+        email String
+      event CustomerDeleted
+        reason String
+      event CustomerRenamed
+        name String
+      readmodel OrderView
+        orderId String
+        customerId String
+        customerName String
+        email String
+        total Decimal
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced
+          customerId = customerId
+        join customer on customerId
+          with CustomerRegistered
+            customerName = name
+        remove via join on CustomerDeleted

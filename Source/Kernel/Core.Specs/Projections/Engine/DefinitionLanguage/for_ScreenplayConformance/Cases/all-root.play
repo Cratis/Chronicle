@@ -1,0 +1,21 @@
+// all at the projection level subscribes to every event type
+// Screenplay documentation: Documentation/screenplay/projections/from-all.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+      readmodel OrderView
+        orderId String
+        placedAt DateTime
+        position Int
+        correlation Uuid
+        source String
+        placedBy String
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        all
+          placedAt = $eventContext.occurred

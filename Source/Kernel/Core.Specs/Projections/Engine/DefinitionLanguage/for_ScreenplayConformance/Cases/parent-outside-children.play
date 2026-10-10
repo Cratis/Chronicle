@@ -1,0 +1,28 @@
+// A parent key at the projection level, where Chronicle never reads it
+// Screenplay documentation: Documentation/screenplay/projections/children.mdx
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+        label String
+        region String
+        total Decimal
+      event OrderRenamed
+        orderRef String
+        label String
+      event OrderTouched
+        label String
+      readmodel OrderView
+        orderId String
+        label String
+        region String
+        total Decimal
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced key orderId
+          parent region
+          label = label

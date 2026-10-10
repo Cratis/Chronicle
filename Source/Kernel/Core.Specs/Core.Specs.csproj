@@ -35,5 +35,6 @@
     </ItemGroup>
     <ItemGroup>
         <None Update="Projections/Engine/DefinitionLanguage/ScreenplayExamples/*.pdl;Projections/Engine/DefinitionLanguage/ScreenplayExamples/*.json" CopyToOutputDirectory="PreserveNewest" />
+        <None Update="Projections/Engine/DefinitionLanguage/for_ScreenplayConformance/Cases/*.play" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>

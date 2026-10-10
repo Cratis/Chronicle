@@ -1,0 +1,20 @@
+// clear with at the projection level
+// Screenplay documentation: Documentation/screenplay/projections/removal.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        label String
+      event OrderCleared
+        reason String
+      readmodel OrderView
+        orderId String
+        label String
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced
+          label = label
+        clear with OrderCleared

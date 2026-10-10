@@ -1,0 +1,35 @@
+// A join in a nested object inside a child collection
+// Screenplay documentation: Documentation/screenplay/projections/nested.mdx
+
+type Shipping
+  carrier String
+
+type ShippedLine
+  lineNumber Int
+  shipping Shipping optional
+module Conformance
+  feature Cases
+    slice StateView Case
+      event LineAdded
+        orderId String
+        lineNumber Int
+        carrierId String
+      event CarrierRenamed
+        carrier String
+      readmodel OrderView
+        orderId String
+        lines ShippedLine[]
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        children lines identified by lineNumber
+          from LineAdded key lineNumber
+            parent orderId
+          nested shipping
+            from LineAdded key lineNumber
+              parent orderId
+              carrier = "unassigned"
+            join carrier on carrier
+              with CarrierRenamed
+                carrier = carrier

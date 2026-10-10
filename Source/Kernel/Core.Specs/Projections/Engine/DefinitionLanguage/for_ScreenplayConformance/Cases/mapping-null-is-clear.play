@@ -1,0 +1,21 @@
+// x = null and clear x are one operation
+// Screenplay documentation: Documentation/screenplay/projections/property-mapping.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+      event OrderRenamed
+        orderId String
+      readmodel OrderView
+        orderId String
+        label String optional
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced
+          label = null
+        from OrderRenamed
+          clear label

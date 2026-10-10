@@ -1,0 +1,30 @@
+// One or more from blocks keyed by an event property with plain sets keep the flat shape
+// Screenplay documentation: Documentation/screenplay/projections/semantic-model.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+        label String
+        region String
+        total Decimal
+      event OrderRenamed
+        orderRef String
+        label String
+      event OrderTouched
+        label String
+      readmodel OrderView
+        orderId String
+        label String
+        region String
+        total Decimal
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced key orderId
+          label = label
+          region = region
+        from OrderRenamed key orderRef
+          label = label
