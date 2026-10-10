@@ -64,6 +64,15 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
     /// <summary>Gets a value indicating whether stored state is released (decrypted) before the cross-sink comparison.</summary>
     protected virtual bool ReleaseBeforeComparing => false;
 
+    /// <summary>Gets whether legacy scenarios apply their states during setup.</summary>
+    protected virtual bool ApplyStatesDuringEstablish => true;
+
+    /// <summary>Folds the next state with the released current state supplied by the pipeline.</summary>
+    /// <param name="current">The released current state, or null on the first reduction.</param>
+    /// <param name="next">The next state represented by the event.</param>
+    /// <returns>The complete reduced state.</returns>
+    protected virtual ExpandoObject Reduce(ExpandoObject? current, ExpandoObject next) => next;
+
     public ExpandoObject? InMemoryResult { get; private set; }
 
     public ExpandoObject? MongoResult { get; private set; }
@@ -107,6 +116,16 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
         _inMemoryPipeline = new ReducerPipeline(readModel, _inMemorySink, _objectComparer, _compliance, "test-store", "test-namespace");
         _mongoPipeline = new ReducerPipeline(readModel, _mongoSink, _objectComparer, _compliance, "test-store", "test-namespace");
 
+        if (ApplyStatesDuringEstablish)
+        {
+            await ApplyStates();
+        }
+    }
+
+    /// <summary>Applies the scenario's states through both pipelines and reads their persisted results.</summary>
+    /// <returns>The asynchronous operation.</returns>
+    protected async Task ApplyStates()
+    {
         foreach (var state in States)
         {
             await ApplyThroughBoth(state);
@@ -114,7 +133,7 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
 
         InMemoryResult = await _inMemorySink.FindOrDefault(_key);
         MongoResult = await _mongoSink.FindOrDefault(_key);
-        StoredDocument = await database.GetCollection<BsonDocument>(_containerName)
+        StoredDocument = await _client.GetDatabase(_databaseName).GetCollection<BsonDocument>(_containerName)
             .Find(Builders<BsonDocument>.Filter.Empty)
             .FirstOrDefaultAsync();
 
@@ -181,11 +200,11 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
 
         await _inMemoryPipeline.Reduce(
             new ReducerContext([CreateEvent(sequenceNumber)], _key),
-            (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(sequenceNumber), stateFactory())));
+            (_, current) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(sequenceNumber), Reduce(current, stateFactory()))));
 
         await _mongoPipeline.Reduce(
             new ReducerContext([CreateEvent(sequenceNumber)], _key),
-            (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(sequenceNumber), stateFactory())));
+            (_, current) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(sequenceNumber), Reduce(current, stateFactory()))));
     }
 
     ReadModelDefinition CreateReadModelDefinition() =>
