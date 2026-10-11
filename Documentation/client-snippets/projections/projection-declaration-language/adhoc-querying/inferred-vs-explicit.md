@@ -6,9 +6,9 @@ var inferred = await projections.Query("""
       from OrderShipped
     """);
 
-// Explicit — schema comes from the registered 'PdlOrderReadModel' type
+// Explicit — assuming PdlOrderReadModel is registered in the MyApp.ReadModels namespace
 var explicitResult = await projections.Query("""
-    projection Orders => PdlOrderReadModel
+    projection Orders => MyApp.ReadModels.PdlOrderReadModel
       from OrderPlaced
       from OrderShipped
     """);
