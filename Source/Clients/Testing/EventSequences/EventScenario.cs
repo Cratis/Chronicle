@@ -2,75 +2,29 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelConcepts;
-extern alias KernelCore;
-extern alias KernelGrpc;
 
-using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.EventSequences.Concurrency;
-using Cratis.Chronicle.Identities;
-using Cratis.Chronicle.Testing.Compliance;
 using Cratis.Chronicle.Testing.Events;
-using Cratis.Chronicle.Transactions;
-using Cratis.Execution;
-using Cratis.Json;
-using Cratis.Serialization;
-using Microsoft.Extensions.DependencyInjection;
-using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
-using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
-using InMemoryEventSourcesStorage = Cratis.Chronicle.Storage.InMemory.EventSources.EventSourcesStorage;
-using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
-using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
-using InMemoryUniqueEventTypesConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueEventTypesConstraintsStorage;
-using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
-using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
 
 /// <summary>
-/// Represents a lightweight, in-process scenario for testing <see cref="IEventSequence"/> operations without any infrastructure.
+/// Represents an isolated, in-process scenario backed by the real kernel append path and production in-memory storage.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The internal implementation wires the real client <see cref="EventLog"/> to the real kernel
-/// <c language="csharp">EventSequences</c> service backed by an <see cref="InProcessGrainFactory"/> that returns the
-/// real kernel <c language="csharp">EventSequence</c> grain — no Orleans silo or Chronicle server required. Only the storage
-/// layer is in-memory. Constraint validation, hash calculation, event serialization and event compliance
-/// run through the actual kernel code paths. PII is protected in in-memory event storage and released on
-/// read with scenario-local keys and generation-specific schemas. Erasure and production read-model
-/// sink encryption are not supported by this scenario.
-/// </para>
-/// <para>
-/// Use the <see cref="Given"/> property to seed pre-existing events into the event log before
-/// exercising production code via <see cref="EventSequence"/> or <see cref="EventLog"/>.
-/// </para>
-/// <para>
-/// Create a new <see cref="EventScenario"/> instance per test to keep tests isolated; the in-memory
-/// event log accumulates state across calls on the same instance. Dispose the scenario when done to
-/// release the in-process connection.
-/// </para>
-/// <para>
-/// Usage:
-/// <code language="csharp">
-/// var scenario = new EventScenario();
-/// await scenario.Given
-///     .ForEventSource(myId)
-///     .Events(new SomeEvent("value"), new OtherEvent("other"));
-/// var result = await scenario.EventLog.Append(myId, new AnotherEvent("more"));
-/// result.ShouldBeSuccessful();
-/// </code>
-/// </para>
+/// Create a new scenario per specification. Events start at sequence number zero and accumulate on that instance.
+/// Constraints, serialization, migrations and PII compliance use the kernel implementations; observers do not run.
+/// Waiting for observer completion throws <see cref="Observation.CannotWaitForObserverCompletion"/>.
+/// PII keys are scenario-local. Erasure and production read-model sink encryption are not supported.
 /// </remarks>
 /// <param name="eventSequenceId">The event sequence identifier.</param>
 /// <param name="eventStoreName">The event store name.</param>
-/// <param name="namespaceName">The event store namespace name.</param>
-/// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies client-side constraint definitions. Pass <see langword="null"/> for no constraints.</param>
-/// <param name="defaults">The defaults used for event types and serialization.</param>
+/// <param name="namespaceName">The namespace name.</param>
+/// <param name="constraintProvider">The constraint provider; null means no constraints.</param>
+/// <param name="defaults">Defaults for artifact discovery and serialization.</param>
 public class EventScenario(
     EventSequenceId eventSequenceId,
     EventStoreName eventStoreName,
@@ -78,56 +32,59 @@ public class EventScenario(
     ICanProvideConstraints? constraintProvider,
     Defaults defaults) : IDisposable
 {
-    readonly (EventLog EventLog, InProcessChronicleConnection Connection, InMemoryEventSequenceStorage Storage) _created = CreateEventLog(eventSequenceId, eventStoreName, namespaceName, constraintProvider, defaults);
+    readonly (IEventLog Log, TestingEventStore Root) _created = Create(eventSequenceId, eventStoreName, namespaceName, constraintProvider, defaults);
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventScenario"/> class.
+    /// Initializes a scenario with constraints discovered from the loaded assemblies.
     /// </summary>
-    /// <remarks>
-    /// Constraints are automatically discovered from all loaded assemblies using the same discovery
-    /// mechanism as the Chronicle client (<see cref="IConstraint"/> implementations, <c language="csharp">[Unique]</c>
-    /// properties, and <c language="csharp">[UniqueEventType]</c> attributes).
-    /// </remarks>
-    public EventScenario()
-        : this(
-            EventSequenceId.Log,
-            "test-event-store",
-            "default",
-            CreateDiscoveredConstraintProvider(Defaults.Instance),
-            Defaults.Instance)
+    public EventScenario() : this(EventSequenceId.Log, "test-event-store", "default")
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventScenario"/> class with an explicit constraint provider.
+    /// Initializes a scenario with an explicit constraint provider.
     /// </summary>
-    /// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies client-side constraint definitions. Pass <see langword="null"/> for no constraints.</param>
+    /// <param name="constraintProvider">The constraint provider; null means no constraints.</param>
     public EventScenario(ICanProvideConstraints? constraintProvider)
-        : this(
-            EventSequenceId.Log,
-            "test-event-store",
-            "default",
-            constraintProvider,
-            Defaults.Instance)
+        : this(EventSequenceId.Log, "test-event-store", "default", constraintProvider, Defaults.Instance)
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventScenario"/> class with per-run defaults.
+    /// Initializes a scenario with per-run defaults.
     /// </summary>
-    /// <param name="defaults">The defaults used for artifact discovery and event serialization.</param>
-    /// <param name="constraintProvider">Optional explicit constraints; <see langword="null"/> discovers constraints from the supplied defaults. Pass an empty provider to disable constraints.</param>
-    /// <remarks>
-    /// Unlike the other constructors accepting a constraint provider, this overload treats <see langword="null"/>
-    /// as discovery from <paramref name="defaults"/>, not as no constraints.
-    /// </remarks>
+    /// <param name="defaults">Defaults for artifact discovery and serialization.</param>
+    /// <param name="constraintProvider">Null discovers constraints from the defaults; an empty provider disables them.</param>
     public EventScenario(Defaults defaults, ICanProvideConstraints? constraintProvider = null)
-        : this(EventSequenceId.Log, "test-event-store", "default", constraintProvider ?? CreateDiscoveredConstraintProvider(defaults), defaults)
+        : this(EventSequenceId.Log, "test-event-store", "default", constraintProvider ?? DiscoverConstraints(defaults), defaults)
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventScenario"/> class with explicit identifiers and constraints.
+    /// Initializes a scenario with explicit identifiers and discovered constraints.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence identifier.</param>
+    /// <param name="eventStoreName">The event store name.</param>
+    /// <param name="namespaceName">The namespace name.</param>
+    public EventScenario(EventSequenceId eventSequenceId, EventStoreName eventStoreName, EventStoreNamespaceName namespaceName)
+        : this(Defaults.Instance, eventSequenceId, eventStoreName, namespaceName)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a scenario with explicit identifiers and constraints discovered from per-run defaults.
+    /// </summary>
+    /// <param name="defaults">Defaults for artifact discovery and serialization.</param>
+    /// <param name="eventSequenceId">The event sequence identifier.</param>
+    /// <param name="eventStoreName">The event store name.</param>
+    /// <param name="namespaceName">The namespace name.</param>
+    public EventScenario(Defaults defaults, EventSequenceId eventSequenceId, EventStoreName eventStoreName, EventStoreNamespaceName namespaceName)
+        : this(eventSequenceId, eventStoreName, namespaceName, DiscoverConstraints(defaults), defaults)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a scenario with explicit identifiers and an explicit constraint provider.
     /// </summary>
     /// <param name="eventSequenceId">The event sequence identifier.</param>
     /// <param name="eventStoreName">The event store name.</param>
@@ -139,227 +96,66 @@ public class EventScenario(
     }
 
     /// <summary>
-    /// Gets the fluent builder used to seed pre-existing events into the event log before the act phase.
+    /// Gets the builder for seeding events before the act phase.
     /// </summary>
-    public EventScenarioGivenBuilder Given => new(_created.EventLog);
+    public EventScenarioGivenBuilder Given => new(_created.Log);
 
     /// <summary>
-    /// Gets the fluent builder used to append the event(s) under test during the act phase and return the resulting <see cref="AppendResult"/>.
+    /// Gets the builder for appending the events under specification and returning the first failure or final result.
     /// </summary>
-    /// <remarks>
-    /// Symmetric to <see cref="Given"/>: where <c language="csharp">Given</c> seeds pre-existing events, <c language="csharp">When</c> performs the act being
-    /// tested. Its terminal <see cref="EventSourceWhenBuilder.Events"/> returns the <see cref="AppendResult"/> — the same
-    /// "the act returns its result" shape as <c language="csharp">CommandScenario.Execute</c>, so constraint/append specs read as
-    /// Given / When / then without binding a raw event-sequence append overload by hand.
-    /// <code language="csharp">
-    /// await scenario.Given.ForEventSource(id).Events(seedEvent);
-    /// var result = await scenario.When.ForEventSource(id).Events(actEvent);
-    /// result.ShouldHaveConstraintViolationFor(name);
-    /// </code>
-    /// </remarks>
-    public EventScenarioWhenBuilder When => new(_created.EventLog);
+    public EventScenarioWhenBuilder When => new(_created.Log);
 
     /// <summary>
-    /// Gets the <see cref="IEventLog"/> backed by the real kernel event sequence grain via the real client event log.
+    /// Gets the client event log backed by the selected in-process sequence.
     /// </summary>
-    public IEventLog EventLog => _created.EventLog;
+    public IEventLog EventLog => _created.Log;
 
     /// <summary>
-    /// Gets the <see cref="IEventSequence"/> backed by the real kernel event sequence grain via the real client event log.
+    /// Gets the selected sequence, the same instance as <see cref="EventLog"/>.
     /// </summary>
-    /// <remarks>
-    /// This is the same underlying instance as <see cref="EventLog"/>.
-    /// </remarks>
-    public IEventSequence EventSequence => _created.EventLog;
+    public IEventSequence EventSequence => _created.Log;
+
+    /// <summary>
+    /// Gets the shared store for internal harness specifications.
+    /// </summary>
+    internal TestingEventStore TestingStore => _created.Root;
 
     /// <inheritdoc/>
-    public void Dispose() => _created.Connection.Dispose();
+    public void Dispose() => _created.Root.Connection.Dispose();
 
     /// <summary>
-    /// Reads stored event JSON before compliance release, for the harness's own regression specs only.
+    /// Reads protected content for harness regression specifications.
     /// </summary>
-    /// <param name="sequenceNumber">The stored event position.</param>
-    /// <returns>The protected event content.</returns>
+    /// <param name="sequenceNumber">The stored position.</param>
+    /// <returns>The stored JSON.</returns>
     internal async Task<string> ReadContentAtRest(EventSequenceNumber sequenceNumber)
     {
-        var stored = await _created.Storage.GetEventAt((KernelConceptsNs::Events.EventSequenceNumber)sequenceNumber.Value);
+        var sequence = _created.Root.Store.GetNamespace(new KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName(namespaceName.Value))
+            .GetEventSequence(new(eventSequenceId.Value));
+        var stored = await sequence.GetEventAt(new(sequenceNumber.Value));
         return JsonSerializer.Serialize(stored.Content);
     }
 
-    static (EventLog EventLog, InProcessChronicleConnection Connection, InMemoryEventSequenceStorage Storage) CreateEventLog(
-        EventSequenceId eventSequenceId,
-        EventStoreName eventStoreName,
-        EventStoreNamespaceName namespaceName,
-        ICanProvideConstraints? constraintProvider,
-        Defaults defaults)
+    static (IEventLog Log, TestingEventStore Root) Create(EventSequenceId sequence, EventStoreName store, EventStoreNamespaceName ns, ICanProvideConstraints? provider, Defaults defaults)
     {
-        var compliance = new InProcessCompliance();
-        var kernelEventSequenceId = (KernelSequenceConcepts::EventSequenceId)(string)eventSequenceId;
-        var kernelEventStoreName = (KernelConceptsNs::EventStoreName)(string)eventStoreName;
-        var kernelNamespaceName = (KernelConceptsNs::EventStoreNamespaceName)(string)namespaceName;
-
-        var identityStorage = new InMemoryIdentityStorage();
-        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventStoreName, kernelNamespaceName, kernelEventSequenceId, identityStorage);
-        var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
-        var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
-        var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
-        var resolvedConstraintProvider = constraintProvider ?? new EmptyConstraintProvider();
-        var constraintsStorage = new InMemoryConstraintsStorage(resolvedConstraintProvider);
-        var eventTypesStorage = new InMemoryEventTypesStorage(() => defaults.EventTypes, defaults.JsonSchemaGenerator);
-
-        // Appends through an event source are validated against the definitions a real Kernel would hold, so the
-        // scenario registers whatever the client artifacts declare, exactly as connecting to a Kernel would.
-        var eventSources = new Cratis.Chronicle.EventSources.EventSources(null, defaults.ClientArtifactsProvider);
+        var root = new TestingEventStore(store, ns, () => defaults.EventTypes);
+        var eventSources = new EventSources.EventSources(null, defaults.ClientArtifactsProvider);
         eventSources.Discover().GetAwaiter().GetResult();
-        var eventSourcesStorage = new InMemoryEventSourcesStorage();
-        foreach (var definition in eventSources.All)
-        {
-            eventSourcesStorage.Save(definition.ToKernel()).GetAwaiter().GetResult();
-        }
-
-        var storage = new InMemoryStorage(
-            eventSequenceStorage,
-            uniqueConstraintsStorage,
-            uniqueEventTypesStorage,
-            constraintsStorage,
-            closedStreamsStorage,
-            identityStorage,
-            eventTypesStorage,
-            eventSourcesStorage);
-
-        var grain = InProcessEventSequence.Create(
-            storage,
-            kernelEventSequenceId,
-            kernelEventStoreName,
-            kernelNamespaceName,
-            compliance).GetAwaiter().GetResult();
-
-        var grainFactory = new InProcessGrainFactory(grain);
-
-        var jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
-        var eventCompliance = compliance.CreateEventCompliance();
-        var sequencesService = new KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences(
-            InProcessCommandPipeline.Create(
-                grainFactory,
-                storage,
-                jsonSerializerOptions,
-                services =>
-                {
-                    services.AddSingleton<IUnitOfWorkManager>(new NoOpUnitOfWorkManager());
-                    services.AddSingleton<IEventLog>(new NoOpEventLog());
-                    services.AddSingleton(defaults.EventTypes);
-                    services.AddSingleton<KernelCore::Cratis.Chronicle.Events.IEventCompliance>(eventCompliance);
-                    services.AddSingleton<KernelCore::Cratis.Chronicle.Schemas.IJsonSchemaMetadataManager>(compliance.Manager);
-                }),
-            storage,
-            eventCompliance,
-            jsonSerializerOptions,
-            new InProcessQueryContextManager(),
-            grainFactory,
-            NullLogger<KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences>.Instance);
-
-        var constraintsService = new InProcessNoOpConstraintsService();
-        var services = new InProcessServices(sequencesService, constraintsService);
-        var connection = new InProcessChronicleConnection(services);
-
-        var inProcessConstraints = new InProcessConstraints(resolvedConstraintProvider);
-        inProcessConstraints.Discover().GetAwaiter().GetResult();
-
-        var eventLog = new EventLog(
-            eventStoreName,
-            namespaceName,
-            connection,
-            defaults.EventTypes,
-            inProcessConstraints,
-            defaults.EventSerializer,
-            new CorrelationIdAccessor(),
-            new NoConcurrencyScopeStrategies(),
-            new CausationManager(),
-            new NoUnitOfWorkManager(),
-            new BaseIdentityProvider(),
-            jsonSerializerOptions,
-            eventSources: eventSources);
-
-        return (eventLog, connection, eventSequenceStorage);
+        root.Seed(provider, defaults.JsonSchemaGenerator, ((EventStoreForTesting)defaults.EventStore).EventTypeMigrators, eventSources.All).GetAwaiter().GetResult();
+        var constraints = new InProcessConstraints(provider ?? new EmptyConstraintProvider());
+        constraints.Discover().GetAwaiter().GetResult();
+        var clientSequence = root.CreateSequence(sequence, defaults.EventSerializer, constraints, eventSources);
+        return (clientSequence as IEventLog ?? EventLogForSequence.Create(clientSequence), root);
     }
 
-    static CompositeConstraintProvider CreateDiscoveredConstraintProvider(Defaults defaults)
+    static ICanProvideConstraints DiscoverConstraints(Defaults defaults)
     {
-        var namingPolicy = new CamelCaseNamingPolicy();
-        using var serviceProvider = new DefaultServiceProvider();
-        using var loggerFactory = new NullLoggerFactory();
-        var artifactActivator = new ClientArtifactsActivator(serviceProvider, loggerFactory);
-        return new CompositeConstraintProvider(
-            new ConstraintsByBuilderProvider(
-                defaults.ClientArtifactsProvider,
-                defaults.EventTypes,
-                namingPolicy,
-                artifactActivator,
-                NullLogger<ConstraintsByBuilderProvider>.Instance),
-            new UniqueConstraintProvider(
-                defaults.ClientArtifactsProvider,
-                defaults.EventTypes,
-                namingPolicy),
-            new UniqueEventTypeConstraintsProvider(
-                defaults.ClientArtifactsProvider,
-                defaults.EventTypes),
-            new ClosesStreamConstraintsProvider(defaults.ClientArtifactsProvider, defaults.EventTypes, namingPolicy));
+        using var loggers = new NullLoggerFactory();
+        return TestingEventStore.DiscoverConstraints(defaults.ClientArtifactsProvider, defaults.EventTypes, new ClientArtifactsActivator(((EventStoreForTesting)defaults.EventStore).ServiceProvider, loggers));
     }
 
-    sealed class CompositeConstraintProvider(params ICanProvideConstraints[] providers) : ICanProvideConstraints
+    sealed class EmptyConstraintProvider : ICanProvideConstraints
     {
-        /// <inheritdoc/>
-        public IImmutableList<IConstraintDefinition> Provide() =>
-            providers
-                .SelectMany(p => p.Provide())
-                .ToImmutableList();
-    }
-
-    sealed class EmptyConstraintProvider() : ICanProvideConstraints
-    {
-        /// <inheritdoc/>
-        public IImmutableList<IConstraintDefinition> Provide() => ImmutableList<IConstraintDefinition>.Empty;
-    }
-
-    sealed class NoConcurrencyScopeStrategies : IConcurrencyScopeStrategies
-    {
-        /// <inheritdoc/>
-        public IConcurrencyScopeStrategy GetFor(IEventSequence eventSequence) => NoConcurrencyScopeStrategy.Instance;
-    }
-
-    sealed class NoConcurrencyScopeStrategy : IConcurrencyScopeStrategy
-    {
-        internal static readonly NoConcurrencyScopeStrategy Instance = new();
-
-        /// <inheritdoc/>
-        public Task<ConcurrencyScope> GetScope(
-            EventSourceId eventSourceId,
-            EventStreamType? eventStreamType = default,
-            EventStreamId? eventStreamId = default,
-            EventSourceType? eventSourceType = default,
-            IEnumerable<EventType>? eventTypes = default) =>
-            Task.FromResult(ConcurrencyScope.None);
-    }
-
-    sealed class NoUnitOfWorkManager : IUnitOfWorkManager
-    {
-        /// <inheritdoc/>
-        public IUnitOfWork Current => throw new NoUnitOfWorkHasBeenStarted();
-
-        /// <inheritdoc/>
-        public bool HasCurrent => false;
-
-        /// <inheritdoc/>
-        public bool TryGetFor(CorrelationId correlationId, [MaybeNullWhen(false)] out IUnitOfWork unitOfWork)
-        {
-            unitOfWork = null;
-            return false;
-        }
-
-        /// <inheritdoc/>
-        public IUnitOfWork Begin(CorrelationId correlationId) => throw new NotSupportedException("Unit of work is not supported in test scenarios.");
-
-        /// <inheritdoc/>
-        public void SetCurrent(IUnitOfWork unitOfWork) => throw new NotSupportedException("Unit of work is not supported in test scenarios.");
+        public System.Collections.Immutable.IImmutableList<IConstraintDefinition> Provide() => [];
     }
 }

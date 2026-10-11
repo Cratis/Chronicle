@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// Represents a no-op implementation of <see cref="IConstraints"/> (contract) used in test scenarios.
 /// </summary>
 /// <remarks>
-/// Constraint registration is handled directly by the kernel grain via <see cref="InMemoryConstraintsStorage"/>,
+/// Constraint registration is handled by the test store through production storage,
 /// so this service implementation is intentionally a no-op.
 /// </remarks>
 internal sealed class InProcessNoOpConstraintsService : IConstraints

@@ -35,7 +35,7 @@ namespace Cratis.Chronicle.Testing.Reactors;
 /// </para>
 /// </remarks>
 /// <typeparam name="TReactor">The type of reactor under test.</typeparam>
-public class ReactorScenario<TReactor>
+public class ReactorScenario<TReactor> : IDisposable
     where TReactor : class, IReactor
 {
     readonly Defaults _defaults;
@@ -187,13 +187,20 @@ public class ReactorScenario<TReactor>
         }
     }
 
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (_explicitEventStore is null && _eventStore is IDisposable store) store.Dispose();
+        if (_explicitServiceProvider is null && _serviceProvider is IDisposable provider) provider.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
     /// <summary>
-    /// Seeds a pre-built read model instance for a specific event source so that a read-model handler-method parameter
-    /// of the reactor is materialized with it.
+    /// Seeds a read model for resolving reactor dependencies.
     /// </summary>
-    /// <typeparam name="TReadModel">The type of read model to seed.</typeparam>
-    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate the read model instance with.</param>
-    /// <param name="readModel">The read model instance to seed.</param>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="readModel">The seeded read model.</param>
     internal void SeedReadModel<TReadModel>(EventSourceId eventSourceId, TReadModel readModel)
         where TReadModel : class =>
         _readModelSeeds.Add(store => store.RegisterReadModelInstance(eventSourceId, readModel));

@@ -15,16 +15,15 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.InMemory.Sinks;
+using Cratis.Chronicle.Testing.Events;
 using Cratis.Json;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 using FrameworkNullLoggerFactory = Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory;
-using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
-using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
 using KernelAppendedEvent = KernelConcepts::Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
-using KernelEventTypes = KernelConcepts::Cratis.Chronicle.Concepts.EventTypes;
 using KernelKey = KernelConcepts::Cratis.Chronicle.Concepts.Keys.Key;
 using KernelProjectionEngine = KernelCore::Cratis.Chronicle.Projections.Engine;
 using KernelReadModels = KernelConcepts::Cratis.Chronicle.Concepts.ReadModels;
@@ -100,8 +99,8 @@ internal static class ProjectionReadModelProcessor
     /// <typeparam name="TReadModel">Type of read model produced by the projection.</typeparam>
     /// <param name="projectionDefinition">The client-side <see cref="Contracts.Projections.ProjectionDefinition"/>.</param>
     /// <param name="events">The events with their associated <see cref="EventSourceId"/> to process.</param>
+    /// <param name="eventStore">The scenario's shared test store.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event type metadata.</param>
-    /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing event input with the scenario's defaults.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for building the read model and event schemas.</param>
     /// <param name="initialState">Optional initial read model state.</param>
     /// <param name="strictEventSubscription">
@@ -122,8 +121,8 @@ internal static class ProjectionReadModelProcessor
     public static async Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> Process<TReadModel>(
         Contracts.Projections.ProjectionDefinition projectionDefinition,
         IEnumerable<(EventSourceId EventSourceId, object Event)> events,
+        EventStoreForTesting eventStore,
         IEventTypes eventTypes,
-        IEventSerializer eventSerializer,
         IJsonSchemaGenerator jsonSchemaGenerator,
         TReadModel? initialState = null,
         bool strictEventSubscription = false,
@@ -136,85 +135,21 @@ internal static class ProjectionReadModelProcessor
         var kernelReadModelDefinition = BuildKernelReadModelDefinition(readModelType, schema);
         var kernelProjectionDefinition = KernelGrpc::Cratis.Chronicle.Services.Projections.Definitions.ProjectionDefinitionConverters.ToChronicle(
             projectionDefinition,
-            KernelConceptsNs::Projections.ProjectionOwner.Client);
+            KernelConceptsNs::Projections.ProjectionOwner.Client) with
+        {
+            EventSequenceId = eventContexts is null ? ReadModelEvents.SequenceId : KernelConceptsNs::EventSequences.EventSequenceId.Log
+        };
 
         var eventsList = events.ToList();
 
-        // Build AppendedEvents with correct EventSourceIds for use in key resolution
-        var appendedEvents = new KernelAppendedEvent[eventsList.Count];
-        for (var index = 0; index < eventsList.Count; index++)
-        {
-            var eventTuple = eventsList[index];
-            var actualEventType = eventTuple.Event.GetType();
-            var clientEventType = eventTypes.GetEventTypeFor(actualEventType);
-            var kernelEventType = ToKernelEventType(clientEventType);
-            var serializedJson = await eventSerializer.Serialize(eventTuple.Event);
-            var eventSchema = jsonSchemaGenerator.Generate(actualEventType);
-
-            // JSON data keys remain case-sensitive even when the serializer matches CLR names case-insensitively.
-            // Re-read the serialized content without carrying those node lookup options into projection input.
-            var projectionJson = JsonNode.Parse(serializedJson.ToJsonString(), new JsonNodeOptions { PropertyNameCaseInsensitive = false })!.AsObject();
-            var content = _expandoObjectConverter.ToExpandoObject(projectionJson, eventSchema);
-            var eventSourceId = (KernelConceptsNs::Events.EventSourceId)eventTuple.EventSourceId.Value;
-            var context = KernelConceptsNs::Events.EventContext.Empty with
-            {
-                EventType = kernelEventType,
-                EventSourceId = eventSourceId,
-                EventSourceType = eventContexts is null ? KernelConceptsNs::Events.EventSourceType.Default : (KernelConceptsNs::Events.EventSourceType)eventContexts[index].EventSourceType.Value,
-                EventStreamType = eventContexts is null ? KernelConceptsNs::Events.EventStreamType.All : (KernelConceptsNs::Events.EventStreamType)eventContexts[index].EventStreamType.Value,
-                EventStreamId = eventContexts is null ? KernelConceptsNs::Events.EventStreamId.Default : (KernelConceptsNs::Events.EventStreamId)eventContexts[index].EventStreamId.Value,
-                SequenceNumber = (KernelConceptsNs::Events.EventSequenceNumber)(uint)index,
-
-                // Give each event a distinct, monotonically increasing occurred time so time-based
-                // projections (e.g. a [FromAll] "last updated" mapped from EventContext.Occurred)
-                // reflect append order the same way the real runtime does — rather than every event
-                // sharing one timestamp.
-                Occurred = KernelConceptsNs::Events.EventContext.Empty.Occurred.AddTicks(index)
-            };
-            appendedEvents[index] = new KernelAppendedEvent(context, content);
-        }
-
-        // Populate in-memory event sequence storage with all events so key resolvers
-        // (e.g. FromParentHierarchy for ChildrenFrom projections) can look up parent events
-        // across separate event source streams.
-        var eventSequenceId = KernelConceptsNs::EventSequences.EventSequenceId.Log;
-        var inMemoryEventSequenceStorage = new InMemoryEventSequenceStorage(
-            KernelConceptsNs::EventStoreName.NotSet,
-            KernelConceptsNs::EventStoreNamespaceName.NotSet,
-            eventSequenceId,
-            new InMemoryIdentityStorage());
-        foreach (var appendedEvent in appendedEvents)
-        {
-            await inMemoryEventSequenceStorage.Append(
-                appendedEvent.Context.SequenceNumber,
-                appendedEvent.Context.EventSourceType,
-                appendedEvent.Context.EventSourceId,
-                appendedEvent.Context.EventStreamType,
-                appendedEvent.Context.EventStreamId,
-                appendedEvent.Context.EventType,
-                appendedEvent.Context.CorrelationId,
-                appendedEvent.Context.Causation,
-                [],
-                appendedEvent.Context.Tags,
-                appendedEvent.Context.Occurred,
-                new Dictionary<KernelConceptsNs::Events.EventTypeGeneration, ExpandoObject>
-                {
-                    { KernelConceptsNs::Events.EventTypeGeneration.First, appendedEvent.Content }
-                },
-                new Dictionary<KernelConceptsNs::Events.EventTypeGeneration, KernelConceptsNs::Events.EventHash>());
-        }
-
-        // Generate event type schemas so AutoMap can map properties from events to read model fields.
-        var eventTypeSchemas = BuildEventTypeSchemas(eventsList, eventTypes, jsonSchemaGenerator);
-
-        // Create a projection factory backed by the populated in-memory storage so that
-        // join and parent-hierarchy resolvers can look up events from all event streams.
-        var storageForFactory = new InMemoryStorage(inMemoryEventSequenceStorage);
-        var projectionFactory = CreateProjectionFactory(storageForFactory);
+        // Keep synthetic positions and observer-free folding; prepare migrations through the kernel component.
+        var (appendedEvents, inMemoryEventSequenceStorage) = await ReadModelEvents.Prepare(eventStore, eventsList, eventContexts, persist: eventContexts is null);
+        var eventTypeSchemas = await eventStore.TestingStore.Store.EventTypes.GetFor(eventTypes.All.Select(ToKernelEventType));
+        var projectionFactory = CreateProjectionFactory(eventStore.TestingStore.Storage);
 
         var engineProjection = await projectionFactory.Create(
-            KernelConceptsNs::EventStoreName.NotSet,
-            KernelConceptsNs::EventStoreNamespaceName.NotSet,
+            new(eventStore.Name.Value),
+            new(eventStore.Namespace.Value),
             kernelProjectionDefinition,
             kernelReadModelDefinition,
             eventTypeSchemas);
@@ -473,39 +408,10 @@ internal static class ProjectionReadModelProcessor
             storage,
             FrameworkNullLoggerFactory.Instance.CreateLogger<KernelProjectionEngine::ProjectionFactory>());
 
-    static List<KernelEventTypes::EventTypeSchema> BuildEventTypeSchemas(
-        IEnumerable<(EventSourceId EventSourceId, object Event)> events,
-        IEventTypes eventTypes,
-        IJsonSchemaGenerator jsonSchemaGenerator)
-    {
-        var seenTypes = new HashSet<Type>();
-        var schemas = new List<KernelEventTypes::EventTypeSchema>();
-
-        foreach (var (_, eventInstance) in events)
-        {
-            var type = eventInstance.GetType();
-            if (!seenTypes.Add(type))
-            {
-                continue;
-            }
-
-            var clientEventType = eventTypes.GetEventTypeFor(type);
-            var kernelEventType = ToKernelEventType(clientEventType);
-            var eventSchema = jsonSchemaGenerator.Generate(type);
-            schemas.Add(new KernelEventTypes::EventTypeSchema(
-                kernelEventType,
-                KernelConceptsNs::Events.EventTypeOwner.Client,
-                KernelConceptsNs::Events.EventTypeSource.Code,
-                eventSchema));
-        }
-
-        return schemas;
-    }
-
     static async Task<(KernelKey? Key, bool Removed)> ProcessSingleEvent(
         KernelProjectionEngine::IProjection projection,
         KernelConceptsNs::Projections.Definitions.ProjectionDefinition kernelProjectionDefinition,
-        InMemoryEventSequenceStorage eventSequenceStorage,
+        IEventSequenceStorage eventSequenceStorage,
         InMemorySink sink,
         KernelAppendedEvent @event,
         Dictionary<object, ExpandoObject> statesByKey,
@@ -610,7 +516,7 @@ internal static class ProjectionReadModelProcessor
     /// </remarks>
     static async Task<bool> ApplyResolvedEvent(
         KernelProjectionEngine::IProjection projection,
-        InMemoryEventSequenceStorage eventSequenceStorage,
+        IEventSequenceStorage eventSequenceStorage,
         InMemorySink sink,
         KernelAppendedEvent @event,
         KernelKey key,
@@ -721,7 +627,7 @@ internal static class ProjectionReadModelProcessor
     static async Task HandleEventFor(
         KernelProjectionEngine::IProjection projection,
         KernelProjectionEngine::ProjectionEventContext context,
-        InMemoryEventSequenceStorage eventSequenceStorage,
+        IEventSequenceStorage eventSequenceStorage,
         InMemorySink sink,
         List<(KernelProjectionEngine::IProjection Child, KernelAppendedEvent Event)> deferredChildren)
     {

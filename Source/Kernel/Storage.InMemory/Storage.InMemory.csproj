@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Storage.InMemory.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
     </ItemGroup>
 
     <ItemGroup>

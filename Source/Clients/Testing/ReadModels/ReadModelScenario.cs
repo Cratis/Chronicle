@@ -41,13 +41,12 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// <param name="initialState">Optional initial state for the read model before any events are applied.</param>
 /// <param name="defaults">The <see cref="Defaults"/> to use for service resolution.</param>
 /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving reducer and projection instances.</param>
-public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults defaults, IServiceProvider? serviceProvider)
+public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults defaults, IServiceProvider? serviceProvider) : IDisposable
     where TReadModel : class
 {
     readonly TReadModel? _initialState = initialState;
     readonly INamingPolicy _namingPolicy = new CamelCaseNamingPolicy();
     readonly IEventTypes _eventTypes = defaults.EventTypes;
-    readonly IEventSerializer _eventSerializer = defaults.EventSerializer;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator = defaults.JsonSchemaGenerator;
     readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
     readonly List<(EventSourceId EventSourceId, object Event)> _collectedEvents = [];
@@ -346,6 +345,14 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _eventStore?.Dispose();
+        if (serviceProvider is null && Services.Any() && _resolvedServiceProvider is IDisposable disposable) disposable.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
     IServiceProvider ResolvedServiceProvider() => _resolvedServiceProvider ??= serviceProvider ?? BuildServiceProvider();
 
 #pragma warning disable CA2000 // Dispose objects before losing scope — held for the scenario's lifetime
@@ -370,7 +377,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     {
         if (!Services.Any())
         {
-            return new DefaultServiceProvider();
+            return ((EventStoreForTesting)defaults.EventStore).ServiceProvider;
         }
 
         Services.AddLogging();
@@ -424,6 +431,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
             var reduced = await ReducerReadModelProcessor.Process<TReadModel>(
                 reducerType,
                 eventsList.Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, Causation.Unknown())),
+                EventStore(),
                 _eventTypes,
                 ArtifactsActivator(),
                 ResolvedServiceProvider(),
@@ -449,8 +457,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
             return await ProjectionReadModelProcessor.Process(
                 projectionDefinition,
                 eventsList,
+                EventStore(),
                 _eventTypes,
-                _eventSerializer,
                 _jsonSchemaGenerator,
                 _initialState,
                 _strictEventSubscription);
