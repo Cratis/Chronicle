@@ -19,6 +19,8 @@ Auto-mapping is enabled by default at the top level, so matching properties are 
 
 Projection types are discovered by implementing `IProjectionFor<TReadModel>`. Event types used in projection definitions must be marked with `[EventType]`.
 
+In .NET, a projection class must target only one read model. Implementing two closed `IProjectionFor<TReadModel>` interfaces, including through inheritance, throws `TypeImplementsMultipleProjectionInterfaces` during default artifact discovery. Split the class into one projection per read model. [CHR0057](../../code-analysis/CHR0057) reports this before runtime.
+
 ## Key Features
 
 - **Auto mapping by default** with the option to turn it off or override per event
