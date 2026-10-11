@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Integration.for_Reactors.when_generation_is_pinned;
-using Cratis.Chronicle.Projections;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_generation_is_pinned;
 
