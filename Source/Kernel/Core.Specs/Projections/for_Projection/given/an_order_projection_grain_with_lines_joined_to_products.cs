@@ -43,7 +43,7 @@ public class an_order_projection_grain_with_lines_joined_to_products : Specifica
     protected const string Kettle = "00000000-0000-0000-0000-000000000011";
     protected const string Mug = "00000000-0000-0000-0000-000000000012";
 
-    const string Declaration = """
+    protected virtual string Declaration => """
         projection Order => Proof.Pdl.Order
           every
             LastUpdated = $eventContext.occurred
@@ -146,6 +146,8 @@ public class an_order_projection_grain_with_lines_joined_to_products : Specifica
                   "properties": {
                     "id": { "type": "string", "format": "guid" },
                     "CustomerName": { "type": "string" },
+                    "ProductId": { "type": "string", "format": "guid" },
+                    "ProductName": { "type": "string" },
                     "IsShipped": { "type": "boolean" },
                     "ItemCount": { "type": "integer" },
                     "LastUpdated": { "type": "string", "format": "date-time" },
@@ -173,7 +175,7 @@ public class an_order_projection_grain_with_lines_joined_to_products : Specifica
     [
         EventTypeSchemaFor("ProductRegistered", """{ "Name": { "type": "string" } }"""),
         EventTypeSchemaFor("ProductRenamed", """{ "Name": { "type": "string" } }"""),
-        EventTypeSchemaFor("OrderPlaced", """{ "CustomerName": { "type": "string" } }"""),
+        EventTypeSchemaFor("OrderPlaced", """{ "CustomerName": { "type": "string" }, "ProductId": { "type": "string", "format": "guid" } }"""),
         EventTypeSchemaFor("ItemAddedToOrder", """{ "ProductId": { "type": "string", "format": "guid" }, "Quantity": { "type": "integer" } }"""),
         EventTypeSchemaFor("ItemQuantityAdjusted", """{ "ProductId": { "type": "string", "format": "guid" }, "Quantity": { "type": "integer" } }"""),
         EventTypeSchemaFor("ItemRemovedFromOrder", """{ "ProductId": { "type": "string", "format": "guid" } }"""),
@@ -228,7 +230,7 @@ public class an_order_projection_grain_with_lines_joined_to_products : Specifica
         EventTypeSource.Code,
         JsonSchema.FromJson($$"""{ "type": "object", "properties": {{properties}} }"""));
 
-    static ProjectionDefinition CompileDeclaration()
+    ProjectionDefinition CompileDeclaration()
     {
         var language = new LanguageService(new Generator(), Engine.DeclarationLanguage.CodeGeneration.given.ProjectionCodeGenerators.All());
         return language.Compile(Declaration, ProjectionOwner.Server, [], []).Match(
@@ -236,7 +238,7 @@ public class an_order_projection_grain_with_lines_joined_to_products : Specifica
             errors => throw new InvalidOperationException($"Compilation failed: {string.Join(", ", errors.Errors)}"));
     }
 
-    async Task<AppendedEvent> Append(EventSourceId eventSourceId, string eventType, object content)
+    protected async Task<AppendedEvent> Append(EventSourceId eventSourceId, string eventType, object content)
     {
         var sequenceNumber = _nextSequenceNumber++;
         var result = await _eventSequenceStorage.Append(
