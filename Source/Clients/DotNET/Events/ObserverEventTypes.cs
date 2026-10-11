@@ -76,16 +76,18 @@ internal static class ObserverEventTypes
 
     static bool IsCurrentEventType(Type type, IEventTypes eventTypes)
     {
+        // Metadata inference is not handler validation. A filtered provider may omit a helper's
+        // parameter type; genuinely missing dispatch events are still rejected by the invoker.
+        if (!eventTypes.HasFor(type))
+        {
+            return false;
+        }
+
         if (Attribute.IsDefined(type, typeof(EventTypeAttribute)))
         {
             return true;
         }
 
-        if (type == typeof(object) || Attribute.IsDefined(type, typeof(EventTypeGenerationForAttribute)))
-        {
-            return false;
-        }
-
-        return eventTypes.HasFor(type);
+        return type != typeof(object) && !Attribute.IsDefined(type, typeof(EventTypeGenerationForAttribute));
     }
 }
