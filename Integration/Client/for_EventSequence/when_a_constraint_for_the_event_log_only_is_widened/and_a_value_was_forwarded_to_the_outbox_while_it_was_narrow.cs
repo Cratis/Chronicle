@@ -26,7 +26,7 @@ public class and_a_value_was_forwarded_to_the_outbox_while_it_was_narrow(context
     public class context(ChronicleFixture fixture) : Specification(fixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueReservedName)];
-        public override IEnumerable<Type> EventTypes => [typeof(NameReserved)];
+        public override IEnumerable<Type> EventTypes => [typeof(NameReserved), typeof(PublicNameReserved)];
 
         public IAppendResult FirstInOutbox { get; private set; }
         public IAppendResult SecondInOutbox { get; private set; }
@@ -35,16 +35,17 @@ public class and_a_value_was_forwarded_to_the_outbox_while_it_was_narrow(context
         {
             var outbox = EventStore.GetEventSequence(EventSequenceId.Outbox);
             var @event = new NameReserved("initech");
+            var forwarded = new PublicNameReserved(@event.Name);
 
             await EventStore.EventLog.Append(Guid.NewGuid().ToString(), @event);
-            FirstInOutbox = await outbox.Append(Guid.NewGuid().ToString(), @event);
+            FirstInOutbox = await outbox.Append(Guid.NewGuid().ToString(), forwarded);
 
             // Registering refreshes the outbox's constraints and starts its reindex before it returns, so all that is
             // left to wait for is the reindex completing.
             await RegisterForEveryEventSequence();
             await EventStore.Jobs.WaitForThereToBeNoJobs(TimeSpan.FromSeconds(30), Cratis.Chronicle.Jobs.JobStatus.CompletedSuccessfully);
 
-            SecondInOutbox = await outbox.Append(Guid.NewGuid().ToString(), @event);
+            SecondInOutbox = await outbox.Append(Guid.NewGuid().ToString(), forwarded);
         }
 
         Task RegisterForEveryEventSequence()

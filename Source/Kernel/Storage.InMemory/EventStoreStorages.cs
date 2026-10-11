@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 
@@ -30,10 +31,26 @@ namespace Cratis.Chronicle.Storage.InMemory;
 public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage) : IDisposable
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new();
+    readonly Func<EventStoreName, IEventTypesStorage>? _eventTypesFactory;
 
     readonly Subject<IEnumerable<EventStoreName>> _changes = new();
 
     readonly Lock _publishing = new();
+
+    /// <summary>
+    /// Initializes a registry with an event-types storage factory for in-process composition.
+    /// </summary>
+    /// <param name="sinkFactories">The available sink factories.</param>
+    /// <param name="jobsStorage">The jobs storage.</param>
+    /// <param name="eventTypesFactory">The event-types storage factory.</param>
+    internal EventStoreStorages(
+        IInstancesOf<ISinkFactory> sinkFactories,
+        Cratis.Orleans.Storage.IJobsStorage jobsStorage,
+        Func<EventStoreName, IEventTypesStorage> eventTypesFactory)
+        : this(sinkFactories, jobsStorage)
+    {
+        _eventTypesFactory = eventTypesFactory;
+    }
 
     /// <summary>
     /// Gets all the <see cref="EventStoreName">event stores</see> currently registered.
@@ -87,7 +104,10 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
             return existing;
         }
 
-        var created = new EventStoreStorage(eventStore, sinksFactory ?? CreateDefaultSinksFactory(eventStore), jobsStorage);
+        var sinks = sinksFactory ?? CreateDefaultSinksFactory(eventStore);
+        var created = _eventTypesFactory is null
+            ? new EventStoreStorage(eventStore, sinks, jobsStorage)
+            : new EventStoreStorage(eventStore, sinks, jobsStorage, _eventTypesFactory);
         var storage = _eventStores.GetOrAdd(eventStore, created);
 
         if (ReferenceEquals(storage, created))

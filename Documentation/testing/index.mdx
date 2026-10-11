@@ -75,7 +75,7 @@ The read-model logic runs in-process — a projection or reducer, depending on t
 
 ## What the harness stands in for
 
-The .NET in-process scenario helpers run the real projection and reducer engines, constraint evaluation, and reactor dispatch — but substitute in-memory storage for the kernel's gRPC boundary and persistent event log. That substitution is what makes them fast and isolated, and it's also the boundary they don't cross.
+The .NET in-process scenario helpers run the real projection and reducer engines, constraint evaluation, and reactor dispatch on Chronicle's production in-memory storage. Each scenario owns an isolated store shared by its event log, named sequences, and in-process services. They bypass gRPC and the observer lifecycle, so they remain fast without proving network delivery or persistent storage behavior.
 
 When a .NET test needs to prove behavior **across** that boundary — that a projection's sink writes actually landed in MongoDB, that a reactor registered its observer subscription with a running kernel, that change streams fired and advanced the checkpoint — reach for the [integration fixtures](#choosing-the-right-test-boundary) and `IEventAppendCollection` instead. Those exercise the full client-to-kernel-to-storage stack.
 
