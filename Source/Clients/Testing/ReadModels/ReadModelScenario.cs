@@ -438,7 +438,20 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> ProcessEvents(IEnumerable<ReadModelEvent> events)
     {
         var reducerType = _inlineProjection ? null : FindReducerType(typeof(TReadModel));
-        return ReadModelFolder.Process(events, EventStore(), _eventTypes, _jsonSchemaGenerator, ArtifactsActivator(), ResolvedServiceProvider(), _namingPolicy, reducerType, reducerType is null ? ProjectionDefinition() : null, _initialState, _strictEventSubscription);
+        var fold = new ReadModelFold<TReadModel>
+        {
+            EventStore = EventStore(),
+            EventTypes = _eventTypes,
+            SchemaGenerator = _jsonSchemaGenerator,
+            Activator = ArtifactsActivator(),
+            ServiceProvider = ResolvedServiceProvider(),
+            NamingPolicy = _namingPolicy,
+            ReducerType = reducerType,
+            ProjectionDefinition = reducerType is null ? ProjectionDefinition() : null,
+            InitialState = _initialState,
+            StrictEventSubscription = _strictEventSubscription
+        };
+        return fold.Process(events);
     }
 
     Type? FindReducerType(Type readModelType) =>

@@ -101,24 +101,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     public ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
     {
         var log = _eventLog ?? throw new ReadModelCannotBeObserved(typeof(TReadModel), "An event log is not available in this test scenario");
-        var readModelType = typeof(TReadModel);
-        var metadata = _store ?? throw new ReadModelCannotBeObserved(readModelType, "The owning test store is not available for artifact discovery and event storage");
-        if (!metadata.Projections.HasFor(readModelType) && !metadata.Reducers.HasFor(readModelType))
-        {
-            throw new UnknownReadModel(readModelType);
-        }
-
-        if (readModelType.IsPassive() ||
-            (metadata.Projections is IKnowPassiveProjections passive && passive.IsPassive(readModelType)))
-        {
-            throw new ReadModelCannotBeObserved(readModelType, "Passive read models have no materialized sink");
-        }
-
-        if (readModelType.IsEventTypeTarget())
-        {
-            throw new ReadModelCannotBeObserved(readModelType, "Event targets publish events instead of storing a collection");
-        }
-
+        var metadata = StoreForObservation(typeof(TReadModel));
         var predicate = filter?.Compile();
         var source = Observable.Create<IEnumerable<TReadModel>>(observer =>
         {
@@ -196,6 +179,33 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     {
         var identifier = typeof(TReadModel).GetReadModelIdentifier();
         _instances[(identifier, eventSourceId.Value)] = instance;
+    }
+
+    static bool IsPassive(Type readModelType, EventStoreForTesting store)
+    {
+        if (readModelType.IsPassive()) return true;
+        return store.Projections is IKnowPassiveProjections passive && passive.IsPassive(readModelType);
+    }
+
+    EventStoreForTesting StoreForObservation(Type readModelType)
+    {
+        var store = _store ?? throw new ReadModelCannotBeObserved(readModelType, "The owning test store is not available for artifact discovery and event storage");
+        if (!store.Projections.HasFor(readModelType) && !store.Reducers.HasFor(readModelType))
+        {
+            throw new UnknownReadModel(readModelType);
+        }
+
+        if (IsPassive(readModelType, store))
+        {
+            throw new ReadModelCannotBeObserved(readModelType, "Passive read models have no materialized sink");
+        }
+
+        if (readModelType.IsEventTypeTarget())
+        {
+            throw new ReadModelCannotBeObserved(readModelType, "Event targets publish events instead of storing a collection");
+        }
+
+        return store;
     }
 
     async Task<IEnumerable<TReadModel>> Rebuild<TReadModel>(IEventSequence log, EventStoreForTesting store)
