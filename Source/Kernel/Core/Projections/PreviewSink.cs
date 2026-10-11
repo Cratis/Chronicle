@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Projections;
 /// Represents an <see cref="ISink"/> over the read models a projection builds in memory when it processes events
 /// without persisting them, such as for a preview.
 /// </summary>
+/// <param name="identifierProperty">The identifier property from the root read model schema.</param>
 /// <remarks>
 /// Key resolution asks the sink where an event belongs: which root holds a child that a join event refers to,
 /// and whether a keyed update targets a child that already exists. A saved projection answers from what it has
@@ -28,7 +29,7 @@ namespace Cratis.Chronicle.Projections;
 /// becomes a read model of its own and an update to an existing child cannot find it (Cratis/Chronicle#4727).
 /// The sink never writes: the caller decides what to keep through <see cref="Set"/> and <see cref="Remove(string)"/>.
 /// </remarks>
-internal sealed class PreviewSink : ISink
+internal sealed class PreviewSink(PropertyPath identifierProperty) : ISink
 {
     readonly Dictionary<string, PreviewReadModel> _readModels = [];
 
@@ -56,6 +57,22 @@ internal sealed class PreviewSink : ISink
 
         state = new ExpandoObject();
         return false;
+    }
+
+    /// <summary>
+    /// Gets initial state with the identifier available for resolving joins that happened before the root.
+    /// </summary>
+    /// <param name="key">The root key.</param>
+    /// <returns>The existing state or a new state carrying its identifier.</returns>
+    public ExpandoObject GetInitialState(Key key)
+    {
+        TryGet(key.Value.ToString()!, out var state);
+        if (identifierProperty.IsSet)
+        {
+            ((IDictionary<string, object?>)state)[identifierProperty.Path] = key.Value;
+        }
+
+        return state;
     }
 
     /// <summary>
@@ -245,6 +262,14 @@ internal sealed class PreviewSink : ISink
 
     IEnumerable<(PreviewReadModel ReadModel, object StoredValue)> FindHolding(PropertyPath propertyPath, object value)
     {
+        // The sink persists the identifier from the root key, not from an explicitly mapped property.
+        if (propertyPath == identifierProperty)
+        {
+            return [.. _readModels.Values
+                .Where(readModel => HasSameValue(readModel.KeyValue, value))
+                .Select(readModel => (readModel, (object)readModel.KeyValue))];
+        }
+
         var segments = propertyPath.Segments.Select(_ => _.Value).ToArray();
         return [.. _readModels.Values
             .Select(readModel => (ReadModel: readModel, StoredValue: FindValues(readModel.State, segments, 0, value).FirstOrDefault()))

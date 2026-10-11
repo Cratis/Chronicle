@@ -16,6 +16,7 @@ using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Projections.Engine;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage;
@@ -331,7 +332,7 @@ public class Projection(
     /// <returns>The <see cref="PreviewSink"/> holding the read models built.</returns>
     async Task<PreviewSink> ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, IEnumerable<AppendedEvent> events)
     {
-        var sink = new PreviewSink();
+        var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
         foreach (var @event in events)
         {
             var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
@@ -348,7 +349,7 @@ public class Projection(
     {
         var key = resolvedKey.Key;
         var keyValue = key.Value.ToString()!;
-        _ = sink.TryGet(keyValue, out var initialState);
+        var initialState = sink.GetInitialState(key);
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, initialState);
         var context = new ProjectionEventContext(key, @event, changeset, projection.GetOperationTypeFor(@event.Context.EventType), false, resolvedKey.JoinKey);
 
