@@ -49,7 +49,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     readonly IEventTypes _eventTypes = defaults.EventTypes;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator = defaults.JsonSchemaGenerator;
     readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
-    readonly List<(EventSourceId EventSourceId, object Event)> _collectedEvents = [];
+    readonly List<ReadModelEvent> _collectedEvents = [];
     readonly List<Action<EventStoreForTesting>> _readModelSeeds = [];
     IServiceProvider? _resolvedServiceProvider;
     IClientArtifactsActivator? _artifactsActivator;
@@ -99,7 +99,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <remarks>
     /// This property returns <see langword="null"/> if <see cref="Given"/> has not been used yet or if
     /// the events produced no state changes. Accessing this property triggers event processing the first
-    /// time it is called after events have been collected via <see cref="CollectEventsFor"/> or
+    /// time it is called after events have been collected via <see cref="CollectEventsFor(EventSourceId, IEnumerable{object})"/> or
     /// <see cref="ProcessEventsFor"/>.
     /// When the seeded events materialize more than one instance — for example a multi-source join —
     /// a single result is ambiguous, so this throws <see cref="MultipleInstancesMaterialized"/>; select the
@@ -319,14 +319,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// </remarks>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate with the events.</param>
     /// <param name="events">The event instances to collect in order.</param>
-    public void CollectEventsFor(EventSourceId eventSourceId, IEnumerable<object> events)
-    {
-        _processed = false;
-        foreach (var @event in events)
-        {
-            _collectedEvents.Add((eventSourceId, @event));
-        }
-    }
+    public void CollectEventsFor(EventSourceId eventSourceId, IEnumerable<object> events) =>
+        CollectEventsFor(eventSourceId, events, EventSourceType.Default, EventStreamType.All, EventStreamId.Default);
 
     /// <summary>
     /// Feeds the provided events for a specific event source through the read model's projection or reducer and updates <see cref="Instance"/>.
@@ -351,6 +345,28 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         _eventStore?.Dispose();
         if (serviceProvider is null && Services.Any() && _resolvedServiceProvider is IDisposable disposable) disposable.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Collects events together with their source and stream route.
+    /// </summary>
+    /// <param name="eventSourceId">The event source identifier.</param>
+    /// <param name="events">The event instances to collect in order.</param>
+    /// <param name="eventSourceType">The event source type.</param>
+    /// <param name="eventStreamType">The event stream type.</param>
+    /// <param name="eventStreamId">The event stream identifier.</param>
+    internal void CollectEventsFor(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        EventSourceType eventSourceType,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId)
+    {
+        _processed = false;
+        foreach (var @event in events)
+        {
+            _collectedEvents.Add(new(eventSourceId, @event, eventSourceType, eventStreamType, eventStreamId));
+        }
     }
 
     IServiceProvider ResolvedServiceProvider() => _resolvedServiceProvider ??= serviceProvider ?? BuildServiceProvider();
@@ -420,7 +436,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         }
     }
 
-    async Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> ProcessEvents(IEnumerable<(EventSourceId EventSourceId, object Event)> events)
+    async Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> ProcessEvents(IEnumerable<ReadModelEvent> events)
     {
         var eventsList = events.ToList();
         var readModelType = typeof(TReadModel);
@@ -428,9 +444,14 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         var reducerType = _inlineProjection ? null : FindReducerType(readModelType);
         if (reducerType is not null)
         {
-            var reduced = await ReducerReadModelProcessor.Process<TReadModel>(
+            var (reduced, distinctEventSourceIds) = await ReducerReadModelProcessor.Process<TReadModel>(
                 reducerType,
-                eventsList.Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, Causation.Unknown())),
+                eventsList.Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, Causation.Unknown())
+                {
+                    EventSourceType = e.EventSourceType,
+                    EventStreamType = e.EventStreamType,
+                    EventStreamId = e.EventStreamId
+                }),
                 EventStore(),
                 _eventTypes,
                 ArtifactsActivator(),
@@ -438,11 +459,10 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 _namingPolicy,
                 _initialState);
 
-            // A reducer is single-instance; key its result by the event source id it reduced so that
+            // A reducer is single-instance; key its result by the event source id that passed its filters so that
             // InstanceForEventSourceId / Instances behave the same as for a projection. Only the single-source
             // case is keyed — reducing events across more than one source is misuse of a single-instance API.
             var reducerInstances = new Dictionary<EventSourceId, TReadModel>();
-            var distinctEventSourceIds = eventsList.Select(e => e.EventSourceId).Distinct().ToList();
             if (reduced is not null && distinctEventSourceIds.Count == 1)
             {
                 reducerInstances[distinctEventSourceIds[0]] = reduced;
@@ -456,12 +476,13 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         {
             return await ProjectionReadModelProcessor.Process(
                 projectionDefinition,
-                eventsList,
+                eventsList.Select(e => (e.EventSourceId, e.Event)),
                 EventStore(),
                 _eventTypes,
                 _jsonSchemaGenerator,
                 _initialState,
-                _strictEventSubscription);
+                _strictEventSubscription,
+                seededEvents: eventsList);
         }
 
         throw new NoReadModelHandlerFound(readModelType);
