@@ -21,6 +21,7 @@ public class with_compiled_order : CodeGeneration.given.generated_order_code
     [Fact] void should_keep_child_subscriptions() => _modelBound.Children["lines"].From.Keys.Select(eventType => eventType.Id).ShouldContainOnly(_declarative.Children["lines"].From.Keys.Select(eventType => eventType.Id));
     [Fact] void should_keep_child_identity() => _modelBound.Children["lines"].IdentifiedBy.ShouldEqual(_declarative.Children["lines"].IdentifiedBy);
     [Fact] void should_keep_child_joins() => _modelBound.Children["lines"].Join.Keys.Select(eventType => eventType.Id).ShouldContainOnly(_declarative.Children["lines"].Join.Keys.Select(eventType => eventType.Id));
+    [Fact] void should_join_children_on_the_child_identity() => _modelBound.Children["lines"].Join.Single(join => join.Key.Id == "ProductRegistered").Value.On.ShouldEqual(_declarative.Children["lines"].Join.Single(join => join.Key.Id == "ProductRegistered").Value.On);
     [Fact] void should_keep_child_join_mapping() => _modelBound.Children["lines"].Join.Single(join => join.Key.Id == "ProductRegistered").Value.Properties["productName"].ShouldEqual("name");
     [Fact] void should_keep_child_removal_key() => _modelBound.Children["lines"].RemovedWith.Single().Value.Key.ShouldEqual(_declarative.Children["lines"].RemovedWith.Single().Value.Key);
     [Fact] void should_remove_child_in_the_event_source_parent() => _modelBound.Children["lines"].RemovedWith.Single().Value.ParentKey.ShouldEqual("$eventSourceId");

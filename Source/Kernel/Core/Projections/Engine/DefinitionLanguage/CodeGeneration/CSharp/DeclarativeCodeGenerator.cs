@@ -48,7 +48,7 @@ public class DeclarativeCodeGenerator
             lines.Add(".NoAutoMap()");
         }
         GenerateFromBlocks(definition, schema, lines);
-        DeclarativeRelationships.Joins(definition.Join, lines, isChild);
+        DeclarativeRelationships.Joins(definition, lines, isChild);
         var relationships = new DeclarativeRelationships.Scope(schema, lines, GenerateBlocks);
         DeclarativeRelationships.Children(definition.Children, relationships, false);
         if (definition.Nested is not null)

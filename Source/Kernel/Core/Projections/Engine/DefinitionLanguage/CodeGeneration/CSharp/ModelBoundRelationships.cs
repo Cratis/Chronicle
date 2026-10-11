@@ -36,7 +36,8 @@ static class ModelBoundRelationships
     /// <returns>The member annotations.</returns>
     internal static IEnumerable<AttributeSyntax> PropertyAttributes(ProjectionDefinition definition, PropertyPath property, TypeSyntax childType, bool isCollection)
     {
-        var member = new Member(property, childType, isCollection);
+        var childIdentity = isCollection && definition is ChildrenDefinition children ? children.IdentifiedBy : null;
+        var member = new Member(property, childType, childIdentity);
         return JoinAttributes(definition, member).Concat(ChildAttributes(definition, member)).Concat(NestedAttributes(definition, property));
     }
 
@@ -46,7 +47,7 @@ static class ModelBoundRelationships
     static AttributeSyntax JoinAttribute(KeyValuePair<EventType, JoinDefinition> join, Member member)
     {
         var arguments = new List<string>();
-        if (!member.IsCollection) arguments.Add($"on: \"{join.Value.On.Path}\"");
+        if (!join.Value.On.Equals(member.ChildIdentity)) arguments.Add($"on: \"{join.Value.On.Path}\"");
         arguments.Add($"eventPropertyName: nameof({join.Key.Id.Value}.{join.Value.Properties[member.Target]})");
         return Create($"Join<{join.Key.Id.Value}>", arguments);
     }
@@ -104,5 +105,5 @@ static class ModelBoundRelationships
         return parsed.Length == 0 ? attribute : attribute.WithArgumentList(AttributeArgumentList(SeparatedList(parsed)));
     }
 
-    sealed record Member(PropertyPath Target, TypeSyntax ChildType, bool IsCollection);
+    sealed record Member(PropertyPath Target, TypeSyntax ChildType, PropertyPath? ChildIdentity);
 }

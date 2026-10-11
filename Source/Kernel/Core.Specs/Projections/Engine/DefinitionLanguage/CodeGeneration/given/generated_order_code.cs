@@ -132,7 +132,7 @@ public class generated_order_code : a_projection_to_generate
 
     protected string GenerateModelBound(string declaration) => new ModelBoundCodeGenerator().Generate(CompileDeclaration(declaration), _readModelDefinition).ToFullString();
 
-    protected Assembly CompileGenerated(string declarative, string modelBound)
+    protected Assembly CompileGenerated(string declarative, string modelBound, string events = Events)
     {
         var assemblies = new[]
         {
@@ -144,7 +144,7 @@ public class generated_order_code : a_projection_to_generate
             .Concat(assemblies).Distinct().Select(path => MetadataReference.CreateFromFile(path));
         var compilation = CSharpCompilation.Create(
             $"GeneratedOrder_{Guid.NewGuid():N}",
-            [CSharpSyntaxTree.ParseText(declarative), CSharpSyntaxTree.ParseText(modelBound), CSharpSyntaxTree.ParseText(Events)],
+            [CSharpSyntaxTree.ParseText(declarative), CSharpSyntaxTree.ParseText(modelBound), CSharpSyntaxTree.ParseText(events)],
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         using var output = new MemoryStream();

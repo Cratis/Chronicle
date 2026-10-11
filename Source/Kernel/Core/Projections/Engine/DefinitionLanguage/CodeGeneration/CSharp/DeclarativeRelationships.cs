@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -14,15 +13,20 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration
 static class DeclarativeRelationships
 {
     /// <summary>
-    /// Renders joins without specifying an On property in child scopes.
+    /// Renders joins or limitation comments without specifying an On property in child scopes.
     /// </summary>
-    /// <param name="joins">The joins to render.</param>
+    /// <param name="definition">The projection scope containing the joins.</param>
     /// <param name="lines">The generated fluent steps.</param>
     /// <param name="isChild">Whether these joins belong to children.</param>
-    internal static void Joins(IDictionary<EventType, JoinDefinition> joins, List<string> lines, bool isChild)
+    internal static void Joins(ProjectionDefinition definition, List<string> lines, bool isChild)
     {
-        foreach (var join in joins)
+        foreach (var join in definition.Join)
         {
+            if (isChild && definition is ChildrenDefinition children && join.Value.On != children.IdentifiedBy)
+            {
+                lines.Add($"/* Not expressible with the declarative builder: child join '{join.Key.Id.Value}' on '{join.Value.On.Path}' differs from identity '{children.IdentifiedBy.Path}'. */");
+                continue;
+            }
             var operations = new List<string>();
             if (!isChild)
             {
