@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Projections.Engine;
 
@@ -16,6 +17,7 @@ public static class EventTypeSchemasExtensions
     /// </summary>
     /// <param name="schemas">The available <see cref="EventTypeSchema">schemas</see>.</param>
     /// <param name="eventType">The <see cref="EventType"/> the projection references.</param>
+    /// <param name="generationDelivery">Whether schema lookup must be generation-exact.</param>
     /// <returns>The matching <see cref="EventTypeSchema"/>, or null if the event type has no schema.</returns>
     /// <remarks>
     /// Events reach a projection by event type identifier, whatever generation the projection definition names, and
@@ -24,7 +26,7 @@ public static class EventTypeSchemasExtensions
     /// identifier is used, so a projection definition naming another generation than the one stored still resolves
     /// the schema of the content it receives.
     /// </remarks>
-    public static EventTypeSchema? SchemaFor(this IEnumerable<EventTypeSchema> schemas, EventType eventType)
+    public static EventTypeSchema? SchemaFor(this IEnumerable<EventTypeSchema> schemas, EventType eventType, EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility)
     {
         EventTypeSchema? latestForIdentifier = null;
         foreach (var schema in schemas)
@@ -45,6 +47,6 @@ public static class EventTypeSchemasExtensions
             }
         }
 
-        return latestForIdentifier;
+        return generationDelivery == EventGenerationDelivery.Pinned ? null : latestForIdentifier;
     }
 }

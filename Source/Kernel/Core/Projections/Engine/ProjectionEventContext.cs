@@ -41,6 +41,11 @@ public record ProjectionEventContext(
     public bool IsNewInstance { get; set; }
 
     /// <summary>
+    /// Gets the generation policy used to distinguish deferred clause identities.
+    /// </summary>
+    public Concepts.Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
+    /// <summary>
     /// Gets the collection of deferred futures that need to be stored.
     /// </summary>
     public IEnumerable<ProjectionFuture> DeferredFutures => _deferredFutures;
@@ -107,8 +112,9 @@ public record ProjectionEventContext(
     /// <param name="future">The <see cref="ProjectionFuture"/> to add.</param>
     public void AddDeferredFuture(ProjectionFuture future)
     {
-        // Avoid adding duplicate futures for the same event sequence number
-        if (_deferredFutures.Exists(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber))
+        // One physical event can reach clauses pinned to different generations. Retain both futures.
+        if (_deferredFutures.Exists(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber &&
+            (GenerationDelivery != Concepts.Observation.EventGenerationDelivery.Pinned || f.Event.Context.EventType == future.Event.Context.EventType)))
         {
             return;
         }

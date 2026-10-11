@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine.Expressions;
 using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
@@ -70,9 +71,12 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
     /// <summary>
     /// Build the <see cref="ChildrenDefinition"/>.
     /// </summary>
+    /// <param name="generationDelivery">The root projection's effective generation delivery policy.</param>
     /// <returns>A a new <see cref="ChildrenDefinition"/>.</returns>
-    internal ChildrenDefinition Build()
+    internal ChildrenDefinition Build(EventGenerationDelivery? generationDelivery = null)
     {
+        BuildDefinitions(generationDelivery ?? GenerationDelivery);
+
         return new()
         {
             IdentifiedBy = _identifiedBy,
