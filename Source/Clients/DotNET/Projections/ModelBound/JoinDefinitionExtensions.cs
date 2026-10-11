@@ -42,6 +42,13 @@ static class JoinDefinitionExtensions
         var on = onProperty?.GetValue(attr) as string;
         var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
 
+        // Scalar [Nested] objects also use a children definition, but have no collection identity (NotSet).
+        // They keep the property-name fallback, including nested objects inside child collections.
+        if (childIdentity == PropertyPath.NotSetValue)
+        {
+            childIdentity = null;
+        }
+
         if (!targetJoin.TryGetValue(eventTypeId, out var joinDef))
         {
             if (on is null && childIdentity == WellKnownExpressions.EventSourceId)
