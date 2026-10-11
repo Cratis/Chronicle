@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Testing.Events;
 using Cratis.Execution;
 using Cratis.Serialization;
 
@@ -32,6 +34,7 @@ internal static class ReducerReadModelProcessor
     /// <typeparam name="TReadModel">Type of read model produced by the reducer.</typeparam>
     /// <param name="reducerType">The reducer type implementing <see cref="IReducerFor{TReadModel}"/>.</param>
     /// <param name="events">The events to process.</param>
+    /// <param name="eventStore">The scenario's shared test store.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event type metadata.</param>
     /// <param name="artifactsActivator"><see cref="IClientArtifactsActivator"/> for instantiating the reducer.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> used when invoking the reducer.</param>
@@ -42,6 +45,7 @@ internal static class ReducerReadModelProcessor
     public static async Task<TReadModel?> Process<TReadModel>(
         Type reducerType,
         IEnumerable<EventForEventSourceId> events,
+        EventStoreForTesting eventStore,
         IEventTypes eventTypes,
         IClientArtifactsActivator artifactsActivator,
         IServiceProvider serviceProvider,
@@ -53,11 +57,12 @@ internal static class ReducerReadModelProcessor
         var containerName = (ReadModelContainerName)namingPolicy.GetReadModelName(readModelType);
         var invoker = new ReducerInvoker(eventTypes, artifactsActivator, reducerType, readModelType, containerName);
 
-        var eventsAndContexts = events.Select((@event, index) =>
+        var eventsList = events.ToList();
+        var contexts = eventsList.Select((@event, index) =>
         {
-            var context = EventContext.From(
-                EventStoreName.NotSet,
-                EventStoreNamespaceName.NotSet,
+            return EventContext.From(
+                eventStore.Name,
+                eventStore.Namespace,
                 eventTypes.GetEventTypeFor(@event.Event.GetType()),
                 @event.EventSourceType,
                 @event.EventSourceId,
@@ -65,9 +70,17 @@ internal static class ReducerReadModelProcessor
                 @event.EventStreamId,
                 (EventSequenceNumber)(ulong)index,
                 CorrelationId.NotSet);
-
-            return new EventAndContext(@event.Event, context);
-        });
+        }).ToArray();
+        var (prepared, _) = await ReadModelEvents.Prepare(eventStore, eventsList.Select(input => (input.EventSourceId, input.Event)).ToArray(), contexts);
+        var eventsAndContexts = new List<EventAndContext>();
+        for (var index = 0; index < prepared.Length; index++)
+        {
+            var delivered = prepared[index];
+            var type = new EventType(new(delivered.Context.EventType.Id.Value), new(delivered.Context.EventType.Generation.Value));
+            var json = JsonSerializer.SerializeToNode(delivered.Content)!.AsObject();
+            var content = await eventStore.EventSerializer.Deserialize(eventTypes.GetClrTypeFor(type.Id, type.Generation), json);
+            eventsAndContexts.Add(new(content, contexts[index] with { EventType = type }));
+        }
 
         var result = await invoker.Invoke(serviceProvider, eventsAndContexts, initialState);
 

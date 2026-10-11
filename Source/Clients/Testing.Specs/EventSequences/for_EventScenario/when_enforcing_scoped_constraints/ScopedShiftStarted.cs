@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Testing.EventSequences.for_InMemoryConstraintsStorage;
+namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario.when_enforcing_scoped_constraints;
 
 /// <summary>
 /// Event constrained to once per event source and event stream by <see cref="OneShiftPerEmployeeAndStream"/>.

@@ -77,7 +77,7 @@ internal static class InProcessEventSequence
     /// <param name="compliance">The <see cref="InProcessCompliance"/> the scenario shares, so what this grain encrypts on append is what the reading side can release.</param>
     /// <returns>The initialized kernel <see cref="KernelEventSequences::EventSequence"/> grain.</returns>
     internal static async Task<KernelEventSequences::EventSequence> Create(
-        InMemoryStorage storage,
+        Storage.IStorage storage,
         KernelSequenceConcepts::EventSequenceId eventSequenceId,
         KernelConceptsNs::EventStoreName eventStoreName,
         KernelConceptsNs::EventStoreNamespaceName namespaceName,
@@ -134,10 +134,10 @@ internal static class InProcessEventSequence
                 NullLogger<KernelEventSequences::Concurrency.ConcurrencyValidator>.Instance);
         }
 
-        var grainStorage = new InMemoryGrainStorage<Storage.EventSequences.EventSequenceState>();
-        _storageField.SetValue(grain, grainStorage);
-
         var key = new KernelSequenceConcepts::EventSequenceKey(eventSequenceId, eventStoreName, namespaceName);
+        var grainStorage = new EventSequenceGrainStorage(storage, key);
+        await grainStorage.ReadStateAsync();
+        _storageField.SetValue(grain, grainStorage);
         _eventSequenceKeyField.SetValue(grain, key);
         _eventSequenceIdField.SetValue(grain, eventSequenceId);
 
