@@ -3,7 +3,9 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 
@@ -306,9 +308,31 @@ public partial class Observer
             return false;
         }
 
+        if (!await CheckForRelevantEvents(tailSequenceNumber))
+        {
+            return false;
+        }
+
+        if (shouldUpdateTailEventSequenceNumber)
+        {
+            State = State with { TailEventSequenceNumber = tailSequenceNumber };
+            await WriteStateAsync();
+        }
+
+        return true;
+    }
+
+    async Task<bool> CheckForRelevantEvents(EventSequenceNumber tailSequenceNumber)
+    {
         var nextEventResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(
             State.NextEventSequenceNumber,
             _subscription.EventTypes.ToList());
+
+        if (nextEventResult.TryGetError(out var error) && error != GetSequenceNumberError.NotFound)
+        {
+            logger.WatchdogNextEventLookupFailed(State.NextEventSequenceNumber, error);
+            return false;
+        }
 
         var hasRelevantEvent = nextEventResult.Match(num => num.IsActualValue, _ => false);
         if (!hasRelevantEvent)
@@ -321,12 +345,6 @@ public partial class Observer
             };
             await WriteStateAsync();
             return false;
-        }
-
-        if (shouldUpdateTailEventSequenceNumber)
-        {
-            State = State with { TailEventSequenceNumber = tailSequenceNumber };
-            await WriteStateAsync();
         }
 
         return true;

@@ -26,6 +26,7 @@ public class Routing(
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     EventSequenceNumber _tailEventSequenceNumber = EventSequenceNumber.Unavailable;
     EventSequenceNumber _nextUnhandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+    bool _nextEventLookupFailed;
 
     /// <inheritdoc/>
     public override ObserverRunningState RunningState => ObserverRunningState.Unknown;
@@ -83,8 +84,7 @@ public class Routing(
             state = state with { NextEventSequenceNumber = EventSequenceNumber.First };
         }
 
-        var getNextToHandleResult = await eventSequence.GetNextSequenceNumberGreaterOrEqualTo(state.NextEventSequenceNumber, _subscription.EventTypes.ToList());
-        _nextUnhandledEventSequenceNumber = getNextToHandleResult.Match(eventSequenceNumber => eventSequenceNumber, _ => EventSequenceNumber.Unavailable);
+        await FindNextUnhandledEvent(state.NextEventSequenceNumber);
 
         logger.TailEventSequenceNumbers(_tailEventSequenceNumber, _nextUnhandledEventSequenceNumber);
 
@@ -93,6 +93,26 @@ public class Routing(
         state.ReplayingPartitions.Clear();
 
         return await EvaluateState(state);
+    }
+
+    async Task FindNextUnhandledEvent(EventSequenceNumber nextEventSequenceNumber)
+    {
+        _nextEventLookupFailed = false;
+        var getNextToHandleResult = await eventSequence.GetNextSequenceNumberGreaterOrEqualTo(nextEventSequenceNumber, _subscription.EventTypes.ToList());
+        _nextUnhandledEventSequenceNumber = getNextToHandleResult.Match(
+            eventSequenceNumber => eventSequenceNumber,
+            error => OnNextEventLookupError(nextEventSequenceNumber, error));
+    }
+
+    EventSequenceNumber OnNextEventLookupError(EventSequenceNumber nextEventSequenceNumber, GetSequenceNumberError error)
+    {
+        _nextEventLookupFailed = error != GetSequenceNumberError.NotFound;
+        if (_nextEventLookupFailed)
+        {
+            logger.NextEventLookupFailed(nextEventSequenceNumber, error);
+        }
+
+        return EventSequenceNumber.Unavailable;
     }
 
     async Task<ObserverState> EvaluateState(ObserverState state)
@@ -136,7 +156,7 @@ public class Routing(
         else
         {
             logger.Observing();
-            if (_tailEventSequenceNumber.IsActualValue)
+            if (CanAdvanceToTail())
             {
                 state = state with
                 {
@@ -150,7 +170,10 @@ public class Routing(
         return state;
     }
 
+    bool CanAdvanceToTail() => !_nextEventLookupFailed && _tailEventSequenceNumber.IsActualValue;
+
     bool CanFastForward(ObserverState state) =>
+        !_nextEventLookupFailed &&
         IsFallingBehind(state) &&
         (!_nextUnhandledEventSequenceNumber.IsActualValue ||
         (_nextUnhandledEventSequenceNumber < state.LastHandledEventSequenceNumber && state.LastHandledEventSequenceNumber.IsActualValue));
