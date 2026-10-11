@@ -726,6 +726,7 @@ public class ProjectionFactory(
             var mappedEventTypeIds = projectionDefinition.From.Keys
                 .Concat(projectionDefinition.Join.Keys)
                 .Concat(projectionDefinition.FromDerivatives?.SelectMany(_ => _.EventTypes) ?? [])
+                .Concat(projectionDefinition.FromEvery.IncludeChildren ? ChildEveryEventMappings.GetChildOnlyEventTypes(projection).Select(_ => _.EventType) : [])
                 .Select(_ => _.Id)
                 .ToHashSet();
             projection.Event
@@ -802,6 +803,8 @@ public class ProjectionFactory(
             projection.AutoMap,
             projection.NoAutoMapProperties,
             isNested: false);
+
+        ChildEveryEventMappings.Subscribe(projection, projectionDefinition.FromEvery, propertyMappersForEveryEventType);
 
         foreach (var unmapped in FindUnmappedCollectionProperties(projectionDefinition, currentReadModelSchema, projection.AutoMap, projection.NoAutoMapProperties, eventTypeSchemas))
         {

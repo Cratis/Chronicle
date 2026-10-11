@@ -27,8 +27,7 @@ public class DecRemoveWithJoinBasicUserProjection : IProjectionFor<DecRemoveWith
             .From<DecRemoveWithJoinBasicUserAddedToGroup>(_ => _
                 .UsingParentKey(e => e.UserId)
                 .Set(m => m.JoinedAt).ToEventContextProperty(c => c.Occurred))
-            .Join<DecRemoveWithJoinBasicGroupCreated>(_ => _
-                .On(m => m.GroupId))
+            .Join<DecRemoveWithJoinBasicGroupCreated>()
             .RemovedWithJoin<DecRemoveWithJoinBasicGroupDeleted>());
 }
 ```

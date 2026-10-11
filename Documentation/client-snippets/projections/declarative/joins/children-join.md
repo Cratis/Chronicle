@@ -19,7 +19,6 @@ public class DecJoinsChildProjectBoardProjection : IProjectionFor<DecJoinsChildP
             .IdentifiedBy(e => e.TaskId)
             .From<DecJoinsChildTaskAssigned>(b => b
                 .UsingKey(e => e.TaskId))
-            .Join<DecJoinsChildProjectCreated>(j => j
-                .On(m => m.ProjectId)));
+            .Join<DecJoinsChildProjectCreated>());
 }
 ```
