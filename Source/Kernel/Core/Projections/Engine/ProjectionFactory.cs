@@ -726,7 +726,7 @@ public class ProjectionFactory(
             var mappedEventTypeIds = projectionDefinition.From.Keys
                 .Concat(projectionDefinition.Join.Keys)
                 .Concat(projectionDefinition.FromDerivatives?.SelectMany(_ => _.EventTypes) ?? [])
-                .Concat(projectionDefinition.FromEvery.IncludeChildren ? ChildEveryEventMappings.GetChildOnlyEventTypes(projection).Select(_ => _.EventType) : [])
+                .Concat(ChildEveryEventMappings.GetIncludedChildEventTypes(projection, projectionDefinition.FromEvery))
                 .Select(_ => _.Id)
                 .ToHashSet();
             projection.Event

@@ -28,6 +28,15 @@ internal static class ChildEveryEventMappings
     }
 
     /// <summary>
+    /// Gets the child-only event types the every-event mappings subscribe to.
+    /// </summary>
+    /// <param name="projection">The projection level whose child-only events to collect.</param>
+    /// <param name="definition">The every-event definition controlling child inclusion.</param>
+    /// <returns>The child-only event types, or none when children are excluded.</returns>
+    internal static IEnumerable<EventType> GetIncludedChildEventTypes(IProjection projection, FromEveryDefinition definition) =>
+        definition.IncludeChildren ? GetChildOnlyEventTypes(projection).Select(_ => _.EventType) : [];
+
+    /// <summary>
     /// Subscribes this level's every-event mappings to its child-only events.
     /// </summary>
     /// <param name="projection">The projection level receiving the mappings.</param>
