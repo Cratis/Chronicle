@@ -162,15 +162,24 @@ public class ProjectionObserverSubscriber(
             {
                 var sequenceNumber = @event.Context.SequenceNumber;
 
-                // A stale subscription can still deliver clauses removed from the current definition.
-                if (_projection?.Accepts(@event.Context.EventType) == false)
+                // Definition notifications precede the subscription rebind, so a handled type can still arrive
+                // in the old pin. Only an unhandled type may be skipped; a generation mismatch must be processed.
+                var pin = _projection?.GenerationDelivery == EventGenerationDelivery.Pinned
+                    ? _projection.EventTypes.FirstOrDefault(_ => _.Id == @event.Context.EventType.Id)
+                    : null;
+                if (pin is null && _projection?.Accepts(@event.Context.EventType) == false)
                 {
                     lastSuccessfullyObservedEvent = @event;
                     logger.SkippedEventNotInProjection(@event.Context.EventType, sequenceNumber, _key);
                     continue;
                 }
 
-                var pipelineContext = await _pipeline.Handle(@event);
+                // Already-pinned events have been released by the observer. Re-select/release only a mismatch
+                // through the current projection's release boundary, which also migrates an unstored generation.
+                var eventToHandle = pin is not null && pin != @event.Context.EventType
+                    ? await _projection!.ReleaseEvent(pin, @event)
+                    : @event;
+                var pipelineContext = await _pipeline.Handle(eventToHandle);
                 changeset = pipelineContext.Changeset;
 
                 // Accumulate across the batch: a single OnNext delivers all events for one partition
