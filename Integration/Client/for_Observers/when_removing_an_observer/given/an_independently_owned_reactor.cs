@@ -35,6 +35,7 @@ public class an_independently_owned_reactor(ChronicleFixture fixture) : Specific
     {
         Reactor = new();
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSingleton(Reactor);
         services.AddSingleton(Services.GetRequiredService<IGrainFactory>());
         services.AddSingleton(Services.GetRequiredService<ILocalSiloDetails>());
