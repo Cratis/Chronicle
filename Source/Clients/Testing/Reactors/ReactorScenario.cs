@@ -304,7 +304,7 @@ public class ReactorScenario<TReactor> : IDisposable
         }
         else
         {
-            _eventStore = new EventStoreForTesting(serviceProvider, _defaults.ClientArtifactsProvider);
+            _eventStore = new EventStoreForTesting(serviceProvider, _defaults.ClientArtifactsProvider, _defaults.ScenarioOptions);
         }
 
         if (_eventStore is EventStoreForTesting inProcessEventStore)
