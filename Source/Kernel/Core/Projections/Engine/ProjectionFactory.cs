@@ -796,6 +796,8 @@ public class ProjectionFactory(
                 .Concat(projectionDefinition.FromDerivatives?.SelectMany(_ => _.EventTypes.Select(type => type.Id)) ?? [])
                 .ToHashSet());
 
+        ChildEveryEventMappings.Subscribe(projection, projectionDefinition.FromEvery, propertyMappersForEveryEventType);
+
         LogUnmappedCollectionProperties(level, context);
     }
 
@@ -852,6 +854,7 @@ public class ProjectionFactory(
         var mappedEventTypeIds = projectionDefinition.From.Keys
             .Concat(projectionDefinition.Join.Keys)
             .Concat(projectionDefinition.FromDerivatives?.SelectMany(_ => _.EventTypes) ?? [])
+            .Concat(ChildEveryEventMappings.GetIncludedChildEventTypes(projection, projectionDefinition.FromEvery))
             .Select(_ => _.Id)
             .ToHashSet();
         projection.Event
