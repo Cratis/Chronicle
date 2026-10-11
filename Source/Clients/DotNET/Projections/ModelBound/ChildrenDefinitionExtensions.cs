@@ -417,7 +417,7 @@ static class ChildrenDefinitionExtensions
                     // Process Join attributes on constructor parameters
                     foreach (var (joinAttr, joinEventType) in parameter.GetAttributesOfGenericType<JoinAttribute<object>>())
                     {
-                        childrenDef.Join.ProcessJoinAttribute(getOrCreateEventType, namingPolicy, joinAttr, joinEventType, parameter.Name!, paramPropertyName);
+                        childrenDef.Join.ProcessJoinAttribute(getOrCreateEventType, namingPolicy, joinAttr, joinEventType, parameter.Name!, paramPropertyName, childrenDef.IdentifiedBy);
                     }
 
                     // A [RemovedWith] alongside a [ChildrenFrom] on the same parameter is the removal trigger for
