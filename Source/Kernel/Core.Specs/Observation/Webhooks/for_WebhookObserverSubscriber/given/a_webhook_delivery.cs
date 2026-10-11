@@ -12,6 +12,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Setup.Serialization;
+using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Core;
 using Orleans.TestKit;
@@ -23,6 +24,7 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
     protected TestKitSilo _silo;
     protected WebhookObserverSubscriber _subscriber;
     protected IWebhook _webhook;
+    protected IWebhookDefinitionsStorage _webhookDefinitions;
     protected WebhookDefinition _webhookDefinition;
     protected AppendedEvent[] _events;
     protected ObserverSubscriberResult _deliveryResult;
@@ -70,6 +72,9 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
         var stateStorage = Substitute.For<IStorage<WebhookDefinition>>();
         stateStorage.State = _webhookDefinition;
         _silo.Options.StorageFactory = _ => stateStorage;
+        _webhookDefinitions = Substitute.For<IWebhookDefinitionsStorage>();
+        _storage.GetEventStore("store").Webhooks.Returns(_webhookDefinitions);
+        _webhookDefinitions.Get("webhook").Returns(_ => _webhookDefinition);
         _webhook = Substitute.For<IWebhook>();
         _webhook.GetDefinition().Returns(_ => _webhookDefinition);
         _silo.AddProbe(_ => _webhook);
@@ -98,9 +103,13 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
     {
         public List<string> Payloads { get; } = [];
         public HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
+        public TaskCompletionSource RequestReceived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public Task ResponseGate { get; set; } = Task.CompletedTask;
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Payloads.Add(await request.Content!.ReadAsStringAsync(cancellationToken));
+            RequestReceived.TrySetResult();
+            await ResponseGate.WaitAsync(cancellationToken);
             return new(StatusCode);
         }
     }

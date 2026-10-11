@@ -26,7 +26,7 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="encryption">The <see cref="IEncryption"/>.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="generationRelease">The pinned generation release boundary.</param>
-/// <param name="storage">Storage for the pinned event schemas.</param>
+/// <param name="storage">Storage for the authoritative webhook policy and pinned event schemas.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Webhooks)]
 public class WebhookObserverSubscriber(
     IWebhookMediator webhookMediator,
@@ -49,16 +49,13 @@ public class WebhookObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        if (State.GenerationDelivery == EventGenerationDelivery.Pinned || context.Metadata is EventGenerationDelivery.Pinned)
+        try
         {
-            try
-            {
-                events = await ReleaseMismatches(events);
-            }
-            catch (Exception error)
-            {
-                return HandleError(error);
-            }
+            events = await ReleaseMismatches(events);
+        }
+        catch (Exception error)
+        {
+            return HandleError(error);
         }
 
         await EnsureAuthorized();
@@ -93,17 +90,16 @@ public class WebhookObserverSubscriber(
 
     async Task<IEnumerable<AppendedEvent>> ReleaseMismatches(IEnumerable<AppendedEvent> events)
     {
-        // A definition update can precede the observer rebind. Read the authoritative pins rather than
-        // retaining a subscriber activation's old definition. Compatibility deliveries bypass this boundary.
-        var webhook = GrainFactory.GetGrain<IWebhook>(new WebhookKey(_key.ObserverId, _key.EventStore));
-        var definition = await webhook.GetDefinition();
-        State = State with { EventTypes = definition.EventTypes, GenerationDelivery = definition.GenerationDelivery };
-        if (State.GenerationDelivery != EventGenerationDelivery.Pinned)
+        // SetDefinition persists here before notifications, replay, and observer rebind. Resolve the committed
+        // policy for every batch, including old Compatibility jobs with null metadata. Reading storage directly
+        // avoids calling the webhook grain while its replay turn awaits this observer's delivery.
+        var definition = await storage.GetEventStore(_key.EventStore).Webhooks.Get(_key.ObserverId);
+        if (definition.GenerationDelivery != EventGenerationDelivery.Pinned)
         {
             return events;
         }
 
-        var pins = State.EventTypes.Distinct().ToDictionary(_ => _.Id);
+        var pins = definition.EventTypes.Distinct().ToDictionary(_ => _.Id);
         var schemas = new Dictionary<EventType, EventTypeSchema>();
         var released = new List<AppendedEvent>();
         foreach (var @event in events)

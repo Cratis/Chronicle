@@ -36,14 +36,13 @@ public class with_a_stale_generation : Specification
         {
             GenerationDelivery = EventGenerationDelivery.Pinned
         };
-        var webhook = Substitute.For<IWebhook>();
-        webhook.GetDefinition().Returns(_definition);
-        silo.AddProbe(_ => webhook);
         var generationRelease = Substitute.For<IEventGenerationRelease>();
         generationRelease.Release(Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>(), Arg.Any<IEnumerable<AppendedEvent>>())
             .Returns(call => [((IEnumerable<AppendedEvent>)call[3]).Single() with { Context = _event.Context with { EventType = new("customer", 1) } }]);
         silo.AddService(generationRelease);
-        silo.AddService(Substitute.For<Cratis.Chronicle.Storage.IStorage>());
+        var definitionStorage = Substitute.For<Cratis.Chronicle.Storage.IStorage>();
+        definitionStorage.GetEventStore("store").Webhooks.Get("webhook").Returns(_definition);
+        silo.AddService(definitionStorage);
         var storage = Substitute.For<IStorage<WebhookDefinition>>();
         storage.State = _definition;
         silo.Options.StorageFactory = _ => storage;
