@@ -28,6 +28,39 @@ dotnet add package Cratis.Chronicle.Testing
 
 Pass events to the read-model logic, then assert on the result. In .NET, the scenario takes `Given.ForEventSource(id).Events(...)` and exposes `Instance`; in TypeScript, `given.forEventSource(id).events(...)` and an awaited `instance`. Kotlin folds events through `scenario.fold(...)`. The Java example has no scenario: it calls the reducer directly and asserts on what it returns.
 
+## Seed routed events
+
+In .NET, use `Given.ForEventSource(id).OnStream(eventSourceType, eventStreamType, eventStreamId).Events(...)`
+when your read model needs the event's source or stream route. The route reaches the projection or reducer
+through `EventContext.EventSourceType`, `EventContext.EventStreamType`, and `EventContext.EventStreamId`.
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/routed-events" />
+
+All three `OnStream` arguments are optional. Omitting an argument, or passing `null`, uses the same default
+as appending to the event log:
+
+| Argument | Default |
+|----------|---------|
+| `eventSourceType` | `EventSourceType.Default` |
+| `eventStreamType` | `EventStreamType.All` |
+| `eventStreamId` | `EventStreamId.Default` |
+
+For example, `OnStream(eventStreamType: "Payments")` seeds a payment stream with the default source type and
+stream id. Leaving out `OnStream` keeps these defaults too. The method returns a new builder, so reusing the
+original builder does not inherit the route. Calling `ReadModel(instance)` still registers the instance by
+its event source id, regardless of the builder's route.
+
+Reducer source and stream filters apply to seeded events just as they do under the kernel. A reducer carrying
+`[EventSourceType("Order")]` ignores events from other source types; `[EventStreamType("Payments")]` narrows
+by stream type. `[FromEventSource<TSource>("Payments")]` resolves both filters from the registered event
+source definition. Both filters must match, and neither filters by stream id. An unspecified source filter
+(`EventSourceType.Unspecified`) and `EventStreamType.All` do not narrow delivery. An explicit source filter
+of `EventSourceType.Default` matches only that source type.
+
+Projections have no source-type or stream-type filters: they consume the event types their definitions
+subscribe to, across every route. Use context mappings such as `[SetFromContext<TEvent>]` to inspect the
+route in a projected property.
+
 ## Event input serialization
 
 In the .NET scenario, seeded events for projection-backed read models pass through the `IEventSerializer` supplied by
