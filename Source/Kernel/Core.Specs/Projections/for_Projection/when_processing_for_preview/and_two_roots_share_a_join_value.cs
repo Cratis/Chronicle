@@ -14,6 +14,6 @@ public class and_two_roots_share_a_join_value : given.two_orders_joined_to_a_pro
     [Fact] void should_have_only_the_orders() => _result.Count().ShouldEqual(2);
     [Fact] void should_join_the_first_order() => ReadModelFor(_result, Order)["ProductName"].ShouldEqual("Electric kettle");
     [Fact] void should_join_the_second_order() => ReadModelFor(_result, SecondOrder)["ProductName"].ShouldEqual("Electric kettle");
-    [Fact] void should_not_apply_direct_properties_to_the_first_order() => DateTimeOffset.Parse(ReadModelFor(_result, Order)["LastUpdated"]!.ToString()!).ShouldEqual(_events[0].Context.Occurred);
-    [Fact] void should_not_apply_direct_properties_to_the_second_order() => DateTimeOffset.Parse(ReadModelFor(_result, SecondOrder)["LastUpdated"]!.ToString()!).ShouldEqual(_events[1].Context.Occurred);
+    [Fact] void should_apply_the_joined_every_mapping_to_the_first_order() => Convert.ToDateTime(ReadModelFor(_result, Order)["LastUpdated"]).ShouldEqual(_events[2].Context.Occurred.UtcDateTime);
+    [Fact] void should_apply_the_joined_every_mapping_to_the_second_order() => Convert.ToDateTime(ReadModelFor(_result, SecondOrder)["LastUpdated"]).ShouldEqual(_events[2].Context.Occurred.UtcDateTime);
 }

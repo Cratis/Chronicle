@@ -189,6 +189,11 @@ public class Projection(
         return [.. sink.ReadModels.Select(readModel => WithIdentifier(readModel, identifierPropertyName))];
     }
 
+    static bool SuppressesDirectRootUpdate(Change[] changes) =>
+        changes.OfType<Joined>().Any(joined => joined.ArrayIndexers.IsEmpty) &&
+        !changes.OfType<Joined>().Any(joined => joined.HasKeyedFrom) &&
+        !changes.Any(change => change is ChildAdded or ChildRemoved);
+
     static bool CreatesInstance(EngineProjection projection, ProjectionEventContext context) =>
         projection.Accepts(context.Event.Context.EventType) && context.CreatesInstance;
 
@@ -332,19 +337,20 @@ public class Projection(
             var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
             if (keyResult is ResolvedKey resolvedKey)
             {
-                await ProjectInMemory(projection, eventSequenceStorage, sink, resolvedKey.Key, @event);
+                await ProjectInMemory(projection, eventSequenceStorage, sink, resolvedKey, @event);
             }
         }
 
         return sink;
     }
 
-    async Task ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, PreviewSink sink, Key key, AppendedEvent @event)
+    async Task ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, PreviewSink sink, ResolvedKey resolvedKey, AppendedEvent @event)
     {
+        var key = resolvedKey.Key;
         var keyValue = key.Value.ToString()!;
         _ = sink.TryGet(keyValue, out var initialState);
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, initialState);
-        var context = new ProjectionEventContext(key, @event, changeset, projection.GetOperationTypeFor(@event.Context.EventType), false);
+        var context = new ProjectionEventContext(key, @event, changeset, projection.GetOperationTypeFor(@event.Context.EventType), false, resolvedKey.JoinKey);
 
         await HandleEventFor(projection, context, sink, eventSequenceStorage);
 
@@ -354,15 +360,17 @@ public class Projection(
             return;
         }
 
-        var joinsOnChildren = sink.ApplyJoinsOnChildren(changeset.Changes, @event);
-        var changes = changeset.Changes.Where(change => !joinsOnChildren.Any(joined => ReferenceEquals(joined, change))).ToArray();
+        var originalChanges = changeset.Changes.ToArray();
+        var appliedJoins = sink.ApplyJoinsOnRoots(originalChanges, @event)
+            .Concat(sink.ApplyJoinsOnChildren(originalChanges, @event)).ToArray();
         var hasReadModel = sink.TryGet(keyValue, out var state);
-        if (!ShouldMaterializeReadModel(hasReadModel, key, changes, CreatesInstance(projection, context)))
+        if (!ShouldMaterializeReadModel(hasReadModel, key, originalChanges, CreatesInstance(projection, context)) || SuppressesDirectRootUpdate(originalChanges))
         {
             return;
         }
 
-        if (changes.Length > 0 || !hasReadModel)
+        var changes = originalChanges.Where(change => !appliedJoins.Any(joined => ReferenceEquals(joined, change))).ToArray();
+        if (changes.Length > 0 || (!hasReadModel && CreatesInstance(projection, context)))
         {
             state = InMemoryChanges.Apply(key, changes, state);
             sink.Set(keyValue, state, @event.Context.SequenceNumber);
@@ -373,6 +381,7 @@ public class Projection(
 
     async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context, ISink sink, IEventSequenceStorage eventSequenceStorage)
     {
+        context = context with { Key = InMemoryChildKeys.Bind(context.Key, context.Changeset.InitialState) };
         if (projection.Accepts(context.Event.Context.EventType))
         {
             projection.OnNext(context);

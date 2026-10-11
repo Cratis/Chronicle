@@ -99,13 +99,31 @@ internal sealed class PreviewSink : ISink
             foreach (var (readModel, storedIdentifier) in FindHolding(child.ArrayProperty + child.IdentifierProperty, child.Identifier))
             {
                 var rebound = RebindChild(joined, child, storedIdentifier);
-                var state = InMemoryChanges.Apply(new Key(readModel.KeyValue, rebound.ArrayIndexers), rebound.Changes, readModel.State);
-                ReadModelSubjects.TrackChanges(state, rebound.Changes, @event);
-                Set(readModel.KeyValue, state, @event.Context.SequenceNumber);
+                ApplyJoin(readModel, rebound, @event);
             }
         }
 
         return joinsOnChildren;
+    }
+
+    /// <summary>
+    /// Applies root joins to every read model matching the join property, as the saved sink's UpdateMany does.
+    /// </summary>
+    /// <param name="changes">The changes the event produced.</param>
+    /// <param name="event">The event.</param>
+    /// <returns>The joins applied independently of the event's resolved root key.</returns>
+    public Joined[] ApplyJoinsOnRoots(IEnumerable<Change> changes, AppendedEvent @event)
+    {
+        var joins = changes.OfType<Joined>().Where(joined => joined.ArrayIndexers.IsEmpty).ToArray();
+        foreach (var joined in joins)
+        {
+            foreach (var (readModel, _) in FindHolding(joined.OnProperty, joined.Key))
+            {
+                ApplyJoin(readModel, joined, @event);
+            }
+        }
+
+        return joins;
     }
 
     /// <inheritdoc/>
@@ -216,6 +234,13 @@ internal sealed class PreviewSink : ISink
             IEnumerable items and not string and not IDictionary<string, object?> => items.Cast<object?>().SelectMany(item => FindValues(item, segments, index, value)),
             _ => []
         };
+    }
+
+    void ApplyJoin(PreviewReadModel readModel, Joined joined, AppendedEvent @event)
+    {
+        var state = InMemoryChanges.Apply(new Key(readModel.KeyValue, joined.ArrayIndexers), joined.Changes, readModel.State);
+        ReadModelSubjects.TrackChanges(state, joined.Changes, @event);
+        Set(readModel.KeyValue, state, @event.Context.SequenceNumber);
     }
 
     IEnumerable<(PreviewReadModel ReadModel, object StoredValue)> FindHolding(PropertyPath propertyPath, object value)
