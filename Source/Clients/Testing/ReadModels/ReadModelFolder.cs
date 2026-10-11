@@ -101,8 +101,8 @@ internal static class ReadModelFolder
     /// <param name="store">The store supplying discovered artifacts.</param>
     /// <param name="events">The ordered log snapshot.</param>
     /// <param name="useOriginalContexts">Whether the events belong to this store's log.</param>
-    /// <returns>The rebuilt collection.</returns>
-    public static async Task<IEnumerable<TReadModel>> Fold<TReadModel>(EventStoreForTesting store, IEnumerable<AppendedEvent> events, bool useOriginalContexts)
+    /// <returns>The rebuilt instances indexed by their materialized keys.</returns>
+    public static async Task<IReadOnlyDictionary<EventSourceId, TReadModel>> Fold<TReadModel>(EventStoreForTesting store, IEnumerable<AppendedEvent> events, bool useOriginalContexts)
         where TReadModel : class
     {
         var namingPolicy = new CamelCaseNamingPolicy();
@@ -118,18 +118,18 @@ internal static class ReadModelFolder
         var inputs = appended.Select(ToInput).ToArray();
         if (reducerType is not null)
         {
-            var instances = new List<TReadModel>();
+            var instances = new Dictionary<EventSourceId, TReadModel>();
             foreach (var group in appended.GroupBy(e => e.Context.EventSourceId))
             {
                 var (primary, _) = await Process<TReadModel>(group.Select(ToInput), store, store.EventTypes, store.JsonSchemaGenerator, activator, store.ServiceProvider, namingPolicy, reducerType, null, eventContexts: useOriginalContexts ? group.Select(e => e.Context).ToArray() : null);
-                if (primary is not null) instances.Add(primary);
+                if (primary is not null) instances[group.Key] = primary;
             }
 
             return instances;
         }
 
         var (_, projected) = await Process<TReadModel>(inputs, store, store.EventTypes, store.JsonSchemaGenerator, activator, store.ServiceProvider, namingPolicy, null, definition, eventContexts: useOriginalContexts ? appended.Select(e => e.Context).ToArray() : null);
-        return projected.Values;
+        return projected;
     }
 
     static ReadModelEvent ToInput(AppendedEvent e) => new(e.Context.EventSourceId, e.Content, e.Context.EventSourceType, e.Context.EventStreamType, e.Context.EventStreamId);

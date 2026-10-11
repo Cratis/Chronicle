@@ -35,6 +35,10 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     /// </summary>
     /// <param name="inner">The inner read model surface.</param>
     /// <param name="eventLog">The scenario event log to observe.</param>
+    /// <remarks>
+    /// Observation requires an inner testing surface with an owning store so that artifact discovery,
+    /// services, and event storage match the supplied log. Otherwise Observe throws ReadModelCannotBeObserved.
+    /// </remarks>
     public ReadModelsForTesting(IReadModels inner, IEventSequence eventLog)
         : this(inner)
     {
@@ -97,7 +101,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     {
         var log = _eventLog ?? throw new ReadModelCannotBeObserved(typeof(TReadModel), "An event log is not available in this test scenario");
         var readModelType = typeof(TReadModel);
-        var metadata = _store ?? (EventStoreForTesting)Defaults.Instance.EventStore;
+        var metadata = _store ?? throw new ReadModelCannotBeObserved(readModelType, "The owning test store is not available for artifact discovery and event storage");
         if (!metadata.Projections.HasFor(readModelType) && !metadata.Reducers.HasFor(readModelType))
         {
             throw new UnknownReadModel(readModelType);
@@ -118,7 +122,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
         var source = Observable.Create<IEnumerable<TReadModel>>(observer =>
         {
             var signals = new Subject<Unit>();
-            var rebuilds = signals.Select(_ => Observable.FromAsync(() => Rebuild<TReadModel>(log)))
+            var rebuilds = signals.Select(_ => Observable.FromAsync(() => Rebuild<TReadModel>(log, metadata)))
                 .Concat()
                 .Select(set => (IEnumerable<TReadModel>)(predicate is null ? set.ToArray() : set.Where(predicate).ToArray()))
                 .DistinctUntilChanged(set => JsonSerializer.Serialize(set, Globals.JsonSerializerOptions))
@@ -182,15 +186,20 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
         _instances[(identifier, eventSourceId.Value)] = instance;
     }
 
-    async Task<IEnumerable<TReadModel>> Rebuild<TReadModel>(IEventSequence log)
+    async Task<IEnumerable<TReadModel>> Rebuild<TReadModel>(IEventSequence log, EventStoreForTesting store)
     {
         var events = await log.GetFromSequenceNumber(EventSequenceNumber.First);
-        using var ownedStore = _store is null ? new EventStoreForTesting() : null;
-        var store = _store ?? ownedStore!;
         var fold = typeof(ReadModelFolder).GetMethod(nameof(ReadModelFolder.Fold), BindingFlags.Public | BindingFlags.Static)!
             .MakeGenericMethod(typeof(TReadModel));
-        var folded = await (Task<IEnumerable<TReadModel>>)fold.Invoke(null, [store, events, _store is not null])!;
+        var folded = await (Task<IReadOnlyDictionary<EventSourceId, TReadModel>>)fold.Invoke(null, [store, events, true])!;
         var identifier = typeof(TReadModel).GetReadModelIdentifier().Value;
-        return folded.Concat(_instances.Where(pair => pair.Key.Identifier == identifier).Select(pair => (TReadModel)pair.Value)).ToArray();
+        var instances = _instances.Where(pair => pair.Key.Identifier == identifier)
+            .ToDictionary(pair => pair.Key.Key, pair => (TReadModel)pair.Value);
+        foreach (var (key, instance) in folded)
+        {
+            instances[key.Value] = instance;
+        }
+
+        return instances.Values.ToArray();
     }
 }

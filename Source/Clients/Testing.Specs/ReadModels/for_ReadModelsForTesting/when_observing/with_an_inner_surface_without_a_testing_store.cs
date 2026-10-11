@@ -7,13 +7,13 @@ namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelsForTesting.when_obse
 
 public class with_an_inner_surface_without_a_testing_store : given.a_collection
 {
-    async Task Because()
+    Exception _exception;
+
+    void Because()
     {
         var readModels = new ReadModelsForTesting(Substitute.For<IReadModels>(), _store.EventLog);
-        _observation = readModels.Observe<ObservedModule>();
-        Subscribe();
-        await WaitForEmission();
+        _exception = Catch.Exception(() => readModels.Observe<ObservedModule>());
     }
 
-    [Fact] void should_rebuild_with_default_artifact_discovery() => _emissions.Single().Select(row => row.Name).ShouldContainOnly("First");
+    [Fact] void should_refuse_observation_without_the_owning_store() => _exception.ShouldBeOfExactType<ReadModelCannotBeObserved>();
 }
