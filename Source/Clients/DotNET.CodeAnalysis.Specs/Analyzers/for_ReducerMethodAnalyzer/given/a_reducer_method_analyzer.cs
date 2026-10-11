@@ -30,6 +30,7 @@ public class a_reducer_method_analyzer : Specification
             "",
             "namespace Cratis.Chronicle.Reducers",
             "{",
+            "    public interface IReducerFor<T> : IReducer {}",
             "    public interface IReducer",
             "    {",
             "    }",

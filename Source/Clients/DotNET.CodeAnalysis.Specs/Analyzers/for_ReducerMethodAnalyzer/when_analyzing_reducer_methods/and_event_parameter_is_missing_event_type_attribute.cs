@@ -13,11 +13,10 @@ public class and_event_parameter_is_missing_event_type_attribute : given.a_reduc
     {
     }
 
-    public class Reducer : Cratis.Chronicle.Reducers.IReducer
+    public class Model {}
+    public class Reducer : Cratis.Chronicle.Reducers.IReducerFor<Model>
     {
-        public void On({|#0:MissingEvent @event|})
-        {
-        }
+        public Model On({|#0:MissingEvent @event|}, Model current) => current;
     }
     """;
 

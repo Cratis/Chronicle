@@ -406,6 +406,14 @@ public class Reducers : IReducers
 
     void RegisterReducer(IReducerHandler handler)
     {
+        if (!handler.EventTypes.Any())
+        {
+            _logger.ReducerHasNoDispatchableMethods(
+                handler.ReducerType,
+                SkippedReducerMethods.Describe(handler.ReducerType, handler.ReadModelType, _eventTypes.AllClrTypes));
+            return;
+        }
+
         _logger.RegisterReducer(
             handler.Id,
             handler.EventSequenceId);

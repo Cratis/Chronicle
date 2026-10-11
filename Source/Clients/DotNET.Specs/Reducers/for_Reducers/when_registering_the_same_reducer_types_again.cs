@@ -52,7 +52,7 @@ public class when_registering_the_same_reducer_types_again : given.all_dependenc
         handler.ReadModelType.Returns(readModelType);
         handler.Id.Returns((ReducerId)id);
         handler.EventSequenceId.Returns(EventSequences.EventSequenceId.Log);
-        handler.EventTypes.Returns([]);
+        handler.EventTypes.Returns([new Events.EventType("spec-event", 1)]);
         handler.IsActive.Returns(true);
         _handlersByModelType[readModelType] = handler;
     }
