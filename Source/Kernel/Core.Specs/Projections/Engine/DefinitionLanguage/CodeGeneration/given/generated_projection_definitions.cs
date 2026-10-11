@@ -22,11 +22,11 @@ public static class generated_projection_definitions
         return (Contracts.Projections.ProjectionDefinition)builderType.GetMethod("Build", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!.Invoke(builder, null)!;
     }
 
-    public static Contracts.Projections.ProjectionDefinition ModelBound(Assembly assembly)
+    public static Contracts.Projections.ProjectionDefinition ModelBound(Assembly assembly, string readModelName = "Order")
     {
         var builderType = typeof(Client::Cratis.Chronicle.Projections.IProjectionFor<>).Assembly.GetType("Cratis.Chronicle.Projections.ModelBound.ModelBoundProjectionBuilder")!;
         var builder = Activator.CreateInstance(builderType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, [new CamelCaseNamingPolicy(), EventTypes(assembly), null], null)!;
-        return (Contracts.Projections.ProjectionDefinition)builderType.GetMethod("Build")!.Invoke(builder, [assembly.GetType("Order")!])!;
+        return (Contracts.Projections.ProjectionDefinition)builderType.GetMethod("Build")!.Invoke(builder, [assembly.GetType(readModelName)!])!;
     }
 
     static Client::Cratis.Chronicle.Events.IEventTypes EventTypes(Assembly assembly)
