@@ -40,9 +40,9 @@ internal static class ReducerReadModelProcessor
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> used when invoking the reducer.</param>
     /// <param name="namingPolicy">The <see cref="INamingPolicy"/> for deriving the read model container name.</param>
     /// <param name="initialState">Optional initial read model state the reducer reduces on top of.</param>
-    /// <returns>The projected read model, or <see langword="null"/> if the reducer removed the instance.</returns>
+    /// <returns>The reduced read model and the distinct event sources that passed the reducer's filters.</returns>
     /// <exception cref="ReducerFailed">Thrown when the reducer raises an error while processing the events.</exception>
-    public static async Task<TReadModel?> Process<TReadModel>(
+    public static async Task<(TReadModel? State, IReadOnlyList<EventSourceId> EventSourceIds)> Process<TReadModel>(
         Type reducerType,
         IEnumerable<EventForEventSourceId> events,
         EventStoreForTesting eventStore,
@@ -72,8 +72,9 @@ internal static class ReducerReadModelProcessor
                 CorrelationId.NotSet);
         }).ToArray();
         var (prepared, _) = await ReadModelEvents.Prepare(eventStore, eventsList.Select(input => (input.EventSourceId, input.Event)).ToArray(), contexts);
+        var filters = new ObserverRouteFilter(reducerType, eventStore.EventSources);
         var eventsAndContexts = new List<EventAndContext>();
-        for (var index = 0; index < prepared.Length; index++)
+        foreach (var index in Enumerable.Range(0, prepared.Length).Where(index => filters.Matches(prepared[index])))
         {
             var delivered = prepared[index];
             var type = new EventType(new(delivered.Context.EventType.Id.Value), new(delivered.Context.EventType.Generation.Value));
@@ -92,6 +93,6 @@ internal static class ReducerReadModelProcessor
             throw new ReducerFailed(readModelType, result.ErrorMessages, result.StackTrace);
         }
 
-        return result.ReadModelState as TReadModel;
+        return (result.ReadModelState as TReadModel, eventsAndContexts.Select(e => e.Context.EventSourceId).Distinct().ToArray());
     }
 }

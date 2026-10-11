@@ -20,6 +20,11 @@ public class Constraints(
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     readonly List<IConstraintDefinition> _constraints = [];
 
+    /// <summary>
+    /// Gets the discovered constraint names.
+    /// </summary>
+    internal IEnumerable<ConstraintName> Names => _constraints.Select(_ => _.Name).Distinct();
+
     /// <inheritdoc/>
     public Task Discover()
     {

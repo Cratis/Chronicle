@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using System.Runtime.ExceptionServices;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
@@ -21,7 +22,11 @@ namespace Cratis.Chronicle.Testing.Reactors;
 /// supplied <see cref="IServiceProvider"/>) and routes events directly through the <see cref="ReactorInvoker"/> — no
 /// Chronicle server, gRPC, or observer registration required. The reactor's constructor dependencies and any
 /// service-typed handler-method parameters are resolved from that provider; read-model handler parameters are
-/// materialized from read models seeded via <c language="csharp">Given.ForEventSourceId(...).ReadModel(...)</c>.
+/// resolved from read models seeded via <c language="csharp">Given.ForEventSourceId(...).ReadModel(...)</c>.
+/// Given events do not build read models, including passive read models. An unseeded read-model parameter throws
+/// <see cref="ReadModelNotSeededForReactorScenario"/> unless absence was declared with
+/// <c language="csharp">Given.ForEventSourceId(...).NoReadModel&lt;TReadModel&gt;()</c>. This guard does not apply
+/// when an explicit event store other than <see cref="EventStoreForTesting"/> is supplied.
 /// </para>
 /// <para>
 /// Usage:
@@ -44,15 +49,16 @@ public class ReactorScenario<TReactor> : IDisposable
     readonly IServiceProvider? _explicitServiceProvider;
     readonly IEventTypes _eventTypes;
     readonly List<Action<EventStoreForTesting>> _readModelSeeds = [];
+    readonly HashSet<(Type ReadModelType, string Key)> _absentReadModels = [];
     readonly RecordingReactorSideEffectHandlers _recordingHandlers;
     IServiceProvider? _serviceProvider;
     IEventStore? _eventStore;
 
     /// <summary>
-    /// The sequence number the next event handed to the reactor is given.
+    /// The sequence number the next seeded event is given, whether or not its route matches the reactor's filters.
     /// </summary>
     /// <remarks>
-    /// Every event the scenario delivers gets its own number, contiguously from the first, across every
+    /// Every event the scenario seeds gets its own number, contiguously from the first, across every
     /// <c language="csharp">Given</c> call. Without that, a reactor keyed on <see cref="ReactorDelivery"/> would see two distinct
     /// events as the same delivery and skip the second - the scenario would report an idempotent reactor broken.
     /// </remarks>
@@ -149,6 +155,15 @@ public class ReactorScenario<TReactor> : IDisposable
     public IReadOnlyList<object> Produced => _recordingHandlers.Produced;
 
     /// <summary>
+    /// Gets the produced events together with their resolved destinations, excluding commands and other non-event side effects.
+    /// </summary>
+    /// <remarks>
+    /// Events are recorded rather than appended. Populated only when no explicit
+    /// <see cref="IReactorSideEffectHandlers"/> was supplied to the constructor.
+    /// </remarks>
+    public IReadOnlyList<ProducedEvent> ProducedEvents => _recordingHandlers.ProducedEvents;
+
+    /// <summary>
     /// Asserts that the reactor produced at least one side effect of type <typeparamref name="T"/>.
     /// </summary>
     /// <typeparam name="T">The type of the produced event or command to assert.</typeparam>
@@ -172,6 +187,24 @@ public class ReactorScenario<TReactor> : IDisposable
                 $"Expected reactor '{typeof(TReactor).Name}' to produce a matching '{typeof(T).Name}', but it produced: {produced}.");
         }
     }
+
+    /// <summary>
+    /// Asserts that the reactor produced an event of type <typeparamref name="TEvent"/> for the specified event source.
+    /// </summary>
+    /// <typeparam name="TEvent">The type of the produced event.</typeparam>
+    /// <param name="eventSourceId">The destination event source identifier.</param>
+    /// <exception cref="ReactorSideEffectAssertionException">Thrown when no produced event of the type has the specified destination.</exception>
+    public void ShouldHaveProduced<TEvent>(EventSourceId eventSourceId) =>
+        AssertProduced<TEvent>((produced, _) => produced.EventSourceId == eventSourceId, $"for event source '{eventSourceId.Value}'");
+
+    /// <summary>
+    /// Asserts that the reactor produced an event of type <typeparamref name="TEvent"/> matching an event and destination predicate.
+    /// </summary>
+    /// <typeparam name="TEvent">The type of the produced event.</typeparam>
+    /// <param name="predicate">The predicate receiving the recorded destination and the typed event.</param>
+    /// <exception cref="ReactorSideEffectAssertionException">Thrown when no produced event of the type satisfies the predicate.</exception>
+    public void ShouldHaveProduced<TEvent>(Func<ProducedEvent, TEvent, bool> predicate) =>
+        AssertProduced(predicate, "matching the event and destination predicate");
 
     /// <summary>
     /// Asserts that the reactor produced no side effect of type <typeparamref name="T"/>.
@@ -206,6 +239,15 @@ public class ReactorScenario<TReactor> : IDisposable
         _readModelSeeds.Add(store => store.RegisterReadModelInstance(eventSourceId, readModel));
 
     /// <summary>
+    /// Declares that a read model is deliberately absent for a key.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="eventSourceId">The key for which absence is expected.</param>
+    internal void DeclareNoReadModel<TReadModel>(EventSourceId eventSourceId)
+        where TReadModel : class =>
+        _absentReadModels.Add((typeof(TReadModel), eventSourceId.Value));
+
+    /// <summary>
     /// Invokes the reactor with the provided events for a specific event source.
     /// </summary>
     /// <remarks>
@@ -214,12 +256,22 @@ public class ReactorScenario<TReactor> : IDisposable
     /// </remarks>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate with the events.</param>
     /// <param name="events">The event instances to invoke the reactor with, in order.</param>
-    /// <returns>A <see cref="Task"/> that completes when all events have been handled.</returns>
+    /// <param name="eventSourceType">The event source type for the input events.</param>
+    /// <param name="eventStreamType">The event stream type for the input events.</param>
+    /// <param name="eventStreamId">The event stream identifier for the input events.</param>
+    /// <returns>A <see cref="Task"/> that completes when all matching events have been handled.</returns>
     /// <exception cref="CannotActivateReactorForScenario">Thrown when the reactor's dependencies cannot be resolved.</exception>
-    internal async Task InvokeWith(EventSourceId eventSourceId, IEnumerable<object> events)
+    /// <exception cref="ReadModelNotSeededForReactorScenario">Thrown when a read-model parameter was neither seeded nor declared absent.</exception>
+    internal async Task InvokeWith(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        EventSourceType eventSourceType,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId)
     {
         var serviceProvider = EnsureServiceProvider();
         var eventStore = EnsureEventStore(serviceProvider);
+        var filters = new ObserverRouteFilter(typeof(TReactor), eventStore.EventSources);
 
         using var loggerFactory = new NullLoggerFactory();
 #pragma warning disable CA2000 // Dispose objects before losing scope
@@ -251,7 +303,7 @@ public class ReactorScenario<TReactor> : IDisposable
                 new EventSourceTypeValuesProvider(),
                 new SubjectValuesProvider()
             ])),
-            argumentsResolver: null,
+            argumentsResolver: new ScenarioReactorMethodArgumentsResolver(new ReactorMethodArgumentsResolver(), _absentReadModels),
             serviceProvider: serviceProvider);
 
         foreach (var @event in events)
@@ -261,14 +313,19 @@ public class ReactorScenario<TReactor> : IDisposable
                 "testing",
                 "default",
                 eventType,
-                EventSourceType.Default,
+                eventSourceType,
                 eventSourceId,
-                EventStreamType.All,
-                EventStreamId.Default,
+                eventStreamType,
+                eventStreamId,
                 _nextSequenceNumber,
                 CorrelationId.New());
 
             _nextSequenceNumber += 1;
+            if (!filters.Matches(context))
+            {
+                continue;
+            }
+
             var result = await invoker.Invoke(@event, context);
 
             // A throwing reactor handler is a documented, load-bearing behavior in production - it pauses the
@@ -278,8 +335,24 @@ public class ReactorScenario<TReactor> : IDisposable
             // matching what a spec author asserting the reactor's guard clearly expects (#3933).
             if (result.ExceptionResult.TryGetException(out var reactorException))
             {
-                ExceptionDispatchInfo.Capture(reactorException).Throw();
+                var handlerException = reactorException is TargetInvocationException { InnerException: { } inner }
+                    ? inner
+                    : reactorException;
+                ExceptionDispatchInfo.Capture(handlerException).Throw();
             }
+        }
+    }
+
+    void AssertProduced<TEvent>(Func<ProducedEvent, TEvent, bool> predicate, string expectation)
+    {
+        if (!ProducedEvents.Any(produced => produced.Event is TEvent @event && predicate(produced, @event)))
+        {
+            var destinations = ProducedEvents.Count > 0
+                ? string.Join(", ", ProducedEvents.Select(produced =>
+                    $"{produced.Event.GetType().Name} [source id '{produced.EventSourceId.Value}', source type '{produced.EventSourceType.Value}', stream type '{produced.EventStreamType.Value}', stream id '{produced.EventStreamId.Value}']"))
+                : "nothing";
+            throw new ReactorSideEffectAssertionException(
+                $"Expected reactor '{typeof(TReactor).Name}' to produce a '{typeof(TEvent).Name}' {expectation}, but recorded destinations were: {destinations}.");
         }
     }
 
@@ -304,7 +377,7 @@ public class ReactorScenario<TReactor> : IDisposable
         }
         else
         {
-            _eventStore = new EventStoreForTesting(serviceProvider, _defaults.ClientArtifactsProvider);
+            _eventStore = new EventStoreForTesting(serviceProvider, _defaults.ClientArtifactsProvider, _defaults.ScenarioOptions);
         }
 
         if (_eventStore is EventStoreForTesting inProcessEventStore)

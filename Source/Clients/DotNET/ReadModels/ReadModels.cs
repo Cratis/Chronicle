@@ -101,7 +101,7 @@ public class ReadModels(
                     Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
                     Generation = ReadModelGeneration.First,
                 },
-                ContainerName = namingPolicy.GetReadModelName(readModel.ReadModelType),
+                ContainerName = GetContainerNameFor(readModel.ReadModelType),
                 DisplayName = readModel.ReadModelType.Name,
                 Sink = new()
                 {
@@ -190,7 +190,7 @@ public class ReadModels(
                     Identifier = typeof(TReadModel).GetReadModelIdentifier(),
                     Generation = ReadModelGeneration.First,
                 },
-                ContainerName = namingPolicy.GetReadModelName(typeof(TReadModel)),
+                ContainerName = GetContainerNameFor(typeof(TReadModel)),
                 DisplayName = typeof(TReadModel).Name,
                 Sink = new()
                 {
@@ -527,6 +527,16 @@ public class ReadModels(
             ObserverIdentifier = observerIdentifier
         };
     }
+
+    /// <summary>
+    /// Resolves the container name for a read model type.
+    /// </summary>
+    /// <param name="readModelType">The read model type to resolve the container name for.</param>
+    /// <returns>The container name override from a projection, or the naming policy's name.</returns>
+    string GetContainerNameFor(Type readModelType) =>
+        projections is IKnowReadModelContainerNames containerNames && containerNames.GetContainerNameOverride(readModelType) is { } containerName
+            ? containerName
+            : namingPolicy.GetReadModelName(readModelType);
 
     /// <summary>
     /// Resolves the <see cref="SinkTypeId"/> for a read model type.

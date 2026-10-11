@@ -62,6 +62,7 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0052](CHR0052) | `[Encrypted]` cannot be applied to an `EventSourceId<T>` | Error | The event source id is used to correlate events and cannot be encrypted |
 | [CHR0053](CHR0053) | `[PII]` and `[Encrypted]` cannot both apply to the same value | Error | Combining them encrypts the value twice, under two different keys, and it cannot be released correctly |
 | [CHR0054](CHR0054) | Reactor method has an unsupported return type | Warning | A reactor method with an event parameter must return a shape Chronicle discovers as a handler |
+| [CHR0057](CHR0057) | An artifact must target one read model | Warning | A class implementing multiple closed projection or reducer interfaces fails during default artifact discovery; split it into one artifact per read model |
 
 ## Quick Fixes
 

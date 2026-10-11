@@ -38,7 +38,7 @@ public class Projections(
     INamingPolicy namingPolicy,
     IClientArtifactsActivator artifactsActivator,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<Projections> logger) : IProjections, IKnowPassiveProjections
+    ILogger<Projections> logger) : IProjections, IKnowPassiveProjections, IKnowReadModelContainerNames
 {
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
 #if NET8_0
@@ -54,6 +54,8 @@ public class Projections(
     Dictionary<Type, ProjectionDefinition> _definitionsByType = new();
     Dictionary<Type, IProjectionHandler> _discoveredHandlersByModelType = new();
     Dictionary<Type, ExplicitProjectionRegistration> _explicitRegistrations = new();
+    Dictionary<Type, string> _discoveredContainerNames = new();
+    Dictionary<Type, string> _containerNames = new();
     Dictionary<Type, Exception> _explicitFailures = new();
     IImmutableList<ProjectionDefinition> _discoveredDefinitions = ImmutableList<ProjectionDefinition>.Empty;
     IImmutableList<ArtifactRegistration> _discoveredArtifactRegistrations = ImmutableList<ArtifactRegistration>.Empty;
@@ -185,7 +187,7 @@ public class Projections(
             kvp => kvp.Key,
             kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
 
-        var (definitionsByType, failures) = FindAllProjectionDefinitions(
+        var (definitionsByType, failures, containerNames) = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
             artifactsActivator,
@@ -230,6 +232,7 @@ public class Projections(
         lock (_explicitLock)
         {
             _discoveredHandlersByModelType = discoveredHandlersByModelType;
+            _discoveredContainerNames = containerNames;
 
             _discoveredDefinitions =
                 ((IEnumerable<ProjectionDefinition>)[
@@ -307,6 +310,10 @@ public class Projections(
     bool IKnowPassiveProjections.IsPassive(Type readModelType) =>
         _handlersByModelType.TryGetValue(readModelType, out var handler) &&
         Definitions.Any(definition => definition.Identifier == handler.Id.Value && !definition.IsActive);
+
+    /// <inheritdoc/>
+    string? IKnowReadModelContainerNames.GetContainerNameOverride(Type readModelType) =>
+        _containerNames.GetValueOrDefault(readModelType);
 
     /// <summary>
     /// Add an explicit projection that is built by the next <see cref="Discover"/> rather than immediately.
@@ -457,7 +464,7 @@ public class Projections(
     {
         var definition = projection.Build(new(namingPolicy, eventTypes, jsonSerializerOptions, eventStore.Name?.Value));
         var handler = new ProjectionHandler(eventStore, definition.Identifier, projection.ReadModelType, definition.ReadModel, definition.EventSequenceId);
-        return new(definition, handler);
+        return new(definition, handler, projection.ContainerNameOverride);
     }
 
     /// <summary>
@@ -477,6 +484,17 @@ public class Projections(
 
         _explicitHandlers = [.. _explicitRegistrations.Values.Select(_ => _.Handler)];
         _handlersByModelType = handlersByModelType;
+
+        var containerNames = new Dictionary<Type, string>(_discoveredContainerNames);
+        foreach (var (readModelType, registration) in _explicitRegistrations)
+        {
+            if (registration.ContainerName is not null)
+            {
+                containerNames[readModelType] = registration.ContainerName;
+            }
+        }
+
+        _containerNames = containerNames;
         Definitions = _discoveredDefinitions.AddRange(_explicitRegistrations.Values.Select(_ => _.Definition));
         ArtifactRegistrations = _discoveredArtifactRegistrations
             .AddRange(_explicitRegistrations.Keys.Select(type => new ArtifactRegistration(type, null)))
@@ -495,7 +513,7 @@ public class Projections(
     /// A projection that cannot be built is logged and skipped so that it costs itself and nothing else. The failure is
     /// returned alongside rather than only logged, so that its read model can be told apart from one never declared.
     /// </remarks>
-    (Dictionary<Type, ProjectionDefinition> Definitions, Dictionary<Type, Exception> Failures) FindAllProjectionDefinitions(
+    (Dictionary<Type, ProjectionDefinition> Definitions, Dictionary<Type, Exception> Failures, Dictionary<Type, string> ContainerNames) FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
         IClientArtifactsActivator artifactsActivator,
@@ -504,6 +522,7 @@ public class Projections(
         var result = new Dictionary<Type, ProjectionDefinition>();
         var failures = new Dictionary<Type, Exception>();
         var variantDeclarations = new Dictionary<Type, FluentVariantDeclaration>();
+        var containerNames = new Dictionary<Type, string>();
         foreach (var projectionType in clientArtifacts.Projections)
         {
             var modelType = projectionType.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
@@ -517,7 +536,8 @@ public class Projections(
                     eventTypes,
                     artifactsActivator,
                     jsonSerializerOptions,
-                    variantDeclarations
+                    variantDeclarations,
+                    containerNames
                 ]) as Catch<ProjectionDefinition>)!;
             if (createProjectionDefinitionResult.TryGetException(out var exception))
             {
@@ -530,10 +550,10 @@ public class Projections(
 
         VariantReclassifier.CrossWireGroups(result, variantDeclarations);
 
-        return (result, failures);
+        return (result, failures, containerNames);
     }
 
-    sealed record ExplicitProjectionRegistration(ProjectionDefinition Definition, IProjectionHandler Handler);
+    sealed record ExplicitProjectionRegistration(ProjectionDefinition Definition, IProjectionHandler Handler, string? ContainerName);
 
     static class ProjectionDefinitionCreator<TReadModel>
         where TReadModel : class
@@ -544,7 +564,8 @@ public class Projections(
             IEventTypes eventTypes,
             IClientArtifactsActivator artifactsActivator,
             JsonSerializerOptions jsonSerializerOptions,
-            IDictionary<Type, FluentVariantDeclaration> variantDeclarations)
+            IDictionary<Type, FluentVariantDeclaration> variantDeclarations,
+            IDictionary<Type, string> containerNames)
         {
             try
             {
@@ -557,6 +578,16 @@ public class Projections(
                 var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), type, namingPolicy, eventTypes, jsonSerializerOptions);
                 activateArtifactResult.AsT0.Define(builder);
                 var definition = builder.Build();
+
+                if (builder.ContainerNameOverride is { } containerName)
+                {
+                    if (containerNames.TryGetValue(typeof(TReadModel), out var existing) && existing != containerName)
+                    {
+                        throw new ConflictingContainerNamesForReadModel(typeof(TReadModel), existing, containerName);
+                    }
+
+                    containerNames[typeof(TReadModel)] = containerName;
+                }
 
                 if (builder.VariantDeclaration is not null)
                 {
