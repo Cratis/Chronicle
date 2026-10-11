@@ -491,7 +491,7 @@ public partial class Observer(
         }
 
         await UnregisterReminderNamed(reminderName);
-        if (CannotRecoverFromReminder)
+        if (CannotRecoverFromReminder())
         {
             return;
         }
@@ -502,12 +502,6 @@ public partial class Observer(
             await StartRecoverJobForFailedPartition(partition);
         }
     }
-
-    bool CannotRecoverFromReminder => IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed;
-
-    static bool IsRetryReminderFor(FailedPartition partition, string reminderName) =>
-        !partition.IsQuarantined &&
-        (PartitionReminderName(partition.Id) == reminderName || partition.Partition.ToString() == reminderName);
 
     /// <summary>
     /// Gets a retry reminder name in a namespace disjoint from the alert reminder, regardless of the partition key.
@@ -611,6 +605,110 @@ public partial class Observer(
         }
     }
 
+    /// <inheritdoc/>
+    protected override async Task OnAfterEnteringState(IState<ObserverState> state)
+    {
+        if (SettlesOwedRecovery(state))
+        {
+            // Settled: the observer is driven forward again, or routing legitimately disconnected an empty
+            // explicitly-typed subscription. The initial Disconnected entry still owes its recovery.
+            _retryRecoveryAfterQuarantine = false;
+            _owedRecoveryAttempts = 0;
+            return;
+        }
+
+        if (state is Disconnected && _recoverSubscriptionAfterQuarantine)
+        {
+            _recoverSubscriptionAfterQuarantine = false;
+            if (_subscription.IsSubscribed)
+            {
+                await RecoverAfterQuarantine();
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override async Task WriteStateAsync()
+    {
+        if (CannotWriteState()) return;
+        await _stateWriteLock.WaitAsync();
+        try
+        {
+            if (_removed || CannotWriteState()) return;
+
+            // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
+            // so any write while quarantined persists the quarantine rather than a stale active snapshot.
+            if (IsQuarantined)
+            {
+                State = State with { RunningState = ObserverRunningState.Quarantined };
+            }
+
+            // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
+            // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
+            State = State with
+            {
+                AlertLifecycleId = _alertLifecycleId,
+                AlertRevision = _alertRevision,
+                AlertDisposition = _alertDisposition,
+                QuarantineEpisodeId = _quarantineEpisodeId
+            };
+            var revision = _alertRevision;
+            await base.WriteStateAsync();
+            if (revision == _alertRevision)
+            {
+                _alertStateNeedsPersistence = false;
+            }
+
+            _debouncedProgressWrites = 0;
+        }
+        finally
+        {
+            _stateWriteLock.Release();
+        }
+    }
+
+    static bool IsRetryReminderFor(FailedPartition partition, string reminderName) =>
+        !partition.IsQuarantined &&
+        (PartitionReminderName(partition.Id) == reminderName || partition.Partition.ToString() == reminderName);
+
+    static void ThrowIfPinsMultipleGenerations(IEnumerable<EventType> eventTypes)
+    {
+        var duplicate = eventTypes.GroupBy(_ => _.Id).FirstOrDefault(_ => _.Select(type => type.Generation).Distinct().Count() > 1);
+        if (duplicate is not null)
+        {
+            throw new ObserverPinsMultipleGenerationsOfEventType(duplicate.Key);
+        }
+    }
+
+    static bool FiltersAreEqual(ObserverFilters? left, ObserverFilters? right)
+    {
+        if (left is null || right is null)
+        {
+            return ReferenceEquals(left, right);
+        }
+
+        // ObserverFilters is a record, but its Tags collection makes the generated equality a
+        // reference comparison - two identical registrations from different client instances
+        // would never be considered equal. Compare structurally instead.
+        return left.Tags.ToHashSet().SetEquals(right.Tags) &&
+               Equals(left.EventSourceType, right.EventSourceType) &&
+               Equals(left.EventStreamType, right.EventStreamType);
+    }
+
+    bool SettlesOwedRecovery(IState<ObserverState> state) =>
+        state is Observing or States.Replay || IsEmptySubscriptionDisconnect(state);
+
+    bool IsEmptySubscriptionDisconnect(IState<ObserverState> state) =>
+        state is Disconnected &&
+        !_recoverSubscriptionAfterQuarantine &&
+        _subscription.IsSubscribed &&
+        !_subscription.EventTypes.Any() &&
+        !State.SubscribesToAllEvents;
+
+    bool CannotWriteState() => _stateWritingSuspended || !_observerExists;
+
+    bool CannotRecoverFromReminder() => IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed;
+
     void ResetRecoveryFlagsForEntering(IState<ObserverState> state)
     {
         // Any transition supersedes a recovery scheduled for when a requested leave enters Disconnected. Entering
@@ -649,95 +747,6 @@ public partial class Observer(
             _quarantineEpisodeId = null;
             ChangeAlertState();
         }
-    }
-
-    /// <inheritdoc/>
-    protected override async Task OnAfterEnteringState(IState<ObserverState> state)
-    {
-        if (SettlesOwedRecovery(state))
-        {
-            // Settled: the observer is driven forward again, or routing legitimately disconnected an empty
-            // explicitly-typed subscription. The initial Disconnected entry still owes its recovery.
-            _retryRecoveryAfterQuarantine = false;
-            _owedRecoveryAttempts = 0;
-            return;
-        }
-
-        if (state is Disconnected && _recoverSubscriptionAfterQuarantine)
-        {
-            _recoverSubscriptionAfterQuarantine = false;
-            if (_subscription.IsSubscribed)
-            {
-                await RecoverAfterQuarantine();
-            }
-        }
-    }
-
-    bool SettlesOwedRecovery(IState<ObserverState> state) =>
-        state is Observing or States.Replay || IsEmptySubscriptionDisconnect(state);
-
-    bool IsEmptySubscriptionDisconnect(IState<ObserverState> state) =>
-        state is Disconnected &&
-        !_recoverSubscriptionAfterQuarantine &&
-        _subscription.IsSubscribed &&
-        !_subscription.EventTypes.Any() &&
-        !State.SubscribesToAllEvents;
-
-    bool CannotWriteState => _stateWritingSuspended || !_observerExists;
-
-    /// <inheritdoc/>
-    protected override async Task WriteStateAsync()
-    {
-        if (CannotWriteState) return;
-        await _stateWriteLock.WaitAsync();
-        try
-        {
-            if (_removed || CannotWriteState) return;
-
-            // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
-            // so any write while quarantined persists the quarantine rather than a stale active snapshot.
-            if (IsQuarantined)
-            {
-                State = State with { RunningState = ObserverRunningState.Quarantined };
-            }
-
-            // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
-            // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
-            State = State with
-            {
-                AlertLifecycleId = _alertLifecycleId,
-                AlertRevision = _alertRevision,
-                AlertDisposition = _alertDisposition,
-                QuarantineEpisodeId = _quarantineEpisodeId
-            };
-            var revision = _alertRevision;
-            await base.WriteStateAsync();
-            if (revision == _alertRevision)
-            {
-                _alertStateNeedsPersistence = false;
-            }
-
-            _debouncedProgressWrites = 0;
-        }
-        finally
-        {
-            _stateWriteLock.Release();
-        }
-    }
-
-    static bool FiltersAreEqual(ObserverFilters? left, ObserverFilters? right)
-    {
-        if (left is null || right is null)
-        {
-            return ReferenceEquals(left, right);
-        }
-
-        // ObserverFilters is a record, but its Tags collection makes the generated equality a
-        // reference comparison - two identical registrations from different client instances
-        // would never be considered equal. Compare structurally instead.
-        return left.Tags.ToHashSet().SetEquals(right.Tags) &&
-               Equals(left.EventSourceType, right.EventSourceType) &&
-               Equals(left.EventStreamType, right.EventStreamType);
     }
 
     /// <summary>
@@ -860,15 +869,6 @@ public partial class Observer(
         {
             _subscriptionSetupFailed = true;
             throw;
-        }
-    }
-
-    static void ThrowIfPinsMultipleGenerations(IEnumerable<EventType> eventTypes)
-    {
-        var duplicate = eventTypes.GroupBy(_ => _.Id).FirstOrDefault(_ => _.Select(type => type.Generation).Distinct().Count() > 1);
-        if (duplicate is not null)
-        {
-            throw new ObserverPinsMultipleGenerationsOfEventType(duplicate.Key);
         }
     }
 
