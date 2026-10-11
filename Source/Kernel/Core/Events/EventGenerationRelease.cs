@@ -30,7 +30,7 @@ public class EventGenerationRelease(
     /// <inheritdoc/>
     public async Task<AppendedEvent[]> Release(EventStoreName eventStore, IEnumerable<EventType> pins, IDictionary<EventType, EventTypeSchema> schemas, IEnumerable<AppendedEvent> events)
     {
-        var pinsById = pins.ToDictionary(_ => _.Id);
+        var pinsById = pins.Distinct().ToDictionary(_ => _.Id);
         var definitions = new Dictionary<EventTypeId, EventTypeDefinition>();
         var eventTypes = storage.GetEventStore(eventStore).EventTypes;
         var protectedMigrations = new ProtectedEventTypeMigrations(eventTypes, migrations, metadataManager, converter);

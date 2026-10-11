@@ -28,8 +28,8 @@ public class EventTypesForSpecifications : IEventTypes
     };
 
     readonly Dictionary<Type, EventType> _eventTypes = [];
-    readonly Dictionary<EventTypeId, Type> _clrTypesByEventType = [];
-    readonly Dictionary<EventTypeId, JsonSchema> _jsonSchemasByEventType = [];
+    readonly Dictionary<EventType, Type> _clrTypesByEventType = [];
+    readonly Dictionary<EventType, JsonSchema> _jsonSchemasByEventType = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypesForSpecifications"/> class.
@@ -40,10 +40,10 @@ public class EventTypesForSpecifications : IEventTypes
         types ??= [];
 
         _eventTypes = types.ToDictionary(_ => _, _ => _.GetEventType());
-        _clrTypesByEventType = _eventTypes.ToDictionary(_ => _.Value.Id, _ => _.Key);
+        _clrTypesByEventType = _eventTypes.ToDictionary(_ => _.Value, _ => _.Key);
 
         _jsonSchemasByEventType = _eventTypes.ToDictionary(
-            _ => _.Value.Id,
+            _ => _.Value,
             _ => new JsonSchema(_serializerOptions.GetJsonSchemaAsNode(_.Key, _exporterOptions).AsObject()));
 
         AllClrTypes = _clrTypesByEventType.Values.ToImmutableList();
@@ -63,10 +63,16 @@ public class EventTypesForSpecifications : IEventTypes
     public Task Register() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Type GetClrTypeFor(EventTypeId eventTypeId) => _clrTypesByEventType[eventTypeId];
+    public Type GetClrTypeFor(EventTypeId eventTypeId) => _clrTypesByEventType
+        .Where(_ => _.Key.Id == eventTypeId)
+        .OrderByDescending(_ => _.Key.Generation.Value)
+        .First().Value;
 
     /// <inheritdoc/>
-    public Type GetClrTypeFor(EventTypeId eventTypeId, EventTypeGeneration generation) => _clrTypesByEventType[eventTypeId];
+    public Type GetClrTypeFor(EventTypeId eventTypeId, EventTypeGeneration generation) => _clrTypesByEventType
+        .Where(_ => _.Key.Id == eventTypeId && _.Key.Generation == generation)
+        .Select(_ => _.Value)
+        .FirstOrDefault() ?? GetClrTypeFor(eventTypeId);
 
     /// <inheritdoc/>
     /// <remarks>
@@ -80,10 +86,13 @@ public class EventTypesForSpecifications : IEventTypes
     }
 
     /// <inheritdoc/>
-    public JsonSchema GetSchemaFor(EventTypeId eventTypeId) => _jsonSchemasByEventType[eventTypeId];
+    public JsonSchema GetSchemaFor(EventTypeId eventTypeId) => _jsonSchemasByEventType
+        .Where(_ => _.Key.Id == eventTypeId)
+        .OrderByDescending(_ => _.Key.Generation.Value)
+        .First().Value;
 
     /// <inheritdoc/>
-    public bool HasFor(EventTypeId eventTypeId) => _clrTypesByEventType.ContainsKey(eventTypeId);
+    public bool HasFor(EventTypeId eventTypeId) => _clrTypesByEventType.Any(_ => _.Key.Id == eventTypeId);
 
     /// <inheritdoc/>
     public bool HasFor(Type clrType)
@@ -101,7 +110,7 @@ public class EventTypesForSpecifications : IEventTypes
             {
                 var eventType = clrType.GetEventType();
                 _eventTypes[clrType] = eventType;
-                _clrTypesByEventType[eventType.Id] = clrType;
+                _clrTypesByEventType[eventType] = clrType;
             }
         }
     }
