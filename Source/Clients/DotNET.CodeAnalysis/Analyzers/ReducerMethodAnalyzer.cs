@@ -41,7 +41,7 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
         context.EnableConcurrentExecution();
         context.RegisterCompilationStartAction(start =>
         {
-            var eventTypes = GetTypes(start.Compilation.Assembly.GlobalNamespace).Where(WellKnownTypes.HasEventTypeAttribute).ToImmutableArray();
+            var eventTypes = GetTypes(start.Compilation.GlobalNamespace).Where(HasEventTypeAttribute).ToImmutableArray();
             start.RegisterSymbolAction(symbol => AnalyzeMethod(symbol, eventTypes), SymbolKind.Method);
         });
     }
@@ -68,7 +68,7 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
         var parameters = methodSymbol.Parameters;
         if (readModel is null || parameters.Length == 0 ||
             (!parameters.Any(_ => SymbolEqualityComparer.Default.Equals(_.Type, readModel)) &&
-             !WellKnownTypes.HasEventTypeAttribute(parameters[0].Type) &&
+             !IsEventType(parameters[0].Type, eventTypes, context.Compilation) &&
              !ReturnsReadModel(methodSymbol.ReturnType, readModel, context.Compilation)))
         {
             return;
@@ -96,7 +96,20 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
 
     static bool IsEventType(ITypeSymbol type, ImmutableArray<INamedTypeSymbol> eventTypes, Compilation compilation) =>
         type.SpecialType != SpecialType.System_Object &&
-        (WellKnownTypes.HasEventTypeAttribute(type) || eventTypes.Any(eventType => compilation.ClassifyCommonConversion(eventType, type) is { IsImplicit: true, IsUserDefined: false }));
+        (HasEventTypeAttribute(type) || eventTypes.Any(eventType => compilation.ClassifyCommonConversion(eventType, type) is { IsImplicit: true, IsUserDefined: false }));
+
+    static bool HasEventTypeAttribute(ITypeSymbol type)
+    {
+        for (var current = type; current is not null; current = current.BaseType)
+        {
+            if (WellKnownTypes.HasEventTypeAttribute(current))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     static IEnumerable<INamedTypeSymbol> GetTypes(INamespaceOrTypeSymbol symbol)
     {
