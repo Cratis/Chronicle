@@ -57,6 +57,15 @@ public class SetBuilder<TReadModel, TEvent, TParentBuilder>(TParentBuilder paren
         return _expression!.Build();
     }
 
+    /// <summary>
+    /// Converts an accessor using this builder's serialization naming policy.
+    /// </summary>
+    /// <param name="expression">The member expression.</param>
+    /// <param name="description">The description of the property being configured.</param>
+    /// <returns>The serialized property path.</returns>
+    private protected PropertyPath ResolvePropertyPath(LambdaExpression expression, string description) =>
+        ProjectionPropertyPaths.FromExpression(expression, namingPolicy, description);
+
     void ThrowIfMissingToExpression()
     {
         if (_expression is null)
@@ -139,22 +148,15 @@ public class SetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
     /// <inheritdoc/>
     public TParentBuilder To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
-        if (!eventPropertyAccessor.TryGetPropertyPath(out var propertyPath))
-        {
-            throw new InvalidPropertyExpression($"property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'", eventPropertyAccessor);
-        }
-
-        return To(propertyPath);
+        var propertyPath = ResolvePropertyPath(eventPropertyAccessor, $"property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'");
+        _expression = new EventContentPropertyExpression(propertyPath);
+        return _parent;
     }
 
     /// <inheritdoc/>
     public TParentBuilder ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor)
     {
-        if (!eventContextPropertyAccessor.TryGetPropertyPath(out var propertyPath))
-        {
-            throw new InvalidPropertyExpression($"the event context value for property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'", eventContextPropertyAccessor);
-        }
-
+        var propertyPath = ResolvePropertyPath(eventContextPropertyAccessor, $"the event context value for property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'");
         _expression = new EventContextPropertyExpression(propertyPath);
         return _parent;
     }

@@ -6,7 +6,6 @@ using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
@@ -168,7 +167,7 @@ internal class ModelBoundProjectionBuilder(
     HashSet<string> GetMemberNames(Type modelType)
     {
         var names = modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Select(property => _namingPolicy.GetPropertyName(new PropertyPath(property.Name)));
+            .Select(property => (string)ProjectionPropertyPaths.Resolve(property.Name, _namingPolicy));
 
         return new HashSet<string>(names, StringComparer.Ordinal);
     }
@@ -189,7 +188,7 @@ internal class ModelBoundProjectionBuilder(
 
             var keyProperty = attr.GetType().GetProperty(nameof(EntersOnAttribute<object>.Key));
             var key = keyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
-            var convertedKey = key.StartsWith('$') ? key : _namingPolicy.GetPropertyName(new PropertyPath(key));
+            var convertedKey = key.StartsWith('$') ? key : (string)ProjectionPropertyPaths.Resolve(key, _namingPolicy);
 
             if (!definition.From.TryGetValue(eventTypeId, out var fromDefinition))
             {
@@ -221,14 +220,14 @@ internal class ModelBoundProjectionBuilder(
         var keyParameter = primaryConstructor?.GetParameters().FirstOrDefault(p => p.GetCustomAttribute<KeyAttribute>(true) is not null);
         if (keyParameter is not null)
         {
-            return _namingPolicy.GetPropertyName(new PropertyPath(keyParameter.Name!));
+            return ProjectionPropertyPaths.Resolve(keyParameter.Name!, _namingPolicy);
         }
 
         var keyProperty = modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .FirstOrDefault(p => Attribute.IsDefined(p, typeof(KeyAttribute), true));
         if (keyProperty is not null)
         {
-            return _namingPolicy.GetPropertyName(new PropertyPath(keyProperty.Name));
+            return ProjectionPropertyPaths.Resolve(keyProperty.Name, _namingPolicy);
         }
 
         throw new VariantMustDeclareKeyProperty(modelType);
@@ -308,16 +307,14 @@ internal class ModelBoundProjectionBuilder(
         if (!string.IsNullOrEmpty(key))
         {
             PropertyValidator.ValidatePropertyExists(eventType, key);
-            var keyPropertyPath = new PropertyPath(key);
-            fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
+            fromDefinition.Key = ProjectionPropertyPaths.Resolve(key, _namingPolicy);
         }
 
         var parentKey = (attr as IFromEventAttribute)?.ParentKey;
         if (!string.IsNullOrEmpty(parentKey))
         {
             PropertyValidator.ValidatePropertyExists(eventType, parentKey);
-            var parentKeyPropertyPath = new PropertyPath(parentKey);
-            fromDefinition.ParentKey = _namingPolicy.GetPropertyName(parentKeyPropertyPath);
+            fromDefinition.ParentKey = ProjectionPropertyPaths.Resolve(parentKey, _namingPolicy);
         }
 
         var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
@@ -342,15 +339,13 @@ internal class ModelBoundProjectionBuilder(
             {
                 // Map from event context property
                 PropertyValidator.ValidatePropertyExists<EventContext>(attribute.ContextProperty);
-                var contextPropertyPath = new PropertyPath(attribute.ContextProperty);
-                var convertedContextPropertyName = _namingPolicy.GetPropertyName(contextPropertyPath);
+                var convertedContextPropertyName = ProjectionPropertyPaths.Resolve(attribute.ContextProperty, _namingPolicy);
                 properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
             }
             else if (!string.IsNullOrEmpty(attribute.Property))
             {
                 // Map from event property
-                var eventPropertyPath = new PropertyPath(attribute.Property);
-                properties[propertyName] = _namingPolicy.GetPropertyName(eventPropertyPath);
+                properties[propertyName] = ProjectionPropertyPaths.Resolve(attribute.Property, _namingPolicy);
             }
             else
             {
@@ -429,8 +424,7 @@ internal class ModelBoundProjectionBuilder(
         ChildrenDefinition? childrenDef = null)
     {
         var memberName = parameter.Name!;
-        var propertyPath = new PropertyPath(memberName);
-        var propertyName = _namingPolicy.GetPropertyName(propertyPath);
+        var propertyName = (string)ProjectionPropertyPaths.Resolve(memberName, _namingPolicy);
 
         var targetFrom = isRoot ? definition.From : childrenDef?.From ?? definition.From;
         var targetJoin = isRoot ? definition.Join : childrenDef?.Join ?? definition.Join;
@@ -605,8 +599,7 @@ internal class ModelBoundProjectionBuilder(
         Type? modelType = null,
         ChildrenDefinition? childrenDef = null)
     {
-        var propertyPath = new PropertyPath(property.Name);
-        var propertyName = _namingPolicy.GetPropertyName(propertyPath);
+        var propertyName = (string)ProjectionPropertyPaths.Resolve(property.Name, _namingPolicy);
 
         var targetFrom = isRoot ? definition.From : childrenDef?.From ?? definition.From;
         var targetJoin = isRoot ? definition.Join : childrenDef?.Join ?? definition.Join;

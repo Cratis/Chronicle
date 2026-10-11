@@ -64,12 +64,7 @@ public class AddChildBuilder<TParentReadModel, TChildModel, TEvent>(IChildrenBui
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> FromObject(Expression<Func<TEvent, TChildModel>> propertyWithChild)
     {
-        if (!propertyWithChild.TryGetPropertyPath(out var propertyWithChildPath))
-        {
-            throw new InvalidPropertyExpression($"the child object on event '{typeof(TEvent).FullName}'", propertyWithChild);
-        }
-
-        var childProperty = namingPolicy.GetPropertyName(propertyWithChildPath);
+        var childProperty = ProjectionPropertyPaths.FromExpression(propertyWithChild, namingPolicy, $"the child object on event '{typeof(TEvent).FullName}'");
         foreach (var property in typeof(TChildModel).GetProperties())
         {
             var propertyPath = new PropertyPath(property.Name);

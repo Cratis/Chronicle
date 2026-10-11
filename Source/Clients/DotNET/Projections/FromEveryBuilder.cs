@@ -3,7 +3,6 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
@@ -22,12 +21,7 @@ public class FromEveryBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromEve
     /// <inheritdoc/>
     public IAllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>> Set<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        if (!readModelPropertyAccessor.TryGetPropertyPath(out var accessorPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"the property to set on read model '{typeof(TReadModel).FullName}'", readModelPropertyAccessor);
-        }
-
-        var propertyPath = namingPolicy.GetPropertyName(accessorPropertyPath);
+        var propertyPath = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, $"the property to set on read model '{typeof(TReadModel).FullName}'");
         if (_propertyExpressions.Exists(b => b.TargetProperty == propertyPath))
         {
             throw new DuplicatePropertyInProjection(propertyPath);

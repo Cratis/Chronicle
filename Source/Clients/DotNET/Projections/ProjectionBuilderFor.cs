@@ -99,13 +99,9 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     /// <inheritdoc/>
     public IProjectionBuilderFor<TReadModel> VariantOf<TIdentity>(Expression<Func<TReadModel, object?>> keyAccessor)
     {
-        if (!keyAccessor.TryGetPropertyPath(out var propertyPath))
-        {
-            throw new InvalidPropertyExpression($"the variant key property on read model '{typeof(TReadModel).FullName}'", keyAccessor);
-        }
-
+        var propertyPath = ProjectionPropertyPaths.FromExpression(keyAccessor, _namingPolicy, $"the variant key property on read model '{typeof(TReadModel).FullName}'");
         _variantIdentity = typeof(TIdentity);
-        _variantKey = _namingPolicy.GetPropertyName(propertyPath);
+        _variantKey = propertyPath;
         return this;
     }
 

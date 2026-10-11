@@ -209,28 +209,20 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <inheritdoc/>
     public TBuilder Children<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TReadModel, TChildModel>> builderCallback)
     {
-        if (!targetProperty.TryGetPropertyPath(out var targetPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"the target property on read model '{typeof(TReadModel).FullName}'", targetProperty);
-        }
-
+        var targetPropertyPath = ProjectionPropertyPaths.FromExpression(targetProperty, namingPolicy, $"the target property on read model '{typeof(TReadModel).FullName}'");
         var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit);
         builderCallback(builder);
-        _childrenDefinitions[namingPolicy.GetPropertyName(targetPropertyPath)] = builder.Build();
+        _childrenDefinitions[targetPropertyPath] = builder.Build();
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public TBuilder Nested<TNestedModel>(Expression<Func<TReadModel, TNestedModel?>> targetProperty, Action<INestedBuilder<TReadModel, TNestedModel>> builderCallback)
     {
-        if (!targetProperty.TryGetPropertyPath(out var targetPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"the target property on read model '{typeof(TReadModel).FullName}'", targetProperty);
-        }
-
+        var targetPropertyPath = ProjectionPropertyPaths.FromExpression(targetProperty, namingPolicy, $"the target property on read model '{typeof(TReadModel).FullName}'");
         var builder = new NestedBuilder<TReadModel, TNestedModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit);
         builderCallback(builder);
-        _nestedDefinitions[namingPolicy.GetPropertyName(targetPropertyPath)] = builder.Build();
+        _nestedDefinitions[targetPropertyPath] = builder.Build();
         return (this as TBuilder)!;
     }
 
