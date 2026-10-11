@@ -5,7 +5,6 @@ using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.EventTypes;
-using Cratis.Chronicle.Storage.InMemory.Events.EventTypes;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 
@@ -32,7 +31,7 @@ namespace Cratis.Chronicle.Storage.InMemory;
 public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage) : IDisposable
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new();
-    readonly Func<EventStoreName, IEventTypesStorage> _eventTypesFactory = _ => new EventTypesStorage();
+    readonly Func<EventStoreName, IEventTypesStorage>? _eventTypesFactory;
 
     readonly Subject<IEnumerable<EventStoreName>> _changes = new();
 
@@ -105,7 +104,10 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
             return existing;
         }
 
-        var created = new EventStoreStorage(eventStore, sinksFactory ?? CreateDefaultSinksFactory(eventStore), jobsStorage, _eventTypesFactory);
+        var sinks = sinksFactory ?? CreateDefaultSinksFactory(eventStore);
+        var created = _eventTypesFactory is null
+            ? new EventStoreStorage(eventStore, sinks, jobsStorage)
+            : new EventStoreStorage(eventStore, sinks, jobsStorage, _eventTypesFactory);
         var storage = _eventStores.GetOrAdd(eventStore, created);
 
         if (ReferenceEquals(storage, created))
