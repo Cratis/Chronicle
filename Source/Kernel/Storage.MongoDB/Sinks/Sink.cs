@@ -259,12 +259,6 @@ public class Sink(
             isUpsert = false;
         }
 
-        // Run through and remove all children affected by ChildRemovedFromAll
-        foreach (var childRemoved in changeset.Changes.OfType<ChildRemovedFromAll>())
-        {
-            await RemoveChildFromAll(childRemoved);
-        }
-
         // For join events in bulk mode, flush pending operations first so that the join
         // can read committed data. Skip the Count check outside the lock to avoid reading
         // the list without synchronization.
@@ -273,7 +267,10 @@ public class Sink(
             await ExecuteBulk();
         }
 
+        // Converting runs the joins, which are matched by what the documents hold now. A join on a child this changeset
+        // removes from all has to find the documents still holding it, so the children are removed only afterwards.
         var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
+        await RemoveChildrenFromAll(changeset);
         if (!converted.hasChanges) return [];
 
         // ChangesetConverter has already executed the correctly filtered UpdateMany for the root join.
@@ -1024,6 +1021,14 @@ public class Sink(
             DeleteOneModel<BsonDocument> => EstimatedDeleteSize,
             _ => DefaultEstimatedSize
         };
+    }
+
+    async Task RemoveChildrenFromAll(IChangeset<AppendedEvent, ExpandoObject> changeset)
+    {
+        foreach (var childRemoved in changeset.Changes.OfType<ChildRemovedFromAll>())
+        {
+            await RemoveChildFromAll(childRemoved);
+        }
     }
 
     async Task RemoveChildFromAll(ChildRemovedFromAll childRemoved)
