@@ -3,23 +3,23 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections;
 
 [EventType]
-public record DecJoinsChildTaskAssigned(string TaskId, string ProjectId);
+public record DecJoinsChildMemberAssignedToProject(string ProjectId, string MemberId);
 
 [EventType]
-public record DecJoinsChildProjectCreated(string Name);
+public record DecJoinsChildMemberRegistered(string Name);
 
-public record DecJoinsChildTask(string TaskId, string ProjectId, string? ProjectName);
+public record DecJoinsChildProjectMember(string MemberId, string? Name);
 
-public record DecJoinsChildProjectBoard(IEnumerable<DecJoinsChildTask> Tasks);
+public record DecJoinsChildProjectBoard(IEnumerable<DecJoinsChildProjectMember> Members);
 
 public class DecJoinsChildProjectBoardProjection : IProjectionFor<DecJoinsChildProjectBoard>
 {
     public void Define(IProjectionBuilderFor<DecJoinsChildProjectBoard> builder) => builder
-        .Children(m => m.Tasks, children => children
-            .IdentifiedBy(e => e.TaskId)
-            .From<DecJoinsChildTaskAssigned>(b => b
-                .UsingKey(e => e.TaskId))
-            .Join<DecJoinsChildProjectCreated>(j => j
-                .On(m => m.ProjectId)));
+        .Children(m => m.Members, children => children
+            .IdentifiedBy(e => e.MemberId)
+            .From<DecJoinsChildMemberAssignedToProject>(b => b
+                .UsingParentKey(e => e.ProjectId)
+                .UsingKey(e => e.MemberId))
+            .Join<DecJoinsChildMemberRegistered>());
 }
 ```
