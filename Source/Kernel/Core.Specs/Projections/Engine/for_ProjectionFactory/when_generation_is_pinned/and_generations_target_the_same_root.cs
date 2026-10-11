@@ -14,6 +14,6 @@ public class and_generations_target_the_same_root : given.a_pinned_pipeline
     }
 
     [Fact] void should_save_the_first_clause() => _saved["root"]["oldName"].ShouldEqual("original");
-    [Fact] void should_save_the_second_clause_in_the_same_changeset() => _saved["root"]["newName"].ShouldEqual("migrated");
-    [Fact] void should_advance_the_sink_watermark_once() => _writes.ShouldEqual(1);
+    [Fact] void should_save_the_second_clause_after_the_first() => _saved["root"]["newName"].ShouldEqual("migrated");
+    [Fact] void should_save_each_generation_separately() => _writes.ShouldEqual(2);
 }

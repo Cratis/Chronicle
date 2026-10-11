@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
@@ -112,67 +111,21 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionEventContext>> HandleGenerations(IEnumerable<AppendedEvent> events)
     {
-        var copies = events.ToArray();
-        if (copies.Length == 1)
+        var copies = events.OrderBy(@event => @event.Context.EventType.Generation.Value).ToArray();
+        if (copies.Length == 0)
         {
-            return [await Handle(copies[0])];
+            return [];
         }
 
         using var handleScope = projection.IsEventSourceKeyed
             ? await _handleLock.AcquireFor(copies[0].Context.EventSourceId)
             : await _handleLock.AcquireCoarse();
-        var pipelineSteps = steps.ToArray();
-        var resolveKey = pipelineSteps.OfType<ResolveKey>().Single();
-        var handleEvent = pipelineSteps.OfType<HandleEvent>().Single();
-        var beforeHandling = pipelineSteps.SkipWhile(step => step != resolveKey).Skip(1).TakeWhile(step => step != handleEvent).ToArray();
-        var afterHandling = pipelineSteps.SkipWhile(step => step != handleEvent).Skip(1).ToArray();
-        var groups = new List<List<ProjectionEventContext>>();
+        var results = new List<ProjectionEventContext>();
         foreach (var copy in copies)
         {
-            var context = ProjectionEventContext.Empty(objectComparer, copy) with { OperationType = projection.GetOperationTypeFor(copy.Context.EventType), GenerationDelivery = projection.GenerationDelivery };
-            context = await resolveKey.Perform(projection, context);
-            var group = context.IsDeferred || context.IsUnresolvable
-                ? null
-                : groups.FirstOrDefault(candidate => !candidate[0].IsDeferred && !candidate[0].IsUnresolvable &&
-                    KeysAreEqual(candidate[0].Key.Value, context.Key.Value));
-            if (group is null)
-            {
-                groups.Add([context]);
-            }
-            else
-            {
-                group.Add(context);
-            }
-        }
-
-        var results = new List<ProjectionEventContext>();
-        foreach (var group in groups)
-        {
-            // Initialize from a creating clause when one exists; join-only or child-only copies must not
-            // prevent another clause of this physical event from initializing the same root.
-            var context = group.FirstOrDefault(candidate => candidate.CreatesInstance) ?? group[0];
-            foreach (var step in beforeHandling)
-            {
-                context = await step.Perform(projection, context);
-            }
-
-            foreach (var clause in group)
-            {
-                context.Changeset.Incoming = clause.Event;
-                var clauseContext = clause with { Changeset = context.Changeset, NeedsInitialState = context.NeedsInitialState };
-                clauseContext = await handleEvent.Perform(projection, clauseContext);
-                foreach (var future in clauseContext.DeferredFutures)
-                {
-                    context.AddDeferredFuture(future);
-                }
-            }
-
-            foreach (var step in afterHandling)
-            {
-                context = await step.Perform(projection, context);
-            }
-
-            results.Add(context);
+            // Each generation owns its changeset and reads the state saved by the preceding generation.
+            // Keep the physical event serialized without combining unrelated join or child operations.
+            results.Add(await PerformPipeline(copy));
         }
 
         return results;
@@ -188,6 +141,11 @@ public class ProjectionPipeline(
             ? await _handleLock.AcquireFor(@event.Context.EventSourceId)
             : await _handleLock.AcquireCoarse();
 
+        return await PerformPipeline(@event);
+    }
+
+    async Task<ProjectionEventContext> PerformPipeline(AppendedEvent @event)
+    {
         logger.StartingPipeline(@event.Context.SequenceNumber);
         var context = ProjectionEventContext.Empty(objectComparer, @event) with
         {
@@ -210,25 +168,5 @@ public class ProjectionPipeline(
         logger.CompletedAllSteps(@event.Context.SequenceNumber);
 
         return context;
-    }
-
-    bool KeysAreEqual(object? left, object? right)
-    {
-        if (left is ExpandoObject && right is ExpandoObject)
-        {
-            return objectComparer.Compare(left, right, ObjectComparerMode.Strict, out _);
-        }
-
-        if (Equals(left, right)) return true;
-        if (left is null || right is null) return false;
-
-        // A root's event-source key can be a string while a child's typed parent key is a Guid.
-        // They address the same sink document, so coalesce their writes before advancing its watermark.
-        if (left is Guid || right is Guid)
-        {
-            return Guid.TryParse(left.ToString(), out var leftGuid) && Guid.TryParse(right.ToString(), out var rightGuid) && leftGuid == rightGuid;
-        }
-
-        return string.Equals(left.ToString(), right.ToString(), StringComparison.Ordinal);
     }
 }

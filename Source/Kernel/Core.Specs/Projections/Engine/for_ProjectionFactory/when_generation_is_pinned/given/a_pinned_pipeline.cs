@@ -20,16 +20,19 @@ public class a_pinned_pipeline : a_projection_with_generations
 {
     protected ISink _sink;
     protected int _writes;
-    protected Dictionary<string, IDictionary<string, object?>> _saved = [];
+    protected Dictionary<string, IDictionary<string, object?>> _saved = new(StringComparer.OrdinalIgnoreCase);
+    protected List<SinkWriteMode> _writeModes = [];
 
     void Establish()
     {
         _sink = Substitute.For<ISink>();
         _sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), Arg.Any<object>()).Returns(Option<Key>.None());
+        _sink.FindOrDefault(Arg.Any<Key>()).Returns(call => _saved.TryGetValue(call.Arg<Key>().ToString(), out var state) ? (ExpandoObject)state : null);
         _sink.ApplyChanges(Arg.Any<Key>(), Arg.Any<IChangeset<AppendedEvent, ExpandoObject>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<SinkWriteMode>())
             .Returns(call =>
             {
                 _writes++;
+                _writeModes.Add(call.Arg<SinkWriteMode>());
                 _saved[call.Arg<Key>().ToString()] = call.Arg<IChangeset<AppendedEvent, ExpandoObject>>().CurrentState;
                 return [];
             });

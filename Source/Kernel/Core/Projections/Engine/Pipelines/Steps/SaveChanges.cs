@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
@@ -152,10 +153,14 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
     /// key, a parent hierarchy — is deliberately written out of order and would lose events to the guard. The
     /// event that creates the instance is written unconditionally: there is no document to compare a watermark
     /// against, and a guarded write never inserts. On a redelivery of that same creating event the instance is
-    /// already there, so the write is guarded and correctly does nothing.
+    /// already there, so the write is guarded and correctly does nothing. Multiple pinned generations of one
+    /// event share its sequence number but have separate changesets; guarding those writes would suppress every
+    /// generation after the first, so they are written unconditionally under the projection's handling lock.
     /// </remarks>
     SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context) =>
-        guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance
+        guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance &&
+        !(projection.GenerationDelivery == EventGenerationDelivery.Pinned &&
+            projection.EventTypes.Count(eventType => eventType.Id == context.Event.Context.EventType.Id) > 1)
             ? SinkWriteMode.OnlyWhenAdvancingWatermark
             : SinkWriteMode.Always;
 }

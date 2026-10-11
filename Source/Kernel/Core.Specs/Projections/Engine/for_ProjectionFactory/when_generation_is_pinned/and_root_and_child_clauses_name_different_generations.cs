@@ -29,5 +29,5 @@ public class and_root_and_child_clauses_name_different_generations : given.a_pin
 
     [Fact] void should_project_the_root_from_its_generation() => _saved["root"]["oldName"].ShouldEqual("original");
     [Fact] void should_project_the_child_from_its_generation() => ((IDictionary<string, object?>)((IEnumerable<object>)_saved["root"]["items"]!).Single())["newName"].ShouldEqual("migrated");
-    [Fact] void should_save_the_root_and_child_together() => _writes.ShouldEqual(1);
+    [Fact] void should_save_the_root_and_child_separately() => _writes.ShouldEqual(2);
 }

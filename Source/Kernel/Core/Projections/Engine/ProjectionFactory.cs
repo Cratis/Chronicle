@@ -880,9 +880,7 @@ public class ProjectionFactory(
             {
                 propertyMappers.AddRange(propertyMappersForEveryEventType);
             }
-            var hasKeyedFrom = !isNested && keyedFromEventTypeIds.Contains(eventType.Id) &&
-                (projection.GenerationDelivery != EventGenerationDelivery.Pinned || projectionDefinition.From.ContainsKey(eventType) ||
-                    (projectionDefinition.FromDerivatives?.Any(derivative => derivative.EventTypes.Contains(eventType)) ?? false));
+            var hasKeyedFrom = !isNested && keyedFromEventTypeIds.Contains(eventType.Id);
             var joinObservable = projection.Event
                 .WhereEventTypeEquals(eventType, projection.GenerationDelivery)
                 .Join(accessorPath + joinDefinition.On, hasKeyedFrom);

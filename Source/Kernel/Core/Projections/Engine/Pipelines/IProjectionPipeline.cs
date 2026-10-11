@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 public interface IProjectionPipeline
 {
     /// <summary>
-    /// Applies all pinned generations of one physical event, saving one changeset per resolved root key.
+    /// Applies the pinned generations of one physical event in ascending generation order, saving a separate changeset for each copy.
     /// </summary>
     /// <param name="events">The released generation copies of one event.</param>
     /// <returns>The contexts whose changes were saved.</returns>

@@ -35,7 +35,7 @@ public class and_the_root_and_parent_key_have_different_representations : given.
         await pipeline.HandleGenerations([first, second]);
     }
 
-    [Fact] void should_save_both_clauses_before_advancing_the_watermark() => _writes.ShouldEqual(1);
+    [Fact] void should_save_each_generation_separately() => _writes.ShouldEqual(2);
     [Fact] void should_project_the_root() => _saved.Values.Single()["oldName"].ShouldEqual("original");
     [Fact] void should_project_the_child() => ((IDictionary<string, object?>)((IEnumerable<object>)_saved.Values.Single()["items"]!).Single())["newName"].ShouldEqual("migrated");
 }

@@ -500,7 +500,7 @@ public partial class ProjectionsManager(
 
             if (definition.GenerationDelivery == EventGenerationDelivery.Pinned)
             {
-                return observer.SubscribeWithGenerationDelivery<TSubscriber>(ObserverType.Projection, projection.EventTypes, localSiloDetails.SiloAddress, definition.GenerationDelivery, isReplayable: definition.IsRewindable, reactivateRetired: reactivateRetired);
+                return observer.SubscribeWithGenerationDelivery<TSubscriber>(ObserverType.Projection, projection.EventTypes, localSiloDetails.SiloAddress, definition.GenerationDelivery, reactivateRetired: reactivateRetired);
             }
 
             return observer.Subscribe<TSubscriber>(ObserverType.Projection, projection.EventTypes, localSiloDetails.SiloAddress, reactivateRetired: reactivateRetired);
