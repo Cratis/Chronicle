@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Integration.for_Reactors;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 using context = Cratis.Chronicle.Integration.for_Observers.when_removing_an_observer.and_its_client_is_gone.context;
@@ -21,48 +20,31 @@ namespace Cratis.Chronicle.Integration.for_Observers.when_removing_an_observer;
 [Collection(ChronicleCollection.Name)]
 public class and_its_client_is_gone(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.an_independently_owned_reactor(chronicleFixture)
     {
-        public ReactorWithoutDelay Reactor = default!;
-        public ObserverId ObserverId = default!;
+        public ReactorState StateBeforeRemoval = default!;
         public ObserverRemovalResult Result = default!;
         public bool WasListedBeforeRemoval;
         public bool IsListedAfterRemoval;
 
-        public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
-        public override IEnumerable<Type> Reactors => [typeof(ReactorWithoutDelay)];
-
-        protected override void ConfigureServices(IServiceCollection services)
-        {
-            Reactor = new();
-            services.AddSingleton(Reactor);
-        }
-
         async Task Because()
         {
-            var reactor = EventStore.Reactors.GetHandlerFor<ReactorWithoutDelay>();
-            await reactor.WaitTillActive();
-            ObserverId = reactor.Id.Value;
-
             WasListedBeforeRemoval = await IsListed();
 
-            // Stands in for the application that declared the reactor being shut down and never coming back. The
-            // kernel sees the subscription end; nothing re-declares the observer, so its records are all that is left.
-            await EventStore.Connection.Lifecycle.Disconnected();
-            await EventStore.Reactors.WaitForState<ReactorWithoutDelay>(ObserverRunningState.Disconnected, TimeSpanFactory.FromSeconds(30));
+            // Dispose the independently owned client and its subscription. Query only through management afterward:
+            // a lifecycle disconnect followed by a query through the owner reconnects and re-registers its reactor.
+            DisposeOwner();
+            StateBeforeRemoval = await _managementHandler.WaitForStateAndGetState(ObserverRunningState.Disconnected, TimeSpanFactory.FromSeconds(30));
+            StateBeforeRemoval.IsSubscribed.ShouldBeFalse();
 
             Result = await EventStore.Observers.Remove(ObserverId);
             IsListedAfterRemoval = await IsListed();
         }
-
-        async Task<bool> IsListed()
-        {
-            var observers = await EventStore.Observers.GetAll();
-            return observers.Any(observer => observer.Id == ObserverId);
-        }
     }
 
     [Fact] void should_have_listed_the_observer_before_removing_it() => Context.WasListedBeforeRemoval.ShouldBeTrue();
+
+    [Fact] void should_have_ended_the_subscription() => Context.StateBeforeRemoval.IsSubscribed.ShouldBeFalse();
 
     [Fact] void should_remove_the_observer() => Context.Result.Outcome.ShouldEqual(ObserverRemovalOutcome.Removed);
 
