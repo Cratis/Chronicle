@@ -14,7 +14,6 @@ public class and_method_is_not_dispatchable : given.a_reducer_method_analyzer
     [InlineData("Task<Model>", "KnownEvent @event, Model current, string context", DiagnosticIds.ReducerMethodSignatureMustMatchAllowed)]
     [InlineData("void", "KnownEvent @event, Model current", DiagnosticIds.ReducerMethodSignatureMustMatchAllowed)]
     [InlineData("Model", "KnownEvent @event", DiagnosticIds.ReducerMethodSignatureMustMatchAllowed)]
-    [InlineData("static Model", "KnownEvent @event, Model current", DiagnosticIds.ReducerMethodSignatureMustMatchAllowed)]
     [InlineData("Model", "KnownEvent @event, ref Model current", DiagnosticIds.ReducerMethodSignatureMustMatchAllowed)]
     public Task should_report_skipped_shape(string returnType, string parameters, string diagnosticId)
     {

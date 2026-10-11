@@ -41,12 +41,13 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
         context.EnableConcurrentExecution();
         context.RegisterCompilationStartAction(start =>
         {
-            var eventTypes = GetTypes(start.Compilation.GlobalNamespace).Where(HasEventTypeAttribute).ToImmutableArray();
+            var eventTypes = new Lazy<ImmutableArray<INamedTypeSymbol>>(() =>
+                GetTypes(start.Compilation.GlobalNamespace).Where(HasEventTypeAttribute).ToImmutableArray());
             start.RegisterSymbolAction(symbol => AnalyzeMethod(symbol, eventTypes), SymbolKind.Method);
         });
     }
 
-    static void AnalyzeMethod(SymbolAnalysisContext context, ImmutableArray<INamedTypeSymbol> eventTypes)
+    static void AnalyzeMethod(SymbolAnalysisContext context, Lazy<ImmutableArray<INamedTypeSymbol>> eventTypes)
     {
         var methodSymbol = (IMethodSymbol)context.Symbol;
 
@@ -56,8 +57,8 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // Skip special methods (constructors, property accessors, etc.)
-        if (methodSymbol.MethodKind != MethodKind.Ordinary)
+        // Non-public and static methods can be ordinary helpers, not intended reducer methods.
+        if (!IsPublicInstanceMethod(methodSymbol))
         {
             return;
         }
@@ -93,7 +94,10 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
             .TypeArguments.FirstOrDefault();
     }
 
-    static bool LooksLikeReducerMethod(IMethodSymbol method, ITypeSymbol readModel, ImmutableArray<INamedTypeSymbol> eventTypes, Compilation compilation)
+    static bool IsPublicInstanceMethod(IMethodSymbol method) =>
+        method is { MethodKind: MethodKind.Ordinary, IsStatic: false, DeclaredAccessibility: Accessibility.Public };
+
+    static bool LooksLikeReducerMethod(IMethodSymbol method, ITypeSymbol readModel, Lazy<ImmutableArray<INamedTypeSymbol>> eventTypes, Compilation compilation)
     {
         var parameters = method.Parameters;
         if (parameters.Length == 0)
@@ -127,15 +131,19 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
         parameters.Length == 2 ||
         SymbolEqualityComparer.Default.Equals(parameters[2].Type, compilation.GetTypeByMetadataName(WellKnownTypes.EventContextName));
 
-    static bool IsEventType(ITypeSymbol type, ImmutableArray<INamedTypeSymbol> eventTypes, Compilation compilation) =>
+    static bool IsEventType(ITypeSymbol type, Lazy<ImmutableArray<INamedTypeSymbol>> eventTypes, Compilation compilation) =>
         type.SpecialType != SpecialType.System_Object &&
-        (HasEventTypeAttribute(type) || eventTypes.Any(eventType => compilation.ClassifyCommonConversion(eventType, type) is { IsImplicit: true, IsUserDefined: false }));
+        (HasEventTypeAttribute(type) || IsAssignableEventType(type, eventTypes, compilation));
+
+    static bool IsAssignableEventType(ITypeSymbol type, Lazy<ImmutableArray<INamedTypeSymbol>> eventTypes, Compilation compilation) =>
+        type is { IsSealed: false, TypeKind: TypeKind.Interface or TypeKind.Class } &&
+        eventTypes.Value.Any(eventType => compilation.ClassifyCommonConversion(eventType, type) is { IsImplicit: true, IsUserDefined: false });
 
     static bool HasEventTypeAttribute(ITypeSymbol type)
     {
         for (var current = type; current is not null; current = current.BaseType)
         {
-            if (WellKnownTypes.HasEventTypeAttribute(current))
+            if (HasEventTypeMarker(current))
             {
                 return true;
             }
@@ -143,6 +151,9 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
 
         return false;
     }
+
+    static bool HasEventTypeMarker(ITypeSymbol type) =>
+        WellKnownTypes.HasEventTypeAttribute(type) || WellKnownTypes.HasEventTypeGenerationForAttribute(type);
 
     static IEnumerable<INamedTypeSymbol> GetTypes(INamespaceOrTypeSymbol symbol)
     {

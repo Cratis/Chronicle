@@ -23,6 +23,8 @@ public class a_reducer_method_analyzer : Specification
             "",
             "namespace Cratis.Chronicle.Events",
             "{",
+            "    [AttributeUsage(AttributeTargets.Class)]",
+            "    public sealed class EventTypeGenerationForAttribute<TEventType>(uint generation) : Attribute where TEventType : class {}",
             "    public sealed class EventContext",
             "    {",
             "    }",

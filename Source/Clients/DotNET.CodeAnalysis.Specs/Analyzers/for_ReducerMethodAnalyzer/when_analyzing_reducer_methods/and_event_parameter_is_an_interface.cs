@@ -15,7 +15,7 @@ public class and_event_parameter_is_an_interface : given.a_reducer_method_analyz
     public class Model {}
     public class Reducer : Cratis.Chronicle.Reducers.IReducerFor<Model>
     {
-        private Model Reduce(IKnownEvent @event, Model current) => current;
+        public Model Reduce(IKnownEvent @event, Model current) => current;
     }
     """));
 

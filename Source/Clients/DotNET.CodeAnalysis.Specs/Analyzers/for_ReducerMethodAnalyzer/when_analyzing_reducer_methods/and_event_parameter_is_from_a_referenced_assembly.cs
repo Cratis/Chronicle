@@ -20,6 +20,9 @@ public class and_event_parameter_is_from_a_referenced_assembly : given.a_reducer
         [EventType] public class ImportedEvent : IImportedEvent {}
         [EventType] public class BaseEvent {}
         public class InheritedEvent : BaseEvent {}
+        public interface IImportedPreviousEvent {}
+        [Cratis.Chronicle.Events.EventTypeGenerationFor<ImportedEvent>(1)]
+        public class ImportedPreviousEvent : IImportedPreviousEvent {}
         """)).GetCompilationAsync();
         await using var assembly = new MemoryStream();
         events!.WithAssemblyName("ReferencedEvents").Emit(assembly).Success.ShouldBeTrue();
@@ -30,6 +33,8 @@ public class and_event_parameter_is_from_a_referenced_assembly : given.a_reducer
         {
             public Model Reduce(IImportedEvent @event, Model? current) => current ?? new Model();
             public Model Reduce(InheritedEvent @event, Model? current) => current ?? new Model();
+            public Model Reduce(ImportedPreviousEvent @event, Model? current) => current ?? new Model();
+            public Model Reduce(IImportedPreviousEvent @event, Model? current) => current ?? new Model();
         }
         """)).AddMetadataReference(reference);
         _compilation = (await project.GetCompilationAsync())!;
