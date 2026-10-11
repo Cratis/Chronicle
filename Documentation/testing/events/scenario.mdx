@@ -92,9 +92,15 @@ returns an empty list) to disable constraints. This differs from the older const
 accept a constraint provider, where `null` means no constraints. Existing constructors continue
 using the default shared provider.
 
+To select an identity while keeping automatic discovery, use `new EventScenario(eventSequenceId, eventStoreName, namespaceName)`. For run-specific artifacts, use `new EventScenario(defaults, eventSequenceId, eventStoreName, namespaceName)`. Neither overload takes a constraint provider; the existing explicit-provider overload still treats `null` as no constraints.
+
+## Event generations
+
+Discovered event migrations run on append. An event appended in an older generation retains its original content and also stores the migrated generations. This does not determine which generation an ordinary read delivers. Migrators use the service provider supplied to `Defaults`, including their constructor dependencies.
+
 ## Isolation
 
-Create a **new `EventScenario` instance per test** to keep tests isolated. The in-memory store accumulates state across calls on the same instance. Each instance starts with an empty event log and sequence number zero.
+Create a **new `EventScenario` instance per test** to keep tests isolated. The in-memory store accumulates state across calls on the same instance. Each instance starts with an empty event log and sequence number zero. Dispose the scenario after the specification to release its in-memory resources.
 
 If your specs supply event types or constraints at runtime, construct `new Defaults(artifactsProvider)`
 and pass it to `new EventScenario(defaults)`. This uses that registry for event serialization and

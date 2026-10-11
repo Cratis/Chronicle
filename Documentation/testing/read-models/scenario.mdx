@@ -181,11 +181,13 @@ These are substituted for every scenario, whatever your read model looks like:
 | Layer | What runs instead |
 |-------|-------------------|
 | The read model sink | An in-memory sink. Documents are held as objects and round-tripped through JSON, never through the encoding a real store uses. |
-| Storage and the observer lifecycle | Nothing at all. There are no observers, no partitions, no failed-partition state, and no replay or rewind. |
+| Storage and the observer lifecycle | Chronicle's production in-memory storage holds seeded events, including their original and migrated generations and content hashes. No observers run: there is no partition scheduling, replay or rewind. |
 | The event context | The sequence number is the event's position in what you seeded, and `Occurred` is a fixed base plus one tick per event. A reducer gets a context built differently again, with no `Occurred`. |
 | The document key mapping | The `_id` ↔ identifier-property mapping a store performs is applied in C# instead. |
 | The read model definition | Identifier, container and display name come straight off the CLR type and there are no indexes, where a deployed Chronicle uses your naming policy and the indexes you declared. |
-| The client read surface | `scenario.ReadModels` is the production client surface; its read side wants a running Chronicle and refuses rather than answering. Read what the scenario materialized through `Instance`, `Instances` or `InstanceForEventSourceId`. |
+| The client read surface | `scenario.ReadModels` serves explicitly seeded instances and delegates other reads to in-process services backed by the same store. Those reads do not automatically return the processor's materialized result. Read it through `Instance`, `Instances` or `InstanceForEventSourceId`. |
+
+Old-generation events are migrated through the kernel's event-type migrations before projection or reduction. Re-reading `Instance` after collecting more events folds the accumulated input again without duplicating its stored rows.
 
 Four more are substituted only for certain shapes — and because the harness can see which of those shapes your read model has, it tells you.
 
