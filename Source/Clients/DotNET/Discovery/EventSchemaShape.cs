@@ -22,83 +22,9 @@ internal static class EventSchemaShape
             return null;
         }
 
-        var shape = Normalize(root, root, 0);
+        var shape = new Normalizer(root).Normalize(root, 0);
 
         return shape?["properties"] is JsonObject { Count: > 0 } ? shape.ToJsonString() : null;
-    }
-
-    static JsonObject? Normalize(JsonObject node, JsonObject root, int depth)
-    {
-        // Cyclic or unresolved references cannot establish an identical shape safely.
-        if (depth > 64)
-        {
-            return null;
-        }
-
-        if (node["$ref"] is JsonValue reference)
-        {
-            var target = Resolve(reference.GetValue<string>(), root);
-            return target is null ? null : Normalize(target, root, depth + 1);
-        }
-
-        var alternatives = node["anyOf"] as JsonArray ?? node["oneOf"] as JsonArray;
-        if (alternatives is not null)
-        {
-            var variants = alternatives.OfType<JsonObject>().Where(_ => _["type"]?.ToJsonString() != "\"null\"")
-                .Select(_ => Normalize(_, root, depth + 1)).ToArray();
-            if (variants.Any(_ => _ is null) || variants.Length == 0)
-            {
-                return null;
-            }
-
-            return variants.Length == 1 ? variants[0] : new JsonObject
-            {
-                ["variants"] = new JsonArray(variants.Select(_ => _!.ToJsonString()).Distinct().Order(StringComparer.Ordinal).Select(_ => (JsonNode?)JsonValue.Create(_)).ToArray())
-            };
-        }
-
-        var types = TypesOf(node).ToArray();
-        var result = new JsonObject { ["type"] = string.Join('|', types) };
-        if (node["properties"] is JsonObject properties)
-        {
-            var normalized = new JsonObject();
-            foreach (var property in properties.OrderBy(_ => _.Key, StringComparer.Ordinal))
-            {
-                var shape = property.Value is JsonObject value ? Normalize(value, root, depth + 1) : null;
-                if (shape is null)
-                {
-                    return null;
-                }
-
-                normalized[property.Key] = shape;
-            }
-
-            result["properties"] = normalized;
-        }
-
-        if (node["items"] is JsonObject items)
-        {
-            var shape = Normalize(items, root, depth + 1);
-            if (shape is null)
-            {
-                return null;
-            }
-
-            result["items"] = shape;
-        }
-
-        if (node["additionalProperties"] is JsonObject additional)
-        {
-            var shape = Normalize(additional, root, depth + 1);
-            if (shape is null)
-            {
-                return null;
-            }
-
-            result["additionalProperties"] = shape;
-        }
-
-        return result;
     }
 
     static IEnumerable<string> TypesOf(JsonObject node)
@@ -127,5 +53,115 @@ internal static class EventSchemaShape
         }
 
         return target as JsonObject;
+    }
+
+    /// <summary>
+    /// Normalizes schema nodes relative to one root schema.
+    /// </summary>
+    /// <param name="root">The root schema that references resolve against.</param>
+    sealed class Normalizer(JsonObject root)
+    {
+        const int MaximumDepth = 64;
+
+        /// <summary>
+        /// Normalizes a schema node.
+        /// </summary>
+        /// <param name="node">The node to normalize.</param>
+        /// <param name="depth">The current depth.</param>
+        /// <returns>The normalized node, or null when comparison is unsafe.</returns>
+        public JsonObject? Normalize(JsonObject node, int depth)
+        {
+            // Cyclic or unresolved references cannot establish an identical shape safely.
+            if (depth > MaximumDepth)
+            {
+                return null;
+            }
+
+            if (node["$ref"] is JsonValue reference)
+            {
+                return NormalizeReference(reference.GetValue<string>(), depth);
+            }
+
+            if ((node["anyOf"] as JsonArray ?? node["oneOf"] as JsonArray) is JsonArray alternatives)
+            {
+                return NormalizeAlternatives(alternatives, depth);
+            }
+
+            return NormalizeNode(node, depth);
+        }
+
+        JsonObject? NormalizeReference(string reference, int depth)
+        {
+            var target = Resolve(reference, root);
+            return target is null ? null : Normalize(target, depth + 1);
+        }
+
+        JsonObject? NormalizeNode(JsonObject node, int depth)
+        {
+            var result = new JsonObject { ["type"] = string.Join('|', TypesOf(node)) };
+            string[] children = ["items", "additionalProperties"];
+            var complete = TryAddProperties(node, result, depth) && children.All(_ => TryAddChild(node, _, result, depth));
+            return complete ? result : null;
+        }
+
+        JsonObject? NormalizeAlternatives(JsonArray alternatives, int depth)
+        {
+            var variants = alternatives.OfType<JsonObject>()
+                .Where(_ => _["type"]?.ToJsonString() != "\"null\"")
+                .Select(_ => Normalize(_, depth + 1))
+                .ToArray();
+            if (variants.Length == 0 || variants.Any(_ => _ is null))
+            {
+                return null;
+            }
+
+            if (variants.Length == 1)
+            {
+                return variants[0];
+            }
+
+            var distinct = variants.Select(_ => _!.ToJsonString()).Distinct().Order(StringComparer.Ordinal);
+            return new JsonObject { ["variants"] = new JsonArray(distinct.Select(_ => (JsonNode?)JsonValue.Create(_)).ToArray()) };
+        }
+
+        bool TryAddProperties(JsonObject node, JsonObject result, int depth)
+        {
+            if (node["properties"] is not JsonObject properties)
+            {
+                return true;
+            }
+
+            var normalized = new JsonObject();
+            foreach (var property in properties.OrderBy(_ => _.Key, StringComparer.Ordinal))
+            {
+                var shape = property.Value is JsonObject value ? Normalize(value, depth + 1) : null;
+                if (shape is null)
+                {
+                    return false;
+                }
+
+                normalized[property.Key] = shape;
+            }
+
+            result["properties"] = normalized;
+            return true;
+        }
+
+        bool TryAddChild(JsonObject node, string key, JsonObject result, int depth)
+        {
+            if (node[key] is not JsonObject child)
+            {
+                return true;
+            }
+
+            var shape = Normalize(child, depth + 1);
+            if (shape is null)
+            {
+                return false;
+            }
+
+            result[key] = shape;
+            return true;
+        }
     }
 }
