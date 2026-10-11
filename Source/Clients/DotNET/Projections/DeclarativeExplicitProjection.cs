@@ -23,6 +23,9 @@ internal sealed class DeclarativeExplicitProjection<TReadModel>(Action<IProjecti
     public bool IsModelBound => false;
 
     /// <inheritdoc/>
+    public string? ContainerNameOverride { get; private set; }
+
+    /// <inheritdoc/>
     /// <exception cref="VariantReadModelsCannotBeRegisteredExplicitly">Thrown when the definition declares the read model a variant.</exception>
     public ProjectionDefinition Build(ExplicitProjectionContext context)
     {
@@ -41,6 +44,7 @@ internal sealed class DeclarativeExplicitProjection<TReadModel>(Action<IProjecti
             throw new VariantReadModelsCannotBeRegisteredExplicitly(typeof(TReadModel));
         }
 
+        ContainerNameOverride = builder.ContainerNameOverride;
         return builder.Build();
     }
 }

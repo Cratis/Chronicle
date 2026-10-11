@@ -26,6 +26,9 @@ internal sealed class ModelBoundExplicitProjection(Type readModelType) : IExplic
     public bool IsModelBound => true;
 
     /// <inheritdoc/>
+    public string? ContainerNameOverride => null;
+
+    /// <inheritdoc/>
     /// <exception cref="ReadModelIsNotModelBound">Thrown when the read model carries no model-bound projection attributes.</exception>
     /// <exception cref="VariantReadModelsCannotBeRegisteredExplicitly">Thrown when the read model is a variant or a global handler of one.</exception>
     public ProjectionDefinition Build(ExplicitProjectionContext context)
