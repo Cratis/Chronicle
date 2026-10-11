@@ -57,24 +57,7 @@ public sealed class WebhookRegistrar(
         webhooks = webhooks.ToArray();
 
         // Validate the entire request before appending any registration changes.
-        foreach (var webhook in webhooks.Where(_ => _.GenerationDelivery == Contracts.Observation.EventGenerationDelivery.Pinned))
-        {
-            var pins = webhook.EventTypes.Select(_ => _.ToChronicle()).ToArray();
-            var duplicate = pins.GroupBy(_ => _.Id).FirstOrDefault(_ => _.Select(pin => pin.Generation).Distinct().Count() > 1);
-            if (duplicate is not null)
-            {
-                throw new ObserverPinsMultipleGenerationsOfEventType(duplicate.Key);
-            }
-
-            var eventTypes = storage.GetEventStore(eventStore).EventTypes;
-            foreach (var pin in pins)
-            {
-                if (!await eventTypes.HasFor(pin.Id, pin.Generation) || !(await eventTypes.GetDefinition(pin.Id)).Generations.Any(_ => _.Generation == pin.Generation))
-                {
-                    throw new EventTypeGenerationNotRegisteredForObserver(pin);
-                }
-            }
-        }
+        await ValidatePins(eventStore, webhooks);
 
         var eventSequence = grainFactory.GetSystemEventSequence(eventStore);
         var webhooksManager = grainFactory.GetGrain<Chronicle.Observation.Webhooks.IWebhooks>(eventStore);
@@ -114,14 +97,7 @@ public sealed class WebhookRegistrar(
             {
                 var changedProperties = compareResult.ChangedProperties;
 
-                if (changedProperties.GenerationDeliveryChanged)
-                {
-                    await Append(eventSequence, webhook.Identifier, new GenerationDeliverySetForWebhook(encryptedWebhook.GenerationDelivery, encryptedWebhook.EventTypes));
-                }
-                else if (changedProperties.EventTypesChanged)
-                {
-                    await Append(eventSequence, webhook.Identifier, new EventTypesSetForWebhook(encryptedWebhook.EventTypes));
-                }
+                await AppendGenerationChanges(eventSequence, encryptedWebhook, changedProperties);
 
                 if (changedProperties.TargetUrlChanged)
                 {
@@ -254,6 +230,48 @@ public sealed class WebhookRegistrar(
             Success = false,
             ErrorMessage = exception?.Message ?? "Unable to connect to webhook endpoint."
         };
+    }
+
+    async Task ValidatePins(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
+    {
+        foreach (var webhook in webhooks.Where(_ => _.GenerationDelivery == Contracts.Observation.EventGenerationDelivery.Pinned))
+        {
+            await ValidatePins(eventStore, webhook);
+        }
+    }
+
+    async Task ValidatePins(EventStoreName eventStore, WebhookDefinition webhook)
+    {
+        var pins = webhook.EventTypes.Select(_ => _.ToChronicle()).ToArray();
+        var duplicate = pins.GroupBy(_ => _.Id).FirstOrDefault(_ => _.Select(pin => pin.Generation).Distinct().Count() > 1);
+        if (duplicate is not null)
+        {
+            throw new ObserverPinsMultipleGenerationsOfEventType(duplicate.Key);
+        }
+
+        var eventTypes = storage.GetEventStore(eventStore).EventTypes;
+        foreach (var pin in pins)
+        {
+            if (!await eventTypes.HasFor(pin.Id, pin.Generation) || !(await eventTypes.GetDefinition(pin.Id)).Generations.Any(_ => _.Generation == pin.Generation))
+            {
+                throw new EventTypeGenerationNotRegisteredForObserver(pin);
+            }
+        }
+    }
+
+    async Task AppendGenerationChanges(
+        IEventSequence eventSequence,
+        Concepts.Observation.Webhooks.WebhookDefinition webhook,
+        WebhookDefinitionChangedProperties changedProperties)
+    {
+        if (changedProperties.GenerationDeliveryChanged)
+        {
+            await Append(eventSequence, webhook.Identifier, new GenerationDeliverySetForWebhook(webhook.GenerationDelivery, webhook.EventTypes));
+        }
+        else if (changedProperties.EventTypesChanged)
+        {
+            await Append(eventSequence, webhook.Identifier, new EventTypesSetForWebhook(webhook.EventTypes));
+        }
     }
 
     Concepts.Observation.Webhooks.WebhookDefinition EncryptWebhookSecrets(Concepts.Observation.Webhooks.WebhookDefinition definition)

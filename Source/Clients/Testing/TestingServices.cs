@@ -148,17 +148,7 @@ internal sealed class TestingServices : IServices
                     services.AddSingleton(new KernelEventTypeRegistrar(grainFactory));
                     services.AddSingleton<KernelCore::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.ILanguageService>(new KernelCaptureLanguageService());
                     services.AddSingleton<KernelCore::Cratis.Chronicle.Captures.Engine.ICaptureValidator>(new KernelCaptureValidator(storage));
-                    services.AddSingleton(new KernelWebhookRegistrar(
-                        grainFactory,
-                        new KernelWebhookComparer(
-                            storage,
-                            new ObjectComparer(),
-                            NullLogger<KernelWebhookComparer>.Instance),
-                        null!,
-                        null!,
-                        new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
-                        Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
-                        storage));
+                    services.AddSingleton(CreateWebhookRegistrar(grainFactory, storage, jsonSerializerOptions));
 
                     // AddCratisArcCore discovers every ICommandExecutionScope across the whole process, not just the
                     // ones this pipeline cares about - an Arc.Chronicle consumer's transactional command scope is
@@ -395,4 +385,17 @@ internal sealed class TestingServices : IServices
 
     /// <inheritdoc/>
     public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
+
+    static KernelWebhookRegistrar CreateWebhookRegistrar(IGrainFactory grainFactory, IStorage storage, JsonSerializerOptions jsonSerializerOptions) =>
+        new(
+            grainFactory,
+            new KernelWebhookComparer(
+                storage,
+                new ObjectComparer(),
+                NullLogger<KernelWebhookComparer>.Instance),
+            null!,
+            null!,
+            new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
+            Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
+            storage);
 }
