@@ -77,15 +77,10 @@ internal static class ProjectionPropertyPaths
     {
         var current = (Expression?)UnwrapConversion(expression.Body);
         var segments = new List<string>();
-        if (role == ProjectionPathRole.Source && current is MethodCallExpression methodCall &&
-            methodCall.Arguments.Count == 1 &&
-            methodCall.Method.IsStatic &&
-            methodCall.Method.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), inherit: false) &&
-            UnwrapConversion(methodCall.Arguments[0]) is MemberExpression &&
-            DerivedPropertyFunctions.TryGet(methodCall.Method.Name, out var function))
+        if (GetDerivedCall(current, role) is { } derivedCall)
         {
-            segments.Add($"{function.Name}()");
-            current = UnwrapConversion(methodCall.Arguments[0]);
+            segments.Add($"{derivedCall.Name}()");
+            current = UnwrapConversion(derivedCall.MethodCall.Arguments[0]);
         }
 
         while (current is MemberExpression member)
@@ -98,6 +93,46 @@ internal static class ProjectionPropertyPaths
 
         isMemberPath = segments.Count > 0 && current is ParameterExpression;
         return new PropertyPath(string.Join('.', segments));
+    }
+
+    static (string Name, MethodCallExpression MethodCall)? GetDerivedCall(Expression? expression, ProjectionPathRole role)
+    {
+        if (role != ProjectionPathRole.Source)
+        {
+            return null;
+        }
+
+        if (expression is not MethodCallExpression methodCall)
+        {
+            return null;
+        }
+
+        if (methodCall.Arguments.Count != 1)
+        {
+            return null;
+        }
+
+        if (!methodCall.Method.IsStatic)
+        {
+            return null;
+        }
+
+        if (!methodCall.Method.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), inherit: false))
+        {
+            return null;
+        }
+
+        if (UnwrapConversion(methodCall.Arguments[0]) is not MemberExpression)
+        {
+            return null;
+        }
+
+        if (!DerivedPropertyFunctions.TryGet(methodCall.Method.Name, out var function))
+        {
+            return null;
+        }
+
+        return (function.Name, methodCall);
     }
 
     static Expression UnwrapConversion(Expression expression) =>
