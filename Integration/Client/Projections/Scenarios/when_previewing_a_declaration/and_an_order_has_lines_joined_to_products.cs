@@ -62,7 +62,7 @@ public class and_an_order_has_lines_joined_to_products(context context) : Given<
         public Guid Mug { get; } = Guid.NewGuid();
         public IEnumerable<string> SaveErrors { get; private set; } = [];
         public PreviewedOrder Saved { get; private set; }
-        public PreviewedOrder[] Previewed { get; private set; } = [];
+        public IReadOnlyList<PreviewedOrder> Previewed { get; private set; } = [];
 
         public override IEnumerable<Type> EventTypes =>
         [
@@ -123,7 +123,7 @@ public class and_an_order_has_lines_joined_to_products(context context) : Given<
     }
 
     [Fact] void should_save_the_declaration() => Context.SaveErrors.ShouldBeEmpty();
-    [Fact] void should_preview_only_the_order() => Context.Previewed.Length.ShouldEqual(1);
+    [Fact] void should_preview_only_the_order() => Context.Previewed.Count.ShouldEqual(1);
     [Fact] void should_preview_the_saved_customer_name() => Context.Previewed[0].CustomerName.ShouldEqual(Context.Saved.CustomerName);
     [Fact] void should_preview_the_saved_shipping_state() => Context.Previewed[0].IsShipped.ShouldEqual(Context.Saved.IsShipped);
     [Fact] void should_preview_the_saved_item_count() => Context.Previewed[0].ItemCount.ShouldEqual(Context.Saved.ItemCount);

@@ -26,7 +26,7 @@ namespace Cratis.Chronicle.Projections;
 /// and whether a keyed update targets a child that already exists. A saved projection answers from what it has
 /// persisted. Processing in memory has to answer from the read models it has built so far, or a join event
 /// becomes a read model of its own and an update to an existing child cannot find it (Cratis/Chronicle#4727).
-/// The sink never writes: the caller decides what to keep through <see cref="Set"/> and <see cref="Remove"/>.
+/// The sink never writes: the caller decides what to keep through <see cref="Set"/> and <see cref="Remove(string)"/>.
 /// </remarks>
 internal sealed class PreviewSink : ISink
 {
@@ -174,6 +174,10 @@ internal sealed class PreviewSink : ISink
     /// identifier as another type, such as a <see cref="Guid"/>. Children are matched by equality, so the join would
     /// otherwise miss the child it is for and add a new one. The persistent sinks convert it through the schema.
     /// </remarks>
+    /// <param name="joined">The join to rebind.</param>
+    /// <param name="child">The <see cref="ArrayIndexer"/> of the child the join is for.</param>
+    /// <param name="storedIdentifier">The identifier of the child as the read model stores it.</param>
+    /// <returns>The join bound to the stored identifier.</returns>
     static Joined RebindChild(Joined joined, ArrayIndexer child, object storedIdentifier)
     {
         var rebound = child with { Identifier = storedIdentifier };

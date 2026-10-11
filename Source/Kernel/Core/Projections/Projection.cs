@@ -12,7 +12,6 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Configuration;
-using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.States;
@@ -196,7 +195,7 @@ public class Projection(
     static bool ShouldMaterializeReadModel(
         bool isMaterialized,
         Key key,
-        IReadOnlyCollection<Change> changes,
+        Change[] changes,
         bool createsInstance)
     {
         if (changes.Any(change => change is Removed))
@@ -211,7 +210,7 @@ public class Projection(
 
         // The materializing pipeline writes the instance for an event that creates it even when the event changes
         // nothing, so an event without properties still brings its read model into existence.
-        if (changes.Count == 0)
+        if (changes.Length == 0)
         {
             return createsInstance;
         }
@@ -225,6 +224,12 @@ public class Projection(
         var isRootLevelJoin = hasJoined && !key.ArrayIndexers.All.Any();
 
         return !onlyPropertyUpdatesAlongsideJoin && !isRootLevelJoin;
+    }
+
+    static ExpandoObject WithIdentifier(PreviewReadModel readModel, string identifierPropertyName)
+    {
+        ((IDictionary<string, object?>)readModel.State)[identifierPropertyName] = readModel.KeyValue;
+        return readModel.State;
     }
 
     async Task<ExpandoObject> ProjectForSingleReadModel(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events)
@@ -307,12 +312,6 @@ public class Projection(
         })];
     }
 
-    static ExpandoObject WithIdentifier(PreviewReadModel readModel, string identifierPropertyName)
-    {
-        ((IDictionary<string, object?>)readModel.State)[identifierPropertyName] = readModel.KeyValue;
-        return readModel.State;
-    }
-
     /// <summary>
     /// Projects events into read models held in memory, in the order the events happened.
     /// </summary>
@@ -321,6 +320,10 @@ public class Projection(
     /// so a join event reaches the read models holding the child it refers to and a keyed update finds the child it
     /// updates.
     /// </remarks>
+    /// <param name="projection">The projection to project with.</param>
+    /// <param name="eventSequenceStorage">The storage of the event sequence the events come from.</param>
+    /// <param name="events">The events to project.</param>
+    /// <returns>The <see cref="PreviewSink"/> holding the read models built.</returns>
     async Task<PreviewSink> ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, IEnumerable<AppendedEvent> events)
     {
         var sink = new PreviewSink();
