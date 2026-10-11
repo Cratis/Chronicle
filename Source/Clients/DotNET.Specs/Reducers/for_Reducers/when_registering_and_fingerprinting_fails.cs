@@ -44,7 +44,7 @@ public class when_registering_and_fingerprinting_fails : given.all_dependencies
         handler.ReadModelType.Returns(readModelType);
         handler.Id.Returns((ReducerId)id);
         handler.EventSequenceId.Returns(EventSequences.EventSequenceId.Log);
-        handler.EventTypes.Returns([]);
+        handler.EventTypes.Returns([new Events.EventType("spec-event", 1)]);
         handler.IsActive.Returns(true);
         _handlersByModelType[readModelType] = handler;
     }

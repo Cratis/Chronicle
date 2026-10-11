@@ -118,7 +118,7 @@ public record EventContext(
     /// <param name="eventStreamId"><see cref="EventStreamId"/> to create from.</param>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event as persisted in the event sequence.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
-    /// <param name="occurred">Optional occurred.</param>
+    /// <param name="occurred">Optional occurrence time. Defaults to <see cref="DateTimeOffset.UtcNow"/> when omitted.</param>
     /// <returns>A new <see cref="EventContext"/>.</returns>
     public static EventContext From(
         EventStoreName eventStore,
@@ -139,7 +139,7 @@ public record EventContext(
             eventStreamType,
             eventStreamId,
             sequenceNumber,
-            occurred ?? DateTimeOffset.Now,
+            occurred ?? DateTimeOffset.UtcNow,
             eventStore,
             @namespace,
             correlationId,

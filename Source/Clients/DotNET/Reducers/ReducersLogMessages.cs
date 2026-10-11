@@ -16,6 +16,9 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Trace, "Registering reducer with id '{ReducerId}', for event sequence '{EventSequenceId}'")]
     internal static partial void RegisterReducer(this ILogger<Reducers> logger, ReducerId reducerId, EventSequenceId eventSequenceId);
 
+    [LoggerMessage(LogLevel.Warning, "Reducer '{ReducerType}' has no dispatchable methods and will not be registered with the kernel. Skipped public methods: {SkippedMethods}")]
+    internal static partial void ReducerHasNoDispatchableMethods(this ILogger<Reducers> logger, Type reducerType, string skippedMethods);
+
     [LoggerMessage(LogLevel.Warning, "Could not fingerprint reducer '{ReducerType}'; using a conservative fingerprint that replays when the reducer's assembly changes")]
     internal static partial void ReducerFingerprintFailed(this ILogger<Reducers> logger, Type reducerType, Exception exception);
 

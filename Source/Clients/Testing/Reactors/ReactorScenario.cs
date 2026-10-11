@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using System.Runtime.ExceptionServices;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
@@ -21,7 +22,11 @@ namespace Cratis.Chronicle.Testing.Reactors;
 /// supplied <see cref="IServiceProvider"/>) and routes events directly through the <see cref="ReactorInvoker"/> — no
 /// Chronicle server, gRPC, or observer registration required. The reactor's constructor dependencies and any
 /// service-typed handler-method parameters are resolved from that provider; read-model handler parameters are
-/// materialized from read models seeded via <c language="csharp">Given.ForEventSourceId(...).ReadModel(...)</c>.
+/// resolved from read models seeded via <c language="csharp">Given.ForEventSourceId(...).ReadModel(...)</c>.
+/// Given events do not build read models, including passive read models. An unseeded read-model parameter throws
+/// <see cref="ReadModelNotSeededForReactorScenario"/> unless absence was declared with
+/// <c language="csharp">Given.ForEventSourceId(...).NoReadModel&lt;TReadModel&gt;()</c>. This guard does not apply
+/// when an explicit event store other than <see cref="EventStoreForTesting"/> is supplied.
 /// </para>
 /// <para>
 /// Usage:
@@ -44,6 +49,7 @@ public class ReactorScenario<TReactor> : IDisposable
     readonly IServiceProvider? _explicitServiceProvider;
     readonly IEventTypes _eventTypes;
     readonly List<Action<EventStoreForTesting>> _readModelSeeds = [];
+    readonly HashSet<(Type ReadModelType, string Key)> _absentReadModels = [];
     readonly RecordingReactorSideEffectHandlers _recordingHandlers;
     IServiceProvider? _serviceProvider;
     IEventStore? _eventStore;
@@ -233,6 +239,15 @@ public class ReactorScenario<TReactor> : IDisposable
         _readModelSeeds.Add(store => store.RegisterReadModelInstance(eventSourceId, readModel));
 
     /// <summary>
+    /// Declares that a read model is deliberately absent for a key.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="eventSourceId">The key for which absence is expected.</param>
+    internal void DeclareNoReadModel<TReadModel>(EventSourceId eventSourceId)
+        where TReadModel : class =>
+        _absentReadModels.Add((typeof(TReadModel), eventSourceId.Value));
+
+    /// <summary>
     /// Invokes the reactor with the provided events for a specific event source.
     /// </summary>
     /// <remarks>
@@ -246,6 +261,7 @@ public class ReactorScenario<TReactor> : IDisposable
     /// <param name="eventStreamId">The event stream identifier for the input events.</param>
     /// <returns>A <see cref="Task"/> that completes when all matching events have been handled.</returns>
     /// <exception cref="CannotActivateReactorForScenario">Thrown when the reactor's dependencies cannot be resolved.</exception>
+    /// <exception cref="ReadModelNotSeededForReactorScenario">Thrown when a read-model parameter was neither seeded nor declared absent.</exception>
     internal async Task InvokeWith(
         EventSourceId eventSourceId,
         IEnumerable<object> events,
@@ -287,7 +303,7 @@ public class ReactorScenario<TReactor> : IDisposable
                 new EventSourceTypeValuesProvider(),
                 new SubjectValuesProvider()
             ])),
-            argumentsResolver: null,
+            argumentsResolver: new ScenarioReactorMethodArgumentsResolver(new ReactorMethodArgumentsResolver(), _absentReadModels),
             serviceProvider: serviceProvider);
 
         foreach (var @event in events)
@@ -319,7 +335,10 @@ public class ReactorScenario<TReactor> : IDisposable
             // matching what a spec author asserting the reactor's guard clearly expects (#3933).
             if (result.ExceptionResult.TryGetException(out var reactorException))
             {
-                ExceptionDispatchInfo.Capture(reactorException).Throw();
+                var handlerException = reactorException is TargetInvocationException { InnerException: { } inner }
+                    ? inner
+                    : reactorException;
+                ExceptionDispatchInfo.Capture(handlerException).Throw();
             }
         }
     }
