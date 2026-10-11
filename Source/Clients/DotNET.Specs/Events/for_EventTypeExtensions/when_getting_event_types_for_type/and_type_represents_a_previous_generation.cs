@@ -9,7 +9,7 @@ public class and_type_represents_a_previous_generation : Specification
 
     void Because() => _result = typeof(Previous).GetEventTypes([typeof(Previous), typeof(Current)]);
 
-    [Fact] void should_return_the_previous_generation_type() => _result.ShouldContainOnly(typeof(Previous));
+    [Fact] void should_not_expand_to_the_previous_generation_type() => _result.ShouldBeEmpty();
 
     [EventTypeGenerationFor<Current>(1)]
     record Previous(string Name);

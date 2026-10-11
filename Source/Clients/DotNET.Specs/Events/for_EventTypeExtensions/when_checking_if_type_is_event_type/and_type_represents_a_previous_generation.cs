@@ -9,7 +9,7 @@ public class and_type_represents_a_previous_generation : Specification
 
     void Because() => _result = typeof(Previous).IsEventType([]);
 
-    [Fact] void should_be_considered_an_event_type() => _result.ShouldBeTrue();
+    [Fact] void should_not_be_considered_an_event_type_without_registration() => _result.ShouldBeFalse();
 
     [EventTypeGenerationFor<Current>(1)]
     record Previous(string Name);

@@ -31,7 +31,7 @@ internal sealed class DeclarativeExplicitProjection<TReadModel>(Action<IProjecti
             typeof(TReadModel),
             context.NamingPolicy,
             context.EventTypes,
-            context.JsonSerializerOptions);
+            context.JsonSerializerOptions) { GenerationDelivery = context.GenerationDelivery };
         define(builder);
 
         // A variant is cross-wired with its siblings, which are only ever found together by discovery. An explicit

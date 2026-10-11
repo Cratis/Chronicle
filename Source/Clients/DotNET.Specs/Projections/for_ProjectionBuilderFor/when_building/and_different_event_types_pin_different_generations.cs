@@ -18,7 +18,9 @@ public class and_different_event_types_pin_different_generations : given.a_build
 
     void Because() => _definition = _builder.Build(EventGenerationDelivery.Pinned);
 
-    [Fact] void should_keep_the_first_events_pin() => _definition.From.Keys.Single().Generation.ShouldEqual(1U);
-    [Fact] void should_keep_the_other_events_pin() => _definition.Join.Keys.Single().Generation.ShouldEqual(2U);
+    [Fact] void should_pin_the_other_event_type() => _definition.From.Keys.Single().Id.ShouldEqual("Other");
+    [Fact] void should_keep_the_other_events_generation() => _definition.From.Keys.Single().Generation.ShouldEqual(1U);
+    [Fact] void should_pin_the_person_event_type() => _definition.Join.Keys.Single().Id.ShouldEqual("PinnedPerson");
+    [Fact] void should_keep_the_person_events_generation() => _definition.Join.Keys.Single().Generation.ShouldEqual(2U);
     [Fact] void should_opt_in_to_pinned_delivery() => _definition.GenerationDelivery.ShouldEqual(Contracts.Observation.EventGenerationDelivery.Pinned);
 }

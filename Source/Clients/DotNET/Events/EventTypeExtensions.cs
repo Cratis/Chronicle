@@ -44,7 +44,7 @@ public static class EventTypeExtensions
             return false;
         }
 
-        if (Attribute.IsDefined(type, typeof(EventTypeAttribute)) || Attribute.IsDefined(type, typeof(EventTypeGenerationForAttribute)))
+        if (Attribute.IsDefined(type, typeof(EventTypeAttribute)))
         {
             return true;
         }
@@ -62,7 +62,7 @@ public static class EventTypeExtensions
     {
         eventTypes = eventTypes.Except([type]);
 
-        if (Attribute.IsDefined(type, typeof(EventTypeAttribute)) || Attribute.IsDefined(type, typeof(EventTypeGenerationForAttribute)))
+        if (Attribute.IsDefined(type, typeof(EventTypeAttribute)))
         {
             yield return type;
         }

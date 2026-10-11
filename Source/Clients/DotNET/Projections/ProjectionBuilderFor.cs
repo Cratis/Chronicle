@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Serialization;
@@ -24,6 +25,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     readonly INamingPolicy _namingPolicy;
     readonly IEventTypes _eventTypes;
     readonly List<EventType> _enteringEventTypes = [];
+    readonly List<Type> _enteringClrTypes = [];
     EventSequenceId _eventSequenceId = EventSequenceId.Log;
     bool _eventSequenceExplicitlySet;
     bool _isRewindable = true;
@@ -108,25 +110,8 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     {
         var type = typeof(TEvent);
 
-        if (!type.IsEventType(_eventTypes.AllClrTypes))
-        {
-            throw new TypeIsNotAnEventType(type);
-        }
-
-        var eventType = GetFromEventType(_eventTypes.GetEventTypeFor(type));
-        _enteringEventTypes.Add(eventType);
-
-        // The entering event is what creates the variant, so it must have a From even when the author maps no
-        // properties on it explicitly and leaves the mapping to AutoMap.
-        if (!_fromDefinitions.ContainsKey(eventType))
-        {
-            _fromDefinitions[eventType] = new FromDefinition
-            {
-                Key = WellKnownExpressions.EventSourceId,
-                Properties = new Dictionary<string, string>()
-            };
-        }
-
+        ValidateEventType(type);
+        _enteringClrTypes.Add(type);
         CollectEventStore(type);
 
         return this;
@@ -140,8 +125,29 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     /// <exception cref="Observation.MultipleGenerationsOfEventTypeInObserver">The pinned projection names several generations of one event type.</exception>
     /// <exception cref="MultipleEventStoresDefined">Thrown when event types from multiple event stores are used without an explicit event sequence.</exception>
     /// <exception cref="VariantMustDeclareEntersOnEvent">Thrown when the projection is declared as a variant without naming the event that activates it.</exception>
-    internal ProjectionDefinition Build(Observation.EventGenerationDelivery generationDelivery = Observation.EventGenerationDelivery.Compatibility)
+    internal ProjectionDefinition Build(EventGenerationDelivery? generationDelivery = null)
     {
+        var effectiveDelivery = _isActive && !SubscribesToAllEvents
+            ? generationDelivery ?? GenerationDelivery
+            : EventGenerationDelivery.Compatibility;
+        BuildDefinitions(effectiveDelivery);
+        _enteringEventTypes.Clear();
+        foreach (var type in _enteringClrTypes)
+        {
+            var eventType = GetFromEventType(_eventTypes.GetEventTypeFor(type));
+            _enteringEventTypes.Add(eventType);
+
+            // The entering event creates the variant, even if the author leaves its mapping to AutoMap.
+            if (!_fromDefinitions.ContainsKey(eventType))
+            {
+                _fromDefinitions[eventType] = new FromDefinition
+                {
+                    Key = WellKnownExpressions.EventSourceId,
+                    Properties = new Dictionary<string, string>()
+                };
+            }
+        }
+
         var eventSequenceId = _eventSequenceId;
 
         if (!_eventSequenceExplicitlySet && _observedEventStores.Count > 0)
@@ -184,7 +190,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             NoAutoMapProperties = [.. _noAutoMapProperties],
             Nested = _nestedDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value)
         };
-        ProjectionGenerationDeliveryValidation.Apply(definition, generationDelivery);
+        ProjectionGenerationDeliveryValidation.Apply(definition, effectiveDelivery);
 
         return definition;
     }

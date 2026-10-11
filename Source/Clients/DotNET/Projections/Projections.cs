@@ -461,7 +461,7 @@ public class Projections(
 
     ExplicitProjectionRegistration Build(IExplicitProjection projection)
     {
-        var definition = projection.Build(new(namingPolicy, eventTypes, jsonSerializerOptions, eventStore.Name?.Value));
+        var definition = projection.Build(new(namingPolicy, eventTypes, jsonSerializerOptions, eventStore.Name?.Value, GenerationDelivery));
         ProjectionGenerationDeliveryValidation.Apply(definition, GenerationDelivery);
         var handler = new ProjectionHandler(eventStore, definition.Identifier, projection.ReadModelType, definition.ReadModel, definition.EventSequenceId);
         return new(definition, handler);
@@ -524,7 +524,8 @@ public class Projections(
                     eventTypes,
                     artifactsActivator,
                     jsonSerializerOptions,
-                    variantDeclarations
+                    variantDeclarations,
+                    GenerationDelivery
                 ]) as Catch<ProjectionDefinition>)!;
             if (createProjectionDefinitionResult.TryGetException(out var exception))
             {
@@ -571,7 +572,8 @@ public class Projections(
             IEventTypes eventTypes,
             IClientArtifactsActivator artifactsActivator,
             JsonSerializerOptions jsonSerializerOptions,
-            IDictionary<Type, FluentVariantDeclaration> variantDeclarations)
+            IDictionary<Type, FluentVariantDeclaration> variantDeclarations,
+            Observation.EventGenerationDelivery generationDelivery)
         {
             try
             {
@@ -581,7 +583,7 @@ public class Projections(
                     return exception;
                 }
 
-                var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), type, namingPolicy, eventTypes, jsonSerializerOptions);
+                var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), type, namingPolicy, eventTypes, jsonSerializerOptions) { GenerationDelivery = generationDelivery };
                 activateArtifactResult.AsT0.Define(builder);
                 var definition = builder.Build();
 
