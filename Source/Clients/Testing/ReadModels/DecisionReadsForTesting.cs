@@ -81,8 +81,8 @@ internal sealed class DecisionReadsForTesting(EventStoreForTesting eventStore, D
             var (_, instances) = await ProjectionReadModelProcessor.Process<T>(
                 definition,
                 events.Select(_ => (_.Context.EventSourceId, _.Content)),
+                eventStore,
                 eventStore.EventTypes,
-                eventStore.EventSerializer,
                 eventStore.JsonSchemaGenerator,
                 eventContexts: events.Select(_ => _.Context).ToArray());
             instances.TryGetValue((EventSourceId)key, out instance);
