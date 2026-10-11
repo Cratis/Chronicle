@@ -4,3 +4,4 @@
 | --- | --- | --- | --- | --- | --- |
 | [0001-empty-collection-responses](0001-empty-collection-responses.md) | Normalize empty collection responses at the contract boundary | Proposed | None | — | — |
 | [0002-event-generation-preservation-and-delivery](0002-event-generation-preservation-and-delivery.md) | Preserve every event generation and deliver the generation each consumer pins | Accepted | None | 2026-10-10 | woksin |
+| [0003-ordered-lanes-observer-delivery](0003-ordered-lanes-observer-delivery.md) | Deliver observers through ordered lanes over a declared sequencing key | Proposed | None | — | woksin (to accept) |
