@@ -44,6 +44,8 @@ When enough partitions of an observer fail, Chronicle quarantines the observer i
 
 An observer outlives the code that declared it. Delete a read model and its projection, or remove a reactor, and nothing tells the event store — the observer simply stops being reported by any client, settles into `Disconnected` and stays there, keeping its definition, its state and handled counts in every namespace, its failed partitions and, for a projection, its projection definition.
 
+A reactor rename or namespace move can leave the same kind of disconnected orphan, because its default id changes. Preserve the existing id to keep its position; remove the old observer only when the identity change is intentional and no service needs it. See [Reactor identity and renaming](../reactors/identity.mdx). The kernel retires renamed client projections during full-set registration.
+
 Removing one deletes exactly that bookkeeping:
 
 <ChronicleClientTabs snippet="concepts/observers/remove" />

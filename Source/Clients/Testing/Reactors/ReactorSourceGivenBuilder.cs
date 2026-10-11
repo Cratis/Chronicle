@@ -59,8 +59,26 @@ public class ReactorSourceGivenBuilder<TReactor>(ReactorScenario<TReactor> scena
     /// </remarks>
     /// <param name="events">The event instances to provide to the reactor, in order.</param>
     /// <returns>A <see cref="Task"/> that completes when the reactor has handled all events.</returns>
+    /// <exception cref="ReadModelNotSeededForReactorScenario">Thrown when a read-model parameter was neither seeded nor declared absent.</exception>
     public Task Events(params object[] events) =>
         scenario.InvokeWith(eventSourceId, events, _eventSourceType, _eventStreamType, _eventStreamId);
+
+    /// <summary>
+    /// Declares that a read model is deliberately absent for this key, allowing the handler to receive null.
+    /// </summary>
+    /// <remarks>
+    /// Use the key returned by <see cref="ICanResolveReadModelKey"/> when the reactor
+    /// implements it; otherwise use the triggering event source identifier. This declaration is shared across
+    /// the scenario's builders and is unaffected by <see cref="OnStream"/>. It does not remove a seeded instance.
+    /// </remarks>
+    /// <typeparam name="TReadModel">The type of read model expected to be absent.</typeparam>
+    /// <returns>This <see cref="ReactorSourceGivenBuilder{TReactor}"/> for further chaining.</returns>
+    public ReactorSourceGivenBuilder<TReactor> NoReadModel<TReadModel>()
+        where TReadModel : class
+    {
+        scenario.DeclareNoReadModel<TReadModel>(eventSourceId);
+        return this;
+    }
 
     /// <summary>
     /// Seeds a pre-built read model instance for this event source, materializing the reactor's read-model
