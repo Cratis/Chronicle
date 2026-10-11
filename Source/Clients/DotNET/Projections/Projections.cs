@@ -266,7 +266,7 @@ public class Projections(
     public Task<IProjectionHandler> Register<TReadModel>(Action<IProjectionBuilderFor<TReadModel>> define, ProjectionId? id = null)
     {
         ArgumentNullException.ThrowIfNull(define);
-        return RegisterExplicit<TReadModel>(new DeclarativeExplicitProjection<TReadModel>(define, id ?? new ProjectionId(typeof(TReadModel).FullName!)));
+        return RegisterExplicit<TReadModel>(new DeclarativeExplicitProjection<TReadModel>(define, id ?? ArtifactIdentity.ModelProjectionIdFor(typeof(TReadModel))));
     }
 
     /// <inheritdoc/>

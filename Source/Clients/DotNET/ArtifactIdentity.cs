@@ -4,6 +4,7 @@
 using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSources;
+using Cratis.Chronicle.Projections;
 
 namespace Cratis.Chronicle;
 
@@ -47,6 +48,13 @@ internal static class ArtifactIdentity
     /// <param name="type">The read model type.</param>
     /// <returns>The read model identifier.</returns>
     internal static string ReadModelIdFor(Type type) => type.FullName ?? type.Name;
+
+    /// <summary>
+    /// Derives a model-owned projection identifier without the observer fallback.
+    /// </summary>
+    /// <param name="type">The read model type.</param>
+    /// <returns>The full-name projection identifier.</returns>
+    internal static ProjectionId ModelProjectionIdFor(Type type) => new(type.FullName!);
 
     /// <summary>
     /// Derives an event source name, preserving explicit empty names and suffix rules.

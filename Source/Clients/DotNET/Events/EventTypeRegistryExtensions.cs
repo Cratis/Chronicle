@@ -18,5 +18,14 @@ internal static class EventTypeRegistryExtensions
     internal static EventTypeDescriptor GetDescriptorFor(this IEventTypes eventTypes, Type type, EventStoreName eventStore) =>
         eventTypes is EventTypes registry
             ? registry.GetDescriptorFor(type)
-            : EventTypeDescriptor.FromDeclaration(type, eventStore) with { EventType = eventTypes.GetEventTypeFor(type) };
+            : EventTypeDescriptor.FromRegisteredType(type, eventTypes.GetEventTypeFor(type), eventStore);
+
+    /// <summary>
+    /// Identifies registered event targets while retaining rejection of unregistered declared targets.
+    /// </summary>
+    /// <param name="eventTypes">The registry.</param>
+    /// <param name="type">The target CLR type.</param>
+    /// <returns>Whether the target must use the event sequence sink.</returns>
+    internal static bool IsEventTarget(this IEventTypes eventTypes, Type type) =>
+        Sinks.EventTargetExtensions.IsEventTypeTarget(type) || eventTypes.HasFor(type);
 }

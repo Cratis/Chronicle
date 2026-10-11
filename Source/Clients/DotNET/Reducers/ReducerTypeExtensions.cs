@@ -229,6 +229,18 @@ public static class ReducerTypeExtensions
             .Distinct()
             .ToList();
 
+    /// <summary>
+    /// Resolves a reducer's sequence using this client's registered event metadata.
+    /// </summary>
+    /// <param name="type">The reducer type.</param>
+    /// <param name="eventTypes">The event registry.</param>
+    /// <param name="currentStore">The current client's store.</param>
+    /// <returns>The selected event sequence.</returns>
+    internal static EventSequenceId GetEventSequenceId(this Type type, IEventTypes eventTypes, EventStoreName currentStore) =>
+        type.HasExplicitEventSequence() || Attribute.IsDefined(type, typeof(EventStoreAttribute))
+            ? type.GetEventSequenceId(currentStore.Value)
+            : ObserverEventTypes.InferSequence(type, eventTypes, currentStore);
+
     static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reducerType, string? currentEventStoreName)
     {
         var eventParameterTypes = reducerType

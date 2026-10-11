@@ -10,20 +10,38 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// The identity and independent registration and publication metadata of one registered CLR type.
 /// </summary>
-/// <param name="ClrType">The registered CLR type.</param>
-/// <param name="EventType">The event identity and generation.</param>
-/// <param name="EventStore">The declaring store, if specified.</param>
-/// <param name="RegistrationVisibility">The visibility sent at registration.</param>
-/// <param name="PublicationEligibility">Whether the current store may publish this type to its outbox.</param>
-/// <param name="PublishingSequence">The destination for event-target publication.</param>
-internal sealed record EventTypeDescriptor(
-    Type ClrType,
-    EventType EventType,
-    string? EventStore,
-    EventTypeVisibility RegistrationVisibility,
-    bool PublicationEligibility,
-    EventSequenceId PublishingSequence)
+internal sealed record EventTypeDescriptor
 {
+    /// <summary>
+    /// Gets the registered CLR type.
+    /// </summary>
+    internal required Type ClrType { get; init; }
+
+    /// <summary>
+    /// Gets the event identity and generation.
+    /// </summary>
+    internal required EventType EventType { get; init; }
+
+    /// <summary>
+    /// Gets the declaring store, if specified.
+    /// </summary>
+    internal required string? EventStore { get; init; }
+
+    /// <summary>
+    /// Gets the visibility sent at registration.
+    /// </summary>
+    internal required EventTypeVisibility RegistrationVisibility { get; init; }
+
+    /// <summary>
+    /// Gets whether the current store may publish this type to its outbox.
+    /// </summary>
+    internal required bool PublicationEligibility { get; init; }
+
+    /// <summary>
+    /// Gets the destination for event-target publication.
+    /// </summary>
+    internal required EventSequenceId PublishingSequence { get; init; }
+
     /// <summary>
     /// Reads the independent metadata facets of an attributed event type.
     /// </summary>
@@ -33,16 +51,30 @@ internal sealed record EventTypeDescriptor(
     internal static EventTypeDescriptor FromDeclaration(Type type, EventStoreName currentEventStore)
     {
         type.ValidateEventType();
+        return FromRegisteredType(type, ArtifactIdentity.EventTypeFor(type), currentEventStore);
+    }
+
+    /// <summary>
+    /// Reads available declaration metadata without requiring a marker for a registered type.
+    /// </summary>
+    /// <param name="type">The registered CLR type.</param>
+    /// <param name="eventType">The registry's identity.</param>
+    /// <param name="currentEventStore">The current client's store.</param>
+    /// <returns>The descriptor.</returns>
+    internal static EventTypeDescriptor FromRegisteredType(Type type, EventType eventType, EventStoreName currentEventStore)
+    {
         var eventStore = type.GetEventStoreName();
         var visibility = eventStore is not null || type.IsDefined(typeof(PublicAttribute), false)
             ? EventTypeVisibility.Public
             : EventTypeVisibility.Private;
-        return new(
-            type,
-            ArtifactIdentity.EventTypeFor(type),
-            eventStore,
-            visibility,
-            type.IsPublicEventType(currentEventStore),
-            type.GetPublishingSequence());
+        return new()
+        {
+            ClrType = type,
+            EventType = eventType,
+            EventStore = eventStore,
+            RegistrationVisibility = visibility,
+            PublicationEligibility = type.IsPublicEventType(currentEventStore),
+            PublishingSequence = type.GetPublishingSequence()
+        };
     }
 }

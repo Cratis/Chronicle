@@ -121,6 +121,18 @@ public static class ReactorTypeExtensions
     /// <returns>Collection of types that are Reactors.</returns>
     public static IEnumerable<Type> AllReactors(this IEnumerable<Type> types) => types.Where(_ => _.HasAttribute<ReactorAttribute>()).ToArray();
 
+    /// <summary>
+    /// Resolves a reactor's sequence using this client's registered event metadata.
+    /// </summary>
+    /// <param name="type">The reactor type.</param>
+    /// <param name="eventTypes">The event registry.</param>
+    /// <param name="currentStore">The current client's store.</param>
+    /// <returns>The selected event sequence.</returns>
+    internal static EventSequenceId GetEventSequenceId(this Type type, IEventTypes eventTypes, EventStoreName currentStore) =>
+        type.HasExplicitEventSequence() || Attribute.IsDefined(type, typeof(EventStoreAttribute))
+            ? type.GetEventSequenceId(currentStore.Value)
+            : ObserverEventTypes.InferSequence(type, eventTypes, currentStore);
+
     static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reactorType, string? currentEventStoreName)
     {
         var eventParameterTypes = reactorType

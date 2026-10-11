@@ -66,8 +66,7 @@ public static class EventTypeExtensions
         }
 
         var knownTypes = eventTypes.ToArray();
-        if (Attribute.IsDefined(type, typeof(EventTypeAttribute)) ||
-            (knownTypes.Contains(type) && !Attribute.IsDefined(type, typeof(EventTypeGenerationForAttribute))))
+        if (CanIncludeExactType(type, knownTypes))
         {
             yield return type;
         }
@@ -116,5 +115,15 @@ public static class EventTypeExtensions
         type.ValidateEventType();
 
         return ArtifactIdentity.EventTypeFor(type);
+    }
+
+    static bool CanIncludeExactType(Type type, IEnumerable<Type> knownTypes)
+    {
+        if (Attribute.IsDefined(type, typeof(EventTypeAttribute)))
+        {
+            return true;
+        }
+
+        return knownTypes.Contains(type) && !Attribute.IsDefined(type, typeof(EventTypeGenerationForAttribute));
     }
 }

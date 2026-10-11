@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
@@ -702,62 +701,21 @@ public class EventStore : IEventStore
 
     async Task RegisterExternalEventStoreSubscriptionsAsync()
     {
-        var currentStoreName = _eventStoreName?.Value;
-
-        static string? ResolveSourceStoreForObserver(Type observerType)
-        {
-            var observerEventStore = observerType.GetCustomAttributes(typeof(EventStoreAttribute), inherit: true)
-                .OfType<EventStoreAttribute>()
-                .FirstOrDefault();
-            if (observerEventStore is not null)
-            {
-                return observerEventStore.EventStore;
-            }
-
-            var eventStores = observerType
-                .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                .Where(m => !m.IsSpecialName)
-                .Select(m => m.GetParameters().FirstOrDefault()?.ParameterType)
-                .OfType<Type>()
-                .Where(t => Attribute.IsDefined(t, typeof(EventTypeAttribute), inherit: true))
-                .Select(t => t.GetEventStoreName())
-                .Where(name => name is not null)
-                .Select(name => name!)
-                .Distinct()
-                .ToList();
-
-            if (eventStores.Count == 1)
-            {
-                return eventStores[0];
-            }
-
-            return null;
-        }
-
-        static IEnumerable<EventTypeId> ResolveObserverEventTypeIds(Type observerType, IEventTypes eventTypes) =>
-            observerType
-                .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                .Where(m => !m.IsSpecialName)
-                .Select(m => m.GetParameters().FirstOrDefault()?.ParameterType)
-                .OfType<Type>()
-                .Where(t => Attribute.IsDefined(t, typeof(EventTypeAttribute), inherit: true))
-                .Select(t => eventTypes.GetEventTypeFor(t).Id)
-                .Distinct()
-                .ToArray();
+        var currentStoreName = _eventStoreName.Value;
 
         var observerExternalSubscriptions = _clientArtifactsProvider.Reactors
             .Where(r => !ReactorTypeExtensions.HasExplicitEventSequence(r))
             .Concat(_clientArtifactsProvider.Reducers.Where(r => !ReducerTypeExtensions.HasExplicitEventSequence(r)))
             .Select(observerType =>
             {
-                var sourceStore = ResolveSourceStoreForObserver(observerType);
+                var sourceStore = ObserverEventTypes.GetSourceStore(observerType, EventTypes, _eventStoreName);
                 return (observerType, sourceStore);
             })
             .Where(item => item.sourceStore is not null && item.sourceStore != currentStoreName)
             .GroupBy(item => item.sourceStore!, item => item.observerType)
             .ToDictionary(
                 g => g.Key,
-                g => g.SelectMany(observerType => ResolveObserverEventTypeIds(observerType, EventTypes)).Distinct().ToList());
+                g => g.SelectMany(observerType => ObserverEventTypes.GetIds(observerType, EventTypes)).Distinct().ToList());
 
         // Merge with projection external event store references (already filtered by GetExternalEventStoreSubscriptions)
         var allByStore = new Dictionary<string, HashSet<EventTypeId>>();

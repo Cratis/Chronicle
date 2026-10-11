@@ -89,7 +89,7 @@ public class ReadModels(
                 _ => string.Empty
             };
 
-            if (readModel.ReadModelType.IsEventTypeTarget())
+            if (eventTypes.IsEventTarget(readModel.ReadModelType))
             {
                 return CreateEventTargetDefinition(readModel.ReadModelType, observerType, observerIdentifier);
             }
@@ -126,20 +126,10 @@ public class ReadModels(
     /// <inheritdoc/>
     public async Task Register<TReadModel>()
     {
-        // A read model nothing in this client knows yet, carrying model-bound attributes, is a request to register it
-        // explicitly - its projection is registered along with it, which in turn registers the read model below.
-        if (!projections.HasFor<TReadModel>() &&
-            !reducers.HasFor<TReadModel>() &&
-            typeof(TReadModel).HasModelBoundProjectionAttributes())
-        {
-            await projections.Register<TReadModel>();
-            return;
-        }
-
         var observerType = ReadModelObserverType.Projection;
         var observerIdentifier = string.Empty;
 
-        if (typeof(TReadModel).IsEventTypeTarget())
+        if (eventTypes.IsEventTarget(typeof(TReadModel)))
         {
             var targetHandler = (IHaveReadModel?)projections.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel))
                 ?? reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
@@ -159,6 +149,16 @@ public class ReadModels(
                 Owner = ReadModelOwner.Client,
                 ReadModels = [CreateEventTargetDefinition(typeof(TReadModel), observerType, observerIdentifier)]
             });
+            return;
+        }
+
+        // A read model nothing in this client knows yet, carrying model-bound attributes, is a request to register it
+        // explicitly - its projection is registered along with it, which in turn registers the read model below.
+        if (!projections.HasFor<TReadModel>() &&
+            !reducers.HasFor<TReadModel>() &&
+            typeof(TReadModel).HasModelBoundProjectionAttributes())
+        {
+            await projections.Register<TReadModel>();
             return;
         }
 
