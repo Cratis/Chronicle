@@ -118,6 +118,30 @@ public class ExplicitArtifacts
         return this;
     }
 
+    /// <summary>
+    /// Applies projection recipes to a store before discovery.
+    /// </summary>
+    /// <param name="projections">The store's projections.</param>
+    internal void ApplyTo(Projections.Projections projections)
+    {
+        foreach (var projection in Projections)
+        {
+            projections.Add(projection);
+        }
+    }
+
+    /// <summary>
+    /// Applies reactor recipes to a store before discovery.
+    /// </summary>
+    /// <param name="reactors">The store's reactors.</param>
+    internal void ApplyTo(Reactors.Reactors reactors)
+    {
+        foreach (var (id, define) in Reactors)
+        {
+            reactors.Add(id, define);
+        }
+    }
+
     ExplicitArtifacts Add(IExplicitProjection projection)
     {
         lock (_lock)

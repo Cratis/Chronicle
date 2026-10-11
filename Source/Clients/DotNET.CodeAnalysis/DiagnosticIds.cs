@@ -283,4 +283,9 @@ public static class DiagnosticIds
     /// Explicit event metadata routing contradicts a typed event-source filter.
     /// </summary>
     public const string ExplicitRoutingContradictsTypedEventSourceFilter = "CHR0056";
+
+    /// <summary>
+    /// A type implements multiple closed projection or reducer interfaces.
+    /// </summary>
+    public const string MultipleArtifactInterfaces = "CHR0057";
 }

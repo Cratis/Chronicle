@@ -363,7 +363,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     {
         if (_eventStore is null)
         {
-            _eventStore = new EventStoreForTesting(ResolvedServiceProvider(), defaults.ClientArtifactsProvider);
+            _eventStore = new EventStoreForTesting(ResolvedServiceProvider(), defaults.ClientArtifactsProvider, defaults.ScenarioOptions);
             foreach (var seed in _readModelSeeds)
             {
                 seed(_eventStore);
@@ -468,6 +468,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     }
 
     Type? FindReducerType(Type readModelType) =>
+        EventStore().ClientOptions.ExplicitArtifacts.Projections.Any(_ => _.ReadModelType == readModelType) ? null :
         ClientArtifactsProvider.Reducers.FirstOrDefault(t =>
             t.GetInterfaces().Any(i =>
                 i.IsGenericType &&
@@ -476,6 +477,13 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 
     Contracts.Projections.ProjectionDefinition? FindProjectionDefinition(Type readModelType)
     {
+        var explicitProjection = EventStore().ClientOptions.ExplicitArtifacts.Projections.FirstOrDefault(_ => _.ReadModelType == readModelType);
+        if (explicitProjection is not null)
+        {
+            return ((Projections.Projections)EventStore().Projections).Definitions
+                .FirstOrDefault(_ => _.Identifier == explicitProjection.Id.Value);
+        }
+
         // Try fluent IProjectionFor<TReadModel> projection
         var projectionType = ClientArtifactsProvider.Projections.FirstOrDefault(t =>
             t.GetInterfaces().Any(i =>
