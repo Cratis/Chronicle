@@ -135,10 +135,12 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     /// <summary>
     /// Build the projection definition.
     /// </summary>
+    /// <param name="generationDelivery">The client's generation delivery policy.</param>
     /// <returns><see cref="ProjectionDefinition"/>.</returns>
+    /// <exception cref="Observation.MultipleGenerationsOfEventTypeInObserver">The pinned projection names several generations of one event type.</exception>
     /// <exception cref="MultipleEventStoresDefined">Thrown when event types from multiple event stores are used without an explicit event sequence.</exception>
     /// <exception cref="VariantMustDeclareEntersOnEvent">Thrown when the projection is declared as a variant without naming the event that activates it.</exception>
-    internal ProjectionDefinition Build()
+    internal ProjectionDefinition Build(Observation.EventGenerationDelivery generationDelivery = Observation.EventGenerationDelivery.Compatibility)
     {
         var eventSequenceId = _eventSequenceId;
 
@@ -163,7 +165,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             VariantReclassifier.Reclassify(_fromDefinitions, _joinDefinitions, _enteringEventTypes, _variantKey);
         }
 
-        return new()
+        var definition = new ProjectionDefinition
         {
             EventSequenceId = eventSequenceId,
             Identifier = _identifier,
@@ -182,5 +184,8 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             NoAutoMapProperties = [.. _noAutoMapProperties],
             Nested = _nestedDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value)
         };
+        ProjectionGenerationDeliveryValidation.Apply(definition, generationDelivery);
+
+        return definition;
     }
 }

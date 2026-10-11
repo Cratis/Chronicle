@@ -7,7 +7,14 @@ namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_generat
 
 public class and_delivery_is_compatibility : given.a_projection_with_generations
 {
-    void Establish() => _definition = _definition with { GenerationDelivery = EventGenerationDelivery.Compatibility };
+    void Establish()
+    {
+        var secondFrom = _definition.From[_second];
+        _definition.From.Remove(_second);
+        _second = new(_first.Id, 2);
+        _definition.From[_second] = secondFrom;
+        _definition = _definition with { GenerationDelivery = EventGenerationDelivery.Compatibility };
+    }
 
     async Task Because()
     {

@@ -32,10 +32,11 @@ public class and_the_root_and_parent_key_have_different_representations : given.
         first = first with { Context = first.Context with { EventSourceId = Root } };
         var second = Event(_second, "migrated");
         second = second with { Context = second.Context with { EventSourceId = Root } };
-        await pipeline.HandleGenerations([first, second]);
+        await pipeline.Handle(first);
+        await pipeline.Handle(second);
     }
 
-    [Fact] void should_save_each_generation_separately() => _writes.ShouldEqual(2);
+    [Fact] void should_save_each_event_separately() => _writes.ShouldEqual(2);
     [Fact] void should_project_the_root() => _saved.Values.Single()["oldName"].ShouldEqual("original");
     [Fact] void should_project_the_child() => ((IDictionary<string, object?>)((IEnumerable<object>)_saved.Values.Single()["items"]!).Single())["newName"].ShouldEqual("migrated");
 }

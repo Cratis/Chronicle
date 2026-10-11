@@ -13,13 +13,6 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 public interface IProjectionPipeline
 {
     /// <summary>
-    /// Applies the pinned generations of one physical event in ascending generation order, saving a separate changeset for each copy.
-    /// </summary>
-    /// <param name="events">The released generation copies of one event.</param>
-    /// <returns>The contexts whose changes were saved.</returns>
-    Task<IEnumerable<ProjectionEventContext>> HandleGenerations(IEnumerable<AppendedEvent> events);
-
-    /// <summary>
     /// Notifies about the beginning of a replay.
     /// </summary>
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>

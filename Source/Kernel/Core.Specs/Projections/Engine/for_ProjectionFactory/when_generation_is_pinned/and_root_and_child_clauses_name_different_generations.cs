@@ -24,7 +24,8 @@ public class and_root_and_child_clauses_name_different_generations : given.a_pin
     async Task Because()
     {
         var pipeline = await CreatePipeline();
-        await pipeline.HandleGenerations([Event(_first, "original"), Event(_second, "migrated")]);
+        await pipeline.Handle(Event(_first, "original"));
+        await pipeline.Handle(Event(_second, "migrated"));
     }
 
     [Fact] void should_project_the_root_from_its_generation() => _saved["root"]["oldName"].ShouldEqual("original");

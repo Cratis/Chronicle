@@ -23,8 +23,8 @@ public class and_a_stored_join_is_at_another_generation : given.a_projection_wit
             From = new Dictionary<EventType, FromDefinition> { [_first] = new(new Dictionary<PropertyPath, string> { [(PropertyPath)"joinId"] = "parent" }, "key", null) },
             Join = new Dictionary<EventType, JoinDefinition> { [_second] = new("joinId", new Dictionary<PropertyPath, string> { [(PropertyPath)"newName"] = "name" }, "key") }
         };
-        var stored = Event(_first, "protected-original");
-        _sequence.TryGetLastEventBefore(_first.Id, "parent", Arg.Any<EventSequenceNumber>()).Returns(new Option<AppendedEvent>(stored));
+        var stored = Event(new(_second.Id, 1), "protected-original");
+        _sequence.TryGetLastEventBefore(_second.Id, "parent", Arg.Any<EventSequenceNumber>()).Returns(new Option<AppendedEvent>(stored));
         _release.Release(Arg.Any<EventStoreName>(), Arg.Is<IEnumerable<EventType>>(pins => pins.Single() == _second), Arg.Any<IDictionary<EventType, EventTypeSchema>>(), Arg.Any<IEnumerable<AppendedEvent>>()).Returns([Event(_second, "released-migrated")]);
     }
 

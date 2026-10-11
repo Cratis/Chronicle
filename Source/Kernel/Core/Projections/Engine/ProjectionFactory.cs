@@ -67,6 +67,7 @@ public class ProjectionFactory(
     public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         readModelDefinition.Sink.EnsureReadModelSupported();
+        ProjectionGenerationDeliveryValidation.Validate(definition);
         if (definition.GenerationDelivery == EventGenerationDelivery.Pinned &&
             (eventGenerationRelease is null || definition.SubscribesToAllEvents))
         {
@@ -880,10 +881,9 @@ public class ProjectionFactory(
             {
                 propertyMappers.AddRange(propertyMappersForEveryEventType);
             }
-            var hasKeyedFrom = !isNested && keyedFromEventTypeIds.Contains(eventType.Id);
             var joinObservable = projection.Event
                 .WhereEventTypeEquals(eventType, projection.GenerationDelivery)
-                .Join(accessorPath + joinDefinition.On, hasKeyedFrom);
+                .Join(accessorPath + joinDefinition.On, !isNested && keyedFromEventTypeIds.Contains(eventType.Id));
 
             if (isNested)
             {

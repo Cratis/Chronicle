@@ -16,6 +16,8 @@ public class and_a_bare_declaration_is_registered : given.a_projection_with_gene
     ProjectionDefinition _compiled;
     ProjectionDefinition _compatibility;
 
+    void Establish() => _schemas = [.. _schemas, new(new EventType("PersonRegistered", 2), EventTypeOwner.Client, EventTypeSource.Code, _schemas[1].Schema)];
+
     async Task Because()
     {
         var language = new LanguageService(new Generator(), new KnownInstancesOf<IProjectionCodeGenerator>());

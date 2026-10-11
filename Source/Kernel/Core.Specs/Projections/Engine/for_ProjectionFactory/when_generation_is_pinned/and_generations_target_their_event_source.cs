@@ -13,11 +13,13 @@ public class and_generations_target_their_event_source : given.a_pinned_pipeline
     async Task Because()
     {
         var pipeline = await CreatePipeline();
-        await pipeline.HandleGenerations([Event(_second, "migrated"), Event(_first, "original")]);
+        await pipeline.Handle(Event(_first, "original"));
+        var second = Event(_second, "migrated");
+        await pipeline.Handle(second with { Context = second.Context with { SequenceNumber = 1 } });
     }
 
     [Fact] void should_keep_event_source_keyed_handling() => _projection.IsEventSourceKeyed.ShouldBeTrue();
     [Fact] void should_save_the_first_mapping() => _saved["source"]["oldName"].ShouldEqual("original");
     [Fact] void should_save_the_second_mapping() => _saved["source"]["newName"].ShouldEqual("migrated");
-    [Fact] void should_not_suppress_a_generation_with_the_same_sequence_number() => _writeModes.ShouldContainOnly(SinkWriteMode.Always, SinkWriteMode.Always);
+    [Fact] void should_guard_the_existing_instances_watermark() => _writeModes.ShouldContainOnly(SinkWriteMode.Always, SinkWriteMode.OnlyWhenAdvancingWatermark);
 }

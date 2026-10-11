@@ -27,7 +27,7 @@ public class and_a_parent_creation_event_is_at_another_generation : given.a_proj
                 [(PropertyPath)"items"] = new("id", new Dictionary<EventType, FromDefinition> { [childType] = new(new Dictionary<PropertyPath, string>(), "key", "parent") }, new Dictionary<EventType, JoinDefinition>(), new Dictionary<PropertyPath, ChildrenDefinition>(), _definition.FromEvery, _definition.RemovedWith, _definition.RemovedWithJoin)
             }
         };
-        _sequence.TryGetLastInstanceOfAny("parent", Arg.Any<IEnumerable<EventTypeId>>()).Returns(new Option<AppendedEvent>(Event(_first, "protected-parent")));
+        _sequence.TryGetLastInstanceOfAny("parent", Arg.Any<IEnumerable<EventTypeId>>()).Returns(new Option<AppendedEvent>(Event(new(_second.Id, 1), "protected-parent")));
         _release.Release(Arg.Any<EventStoreName>(), Arg.Is<IEnumerable<EventType>>(pins => pins.Single() == _second), Arg.Any<IDictionary<EventType, EventTypeSchema>>(), Arg.Any<IEnumerable<AppendedEvent>>()).Returns([Event(_second, "released-parent")]);
     }
 

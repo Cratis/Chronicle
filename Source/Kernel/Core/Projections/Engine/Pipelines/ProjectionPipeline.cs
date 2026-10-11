@@ -109,29 +109,6 @@ public class ProjectionPipeline(
     public Task<IEnumerable<FailedPartition>> EndBulk() => sink.EndBulk();
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ProjectionEventContext>> HandleGenerations(IEnumerable<AppendedEvent> events)
-    {
-        var copies = events.OrderBy(@event => @event.Context.EventType.Generation.Value).ToArray();
-        if (copies.Length == 0)
-        {
-            return [];
-        }
-
-        using var handleScope = projection.IsEventSourceKeyed
-            ? await _handleLock.AcquireFor(copies[0].Context.EventSourceId)
-            : await _handleLock.AcquireCoarse();
-        var results = new List<ProjectionEventContext>();
-        foreach (var copy in copies)
-        {
-            // Each generation owns its changeset and reads the state saved by the preceding generation.
-            // Keep the physical event serialized without combining unrelated join or child operations.
-            results.Add(await PerformPipeline(copy));
-        }
-
-        return results;
-    }
-
-    /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
         // A purely event-source-keyed projection resolves every event's key to its own event source id, so striping
@@ -141,11 +118,6 @@ public class ProjectionPipeline(
             ? await _handleLock.AcquireFor(@event.Context.EventSourceId)
             : await _handleLock.AcquireCoarse();
 
-        return await PerformPipeline(@event);
-    }
-
-    async Task<ProjectionEventContext> PerformPipeline(AppendedEvent @event)
-    {
         logger.StartingPipeline(@event.Context.SequenceNumber);
         var context = ProjectionEventContext.Empty(objectComparer, @event) with
         {

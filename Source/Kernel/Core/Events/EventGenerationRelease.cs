@@ -30,99 +30,94 @@ public class EventGenerationRelease(
     /// <inheritdoc/>
     public async Task<AppendedEvent[]> Release(EventStoreName eventStore, IEnumerable<EventType> pins, IDictionary<EventType, EventTypeSchema> schemas, IEnumerable<AppendedEvent> events)
     {
-        var pinsById = pins.Distinct().GroupBy(_ => _.Id).ToDictionary(_ => _.Key, _ => _.ToArray());
+        var pinsById = pins.Distinct().ToDictionary(_ => _.Id);
         var definitions = new Dictionary<EventTypeId, EventTypeDefinition>();
         var eventTypes = storage.GetEventStore(eventStore).EventTypes;
         var protectedMigrations = new ProtectedEventTypeMigrations(eventTypes, migrations, metadataManager, converter);
         var releasedEvents = new List<AppendedEvent>();
         foreach (var @event in events)
         {
-            if (@event.Context.EventType.Id == GlobalEventTypes.Redaction || !pinsById.TryGetValue(@event.Context.EventType.Id, out var eventPins))
+            if (@event.Context.EventType.Id == GlobalEventTypes.Redaction || !pinsById.TryGetValue(@event.Context.EventType.Id, out var pin))
             {
                 releasedEvents.AddRange(await eventCompliance.Release([@event], schemas));
                 continue;
             }
 
-            // Projections can reference the same identifier at different generations in different clauses.
-            // Deliver one released copy per pin; exact-generation dispatch keeps each clause on its own shape.
-            foreach (var pin in eventPins)
+            if (!definitions.TryGetValue(pin.Id, out var definition))
             {
-                if (!definitions.TryGetValue(pin.Id, out var definition))
+                definition = await eventTypes.GetDefinition(pin.Id);
+                definitions[pin.Id] = definition;
+            }
+
+            if (!definition.Generations.Any(_ => _.Generation == pin.Generation) || !schemas.TryGetValue(pin, out var schema))
+            {
+                throw new PinnedEventTypeGenerationUnavailable(pin);
+            }
+
+            var revisionGeneration = @event.RevisedGeneration ?? @event.Revisions.LastOrDefault()?.EventTypeGeneration;
+            var deliverySource = @event;
+            if (revisionGeneration is not null && revisionGeneration != @event.Context.EventType.Generation)
+            {
+                var revisionSchema = definition.Generations.SingleOrDefault(_ => _.Generation == revisionGeneration)?.Schema;
+                if (revisionSchema is null || !@event.GenerationalContent.TryGetValue((int)revisionGeneration.Value, out var revisionContent))
                 {
-                    definition = await eventTypes.GetDefinition(pin.Id);
-                    definitions[pin.Id] = definition;
+                    throw new PinnedEventTypeGenerationUnavailable(new(pin.Id, revisionGeneration));
                 }
 
-                if (!definition.Generations.Any(_ => _.Generation == pin.Generation) || !schemas.TryGetValue(pin, out var schema))
+                deliverySource = @event with
                 {
-                    throw new PinnedEventTypeGenerationUnavailable(pin);
-                }
-
-                var revisionGeneration = @event.RevisedGeneration ?? @event.Revisions.LastOrDefault()?.EventTypeGeneration;
-                var deliverySource = @event;
-                if (revisionGeneration is not null && revisionGeneration != @event.Context.EventType.Generation)
-                {
-                    var revisionSchema = definition.Generations.SingleOrDefault(_ => _.Generation == revisionGeneration)?.Schema;
-                    if (revisionSchema is null || !@event.GenerationalContent.TryGetValue((int)revisionGeneration.Value, out var revisionContent))
+                    Content = converter.ToExpandoObject(JsonNode.Parse(revisionContent)!.AsObject(), revisionSchema),
+                    Context = @event.Context with
                     {
-                        throw new PinnedEventTypeGenerationUnavailable(new(pin.Id, revisionGeneration));
+                        EventType = new(pin.Id, revisionGeneration),
+                        Hash = @event.GenerationalHashes.GetValueOrDefault((int)revisionGeneration.Value, EventHash.NotSet)
                     }
+                };
+            }
 
-                    deliverySource = @event with
-                    {
-                        Content = converter.ToExpandoObject(JsonNode.Parse(revisionContent)!.AsObject(), revisionSchema),
-                        Context = @event.Context with
-                        {
-                            EventType = new(pin.Id, revisionGeneration),
-                            Hash = @event.GenerationalHashes.GetValueOrDefault((int)revisionGeneration.Value, EventHash.NotSet)
-                        }
-                    };
-                }
+            if (deliverySource.Context.EventType.Generation == pin.Generation)
+            {
+                releasedEvents.Add(await eventCompliance.Release(deliverySource with { Context = deliverySource.Context with { EventType = pin } }, schema.Schema));
+                continue;
+            }
 
-                if (deliverySource.Context.EventType.Generation == pin.Generation)
-                {
-                    releasedEvents.Add(await eventCompliance.Release(deliverySource with { Context = deliverySource.Context with { EventType = pin } }, schema.Schema));
-                    continue;
-                }
+            if (!@event.IsRevised && @event.GenerationalContent.TryGetValue((int)pin.Generation.Value, out var storedContent))
+            {
+                var content = converter.ToExpandoObject(JsonNode.Parse(storedContent)!.AsObject(), schema.Schema);
+                var hash = @event.GenerationalHashes.GetValueOrDefault((int)pin.Generation.Value, EventHash.NotSet);
+                var selected = @event with { Content = content, Context = @event.Context with { EventType = pin, Hash = hash } };
+                releasedEvents.Add(await eventCompliance.Release(selected, schema.Schema));
+                continue;
+            }
 
-                if (!@event.IsRevised && @event.GenerationalContent.TryGetValue((int)pin.Generation.Value, out var storedContent))
-                {
-                    var content = converter.ToExpandoObject(JsonNode.Parse(storedContent)!.AsObject(), schema.Schema);
-                    var hash = @event.GenerationalHashes.GetValueOrDefault((int)pin.Generation.Value, EventHash.NotSet);
-                    var selected = @event with { Content = content, Context = @event.Context with { EventType = pin, Hash = hash } };
-                    releasedEvents.Add(await eventCompliance.Release(selected, schema.Schema));
-                    continue;
-                }
-
-                var source = deliverySource.Context.EventType;
-                var sourceSchema = definition.Generations.SingleOrDefault(_ => _.Generation == source.Generation)?.Schema;
-                JsonObject protectedContent;
-                if (!@event.IsRevised && @event.GenerationalContent.Count > 0)
-                {
-                    var sourceGeneration = @event.Context.AppendedGeneration is { } appended && @event.GenerationalContent.ContainsKey((int)appended.Value)
-                        ? (int)appended.Value
-                        : @event.GenerationalContent.Keys.Max();
-                    source = new(pin.Id, (uint)sourceGeneration);
-                    protectedContent = JsonNode.Parse(@event.GenerationalContent[sourceGeneration])!.AsObject();
-                }
-                else
-                {
-                    if (sourceSchema is null)
-                    {
-                        throw new PinnedEventTypeGenerationUnavailable(source);
-                    }
-
-                    protectedContent = converter.ToJsonObject(deliverySource.Content, sourceSchema);
-                }
-
-                if (!definition.Generations.Any(_ => _.Generation == source.Generation))
+            var source = deliverySource.Context.EventType;
+            var sourceSchema = definition.Generations.SingleOrDefault(_ => _.Generation == source.Generation)?.Schema;
+            JsonObject protectedContent;
+            if (!@event.IsRevised && @event.GenerationalContent.Count > 0)
+            {
+                var sourceGeneration = @event.Context.AppendedGeneration is { } appended && @event.GenerationalContent.ContainsKey((int)appended.Value)
+                    ? (int)appended.Value
+                    : @event.GenerationalContent.Keys.Max();
+                source = new(pin.Id, (uint)sourceGeneration);
+                protectedContent = JsonNode.Parse(@event.GenerationalContent[sourceGeneration])!.AsObject();
+            }
+            else
+            {
+                if (sourceSchema is null)
                 {
                     throw new PinnedEventTypeGenerationUnavailable(source);
                 }
 
-                var migrated = await protectedMigrations.ReleaseAndMigrateTo(eventStore, @event.Context.Namespace, definition, source, protectedContent, @event.Context.Subject.Value, pin.Generation);
-                releasedEvents.Add(@event with { Content = migrated, Context = @event.Context with { EventType = pin, Hash = EventHash.NotSet } });
+                protectedContent = converter.ToJsonObject(deliverySource.Content, sourceSchema);
             }
+
+            if (!definition.Generations.Any(_ => _.Generation == source.Generation))
+            {
+                throw new PinnedEventTypeGenerationUnavailable(source);
+            }
+
+            var migrated = await protectedMigrations.ReleaseAndMigrateTo(eventStore, @event.Context.Namespace, definition, source, protectedContent, @event.Context.Subject.Value, pin.Generation);
+            releasedEvents.Add(@event with { Content = migrated, Context = @event.Context with { EventType = pin, Hash = EventHash.NotSet } });
         }
 
         return releasedEvents.ToArray();

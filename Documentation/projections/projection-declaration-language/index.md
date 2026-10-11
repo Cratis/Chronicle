@@ -20,8 +20,9 @@ resolves each event reference once and persists the resulting generation in the 
 | `from PersonRegistered` | Latest registered generation at registration time |
 
 The same rule applies to join and removal references and to clauses inside children and nested
-objects. Each clause reads its own pinned generation, even when another clause names a different
-generation of the same event type. Registering a new generation does not change an existing pin.
+objects. A pinned projection can name only one generation per event type across all its clauses;
+registration rejects conflicting pins, including those in children and nested objects. Different
+event types can pin different generations. Registering a new generation does not change an existing pin.
 Saving a declaration again resolves its bare names against the generations registered at that time.
 PDL has no generation-qualified event reference syntax. For explicit per-clause generations, use the
 [.NET projection builders](../declarative/simple-projection.mdx) or model-bound attributes with the

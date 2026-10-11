@@ -186,6 +186,7 @@ public class Projections(
     {
         var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes, logger, eventStore.Name?.Value);
         var modelBoundDefinitions = modelBoundProjections.Discover();
+        ApplyGenerationDelivery(modelBoundDefinitions, modelBoundProjections.Failures);
         var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
             kvp => kvp.Key,
             kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
@@ -461,6 +462,7 @@ public class Projections(
     ExplicitProjectionRegistration Build(IExplicitProjection projection)
     {
         var definition = projection.Build(new(namingPolicy, eventTypes, jsonSerializerOptions, eventStore.Name?.Value));
+        ProjectionGenerationDeliveryValidation.Apply(definition, GenerationDelivery);
         var handler = new ProjectionHandler(eventStore, definition.Identifier, projection.ReadModelType, definition.ReadModel, definition.EventSequenceId);
         return new(definition, handler);
     }
@@ -483,13 +485,6 @@ public class Projections(
         _explicitHandlers = [.. _explicitRegistrations.Values.Select(_ => _.Handler)];
         _handlersByModelType = handlersByModelType;
         Definitions = _discoveredDefinitions.AddRange(_explicitRegistrations.Values.Select(_ => _.Definition));
-        foreach (var definition in Definitions)
-        {
-            // Immediate/passive and wildcard projections keep Compatibility until their own delivery lanes.
-            definition.GenerationDelivery = definition.IsActive && !definition.SubscribesToAllEvents
-                ? (Contracts.Observation.EventGenerationDelivery)GenerationDelivery
-                : Contracts.Observation.EventGenerationDelivery.Compatibility;
-        }
         ArtifactRegistrations = _discoveredArtifactRegistrations
             .AddRange(_explicitRegistrations.Keys.Select(type => new ArtifactRegistration(type, null)))
             .AddRange(_explicitFailures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)));
@@ -541,8 +536,28 @@ public class Projections(
         }
 
         VariantReclassifier.CrossWireGroups(result, variantDeclarations);
+        ApplyGenerationDelivery(result, failures);
 
         return (result, failures);
+    }
+
+    void ApplyGenerationDelivery(IDictionary<Type, ProjectionDefinition> definitions, IDictionary<Type, Exception> failures)
+    {
+        foreach (var (type, definition) in definitions.ToArray())
+        {
+            try
+            {
+                ProjectionGenerationDeliveryValidation.Apply(definition, GenerationDelivery);
+            }
+#pragma warning disable CA1031 // One invalid projection must not discard the other definitions.
+            catch (Exception exception)
+#pragma warning restore CA1031
+            {
+                logger.FailedToCreateProjectionDefinition(type, exception);
+                failures[type] = exception;
+                definitions.Remove(type);
+            }
+        }
     }
 
     sealed record ExplicitProjectionRegistration(ProjectionDefinition Definition, IProjectionHandler Handler);

@@ -158,54 +158,44 @@ public class ProjectionObserverSubscriber(
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
             var isNewInstance = false;
 
-            var batches = State.GenerationDelivery == EventGenerationDelivery.Pinned
-                ? events.GroupBy(@event => @event.Context.SequenceNumber).Select(group => group.ToArray())
-                : events.Select(@event => new[] { @event });
-            foreach (var eventBatch in batches)
+            foreach (var @event in events)
             {
-                var sequenceNumber = eventBatch[0].Context.SequenceNumber;
+                var sequenceNumber = @event.Context.SequenceNumber;
 
                 // A stale subscription can still deliver clauses removed from the current definition.
-                var accepted = eventBatch.Where(@event => _projection?.Accepts(@event.Context.EventType) != false).ToArray();
-                if (accepted.Length == 0)
+                if (_projection?.Accepts(@event.Context.EventType) == false)
                 {
-                    lastSuccessfullyObservedEvent = eventBatch[^1];
-                    logger.SkippedEventNotInProjection(lastSuccessfullyObservedEvent.Context.EventType, sequenceNumber, _key);
+                    lastSuccessfullyObservedEvent = @event;
+                    logger.SkippedEventNotInProjection(@event.Context.EventType, sequenceNumber, _key);
                     continue;
                 }
 
-                var contexts = accepted.Length > 1 && State.GenerationDelivery == EventGenerationDelivery.Pinned
-                    ? await _pipeline.HandleGenerations(accepted)
-                    : [await _pipeline.Handle(accepted[0])];
-                foreach (var pipelineContext in contexts)
+                var pipelineContext = await _pipeline.Handle(@event);
+                changeset = pipelineContext.Changeset;
+
+                // Accumulate across the batch: a single OnNext delivers all events for one partition
+                // (e.g. AppendMany, or an observer draining a backlog on catch-up). If the instance was
+                // created by any event in the batch, the net change is an Add even when a later event in
+                // the same batch updates it — so OR rather than overwrite, else the create is misreported
+                // as Modified. HasBeenRemoved() on the final changeset still takes precedence below.
+                isNewInstance |= pipelineContext.IsNewInstance;
+
+                // Check if there are any failed partitions from bulk operations
+                if (pipelineContext.FailedPartitions.Any())
                 {
-                    changeset = pipelineContext.Changeset;
-
-                    // Accumulate across the batch: a single OnNext delivers all events for one partition
-                    // (e.g. AppendMany, or an observer draining a backlog on catch-up). If the instance was
-                    // created by any event in the batch, the net change is an Add even when a later event in
-                    // the same batch updates it — so OR rather than overwrite, else the create is misreported
-                    // as Modified. HasBeenRemoved() on the final changeset still takes precedence below.
-                    isNewInstance |= pipelineContext.IsNewInstance;
-
-                    // Check if there are any failed partitions from bulk operations
-                    if (pipelineContext.FailedPartitions.Any())
+                    var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+                    foreach (var failedPartition in pipelineContext.FailedPartitions)
                     {
-                        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
-                        foreach (var failedPartition in pipelineContext.FailedPartitions)
-                        {
-                            await observer.PartitionFailed(
-                                failedPartition.EventSourceId,
-                                failedPartition.EventSequenceNumber,
-                                [ProjectionBulkFailures.MessageFor(failedPartition)],
-                                string.Empty,
-                                FailureKind.Handling);
-                        }
+                        await observer.PartitionFailed(
+                            failedPartition.EventSourceId,
+                            failedPartition.EventSequenceNumber,
+                            [ProjectionBulkFailures.MessageFor(failedPartition)],
+                            string.Empty,
+                            FailureKind.Handling);
                     }
                 }
 
-                // Advance only after every generation of the physical event has succeeded.
-                lastSuccessfullyObservedEvent = eventBatch[^1];
+                lastSuccessfullyObservedEvent = @event;
                 logger.SuccessfullyHandledEvent(sequenceNumber, _key);
             }
 

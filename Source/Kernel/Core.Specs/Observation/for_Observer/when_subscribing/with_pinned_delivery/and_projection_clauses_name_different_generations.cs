@@ -11,10 +11,11 @@ public class and_projection_clauses_name_different_generations : given.an_observ
     readonly EventType _first = new("person-registered", 1);
     readonly EventType _second = new("person-registered", 2);
 
+    Exception _error;
+
     void Establish() => _eventTypesStorage.HasFor(_first.Id, Arg.Any<EventTypeGeneration>()).Returns(true);
 
-    async Task Because() => await _observer.SubscribeWithGenerationDelivery<NullObserverSubscriber>(ObserverType.Projection, [_first, _second], SiloAddress.Zero, EventGenerationDelivery.Pinned);
+    async Task Because() => _error = await Catch.Exception(() => _observer.SubscribeWithGenerationDelivery<NullObserverSubscriber>(ObserverType.Projection, [_first, _second], SiloAddress.Zero, EventGenerationDelivery.Pinned));
 
-    [Fact] void should_preserve_both_clause_pins() => _definitionStorage.State.EventTypes.ShouldContainOnly(_first, _second);
-    [Fact] void should_persist_pinned_delivery() => _definitionStorage.State.GenerationDelivery.ShouldEqual(EventGenerationDelivery.Pinned);
+    [Fact] void should_reject_ambiguous_pins() => _error.ShouldBeOfExactType<ObserverPinsMultipleGenerationsOfEventType>();
 }

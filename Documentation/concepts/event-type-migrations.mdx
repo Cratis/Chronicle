@@ -123,8 +123,10 @@ one when you need to rebuild prior state.
 
 The .NET option also opts typed materialized projections into pinned delivery. Each `From`, `Join`, child,
 key, parent-key, and removal clause uses the generation it names, including events read from storage
-to resolve joins or parent keys. Different clauses can name different generations of the same event
-type. Live, catch-up, and replay use the same generation-selection and release boundary.
+to resolve joins or parent keys. A pinned projection can name only one generation per event type
+across all its clauses, including children and nested objects; registration rejects conflicting pins,
+just as it does for reactors and reducers. Different event types can pin different generations.
+Live, catch-up, and replay use the same generation-selection and release boundary.
 
 For a PDL definition saved with `GenerationDelivery = Pinned`, a bare `from PersonRegistered` resolves
 to the latest registered generation when you save it. That resolved generation is persisted as the

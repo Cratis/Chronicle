@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_generat
 public class a_projection_with_generations : Specification
 {
     protected EventType _first = new("PersonRegistered", 1);
-    protected EventType _second = new("PersonRegistered", 2);
+    protected EventType _second = new("PersonRenamed", 2);
     protected ProjectionFactory _factory;
     protected ProjectionDefinition _definition;
     protected ReadModelDefinition _readModel;

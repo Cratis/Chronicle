@@ -8,7 +8,8 @@ public class and_generations_target_different_roots : given.a_pinned_pipeline
     async Task Because()
     {
         var pipeline = await CreatePipeline();
-        await pipeline.HandleGenerations([Event(_first, "original"), Event(_second, "migrated")]);
+        await pipeline.Handle(Event(_first, "original"));
+        await pipeline.Handle(Event(_second, "migrated"));
     }
 
     [Fact] void should_save_the_first_clause_under_its_own_key() => _saved["key-1"]["oldName"].ShouldEqual("original");
