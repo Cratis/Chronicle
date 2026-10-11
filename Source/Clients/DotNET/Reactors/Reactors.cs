@@ -120,6 +120,11 @@ public class Reactors : IReactors, IReactorPartitionRecovery
     /// </summary>
     internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
 
+    /// <summary>
+    /// Gets the current discovered and runtime reactor handlers.
+    /// </summary>
+    internal IEnumerable<IReactorHandler> Handlers => _handlers.Values.Select(_ => _.Handler);
+
     /// <inheritdoc/>
     public Task Discover()
     {

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
@@ -176,6 +177,12 @@ public interface IEventStore
     /// </para>
     /// </remarks>
     RegistrationOutcome Registration { get; }
+
+    /// <summary>
+    /// Gets the artifacts found by the last completed discovery pass, or <see cref="DiscoveryReport.NotRun"/>.
+    /// Reading this does not trigger discovery or indicate registration success.
+    /// </summary>
+    DiscoveryReport Discovery => DiscoveryReport.NotRun;
 
     /// <summary>
     /// Discover all artifacts for the event store.
