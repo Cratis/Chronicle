@@ -74,8 +74,9 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
     public bool IsSuccess => HasRun && Failure is null && Artifacts.All(_ => _.IsRegistered);
 
     /// <summary>
-    /// Gets the likely identity changes detected before this registration run.
+    /// Gets the likely identity changes detected before this registration run, retained across background retries.
     /// These are heuristic findings, not per-artifact registration failures.
+    /// Only reactor and event type findings prevent registration under the Fail policy.
     /// </summary>
     public IImmutableList<ArtifactIdentityDrift> IdentityDrift { get; init; } = ImmutableList<ArtifactIdentityDrift>.Empty;
 

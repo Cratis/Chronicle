@@ -29,7 +29,7 @@ internal class ArtifactIdentityDriftDetector(
     /// Detects likely identity changes without failing on unavailable diagnostics.
     /// </summary>
     /// <param name="current">The current artifacts.</param>
-    /// <returns>The confirmed identity drift findings.</returns>
+    /// <returns>The findings, with reactor and reducer candidates confirmed unsubscribed.</returns>
     internal async Task<IImmutableList<ArtifactIdentityDrift>> Detect(DiscoveryReport current)
     {
         try
@@ -46,7 +46,9 @@ internal class ArtifactIdentityDriftDetector(
             foreach (var candidate in ObserverIdentityDrift.Find(observers, current))
             {
                 var observer = observers.First(_ => _.Id == candidate.PreviousId);
-                if (await IsUnsubscribed(observer, deadline.Token))
+
+                // Kernel-owned projections remain subscribed until registration retires their old identities.
+                if (candidate.Kind == ArtifactKind.Projection || await IsUnsubscribed(observer, deadline.Token))
                 {
                     drift.Add(candidate);
                 }

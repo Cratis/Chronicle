@@ -218,6 +218,7 @@ public class ChronicleOptions(
 
     /// <summary>
     /// Gets or sets how likely artifact renames or moves are handled before registration. Defaults to Warn.
+    /// Fail escalates only Warning-level reactor and event type findings, not Information-level read model findings.
     /// Snapshot failures never prevent registration, even under Fail.
     /// </summary>
     public ArtifactIdentityDriftPolicy ArtifactIdentityDrift { get; set; } = ArtifactIdentityDriftPolicy.Warn;

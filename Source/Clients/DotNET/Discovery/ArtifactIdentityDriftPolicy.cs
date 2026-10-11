@@ -14,7 +14,8 @@ public enum ArtifactIdentityDriftPolicy
     Warn = 0,
 
     /// <summary>
-    /// Fail before registering when a finding exists.
+    /// Fail before registering when a Warning-level reactor or event type finding exists.
+    /// Information-level reducer and projection findings never prevent registration.
     /// </summary>
     Fail = 1,
 

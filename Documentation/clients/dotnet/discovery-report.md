@@ -21,7 +21,7 @@ var reactorCount = report.CountOf(ArtifactKind.Reactor);
 var reactors = report.OfKind(ArtifactKind.Reactor);
 ```
 
-Explicit or runtime registrations added later do not mutate this snapshot. The identity check builds a fresh view before each registration run, including those additions. Webhooks, external subscriptions, and read model reactors are outside the report.
+Explicit or runtime registrations added later do not mutate this snapshot. The identity check builds a fresh view for each foreground registration run, including those additions. Background retries reuse that run's findings without repeating snapshots or drift logs. Webhooks, external subscriptions, and read model reactors are outside the report.
 
 ## Inspect likely identity changes
 
@@ -32,7 +32,7 @@ await eventStore.RegisterAll();
 var findings = eventStore.Registration.IdentityDrift;
 ```
 
-An observer candidate must have the same kind and a matching short name, be absent from the current declarations, and no longer be subscribed. An event type candidate must be client-owned and uniquely match a nonempty coarse schema shape. A current id already stored in the kernel is not reported again on reconnect.
+An observer candidate must have the same kind and a matching short name, and be absent from the current declarations of that kind. Reactors and reducers must no longer be subscribed. Projections skip subscription confirmation: the kernel keeps the old projection subscribed until registration retires it. An event type candidate must be client-owned and uniquely match a nonempty coarse schema shape. A current id already stored in the kernel is not reported again on reconnect.
 
 ## Choose a policy
 
@@ -41,10 +41,10 @@ Set `ChronicleOptions.ArtifactIdentityDrift` to a value from `ArtifactIdentityDr
 | Policy | Behavior |
 | --- | --- |
 | `Warn` (default) | Log findings, include them in `Registration.IdentityDrift`, and continue registering. |
-| `Fail` | Throw `ArtifactIdentityDriftDetected` before registering any artifacts when findings exist. `Registration.Failure` and `IdentityDrift` record the failure and findings. Bounded and background retries do not retry it. |
+| `Fail` | Throw `ArtifactIdentityDriftDetected` before registering any artifacts when Warning-level reactor or event type findings exist. Information-level reducer and projection findings never fail registration. `Registration.Failure` records the failure and `IdentityDrift` retains all findings. Bounded and background retries do not retry this failure. |
 | `Ignore` | Skip the identity check and its kernel calls. Discovery reporting still runs. |
 
-Snapshot failures never block registration, even with `Fail`. The client logs the skipped check and returns no findings. A failed subscription confirmation drops that observer candidate. Diagnostic calls share a five-second deadline.
+Snapshot failures never block registration, even with `Fail`. The client logs the skipped check and returns no findings. A failed subscription confirmation drops that reactor or reducer candidate. Diagnostic calls share a five-second deadline.
 
 `Fail` is useful in CI or staging, not a guarantee that every rename will be caught. Review each finding before acting: pin the previous reactor id to preserve its position, or deliberately remove an abandoned observer. See [Reactor identity and renaming](../../reactors/identity.mdx) and [the configuration reference](../../configuration/chronicle-options.mdx#artifactidentitydrift).
 
@@ -62,7 +62,7 @@ Snapshot failures never block registration, even with `Fail`. The client logs th
 
 ## Limits of the heuristic
 
-- During a rolling deployment, a still-subscribed old observer is filtered out. Once the new id is registered, later checks stay quiet, so this can miss a rename.
-- Two services sharing a store and a short type name can look like a rename when one is down. Review the evidence; there is no per-id allow-list.
+- During a rolling deployment, a still-subscribed old reactor or reducer is filtered out. Once the new id is registered, later checks stay quiet, so this can miss a rename.
+- Two services sharing a store and a short type name can look like a rename when one is down. Projections can match even while subscribed, so same-named projections from separate services are more prone to false positives. Reducer and projection findings remain informational under every policy. Review the evidence; there is no per-id allow-list.
 - Same-shaped events can match coincidentally. Empty and ambiguous shapes are excluded, but a rename accompanied by schema changes can be missed.
 - Event types cannot be removed to acknowledge a finding under `Fail`. Preserve the old id when evolving its contract, or switch to `Warn` after reviewing an intentional new identity. See [Event type migrations](../../concepts/event-type-migrations.mdx).

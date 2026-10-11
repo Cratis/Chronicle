@@ -19,12 +19,12 @@ internal static class ObserverIdentityDrift
     internal static IEnumerable<ArtifactIdentityDrift> Find(IEnumerable<ObserverInformation> observers, DiscoveryReport current)
     {
         var snapshot = observers.ToArray();
-        var storedIds = snapshot.Select(_ => _.Id).ToHashSet(StringComparer.Ordinal);
-        var declaredIds = current.Artifacts.Select(_ => _.Id).ToHashSet(StringComparer.Ordinal);
+        var storedIds = snapshot.ToLookup(_ => KindOf(_.Type), _ => _.Id);
+        var declaredIds = current.Artifacts.ToLookup(_ => _.Kind, _ => _.Id);
 
-        return current.Artifacts.Where(_ => IsObserver(_.Kind) && !storedIds.Contains(_.Id))
+        return current.Artifacts.Where(_ => IsObserver(_.Kind) && !storedIds[_.Kind].Contains(_.Id, StringComparer.Ordinal))
             .SelectMany(artifact => snapshot.Where(observer =>
-                !declaredIds.Contains(observer.Id) &&
+                !declaredIds[artifact.Kind].Contains(observer.Id, StringComparer.Ordinal) &&
                 KindOf(observer.Type) == artifact.Kind &&
                 (artifact.Kind == ArtifactKind.Projection || observer.Owner != ObserverOwner.Kernel) &&
                 ArtifactIdNames.CandidateNamesOf(artifact).Contains(ArtifactIdNames.NameSegmentOf(observer.Id), StringComparer.Ordinal))

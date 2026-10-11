@@ -69,6 +69,7 @@ public class EventStore : IEventStore
     readonly ArtifactIdentityDriftDetector? _identityDriftDetector;
     readonly ArtifactIdentityDriftPolicy _identityDriftPolicy;
     SingleFlightRegistration? _registerAllFlight;
+    AsyncLocal<bool>? _backgroundRegistrationRetryContext;
     int _backgroundRegistrationRetryActive;
     Task? _backgroundRegistrationRetryTask;
 
@@ -471,16 +472,18 @@ public class EventStore : IEventStore
     async Task RegisterAllCore()
     {
         _logger.RegisterAllArtifacts();
-        IImmutableList<ArtifactIdentityDrift> drift = ImmutableList<ArtifactIdentityDrift>.Empty;
+        var isBackgroundRetry = _backgroundRegistrationRetryContext?.Value == true;
+        var drift = isBackgroundRetry ? Registration.IdentityDrift : ImmutableList<ArtifactIdentityDrift>.Empty;
 
         try
         {
-            if (_identityDriftDetector is not null && BuildDiscoveryReport() is { } current)
+            if (!isBackgroundRetry && _identityDriftDetector is not null && BuildDiscoveryReport() is { } current)
             {
                 drift = await _identityDriftDetector.Detect(current);
-                if (_identityDriftPolicy == ArtifactIdentityDriftPolicy.Fail && drift.Count > 0)
+                var warnings = drift.Where(_ => _.Kind is ArtifactKind.Reactor or ArtifactKind.EventType).ToImmutableList();
+                if (_identityDriftPolicy == ArtifactIdentityDriftPolicy.Fail && warnings.Count > 0)
                 {
-                    throw new ArtifactIdentityDriftDetected(drift);
+                    throw new ArtifactIdentityDriftDetected(warnings);
                 }
             }
 
@@ -572,7 +575,7 @@ public class EventStore : IEventStore
 
                 try
                 {
-                    await RegisterAll();
+                    await RegisterAllInBackground();
                     _logger.BackgroundRegistrationRetrySucceeded(attempt);
                     return;
                 }
@@ -592,6 +595,22 @@ public class EventStore : IEventStore
         {
             Connection.Lifecycle.OnDisconnected -= StopOnDisconnect;
             Interlocked.Exchange(ref _backgroundRegistrationRetryActive, 0);
+        }
+    }
+
+    async Task RegisterAllInBackground()
+    {
+        // Execution-local state keeps an independent foreground caller's diagnostics enabled, even while this
+        // loop is active. It flows into a new single flight but does not change one the retry merely joins.
+        var context = LazyInitializer.EnsureInitialized(ref _backgroundRegistrationRetryContext);
+        context.Value = true;
+        try
+        {
+            await RegisterAll();
+        }
+        finally
+        {
+            context.Value = false;
         }
     }
 

@@ -218,7 +218,7 @@ In `appsettings.json`:
 
 ### ArtifactIdentityDrift
 
-Controls the .NET client's check for likely artifact renames or moves before each registration run.
+Controls the .NET client's check for likely artifact renames or moves before each foreground registration run. Background retries retain its findings without repeating snapshots or drift logs.
 
 | | |
 |---|---|
@@ -226,7 +226,7 @@ Controls the .NET client's check for likely artifact renames or moves before eac
 | Default | `Warn` |
 | Values | `Warn`, `Fail`, `Ignore` |
 
-`Warn` logs findings and continues registering. `Fail` throws `ArtifactIdentityDriftDetected` before any artifacts are registered when findings exist, without retrying. `Ignore` skips the check and its kernel calls. Snapshot failures never prevent registration, even with `Fail`; a failed subscription confirmation omits that observer candidate.
+`Warn` logs findings and continues registering. `Fail` throws `ArtifactIdentityDriftDetected` before any artifacts are registered when Warning-level reactor or event type findings exist, without retrying. Information-level reducer and projection findings never fail registration. `Ignore` skips the check and its kernel calls. Snapshot failures never prevent registration, even with `Fail`; a failed subscription confirmation omits that reactor or reducer candidate. Projections skip confirmation because the kernel keeps them subscribed until registration retires them.
 
 In `appsettings.json`:
 
@@ -234,7 +234,7 @@ In `appsettings.json`:
 { "Cratis": { "Chronicle": { "ArtifactIdentityDrift": "Fail" } } }
 ```
 
-Use `Fail` in CI or staging to investigate likely identity changes before deploying. This is a heuristic: rolling deployments can hide renames, and unrelated same-named observers or same-shaped events can match. Event types cannot be removed to acknowledge a finding; preserve the old id or switch to `Warn` after reviewing an intentional new identity. See [Discovery report and identity drift](../clients/dotnet/discovery-report.md) for findings, log levels, and limitations.
+Use `Fail` in CI or staging to investigate likely identity changes before deploying. This is a heuristic: rolling deployments can hide reactor or reducer renames, and unrelated same-named observers or same-shaped events can match. Projections are more prone to false positives because subscribed candidates are included; their findings remain informational. Event types cannot be removed to acknowledge a finding; preserve the old id or switch to `Warn` after reviewing an intentional new identity. See [Discovery report and identity drift](../clients/dotnet/discovery-report.md) for findings, log levels, and limitations.
 
 ### Tls
 

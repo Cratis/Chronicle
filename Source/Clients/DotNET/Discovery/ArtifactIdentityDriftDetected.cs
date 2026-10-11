@@ -6,9 +6,9 @@ using System.Collections.Immutable;
 namespace Cratis.Chronicle.Discovery;
 
 /// <summary>
-/// The exception that is thrown when likely identity changes prevent artifact registration under the Fail policy.
+/// The exception that is thrown when Warning-level reactor or event type identity changes prevent registration under the Fail policy.
 /// </summary>
-/// <param name="drift">The identity changes detected before registration.</param>
+/// <param name="drift">The Warning-level identity changes detected before registration.</param>
 public class ArtifactIdentityDriftDetected(IImmutableList<ArtifactIdentityDrift> drift) : Exception(
     $"Likely artifact identity changes: {string.Join("; ", drift.Select(_ => $"{_.Kind}: {_.PreviousId} -> {_.CurrentId}"))}. " +
     "Preserve reactor positions with [Reactor(\"<previous id>\")], or remove orphaned observers with Observers.Remove(\"<previous id>\"). " +
