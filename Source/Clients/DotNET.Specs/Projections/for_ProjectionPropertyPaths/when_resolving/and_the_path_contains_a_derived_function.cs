@@ -10,7 +10,8 @@ public class and_the_path_contains_a_derived_function : Specification
 {
     PropertyPath _result;
 
-    void Because() => _result = ProjectionPropertyPaths.Resolve("Brief.Occurred.Week()", new CamelCaseNamingPolicy());
+    void Because() => _result = ProjectionPropertyPaths.Resolve("Occurred.Week()", new CamelCaseNamingPolicy());
 
-    [Fact] void should_name_members_without_changing_the_function() => _result.Path.ShouldEqual("brief.occurred.Week");
+    [Fact] void should_name_members_without_changing_the_function() => _result.Path.ShouldEqual("occurred.Week");
+    [Fact] void should_resolve_a_function() => _result.LastSegment.ShouldBeOfExactType<DerivedPropertyFunctionSegment>();
 }
