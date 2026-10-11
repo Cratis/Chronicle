@@ -280,6 +280,15 @@ internal static class ProjectionReadModelProcessor
     }
 
     /// <summary>
+    /// Creates a sink using the same read model schema and key conversion as projection folding.
+    /// </summary>
+    /// <param name="readModelType">The read model type.</param>
+    /// <param name="schemaGenerator">The schema generator used by the fold.</param>
+    /// <returns>A sink whose key conversion matches the materialized instances.</returns>
+    internal static InMemorySink CreateSink(Type readModelType, IJsonSchemaGenerator schemaGenerator) =>
+        new(BuildKernelReadModelDefinition(readModelType, schemaGenerator.GenerateForReadModel(readModelType)), _typeFormats);
+
+    /// <summary>
     /// Deserializes every per-key document held by the in-memory sink into a <typeparamref name="TReadModel"/>,
     /// keyed by its event source id.
     /// </summary>

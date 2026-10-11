@@ -11,6 +11,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Sinks;
 using Cratis.Chronicle.Testing.Events;
@@ -193,11 +194,16 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
             .MakeGenericMethod(typeof(TReadModel));
         var folded = await (Task<IReadOnlyDictionary<EventSourceId, TReadModel>>)fold.Invoke(null, [store, events, true])!;
         var identifier = typeof(TReadModel).GetReadModelIdentifier().Value;
-        var instances = _instances.Where(pair => pair.Key.Identifier == identifier)
-            .ToDictionary(pair => pair.Key.Key, pair => (TReadModel)pair.Value);
+        using var sink = ProjectionReadModelProcessor.CreateSink(typeof(TReadModel), store.JsonSchemaGenerator);
+        var instances = new Dictionary<object, TReadModel>();
+        foreach (var pair in _instances.Where(pair => pair.Key.Identifier == identifier))
+        {
+            instances[sink.GetKeyValue(new(pair.Key.Key, ArrayIndexers.NoIndexers))] = (TReadModel)pair.Value;
+        }
+
         foreach (var (key, instance) in folded)
         {
-            instances[key.Value] = instance;
+            instances[sink.GetKeyValue(new(key.Value, ArrayIndexers.NoIndexers))] = instance;
         }
 
         return instances.Values.ToArray();
