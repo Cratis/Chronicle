@@ -66,8 +66,10 @@ public class AddChildBuilder<TParentReadModel, TChildModel, TEvent>(IChildrenBui
         var childProperty = ProjectionPropertyPaths.FromExpression(propertyWithChild, namingPolicy, ProjectionPathRole.Source, $"the child object on event '{typeof(TEvent).FullName}'");
         foreach (var property in typeof(TChildModel).GetProperties())
         {
-            var propertyPath = ProjectionPropertyPaths.Resolve(property.Name, namingPolicy, ProjectionPathRole.Target);
-            fromBuilder.Set(propertyPath).To(childProperty + propertyPath);
+            // Set resolves the CLR member before applying the target naming policy.
+            var setBuilder = fromBuilder.Set(property.Name);
+            var propertyPath = ProjectionPropertyPaths.Resolve(property, namingPolicy, ProjectionPathRole.Target);
+            setBuilder.To(childProperty + propertyPath);
         }
 
         return this;

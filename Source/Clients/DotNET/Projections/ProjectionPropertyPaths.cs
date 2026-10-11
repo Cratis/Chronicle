@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using System.Reflection;
 using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 
@@ -31,6 +32,16 @@ internal static class ProjectionPropertyPaths
     /// <returns>The serialized property path.</returns>
     public static PropertyPath Resolve(string path, INamingPolicy namingPolicy, ProjectionPathRole role) =>
         new(string.Join('.', path.Split('.').Select((segment, index) => ResolveRawSegment(segment, namingPolicy, role, index))));
+
+    /// <summary>
+    /// Converts a CLR member to its serialized projection property path without parsing its CLR name.
+    /// </summary>
+    /// <param name="property">The CLR property to resolve.</param>
+    /// <param name="namingPolicy">The serialization naming policy.</param>
+    /// <param name="role">Whether the path reads event data or addresses read-model state.</param>
+    /// <returns>The serialized property path.</returns>
+    public static PropertyPath Resolve(PropertyInfo property, INamingPolicy namingPolicy, ProjectionPathRole role) =>
+        Resolve(property.Name, namingPolicy, role);
 
     /// <summary>
     /// Converts a member expression to its serialized projection property path.
