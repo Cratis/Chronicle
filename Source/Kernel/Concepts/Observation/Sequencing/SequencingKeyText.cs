@@ -19,7 +19,23 @@ public static class SequencingKeyText
     /// </summary>
     /// <param name="text">The text to check.</param>
     /// <returns>Whether the text is well-formed.</returns>
-    public static bool IsWellFormed(string text) => TryByteCount(text, int.MaxValue, out _);
+    public static bool IsWellFormed(string text)
+    {
+        if (text is null)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < text.Length; index++)
+        {
+            if (ByteLengthAt(text, ref index) < 0)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// Counts the strict UTF-8 bytes of text.
@@ -105,28 +121,8 @@ public static class SequencingKeyText
 
         for (var index = 0; index < text.Length; index++)
         {
-            var character = text[index];
-            var length = 3;
-            if (character <= 0x7F)
-            {
-                length = 1;
-            }
-            else if (character <= 0x7FF)
-            {
-                length = 2;
-            }
-            if (char.IsSurrogate(character))
-            {
-                if (!char.IsHighSurrogate(character) || index + 1 == text.Length || !char.IsLowSurrogate(text[index + 1]))
-                {
-                    return false;
-                }
-
-                index++;
-                length = 4;
-            }
-
-            if (count > maximum - length)
+            var length = ByteLengthAt(text, ref index);
+            if (length < 0 || count > maximum - length)
             {
                 return false;
             }
@@ -156,6 +152,34 @@ public static class SequencingKeyText
         }
 
         return hash.GetHashAndReset();
+    }
+
+    static int ByteLengthAt(string text, ref int index)
+    {
+        var character = text[index];
+        if (character <= 0x7F)
+        {
+            return 1;
+        }
+
+        if (character <= 0x7FF)
+        {
+            return 2;
+        }
+
+        if (!char.IsSurrogate(character))
+        {
+            return 3;
+        }
+
+        if (!char.IsHighSurrogate(character) || index + 1 == text.Length || !char.IsLowSurrogate(text[index + 1]))
+        {
+            return -1;
+        }
+
+        index++;
+
+        return 4;
     }
 
     static void WriteCodeUnits(ReadOnlySpan<char> text, Span<byte> bytes)
