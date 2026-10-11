@@ -22,6 +22,10 @@ public interface IProjectionBuilderFor<TReadModel> : IProjectionBuilder<TReadMod
     /// <summary>
     /// Names the model container - typically used by storage as name of storage unit (collection, table, etc.).
     /// </summary>
+    /// <remarks>
+    /// Overrides the container name the naming policy would otherwise give the read model. The identifier of the
+    /// read model is not affected. Every projection of the same read model must agree on the container name.
+    /// </remarks>
     /// <param name="containerName">Container name of the read model.</param>
     /// <returns>Builder continuation.</returns>
     IProjectionBuilderFor<TReadModel> ContainerName(string containerName);

@@ -102,3 +102,5 @@
   href: CHR0053.mdx
 - name: CHR0054 - Reactor method has an unsupported return type
   href: CHR0054.mdx
+- name: CHR0057 - An artifact must target one read model
+  href: CHR0057.mdx

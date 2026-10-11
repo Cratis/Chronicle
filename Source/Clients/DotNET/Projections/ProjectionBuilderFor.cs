@@ -30,6 +30,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     bool _eventSequenceExplicitlySet;
     bool _isRewindable = true;
     bool _isActive = true;
+    string? _containerName;
     Type? _variantIdentity;
     PropertyPath _variantKey = PropertyPath.NotSet;
 
@@ -57,6 +58,11 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     }
 
     /// <summary>
+    /// Gets the container name this projection declared for its read model, or null when it left it to the naming policy.
+    /// </summary>
+    internal string? ContainerNameOverride => _containerName;
+
+    /// <summary>
     /// Gets what this projection declared about being one variant of a mutually exclusive group, or default when
     /// it is an ordinary single-read-model projection.
     /// </summary>
@@ -74,7 +80,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     /// <inheritdoc/>
     public IProjectionBuilderFor<TReadModel> ContainerName(string containerName)
     {
-        _readModelIdentifier = containerName;
+        _containerName = containerName;
         return this;
     }
 
