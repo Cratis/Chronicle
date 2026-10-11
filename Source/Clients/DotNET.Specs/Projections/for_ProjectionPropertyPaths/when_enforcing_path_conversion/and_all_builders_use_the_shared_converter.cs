@@ -33,6 +33,15 @@ public class and_all_builders_use_the_shared_converter : Specification
         var syntax = CSharpSyntaxTree.ParseText(reader.ReadToEnd()).GetRoot();
 
         return syntax.DescendantNodes().OfType<InvocationExpressionSyntax>()
-            .Any(invocation => invocation.Expression is MemberAccessExpressionSyntax memberAccess && _pathNamingMethods.Contains(memberAccess.Name.Identifier.ValueText));
+            .Select(invocation => InvokedName(invocation.Expression))
+            .Any(name => name is not null && _pathNamingMethods.Contains(name));
     }
+
+    static string? InvokedName(ExpressionSyntax expression) => expression switch
+    {
+        MemberAccessExpressionSyntax memberAccess => memberAccess.Name.Identifier.ValueText,
+        MemberBindingExpressionSyntax memberBinding => memberBinding.Name.Identifier.ValueText,
+        SimpleNameSyntax simpleName => simpleName.Identifier.ValueText,
+        _ => null
+    };
 }
