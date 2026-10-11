@@ -139,7 +139,7 @@ jobs:
           max_attempts: 5
           retry_wait_seconds: 15
           command: |
-            docker pull mongo
+            docker pull mongo:8.2
             if [ "${{ matrix.database }}" = "postgresql" ]; then
               docker pull postgres:16
             fi
@@ -239,7 +239,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 5
           retry_wait_seconds: 15
-          command: docker pull mongo
+          command: docker pull mongo:8.2
 
       - name: Run Kernel integration tests (${{ matrix.namespace }})
         env:

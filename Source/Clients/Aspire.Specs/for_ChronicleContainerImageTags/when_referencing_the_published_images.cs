@@ -16,5 +16,5 @@ public class when_referencing_the_published_images : Specification
     [Fact] void should_publish_the_development_image_as_latest_development() => ChronicleContainerImageTags.DevelopmentTag.ShouldEqual("latest-development");
     [Fact] void should_publish_the_slim_development_image_as_latest_development_slim() => ChronicleContainerImageTags.DevelopmentSlimTag.ShouldEqual("latest-development-slim");
     [Fact] void should_pull_the_mongo_db_image() => ChronicleContainerImageTags.MongoDBImage.ShouldEqual("mongo");
-    [Fact] void should_pull_the_pinned_mongo_db_tag() => ChronicleContainerImageTags.MongoDBTag.ShouldEqual("8.0");
+    [Fact] void should_pull_the_pinned_mongo_db_tag() => ChronicleContainerImageTags.MongoDBTag.ShouldEqual("8.2");
 }

@@ -105,7 +105,7 @@ services:
     restart: unless-stopped
 
   mongodb:
-    image: mongo:8
+    image: mongo:8.2
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     # This MongoDB has no authentication. Publish it on loopback at most, for host tools.
     ports:
@@ -115,7 +115,7 @@ services:
     restart: unless-stopped
 
   mongodb-init:
-    image: mongo:8
+    image: mongo:8.2
     depends_on:
       - mongodb
     restart: "no"
@@ -294,7 +294,7 @@ services:
     restart: unless-stopped
 
   mongodb:
-    image: mongo:8
+    image: mongo:8.2
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     # This MongoDB has no authentication. Publish it on loopback at most, for host tools.
     ports:
@@ -304,7 +304,7 @@ services:
     restart: unless-stopped
 
   mongodb-init:
-    image: mongo:8
+    image: mongo:8.2
     depends_on:
       - mongodb
     restart: "no"

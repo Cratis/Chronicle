@@ -160,6 +160,15 @@ public record ProjectionEventContext(
         _pendingFutureSaves.Add(new PendingFutureSave(key, changeset));
 
     /// <summary>
+    /// Adds a pending save whose persisted future must remain until its write succeeds.
+    /// </summary>
+    /// <param name="key">The key to use when applying the changeset.</param>
+    /// <param name="changeset">The changeset containing the resolved future's changes.</param>
+    /// <param name="futureId">The identity of the persisted future.</param>
+    public void AddPendingFutureSave(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, ProjectionFutureId futureId) =>
+        _pendingFutureSaves.Add(new PendingFutureSave(key, changeset) { FutureId = futureId });
+
+    /// <summary>
     /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and
     /// <see cref="AppendedEvent"/>.
     /// </summary>

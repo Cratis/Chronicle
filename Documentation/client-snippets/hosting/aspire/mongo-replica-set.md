@@ -15,7 +15,7 @@ public static class HostingAspireMongoReplicaSet
             "mongosh --quiet --eval 'try { rs.status() } catch (error) { rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"localhost:27017\" }] }) }' ) & " +
             "exec docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all";
 
-        var mongo = builder.AddContainer("mongo", "mongo", "8.0")
+        var mongo = builder.AddContainer("mongo", "mongo", "8.2")
             .WithEndpoint(targetPort: 27017, name: "tcp")
             .WithEntrypoint("/bin/sh")
             .WithArgs("-c", replicaSetCommand);

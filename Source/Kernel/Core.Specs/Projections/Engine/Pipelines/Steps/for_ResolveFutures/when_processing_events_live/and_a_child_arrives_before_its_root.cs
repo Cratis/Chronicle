@@ -43,10 +43,10 @@ public class and_a_child_arrives_before_its_root : given.a_first_level_child_fut
     }
 
     [Fact] void should_leave_the_future_pending_before_the_root_arrives() => _resolvedBeforeRoot.ShouldBeFalse();
-    [Fact] void should_resolve_the_future_after_the_root_arrives() => _projectionFutures.Received(1).ResolveFuture(_future.Id);
+    [Fact] void should_queue_the_future_after_the_root_arrives() => _result!.PendingFutureSaves.Single().FutureId.ShouldEqual(_future.Id);
     [Fact] void should_project_the_child_under_the_root() => HasChild.ShouldBeTrue();
     [Fact] void should_produce_the_same_state_as_replay_order() => _matchesReplayOrder.ShouldBeTrue();
     [Fact] void should_save_the_child_under_the_root_key() => _result!.PendingFutureSaves.Single().Key.Value.ShouldEqual("root-key");
     [Fact] void should_use_only_the_child_indexer() => _result!.PendingFutureSaves.Single().Key.ArrayIndexers.All.Single().ArrayProperty.ShouldEqual(new PropertyPath("children"));
-    [Fact] void should_leave_no_future_pending() => _tracker.HasPending.ShouldBeFalse();
+    [Fact] void should_keep_the_future_pending_until_saved() => _tracker.HasPending.ShouldBeTrue();
 }

@@ -16,17 +16,15 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> to use for creating clients.</param>
 public class MongoDBClientManager(IMongoDBClientFactory clientFactory) : IMongoDBClientManager
 {
-    readonly ConcurrentDictionary<string, IMongoClient> _clients = new();
+    readonly ConcurrentDictionary<string, Lazy<IMongoClient>> _clients = new();
 
     /// <inheritdoc/>
     public IMongoClient GetClientFor(MongoClientSettings settings)
     {
         var identifier = string.Join('#', settings.Servers.Select(_ => _.ToString()).Order());
-        if (!_clients.TryGetValue(identifier, out var client))
-        {
-            _clients[identifier] = client = clientFactory.Create(settings);
-        }
-
-        return client;
+        return _clients.GetOrAdd(
+            identifier,
+            static (_, state) => new Lazy<IMongoClient>(() => state.Factory.Create(state.Settings), LazyThreadSafetyMode.ExecutionAndPublication),
+            (Factory: clientFactory, Settings: settings)).Value;
     }
 }

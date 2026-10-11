@@ -1,9 +1,9 @@
 services:
   # ─── MongoDB (default profile) ────────────────────────────────────────────────
-  # Run mongo:8 as a single-node replica set so Chronicle can use MongoDB transactions
+  # Run mongo:8.2 as a single-node replica set so Chronicle can use MongoDB transactions
   # (AppendMany, unit of work, Orleans membership). mongo-init initializes the replica set.
   mongo:
-    image: mongo:8
+    image: mongo:8.2
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     profiles: [mongodb, ""]
     ports:
@@ -12,7 +12,7 @@ services:
   # One-shot initializer: waits for mongo to answer, then initiates the rs0 replica set with the
   # member advertising localhost:27017 so host clients reach it after replica-set host discovery.
   mongo-init:
-    image: mongo:8
+    image: mongo:8.2
     profiles: [mongodb, ""]
     depends_on:
       - mongo
