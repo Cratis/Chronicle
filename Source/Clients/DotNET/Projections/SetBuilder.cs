@@ -37,7 +37,7 @@ public class SetBuilder<TReadModel, TEvent, TParentBuilder>(TParentBuilder paren
     /// <inheritdoc/>
     public TParentBuilder To(PropertyPath propertyPath)
     {
-        _expression = new EventContentPropertyExpression(namingPolicy.GetPropertyName(propertyPath));
+        _expression = new EventContentPropertyExpression(ProjectionPropertyPaths.Resolve(propertyPath, namingPolicy));
         return parent;
     }
 
@@ -92,7 +92,6 @@ public class SetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
     : SetBuilder<TReadModel, TEvent, TParentBuilder>(parent, targetProperty, namingPolicy, forceEventProperty), ISetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>
 {
     readonly TParentBuilder _parent = parent;
-    readonly INamingPolicy _namingPolicy = namingPolicy;
 
     /// <inheritdoc/>
     public TParentBuilder ToValue(TProperty value)
@@ -145,8 +144,7 @@ public class SetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
             throw new InvalidPropertyExpression($"property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'", eventPropertyAccessor);
         }
 
-        _expression = new EventContentPropertyExpression(_namingPolicy.GetPropertyName(propertyPath));
-        return _parent;
+        return To(propertyPath);
     }
 
     /// <inheritdoc/>

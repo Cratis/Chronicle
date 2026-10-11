@@ -75,7 +75,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     {
         var propertyInfo = propertyPath.GetPropertyInfoFor<TReadModel>();
         var primitive = propertyInfo.PropertyType.IsAPrimitiveType() || propertyInfo.PropertyType.IsConcept();
-        propertyPath = _namingPolicy.GetPropertyName(propertyInfo.Name);
+        propertyPath = ProjectionPropertyPaths.Resolve(propertyPath.Segments.Count() == 1 ? (PropertyPath)propertyInfo.Name : propertyPath, _namingPolicy);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy, !primitive);
         _propertyExpressions[propertyPath] = setBuilder;
@@ -89,7 +89,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 
-        var propertyPath = _namingPolicy.GetPropertyName(ResolveTargetPropertyPath(readModelPropertyAccessor));
+        var propertyPath = ProjectionPropertyPaths.Resolve(ResolveTargetPropertyPath(readModelPropertyAccessor), _namingPolicy);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         var setBuilder = new SetBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy, !primitive);
         _propertyExpressions[propertyPath] = setBuilder;
