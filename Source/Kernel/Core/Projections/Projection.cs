@@ -602,7 +602,8 @@ public class Projection(
             var eventStoreStorage = storage.GetEventStore(key.EventStore);
             var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
-            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, State, readModelDefinition, eventTypeSchemas);
+            // Direct computation belongs to the immediate/read lane, not materialized observer delivery.
+            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, State with { GenerationDelivery = EventGenerationDelivery.Compatibility }, readModelDefinition, eventTypeSchemas);
             _projectionsByNamespace[eventStoreNamespace] = projection;
         }
 
@@ -616,7 +617,7 @@ public class Projection(
         var eventStoreStorage = storage.GetEventStore(key.EventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
-        return await projectionFactory.Create(key.EventStore, eventStoreNamespace, State, readModelDefinition, eventTypeSchemas);
+        return await projectionFactory.Create(key.EventStore, eventStoreNamespace, State with { GenerationDelivery = EventGenerationDelivery.Compatibility }, readModelDefinition, eventTypeSchemas);
     }
 
     async Task EvolveForAllNamespaces(

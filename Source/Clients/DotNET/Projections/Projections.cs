@@ -64,6 +64,11 @@ public class Projections(
     internal event Action? Registered;
 
     /// <summary>
+    /// Gets the generation delivery policy supplied by the event store.
+    /// </summary>
+    internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
+    /// <summary>
     /// Gets all the <see cref="ProjectionDefinition">projection definitions</see>.
     /// </summary>
     internal IImmutableList<ProjectionDefinition> Definitions { get; private set; } = ImmutableList<ProjectionDefinition>.Empty;
@@ -478,6 +483,13 @@ public class Projections(
         _explicitHandlers = [.. _explicitRegistrations.Values.Select(_ => _.Handler)];
         _handlersByModelType = handlersByModelType;
         Definitions = _discoveredDefinitions.AddRange(_explicitRegistrations.Values.Select(_ => _.Definition));
+        foreach (var definition in Definitions)
+        {
+            // Immediate/passive and wildcard projections keep Compatibility until their own delivery lanes.
+            definition.GenerationDelivery = definition.IsActive && !definition.SubscribesToAllEvents
+                ? (Contracts.Observation.EventGenerationDelivery)GenerationDelivery
+                : Contracts.Observation.EventGenerationDelivery.Compatibility;
+        }
         ArtifactRegistrations = _discoveredArtifactRegistrations
             .AddRange(_explicitRegistrations.Keys.Select(type => new ArtifactRegistration(type, null)))
             .AddRange(_explicitFailures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)));

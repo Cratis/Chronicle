@@ -94,7 +94,7 @@ public class ChronicleOptions(
     public UnitOfWorkLifecyclePolicy UnitOfWorkLifecyclePolicy { get; set; } = UnitOfWorkLifecyclePolicy.Compatibility;
 
     /// <summary>
-    /// Gets or sets how client reactors and reducers receive event generations.
+    /// Gets or sets how client reactors, reducers, and typed materialized projections receive event generations.
     /// Defaults to Compatibility; Pinned requests kernel selection and release of the subscribed generation.
     /// </summary>
     public EventGenerationDelivery EventGenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;

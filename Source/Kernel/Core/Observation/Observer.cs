@@ -757,7 +757,7 @@ public partial class Observer(
         if (generationDelivery == EventGenerationDelivery.Pinned)
         {
             var duplicate = eventTypes.GroupBy(_ => _.Id).FirstOrDefault(_ => _.Select(type => type.Generation).Distinct().Count() > 1);
-            if (duplicate is not null)
+            if (duplicate is not null && type != ObserverType.Projection)
             {
                 throw new ObserverPinsMultipleGenerationsOfEventType(duplicate.Key);
             }

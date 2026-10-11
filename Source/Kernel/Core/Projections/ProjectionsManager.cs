@@ -491,17 +491,20 @@ public partial class ProjectionsManager(
         // databases are dropped. Subscribe is idempotent and re-reads
         // persistent state, which detects the reset.
         Task SubscribeAs<TSubscriber>()
-            where TSubscriber : IObserverSubscriber =>
-            definition.SubscribesToAllEvents
-                ? observer.SubscribeToAllEvents<TSubscriber>(
-                    ObserverType.Projection,
-                    localSiloDetails.SiloAddress,
-                    reactivateRetired: reactivateRetired)
-                : observer.Subscribe<TSubscriber>(
-                    ObserverType.Projection,
-                    projection.EventTypes,
-                    localSiloDetails.SiloAddress,
-                    reactivateRetired: reactivateRetired);
+            where TSubscriber : IObserverSubscriber
+        {
+            if (definition.SubscribesToAllEvents)
+            {
+                return observer.SubscribeToAllEvents<TSubscriber>(ObserverType.Projection, localSiloDetails.SiloAddress, reactivateRetired: reactivateRetired);
+            }
+
+            if (definition.GenerationDelivery == EventGenerationDelivery.Pinned)
+            {
+                return observer.SubscribeWithGenerationDelivery<TSubscriber>(ObserverType.Projection, projection.EventTypes, localSiloDetails.SiloAddress, definition.GenerationDelivery, isReplayable: definition.IsRewindable, reactivateRetired: reactivateRetired);
+            }
+
+            return observer.Subscribe<TSubscriber>(ObserverType.Projection, projection.EventTypes, localSiloDetails.SiloAddress, reactivateRetired: reactivateRetired);
+        }
 
         // The subscriber type is how the observer learns whether the projection's partitions may be spread across
         // the silos of a cluster. A projection that can collapse several event sources onto one read model

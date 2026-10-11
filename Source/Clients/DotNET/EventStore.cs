@@ -219,7 +219,10 @@ public class EventStore : IEventStore
             namingPolicy,
             artifactActivator,
             jsonSerializerOptions,
-            loggerFactory.CreateLogger<Projections.Projections>());
+            loggerFactory.CreateLogger<Projections.Projections>())
+        {
+            GenerationDelivery = options.Value.EventGenerationDelivery
+        };
 
         _projections = projections;
         Projections = projections;
