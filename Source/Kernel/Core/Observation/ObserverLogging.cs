@@ -17,6 +17,9 @@ namespace Cratis.Chronicle.Observation;
 
 internal static partial class ObserverLogMessages
 {
+    [LoggerMessage(LogLevel.Debug, "Retrying routing after a failed next-event lookup from {NextEventSequenceNumber}")]
+    internal static partial void WatchdogRetryingEventLookup(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
+
     [LoggerMessage(LogLevel.Debug, "Subscribing observer")]
     internal static partial void Subscribing(this ILogger<Observer> logger);
 

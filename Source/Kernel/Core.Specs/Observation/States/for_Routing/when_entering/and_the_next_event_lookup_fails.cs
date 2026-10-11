@@ -19,5 +19,6 @@ public class and_the_next_event_lookup_fails : given.a_routing_state
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
     [Fact] void should_leave_the_position_unchanged() => _resultingStoredState.NextEventSequenceNumber.ShouldEqual(_storedState.NextEventSequenceNumber);
-    [Fact] void should_retry_through_catch_up() => _observer.Received(1).CatchUp();
+    [Fact] void should_not_start_catch_up() => _observer.DidNotReceive().CatchUp();
+    [Fact] void should_not_start_live_observing() => _stateMachine.DidNotReceive().TransitionTo<Observing>();
 }

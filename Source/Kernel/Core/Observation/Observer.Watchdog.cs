@@ -64,7 +64,7 @@ public partial class Observer
     /// </remarks>
     async Task RecoverIfStuck()
     {
-        if (await CheckOwedRecoveryAfterQuarantine() || await CheckJobTasks() || await CheckStrandedCatchupPreparation())
+        if (await RecoveredBySettlingChecks())
         {
             return;
         }
@@ -73,6 +73,24 @@ public partial class Observer
         {
             await CheckStrandedSubscription();
         }
+    }
+
+    async Task<bool> RecoveredBySettlingChecks() =>
+        await CheckDeferredRouting() || await CheckOwedRecoveryAfterQuarantine() || await CheckJobTasks() || await CheckStrandedCatchupPreparation();
+
+    async Task<bool> IsWaitingForEventLookupRetry() =>
+        !IsQuarantined && _subscription.IsSubscribed && await GetCurrentState() is Routing { NextEventLookupFailed: true };
+
+    async Task<bool> CheckDeferredRouting()
+    {
+        if (!await IsWaitingForEventLookupRetry())
+        {
+            return false;
+        }
+
+        logger.WatchdogRetryingEventLookup(State.NextEventSequenceNumber);
+        await TransitionTo<Routing>();
+        return true;
     }
 
     /// <summary>
