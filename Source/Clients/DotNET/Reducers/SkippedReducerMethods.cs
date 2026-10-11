@@ -11,6 +11,17 @@ namespace Cratis.Chronicle.Reducers;
 /// </summary>
 internal static class SkippedReducerMethods
 {
+    static readonly (Func<Candidate, bool> IsViolated, string Reason)[] _rules =
+    [
+        (_ => _.Method.IsStatic, "method must be an instance method"),
+        (_ => _.Parameters.Any(parameter => parameter.ParameterType.IsByRef), "parameters must not be passed by reference"),
+        (_ => _.Parameters.Length is < 2 or > 3, "method must take two or three parameters"),
+        (_ => !_.Parameters[0].ParameterType.IsEventType(_.EventTypes), "first parameter must be a known event type, not the read model or object"),
+        (_ => _.Parameters[1].ParameterType != _.ReadModelType, "second parameter must be the current read model"),
+        (_ => _.Parameters.Length == 3 && _.Parameters[2].ParameterType != typeof(EventContext), "third parameter must be EventContext"),
+        (_ => !_.Method.HasReducerMethodShape(_.ReadModelType, _.EventTypes), "return type must be the read model, Task of the read model or Task")
+    ];
+
     /// <summary>
     /// Describe why the public reducer-like methods of a reducer were skipped.
     /// </summary>
@@ -39,14 +50,9 @@ internal static class SkippedReducerMethods
 
     static string GetReason(MethodInfo method, Type readModelType, IEnumerable<Type> eventTypes)
     {
-        var parameters = method.GetParameters();
-        if (method.IsStatic) return "method must be an instance method";
-        if (parameters.Any(parameter => parameter.ParameterType.IsByRef)) return "parameters must not be passed by reference";
-        if (parameters.Length is < 2 or > 3) return "method must take two or three parameters";
-        if (!parameters[0].ParameterType.IsEventType(eventTypes)) return "first parameter must be a known event type, not the read model or object";
-        if (parameters[1].ParameterType != readModelType) return "second parameter must be the current read model";
-        if (parameters.Length == 3 && parameters[2].ParameterType != typeof(EventContext)) return "third parameter must be EventContext";
-        if (!method.HasReducerMethodShape(readModelType, eventTypes)) return "return type must be the read model, Task of the read model or Task";
-        return "event parameter has no registered concrete event types";
+        var candidate = new Candidate(method, method.GetParameters(), readModelType, eventTypes);
+        return _rules.FirstOrDefault(rule => rule.IsViolated(candidate)).Reason ?? "event parameter has no registered concrete event types";
     }
+
+    record Candidate(MethodInfo Method, ParameterInfo[] Parameters, Type ReadModelType, IEnumerable<Type> EventTypes);
 }
