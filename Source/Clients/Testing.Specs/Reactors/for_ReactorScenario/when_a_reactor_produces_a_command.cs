@@ -18,4 +18,5 @@ public class when_a_reactor_produces_a_command : Specification
 
     [Fact] void should_produce_a_send_reminder_command() => _scenario.ShouldHaveProduced<SendReminder>(r => r.Host == Host);
     [Fact] void should_not_produce_unrelated_side_effects() => _scenario.ShouldNotHaveProduced<MemberActivityRecorded>();
+    [Fact] void should_not_record_commands_as_events_with_destinations() => _scenario.ProducedEvents.ShouldBeEmpty();
 }

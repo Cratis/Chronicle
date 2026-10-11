@@ -8,11 +8,13 @@ namespace Cratis.Chronicle.Testing.Reactors.for_ReactorScenario;
 public class when_a_reactor_produces_concurrency_scoped_events : Specification
 {
     ReactorScenario<ConcurrencyScopedReservationReactor> _scenario;
+    readonly EventSourceId _source = EventSourceId.New();
 
     void Establish() => _scenario = new();
 
     async Task Because() =>
-        await _scenario.Given.ForEventSource(EventSourceId.New()).Events(new ReservationMade("member-42"));
+        await _scenario.Given.ForEventSource(_source).Events(new ReservationMade("member-42"));
 
     [Fact] void should_unwrap_and_produce_the_event() => _scenario.ShouldHaveProduced<MemberActivityRecorded>();
+    [Fact] void should_record_the_events_destination() => _scenario.ProducedEvents.Single().ShouldEqual(new ProducedEvent(new MemberActivityRecorded(), _source, EventSourceType.Default, EventStreamType.All, EventStreamId.Default));
 }

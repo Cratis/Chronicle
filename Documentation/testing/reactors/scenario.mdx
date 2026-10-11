@@ -43,6 +43,26 @@ dotnet add package Cratis.Chronicle.Testing
 
 `Given` is a fluent builder: call `ForEventSource(id)` to specify the event source, then `Events(...)` to route events through the reactor in order.
 
+## Routed givens
+
+When the reactor reads stream metadata from `EventContext`, supply that metadata with `OnStream(...)` before `Events(...)`:
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/routed-events" />
+
+The handler receives the source type, stream type, and stream identifier you specified. Omitted or `null` values use `EventSourceType.Default`, `EventStreamType.All`, and `EventStreamId.Default`. Without `OnStream`, existing givens keep those defaults.
+
+`OnStream` returns a new builder: you can reuse the original without changing its route. The route does not affect read models seeded with `ReadModel(...)`. The non-generic scenario for fluent registrations also accepts `OnStream` and passes the route to its callbacks.
+
+## Observer filters
+
+A class-based reactor with an `[EventSourceType]` or `[EventStreamType]` filter handles only matching givens. A typed `[FromEventSource<T>(stream)]` filter resolves both values from the registered event source definition:
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/observer-filters" />
+
+The first two givens are ignored; only the matching payment produces a side effect. A reactor without these filters receives events on any route. `EventSourceType.Unspecified` and `EventStreamType.All` do not narrow delivery; an explicit `EventSourceType.Default` filter matches only that literal source type. Stream identifiers do not narrow these filters.
+
+Every given event advances the sequence number, even if the filter skips it, matching the kernel's append-time numbering. Tag filters (`FilterEventsByTag`) are not applied: scenario givens do not carry tags. Use a kernel-backed integration specification to verify tag-based delivery.
+
 ## Injecting dependencies
 
 Register the mocks and stubs the reactor depends on through the scenario's `Services` collection — the same `IServiceCollection` you use to configure an application. Logging is registered for you, so a reactor that injects `ILogger<T>` activates without any extra setup:
@@ -99,6 +119,18 @@ When a reactor returns a built-in event side effect or an asynchronous command, 
 The scenario records everything the reactor returns — flattening collections and unwrapping cross-stream event wrappers — so `ShouldHaveProduced<T>()`, its predicate overload, and `ShouldNotHaveProduced<T>()` all work against events and commands alike. The raw list is available on `Produced`.
 
 For a custom synchronous return type, register an `IReactorSideEffectHandler` in `scenario.Services` whose `CanHandleReturnType(Type)` claims that type, as you would in the host. The scenario records the result rather than executing the handler. Unclaimed synchronous types are rejected, just as they are in production; built-in event return types need no extra registration.
+
+## Asserting produced destinations
+
+An event's contents can be right while its destination is wrong. Use `ProducedEvents` to inspect each returned event together with its event source identifier, source type, stream type, and stream identifier:
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/produced-destinations" />
+
+`ShouldHaveProduced<TEvent>(eventSourceId)` checks the destination source. The two-argument predicate overload receives a `ProducedEvent` and the typed event, so you can check both destination and contents. A failing destination assertion lists the recorded destinations. `Produced` and the existing content-only assertions remain unchanged; commands and other non-event side effects appear only in `Produced`.
+
+Bare returned events use the reactor's context values: the source identifier comes from `ICanProvideEventSourceId` when implemented, otherwise from the triggering event. Reactor-level source and stream attributes and `ICanProvideEventStreamId` supply the remaining route values. Unset values use event-log defaults, not the triggering event's source or stream types or stream identifier. An `EventForEventSourceId` uses its own destination metadata instead, including an event source definition when specified. Collections preserve each event's destination.
+
+The scenario records these events without appending them. If you supply explicit side-effect handlers, assert against those handlers instead; neither recording list is populated.
 
 ## Example: email notification
 
