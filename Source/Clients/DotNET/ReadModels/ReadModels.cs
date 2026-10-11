@@ -490,8 +490,18 @@ public class ReadModels(
     /// <exception cref="PrivateEventTypeCannotBePublishedToOutbox">Thrown when the outbox is the destination and the event type is not public.</exception>
     ReadModelDefinition CreateEventTargetDefinition(Type eventTargetType, ReadModelObserverType observerType, string observerIdentifier)
     {
-        eventTargetType.ValidateAsEventTarget(eventStore.Name);
-        var eventType = eventTargetType.GetEventType();
+        var descriptor = eventTypes.GetDescriptorFor(eventTargetType, eventStore.Name);
+        if (descriptor.PublishingSequence == EventSequenceId.Log)
+        {
+            throw new EventLogIsNotAPublicationTarget(eventTargetType);
+        }
+
+        if (descriptor.PublishingSequence == EventSequenceId.Outbox && !descriptor.PublicationEligibility)
+        {
+            throw new PrivateEventTypeCannotBePublishedToOutbox(eventTargetType, eventStore.Name);
+        }
+
+        var eventType = descriptor.EventType;
 
         if (!eventTypes.HasFor(eventType.Id))
         {
@@ -514,8 +524,8 @@ public class ReadModels(
                 EventSequence = new()
                 {
                     EventType = eventType.ToContract(),
-                    EventSequence = eventTargetType.GetPublishingSequence().Value,
-                    IsPublic = eventTargetType.IsPublicEventType(eventStore.Name)
+                    EventSequence = descriptor.PublishingSequence.Value,
+                    IsPublic = descriptor.PublicationEligibility
                 }
             },
             Schema = (eventStore.Connection is Connections.IKernelCapabilities capabilities &&

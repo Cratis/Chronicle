@@ -23,12 +23,7 @@ public static class ReactorTypeExtensions
     {
         TypeMustImplementReactor.ThrowIfTypeDoesNotImplementReactor(type);
         var reactorAttribute = type.GetCustomAttribute<ReactorAttribute>();
-        var id = reactorAttribute?.Id.Value ?? string.Empty;
-        return id switch
-        {
-            "" => new ReactorId(type.FullName ?? $"{type.Namespace}.{type.Name}"),
-            _ => new ReactorId(id)
-        };
+        return new ReactorId(ArtifactIdentity.ObserverIdFor(type, reactorAttribute?.Id.Value));
     }
 
     /// <summary>

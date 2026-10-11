@@ -13,5 +13,5 @@ public static class ReadModelTypeExtensions
     /// </summary>
     /// <param name="type">Type to get the read model identifier for.</param>
     /// <returns>Read model identifier.</returns>
-    public static ReadModelIdentifier GetReadModelIdentifier(this Type type) => type.FullName ?? type.Name;
+    public static ReadModelIdentifier GetReadModelIdentifier(this Type type) => ArtifactIdentity.ReadModelIdFor(type);
 }

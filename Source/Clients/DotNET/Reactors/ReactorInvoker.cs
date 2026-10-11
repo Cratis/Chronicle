@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
@@ -56,9 +54,8 @@ public class ReactorInvoker(
     IReactorMethodArgumentsResolver? argumentsResolver = null,
     IServiceProvider? serviceProvider = null) : IReactorInvoker
 {
-    static readonly ConcurrentDictionary<Type, HandlerMethods> _methodsByEventTypeCache = [];
-    static readonly ConditionalWeakTable<IReactorSideEffectHandlers, ConcurrentDictionary<Type, HandlerMethods>> _methodsByHandlersCache = new();
-    readonly HandlerMethods _methodsByEventType = MethodsByEventType.Get(targetType, eventTypes.AllClrTypes, sideEffectHandlers);
+    static readonly EventTypeRegistryCache<HandlerMethods> _methodsByEventTypeCache = new();
+    readonly HandlerMethods _methodsByEventType = _methodsByEventTypeCache.Get(eventTypes, targetType, sideEffectHandlers, types => MethodsByEventType.Get(targetType, types, sideEffectHandlers));
     readonly IReactorMethodArgumentsResolver _argumentsResolver = argumentsResolver ?? new ReactorMethodArgumentsResolver();
 
     /// <summary>
@@ -87,7 +84,7 @@ public class ReactorInvoker(
     /// <param name="sideEffectHandlers">Handlers claiming synchronous return types.</param>
     /// <returns>The event types handled by the reactor.</returns>
     public static IImmutableList<EventType> GetEventTypesFor(IEventTypes eventTypes, Type reactorType, IReactorSideEffectHandlers? sideEffectHandlers) =>
-        MethodsByEventType.Get(reactorType, eventTypes.AllClrTypes, sideEffectHandlers)
+        _methodsByEventTypeCache.Get(eventTypes, reactorType, sideEffectHandlers, types => MethodsByEventType.Get(reactorType, types, sideEffectHandlers))
             .AllEventTypes
             .Select(eventTypes.GetEventTypeFor)
             .ToImmutableList();
@@ -295,13 +292,15 @@ public class ReactorInvoker(
 
     static class MethodsByEventType
     {
-        public static HandlerMethods Get(Type targetType, IEnumerable<Type> eventTypes, IReactorSideEffectHandlers? sideEffectHandlers = null) =>
-            sideEffectHandlers is null
-                ? _methodsByEventTypeCache.GetOrAdd(targetType, static (key, keyEventTypes) => Build(key, keyEventTypes, null), eventTypes)
-                : _methodsByHandlersCache.GetValue(sideEffectHandlers, static _ => new ConcurrentDictionary<Type, HandlerMethods>())
-                    .GetOrAdd(targetType, static (key, state) => Build(key, state.EventTypes, state.Handlers), (EventTypes: eventTypes, Handlers: sideEffectHandlers));
-
-        static HandlerMethods Build(Type targetType, IEnumerable<Type> eventTypes, IReactorSideEffectHandlers? sideEffectHandlers)
+        /// <summary>
+        /// Builds dispatch for the supplied registry snapshot and side-effect handlers.
+        /// </summary>
+        /// <param name="targetType">The reactor type.</param>
+        /// <param name="eventTypes">The current registry's CLR types.</param>
+        /// <param name="sideEffectHandlers">The current side-effect handlers.</param>
+        /// <returns>The handler map.</returns>
+        /// <exception cref="InvalidReactorHandlerReturnType">A public handler has an unsupported return type.</exception>
+        public static HandlerMethods Get(Type targetType, IEnumerable<Type> eventTypes, IReactorSideEffectHandlers? sideEffectHandlers = null)
         {
             var liveMethodsByEventType = new Dictionary<Type, MethodInfo>();
             var replayMethodsByEventType = new Dictionary<Type, MethodInfo>();

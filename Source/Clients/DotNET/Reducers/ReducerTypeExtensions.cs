@@ -127,12 +127,7 @@ public static class ReducerTypeExtensions
     {
         TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(type);
         var reducerAttribute = type.GetCustomAttribute<ReducerAttribute>();
-        var id = reducerAttribute?.Id.Value ?? string.Empty;
-        return id switch
-        {
-            "" => new ReducerId(type.FullName ?? $"{type.Namespace}.{type.Name}"),
-            _ => new ReducerId(id)
-        };
+        return new ReducerId(ArtifactIdentity.ObserverIdFor(type, reducerAttribute?.Id.Value));
     }
 
     /// <summary>

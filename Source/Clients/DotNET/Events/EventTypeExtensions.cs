@@ -60,14 +60,19 @@ public static class EventTypeExtensions
     /// <returns>Collection of actual event types.</returns>
     public static IEnumerable<Type> GetEventTypes(this Type type, IEnumerable<Type> eventTypes)
     {
-        eventTypes = eventTypes.Except([type]);
+        if (type == typeof(object))
+        {
+            yield break;
+        }
 
-        if (Attribute.IsDefined(type, typeof(EventTypeAttribute)))
+        var knownTypes = eventTypes.ToArray();
+        if (Attribute.IsDefined(type, typeof(EventTypeAttribute)) ||
+            (knownTypes.Contains(type) && !Attribute.IsDefined(type, typeof(EventTypeGenerationForAttribute))))
         {
             yield return type;
         }
 
-        foreach (var eventType in eventTypes)
+        foreach (var eventType in knownTypes.Except([type, typeof(object)]))
         {
             if (eventType.IsAssignableTo(type))
             {
@@ -110,22 +115,6 @@ public static class EventTypeExtensions
     {
         type.ValidateEventType();
 
-        if (type.GetCustomAttribute<EventTypeGenerationForAttribute>() is { } generationFor)
-        {
-            var referencedType = generationFor.EventTypeClrType;
-            var referencedAttribute = referencedType.GetCustomAttribute<EventTypeAttribute>() ??
-                throw new EventTypeGenerationReferencesNonEventType(type, referencedType);
-
-            return new EventType(ResolveId(referencedType, referencedAttribute), generationFor.Generation);
-        }
-
-        var attribute = type.GetCustomAttribute<EventTypeAttribute>()!;
-        return new EventType(ResolveId(type, attribute), attribute.Generation);
+        return ArtifactIdentity.EventTypeFor(type);
     }
-
-    static EventTypeId ResolveId(Type type, EventTypeAttribute attribute) => attribute.Id.Value switch
-    {
-        "" => type.Name,
-        _ => attribute.Id.Value
-    };
 }
