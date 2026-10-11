@@ -48,6 +48,12 @@ These overload tables are specific to C#'s method-overload-based dispatch. Kotli
 - The `EventContext` parameter provides metadata like event source ID, occurred timestamp, and sequence number
 - Both synchronous and asynchronous methods are supported
 
+### .NET dispatch and diagnostics
+
+In .NET, the event must be the first parameter and the nullable current read model the second. An optional third parameter must be `EventContext`. The return type must be the read model, `Task<TReadModel>` (including a nullable result), or `Task`. A method taking the current read model first and `object` second is not dispatched.
+
+The .NET analyzers report unsupported signatures as **CHR0006** and event parameters without `[EventType]` as **CHR0007**, including `object` event parameters. If none of a reducer's methods can be dispatched, the client skips its kernel registration and logs a warning naming the reducer and explaining why its public reducer-like methods were skipped. The application still starts; correct the signatures so the reducer can observe events.
+
 ### 3. Using the Reducer Attribute (Optional)
 
 You can customize the reducer using the `[Reducer]` attribute:
