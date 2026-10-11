@@ -122,6 +122,7 @@ public class ProjectionPipeline(
         var context = ProjectionEventContext.Empty(objectComparer, @event) with
         {
             OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
+            GenerationDelivery = projection.GenerationDelivery,
         };
 
         foreach (var step in steps)

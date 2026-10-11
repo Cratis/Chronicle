@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 
@@ -59,6 +60,11 @@ public record ProjectionDefinition(
     IEnumerable<PropertyPath>? NoAutoMapProperties = default,
     ProjectionScope Scope = ProjectionScope.Namespaced)
 {
+    /// <summary>
+    /// Gets the event generation delivery policy. Compatibility preserves identifier-only dispatch.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; }
+
     /// <summary>
     /// Gets a value indicating whether the projection is owned by the kernel itself.
     /// </summary>

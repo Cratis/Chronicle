@@ -160,22 +160,26 @@ public class ProjectionObserverSubscriber(
 
             foreach (var @event in events)
             {
-                // An event this projection no longer takes part in still reaches us for a while after a
-                // definition drops it: the subscriber is told about the new definition before the observer's
-                // subscription is narrowed to match, and a replay scheduled by that same change reads through
-                // the subscription's event types. Resolving a key for it would throw and fail the partition,
-                // which is how removing a child collection could leave the projection stuck mid-replay (#3722).
-                // Skipping is what the definition actually says to do - the event contributes nothing here -
-                // while still advancing the observer past it. An event type the definition *does* name but the
-                // pipeline cannot resolve is a different thing entirely, and still fails so it gets retried.
-                if (_projection?.Accepts(@event.Context.EventType) == false)
+                var sequenceNumber = @event.Context.SequenceNumber;
+
+                // Definition notifications precede the subscription rebind, so a handled type can still arrive
+                // in the old pin. Only an unhandled type may be skipped; a generation mismatch must be processed.
+                var pin = _projection?.GenerationDelivery == EventGenerationDelivery.Pinned
+                    ? _projection.EventTypes.FirstOrDefault(_ => _.Id == @event.Context.EventType.Id)
+                    : null;
+                if (pin is null && _projection?.Accepts(@event.Context.EventType) == false)
                 {
                     lastSuccessfullyObservedEvent = @event;
-                    logger.SkippedEventNotInProjection(@event.Context.EventType, @event.Context.SequenceNumber, _key);
+                    logger.SkippedEventNotInProjection(@event.Context.EventType, sequenceNumber, _key);
                     continue;
                 }
 
-                var pipelineContext = await _pipeline.Handle(@event);
+                // Already-pinned events have been released by the observer. Re-select/release only a mismatch
+                // through the current projection's release boundary, which also migrates an unstored generation.
+                var eventToHandle = pin is not null && pin != @event.Context.EventType
+                    ? await _projection!.ReleaseEvent(pin, @event)
+                    : @event;
+                var pipelineContext = await _pipeline.Handle(eventToHandle);
                 changeset = pipelineContext.Changeset;
 
                 // Accumulate across the batch: a single OnNext delivers all events for one partition
@@ -201,7 +205,7 @@ public class ProjectionObserverSubscriber(
                 }
 
                 lastSuccessfullyObservedEvent = @event;
-                logger.SuccessfullyHandledEvent(@event.Context.SequenceNumber, _key);
+                logger.SuccessfullyHandledEvent(sequenceNumber, _key);
             }
 
             // Note: We don't want to send changesets if the projection is not active
@@ -291,6 +295,7 @@ public class ProjectionObserverSubscriber(
         if (oldDefinition.ReadModel != newDefinition.ReadModel ||
             oldDefinition.IsActive != newDefinition.IsActive ||
             oldDefinition.IsRewindable != newDefinition.IsRewindable ||
+            oldDefinition.GenerationDelivery != newDefinition.GenerationDelivery ||
             oldDefinition.EventSequenceId != newDefinition.EventSequenceId)
         {
             return true;
