@@ -91,6 +91,7 @@ message EventContext {
    string Subject = 16;
    repeated NamedTag NamedTags = 17;
    string EventSource = 18;
+   uint32 AppendedGeneration = 19;
 }
 enum EventObservationState {
    None = 0;

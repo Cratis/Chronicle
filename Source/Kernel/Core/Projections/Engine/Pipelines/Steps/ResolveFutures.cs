@@ -7,6 +7,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -61,12 +62,13 @@ public class ResolveFutures(
         // This handles the case where resolving one future creates the parent data needed by another future
         var resolvedAny = true;
         var latestResolvedEvent = context.Event;
+        var queuedFutures = new HashSet<ProjectionFutureId>();
         while (resolvedAny)
         {
             resolvedAny = false;
             futures = await projectionFutures.GetFutures();
 
-            foreach (var future in futures)
+            foreach (var future in futures.Where(future => !queuedFutures.Contains(future.Id)))
             {
                 try
                 {
@@ -176,18 +178,12 @@ public class ResolveFutures(
                     ProvideToAncestors(childProjection, futureContext);
                     childProjection.OnNext(futureContext);
 
-                    // Successfully resolved the future
-                    await projectionFutures.ResolveFuture(future.Id);
+                    await QueueFutureSave(context, new PendingFutureSave(key, futureChangeset) { FutureId = future.Id }, queuedFutures);
                     logger.ResolvedFuture(future.Id, future.ProjectionId);
                     resolvedAny = true;
                     if (future.Event.Context.SequenceNumber > latestResolvedEvent.Context.SequenceNumber)
                     {
                         latestResolvedEvent = future.Event;
-                    }
-
-                    if (futureChangeset.HasChanges)
-                    {
-                        context.AddPendingFutureSave(key, futureChangeset);
                     }
                 }
                 catch (Exception ex)
@@ -197,7 +193,7 @@ public class ResolveFutures(
             }
         }
 
-        // The final pass resolved nothing, so the last fetch reflects the futures still awaiting a parent
+        // Queued writes remain persisted too, so a failed save keeps the tracker pending.
         futuresTracker.HasPending = futures.Any();
 
         return context with { Event = latestResolvedEvent };
@@ -481,4 +477,18 @@ public class ResolveFutures(
             IEnumerable enumerable => enumerable.OfType<ExpandoObject>(),
             _ => null
         };
+
+    async Task QueueFutureSave(ProjectionEventContext context, PendingFutureSave pendingSave, HashSet<ProjectionFutureId> queuedFutures)
+    {
+        var futureId = pendingSave.FutureId!;
+        if (pendingSave.Changeset.HasChanges)
+        {
+            context.AddPendingFutureSave(pendingSave.Key, pendingSave.Changeset, futureId);
+            queuedFutures.Add(futureId);
+        }
+        else
+        {
+            await projectionFutures.ResolveFuture(futureId);
+        }
+    }
 }

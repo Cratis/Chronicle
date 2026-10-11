@@ -33,6 +33,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
 /// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for getting the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
@@ -41,7 +42,8 @@ public class HandleEventsForPartition(
     IEventCompliance eventCompliance,
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
-    ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
+    ILogger<HandleEventsForPartition> logger,
+    IEventGenerationRelease? eventGenerationRelease = null) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
@@ -51,6 +53,9 @@ public class HandleEventsForPartition(
     IObserverSubscriber? _subscriber;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     IEventTypesStorage? _eventTypes;
+    EventType[] _generationPins = [];
+    EventStoreName _generationEventStore = EventStoreName.NotSet;
+    EventGenerationDelivery _generationDelivery;
     bool _isCollapsingProjection;
 
     IHandleEventsForPartition _selfGrainReference = null!;
@@ -156,6 +161,7 @@ public class HandleEventsForPartition(
     {
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         var subscription = await _observer.GetSubscription();
+        _generationDelivery = subscription.GenerationDelivery;
         try
         {
             lastSuccessfullyHandledEventSequenceNumber = currentState.LastSuccessfullyHandledEventSequenceNumber;
@@ -177,6 +183,8 @@ public class HandleEventsForPartition(
             var eventTypesToRead = requestedEventTypes.Length != 0
                 ? requestedEventTypes
                 : await ResolveFallbackEventTypesToRead(subscription.EventTypes);
+            _generationPins = eventTypesToRead.ToArray();
+            _generationEventStore = currentState.ObserverKey.EventStore;
             var nonRedactionEventTypeIds = eventTypesToRead
                 .Where(et => et.Id != GlobalEventTypes.Redaction)
                 .Select(et => et.Id)
@@ -433,6 +441,11 @@ public class HandleEventsForPartition(
 
     async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
     {
+        if (_generationDelivery == EventGenerationDelivery.Pinned)
+        {
+            return await (eventGenerationRelease ?? throw new EventGenerationDeliveryNotSupported()).Release(_generationEventStore, _generationPins, _eventTypeSchemas, events);
+        }
+
         // The schemas read up front are those of the generations the observer subscribes to, while the events carry the
         // generation they were stored at - the schema of that generation is what says what to decrypt.
         var eventsToDecrypt = events as AppendedEvent[] ?? events.ToArray();

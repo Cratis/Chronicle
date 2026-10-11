@@ -187,7 +187,10 @@ public class EventStore : IEventStore
             new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(types, serviceProvider)),
             new ReactorMethodArgumentsResolver(),
             loggerFactory.CreateLogger<Reactors.Reactors>(),
-            loggerFactory);
+            loggerFactory)
+        {
+            GenerationDelivery = options.Value.EventGenerationDelivery
+        };
         Reactors = reactors;
 
         var reducerObservers = new ReducerObservers();
@@ -204,7 +207,10 @@ public class EventStore : IEventStore
             identityProvider,
             reducerObservers,
             serviceProvider.GetRequiredKeyedService<IActivitySource<Reducers.Reducers>>(ClientActivity.SourceName),
-            loggerFactory.CreateLogger<Reducers.Reducers>());
+            loggerFactory.CreateLogger<Reducers.Reducers>())
+        {
+            GenerationDelivery = options.Value.EventGenerationDelivery
+        };
 
         var projections = new Projections.Projections(
             this,

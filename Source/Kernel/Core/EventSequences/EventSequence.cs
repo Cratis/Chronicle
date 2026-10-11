@@ -384,11 +384,11 @@ public partial class EventSequence(
                 };
             }
 
-            var concurrencyCheckPerformed = concurrencyScopes.ShouldAllBeValidated;
+            using var concurrencyCheck = BeginConcurrencyValidation(concurrencyScopes);
             var concurrencyViolations = await ConcurrencyValidator.Validate(concurrencyScopes);
             if (concurrencyViolations.Any())
             {
-                return AppendManyResult.Failed(correlationId, concurrencyViolations).ReportingConcurrencyCheck(concurrencyCheckPerformed);
+                return AppendManyResult.Failed(correlationId, concurrencyViolations).ReportingConcurrencyCheck(concurrencyScopes.ShouldAllBeValidated);
             }
 
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
@@ -399,7 +399,7 @@ public partial class EventSequence(
             });
 
             var appendManyResult = await AppendManyToStorage(validatedEvents, correlationId, causation, identity);
-            return appendManyResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
+            return appendManyResult.ReportingConcurrencyCheck(concurrencyScopes.ShouldAllBeValidated);
         }
         catch (Exception ex)
         {
@@ -667,16 +667,15 @@ public partial class EventSequence(
             nextSequenceNumber = nextSequenceNumber.Next();
         }
 
-        Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>? appendResult = null;
-        do
+        async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendToStorage()
         {
-            HandleFailedAppendManyResult(appendResult, eventsToAppend);
             logger.AppendManyCallingStorage(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventsToAppend.Count);
-            appendResult = eventsToAppend.Exists(@event => @event.NamedTags.Count > 0)
+            return eventsToAppend.Exists(@event => @event.NamedTags.Count > 0)
                 ? await EventSequenceStorage.AppendManyWithNamedTags(eventsToAppend)
                 : await EventSequenceStorage.AppendMany(eventsToAppend);
         }
-        while (!appendResult.IsSuccess);
+        var appendResult = await AppendWithRetries(AppendToStorage, error => RenumberAppendMany(eventsToAppend, error), () => ValidateAppendManyRetry(correlationId));
+        if (appendResult.TryGetError(out var retryFailure)) return retryFailure;
 
         // Commit the advanced sequence number only after the batch has been durably appended, so a thrown
         // storage error (handled by the caller's catch) cannot leave State.SequenceNumber advanced past
@@ -720,6 +719,30 @@ public partial class EventSequence(
         return AppendManyResult.Success(correlationId, appendedEventsList.Select(@event => @event.Context.SequenceNumber));
     }
 
+    async Task<Result<TAppended, TFailure>> AppendWithRetries<TAppended, TFailure>(
+        Func<Task<Result<TAppended, DuplicateEventSequenceNumber>>> append,
+        Func<DuplicateEventSequenceNumber, Task> renumber,
+        Func<Task<TFailure?>> validateRetry)
+        where TAppended : notnull
+        where TFailure : class
+    {
+        var result = await append();
+        while (result.TryGetError(out var duplicateError))
+        {
+            await renumber(duplicateError);
+            if (await validateRetry() is { } failure) return failure;
+            result = await append();
+        }
+
+        return Result<TAppended, TFailure>.Success(result.AsT0);
+    }
+
+    Task RenumberAppendMany(List<EventToAppendToStorage> eventsToAppend, DuplicateEventSequenceNumber error)
+    {
+        HandleFailedAppendManyResult((Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>)error, eventsToAppend);
+        return Task.CompletedTask;
+    }
+
     IEnumerable<Causation> CausationForStorage(IEnumerable<Causation> causation) =>
         options.Value.Events.CausationPropertyRetention == CausationPropertyRetention.Omit
             ? causation.Select(entry => entry with { Properties = new Dictionary<string, string>() }).ToArray()
@@ -752,8 +775,6 @@ public partial class EventSequence(
         span?.Activity?.Tag(eventSourceType, eventSourceId);
         try
         {
-            Result<AppendedEvent, DuplicateEventSequenceNumber>? appendResult = null;
-
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
 
             // Transform plaintext, then protect every target generation under the original subject.
@@ -765,9 +786,8 @@ public partial class EventSequence(
                 kvp => kvp.Key,
                 kvp => eventHashCalculator.Calculate(eventType.Id, eventSourceId, kvp.Value));
 
-            do
+            async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> AppendToStorage()
             {
-                await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventType.Id);
                 var eventOccurred = occurred ?? DateTimeOffset.UtcNow;
                 logger.Appending(
                     _eventSequenceKey.EventStore,
@@ -779,7 +799,7 @@ public partial class EventSequence(
 
                 if (publication is not null)
                 {
-                    appendResult = await AppendPublicationToStorage(publication, new EventToAppendToStorage(
+                    return await AppendPublicationToStorage(publication, new EventToAppendToStorage(
                         State.SequenceNumber,
                         eventSourceType,
                         eventSourceId,
@@ -800,12 +820,11 @@ public partial class EventSequence(
                         GenerationalContent = migratedContent,
                         ContentHashes = contentHashes
                     });
-                    continue;
                 }
 
                 if (eventSource?.IsSet == true)
                 {
-                    appendResult = await AppendThroughEventSource(
+                    return await AppendThroughEventSource(
                         new EventToAppendToStorage(
                             State.SequenceNumber,
                             eventSourceType,
@@ -827,10 +846,9 @@ public partial class EventSequence(
                             GenerationalContent = migratedContent,
                             ContentHashes = contentHashes
                         });
-                    continue;
                 }
 
-                appendResult = namedTags.Count == 0
+                return namedTags.Count == 0
                     ? await EventSequenceStorage.Append(
                         State.SequenceNumber,
                         eventSourceType,
@@ -863,7 +881,8 @@ public partial class EventSequence(
                         subject,
                         namedTags);
             }
-            while (!appendResult.IsSuccess);
+            var appendResult = await AppendWithRetries(AppendToStorage, error => HandleFailedAppendResult((Result<AppendedEvent, DuplicateEventSequenceNumber>)error, eventType, eventSourceId, eventType.Id), () => ValidateAppendRetry(correlationId));
+            if (appendResult.TryGetError(out var retryFailure)) return retryFailure;
 
             var appendedSequenceNumber = appendResult.AsT0.Context.SequenceNumber;
             if (State.SequenceNumber <= appendedSequenceNumber)

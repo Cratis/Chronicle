@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Disposables;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -8,6 +9,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Storage.EventSequences;
 
@@ -15,6 +17,14 @@ namespace Cratis.Chronicle.EventSequences;
 
 public partial class EventSequence
 {
+    /// <summary>
+    /// Tracks the current append's scopes for renumbered retries.
+    /// </summary>
+    /// <remarks>
+    /// Appends do not interleave on this grain; the disposable restores scopes even after a failed append.
+    /// </remarks>
+    ConcurrencyScopes? _concurrencyScopesForRetry;
+
     async Task<AppendResult> AppendValidated(
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -60,11 +70,11 @@ public partial class EventSequence
             }
 
             var (compliantEvent, compliantContent, constraintContext) = getValidAndCompliantEvent.AsT0;
-            var concurrencyCheckPerformed = concurrencyScope.ShouldBeValidated;
+            using var concurrencyCheck = BeginConcurrencyValidation(eventSourceId, concurrencyScope);
             var maybeConcurrencyViolation = await ConcurrencyValidator.Validate(eventSourceId, concurrencyScope);
             if (maybeConcurrencyViolation.TryGetValue(out var concurrencyViolation))
             {
-                return AppendResult.Failed(correlationId, concurrencyViolation).ReportingConcurrencyCheck(concurrencyCheckPerformed);
+                return AppendResult.Failed(correlationId, concurrencyViolation).ReportingConcurrencyCheck(concurrencyScope.ShouldBeValidated);
             }
 
             var appendResult = await AppendValidAndCompliantEvent(
@@ -86,12 +96,37 @@ public partial class EventSequence
                 eventSource,
                 publication);
 
-            return appendResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
+            return appendResult.ReportingConcurrencyCheck(concurrencyScope.ShouldBeValidated);
         }
         catch (Exception ex)
         {
             return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
         }
+    }
+
+    IDisposable BeginConcurrencyValidation(EventSourceId eventSourceId, ConcurrencyScope scope) =>
+        BeginConcurrencyValidation(new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope> { [eventSourceId] = scope }));
+
+    IDisposable BeginConcurrencyValidation(ConcurrencyScopes scopes)
+    {
+        var previousScopes = _concurrencyScopesForRetry;
+        _concurrencyScopesForRetry = scopes;
+        return Disposable.Create(() => _concurrencyScopesForRetry = previousScopes);
+    }
+
+    async Task<IEnumerable<ConcurrencyViolation>> ValidateRetryConcurrency() =>
+        _concurrencyScopesForRetry is { } scopes ? await ConcurrencyValidator.Validate(scopes) : [];
+
+    async Task<AppendResult?> ValidateAppendRetry(CorrelationId correlationId)
+    {
+        var violation = (await ValidateRetryConcurrency()).FirstOrDefault();
+        return violation is not null ? AppendResult.Failed(correlationId, violation) : null;
+    }
+
+    async Task<AppendManyResult?> ValidateAppendManyRetry(CorrelationId correlationId)
+    {
+        var violations = (await ValidateRetryConcurrency()).ToArray();
+        return violations.Length > 0 ? AppendManyResult.Failed(correlationId, violations) : null;
     }
 
     /// <summary>

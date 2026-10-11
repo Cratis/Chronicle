@@ -540,10 +540,19 @@ public static class EventEntryConverter
             Subject: GetSubject(entry))
         {
             NamedTags = namedTags ?? [],
-            EventSource = ToEventSourceName(entry)
+            EventSource = ToEventSourceName(entry),
+            AppendedGeneration = entry.AppendedGeneration is { } appended ? new EventTypeGeneration(appended) : null
         };
 
-        return new AppendedEvent(eventContext, content) { GenerationalContent = GetAllGenerationalContent(entry) };
+        var hashes = string.IsNullOrEmpty(entry.ContentHashes)
+            ? new Dictionary<string, string>()
+            : JsonSerializer.Deserialize<Dictionary<string, string>>(entry.ContentHashes, _jsonSerializerOptions) ?? [];
+        return new AppendedEvent(eventContext, content)
+        {
+            GenerationalContent = GetAllGenerationalContent(entry),
+            GenerationalHashes = hashes.Where(_ => int.TryParse(_.Key, out var generation) && generation > 0).ToDictionary(_ => int.Parse(_.Key), _ => new EventHash(_.Value)),
+            RevisedGeneration = entry.RevisedGeneration is { } revised ? new EventTypeGeneration(revised) : null
+        };
     }
 
     /// <summary>

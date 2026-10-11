@@ -37,6 +37,7 @@ public class when_registering_the_same_reducer_types_again : given.all_dependenc
         await CreateReducers().Register();
     }
 
+    [Fact] void should_keep_compatibility_as_the_default_delivery_policy() => _registrations.TrueForAll(_ => _.Reducer.GenerationDelivery == Contracts.Observation.EventGenerationDelivery.Compatibility).ShouldBeTrue();
     [Fact] void should_register_every_reducer_again() => _registrations.Count.ShouldEqual(4);
     [Fact] void should_normalize_a_supported_reducer_only_once() => _normalized.FingerprintAttempts.ShouldEqual(1);
     [Fact] void should_attempt_an_unsupported_reducer_only_once() => _unsupported.FingerprintAttempts.ShouldEqual(1);

@@ -24,5 +24,8 @@ internal static class ReducerDefinitionConverters
             reducerDefinition.IsActive,
             reducerDefinition.Tags,
             reducerDefinition.Filters.ToChronicle(),
-            reducerDefinition.Hash);
+            reducerDefinition.Hash)
+        {
+            GenerationDelivery = (Concepts.Observation.EventGenerationDelivery)reducerDefinition.GenerationDelivery
+        };
 }

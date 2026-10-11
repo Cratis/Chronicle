@@ -35,6 +35,8 @@ public class all_dependencies : Specification
     protected Dictionary<Type, IReducerHandler> _handlersByModelType;
     protected Reducers _reducers;
 
+    protected virtual Observation.EventGenerationDelivery GenerationDelivery => Observation.EventGenerationDelivery.Compatibility;
+
     void Establish()
     {
         _eventStore = Substitute.For<IEventStore>();
@@ -84,7 +86,10 @@ public class all_dependencies : Specification
             _identityProvider,
             _reducerObservers,
             _activitySource,
-            _logger);
+            _logger)
+        {
+            GenerationDelivery = GenerationDelivery
+        };
 
         // Use reflection to set the private handler fields
         var handlersByTypeField = typeof(Reducers).GetField("_handlersByType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

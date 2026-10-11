@@ -21,7 +21,7 @@ RUN ./copy-server-files.sh && rm -f appsettings.Development.json
 ####################################
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble
 ARG VERSION
-ARG MONGO_VERSION=8.0.8
+ARG MONGO_VERSION=8.2.12
 ARG MONGO_PACKAGE=mongodb-org
 ARG ENTRYPOINT=entrypoint.sh
 
@@ -40,12 +40,12 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install MongoDB using the noble repository with the modern signed-by key method.
-# The libssl1.1 workaround and focal repo are no longer needed — MongoDB 8.0 has
+# The libssl1.1 workaround and focal repo are no longer needed — MongoDB 8.2 has
 # native noble (24.04) packages that link against the OpenSSL 3 already in the base image.
 RUN curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc \
         | gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg \
-    && echo "deb [ arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse" \
-        > /etc/apt/sources.list.d/mongodb-org-8.0.list \
+    && echo "deb [ arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.2 multiverse" \
+        > /etc/apt/sources.list.d/mongodb-org-8.2.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         ${MONGO_PACKAGE}=$MONGO_VERSION \
