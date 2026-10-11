@@ -14,6 +14,13 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration
 /// </summary>
 static class CSharpDefinitionSupport
 {
+    static readonly Dictionary<JsonObjectType, string> _primitiveTypes = new()
+    {
+        [JsonObjectType.Integer] = "int",
+        [JsonObjectType.Number] = "decimal",
+        [JsonObjectType.Boolean] = "bool"
+    };
+
     /// <summary>
     /// Converts context property paths to C# member casing.
     /// </summary>
@@ -55,12 +62,14 @@ static class CSharpDefinitionSupport
     internal static string ModelType(JsonSchema schema, string fallbackName)
     {
         var actual = schema.ActualSchema;
+        if (_primitiveTypes.TryGetValue(actual.Type, out var primitiveType))
+        {
+            return primitiveType;
+        }
+
         return actual.Type switch
         {
             JsonObjectType.String => StringType(actual.Format),
-            JsonObjectType.Integer => "int",
-            JsonObjectType.Number => "decimal",
-            JsonObjectType.Boolean => "bool",
             JsonObjectType.Array when actual.Item is not null => $"System.Collections.Generic.IEnumerable<{ModelType(actual.Item, fallbackName)}>",
             JsonObjectType.Object => RecordName(actual, fallbackName),
             _ => "object"
