@@ -125,9 +125,9 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
     static void SetField(EventStore eventStore, string fieldName, object value) =>
         typeof(EventStore).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(eventStore, value);
 
-    void SetField(string fieldName, object value) => SetField(_eventStore, fieldName, value);
+    protected void SetField(string fieldName, object value) => SetField(_eventStore, fieldName, value);
 
-    void SetAutoProperty(string propertyName, object value) => SetField(_eventStore, $"<{propertyName}>k__BackingField", value);
+    protected void SetAutoProperty(string propertyName, object value) => SetField(_eventStore, $"<{propertyName}>k__BackingField", value);
 
     public record BuildableModel();
 

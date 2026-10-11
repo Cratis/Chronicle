@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
@@ -12,6 +13,7 @@ using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.Namespaces;
 using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
@@ -63,6 +65,9 @@ public class EventStore : IEventStore
     readonly Projections.Projections _projections;
     readonly RegistrationRetryOptions _registrationRetry;
     readonly RegistrationBackoff _registrationBackoff;
+    readonly DiscoveryReportBuilder? _discoveryReportBuilder;
+    readonly ArtifactIdentityDriftDetector? _identityDriftDetector;
+    readonly ArtifactIdentityDriftPolicy _identityDriftPolicy;
     SingleFlightRegistration? _registerAllFlight;
     int _backgroundRegistrationRetryActive;
     Task? _backgroundRegistrationRetryTask;
@@ -223,6 +228,11 @@ public class EventStore : IEventStore
 
         _projections = projections;
         Projections = projections;
+        _discoveryReportBuilder = new(EventTypes, (Constraints)Constraints, reactors, Reducers, projections, namingPolicy);
+        _identityDriftPolicy = options.Value.ArtifactIdentityDrift;
+        _identityDriftDetector = _identityDriftPolicy == ArtifactIdentityDriftPolicy.Ignore
+            ? null
+            : new(_servicesAccessor, Name, Namespace, EventTypes, _logger);
 
         // Registrations made with the client while it was being configured belong to every event store it creates.
         // They are built by discovery, which is when the event types they refer to become known.
@@ -367,6 +377,9 @@ public class EventStore : IEventStore
     /// <inheritdoc/>
     public RegistrationOutcome Registration { get; private set; } = RegistrationOutcome.NotRun;
 
+    /// <inheritdoc/>
+    public DiscoveryReport Discovery { get; private set; } = DiscoveryReport.NotRun;
+
     /// <summary>
     /// Gets the serializer owned by this event store.
     /// </summary>
@@ -399,6 +412,13 @@ public class EventStore : IEventStore
             Reducers.Discover(),
             Projections.Discover(),
             Seeding.Discover());
+
+        var report = BuildDiscoveryReport();
+        if (report is not null)
+        {
+            Discovery = report;
+            _logger.LogDiscovery(report, Name, Namespace);
+        }
     }
 
     /// <inheritdoc/>
@@ -451,15 +471,25 @@ public class EventStore : IEventStore
     async Task RegisterAllCore()
     {
         _logger.RegisterAllArtifacts();
+        IImmutableList<ArtifactIdentityDrift> drift = ImmutableList<ArtifactIdentityDrift>.Empty;
 
         try
         {
+            if (_identityDriftDetector is not null && BuildDiscoveryReport() is { } current)
+            {
+                drift = await _identityDriftDetector.Detect(current);
+                if (_identityDriftPolicy == ArtifactIdentityDriftPolicy.Fail && drift.Count > 0)
+                {
+                    throw new ArtifactIdentityDriftDetected(drift);
+                }
+            }
+
             await RegisterAllArtifactsWithRetries();
 
             // Everything that could be registered has been, and the kernel calls carrying it have returned - which is
             // the first moment the outcome is a fact rather than a hope, and the only transition a consumer can
             // observe.
-            Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations);
+            Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations) { IdentityDrift = drift };
         }
         catch (Exception exception)
         {
@@ -469,9 +499,25 @@ public class EventStore : IEventStore
             // registered before the failure is reported alongside it, because a partial read side is what the
             // consumer now has. The connection lifecycle still gets the exception, and a later reconnect that
             // succeeds replaces this outcome wholesale.
-            Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, exception);
-            StartBackgroundRegistrationRetry();
+            Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, exception) { IdentityDrift = drift };
+            if (exception is not ArtifactIdentityDriftDetected)
+            {
+                StartBackgroundRegistrationRetry();
+            }
             throw;
+        }
+    }
+
+    DiscoveryReport? BuildDiscoveryReport()
+    {
+        try
+        {
+            return _discoveryReportBuilder?.Build();
+        }
+        catch (Exception exception)
+        {
+            _logger.DiscoveryReportFailed(exception, Name, Namespace);
+            return null;
         }
     }
 
@@ -530,6 +576,11 @@ public class EventStore : IEventStore
                     _logger.BackgroundRegistrationRetrySucceeded(attempt);
                     return;
                 }
+                catch (ArtifactIdentityDriftDetected)
+                {
+                    // A newly detected rename is deterministic, not another transient registration failure.
+                    return;
+                }
                 catch (Exception exception)
                 {
                     _logger.RetryingRegisterAllArtifactsInBackground(exception, attempt, delay);
@@ -566,7 +617,7 @@ public class EventStore : IEventStore
                 await RegisterAllArtifacts();
                 return;
             }
-            catch (Exception exception) when (attempt < _registrationRetry.MaxAttempts)
+            catch (Exception exception) when (attempt < _registrationRetry.MaxAttempts && exception is not ArtifactIdentityDriftDetected)
             {
                 var delay = _registrationBackoff.NextDelay(attempt);
                 _logger.RetryingRegisterAllArtifacts(exception, attempt, _registrationRetry.MaxAttempts, delay);
