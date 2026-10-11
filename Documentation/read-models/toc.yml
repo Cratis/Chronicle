@@ -18,6 +18,8 @@
   href: materialized-pagination.mdx
 - name: Getting Snapshots
   href: getting-snapshots.mdx
+- name: Observing Read Models
+  href: observing-read-models.mdx
 - name: Watching Read Models
   href: watching-read-models.mdx
 - name: Releasing PII and Encrypted Values

@@ -202,15 +202,15 @@ public class EventStoreForTesting : IEventStore, IDisposable
             materializedReadModels,
             NullLogger<Chronicle.ReadModels.ReadModels>.Instance);
 
-        _readModelsForTesting = new ReadModelsForTesting(realReadModels);
+        _constraintProvider = TestingEventStore.DiscoverConstraints(ClientArtifactsProvider, _eventTypes, _artifactActivator);
+        TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, eventTypeMigrators, _eventSources.All).GetAwaiter().GetResult();
+
+        _readModelsForTesting = new ReadModelsForTesting(realReadModels, EventLog, this);
         ReadModels = _readModelsForTesting;
         DecisionReads.RegisterTesting(this, new DecisionReadsForTesting(
             this,
             new DecisionReads(this, _projections, JsonSchemaGenerator, _jsonSerializerOptions),
             _readModelsForTesting));
-
-        _constraintProvider = TestingEventStore.DiscoverConstraints(ClientArtifactsProvider, _eventTypes, _artifactActivator);
-        TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, eventTypeMigrators, _eventSources.All).GetAwaiter().GetResult();
 
         _constraints = new Lazy<IConstraints>(() => new Constraints(this, [_constraintProvider]));
         _reactors = new Lazy<IReactors>(CreateReactors);

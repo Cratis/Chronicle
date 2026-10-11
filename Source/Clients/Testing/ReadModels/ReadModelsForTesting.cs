@@ -1,8 +1,20 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Linq.Expressions;
+using System.Reactive;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
+using System.Reflection;
+using System.Text.Json;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Sinks;
+using Cratis.Chronicle.Testing.Events;
+using Cratis.Json;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
 
@@ -15,6 +27,32 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 public class ReadModelsForTesting(IReadModels inner) : IReadModels
 {
     readonly Dictionary<(string Identifier, string Key), object> _instances = [];
+    readonly EventStoreForTesting? _store;
+    IEventSequence? _eventLog;
+
+    /// <summary>
+    /// Initializes a test read model surface that observes collections rebuilt from an event log.
+    /// </summary>
+    /// <param name="inner">The inner read model surface.</param>
+    /// <param name="eventLog">The scenario event log to observe.</param>
+    public ReadModelsForTesting(IReadModels inner, IEventSequence eventLog)
+        : this(inner)
+    {
+        _eventLog = eventLog;
+        _store = (inner as ReadModelsForTesting)?._store;
+    }
+
+    /// <summary>
+    /// Initializes observation using the owning scenario's discovered artifacts and services.
+    /// </summary>
+    /// <param name="inner">The inner read model surface.</param>
+    /// <param name="eventLog">The event log.</param>
+    /// <param name="store">The owning scenario store.</param>
+    internal ReadModelsForTesting(IReadModels inner, IEventSequence eventLog, EventStoreForTesting store)
+        : this(inner, eventLog)
+    {
+        _store = store;
+    }
 
     /// <summary>
     /// Gets the <see cref="IMaterializedReadModels"/> for working with materialized read model instances.
@@ -55,6 +93,45 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
         inner.GetInstances<TReadModel>(eventCount);
 
     /// <inheritdoc/>
+    public ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
+    {
+        var log = _eventLog ?? throw new ReadModelCannotBeObserved(typeof(TReadModel), "An event log is not available in this test scenario");
+        var readModelType = typeof(TReadModel);
+        var metadata = _store ?? (EventStoreForTesting)Defaults.Instance.EventStore;
+        if (!metadata.Projections.HasFor(readModelType) && !metadata.Reducers.HasFor(readModelType))
+        {
+            throw new UnknownReadModel(readModelType);
+        }
+
+        if (readModelType.IsPassive() ||
+            (metadata.Projections is IKnowPassiveProjections passive && passive.IsPassive(readModelType)))
+        {
+            throw new ReadModelCannotBeObserved(readModelType, "Passive read models have no materialized sink");
+        }
+
+        if (readModelType.IsEventTypeTarget())
+        {
+            throw new ReadModelCannotBeObserved(readModelType, "Event targets publish events instead of storing a collection");
+        }
+
+        var predicate = filter?.Compile();
+        var source = Observable.Create<IEnumerable<TReadModel>>(observer =>
+        {
+            var signals = new Subject<Unit>();
+            var rebuilds = signals.Select(_ => Observable.FromAsync(() => Rebuild<TReadModel>(log)))
+                .Concat()
+                .Select(set => (IEnumerable<TReadModel>)(predicate is null ? set.ToArray() : set.Where(predicate).ToArray()))
+                .DistinctUntilChanged(set => JsonSerializer.Serialize(set, Globals.JsonSerializerOptions))
+                .Subscribe(observer);
+            var appends = log.AppendOperations.Where(batch => batch.Any(append => append.Result.IsSuccess))
+                .Subscribe(_ => signals.OnNext(Unit.Default), signals.OnError, signals.OnCompleted);
+            signals.OnNext(Unit.Default);
+            return new CompositeDisposable(appends, rebuilds, signals);
+        });
+        return new ReadModelObservation<TReadModel>(source);
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey) =>
         inner.GetSnapshotsById<TReadModel>(readModelKey);
 
@@ -78,6 +155,11 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     public Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances) =>
         inner.Release(instances);
 
+    /// <summary>
+    /// Keeps the ReadModelScenario surface unsupported: its collected events are not appended to the log.
+    /// </summary>
+    internal void DisableObservation() => _eventLog = null;
+
     /// <summary>Gets a pre-seeded model instance, if present.</summary>
     /// <typeparam name="TReadModel">The read model type.</typeparam>
     /// <param name="key">The model key.</param>
@@ -98,5 +180,17 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     {
         var identifier = typeof(TReadModel).GetReadModelIdentifier();
         _instances[(identifier, eventSourceId.Value)] = instance;
+    }
+
+    async Task<IEnumerable<TReadModel>> Rebuild<TReadModel>(IEventSequence log)
+    {
+        var events = await log.GetFromSequenceNumber(EventSequenceNumber.First);
+        using var ownedStore = _store is null ? new EventStoreForTesting() : null;
+        var store = _store ?? ownedStore!;
+        var fold = typeof(ReadModelFolder).GetMethod(nameof(ReadModelFolder.Fold), BindingFlags.Public | BindingFlags.Static)!
+            .MakeGenericMethod(typeof(TReadModel));
+        var folded = await (Task<IEnumerable<TReadModel>>)fold.Invoke(null, [store, events, _store is not null])!;
+        var identifier = typeof(TReadModel).GetReadModelIdentifier().Value;
+        return folded.Concat(_instances.Where(pair => pair.Key.Identifier == identifier).Select(pair => (TReadModel)pair.Value)).ToArray();
     }
 }

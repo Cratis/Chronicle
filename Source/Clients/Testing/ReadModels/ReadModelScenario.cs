@@ -3,9 +3,7 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.ReadModels;
@@ -380,6 +378,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         if (_eventStore is null)
         {
             _eventStore = new EventStoreForTesting(ResolvedServiceProvider(), defaults.ClientArtifactsProvider, defaults.ScenarioOptions);
+            ((ReadModelsForTesting)_eventStore.ReadModels).DisableObservation();
             foreach (var seed in _readModelSeeds)
             {
                 seed(_eventStore);
@@ -436,56 +435,10 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         }
     }
 
-    async Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> ProcessEvents(IEnumerable<ReadModelEvent> events)
+    Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> ProcessEvents(IEnumerable<ReadModelEvent> events)
     {
-        var eventsList = events.ToList();
-        var readModelType = typeof(TReadModel);
-
-        var reducerType = _inlineProjection ? null : FindReducerType(readModelType);
-        if (reducerType is not null)
-        {
-            var (reduced, distinctEventSourceIds) = await ReducerReadModelProcessor.Process<TReadModel>(
-                reducerType,
-                eventsList.Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, Causation.Unknown())
-                {
-                    EventSourceType = e.EventSourceType,
-                    EventStreamType = e.EventStreamType,
-                    EventStreamId = e.EventStreamId
-                }),
-                EventStore(),
-                _eventTypes,
-                ArtifactsActivator(),
-                ResolvedServiceProvider(),
-                _namingPolicy,
-                _initialState);
-
-            // A reducer is single-instance; key its result by the event source id that passed its filters so that
-            // InstanceForEventSourceId / Instances behave the same as for a projection. Only the single-source
-            // case is keyed — reducing events across more than one source is misuse of a single-instance API.
-            var reducerInstances = new Dictionary<EventSourceId, TReadModel>();
-            if (reduced is not null && distinctEventSourceIds.Count == 1)
-            {
-                reducerInstances[distinctEventSourceIds[0]] = reduced;
-            }
-
-            return (reduced, reducerInstances);
-        }
-
-        var projectionDefinition = ProjectionDefinition();
-        if (projectionDefinition is not null)
-        {
-            return await ProjectionReadModelProcessor.Process(
-                projectionDefinition,
-                eventsList.Select(e => (e.EventSourceId, e.Event)),
-                EventStore(),
-                _eventTypes,
-                _jsonSchemaGenerator,
-                _initialState,
-                _strictEventSubscription,
-                seededEvents: eventsList);
-        }
-
-        throw new NoReadModelHandlerFound(readModelType);
+        var reducerType = _inlineProjection ? null : FindReducerType(typeof(TReadModel));
+        return ReadModelFolder.Process(events, EventStore(), _eventTypes, _jsonSchemaGenerator, ArtifactsActivator(), ResolvedServiceProvider(), _namingPolicy, reducerType, reducerType is null ? ProjectionDefinition() : null, _initialState, _strictEventSubscription);
     }
 
     Type? FindReducerType(Type readModelType) =>
