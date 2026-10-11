@@ -17,6 +17,6 @@ public class and_appended_generation_is_recorded : given.a_storage_for_appended_
     }
 
     [Fact] void should_record_the_original_generation() => _storage.GetAppendedGeneration(0).ShouldEqual((uint?)1);
-    [Fact] void should_still_read_the_appended_generation() => _read.Context.EventType.Generation.ShouldEqual(EventTypeGeneration.First);
-    [Fact] void should_still_read_the_appended_generations_content() => ((IDictionary<string, object?>)_read.Content)["value"].ShouldEqual("original");
+    [Fact] void should_read_the_highest_stored_generation() => _read.Context.EventType.Generation.ShouldEqual(new EventTypeGeneration(2));
+    [Fact] void should_read_the_highest_generations_content() => ((IDictionary<string, object?>)_read.Content)["value"].ShouldEqual("migrated");
 }

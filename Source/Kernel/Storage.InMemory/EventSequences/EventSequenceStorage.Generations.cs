@@ -96,7 +96,11 @@ public partial class EventSequenceStorage
             }
             _generationHashes[observed.SequenceNumber] = hashes;
             _derivedGenerations[observed.SequenceNumber] = provenance;
-            var updated = stored with { GenerationalContent = content };
+            var updated = stored with
+            {
+                GenerationalContent = content,
+                GenerationalHashes = hashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
+            };
             if (!stored.IsRevised)
             {
                 var highest = additions.MaxBy(_ => _.Generation.Value)!;

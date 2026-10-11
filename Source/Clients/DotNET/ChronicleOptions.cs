@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Sinks;
 using Cratis.Chronicle.Transactions;
@@ -91,6 +92,12 @@ public class ChronicleOptions(
     /// Strict will become the default in the next major version.
     /// </summary>
     public UnitOfWorkLifecyclePolicy UnitOfWorkLifecyclePolicy { get; set; } = UnitOfWorkLifecyclePolicy.Compatibility;
+
+    /// <summary>
+    /// Gets or sets how client reactors and reducers receive event generations.
+    /// Defaults to Compatibility; Pinned requests kernel selection and release of the subscribed generation.
+    /// </summary>
+    public EventGenerationDelivery EventGenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
 
     /// <summary>
     /// Gets a value indicating whether to automatically discover and register artifacts.

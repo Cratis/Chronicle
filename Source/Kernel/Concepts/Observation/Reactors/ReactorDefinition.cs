@@ -22,4 +22,10 @@ public record ReactorDefinition(
     IEnumerable<EventTypeWithKeyExpression> EventTypes,
     bool IsReplayable = true,
     IEnumerable<string>? Tags = default,
-    ObserverFilters? Filters = default);
+    ObserverFilters? Filters = default)
+{
+    /// <summary>
+    /// Gets the event generation delivery policy.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+}

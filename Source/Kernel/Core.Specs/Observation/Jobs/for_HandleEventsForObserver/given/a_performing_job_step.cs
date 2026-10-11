@@ -33,6 +33,7 @@ public class a_performing_job_step : Specification
     protected IEventCursor _eventCursor;
     protected IEventTypesStorage _eventTypesStorage;
     protected IEventCompliance _eventCompliance;
+    protected IEventGenerationRelease _eventGenerationRelease;
     protected IEventSequenceStorage _eventSequenceStorage;
     protected HandleEventsForObserverState _performState;
     protected EventSourceId? _eventSourceIdFilter;
@@ -118,6 +119,8 @@ public class a_performing_job_step : Specification
             .Release(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>())
             .Returns(callInfo => Task.FromResult(callInfo.Arg<IEnumerable<AppendedEvent>>().ToArray()));
         _silo.AddService(_eventCompliance);
+        _eventGenerationRelease = Substitute.For<IEventGenerationRelease>();
+        _silo.AddService(_eventGenerationRelease);
 
         var logger = _silo.AddService(NullLogger<HandleEventsForObserver>.Instance);
         var loggerFactory = Substitute.For<ILoggerFactory>();

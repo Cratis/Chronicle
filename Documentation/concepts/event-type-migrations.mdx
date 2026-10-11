@@ -92,6 +92,37 @@ This ensures that:
 - Newer consumers can read events with the latest schema
 - The generation an event was appended as is stored as written. Current backfills only add missing generations; they do not overwrite stored ones. Earlier backfills may already have overwritten content, and SQL revisions still replace content in place. The other generations hold only what the migrations produce: the example above splits a name on spaces, so for "Mary Ann Smith" the upcast generation 2 keeps "Mary" and "Ann" and drops "Smith". Write migrations that keep every part a consumer needs.
 
+## Opt in to pinned observer delivery
+
+Client reactors and reducers can request the generation their handlers subscribe to, rather than
+receiving the appended generation live and the highest stored generation on replay. In the .NET
+client, set `ChronicleOptions.EventGenerationDelivery` to `EventGenerationDelivery.Pinned` before
+connecting; see [the .NET client option](../clients/dotnet/getting-started.md#pin-reactor-and-reducer-generations).
+The default remains `Compatibility` in this major version. Upgrade every kernel silo before opting in.
+
+For pinned observers, the kernel selects the subscribed generation's content and hash and releases
+protected values with that generation's schema on live, catch-up, replay, and partition-retry delivery.
+`EventContext.EventType.Generation` is the delivered generation; `EventContext.AppendedGeneration`
+records the original append generation, or is null for older events where it is unknown.
+
+If the pinned generation has not been stored yet, the kernel releases the known appended generation
+(or the highest stored generation for legacy events) and migrates it for that delivery only. It does
+not persist this result or cache plaintext. Such a delivery has `EventHash.NotSet`, because it has
+no durable stored hash. Erased personal data stays erased through the migration.
+
+A revised event is delivered from its latest revision, migrated to the pin when necessary. Its hash
+is the revision's stored hash only when the revision already matches the pin; otherwise it is
+`EventHash.NotSet`. SQL revisions made before this release cannot be distinguished from original
+content: those rows keep the existing generation-selection behavior until revised again.
+
+An observer can pin only one generation per event type. Registration rejects unregistered generations
+and handlers for multiple generations of the same type. If a pinned generation disappears from the
+registered definition later, delivery fails explicitly rather than substituting a schema. Changing a
+pin or delivery mode does not itself trigger a replay; request one when you need to rebuild prior state.
+
+`GenerationalContent` remains on delivered events for compatibility in this major version. This option
+does not change projections, reads, webhooks, captures, or event-store subscriptions.
+
 ## Protected values
 
 Adding protection metadata within an existing generation affects future appends only. Creating a

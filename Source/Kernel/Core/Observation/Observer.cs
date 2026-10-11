@@ -40,6 +40,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
@@ -55,7 +56,8 @@ public partial class Observer(
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
-    ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable, IDisposable
+    ILoggerFactory loggerFactory,
+    IEventGenerationRelease? eventGenerationRelease = null) : StateMachine<ObserverState>, IObserver, IRemindable, IDisposable
 {
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
 
@@ -326,7 +328,21 @@ public partial class Observer(
         bool reactivateRetired = true,
         bool automatic = false)
         where TObserverSubscriber : IObserverSubscriber
-        => SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, reactivateRetired: reactivateRetired, automatic: automatic);
+        => SubscribeWithGenerationDelivery<TObserverSubscriber>(type, eventTypes, siloAddress, EventGenerationDelivery.Compatibility, subscriberArgs, isReplayable, filters, reactivateRetired, automatic);
+
+    /// <inheritdoc/>
+    public Task SubscribeWithGenerationDelivery<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        EventGenerationDelivery generationDelivery,
+        object? subscriberArgs = null,
+        bool isReplayable = true,
+        ObserverFilters? filters = null,
+        bool reactivateRetired = true,
+        bool automatic = false)
+        where TObserverSubscriber : IObserverSubscriber =>
+        SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, reactivateRetired: reactivateRetired, automatic: automatic, generationDelivery: generationDelivery);
 
     /// <inheritdoc/>
     public async Task SubscribeToAllEvents<TObserverSubscriber>(
@@ -733,9 +749,29 @@ public partial class Observer(
         bool additive = false,
         bool recovering = false,
         bool reactivateRetired = true,
-        bool automatic = false)
+        bool automatic = false,
+        EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility)
         where TObserverSubscriber : IObserverSubscriber
     {
+        eventTypes = eventTypes.ToArray();
+        if (generationDelivery == EventGenerationDelivery.Pinned)
+        {
+            var duplicate = eventTypes.GroupBy(_ => _.Id).FirstOrDefault(_ => _.Select(type => type.Generation).Distinct().Count() > 1);
+            if (duplicate is not null)
+            {
+                throw new ObserverPinsMultipleGenerationsOfEventType(duplicate.Key);
+            }
+
+            var eventTypesStorage = storage.GetEventStore(_observerKey.EventStore).EventTypes;
+            foreach (var eventType in eventTypes)
+            {
+                if (!await eventTypesStorage.HasFor(eventType.Id, eventType.Generation))
+                {
+                    throw new EventTypeGenerationNotRegisteredForObserver(eventType);
+                }
+            }
+        }
+
         if (!automatic)
         {
             _recoverSubscriptionAfterQuarantine = false;
@@ -803,7 +839,7 @@ public partial class Observer(
                 await LeaveQuarantineForSubscription();
             }
 
-            await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters);
+            await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
             await RecoverAfterSubscribing(leavesQuarantine);
 
             // A persisted Active marker alone does not prove setup completed after an entry-write failure.
@@ -822,7 +858,8 @@ public partial class Observer(
         SiloAddress siloAddress,
         object? subscriberArgs,
         bool isReplayable,
-        ObserverFilters? filters)
+        ObserverFilters? filters,
+        EventGenerationDelivery generationDelivery)
         where TObserverSubscriber : IObserverSubscriber
     {
         var owner = GetOwner<TObserverSubscriber>();
@@ -834,14 +871,15 @@ public partial class Observer(
             Type = type,
             Owner = owner,
             EventTypes = eventTypes,
-            IsReplayable = isReplayable
+            IsReplayable = isReplayable,
+            GenerationDelivery = generationDelivery
         };
         await observerDefinition.WriteStateAsync();
 
         if (subscriberArgs is ConnectedClient connectedClient)
         {
             var target = new ObserverSubscriberTarget(siloAddress, connectedClient);
-            if (CanFanOutInto<TObserverSubscriber>(eventTypes, filters))
+            if (CanFanOutInto<TObserverSubscriber>(eventTypes, filters, generationDelivery))
             {
                 // Another instance of the same client is already subscribed with an identical
                 // definition - add this instance as a fan-out target instead of replacing the
@@ -870,7 +908,8 @@ public partial class Observer(
                     isReplayable,
                     filters)
                 {
-                    Targets = [target]
+                    Targets = [target],
+                    GenerationDelivery = generationDelivery
                 };
             }
         }
@@ -884,18 +923,22 @@ public partial class Observer(
                 siloAddress,
                 subscriberArgs,
                 isReplayable,
-                filters);
+                filters)
+            {
+                GenerationDelivery = generationDelivery
+            };
         }
 
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
     }
 
-    bool CanFanOutInto<TObserverSubscriber>(IEnumerable<EventType> eventTypes, ObserverFilters? filters)
+    bool CanFanOutInto<TObserverSubscriber>(IEnumerable<EventType> eventTypes, ObserverFilters? filters, EventGenerationDelivery generationDelivery)
         where TObserverSubscriber : IObserverSubscriber =>
         _subscription.IsSubscribed &&
         _subscription.Targets.Count > 0 &&
         _subscription.SubscriberType == typeof(TObserverSubscriber) &&
+        _subscription.GenerationDelivery == generationDelivery &&
         _subscription.EventTypes.ToHashSet().SetEquals(eventTypes) &&
         FiltersAreEqual(_subscription.Filters, filters);
 

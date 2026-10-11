@@ -36,7 +36,6 @@ public partial class EventSequenceStorage
                 return new DuplicateEventSequenceNumber((EventSequenceNumber)(_events.Max(_ => _.Context.SequenceNumber.Value) + 1));
             }
 
-            var hash = @event.ContentHashes.TryGetValue(@event.EventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
             var appended = BuildAppendedEvent(
                 @event.SequenceNumber,
                 @event.EventSourceType,
@@ -50,7 +49,7 @@ public partial class EventSequenceStorage
                 @event.Tags,
                 @event.Occurred,
                 @event.GenerationalContent,
-                hash,
+                @event.ContentHashes,
                 @event.Subject,
                 @event.NamedTags,
                 @event.EventSource);

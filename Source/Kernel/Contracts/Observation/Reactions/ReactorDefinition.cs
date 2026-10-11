@@ -50,4 +50,10 @@ public class ReactorDefinition
     /// </summary>
     [ProtoMember(7)]
     public bool IsNotReplayable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event generation delivery policy.
+    /// </summary>
+    [ProtoMember(8)]
+    public EventGenerationDelivery GenerationDelivery { get; set; }
 }
