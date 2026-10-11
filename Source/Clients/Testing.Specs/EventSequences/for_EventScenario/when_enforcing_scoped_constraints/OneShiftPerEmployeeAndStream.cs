@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events.Constraints;
 
-namespace Cratis.Chronicle.Testing.EventSequences.for_InMemoryConstraintsStorage;
+namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario.when_enforcing_scoped_constraints;
 
 /// <summary>
 /// A fluent <see cref="IConstraint"/> allowing one <see cref="ScopedShiftStarted"/> per employee within each event stream.
