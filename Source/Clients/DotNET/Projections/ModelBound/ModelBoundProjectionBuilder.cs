@@ -690,9 +690,15 @@ internal class ModelBoundProjectionBuilder(
             }
         }
 
+        // Scalar [Nested] objects also use ChildrenDefinition, but have no collection identity.
+        // Preserve their property-name fallback, including nested objects inside child collections.
+        var childIdentity = childrenDef is not null && childrenDef.IdentifiedBy != PropertyPath.NotSetValue
+            ? childrenDef.IdentifiedBy
+            : null;
+
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<JoinAttribute<object>>())
         {
-            targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, property.Name, propertyName, childrenDef?.IdentifiedBy);
+            targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, property.Name, propertyName, childIdentity);
         }
 
         // A [RemovedWith] that sits alongside a [ChildrenFrom] on the same collection property means "remove the

@@ -49,6 +49,19 @@ public record ExplicitJoinOrderLine(
     Guid OtherProductId,
     [Join<ProductRegistered>(on: nameof(OtherProductId), eventPropertyName: nameof(ProductRegistered.Name))] string ProductName);
 
+public record ProductDetails(
+    [property: Join<ProductRegistered>(eventPropertyName: nameof(ProductRegistered.Name))] string ProductName);
+
+public record OrderWithNestedProduct(
+    [Nested] ProductDetails? Product);
+
+public record OrderWithNestedProductInChildren(
+    [ChildrenFrom<ItemAdded>(key: nameof(ItemAdded.ProductId))] IEnumerable<OrderLineWithNestedProduct> Lines);
+
+public record OrderLineWithNestedProduct(
+    [Key] Guid ProductId,
+    [Nested] ProductDetails? Product);
+
 public record OrderWithoutChildIdentity(
     [ChildrenFrom<ItemAdded>] IEnumerable<UnidentifiedOrderLine> Lines);
 
