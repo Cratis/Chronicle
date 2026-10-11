@@ -71,8 +71,13 @@ public interface IReadModels
     /// <param name="filter">Optional filter, compiled once and applied client-side after release.</param>
     /// <returns>A subject that replays the latest collection. Its dedicated stream stops when the last subscriber leaves, on completion, or on disposal.</returns>
     /// <exception cref="UnknownReadModel">No projection or reducer handles the read model.</exception>
-    /// <exception cref="ReadModelCannotBeObserved">The read model is passive or targets an event sequence.</exception>
-    ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null);
+    /// <remarks>
+    /// The default implementation refuses collection observation. Existing or custom implementations remain usable
+    /// through the other members of this interface and must override this method to support collection observation.
+    /// </remarks>
+    /// <exception cref="ReadModelCannotBeObserved">The implementation does not support collection observation, or the read model is passive or targets an event sequence.</exception>
+    ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
+        => throw new ReadModelCannotBeObserved(typeof(TReadModel), "this implementation does not support collection observation");
 
     /// <summary>
     /// Get snapshots of a read model grouped by CorrelationId by walking through events from the beginning.

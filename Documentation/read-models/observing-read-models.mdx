@@ -43,6 +43,7 @@ Stream, deserialization, and filter failures reach subscribers through `OnError`
 
 ## Boundaries
 
+- Existing or custom `IReadModels` implementations that do not override `Observe` remain usable through their existing APIs. Calling `Observe` on them throws `ReadModelCannotBeObserved`; they must implement or forward it to support collection observation.
 - Passive read models have no materialized sink; `ReadModelCannotBeObserved` refuses them.
 - Event-target types publish events instead of storing a collection; they are refused with the same exception.
 - A type without a known projection or reducer raises `UnknownReadModel`.
