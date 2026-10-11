@@ -20,7 +20,7 @@ public class and_the_same_event_is_delivered_on_every_path(context context) : Gi
 {
     public class context(ChronicleFixture fixture) : given.all_dependencies(fixture)
     {
-        readonly Channel<JsonObject> _deliveries = Channel.CreateUnbounded<JsonObject>();
+        readonly Channel<(JsonObject Event, TaskCompletionSource Response)> _deliveries = Channel.CreateUnbounded<(JsonObject, TaskCompletionSource)>();
         readonly WebhookId _id = $"pinned-webhook-{Guid.NewGuid():N}";
         readonly string _source = $"person-{Guid.NewGuid():N}";
         bool _failDelivery;
@@ -37,16 +37,18 @@ public class and_the_same_event_is_delivered_on_every_path(context context) : Gi
             {
                 using var reader = new StreamReader(httpContext.Request.Body);
                 var payload = JsonNode.Parse(await reader.ReadToEndAsync())!.AsObject();
+                var response = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                httpContext.Response.StatusCode = _failDelivery ? 400 : 200;
                 foreach (var @event in payload["events"]!.AsArray())
                 {
-                    await _deliveries.Writer.WriteAsync(@event!.AsObject());
+                    await _deliveries.Writer.WriteAsync((@event!.AsObject(), response));
                 }
 
-                httpContext.Response.StatusCode = _failDelivery ? 400 : 200;
+                await response.Task.WaitAsync(httpContext.RequestAborted);
             })));
         }
 
-        async Task<JsonObject> NextDelivery()
+        async Task<(JsonObject Event, TaskCompletionSource Response)> NextDelivery()
         {
             using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             return await _deliveries.Reader.ReadAsync(cancellation.Token);
@@ -65,12 +67,14 @@ public class and_the_same_event_is_delivered_on_every_path(context context) : Gi
             await Register(_id);
             _failDelivery = true;
             var appended = await EventStore.EventLog.Append(_source, new PinnedPersonRegisteredV1("Ada Lovelace"));
-            Live = await NextDelivery();
+            var live = await NextDelivery();
+            Live = live.Event;
+            live.Response.SetResult();
             (await appended.WaitForCompletion()).IsSuccess.ShouldBeFalse();
             _failDelivery = false;
 
             var observers = ((IChronicleServicesAccessor)EventStore.Connection).Services.Observers;
-            await observers.RetryPartition(new()
+            var retry = await observers.RetryPartition(new()
             {
                 EventStore = EventStore.Name,
                 Namespace = EventStore.Namespace,
@@ -78,7 +82,25 @@ public class and_the_same_event_is_delivered_on_every_path(context context) : Gi
                 ObserverId = _id,
                 Partition = _source
             });
-            Retried = await NextDelivery();
+            retry.Outcome.ShouldEqual(Contracts.Observation.PartitionRecoveryOutcome.Started);
+            var retried = await NextDelivery();
+            Retried = retried.Event;
+            Job retryJob;
+            try
+            {
+                // The HTTP response is held so this exact retry job cannot finish before its ID is captured.
+                retryJob = (await EventStore.Jobs.GetJobs()).Single(job =>
+                    job.Type.Value.Contains("RetryFailedPartition", StringComparison.Ordinal) &&
+                    job.Details.Value == $"{_id}-{_source}");
+            }
+            finally
+            {
+                retried.Response.SetResult();
+            }
+
+            var completedRetry = await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(retryJob.Id, TimeSpan.FromSeconds(30));
+            completedRetry?.Status.ShouldEqual(JobStatus.CompletedSuccessfully);
+
             (await appended.WaitForCompletion()).IsSuccess.ShouldBeTrue();
 
             var replay = await observers.Replay(new()
@@ -88,16 +110,20 @@ public class and_the_same_event_is_delivered_on_every_path(context context) : Gi
                 EventSequenceId = EventSequenceId.Log,
                 ObserverId = _id
             });
-            Replayed = await NextDelivery();
+            var replayed = await NextDelivery();
+            Replayed = replayed.Event;
+            replayed.Response.SetResult();
             await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(new JobId(Guid.Parse(replay.JobId)), TimeSpan.FromSeconds(30));
 
             // A second webhook starts after the append, exercising catch-up for that same stored event.
             await Register($"catch-up-{Guid.NewGuid():N}");
-            CatchUp = await NextDelivery();
+            var catchUp = await NextDelivery();
+            CatchUp = catchUp.Event;
+            catchUp.Response.SetResult();
         }
     }
 
-    [Fact] void should_release_personal_data_on_catch_up() => Context.CatchUp["content"]!["fullName"]!.GetValue<string>().ShouldEqual("Ada Lovelace");
+    [Fact] void should_release_personal_data_on_catch_up() => Context.CatchUp["content"]![nameof(PinnedPersonRegistered.FullName)]!.GetValue<string>().ShouldEqual("Ada Lovelace");
     [Fact] void should_deliver_identical_content_live() => Context.Live["content"]!.ToJsonString().ShouldEqual(Context.CatchUp["content"]!.ToJsonString());
     [Fact] void should_deliver_identical_content_on_replay() => Context.Replayed["content"]!.ToJsonString().ShouldEqual(Context.CatchUp["content"]!.ToJsonString());
     [Fact] void should_deliver_identical_content_on_retry() => Context.Retried["content"]!.ToJsonString().ShouldEqual(Context.CatchUp["content"]!.ToJsonString());
