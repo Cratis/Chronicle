@@ -65,8 +65,7 @@ internal static class JsonColumnDocuments
         JsonValueKind.Array => element.EnumerateArray().Select(ConvertJsonElement).ToList(),
         JsonValueKind.String => element.GetString(),
         JsonValueKind.Number => ConvertJsonNumber(element),
-        JsonValueKind.True => true,
-        JsonValueKind.False => false,
+        JsonValueKind.True or JsonValueKind.False => element.GetBoolean(),
         _ => null
     };
 
@@ -113,7 +112,7 @@ internal static class JsonColumnDocuments
             return value;
         }
 
-        return value is IEnumerable enumerable ? enumerable.Cast<object?>().Select(UnwrapForJson).ToList() : value;
+        return value is IEnumerable enumerable ? UnwrapEnumerable(enumerable) : value;
     }
 
     internal static object? UnwrapConceptValue(object? value) => value?.IsConcept() == true ? value.GetConceptValue() : value;
@@ -186,14 +185,14 @@ internal static class JsonColumnDocuments
         return modified;
     }
 
-    internal static bool IsRemovedChild(object? item, string identifier, object? key)
+    internal static bool IsRemovedChild(object? item, string identifier, object? key, string? keyAsString)
     {
         if (item is not IDictionary<string, object?> dict || !dict.TryGetValue(identifier, out var value))
         {
             return false;
         }
 
-        return Equals(value, key) || (value is not null && value.ToString() == key?.ToString());
+        return Equals(value, key) || (value is not null && value.ToString() == keyAsString);
     }
 
     internal static ArrayIndexers RewriteIndexersRelativeTo(string columnName, ArrayIndexers indexers)
@@ -225,17 +224,16 @@ internal static class JsonColumnDocuments
 
     internal static ExpandoObject LocateOrCreateChild(IList<object?> list, ArrayIndexer indexer)
     {
-        var identifierName = indexer.IdentifierProperty.LastSegment.Value;
-        var identifierValue = UnwrapConceptValue(indexer.Identifier);
+        var identifier = ChildIdentifier.For(indexer.IdentifierProperty.LastSegment.Value, UnwrapConceptValue(indexer.Identifier));
 
-        var index = FindChildIndex(list, identifierName, identifierValue);
+        var index = FindChildIndex(list, identifier, true);
         if (index >= 0)
         {
             return PromoteToExpando(list, index);
         }
 
         var fresh = new ExpandoObject();
-        ((IDictionary<string, object?>)fresh)[identifierName] = identifierValue;
+        ((IDictionary<string, object?>)fresh)[identifier.Name] = identifier.Value;
         list.Add(fresh);
         return fresh;
     }
@@ -257,7 +255,7 @@ internal static class JsonColumnDocuments
         // appending duplicates. Merge into the existing entry so that any child collections
         // populated by earlier ChildAdded events (e.g. Slices.Events) survive the replacement of
         // the parent's own properties — a wholesale replace would clobber them.
-        var index = FindChildIndex(list, identifierName, identifierValue);
+        var index = FindChildIndex(list, ChildIdentifier.For(identifierName, identifierValue), false);
         if (index < 0)
         {
             list.Add(AsExpando(newChild));
@@ -283,12 +281,11 @@ internal static class JsonColumnDocuments
             return;
         }
 
-        var parentIdentifierName = indexer.IdentifierProperty.LastSegment.Value;
-        var parentIdentifierValue = UnwrapConceptValue(indexer.Identifier);
+        var parentIdentifier = ChildIdentifier.For(indexer.IdentifierProperty.LastSegment.Value, UnwrapConceptValue(indexer.Identifier));
 
         var parentDict = parentList
             .OfType<IDictionary<string, object?>>()
-            .FirstOrDefault(parent => parent.TryGetValue(parentIdentifierName, out var matchValue) && IdentifierMatches(matchValue, parentIdentifierValue));
+            .FirstOrDefault(parent => parent.TryGetValue(parentIdentifier.Name, out var matchValue) && IdentifierMatches(matchValue, parentIdentifier, true));
         if (parentDict is null)
         {
             return;
@@ -382,6 +379,17 @@ internal static class JsonColumnDocuments
         return dict;
     }
 
+    static List<object?> UnwrapEnumerable(IEnumerable enumerable)
+    {
+        var list = new List<object?>();
+        foreach (var item in enumerable)
+        {
+            list.Add(UnwrapForJson(item));
+        }
+
+        return list;
+    }
+
     static Dictionary<string, object?> UnwrapKeyValuePairs(IEnumerable entries)
     {
         var result = new Dictionary<string, object?>();
@@ -454,16 +462,29 @@ internal static class JsonColumnDocuments
         return new ArrayIndexer(trimmedArray, trimmedIdentifier, normalizedIdentifier!);
     }
 
-    static bool IdentifierMatches(object? stored, object? identifier) =>
-        Equals(stored, identifier) || string.Equals(stored?.ToString(), identifier?.ToString(), StringComparison.Ordinal);
+    static bool IdentifierMatches(object? stored, ChildIdentifier identifier, bool eagerStoredConversion)
+    {
+        // The identifier is converted to a string once, up front. The stored value is converted before the equality
+        // check when eagerStoredConversion is set, and only when equality fails otherwise.
+        if (eagerStoredConversion)
+        {
+            var storedAsString = stored?.ToString();
+            return Equals(stored, identifier.Value) || string.Equals(storedAsString, identifier.AsString, StringComparison.Ordinal);
+        }
 
-    static int FindChildIndex(IList<object?> list, string identifierName, object? identifierValue)
+        return Equals(stored, identifier.Value) || stored?.ToString() == identifier.AsString;
+    }
+
+    static int FindChildIndex(IList<object?> list, ChildIdentifier identifier, bool eagerStoredConversion)
     {
         for (var i = 0; i < list.Count; i++)
         {
-            if (list[i] is IDictionary<string, object?> dict &&
-                dict.TryGetValue(identifierName, out var stored) &&
-                IdentifierMatches(stored, identifierValue))
+            if (list[i] is not IDictionary<string, object?> dict || !dict.TryGetValue(identifier.Name, out var stored))
+            {
+                continue;
+            }
+
+            if (IdentifierMatches(stored, identifier, eagerStoredConversion))
             {
                 return i;
             }
@@ -525,6 +546,24 @@ internal static class JsonColumnDocuments
         var created = new List<object?>();
         parent[childCollectionName] = created;
         return created;
+    }
+
+    internal sealed class ChildIdentifier
+    {
+        ChildIdentifier(string name, object? value)
+        {
+            Name = name;
+            Value = value;
+            AsString = value?.ToString();
+        }
+
+        internal string Name { get; }
+
+        internal object? Value { get; }
+
+        internal string? AsString { get; }
+
+        internal static ChildIdentifier For(string name, object? value) => new(name, value);
     }
 
     /// <summary>

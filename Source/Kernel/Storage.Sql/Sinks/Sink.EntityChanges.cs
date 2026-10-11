@@ -204,7 +204,8 @@ public partial class Sink
         }
 
         var identifier = childRemoved.IdentifiedByProperty.LastSegment.Value;
-        var retained = current.Where(item => !IsRemovedChild(item, identifier, childRemoved.Key)).ToList();
+        var keyAsString = childRemoved.Key?.ToString();
+        var retained = current.Where(item => !IsRemovedChild(item, identifier, childRemoved.Key, keyAsString)).ToList();
 
         entry.Entity[column.Name] = SerializeJsonColumn(retained, column);
         entry.Property(column.Name).IsModified = true;
