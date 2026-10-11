@@ -157,7 +157,8 @@ internal sealed class TestingServices : IServices
                         null!,
                         null!,
                         new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
-                        Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
+                        Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
+                        storage));
 
                     // AddCratisArcCore discovers every ICommandExecutionScope across the whole process, not just the
                     // ones this pipeline cares about - an Arc.Chronicle consumer's transactional command scope is
