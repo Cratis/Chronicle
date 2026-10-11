@@ -38,12 +38,17 @@ public class a_renamed_client(ChronicleFixture fixture) : Specification<Chronicl
             new BorrowedConnection(EventStore.Connection),
             new ChronicleOptions
             {
+                AutoDiscoverAndRegister = false,
                 ArtifactIdentityDrift = policy,
                 DefaultSinkTypeId = Services.GetRequiredService<IChronicleClient>().Options.DefaultSinkTypeId
             },
             artifactsProvider: new RenamedArtifacts(),
             serviceProvider: Services);
+
+        // Register explicitly: a failure during GetEventStore would leave its lifecycle callback attached to the
+        // shared connection after the faulted store is evicted, registering the renamed identity in a later fact.
         _renamedStore = await _renamedClient.GetEventStore(EventStore.Name, EventStore.Namespace);
+        await _renamedStore.DiscoverAll();
         _failure = await Catch.Exception(_renamedStore.RegisterAll);
     }
 

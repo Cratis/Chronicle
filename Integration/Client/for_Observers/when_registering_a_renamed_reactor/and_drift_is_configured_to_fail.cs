@@ -11,5 +11,5 @@ public class and_drift_is_configured_to_fail(ChronicleFixture fixture) : given.a
     async Task Because() => await RegisterRenamed(true, ArtifactIdentityDriftPolicy.Fail);
 
     [Fact] void should_refuse_registration() => _failure.ShouldBeOfExactType<ArtifactIdentityDriftDetected>();
-    [Fact] void should_publish_the_failure() => _renamedStore.Registration.Failure.ShouldBeOfExactType<ArtifactIdentityDriftDetected>();
+    [Fact] void should_name_the_renamed_reactor() => _failure!.Message.Contains(typeof(Renamed.SendWelcomeEmail).FullName!, StringComparison.Ordinal).ShouldBeTrue();
 }
