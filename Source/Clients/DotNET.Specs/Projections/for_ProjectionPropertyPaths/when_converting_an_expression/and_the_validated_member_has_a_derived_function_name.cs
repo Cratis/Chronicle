@@ -14,7 +14,7 @@ public class and_the_validated_member_has_a_derived_function_name : Specificatio
     PropertyPath _result;
 
     void Establish() => _expression = model => model.Week;
-    void Because() => _result = ProjectionPropertyPaths.FromExpression(_expression, new CamelCaseNamingPolicy(), "the calendar week");
+    void Because() => _result = ProjectionPropertyPaths.FromExpression(_expression, new CamelCaseNamingPolicy(), ProjectionPathRole.Target, "the calendar week");
 
     [Fact] void should_name_the_member() => _result.Path.ShouldEqual("week");
     [Fact] void should_resolve_a_property_not_a_function() => _result.LastSegment.ShouldBeOfExactType<PropertyName>();

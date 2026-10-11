@@ -10,7 +10,7 @@ public class and_the_path_contains_an_array : Specification
 {
     PropertyPath _result;
 
-    void Because() => _result = ProjectionPropertyPaths.Resolve("[Items].Meta.Topic", new CamelCaseNamingPolicy());
+    void Because() => _result = ProjectionPropertyPaths.Resolve("[Items].Meta.Topic", new CamelCaseNamingPolicy(), ProjectionPathRole.Target);
 
     [Fact] void should_preserve_array_markers_and_name_each_segment() => _result.Path.ShouldEqual("[items].meta.topic");
 }

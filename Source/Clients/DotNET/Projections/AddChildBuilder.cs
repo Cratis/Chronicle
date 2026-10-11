@@ -3,7 +3,6 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
@@ -64,10 +63,10 @@ public class AddChildBuilder<TParentReadModel, TChildModel, TEvent>(IChildrenBui
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> FromObject(Expression<Func<TEvent, TChildModel>> propertyWithChild)
     {
-        var childProperty = ProjectionPropertyPaths.FromExpression(propertyWithChild, namingPolicy, $"the child object on event '{typeof(TEvent).FullName}'");
+        var childProperty = ProjectionPropertyPaths.FromExpression(propertyWithChild, namingPolicy, ProjectionPathRole.Source, $"the child object on event '{typeof(TEvent).FullName}'");
         foreach (var property in typeof(TChildModel).GetProperties())
         {
-            var propertyPath = new PropertyPath(property.Name);
+            var propertyPath = ProjectionPropertyPaths.Resolve(property.Name, namingPolicy, ProjectionPathRole.Target);
             fromBuilder.Set(propertyPath).To(childProperty + propertyPath);
         }
 

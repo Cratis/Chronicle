@@ -10,7 +10,7 @@ public class and_the_bare_name_matches_a_derived_function : Specification
 {
     PropertyPath _result;
 
-    void Because() => _result = ProjectionPropertyPaths.Resolve("Week", new CamelCaseNamingPolicy());
+    void Because() => _result = ProjectionPropertyPaths.Resolve("Week", new CamelCaseNamingPolicy(), ProjectionPathRole.Source);
 
     [Fact] void should_name_the_property() => _result.Path.ShouldEqual("week");
     [Fact] void should_resolve_a_property_not_a_function() => _result.LastSegment.ShouldBeOfExactType<PropertyName>();

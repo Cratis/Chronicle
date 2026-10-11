@@ -12,7 +12,7 @@ public class and_the_path_is_already_parsed : Specification
     PropertyPath _result;
 
     void Establish() => _path = new PropertyPath("[Items].$this.Occurred.Week()");
-    void Because() => _result = ProjectionPropertyPaths.Resolve(_path, new CamelCaseNamingPolicy());
+    void Because() => _result = ProjectionPropertyPaths.Resolve(_path, new CamelCaseNamingPolicy(), ProjectionPathRole.Source);
 
     [Fact] void should_preserve_array_this_and_function_segments() => _result.Path.ShouldEqual("[items].$this.occurred.Week");
     [Fact] void should_resolve_a_function() => _result.LastSegment.ShouldBeOfExactType<DerivedPropertyFunctionSegment>();

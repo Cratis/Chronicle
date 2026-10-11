@@ -21,7 +21,7 @@ public class CompositeKeyBuilder<TKeyType, TEvent>(INamingPolicy namingPolicy) :
     /// <inheritdoc/>
     public ISetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>> Set<TProperty>(Expression<Func<TKeyType, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, $"the composite key part on key type '{typeof(TKeyType).FullName}'");
+        var propertyPath = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"the composite key part on key type '{typeof(TKeyType).FullName}'");
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 

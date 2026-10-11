@@ -50,7 +50,7 @@ public static class NoAutoMapProperties
             if (parameter.IsDefined(typeof(NoAutoMapAttribute), inherit: true) ||
                 parameter.IsDefined(typeof(NotProjectedAttribute), inherit: true))
             {
-                names.Add(ProjectionPropertyPaths.Resolve(parameter.Name!, namingPolicy));
+                names.Add(ProjectionPropertyPaths.Resolve(parameter.Name!, namingPolicy, ProjectionPathRole.Target));
             }
         }
 
@@ -59,7 +59,7 @@ public static class NoAutoMapProperties
             if (Attribute.IsDefined(property, typeof(NoAutoMapAttribute), inherit: true) ||
                 Attribute.IsDefined(property, typeof(NotProjectedAttribute), inherit: true))
             {
-                names.Add(ProjectionPropertyPaths.Resolve(property.Name, namingPolicy));
+                names.Add(ProjectionPropertyPaths.Resolve(property.Name, namingPolicy, ProjectionPathRole.Target));
             }
         }
 

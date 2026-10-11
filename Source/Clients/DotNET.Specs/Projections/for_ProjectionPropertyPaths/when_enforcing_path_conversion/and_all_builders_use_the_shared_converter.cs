@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.Properties;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -32,10 +33,35 @@ public class and_all_builders_use_the_shared_converter : Specification
         using var reader = new StreamReader(stream);
         var syntax = CSharpSyntaxTree.ParseText(reader.ReadToEnd()).GetRoot();
 
-        return syntax.DescendantNodes().OfType<InvocationExpressionSyntax>()
-            .Select(invocation => InvokedName(invocation.Expression))
-            .Any(name => name is not null && _pathNamingMethods.Contains(name));
+        return syntax.DescendantNodes().Any(node => node switch
+        {
+            InvocationExpressionSyntax invocation => InvokedName(invocation.Expression) is { } name && _pathNamingMethods.Contains(name),
+            ObjectCreationExpressionSyntax creation => IsPropertyPath(creation.Type) && !IsDynamicTargetComposition(resourceName, creation),
+            CastExpressionSyntax cast => IsPropertyPath(cast.Type),
+            _ => false
+        });
     }
+
+    static bool IsPropertyPath(TypeSyntax type) => type switch
+    {
+        IdentifierNameSyntax identifier => identifier.Identifier.ValueText == nameof(PropertyPath),
+        QualifiedNameSyntax qualified => IsPropertyPath(qualified.Right),
+        AliasQualifiedNameSyntax alias => IsPropertyPath(alias.Name),
+        _ => false
+    };
+
+    /// <summary>
+    /// FromAllBuilder combines paths already named by the shared converter with the well-known
+    /// $eventContext marker. This is dynamic target syntax, not premature parsing of a CLR name.
+    /// </summary>
+    /// <param name="resourceName">The embedded source file the creation was found in.</param>
+    /// <param name="creation">The <see cref="ObjectCreationExpressionSyntax"/> to check.</param>
+    /// <returns>True when the creation is the allowed dynamic target composition.</returns>
+    static bool IsDynamicTargetComposition(string resourceName, ObjectCreationExpressionSyntax creation) =>
+        resourceName.EndsWith("FromAllBuilder.cs", StringComparison.Ordinal) &&
+        creation.Parent is ReturnStatementSyntax &&
+        creation.Ancestors().OfType<MethodDeclarationSyntax>().Any(method => method.Identifier.ValueText == "BuildDynamicTargetProperty") &&
+        creation.ArgumentList is { Arguments.Count: 1 } arguments && arguments.Arguments[0].Expression is InterpolatedStringExpressionSyntax;
 
     static string? InvokedName(ExpressionSyntax expression) => expression switch
     {

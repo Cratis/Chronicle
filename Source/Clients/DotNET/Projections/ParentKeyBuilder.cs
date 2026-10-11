@@ -26,7 +26,7 @@ public class ParentKeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy) : IP
     /// <inheritdoc/>
     public TBuilder UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        var propertyPath = ProjectionPropertyPaths.FromExpression(keyAccessor, namingPolicy, $"the parent key on event '{typeof(TEvent).FullName}'");
+        var propertyPath = ProjectionPropertyPaths.FromExpression(keyAccessor, namingPolicy, ProjectionPathRole.Source, $"the parent key on event '{typeof(TEvent).FullName}'");
         _parentKeyExpression = new EventContentPropertyExpression(propertyPath).Build();
         return (this as TBuilder)!;
     }
@@ -43,7 +43,7 @@ public class ParentKeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy) : IP
     /// <inheritdoc/>
     public TBuilder UsingParentKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor)
     {
-        var propertyPath = ProjectionPropertyPaths.FromExpression(keyAccessor, namingPolicy, $"the parent key from event context on event '{typeof(TEvent).FullName}'");
+        var propertyPath = ProjectionPropertyPaths.FromExpression(keyAccessor, namingPolicy, ProjectionPathRole.Source, $"the parent key from event context on event '{typeof(TEvent).FullName}'");
         _parentKeyExpression = new EventContextPropertyExpression(propertyPath).Build();
         return (this as TBuilder)!;
     }

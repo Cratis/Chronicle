@@ -13,7 +13,7 @@ public class and_the_expression_is_not_a_member_path : Specification
     Exception _result;
 
     void Establish() => _expression = e => e.Brief.Topic.ToUpperInvariant();
-    void Because() => _result = Catch.Exception(() => ProjectionPropertyPaths.FromExpression(_expression, new CamelCaseNamingPolicy(), "the event topic"));
+    void Because() => _result = Catch.Exception(() => ProjectionPropertyPaths.FromExpression(_expression, new CamelCaseNamingPolicy(), ProjectionPathRole.Source, "the event topic"));
 
     [Fact] void should_reject_the_expression() => _result.ShouldBeOfExactType<InvalidPropertyExpression>();
 }

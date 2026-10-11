@@ -14,7 +14,7 @@ public class and_the_accessor_calls_a_derived_function : Specification
     PropertyPath _result;
 
     void Establish() => _expression = model => model.Occurred.Week();
-    void Because() => _result = ProjectionPropertyPaths.FromExpression(_expression, new CamelCaseNamingPolicy(), "the occurrence week");
+    void Because() => _result = ProjectionPropertyPaths.FromExpression(_expression, new CamelCaseNamingPolicy(), ProjectionPathRole.Source, "the occurrence week");
 
     [Fact] void should_name_the_receiver_without_changing_the_function() => _result.Path.ShouldEqual("occurred.Week");
     [Fact] void should_resolve_a_function() => _result.LastSegment.ShouldBeOfExactType<DerivedPropertyFunctionSegment>();

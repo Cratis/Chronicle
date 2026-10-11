@@ -22,7 +22,7 @@ public class FromAllBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromAllBu
     /// <inheritdoc/>
     public IAllSetBuilder<TReadModel, IFromAllBuilder<TReadModel>> Set<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, $"the property to set on read model '{typeof(TReadModel).FullName}'");
+        var propertyPath = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"the property to set on read model '{typeof(TReadModel).FullName}'");
         var setBuilder = new AllSetBuilder<TReadModel, IFromAllBuilder<TReadModel>>(this, propertyPath, namingPolicy);
         _propertyExpressions.Add(setBuilder);
         return setBuilder;
@@ -65,12 +65,15 @@ public class FromAllBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromAllBu
     }
 
     PropertyPath GetTargetProperty<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor, string description) =>
-        ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, $"{description} read model '{typeof(TReadModel).FullName}'");
+        ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"{description} read model '{typeof(TReadModel).FullName}'");
 
     PropertyPath BuildDynamicTargetProperty<TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<EventContext, object>> dynamicKeyAccessor)
     {
-        var dictionaryProperty = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, $"the dictionary-typed property on read model '{typeof(TReadModel).FullName}'");
-        var contextProperty = ProjectionPropertyPaths.FromExpression(dynamicKeyAccessor, namingPolicy, $"the dynamic dictionary key for read model '{typeof(TReadModel).FullName}'");
+        var dictionaryProperty = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"the dictionary-typed property on read model '{typeof(TReadModel).FullName}'");
+        var contextProperty = ProjectionPropertyPaths.FromExpression(dynamicKeyAccessor, namingPolicy, ProjectionPathRole.Source, $"the dynamic dictionary key for read model '{typeof(TReadModel).FullName}'");
+
+        // Compose already-converted paths with the well-known context marker, not CLR member names.
+        // The context suffix is a source expression for a dynamic dictionary key, not a target member.
         return new PropertyPath($"{dictionaryProperty}.{WellKnownExpressions.EventContext}.{contextProperty}");
     }
 }

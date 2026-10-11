@@ -14,7 +14,7 @@ public class and_the_members_are_nested : Specification
     PropertyPath _result;
 
     void Establish() => _expression = e => e.Brief.Topic;
-    void Because() => _result = ProjectionPropertyPaths.FromExpression(_expression, new CamelCaseNamingPolicy());
+    void Because() => _result = ProjectionPropertyPaths.FromExpression(_expression, new CamelCaseNamingPolicy(), ProjectionPathRole.Source);
 
     [Fact] void should_name_every_member() => _result.Path.ShouldEqual("brief.topic");
 }

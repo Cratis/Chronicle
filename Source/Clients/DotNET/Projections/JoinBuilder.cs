@@ -27,7 +27,7 @@ public class JoinBuilder<TReadModel, TEvent, TParentBuilder>(IProjectionBuilder<
     /// <inheritdoc/>
     public IJoinBuilder<TReadModel, TEvent> On<TProperty>(Expression<Func<TReadModel, TProperty>> keyAccessor)
     {
-        _on = ProjectionPropertyPaths.FromExpression(keyAccessor, _namingPolicy, $"the join 'on' property on read model '{typeof(TReadModel).FullName}'");
+        _on = ProjectionPropertyPaths.FromExpression(keyAccessor, _namingPolicy, ProjectionPathRole.Target, $"the join 'on' property on read model '{typeof(TReadModel).FullName}'");
         return this;
     }
 

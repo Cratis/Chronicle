@@ -28,7 +28,7 @@ public class AddBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
     /// <inheritdoc/>
     public TParentBuilder With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
-        var propertyPath = ProjectionPropertyPaths.FromExpression(eventPropertyAccessor, namingPolicy, $"the value added to property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'");
+        var propertyPath = ProjectionPropertyPaths.FromExpression(eventPropertyAccessor, namingPolicy, ProjectionPathRole.Source, $"the value added to property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'");
         _expression = $"{WellKnownExpressions.Add}({propertyPath})";
         return parent;
     }

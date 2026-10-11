@@ -37,7 +37,7 @@ public class SetBuilder<TReadModel, TEvent, TParentBuilder>(TParentBuilder paren
     /// <inheritdoc/>
     public TParentBuilder To(PropertyPath propertyPath)
     {
-        _expression = new EventContentPropertyExpression(ProjectionPropertyPaths.Resolve(propertyPath, namingPolicy));
+        _expression = new EventContentPropertyExpression(ProjectionPropertyPaths.Resolve(propertyPath, namingPolicy, ProjectionPathRole.Source));
         return parent;
     }
 
@@ -64,7 +64,7 @@ public class SetBuilder<TReadModel, TEvent, TParentBuilder>(TParentBuilder paren
     /// <param name="description">The description of the property being configured.</param>
     /// <returns>The serialized property path.</returns>
     private protected PropertyPath ResolvePropertyPath(LambdaExpression expression, string description) =>
-        ProjectionPropertyPaths.FromExpression(expression, namingPolicy, description);
+        ProjectionPropertyPaths.FromExpression(expression, namingPolicy, ProjectionPathRole.Source, description);
 
     void ThrowIfMissingToExpression()
     {

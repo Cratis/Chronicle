@@ -75,7 +75,9 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     {
         var propertyInfo = propertyPath.GetPropertyInfoFor<TReadModel>();
         var primitive = propertyInfo.PropertyType.IsAPrimitiveType() || propertyInfo.PropertyType.IsConcept();
-        propertyPath = ProjectionPropertyPaths.Resolve(propertyPath.Segments.Count() == 1 ? (PropertyPath)propertyInfo.Name : propertyPath, _namingPolicy);
+        propertyPath = propertyPath.Segments.Count() == 1
+            ? ProjectionPropertyPaths.Resolve(propertyInfo.Name, _namingPolicy, ProjectionPathRole.Target)
+            : ProjectionPropertyPaths.Resolve(propertyPath, _namingPolicy, ProjectionPathRole.Target);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy, !primitive);
         _propertyExpressions[propertyPath] = setBuilder;
@@ -100,7 +102,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public ISetBuilder<TReadModel, TEvent, TBuilder> SetThisValue()
     {
-        var propertyPath = ProjectionPropertyPaths.Resolve(WellKnownExpressions.This, _namingPolicy);
+        var propertyPath = ProjectionPropertyPaths.Resolve(WellKnownExpressions.This, _namingPolicy, ProjectionPathRole.Target);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy, false);
         _propertyExpressions[propertyPath] = setBuilder;
@@ -164,7 +166,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     }
 
     PropertyPath ResolveTargetPropertyPath<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor) =>
-        ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, _namingPolicy, $"the target property on read model '{typeof(TReadModel).FullName}'");
+        ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, _namingPolicy, ProjectionPathRole.Target, $"the target property on read model '{typeof(TReadModel).FullName}'");
 
     void ThrowIfPropertyAlreadyDefined(PropertyPath propertyPath)
     {

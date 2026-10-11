@@ -13,43 +13,47 @@ namespace Cratis.Chronicle.Projections;
 internal static class ProjectionPropertyPaths
 {
     /// <summary>
-    /// Applies the naming policy to each property segment without changing path operators.
+    /// Applies the naming policy to parsed segments according to their source or target role.
     /// </summary>
     /// <param name="path">The property path to resolve.</param>
     /// <param name="namingPolicy">The serialization naming policy.</param>
+    /// <param name="role">Whether the path reads event data or addresses read-model state.</param>
     /// <returns>The serialized property path.</returns>
-    public static PropertyPath Resolve(PropertyPath path, INamingPolicy namingPolicy) =>
-        new(string.Join('.', path.Segments.Select(segment => ResolveSegment(segment, namingPolicy))));
+    public static PropertyPath Resolve(PropertyPath path, INamingPolicy namingPolicy, ProjectionPathRole role) =>
+        new(string.Join('.', path.Segments.Select((segment, index) => ResolveSegment(segment, namingPolicy, role, index))));
 
     /// <summary>
     /// Applies the naming policy to a raw path, recognizing functions only by explicit parentheses.
     /// </summary>
     /// <param name="path">The raw property path to resolve.</param>
     /// <param name="namingPolicy">The serialization naming policy.</param>
+    /// <param name="role">Whether the path reads event data or addresses read-model state.</param>
     /// <returns>The serialized property path.</returns>
-    public static PropertyPath Resolve(string path, INamingPolicy namingPolicy) =>
-        new(string.Join('.', path.Split('.').Select(segment => ResolveRawSegment(segment, namingPolicy))));
+    public static PropertyPath Resolve(string path, INamingPolicy namingPolicy, ProjectionPathRole role) =>
+        new(string.Join('.', path.Split('.').Select((segment, index) => ResolveRawSegment(segment, namingPolicy, role, index))));
 
     /// <summary>
     /// Converts a member expression to its serialized projection property path.
     /// </summary>
     /// <param name="expression">The member expression.</param>
     /// <param name="namingPolicy">The serialization naming policy.</param>
+    /// <param name="role">Whether the path reads event data or addresses read-model state.</param>
     /// <returns>The serialized property path.</returns>
-    public static PropertyPath FromExpression(LambdaExpression expression, INamingPolicy namingPolicy) =>
-        ResolveExpression(expression, namingPolicy, out _);
+    public static PropertyPath FromExpression(LambdaExpression expression, INamingPolicy namingPolicy, ProjectionPathRole role) =>
+        ResolveExpression(expression, namingPolicy, role, out _);
 
     /// <summary>
     /// Converts a member expression and retains the caller's invalid-expression description.
     /// </summary>
     /// <param name="expression">The member expression.</param>
     /// <param name="namingPolicy">The serialization naming policy.</param>
+    /// <param name="role">Whether the path reads event data or addresses read-model state.</param>
     /// <param name="description">The description of the property being configured.</param>
     /// <returns>The serialized property path.</returns>
     /// <exception cref="InvalidPropertyExpression">The expression is not a property path.</exception>
-    public static PropertyPath FromExpression(LambdaExpression expression, INamingPolicy namingPolicy, string description)
+    public static PropertyPath FromExpression(LambdaExpression expression, INamingPolicy namingPolicy, ProjectionPathRole role, string description)
     {
-        var path = ResolveExpression(expression, namingPolicy, out var isMemberPath);
+        var path = ResolveExpression(expression, namingPolicy, role, out var isMemberPath);
         if (!isMemberPath)
         {
             throw new InvalidPropertyExpression(description, expression);
@@ -58,14 +62,15 @@ internal static class ProjectionPropertyPaths
         return path;
     }
 
-    static PropertyPath ResolveExpression(LambdaExpression expression, INamingPolicy namingPolicy, out bool isMemberPath)
+    static PropertyPath ResolveExpression(LambdaExpression expression, INamingPolicy namingPolicy, ProjectionPathRole role, out bool isMemberPath)
     {
         var current = (Expression?)UnwrapConversion(expression.Body);
         var segments = new List<string>();
-        if (current is MethodCallExpression methodCall &&
+        if (role == ProjectionPathRole.Source && current is MethodCallExpression methodCall &&
             methodCall.Arguments.Count == 1 &&
             methodCall.Method.IsStatic &&
             methodCall.Method.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), inherit: false) &&
+            UnwrapConversion(methodCall.Arguments[0]) is MemberExpression &&
             DerivedPropertyFunctions.TryGet(methodCall.Method.Name, out var function))
         {
             segments.Add($"{function.Name}()");
@@ -87,19 +92,25 @@ internal static class ProjectionPropertyPaths
     static Expression UnwrapConversion(Expression expression) =>
         expression is UnaryExpression { NodeType: ExpressionType.Convert or ExpressionType.ConvertChecked } unary ? unary.Operand : expression;
 
-    static string ResolveRawSegment(string segment, INamingPolicy namingPolicy) => segment switch
+    static string ResolveRawSegment(string segment, INamingPolicy namingPolicy, ProjectionPathRole role, int index) => segment switch
     {
         PropertyPath.ThisAccessorValue => segment,
-        _ when segment.EndsWith("()", StringComparison.Ordinal) => segment,
+        _ when segment.EndsWith("()", StringComparison.Ordinal) => role == ProjectionPathRole.Source && index > 0
+            ? segment
+            : namingPolicy.GetPropertyName(segment[..^2]),
         _ when segment.StartsWith('[') && segment.EndsWith(']') => $"[{namingPolicy.GetPropertyName(segment[1..^1])}]",
         _ => namingPolicy.GetPropertyName(segment)
     };
 
-    static string ResolveSegment(IPropertyPathSegment segment, INamingPolicy namingPolicy) => segment switch
+    static string ResolveSegment(IPropertyPathSegment segment, INamingPolicy namingPolicy, ProjectionPathRole role, int index) => segment switch
     {
         PropertyName => namingPolicy.GetPropertyName(segment.Value),
         ArrayProperty => $"[{namingPolicy.GetPropertyName(segment.Value)}]",
-        DerivedPropertyFunctionSegment => $"{segment.Value}()",
+
+        // A parsed source has already resolved its function syntax. It still needs a receiver;
+        // a first segment named Week is a member, even if PropertyPath classified it as a function.
+        DerivedPropertyFunctionSegment when role == ProjectionPathRole.Source && index > 0 => $"{segment.Value}()",
+        DerivedPropertyFunctionSegment => namingPolicy.GetPropertyName(segment.Value),
         _ => segment.ToString()!
     };
 }

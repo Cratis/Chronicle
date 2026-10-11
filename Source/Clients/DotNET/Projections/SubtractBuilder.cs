@@ -28,7 +28,7 @@ public class SubtractBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TPar
     /// <inheritdoc/>
     public TParentBuilder With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
-        var propertyPath = ProjectionPropertyPaths.FromExpression(eventPropertyAccessor, namingPolicy, $"the value subtracted from property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'");
+        var propertyPath = ProjectionPropertyPaths.FromExpression(eventPropertyAccessor, namingPolicy, ProjectionPathRole.Source, $"the value subtracted from property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'");
         _expression = $"{WellKnownExpressions.Subtract}({propertyPath})";
         return parent;
     }

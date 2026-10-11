@@ -75,5 +75,5 @@ static class RemovedWithExtensions
     /// <param name="expression">The key expression to convert.</param>
     /// <returns>The converted key expression.</returns>
     static string ApplyNamingPolicy(INamingPolicy namingPolicy, string expression) =>
-        expression.StartsWith('$') ? expression : (string)ProjectionPropertyPaths.Resolve(expression, namingPolicy);
+        expression.StartsWith('$') ? expression : (string)ProjectionPropertyPaths.Resolve(expression, namingPolicy, ProjectionPathRole.Source);
 }

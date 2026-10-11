@@ -48,14 +48,14 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
     /// <inheritdoc/>
     public IChildrenBuilder<TParentReadModel, TChildReadModel> IdentifiedBy(PropertyPath propertyPath)
     {
-        _identifiedBy = ProjectionPropertyPaths.Resolve(propertyPath, _namingPolicy);
+        _identifiedBy = ProjectionPropertyPaths.Resolve(propertyPath, _namingPolicy, ProjectionPathRole.Target);
         return this;
     }
 
     /// <inheritdoc/>
     public IChildrenBuilder<TParentReadModel, TChildReadModel> IdentifiedBy<TProperty>(Expression<Func<TChildReadModel, TProperty>> propertyExpression)
     {
-        _identifiedBy = ProjectionPropertyPaths.FromExpression(propertyExpression, _namingPolicy, $"the identifier of child read model '{typeof(TChildReadModel).FullName}'");
+        _identifiedBy = ProjectionPropertyPaths.FromExpression(propertyExpression, _namingPolicy, ProjectionPathRole.Target, $"the identifier of child read model '{typeof(TChildReadModel).FullName}'");
         return this;
     }
 
@@ -63,7 +63,7 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
     public IChildrenBuilder<TParentReadModel, TChildReadModel> FromEventProperty<TEvent>(Expression<Func<TEvent, TChildReadModel>> propertyExpression)
     {
         _fromEventPropertyEventType = typeof(TEvent).GetEventType().ToContract();
-        _fromEventPropertyExpression = new EventContentPropertyExpression(ProjectionPropertyPaths.FromExpression(propertyExpression, _namingPolicy));
+        _fromEventPropertyExpression = new EventContentPropertyExpression(ProjectionPropertyPaths.FromExpression(propertyExpression, _namingPolicy, ProjectionPathRole.Source));
         return this;
     }
 

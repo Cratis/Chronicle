@@ -10,7 +10,7 @@ public class and_the_path_contains_this : Specification
 {
     PropertyPath _result;
 
-    void Because() => _result = ProjectionPropertyPaths.Resolve("[Items].$this", new CamelCaseNamingPolicy());
+    void Because() => _result = ProjectionPropertyPaths.Resolve("[Items].$this", new CamelCaseNamingPolicy(), ProjectionPathRole.Target);
 
     [Fact] void should_preserve_the_this_accessor() => _result.Path.ShouldEqual("[items].$this");
     [Fact] void should_keep_the_accessor_segment_type() => _result.LastSegment.ShouldBeOfExactType<ThisAccessor>();

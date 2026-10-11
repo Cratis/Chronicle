@@ -10,7 +10,7 @@ public class and_the_naming_policy_preserves_names : Specification
 {
     PropertyPath _result;
 
-    void Because() => _result = ProjectionPropertyPaths.Resolve("Brief.Topic", new DefaultNamingPolicy());
+    void Because() => _result = ProjectionPropertyPaths.Resolve("Brief.Topic", new DefaultNamingPolicy(), ProjectionPathRole.Target);
 
     [Fact] void should_preserve_every_segment() => _result.Path.ShouldEqual("Brief.Topic");
 }

@@ -21,7 +21,7 @@ public class FromEveryBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromEve
     /// <inheritdoc/>
     public IAllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>> Set<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, $"the property to set on read model '{typeof(TReadModel).FullName}'");
+        var propertyPath = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"the property to set on read model '{typeof(TReadModel).FullName}'");
         if (_propertyExpressions.Exists(b => b.TargetProperty == propertyPath))
         {
             throw new DuplicatePropertyInProjection(propertyPath);

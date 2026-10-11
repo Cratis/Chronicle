@@ -26,7 +26,7 @@ static class FromDefinitionExtensions
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        fromDefinition.Properties[propertyName] = ProjectionPropertyPaths.Resolve(eventPropertyName, namingPolicy);
+        fromDefinition.Properties[propertyName] = ProjectionPropertyPaths.Resolve(eventPropertyName, namingPolicy, ProjectionPathRole.Source);
     }
 
     /// <summary>
@@ -42,7 +42,7 @@ static class FromDefinitionExtensions
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        var convertedEventPropertyName = ProjectionPropertyPaths.Resolve(eventPropertyName, namingPolicy);
+        var convertedEventPropertyName = ProjectionPropertyPaths.Resolve(eventPropertyName, namingPolicy, ProjectionPathRole.Source);
         fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.Add}({convertedEventPropertyName})";
     }
 
@@ -59,7 +59,7 @@ static class FromDefinitionExtensions
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        var convertedEventPropertyName = ProjectionPropertyPaths.Resolve(eventPropertyName, namingPolicy);
+        var convertedEventPropertyName = ProjectionPropertyPaths.Resolve(eventPropertyName, namingPolicy, ProjectionPathRole.Source);
         fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.Subtract}({convertedEventPropertyName})";
     }
 
@@ -152,7 +152,7 @@ static class FromDefinitionExtensions
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        var convertedContextPropertyName = ProjectionPropertyPaths.Resolve(contextPropertyName, namingPolicy);
+        var convertedContextPropertyName = ProjectionPropertyPaths.Resolve(contextPropertyName, namingPolicy, ProjectionPathRole.Source);
         fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
     }
 

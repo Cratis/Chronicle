@@ -57,7 +57,7 @@ static class JoinDefinitionExtensions
             }
 
             // Explicit targets carry CLR casing; the child identity and fallback property are already serialized.
-            var normalizedOn = on is not null ? (string)ProjectionPropertyPaths.Resolve(on, namingPolicy) : childIdentity ?? propertyName;
+            var normalizedOn = on is not null ? (string)ProjectionPropertyPaths.Resolve(on, namingPolicy, ProjectionPathRole.Target) : childIdentity ?? propertyName;
             joinDef = new JoinDefinition
             {
                 On = normalizedOn,
@@ -69,6 +69,6 @@ static class JoinDefinitionExtensions
 
         var eventPropertyToUse = eventPropertyName ?? memberName;
         PropertyValidator.ValidatePropertyExists(eventType, eventPropertyToUse);
-        joinDef.Properties[propertyName] = ProjectionPropertyPaths.Resolve(eventPropertyToUse, namingPolicy);
+        joinDef.Properties[propertyName] = ProjectionPropertyPaths.Resolve(eventPropertyToUse, namingPolicy, ProjectionPathRole.Source);
     }
 }
