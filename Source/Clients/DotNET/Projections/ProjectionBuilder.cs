@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
@@ -56,8 +57,13 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     protected ReadModelIdentifier _readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
 
     readonly Dictionary<Events.EventType, FromDefinition> _explicitFromDefinitions = [];
+    readonly List<(Type Type, FromDefinition Definition)> _fromRegistrations = [];
+    readonly List<Type> _eventTypesToValidate = [];
+    readonly List<Action<EventGenerationDelivery>> _buildChildren = [];
 
     internal bool SubscribesToAllEvents { get; private set; }
+
+    internal EventGenerationDelivery GenerationDelivery { get; init; }
 
     /// <inheritdoc/>
     public TBuilder WithInitialValues(Func<TReadModel> initialValueProviderCallback)
@@ -86,39 +92,11 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     {
         var type = typeof(TEvent);
 
-        if (!type.IsEventType(eventTypes.AllClrTypes))
-        {
-            throw new TypeIsNotAnEventType(typeof(TEvent));
-        }
-
-        var eventTypesInProjection = type.GetEventTypes(eventTypes.AllClrTypes).ToArray();
+        ValidateEventType(type);
 
         var builder = new FromBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
-
         builderCallback?.Invoke(builder);
-        var fromDefinition = builder.Build();
-
-        // Retain inherited mappings separately so a later base registration cannot replace an explicit one.
-        // An interface or unregistered base can expand to just one event type and is still inherited.
-        if (eventTypesInProjection.Any(_ => _ != type))
-        {
-            _fromDerivativesDefinitions.Add(new FromDerivativesDefinition
-            {
-                EventTypes = eventTypesInProjection.Select(eventTypes.GetEventTypeFor).ToContract(),
-                From = fromDefinition
-            });
-        }
-
-        foreach (var eventClrType in eventTypesInProjection)
-        {
-            var eventType = eventTypes.GetEventTypeFor(eventClrType);
-            if (eventClrType == type)
-            {
-                _explicitFromDefinitions[eventType] = fromDefinition;
-            }
-
-            _fromDefinitions[GetFromEventType(eventType)] = BuildFromDefinition(eventType);
-        }
+        _fromRegistrations.Add((type, builder.Build()));
 
         CollectEventStore(type);
 
@@ -128,10 +106,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <inheritdoc/>
     public TBuilder Join<TEvent>(Action<IJoinBuilder<TReadModel, TEvent>>? builderCallback = default)
     {
-        if (!typeof(TEvent).IsEventType(eventTypes.AllClrTypes))
-        {
-            throw new TypeIsNotAnEventType(typeof(TEvent));
-        }
+        ValidateEventType(typeof(TEvent));
 
         var builder = new JoinBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
 
@@ -175,10 +150,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     {
         var type = typeof(TEvent);
 
-        if (!type.IsEventType(eventTypes.AllClrTypes))
-        {
-            throw new TypeIsNotAnEventType(typeof(TEvent));
-        }
+        ValidateEventType(type);
 
         var removedWithEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
         var removedWithBuilder = new RemovedWithBuilder<TReadModel, TEvent>(namingPolicy);
@@ -193,10 +165,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     {
         var type = typeof(TEvent);
 
-        if (!type.IsEventType(eventTypes.AllClrTypes))
-        {
-            throw new TypeIsNotAnEventType(typeof(TEvent));
-        }
+        ValidateEventType(type);
 
         var removedWithJoinEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
         var removedWithJoinBuilder = new RemovedWithJoinBuilder<TReadModel, TEvent>(namingPolicy);
@@ -214,9 +183,9 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
             throw new InvalidPropertyExpression($"the target property on read model '{typeof(TReadModel).FullName}'", targetProperty);
         }
 
-        var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit);
+        var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit) { GenerationDelivery = GenerationDelivery };
         builderCallback(builder);
-        _childrenDefinitions[namingPolicy.GetPropertyName(targetPropertyPath)] = builder.Build();
+        _buildChildren.Add(delivery => _childrenDefinitions[namingPolicy.GetPropertyName(targetPropertyPath)] = builder.Build(delivery));
         return (this as TBuilder)!;
     }
 
@@ -228,9 +197,9 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
             throw new InvalidPropertyExpression($"the target property on read model '{typeof(TReadModel).FullName}'", targetProperty);
         }
 
-        var builder = new NestedBuilder<TReadModel, TNestedModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit);
+        var builder = new NestedBuilder<TReadModel, TNestedModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit) { GenerationDelivery = GenerationDelivery };
         builderCallback(builder);
-        _nestedDefinitions[namingPolicy.GetPropertyName(targetPropertyPath)] = builder.Build();
+        _buildChildren.Add(delivery => _nestedDefinitions[namingPolicy.GetPropertyName(targetPropertyPath)] = builder.Build(delivery));
         return (this as TBuilder)!;
     }
 
@@ -252,6 +221,72 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         if (eventStoreName is not null && !_observedEventStores.Contains(eventStoreName))
         {
             _observedEventStores.Add(eventStoreName);
+        }
+    }
+
+    /// <summary>
+    /// Validates a clause's event type using the requested policy, retaining validation for the effective policy.
+    /// </summary>
+    /// <param name="type">The clause's CLR event type.</param>
+    /// <exception cref="TypeIsNotAnEventType">The clause's type is not an event type under the requested policy.</exception>
+    protected void ValidateEventType(Type type)
+    {
+        if (!ProjectionEventTypes.IsEventType(type, eventTypes.AllClrTypes, GenerationDelivery))
+        {
+            throw new TypeIsNotAnEventType(type);
+        }
+
+        _eventTypesToValidate.Add(type);
+    }
+
+    /// <summary>
+    /// Expands clauses after passive and wildcard declarations have determined the root's effective policy.
+    /// </summary>
+    /// <param name="generationDelivery">The root projection's effective generation delivery policy.</param>
+    /// <exception cref="TypeIsNotAnEventType">A clause's type is not an event type under the effective policy.</exception>
+    protected void BuildDefinitions(EventGenerationDelivery generationDelivery)
+    {
+        foreach (var type in _eventTypesToValidate)
+        {
+            if (!ProjectionEventTypes.IsEventType(type, eventTypes.AllClrTypes, generationDelivery))
+            {
+                throw new TypeIsNotAnEventType(type);
+            }
+        }
+
+        _fromDefinitions.Clear();
+        _explicitFromDefinitions.Clear();
+        _fromDerivativesDefinitions.Clear();
+        foreach (var (type, fromDefinition) in _fromRegistrations)
+        {
+            var eventTypesInProjection = ProjectionEventTypes.Expand(type, eventTypes.AllClrTypes, generationDelivery).ToArray();
+
+            // Retain inherited mappings separately so a later base registration cannot replace an explicit one.
+            // An interface or unregistered base can expand to just one event type and is still inherited.
+            if (eventTypesInProjection.Any(_ => _ != type))
+            {
+                _fromDerivativesDefinitions.Add(new FromDerivativesDefinition
+                {
+                    EventTypes = eventTypesInProjection.Select(eventTypes.GetEventTypeFor).ToContract(),
+                    From = fromDefinition
+                });
+            }
+
+            foreach (var eventClrType in eventTypesInProjection)
+            {
+                var eventType = eventTypes.GetEventTypeFor(eventClrType);
+                if (eventClrType == type)
+                {
+                    _explicitFromDefinitions[eventType] = fromDefinition;
+                }
+
+                _fromDefinitions[GetFromEventType(eventType)] = BuildFromDefinition(eventType);
+            }
+        }
+
+        foreach (var buildChild in _buildChildren)
+        {
+            buildChild(generationDelivery);
         }
     }
 

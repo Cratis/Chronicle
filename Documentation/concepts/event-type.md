@@ -6,6 +6,14 @@ a type associated with it.
 Any client connecting to Chronicle needs to communicate the event types before any events
 can be appended to an [event sequence](./event-sequence.md).
 
+## Identity survives a code rename only if you preserve it
+
+The default event type id is the class name, not its full namespace-qualified name. Renaming the class changes that id unless you explicitly retain the previous value. Stored history stays under the old id; handlers for the new id do not see those events. Moving the class to another namespace without changing its name does not change its default id.
+
+When refactoring an existing event, preserve its stored id. When changing its schema, use a new generation of that same identity and an [event type migration](./event-type-migrations.mdx), not a new id to bypass the old contract. The [.NET discovery diagnostics](../clients/dotnet/discovery-report.md) warn about likely event type renames based on schema shape, but cannot prove that two types represent the same fact.
+
+## Generations
+
 An event type can contain multiple generations. Every new event starts with generation 1
 and any changes to the event should then become a new generation. This allows versioning
 your event types so that multiple schema generations can coexist in the same event store.

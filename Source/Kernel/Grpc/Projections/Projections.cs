@@ -234,7 +234,8 @@ internal sealed class Projections(
             request.Declaration ?? string.Empty,
             Concepts.Projections.ProjectionOwner.Server,
             allReadModels,
-            eventTypeSchemas);
+            eventTypeSchemas,
+            (Concepts.Observation.EventGenerationDelivery)request.GenerationDelivery);
 
         return await compileResult.Match(
             async definition =>

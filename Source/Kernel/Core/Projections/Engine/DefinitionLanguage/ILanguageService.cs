@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -22,12 +23,14 @@ public interface ILanguageService
     /// <param name="owner">The projection owner.</param>
     /// <param name="readModelDefinitions">Available read model definitions for validation.</param>
     /// <param name="eventTypeSchemas">Available event type schemas for validation.</param>
+    /// <param name="generationDelivery">The delivery mode; Pinned resolves bare event names to their latest registered generation.</param>
     /// <returns>A ProjectionDefinition or compiler errors.</returns>
     Result<ProjectionDefinition, CompilerErrors> Compile(
         string definition,
         ProjectionOwner owner,
         IEnumerable<ReadModelDefinition> readModelDefinitions,
-        IEnumerable<EventTypeSchema> eventTypeSchemas);
+        IEnumerable<EventTypeSchema> eventTypeSchemas,
+        EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility);
 
     /// <summary>
     /// Generates a language definition string from a ProjectionDefinition.

@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
@@ -482,6 +483,11 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         {
             logger.FromParentHierarchyResolvingLastEvent(lastEvent.Context.EventType.Id.ToString(), lastEvent.Context.SequenceNumber.Value);
             var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
+            if (parentProjection.GenerationDelivery == EventGenerationDelivery.Pinned)
+            {
+                lastEvent = await parentProjection.ReleaseEvent(eventType, lastEvent);
+            }
+
             var resolvedKeyResult = await keyResolverForEventType(eventSequenceStorage, sink, lastEvent);
 
             // If this event resolves successfully (not deferred), use it
@@ -531,6 +537,11 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             }
 
             var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
+            if (parentProjection.GenerationDelivery == EventGenerationDelivery.Pinned)
+            {
+                candidateEvent = await parentProjection.ReleaseEvent(eventType, candidateEvent);
+            }
+
             var resolvedKeyResult = await keyResolverForEventType(eventSequenceStorage, sink, candidateEvent);
 
             // If this event resolves successfully (not deferred), use it
@@ -594,6 +605,11 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         }
 
         var projectionResolver = projection.GetKeyResolverFor(projectionEventType);
+        if (projection.GenerationDelivery == EventGenerationDelivery.Pinned)
+        {
+            parentCreationEvent = await projection.ReleaseEvent(projectionEventType, parentCreationEvent);
+        }
+
         var resolvedProjectionResult = await projectionResolver(eventSequenceStorage, sink, parentCreationEvent);
         if (resolvedProjectionResult is not ResolvedKey resolvedProjectionKey)
         {
@@ -647,6 +663,11 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         }
 
         var resolver = resolverProjection.GetKeyResolverFor(resolverEventType);
+        if (resolverProjection.GenerationDelivery == EventGenerationDelivery.Pinned)
+        {
+            creationEvent = await resolverProjection.ReleaseEvent(resolverEventType, creationEvent);
+        }
+
         var resolvedResult = await resolver(eventSequenceStorage, sink, creationEvent);
         if (resolvedResult is not ResolvedKey resolvedKey)
         {
@@ -816,6 +837,11 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     {
         var eventType = parentProjection.EventTypes.First(eventType => eventType.Id == parentEvent.Context.EventType.Id);
         var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
+        if (parentProjection.GenerationDelivery == EventGenerationDelivery.Pinned)
+        {
+            parentEvent = await parentProjection.ReleaseEvent(eventType, parentEvent);
+        }
+
         return await keyResolverForEventType(eventSequenceStorage, sink, parentEvent);
     }
 
