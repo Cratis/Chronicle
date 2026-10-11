@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using System.Threading.Channels;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Integration.for_Reactors.when_generation_is_pinned;
@@ -20,10 +19,11 @@ public class and_the_same_event_is_delivered_on_every_path(context context) : Gi
 {
     public class context(ChronicleFixture fixture) : given.all_dependencies(fixture)
     {
-        readonly Channel<(JsonObject Event, TaskCompletionSource Response)> _deliveries = Channel.CreateUnbounded<(JsonObject, TaskCompletionSource)>();
+        readonly PinnedWebhookReceiver _receiver = new();
+        readonly Uri _target = new($"http://pinned-webhook-{Guid.NewGuid():N}.test/webhooks");
+        IDisposable? _receiverLease;
         readonly WebhookId _id = $"pinned-webhook-{Guid.NewGuid():N}";
         readonly string _source = $"person-{Guid.NewGuid():N}";
-        bool _failDelivery;
         public JsonObject CatchUp;
         public JsonObject Live;
         public JsonObject Replayed;
@@ -31,32 +31,29 @@ public class and_the_same_event_is_delivered_on_every_path(context context) : Gi
         public override IEnumerable<Type> EventTypes => [typeof(PinnedPersonRegisteredV1), typeof(PinnedPersonRegistered)];
         public override IEnumerable<Type> EventTypeMigrators => [typeof(PinnedPersonMigration)];
 
-        protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
+        protected override void ConfigureServices(IServiceCollection services)
         {
-            builder.Configure(app => app.UseRouting().UseEndpoints(endpoints => endpoints.MapPost("/webhooks", async httpContext =>
-            {
-                using var reader = new StreamReader(httpContext.Request.Body);
-                var payload = JsonNode.Parse(await reader.ReadToEndAsync())!.AsObject();
-                var response = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                httpContext.Response.StatusCode = _failDelivery ? 400 : 200;
-                foreach (var @event in payload["events"]!.AsArray())
-                {
-                    await _deliveries.Writer.WriteAsync((@event!.AsObject(), response));
-                }
-
-                await response.Task.WaitAsync(httpContext.RequestAborted);
-            })));
+            base.ConfigureServices(services);
+            _receiverLease ??= given.TestHttpClientFactory.Instance.Register(_target, _receiver);
         }
 
-        async Task<(JsonObject Event, TaskCompletionSource Response)> NextDelivery()
+        protected override async Task OnDisposeAsync()
         {
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            return await _deliveries.Reader.ReadAsync(cancellation.Token);
+            _receiverLease?.Dispose();
+            _receiver.Dispose();
+            await base.OnDisposeAsync();
+        }
+
+        public override void Dispose()
+        {
+            _receiverLease?.Dispose();
+            _receiver.Dispose();
+            base.Dispose();
         }
 
         async Task Register(WebhookId id)
         {
-            await Webhooks.Register(id, TargetUrl, builder => builder.WithEventType<PinnedPersonRegistered>().WithGenerationDelivery(EventGenerationDelivery.Pinned));
+            await Webhooks.Register(id, _target.AbsoluteUri, builder => builder.WithEventType<PinnedPersonRegistered>().WithGenerationDelivery(EventGenerationDelivery.Pinned));
             var registration = await EventStore.Reactors.WaitForHandlerById("$system.Cratis.Chronicle.Observation.Webhooks.WebhookReactor", TimeSpan.FromSeconds(30));
             var tail = (await EventStore.GetEventSequence(EventSequenceId.System).GetTailSequenceNumber()).Value;
             await registration.WaitTillReachesEventSequenceNumber(tail);
@@ -65,13 +62,13 @@ public class and_the_same_event_is_delivered_on_every_path(context context) : Gi
         async Task Because()
         {
             await Register(_id);
-            _failDelivery = true;
+            _receiver.FailDeliveries(true);
             var appended = await EventStore.EventLog.Append(_source, new PinnedPersonRegisteredV1("Ada Lovelace"));
-            var live = await NextDelivery();
+            var live = await _receiver.NextDelivery();
             Live = live.Event;
             live.Response.SetResult();
             (await appended.WaitForCompletion()).IsSuccess.ShouldBeFalse();
-            _failDelivery = false;
+            _receiver.FailDeliveries(false);
 
             var observers = ((IChronicleServicesAccessor)EventStore.Connection).Services.Observers;
             var retry = await observers.RetryPartition(new()
@@ -83,7 +80,7 @@ public class and_the_same_event_is_delivered_on_every_path(context context) : Gi
                 Partition = _source
             });
             retry.Outcome.ShouldEqual(Contracts.Observation.PartitionRecoveryOutcome.Started);
-            var retried = await NextDelivery();
+            var retried = await _receiver.NextDelivery();
             Retried = retried.Event;
             Job retryJob;
             try
@@ -110,14 +107,14 @@ public class and_the_same_event_is_delivered_on_every_path(context context) : Gi
                 EventSequenceId = EventSequenceId.Log,
                 ObserverId = _id
             });
-            var replayed = await NextDelivery();
+            var replayed = await _receiver.NextDelivery();
             Replayed = replayed.Event;
             replayed.Response.SetResult();
             await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(new JobId(Guid.Parse(replay.JobId)), TimeSpan.FromSeconds(30));
 
             // A second webhook starts after the append, exercising catch-up for that same stored event.
             await Register($"catch-up-{Guid.NewGuid():N}");
-            var catchUp = await NextDelivery();
+            var catchUp = await _receiver.NextDelivery();
             CatchUp = catchUp.Event;
             catchUp.Response.SetResult();
         }
