@@ -31,7 +31,12 @@ public class RecordParameterFormatter(int indentation) : CSharpSyntaxRewriter
         }
 
         var leading = new[] { ElasticCarriageReturnLineFeed, Whitespace(new string(' ', indentation)) };
-        var parameters = visited.Parameters.Select(parameter => parameter.WithLeadingTrivia(leading));
+        var parameters = visited.Parameters.Select(parameter =>
+        {
+            var comments = parameter.GetLeadingTrivia().Where(trivia => trivia.IsKind(SyntaxKind.SingleLineCommentTrivia));
+            var trivia = comments.SelectMany(comment => leading.Append(comment)).Concat(leading);
+            return parameter.WithLeadingTrivia(trivia);
+        });
 
         return visited.WithParameters(SeparatedList(parameters, visited.Parameters.GetSeparators()));
     }
