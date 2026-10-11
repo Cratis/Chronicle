@@ -477,14 +477,10 @@ public class EventStore : IEventStore
 
         try
         {
-            if (!isBackgroundRetry && _identityDriftDetector is not null && BuildDiscoveryReport() is { } current)
+            if (!isBackgroundRetry)
             {
-                drift = await _identityDriftDetector.Detect(current);
-                var warnings = drift.Where(_ => _.Kind is ArtifactKind.Reactor or ArtifactKind.EventType).ToImmutableList();
-                if (_identityDriftPolicy == ArtifactIdentityDriftPolicy.Fail && warnings.Count > 0)
-                {
-                    throw new ArtifactIdentityDriftDetected(warnings);
-                }
+                drift = await DetectIdentityDrift();
+                ThrowIfIdentityDriftMustFail(drift);
             }
 
             await RegisterAllArtifactsWithRetries();
@@ -508,6 +504,30 @@ public class EventStore : IEventStore
                 StartBackgroundRegistrationRetry();
             }
             throw;
+        }
+    }
+
+    async Task<IImmutableList<ArtifactIdentityDrift>> DetectIdentityDrift()
+    {
+        if (_identityDriftDetector is null || BuildDiscoveryReport() is not { } current)
+        {
+            return ImmutableList<ArtifactIdentityDrift>.Empty;
+        }
+
+        return await _identityDriftDetector.Detect(current);
+    }
+
+    void ThrowIfIdentityDriftMustFail(IImmutableList<ArtifactIdentityDrift> drift)
+    {
+        if (_identityDriftPolicy != ArtifactIdentityDriftPolicy.Fail)
+        {
+            return;
+        }
+
+        var warnings = drift.Where(_ => _.Kind is ArtifactKind.Reactor or ArtifactKind.EventType).ToImmutableList();
+        if (warnings.Count > 0)
+        {
+            throw new ArtifactIdentityDriftDetected(warnings);
         }
     }
 
