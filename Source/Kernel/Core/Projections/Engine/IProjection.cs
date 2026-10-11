@@ -176,6 +176,17 @@ public interface IProjection
     void OnNext(ProjectionEventContext context);
 
     /// <summary>
+    /// Provides the projection with an event handled by one of its descendants, without projecting it at this level.
+    /// </summary>
+    /// <param name="context"><see cref="ProjectionEventContext"/> to work with.</param>
+    /// <remarks>
+    /// Only the mappings this level applies to its descendants' events run - every-event mappings that include children.
+    /// Used when a descendant's event is projected outside the normal top-down handling, such as when a deferred future
+    /// resolves.
+    /// </remarks>
+    void OnDescendantEvent(ProjectionEventContext context);
+
+    /// <summary>
     /// Checks whether the projection will accept a specific event type.
     /// </summary>
     /// <param name="eventType"><see cref="EventType"/> to check.</param>

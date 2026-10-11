@@ -1,5 +1,5 @@
 ---
-id: 0003-ordered-lanes-observer-delivery
+id: 0004-ordered-lanes-observer-delivery
 title: Deliver observers through ordered lanes over a declared sequencing key
 status: proposed
 stage: none
