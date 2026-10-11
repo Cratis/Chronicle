@@ -480,8 +480,10 @@ public class EventStore : IEventStore
             if (!isBackgroundRetry)
             {
                 drift = await DetectIdentityDrift();
-                ThrowIfIdentityDriftMustFail(drift);
             }
+
+            // Background retries reuse the findings of the run that started them, so the policy still applies to them.
+            ThrowIfIdentityDriftMustFail(drift);
 
             await RegisterAllArtifactsWithRetries();
 
