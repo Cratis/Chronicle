@@ -14,12 +14,21 @@ public class and_appended_generation_is_recorded(ReplicaSetMongoDBFixture fixtur
 
     async Task Because()
     {
-        var entry = GenerationalEvent(EventSequenceNumber.First, 1);
+        var entry = GenerationalEvent(EventSequenceNumber.First, 1) with
+        {
+            ContentHashes = new Dictionary<EventTypeGeneration, EventHash> { [EventTypeGeneration.First] = "original-hash", [new EventTypeGeneration(2)] = "migrated-hash" }
+        };
         _acknowledged = (await _storage.Append(entry.SequenceNumber, entry.EventSourceType, entry.EventSourceId, entry.EventStreamType, entry.EventStreamId, entry.EventType, entry.CorrelationId, entry.Causation, entry.CausedByChain, entry.Tags, entry.Occurred, entry.GenerationalContent, entry.ContentHashes)).AsT0;
         _stored = await Stored(entry.SequenceNumber);
         _read = await _storage.GetEventAt(entry.SequenceNumber);
     }
 
+    [Fact] void should_expose_the_appended_generation_live() => _acknowledged.Context.AppendedGeneration!.Value.ShouldEqual(1U);
+    [Fact] void should_expose_the_appended_generation_on_read() => _read.Context.AppendedGeneration!.Value.ShouldEqual(1U);
+    [Fact] void should_expose_generation_hashes_live() => _acknowledged.GenerationalHashes.Keys.ShouldContainOnly(1, 2);
+    [Fact] void should_expose_generation_hashes_on_read() => _read.GenerationalHashes.Keys.ShouldContainOnly(1, 2);
+    [Fact] void should_preserve_the_original_generations_hash() => _acknowledged.GenerationalHashes[1].Value.ShouldEqual("original-hash");
+    [Fact] void should_preserve_the_migrated_generations_hash() => _read.GenerationalHashes[2].Value.ShouldEqual("migrated-hash");
     [Fact] void should_record_the_original_generation() => _stored.AppendedGeneration.ShouldEqual((uint?)1);
     [Fact] void should_still_acknowledge_the_appended_generation() => _acknowledged.Context.EventType.Generation.ShouldEqual(EventTypeGeneration.First);
     [Fact] void should_still_read_the_highest_generation() => _read.Context.EventType.Generation.ShouldEqual(new EventTypeGeneration(2));

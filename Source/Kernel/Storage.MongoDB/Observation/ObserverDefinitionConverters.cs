@@ -26,7 +26,8 @@ public static class ObserverDefinitionConverters
             EventSequenceId = definition.EventSequenceId,
             Type = definition.Type,
             Owner = definition.Owner,
-            IsReplayable = definition.IsReplayable
+            IsReplayable = definition.IsReplayable,
+            GenerationDelivery = definition.GenerationDelivery
         };
 
     /// <summary>
@@ -41,7 +42,10 @@ public static class ObserverDefinitionConverters
             definition.EventSequenceId,
             definition.Type,
             definition.Owner,
-            definition.IsReplayable);
+            definition.IsReplayable)
+        {
+            GenerationDelivery = definition.GenerationDelivery
+        };
 
     /// <summary>
     /// Converts a collection of MongoDB representations of observer definitions to their Kernel representations.

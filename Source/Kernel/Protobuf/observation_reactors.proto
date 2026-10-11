@@ -33,6 +33,11 @@ message EventContext {
    string Subject = 16;
    repeated NamedTag NamedTags = 17;
    string EventSource = 18;
+   uint32 AppendedGeneration = 19;
+}
+enum EventGenerationDelivery {
+   Compatibility = 0;
+   Pinned = 1;
 }
 enum EventObservationState {
    EVENT_OBSERVATION_STATE_None = 0;
@@ -101,6 +106,7 @@ message ReactorDefinition {
    repeated string Tags = 5;
    ObserverFilters Filters = 6;
    bool IsNotReplayable = 7;
+   EventGenerationDelivery GenerationDelivery = 8;
 }
 message ReactorMessage {
    OneOf_RegisterReactor_ReactorResult Content = 1;

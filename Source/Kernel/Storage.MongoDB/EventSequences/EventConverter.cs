@@ -63,13 +63,15 @@ public class EventConverter(
                 Subject: @event.Subject?.IsSet == true ? @event.Subject : new Subject(@event.EventSourceId.Value))
             {
                 NamedTags = (@event.NamedTags ?? []).Select(tag => new NamedTag(new TagName(tag.Name), tag.Value)).ToArray(),
-                EventSource = @event.EventSource ?? EventSourceName.NotSet
+                EventSource = @event.EventSource ?? EventSourceName.NotSet,
+                AppendedGeneration = @event.AppendedGeneration is { } appended ? new EventTypeGeneration(appended) : null
             },
             resolvedContent)
         {
             OriginalContent = originalContent,
             Revisions = revisions,
-            GenerationalContent = generationalContent
+            GenerationalContent = generationalContent,
+            GenerationalHashes = @event.ContentHashes.Where(_ => int.TryParse(_.Key, out var generation) && generation > 0).ToDictionary(_ => int.Parse(_.Key), _ => new EventHash(_.Value))
         };
     }
 

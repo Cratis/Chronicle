@@ -63,6 +63,32 @@ builder.AddCratisChronicle(options => options.EventStore = "Quickstart");
 
 The host integration registers the event store, event log, read models, projections, reducers, reactors, constraints, and related services in dependency injection.
 
+## Pin reactor and reducer generations
+
+When independently deployed consumers use different generations of an event type, opt in to kernel
+selection and release of the generation each reactor or reducer handles. Configure this before connecting:
+
+```csharp
+using Cratis.Chronicle;
+using Cratis.Chronicle.Observation;
+
+var options = new ChronicleOptions(ChronicleConnectionString.Development)
+{
+    EventGenerationDelivery = EventGenerationDelivery.Pinned
+};
+using var client = new ChronicleClient(options);
+var eventStore = await client.GetEventStore("Quickstart");
+```
+
+`Compatibility` remains the default. `Pinned` applies to client reactors and reducers on live delivery,
+catch-up, replay, and partition retry; it does not change projections or event reads. Upgrade all kernel
+silos before enabling it. Each observer must handle only one generation per event type, and that
+generation must be registered. The delivered `EventContext.AppendedGeneration` is separate from the
+handler's generation and is null for legacy events whose original generation is unknown.
+
+See [pinned observer delivery](../../concepts/event-type-migrations.mdx#opt-in-to-pinned-observer-delivery)
+for on-demand migration, revision, and hash behavior.
+
 ## Next
 
 - [Console quickstart](/chronicle/get-started/console/)

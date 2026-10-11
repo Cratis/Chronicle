@@ -16,7 +16,7 @@ Environment.SetEnvironmentVariable("ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS",
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Chronicle needs MongoDB transactions (AppendMany, unit of work, Orleans membership), which
-// require a replica set. mongo:8 has no bundled replica set, so start mongod with replSet enabled,
+// require a replica set. mongo:8.2 has no bundled replica set, so start mongod with replSet enabled,
 // wait for it, run rs.initiate() with the member advertising localhost:27017, then tail to keep the
 // container alive. The connection string uses directConnection so host clients skip replica set host
 // discovery (the member advertises its in-container address).
@@ -26,7 +26,7 @@ const string MongoReplicaSetInit =
     "mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; " +
     "tail -f /dev/null";
 const string MongoConnectionString = "mongodb://localhost:27019/?directConnection=true";
-var mongodb = builder.AddContainer("mongodb", "mongo", "8")
+var mongodb = builder.AddContainer("mongodb", "mongo", "8.2")
     .WithEntrypoint("/bin/sh")
     .WithArgs("-c", MongoReplicaSetInit)
     .WithEndpoint("tcp", endpoint =>

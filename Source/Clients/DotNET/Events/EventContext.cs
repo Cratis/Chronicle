@@ -72,6 +72,11 @@ public record EventContext(
     } = EventSourceName.NotSet;
 
     /// <summary>
+    /// Gets the generation the event was appended in, or null when unknown.
+    /// </summary>
+    public EventTypeGeneration? AppendedGeneration { get; init; }
+
+    /// <summary>
     /// Gets the structured named tags associated with the event.
     /// </summary>
     /// <exception cref="InvalidNamedTag">The supplied collection contains a null named tag.</exception>

@@ -80,7 +80,8 @@ public class when_resolving_a_future_after_reload : given.a_futures_storage
 
     [Fact] void should_project_the_original_occurred_time() => Child["occurred"].ShouldEqual(DateTimeOffset.Parse("2026-05-12T13:14:15.1234567+02:00"));
     [Fact] void should_project_the_original_correlation_id() => Child["correlationId"].ShouldEqual(new CorrelationId(Guid.Parse("de001d50-d624-4d65-a550-314241d40e07")));
-    [Fact] async Task should_remove_the_resolved_future_from_storage() => (await _storage.GetForProjection(_future.ProjectionId)).ShouldBeEmpty();
+    [Fact] async Task should_keep_the_future_until_it_is_saved() => (await _storage.GetForProjection(_future.ProjectionId)).Select(future => future.Id).ShouldContainOnly(_future.Id);
+    [Fact] void should_carry_the_future_identity_on_the_pending_save() => _result.PendingFutureSaves.Single().FutureId.ShouldEqual(_future.Id);
     [Fact] void should_save_the_child_under_the_parent_key() => _result.PendingFutureSaves.Single().Key.Value.ShouldEqual("parent");
 
     IDictionary<string, object?> Child => ((IEnumerable<object>)((IDictionary<string, object?>)_result.PendingFutureSaves.Single().Changeset.CurrentState)["children"]!).OfType<ExpandoObject>().Single();
