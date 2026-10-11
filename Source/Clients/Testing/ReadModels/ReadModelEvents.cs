@@ -32,13 +32,15 @@ internal static class ReadModelEvents
     /// <param name="events">Seeded input.</param>
     /// <param name="contexts">Optional original client contexts.</param>
     /// <param name="persist">Whether to persist synthetic input; false uses the existing event log.</param>
+    /// <param name="seededEvents">Optional routed synthetic input, used when original contexts are not supplied.</param>
     /// <returns>The delivered kernel events and their shared storage.</returns>
     /// <exception cref="SyntheticEventAppendFailed">A synthetic position was already occupied.</exception>
     internal static async Task<(KernelEvents::AppendedEvent[] Events, IEventSequenceStorage Storage)> Prepare(
         EventStoreForTesting store,
         IReadOnlyList<(EventSourceId EventSourceId, object Event)> events,
         IReadOnlyList<EventContext>? contexts = null,
-        bool persist = true)
+        bool persist = true,
+        IReadOnlyList<ReadModelEvent>? seededEvents = null)
     {
         var root = store.TestingStore;
         var converter = new ExpandoObjectConverter(new TypeFormats());
@@ -63,9 +65,9 @@ internal static class ReadModelEvents
             {
                 EventType = kernelType,
                 EventSourceId = new(input.EventSourceId.Value),
-                EventSourceType = contexts is null ? KernelEvents::EventSourceType.Default : new(contexts[index].EventSourceType.Value),
-                EventStreamType = contexts is null ? KernelEvents::EventStreamType.All : new(contexts[index].EventStreamType.Value),
-                EventStreamId = contexts is null ? KernelEvents::EventStreamId.Default : new(contexts[index].EventStreamId.Value),
+                EventSourceType = contexts is not null ? new(contexts[index].EventSourceType.Value) : new((seededEvents?[index].EventSourceType ?? EventSourceType.Default).Value),
+                EventStreamType = contexts is not null ? new(contexts[index].EventStreamType.Value) : new((seededEvents?[index].EventStreamType ?? EventStreamType.All).Value),
+                EventStreamId = contexts is not null ? new(contexts[index].EventStreamId.Value) : new((seededEvents?[index].EventStreamId ?? EventStreamId.Default).Value),
                 SequenceNumber = contexts is null ? new((ulong)index) : new(contexts[index].SequenceNumber.Value),
                 Occurred = contexts is null ? KernelEvents::EventContext.Empty.Occurred.AddTicks(index) : contexts[index].Occurred
             };

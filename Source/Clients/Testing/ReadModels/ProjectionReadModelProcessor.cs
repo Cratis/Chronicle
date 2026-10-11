@@ -109,6 +109,7 @@ internal static class ProjectionReadModelProcessor
     /// <see cref="UnsubscribedEventSeeded"/> instead.
     /// </param>
     /// <param name="eventContexts">Optional original contexts carrying event stream routing.</param>
+    /// <param name="seededEvents">Optional routed synthetic input, used when original contexts are not supplied.</param>
     /// <returns>
     /// A tuple of the primary projected read model (the instance for the first key resolved, exposed as
     /// <c language="csharp">Instance</c>, or <see langword="null"/> if the projection did not apply any changes) and a
@@ -126,7 +127,8 @@ internal static class ProjectionReadModelProcessor
         IJsonSchemaGenerator jsonSchemaGenerator,
         TReadModel? initialState = null,
         bool strictEventSubscription = false,
-        IReadOnlyList<EventContext>? eventContexts = null)
+        IReadOnlyList<EventContext>? eventContexts = null,
+        IReadOnlyList<ReadModelEvent>? seededEvents = null)
         where TReadModel : class
     {
         var readModelType = typeof(TReadModel);
@@ -143,7 +145,7 @@ internal static class ProjectionReadModelProcessor
         var eventsList = events.ToList();
 
         // Keep synthetic positions and observer-free folding; prepare migrations through the kernel component.
-        var (appendedEvents, inMemoryEventSequenceStorage) = await ReadModelEvents.Prepare(eventStore, eventsList, eventContexts, persist: eventContexts is null);
+        var (appendedEvents, inMemoryEventSequenceStorage) = await ReadModelEvents.Prepare(eventStore, eventsList, eventContexts, persist: eventContexts is null, seededEvents: seededEvents);
         var eventTypeSchemas = await eventStore.TestingStore.Store.EventTypes.GetFor(eventTypes.All.Select(ToKernelEventType));
         var projectionFactory = CreateProjectionFactory(eventStore.TestingStore.Storage);
 
