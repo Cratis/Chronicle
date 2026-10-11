@@ -810,7 +810,7 @@ public class ProjectionFactory(
     }
 
     void LogUnmappedCollectionProperties(
-        IProjection projection,
+        Projection projection,
         ProjectionDefinition projectionDefinition,
         PropertyPath childrenAccessorProperty,
         JsonSchema currentReadModelSchema,
