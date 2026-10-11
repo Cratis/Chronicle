@@ -58,22 +58,14 @@ static class CSharpDefinitionSupport
     /// </summary>
     /// <param name="schema">The property schema.</param>
     /// <param name="fallbackName">The record name for an unnamed object.</param>
+    /// <param name="names">The names assigned to referenced object records.</param>
     /// <returns>The C# type name.</returns>
-    internal static string ModelType(JsonSchema schema, string fallbackName)
+    internal static string ModelType(JsonSchema schema, string fallbackName, RecordNames names)
     {
         var actual = schema.ActualSchema;
-        if (_primitiveTypes.TryGetValue(actual.Type, out var primitiveType))
-        {
-            return primitiveType;
-        }
-
-        return actual.Type switch
-        {
-            JsonObjectType.String => StringType(actual.Format),
-            JsonObjectType.Array when actual.Item is not null => $"System.Collections.Generic.IEnumerable<{ModelType(actual.Item, fallbackName)}>",
-            JsonObjectType.Object => RecordName(actual, fallbackName),
-            _ => "object"
-        };
+        var typeName = NonNullableModelType(schema, fallbackName, names);
+        var nullable = (schema.Type | actual.Type).HasFlag(JsonObjectType.Null) || (actual.Format?.EndsWith('?') ?? false);
+        return nullable ? typeName + "?" : typeName;
     }
 
     /// <summary>
@@ -105,6 +97,23 @@ static class CSharpDefinitionSupport
             new FromEveryDefinition(new Dictionary<PropertyPath, string>(), true),
             new Dictionary<EventType, RemovedWithDefinition>(),
             new Dictionary<EventType, RemovedWithJoinDefinition>());
+    }
+
+    static string NonNullableModelType(JsonSchema schema, string fallbackName, RecordNames names)
+    {
+        var actual = schema.ActualSchema;
+        var type = actual.Type & ~JsonObjectType.Null;
+        if (_primitiveTypes.TryGetValue(type, out var primitiveType))
+        {
+            return primitiveType;
+        }
+        return type switch
+        {
+            JsonObjectType.String => StringType(actual.Format?.TrimEnd('?')),
+            JsonObjectType.Array when actual.Item is not null => $"System.Collections.Generic.IEnumerable<{ModelType(actual.Item, fallbackName, names)}>",
+            JsonObjectType.Object => names.Resolve(schema, fallbackName),
+            _ => "object"
+        };
     }
 
     static string StringType(string? format) => format switch

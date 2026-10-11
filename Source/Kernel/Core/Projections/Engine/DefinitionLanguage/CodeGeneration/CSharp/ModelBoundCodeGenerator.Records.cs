@@ -27,31 +27,23 @@ public partial class ModelBoundCodeGenerator
             .WithAttributeLists(List(attributes));
     }
 
-    static IEnumerable<RecordDeclarationSyntax> CreateRecordDeclarations(RecordScope scope)
-    {
-        yield return CreateRecordDeclaration(scope);
-        foreach (var child in ChildScopes(scope))
-        {
-            foreach (var record in CreateRecordDeclarations(child))
-            {
-                yield return record;
-            }
-        }
-    }
+    static IEnumerable<RecordDeclarationSyntax> CreateRecordDeclarations(RecordScope scope) => CollectUniqueRecordDeclarations(scope);
 
     static IEnumerable<RecordScope> ChildScopes(RecordScope scope) => scope.Schema.Properties
         .Select(property => ChildScope(scope, property)).OfType<RecordScope>();
 
     static RecordScope? ChildScope(RecordScope parent, KeyValuePair<string, JsonSchemaProperty> property)
     {
-        var collection = property.Value.ActualSchema.Type == JsonObjectType.Array;
-        var schema = collection ? property.Value.Item?.ActualSchema : property.Value.ActualSchema;
-        if (schema?.Type != JsonObjectType.Object)
+        var actual = property.Value.ActualSchema;
+        var collection = actual.Type.HasFlag(JsonObjectType.Array);
+        var source = collection ? actual.Item : property.Value;
+        var schema = source?.ActualSchema;
+        if (schema?.Type.HasFlag(JsonObjectType.Object) != true)
         {
             return null;
         }
         var definition = CSharpDefinitionSupport.ChildDefinition(parent.Definition, property.Key);
-        return new RecordScope(CSharpDefinitionSupport.RecordName(schema, parent.Name + property.Key), schema, definition)
+        return new RecordScope(parent.Names.Resolve(source!, parent.Name + property.Key), schema, definition, parent.Names)
         {
             IsCollection = collection,
             IsNested = !collection,
@@ -75,16 +67,16 @@ public partial class ModelBoundCodeGenerator
     static ParameterSyntax CreateRecordParameter(ParameterRendering rendering)
     {
         var scope = rendering.Scope;
-        var fallback = scope.Schema.Title + rendering.Target.Path;
-        var childSchema = rendering.Schema.Item?.ActualSchema ?? rendering.Schema.ActualSchema;
-        var childType = ParseTypeName(CSharpDefinitionSupport.RecordName(childSchema, fallback));
+        var fallback = scope.Name + rendering.Target.Path;
+        var childSchema = rendering.Schema.ActualSchema.Item ?? rendering.Schema;
+        var childType = ParseTypeName(scope.Names.Resolve(childSchema, fallback));
         var attributes = ModelBoundRelationships.PropertyAttributes(scope.Definition, rendering.Target, childType, scope.IsCollection).ToList();
         AddParameterAttributes(rendering, attributes);
         var comments = ModelBoundLimitations.Comments(scope.Definition, rendering.Target.Path, scope.Description)
             .SelectMany(comment => new[] { Comment(comment), ElasticCarriageReturnLineFeed });
         return Parameter(Identifier(rendering.Target.Path))
-            .WithType(ParseTypeName(CSharpDefinitionSupport.ModelType(rendering.Schema, fallback)))
-            .WithAttributeLists(List(attributes.Select(ParameterAttribute)))
+            .WithType(ParseTypeName(CSharpDefinitionSupport.ModelType(rendering.Schema, fallback, scope.Names)))
+            .WithAttributeLists(List(attributes.Select(attribute => ParameterAttribute(attribute, scope.IsNested))))
             .WithLeadingTrivia(comments);
     }
 
@@ -97,10 +89,13 @@ public partial class ModelBoundCodeGenerator
         }
     }
 
-    static AttributeListSyntax ParameterAttribute(AttributeSyntax attribute) => AttributeList(SingletonSeparatedList(attribute))
-        .WithTarget(attribute.Name.ToString() == "FromAll" ? AttributeTargetSpecifier(Token(SyntaxKind.PropertyKeyword)) : null);
+    static AttributeListSyntax ParameterAttribute(AttributeSyntax attribute, bool isNested) => AttributeList(SingletonSeparatedList(attribute))
+        .WithTarget(IsPropertyAttribute(attribute, isNested) ? AttributeTargetSpecifier(Token(SyntaxKind.PropertyKeyword)) : null);
 
-    sealed record RecordScope(string Name, JsonSchema Schema, ProjectionDefinition Definition)
+    static bool IsPropertyAttribute(AttributeSyntax attribute, bool isNested) => attribute.Name.ToString() == "FromAll"
+        || (isNested && attribute.Name is GenericNameSyntax generic && generic.Identifier.Text == "SetFromContext");
+
+    sealed record RecordScope(string Name, JsonSchema Schema, ProjectionDefinition Definition, RecordNames Names)
     {
         public bool IsCollection { get; init; }
         public bool IsNested { get; init; }

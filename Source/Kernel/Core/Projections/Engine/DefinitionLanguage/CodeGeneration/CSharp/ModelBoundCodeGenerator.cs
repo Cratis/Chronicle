@@ -32,7 +32,8 @@ public partial class ModelBoundCodeGenerator
     public CompilationUnitSyntax Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
         var schema = readModelDefinition.GetSchemaForLatestGeneration();
-        var scope = new RecordScope(schema.Title!, schema, definition);
+        var names = new RecordNames();
+        var scope = new RecordScope(names.Resolve(schema, schema.Title!), schema, definition, names);
         var usings = new[]
         {
             UsingDirective(ParseName("Cratis.Chronicle.Keys")),

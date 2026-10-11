@@ -1,10 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -88,30 +86,15 @@ public class DeclarativeCodeGenerator
             return;
         }
 
-        var operations = every.Properties.Select(property => EveryOperation(property.Key.Path, property.Value)).ToList();
+        var operations = every.Properties.Select(property => DeclarativeEveryExpressions.Operation(property.Key.Path, property.Value, definition.SubscribesToAllEvents)).ToList();
         if (!definition.SubscribesToAllEvents && !every.IncludeChildren)
         {
             operations.Add(".ExcludeChildProjections()");
         }
         var method = definition.SubscribesToAllEvents ? "FromAll" : "FromEvery";
-        lines.Add($".{method}(_ => _{string.Concat(operations)})");
-    }
-
-    static string EveryOperation(string property, string expression)
-    {
-        var parts = property.Split([$".{WellKnownExpressions.EventContext}."], StringSplitOptions.None);
-        if (parts.Length == 1)
-        {
-            return DeclarativeExpressions.Operation(new PropertyPath(property), expression);
-        }
-
-        var operation = DeclarativeExpressions.Normalize(expression) switch
-        {
-            WellKnownExpressions.Count => "Count",
-            WellKnownExpressions.Increment => "Increment",
-            WellKnownExpressions.Decrement => "Decrement",
-            _ => "Set"
-        };
-        return $".{operation}(m => m.{parts[0]}, c => c.{CSharpDefinitionSupport.ContextPath(parts[1])})";
+        var callback = operations.Exists(operation => operation.StartsWith('.'))
+            ? $"_ => _{string.Concat(operations)}"
+            : $"_ => {{ {string.Concat(operations)} }}";
+        lines.Add($".{method}({callback})");
     }
 }
