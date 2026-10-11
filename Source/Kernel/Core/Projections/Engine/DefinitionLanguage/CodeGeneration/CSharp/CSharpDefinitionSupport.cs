@@ -57,12 +57,7 @@ static class CSharpDefinitionSupport
         var actual = schema.ActualSchema;
         return actual.Type switch
         {
-            JsonObjectType.String => actual.Format switch
-            {
-                "date-time" => "System.DateTimeOffset",
-                "uuid" or "guid" => "System.Guid",
-                _ => "string"
-            },
+            JsonObjectType.String => StringType(actual.Format),
             JsonObjectType.Integer => "int",
             JsonObjectType.Number => "decimal",
             JsonObjectType.Boolean => "bool",
@@ -102,4 +97,11 @@ static class CSharpDefinitionSupport
             new Dictionary<EventType, RemovedWithDefinition>(),
             new Dictionary<EventType, RemovedWithJoinDefinition>());
     }
+
+    static string StringType(string? format) => format switch
+    {
+        "date-time" => "System.DateTimeOffset",
+        "uuid" or "guid" => "System.Guid",
+        _ => "string"
+    };
 }

@@ -19,8 +19,7 @@ static class DeclarativeRelationships
     /// <param name="joins">The joins to render.</param>
     /// <param name="lines">The generated fluent steps.</param>
     /// <param name="isChild">Whether these joins belong to children.</param>
-    /// <param name="setExpression">The set-expression renderer.</param>
-    internal static void Joins(IDictionary<EventType, JoinDefinition> joins, List<string> lines, bool isChild, Func<string, string> setExpression)
+    internal static void Joins(IDictionary<EventType, JoinDefinition> joins, List<string> lines, bool isChild)
     {
         foreach (var join in joins)
         {
@@ -29,7 +28,7 @@ static class DeclarativeRelationships
             {
                 operations.Add($".On(m => m.{join.Value.On.Path})");
             }
-            operations.AddRange(join.Value.Properties.Select(property => $".Set(m => m.{property.Key.Path}).{setExpression(property.Value)}"));
+            operations.AddRange(join.Value.Properties.Select(property => $".Set(m => m.{property.Key.Path}).{DeclarativeExpressions.Set(property.Value)}"));
             var callback = operations.Count == 0 ? string.Empty : $"j => j{string.Concat(operations)}";
             lines.Add($".Join<{join.Key.Id.Value}>({callback})");
         }
@@ -39,16 +38,14 @@ static class DeclarativeRelationships
     /// Renders child collections and nested objects recursively.
     /// </summary>
     /// <param name="children">The child scopes.</param>
-    /// <param name="lines">The generated fluent steps.</param>
-    /// <param name="schema">The enclosing model schema.</param>
+    /// <param name="scope">The enclosing schema, output and renderer.</param>
     /// <param name="nested">Whether the scopes are single objects.</param>
-    /// <param name="generateBlocks">The scope renderer.</param>
-    internal static void Children(IDictionary<PropertyPath, ChildrenDefinition> children, List<string> lines, JsonSchema schema, bool nested, Action<ProjectionDefinition, JsonSchema, List<string>, bool> generateBlocks)
+    internal static void Children(IDictionary<PropertyPath, ChildrenDefinition> children, Scope scope, bool nested)
     {
         foreach (var child in children)
         {
-            var childSchema = schema;
-            if (schema.Properties.TryGetValue(child.Key.Path, out var property))
+            var childSchema = scope.Schema;
+            if (scope.Schema.Properties.TryGetValue(child.Key.Path, out var property))
             {
                 childSchema = nested ? property.ActualSchema : property.Item?.ActualSchema ?? property.ActualSchema;
             }
@@ -57,10 +54,10 @@ static class DeclarativeRelationships
             {
                 blocks.Add($".IdentifiedBy(e => e.{child.Value.IdentifiedBy.Path})");
             }
-            generateBlocks(child.Value, childSchema, blocks, !nested);
+            scope.Render(child.Value, childSchema, blocks, !nested);
             var builder = nested ? "nested" : "children";
             var method = nested ? "Nested" : "Children";
-            lines.Add($".{method}(m => m.{child.Key.Path}, {builder} => {builder}{string.Concat(blocks)})");
+            scope.Lines.Add($".{method}(m => m.{child.Key.Path}, {builder} => {builder}{string.Concat(blocks)})");
         }
     }
 
@@ -68,27 +65,32 @@ static class DeclarativeRelationships
     /// Renders removals through the client's key-builder callbacks.
     /// </summary>
     /// <param name="definition">The scope definition.</param>
-    /// <param name="lines">The generated fluent steps.</param>
-    /// <param name="schema">The model schema.</param>
-    /// <param name="keyExpression">The key renderer.</param>
-    /// <param name="parentKeyExpression">The parent-key renderer.</param>
-    internal static void Removals(ProjectionDefinition definition, List<string> lines, JsonSchema schema, Func<string, JsonSchema, string> keyExpression, Func<string, JsonSchema, string> parentKeyExpression)
+    /// <param name="scope">The enclosing schema and output.</param>
+    internal static void Removals(ProjectionDefinition definition, Scope scope)
     {
         foreach (var removed in definition.RemovedWith)
         {
-            var operations = CSharpDefinitionSupport.IsDefaultKey(removed.Value.Key) ? string.Empty : keyExpression(removed.Value.Key, schema);
+            var operations = CSharpDefinitionSupport.IsDefaultKey(removed.Value.Key) ? string.Empty : DeclarativeExpressions.Key(removed.Value.Key, scope.Schema);
             if (!string.IsNullOrEmpty(removed.Value.ParentKey?.Value))
             {
-                operations += parentKeyExpression(removed.Value.ParentKey, schema);
+                operations += DeclarativeExpressions.ParentKey(removed.Value.ParentKey, scope.Schema);
             }
             var callback = operations.Length == 0 ? string.Empty : $"_ => _{operations}";
-            lines.Add($".RemovedWith<{removed.Key.Id.Value}>({callback})");
+            scope.Lines.Add($".RemovedWith<{removed.Key.Id.Value}>({callback})");
         }
 
         foreach (var removed in definition.RemovedWithJoin)
         {
-            var callback = CSharpDefinitionSupport.IsDefaultKey(removed.Value.Key) ? string.Empty : $"_ => _{keyExpression(removed.Value.Key, schema)}";
-            lines.Add($".RemovedWithJoin<{removed.Key.Id.Value}>({callback})");
+            var callback = CSharpDefinitionSupport.IsDefaultKey(removed.Value.Key) ? string.Empty : $"_ => _{DeclarativeExpressions.Key(removed.Value.Key, scope.Schema)}";
+            scope.Lines.Add($".RemovedWithJoin<{removed.Key.Id.Value}>({callback})");
         }
     }
+
+    /// <summary>
+    /// Carries the shared state for rendering a projection's relationships.
+    /// </summary>
+    /// <param name="Schema">The enclosing model schema.</param>
+    /// <param name="Lines">The generated fluent steps.</param>
+    /// <param name="Render">The recursive scope renderer.</param>
+    internal sealed record Scope(JsonSchema Schema, List<string> Lines, Action<ProjectionDefinition, JsonSchema, List<string>, bool> Render);
 }

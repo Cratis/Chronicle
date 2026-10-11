@@ -1,10 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Properties;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -15,7 +16,7 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration
 /// <summary>
 /// Generates model-bound C# read model code from a <see cref="ProjectionDefinition"/> using Roslyn Syntax Factory.
 /// </summary>
-public class ModelBoundCodeGenerator
+public partial class ModelBoundCodeGenerator
 {
     /// <summary>
     /// How far each record parameter is indented from the record declaration.
@@ -31,474 +32,115 @@ public class ModelBoundCodeGenerator
     public CompilationUnitSyntax Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
         var schema = readModelDefinition.GetSchemaForLatestGeneration();
-        var readModelName = schema.Title!;
-
+        var scope = new RecordScope(schema.Title!, schema, definition);
         var usings = new[]
         {
             UsingDirective(ParseName("Cratis.Chronicle.Keys")),
             UsingDirective(ParseName("Cratis.Chronicle.Projections.ModelBound"))
         };
-
         var compilationUnit = CompilationUnit()
             .WithUsings(List(usings))
-            .WithMembers(List<MemberDeclarationSyntax>(CreateRecordDeclarations(readModelName, schema, definition)))
+            .WithMembers(List<MemberDeclarationSyntax>(CreateRecordDeclarations(scope)))
             .NormalizeWhitespace();
 
-        // Normalizing puts the whole parameter list on one line, and for a model-bound read model that
-        // line carries the entire projection in attributes. Give each property its own line back.
         return (CompilationUnitSyntax)new RecordParameterFormatter(RecordParameterIndentation).Visit(compilationUnit);
     }
 
-    static string GetEventPropertyName(string expression)
+    static List<AttributeSyntax> CreatePropertyAttributes(PropertyRendering rendering)
     {
-        return expression;
-    }
-
-    static string NormalizeExpression(string expression)
-    {
-        if (expression.StartsWith("+=", StringComparison.Ordinal))
-        {
-            return $"{WellKnownExpressions.Add}({expression[2..].Trim()})";
-        }
-
-        if (expression.StartsWith("-=", StringComparison.Ordinal))
-        {
-            return $"{WellKnownExpressions.Subtract}({expression[2..].Trim()})";
-        }
-
-        if (expression.Equals("increment", StringComparison.Ordinal))
-        {
-            return WellKnownExpressions.Increment;
-        }
-
-        if (expression.Equals("decrement", StringComparison.Ordinal))
-        {
-            return WellKnownExpressions.Decrement;
-        }
-
-        if (expression.Equals("count", StringComparison.Ordinal))
-        {
-            return WellKnownExpressions.Count;
-        }
-
-        return expression;
-    }
-
-    RecordDeclarationSyntax CreateRecordDeclaration(
-        string readModelName,
-        JsonSchema schema,
-        ProjectionDefinition definition,
-        bool isCollection,
-        string? keyProperty,
-        string scope)
-    {
-        var attributes = ModelBoundRelationships.ClassAttributes(definition, isCollection)
-            .Select(attribute => AttributeList(SingletonSeparatedList(attribute))).ToList();
-        var parameters = CreateRecordParameters(schema, definition, isCollection, keyProperty, scope);
-
-        var recordDecl = RecordDeclaration(Token(SyntaxKind.RecordKeyword), readModelName)
-            .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
-            .WithParameterList(ParameterList(SeparatedList(parameters)))
-            .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
-
-        if (attributes.Count > 0)
-        {
-            recordDecl = recordDecl.WithAttributeLists(List(attributes));
-        }
-
-        return recordDecl;
-    }
-
-    IEnumerable<RecordDeclarationSyntax> CreateRecordDeclarations(string name, JsonSchema schema, ProjectionDefinition definition, bool isCollection = false, string? keyProperty = null, bool isNested = false, string? scope = null)
-    {
-        if (!isNested && keyProperty is null)
-        {
-            keyProperty = schema.Properties.Keys.FirstOrDefault(property => property.Equals("Id", StringComparison.OrdinalIgnoreCase)) ?? schema.Properties.Keys.FirstOrDefault();
-        }
-        yield return CreateRecordDeclaration(name, schema, definition, isCollection, keyProperty, scope ?? $"projection '{name}'");
-
-        foreach (var property in schema.Properties)
-        {
-            var collection = property.Value.ActualSchema.Type == JsonObjectType.Array;
-            var childSchema = collection ? property.Value.Item?.ActualSchema : property.Value.ActualSchema;
-            if (childSchema?.Type != JsonObjectType.Object)
-            {
-                continue;
-            }
-            var childDefinition = CSharpDefinitionSupport.ChildDefinition(definition, property.Key);
-            var childName = CSharpDefinitionSupport.RecordName(childSchema, name + property.Key);
-            foreach (var record in CreateRecordDeclarations(childName, childSchema, childDefinition, collection, collection ? childDefinition.IdentifiedBy.Path : null, !collection, $"{(collection ? "children" : "nested")} '{property.Key}'"))
-            {
-                yield return record;
-            }
-        }
-    }
-
-    List<ParameterSyntax> CreateRecordParameters(JsonSchema schema, ProjectionDefinition definition, bool isCollection, string? keyProperty, string scope)
-    {
-        var parameters = new List<ParameterSyntax>();
-
-        if (schema.Properties?.Count > 0)
-        {
-            var propertyInfos = CollectPropertyMappings(definition);
-
-            foreach (var schemaProp in schema.Properties)
-            {
-                var propName = schemaProp.Key;
-                var propType = CSharpDefinitionSupport.ModelType(schemaProp.Value, schema.Title + propName);
-                var childSchema = schemaProp.Value.Item?.ActualSchema ?? schemaProp.Value.ActualSchema;
-                var childType = CSharpDefinitionSupport.RecordName(childSchema, schema.Title + propName);
-                var attributes = ModelBoundRelationships.PropertyAttributes(definition, propName, childType, isCollection).ToList();
-
-                if (propName == keyProperty)
-                {
-                    attributes.Add(Attribute(IdentifierName("Key")));
-                }
-
-                if (propertyInfos.TryGetValue(propName, out var propInfo))
-                {
-                    attributes.AddRange(CreatePropertyAttributes(propInfo, propName, definition.SubscribesToAllEvents, definition.AutoMap == AutoMap.Disabled));
-                }
-
-                var parameter = Parameter(Identifier(propName))
-                    .WithType(ParseTypeName(propType));
-
-                if (attributes.Count > 0)
-                {
-                    parameter = parameter.WithAttributeLists(List(attributes.Select(attribute =>
-                        AttributeList(SingletonSeparatedList(attribute)).WithTarget(attribute.Name.ToString() == "FromAll"
-                            ? AttributeTargetSpecifier(Token(SyntaxKind.PropertyKeyword))
-                            : null))));
-                }
-
-                var comments = ModelBoundLimitations.Comments(definition, propName, scope)
-                    .SelectMany(comment => new[] { Comment(comment), ElasticCarriageReturnLineFeed });
-                parameters.Add(parameter.WithLeadingTrivia(comments));
-            }
-        }
-
-        return parameters;
-    }
-
-    Dictionary<string, PropertyInfo> CollectPropertyMappings(ProjectionDefinition definition)
-    {
-        var propertyInfos = new Dictionary<string, PropertyInfo>();
-
-        foreach (var from in definition.From)
-        {
-            var eventTypeName = from.Key.Id.Value;
-            var fromDef = from.Value;
-
-            foreach (var prop in fromDef.Properties)
-            {
-                var propertyName = prop.Key.Path;
-                var normalizedExpression = NormalizeExpression(prop.Value);
-
-                if (!propertyInfos.TryGetValue(propertyName, out var propInfo))
-                {
-                    propInfo = new PropertyInfo { PropertyName = propertyName };
-                    propertyInfos[propertyName] = propInfo;
-                }
-
-                if (normalizedExpression.StartsWith($"{WellKnownExpressions.Add}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
-                {
-                    var innerExpr = normalizedExpression[(WellKnownExpressions.Add.Length + 1)..^1];
-                    propInfo.AddFroms.Add((eventTypeName, GetEventPropertyName(innerExpr)));
-                }
-                else if (normalizedExpression.StartsWith($"{WellKnownExpressions.Subtract}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
-                {
-                    var innerExpr = normalizedExpression[(WellKnownExpressions.Subtract.Length + 1)..^1];
-                    propInfo.SubtractFroms.Add((eventTypeName, GetEventPropertyName(innerExpr)));
-                }
-                else if (normalizedExpression == WellKnownExpressions.Increment)
-                {
-                    propInfo.Increments.Add(eventTypeName);
-                }
-                else if (normalizedExpression == WellKnownExpressions.Decrement)
-                {
-                    propInfo.Decrements.Add(eventTypeName);
-                }
-                else if (normalizedExpression == WellKnownExpressions.Count)
-                {
-                    propInfo.Counts.Add(eventTypeName);
-                }
-                else if (normalizedExpression.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
-                {
-                    var innerValue = normalizedExpression[(WellKnownExpressions.Value.Length + 1)..^1];
-                    propInfo.SetValues.Add((eventTypeName, innerValue, false));
-                }
-                else if (normalizedExpression == WellKnownExpressions.Null)
-                {
-                    propInfo.Clears.Add(eventTypeName);
-                }
-                else if (ProjectionExpressions.ReadValue(normalizedExpression) is { Kind: ProjectionValueKind.Text or ProjectionValueKind.Literal } constant)
-                {
-                    // A constant written without $value() around it - `Status = literal "1"` - is still a
-                    // constant. Left to fall through it became [SetFrom<TEvent>(nameof(TEvent."1"))], which
-                    // reads the value as if it were a property name and does not compile.
-                    propInfo.SetValues.Add((eventTypeName, constant.Value, constant.Kind == ProjectionValueKind.Text));
-                }
-                else
-                {
-                    propInfo.SetFroms.Add((eventTypeName, GetEventPropertyName(normalizedExpression)));
-                }
-            }
-        }
-
-        // Add FromAll/FromEvery mappings (only plain properties, not dynamic dictionary keys)
-        if (definition.FromEvery.Properties.Count > 0)
-        {
-            foreach (var prop in definition.FromEvery.Properties)
-            {
-                var propertyName = prop.Key.Path;
-                var normalizedExpression = NormalizeExpression(prop.Value);
-
-                // Unsupported mappings are documented at their read-model parameter instead of emitting
-                // an attribute that compiles but means something different.
-                if (!ModelBoundLimitations.CanMapEvery(definition, propertyName, normalizedExpression))
-                {
-                    continue;
-                }
-
-                if (!propertyInfos.TryGetValue(propertyName, out var propInfo))
-                {
-                    propInfo = new PropertyInfo { PropertyName = propertyName };
-                    propertyInfos[propertyName] = propInfo;
-                }
-
-                // Child and nested context mappings are expanded over their local subscriptions because
-                // the client's [FromEvery] annotations are collected on the root definition.
-                if (definition.Owner == Concepts.Projections.ProjectionOwner.Parent && ProjectionExpressions.ReadValue(normalizedExpression).Kind is ProjectionValueKind.EventContextProperty or ProjectionValueKind.EventSourceId)
-                {
-                    propInfo.SetFroms.AddRange(definition.From.Keys.Select(eventType => (eventType.Id.Value, normalizedExpression)));
-                    continue;
-                }
-
-                // Check what expression it is and mark for FromAll attribute
-                if (normalizedExpression == WellKnownExpressions.Count)
-                {
-                    propInfo.FromAllCount = true;
-                }
-                else if (normalizedExpression == WellKnownExpressions.Increment)
-                {
-                    propInfo.FromAllIncrement = true;
-                }
-                else if (normalizedExpression == WellKnownExpressions.Decrement)
-                {
-                    propInfo.FromAllDecrement = true;
-                }
-                else if (normalizedExpression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
-                {
-                    propInfo.FromAllContextProperty = CSharpDefinitionSupport.ContextPath(normalizedExpression[(WellKnownExpressions.EventContext.Length + 1)..^1]);
-                }
-                else
-                {
-                    // Property mapping from event
-                    propInfo.FromAllProperty = GetEventPropertyName(normalizedExpression);
-                }
-            }
-        }
-
-        return propertyInfos;
-    }
-
-    List<AttributeSyntax> CreatePropertyAttributes(PropertyInfo propInfo, string propName, bool fromAll, bool noAutoMap)
-    {
+        var property = rendering.Mappings;
         var attributes = new List<AttributeSyntax>();
-
-        // FromAll attributes come first
-        if (propInfo.FromAllCount)
-        {
-            attributes.Add(CreateEveryAttribute(fromAll, "count"));
-        }
-
-        if (propInfo.FromAllIncrement)
-        {
-            attributes.Add(CreateEveryAttribute(fromAll, "increment"));
-        }
-
-        if (propInfo.FromAllDecrement)
-        {
-            attributes.Add(CreateEveryAttribute(fromAll, "decrement"));
-        }
-
-        if (propInfo.FromAllContextProperty is not null)
-        {
-            attributes.Add(CreateEveryAttribute(fromAll, null, propInfo.FromAllContextProperty));
-        }
-
-        if (propInfo.FromAllProperty is not null)
-        {
-            attributes.Add(CreateEveryAttribute(fromAll, propInfo.FromAllProperty, null));
-        }
-
-        foreach (var addFrom in propInfo.AddFroms)
-        {
-            attributes.Add(CreateMappingAttribute("AddFrom", addFrom.EventTypeName, addFrom.EventPropertyName, propName));
-        }
-
-        foreach (var subtractFrom in propInfo.SubtractFroms)
-        {
-            attributes.Add(CreateMappingAttribute("SubtractFrom", subtractFrom.EventTypeName, subtractFrom.EventPropertyName, propName));
-        }
-
-        foreach (var incrementFrom in propInfo.Increments)
-        {
-            attributes.Add(CreateSimpleAttribute("Increment", incrementFrom));
-        }
-
-        foreach (var decrementFrom in propInfo.Decrements)
-        {
-            attributes.Add(CreateSimpleAttribute("Decrement", decrementFrom));
-        }
-
-        foreach (var countFrom in propInfo.Counts)
-        {
-            attributes.Add(CreateSimpleAttribute("Count", countFrom));
-        }
-
-        // SetFrom is only needed when the event property name differs from the model property name
-        // When they match, AutoMap handles it through the class-level [FromEvent<>] attribute
-        foreach (var setFrom in propInfo.SetFroms)
-        {
-            if (setFrom.EventPropertyName != propName || noAutoMap)
-            {
-                attributes.Add(CreateMappingAttribute("SetFrom", setFrom.EventTypeName, setFrom.EventPropertyName, propName));
-            }
-        }
-
-        foreach (var setValue in propInfo.SetValues)
-        {
-            attributes.Add(CreateSetValueAttribute(setValue.EventTypeName, setValue.Value, setValue.IsText));
-        }
-
-        // A clear is emitted as [ClearWith<TEvent>] rather than [SetValue<TEvent>(null)]. Both compile to the same
-        // expression, but the one that says "clear" reads as the intent rather than as a constant that happens to
-        // be absent.
-        foreach (var clear in propInfo.Clears)
-        {
-            attributes.Add(CreateSimpleAttribute("ClearWith", clear));
-        }
-
+        AddEveryAttributes(property, rendering.Scope.Definition.SubscribesToAllEvents, attributes);
+        attributes.AddRange(property.AddFroms.Select(mapping => CreateMappingAttribute("AddFrom", new(mapping.EventTypeName, mapping.EventPropertyName), rendering.Target)));
+        attributes.AddRange(property.SubtractFroms.Select(mapping => CreateMappingAttribute("SubtractFrom", new(mapping.EventTypeName, mapping.EventPropertyName), rendering.Target)));
+        attributes.AddRange(property.Increments.Select(eventType => CreateSimpleAttribute("Increment", eventType)));
+        attributes.AddRange(property.Decrements.Select(eventType => CreateSimpleAttribute("Decrement", eventType)));
+        attributes.AddRange(property.Counts.Select(eventType => CreateSimpleAttribute("Count", eventType)));
+        var noAutoMap = rendering.Scope.Definition.AutoMap == AutoMap.Disabled;
+        attributes.AddRange(property.SetFroms
+            .Where(mapping => mapping.EventPropertyName != rendering.Target.Path || noAutoMap)
+            .Select(mapping => CreateMappingAttribute("SetFrom", new(mapping.EventTypeName, mapping.EventPropertyName), rendering.Target)));
+        attributes.AddRange(property.SetValues.Select(value => CreateSetValueAttribute(new(value.EventTypeName, value.Value, value.IsText))));
+        attributes.AddRange(property.Clears.Select(eventType => CreateSimpleAttribute("ClearWith", eventType)));
         return attributes;
     }
 
-    AttributeSyntax CreateMappingAttribute(string attributeName, string eventTypeName, string eventPropertyName, string propName)
+    static void AddEveryAttributes(PropertyInfo property, bool fromAll, List<AttributeSyntax> attributes)
     {
-        var source = ProjectionExpressions.ReadValue(eventPropertyName);
+        if (property.FromAllCount) attributes.Add(CreateEveryAttribute(fromAll, "count"));
+        if (property.FromAllIncrement) attributes.Add(CreateEveryAttribute(fromAll, "increment"));
+        if (property.FromAllDecrement) attributes.Add(CreateEveryAttribute(fromAll, "decrement"));
+        if (property.FromAllContextProperty is not null) attributes.Add(CreateEveryAttribute(fromAll, contextProperty: property.FromAllContextProperty));
+        if (property.FromAllProperty is not null) attributes.Add(CreateEveryAttribute(fromAll, property.FromAllProperty));
+    }
+
+    static AttributeSyntax CreateMappingAttribute(string attributeName, MappingSource mapping, PropertyPath target)
+    {
+        var source = ProjectionExpressions.ReadValue(mapping.Expression);
         if (attributeName == "SetFrom" && source.Kind is ProjectionValueKind.EventContextProperty or ProjectionValueKind.EventSourceId)
         {
             var contextProperty = source.Kind == ProjectionValueKind.EventSourceId ? "EventSourceId" : CSharpDefinitionSupport.ContextPath(source.Value);
-            return CreateSimpleAttribute("SetFromContext", eventTypeName).WithArgumentList(AttributeArgumentList(
+            return CreateSimpleAttribute("SetFromContext", mapping.EventType).WithArgumentList(AttributeArgumentList(
                 SingletonSeparatedList(AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(contextProperty))))));
         }
-
-        var attribute = GenericName(attributeName)
-            .WithTypeArgumentList(
-                TypeArgumentList(
-                    SingletonSeparatedList<TypeSyntax>(
-                        IdentifierName(eventTypeName))));
-
-        if (eventPropertyName != propName)
+        var attribute = GenericName(attributeName).WithTypeArgumentList(
+            TypeArgumentList(SingletonSeparatedList<TypeSyntax>(IdentifierName(mapping.EventType.Value))));
+        if (mapping.Expression.Value != target.Path)
         {
-            var nameofExpression = InvocationExpression(
-                IdentifierName("nameof"))
-                .WithArgumentList(
-                    ArgumentList(
-                        SingletonSeparatedList(
-                            Argument(
-                                MemberAccessExpression(
-                                    SyntaxKind.SimpleMemberAccessExpression,
-                                    IdentifierName(eventTypeName),
-                                    IdentifierName(eventPropertyName))))));
-
-            return Attribute(attribute)
-                .WithArgumentList(
-                    AttributeArgumentList(
-                        SingletonSeparatedList(
-                            AttributeArgument(nameofExpression))));
+            var nameofExpression = InvocationExpression(IdentifierName("nameof")).WithArgumentList(
+                ArgumentList(SingletonSeparatedList(Argument(MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression, IdentifierName(mapping.EventType.Value), IdentifierName(mapping.Expression.Value))))));
+            return Attribute(attribute).WithArgumentList(AttributeArgumentList(SingletonSeparatedList(AttributeArgument(nameofExpression))));
         }
-
         return Attribute(attribute);
     }
 
-    AttributeSyntax CreateSimpleAttribute(string attributeName, string eventTypeName)
-    {
-        var attribute = GenericName(attributeName)
-            .WithTypeArgumentList(
-                TypeArgumentList(
-                    SingletonSeparatedList<TypeSyntax>(
-                        IdentifierName(eventTypeName))));
+    static AttributeSyntax CreateSimpleAttribute(string attributeName, EventTypeId eventType) => Attribute(
+        GenericName(attributeName).WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList<TypeSyntax>(IdentifierName(eventType.Value)))));
 
-        return Attribute(attribute);
-    }
-
-    AttributeSyntax CreateEveryAttribute(bool fromAll, string? property = null, string? contextProperty = null)
+    static AttributeSyntax CreateEveryAttribute(bool fromAll, PropertyExpression? property = null, PropertyExpression? contextProperty = null)
     {
         var attribute = Attribute(IdentifierName(fromAll ? "FromAll" : "FromEvery"));
         var arguments = new List<AttributeArgumentSyntax>();
         if (contextProperty is not null)
         {
-            arguments.Add(AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(contextProperty)))
+            arguments.Add(AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(contextProperty.Value)))
                 .WithNameColon(NameColon(IdentifierName("contextProperty"))));
         }
         if (property is not null)
         {
-            arguments.Add(AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(property)))
+            arguments.Add(AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(property.Value)))
                 .WithNameColon(NameColon(IdentifierName("property"))));
         }
-
         return arguments.Count == 0 ? attribute : attribute.WithArgumentList(AttributeArgumentList(SeparatedList(arguments)));
     }
 
-    AttributeSyntax CreateSetValueAttribute(string eventTypeName, string value, bool isText)
+    static AttributeSyntax CreateSetValueAttribute(ConstantMapping mapping)
     {
-        var attribute = GenericName("SetValue")
-            .WithTypeArgumentList(
-                TypeArgumentList(
-                    SingletonSeparatedList<TypeSyntax>(
-                        IdentifierName(eventTypeName))));
-
-        ExpressionSyntax valueLiteral;
-
-        // A value the declaration quoted is text whatever it spells, so "1" stays the string rather
-        // than being read back as the number.
-        if (isText)
-        {
-            valueLiteral = LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(value));
-        }
-        else if (bool.TryParse(value, out var boolValue))
-        {
-            valueLiteral = LiteralExpression(
-                boolValue ? SyntaxKind.TrueLiteralExpression : SyntaxKind.FalseLiteralExpression);
-        }
-        else if (int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var intValue))
-        {
-            valueLiteral = LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(intValue));
-        }
-        else if (long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var longValue))
-        {
-            valueLiteral = LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(longValue));
-        }
-        else if (double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var doubleValue))
-        {
-            valueLiteral = LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(doubleValue));
-        }
-        else
-        {
-            valueLiteral = LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(value));
-        }
-
-        return Attribute(attribute)
-            .WithArgumentList(
-                AttributeArgumentList(
-                    SingletonSeparatedList(
-                        AttributeArgument(valueLiteral))));
+        var attribute = GenericName("SetValue").WithTypeArgumentList(
+            TypeArgumentList(SingletonSeparatedList<TypeSyntax>(IdentifierName(mapping.EventType.Value))));
+        return Attribute(attribute).WithArgumentList(AttributeArgumentList(SingletonSeparatedList(AttributeArgument(ConstantLiteral(mapping)))));
     }
+
+    static LiteralExpressionSyntax ConstantLiteral(ConstantMapping mapping)
+    {
+        // Text remains text even when its spelling could be parsed as a number or boolean.
+        if (mapping.IsText) return LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(mapping.Value));
+        if (bool.TryParse(mapping.Value, out var boolean)) return LiteralExpression(boolean ? SyntaxKind.TrueLiteralExpression : SyntaxKind.FalseLiteralExpression);
+        if (int.TryParse(mapping.Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var integer)) return LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(integer));
+        if (long.TryParse(mapping.Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var longInteger)) return LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(longInteger));
+        if (double.TryParse(mapping.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var number)) return LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(number));
+        return LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(mapping.Value));
+    }
+
+    sealed record PropertyRendering(RecordScope Scope, PropertyPath Target, PropertyInfo Mappings);
+
+    sealed record MappingSource(EventTypeId EventType, PropertyExpression Expression);
+
+    sealed record ConstantMapping(EventTypeId EventType, string Value, bool IsText);
 
     sealed class PropertyInfo
     {
-        public string PropertyName { get; set; } = string.Empty;
         public List<(string EventTypeName, string EventPropertyName)> SetFroms { get; } = [];
         public List<(string EventTypeName, string Value, bool IsText)> SetValues { get; } = [];
         public List<string> Clears { get; } = [];

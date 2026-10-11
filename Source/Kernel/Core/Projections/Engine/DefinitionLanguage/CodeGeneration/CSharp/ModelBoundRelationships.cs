@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
@@ -20,26 +21,10 @@ static class ModelBoundRelationships
     /// <param name="definition">The projection scope to render.</param>
     /// <param name="isCollection">Whether subscriptions are supplied by the enclosing collection.</param>
     /// <returns>The record annotations.</returns>
-    internal static IEnumerable<AttributeSyntax> ClassAttributes(ProjectionDefinition definition, bool isCollection)
-    {
-        if (!isCollection)
-        {
-            foreach (var from in definition.From)
-            {
-                yield return Create($"FromEvent<{from.Key.Id.Value}>", KeyArguments(from.Key.Id.Value, from.Value.Key, from.Value.ParentKey));
-            }
-
-            foreach (var removed in definition.RemovedWith)
-            {
-                yield return Create($"RemovedWith<{removed.Key.Id.Value}>", KeyArguments(removed.Key.Id.Value, removed.Value.Key, removed.Value.ParentKey));
-            }
-
-            foreach (var removed in definition.RemovedWithJoin)
-            {
-                yield return Create($"RemovedWithJoin<{removed.Key.Id.Value}>", KeyArguments(removed.Key.Id.Value, removed.Value.Key, null));
-            }
-        }
-    }
+    internal static IEnumerable<AttributeSyntax> ClassAttributes(ProjectionDefinition definition, bool isCollection) => isCollection
+        ? []
+        : definition.From.Select(from => Create($"FromEvent<{from.Key.Id.Value}>", KeyArguments(from.Key.Id, from.Value.Key, from.Value.ParentKey)))
+            .Concat(RemovalAttributes(definition));
 
     /// <summary>
     /// Builds annotations for joins, child collections and nested objects.
@@ -49,70 +34,63 @@ static class ModelBoundRelationships
     /// <param name="childType">The type of a child or nested object.</param>
     /// <param name="isCollection">Whether the enclosing scope is a child collection.</param>
     /// <returns>The member annotations.</returns>
-    internal static IEnumerable<AttributeSyntax> PropertyAttributes(ProjectionDefinition definition, string property, string childType, bool isCollection)
+    internal static IEnumerable<AttributeSyntax> PropertyAttributes(ProjectionDefinition definition, PropertyPath property, TypeSyntax childType, bool isCollection)
     {
-        foreach (var join in definition.Join.Where(join => join.Value.Properties.ContainsKey(new PropertyPath(property))))
-        {
-            var arguments = new List<string>();
-            if (!isCollection)
-            {
-                arguments.Add($"on: \"{join.Value.On.Path}\"");
-            }
-            var source = join.Value.Properties[new PropertyPath(property)];
-            arguments.Add($"eventPropertyName: nameof({join.Key.Id.Value}.{source})");
-            yield return Create($"Join<{join.Key.Id.Value}>", arguments);
-        }
-
-        if (definition.Children.TryGetValue(new PropertyPath(property), out var children))
-        {
-            foreach (var from in children.From)
-            {
-                var arguments = KeyArguments(from.Key.Id.Value, from.Value.Key, from.Value.ParentKey).ToList();
-                arguments.Add($"identifiedBy: nameof({childType}.{children.IdentifiedBy.Path})");
-                if (from.Value.ParentKey is null || string.IsNullOrEmpty(from.Value.ParentKey.Value))
-                {
-                    arguments.Add("parentKey: \"$eventSourceId\"");
-                }
-                yield return Create($"ChildrenFrom<{from.Key.Id.Value}>", arguments);
-            }
-
-            foreach (var removed in children.RemovedWith)
-            {
-                yield return Create($"RemovedWith<{removed.Key.Id.Value}>", KeyArguments(removed.Key.Id.Value, removed.Value.Key, removed.Value.ParentKey));
-            }
-
-            foreach (var removed in children.RemovedWithJoin)
-            {
-                yield return Create($"RemovedWithJoin<{removed.Key.Id.Value}>", KeyArguments(removed.Key.Id.Value, removed.Value.Key, null));
-            }
-        }
-
-        if (definition.Nested?.TryGetValue(new PropertyPath(property), out var nested) == true)
-        {
-            yield return Attribute(IdentifierName("Nested"));
-            foreach (var removed in nested.RemovedWith)
-            {
-                yield return Create($"ClearWith<{removed.Key.Id.Value}>", []);
-            }
-        }
+        var member = new Member(property, childType, isCollection);
+        return JoinAttributes(definition, member).Concat(ChildAttributes(definition, member)).Concat(NestedAttributes(definition, property));
     }
 
-    static IEnumerable<string> KeyArguments(string eventType, string key, PropertyExpression? parentKey)
+    static IEnumerable<AttributeSyntax> JoinAttributes(ProjectionDefinition definition, Member member) => definition.Join
+        .Where(join => join.Value.Properties.ContainsKey(member.Target)).Select(join => JoinAttribute(join, member));
+
+    static AttributeSyntax JoinAttribute(KeyValuePair<EventType, JoinDefinition> join, Member member)
     {
-        if (!CSharpDefinitionSupport.IsDefaultKey(key))
-        {
-            yield return $"key: {KeyValue(eventType, key)}";
-        }
-        if (!string.IsNullOrEmpty(parentKey?.Value))
-        {
-            yield return $"parentKey: {KeyValue(eventType, parentKey.Value)}";
-        }
+        var arguments = new List<string>();
+        if (!member.IsCollection) arguments.Add($"on: \"{join.Value.On.Path}\"");
+        arguments.Add($"eventPropertyName: nameof({join.Key.Id.Value}.{join.Value.Properties[member.Target]})");
+        return Create($"Join<{join.Key.Id.Value}>", arguments);
     }
 
-    static string KeyValue(string eventType, string expression)
+    static IEnumerable<AttributeSyntax> ChildAttributes(ProjectionDefinition definition, Member member)
+    {
+        if (!definition.Children.TryGetValue(member.Target, out var children))
+        {
+            return [];
+        }
+        return children.From.Select(from => ChildAttribute(from, member, children.IdentifiedBy)).Concat(RemovalAttributes(children));
+    }
+
+    static AttributeSyntax ChildAttribute(KeyValuePair<EventType, FromDefinition> from, Member member, PropertyPath identifiedBy)
+    {
+        var arguments = KeyArguments(from.Key.Id, from.Value.Key, from.Value.ParentKey).ToList();
+        arguments.Add($"identifiedBy: nameof({member.ChildType}.{identifiedBy.Path})");
+        if (string.IsNullOrEmpty(from.Value.ParentKey?.Value)) arguments.Add("parentKey: \"$eventSourceId\"");
+        return Create($"ChildrenFrom<{from.Key.Id.Value}>", arguments);
+    }
+
+    static IEnumerable<AttributeSyntax> NestedAttributes(ProjectionDefinition definition, PropertyPath property)
+    {
+        if (definition.Nested?.TryGetValue(property, out var nested) == true)
+        {
+            return new[] { Attribute(IdentifierName("Nested")) }.Concat(nested.RemovedWith.Keys.Select(eventType => Create($"ClearWith<{eventType.Id.Value}>", [])));
+        }
+        return [];
+    }
+
+    static IEnumerable<AttributeSyntax> RemovalAttributes(ProjectionDefinition definition) => definition.RemovedWith
+        .Select(removed => Create($"RemovedWith<{removed.Key.Id.Value}>", KeyArguments(removed.Key.Id, removed.Value.Key, removed.Value.ParentKey)))
+        .Concat(definition.RemovedWithJoin.Select(removed => Create($"RemovedWithJoin<{removed.Key.Id.Value}>", KeyArguments(removed.Key.Id, removed.Value.Key, null))));
+
+    static IEnumerable<string> KeyArguments(EventTypeId eventType, PropertyExpression key, PropertyExpression? parentKey)
+    {
+        if (!CSharpDefinitionSupport.IsDefaultKey(key)) yield return $"key: {KeyValue(eventType, key)}";
+        if (!string.IsNullOrEmpty(parentKey?.Value)) yield return $"parentKey: {KeyValue(eventType, parentKey)}";
+    }
+
+    static string KeyValue(EventTypeId eventType, PropertyExpression expression)
     {
         var key = CSharpDefinitionSupport.AttributeKey(expression);
-        return key.StartsWith('$') ? $"\"{key}\"" : $"nameof({eventType}.{key})";
+        return key.StartsWith('$') ? $"\"{key}\"" : $"nameof({eventType.Value}.{key})";
     }
 
     static AttributeSyntax Create(string name, IEnumerable<string> arguments)
@@ -123,7 +101,8 @@ static class ModelBoundRelationships
             var parts = argument.Split(": ", 2, StringSplitOptions.None);
             return AttributeArgument(ParseExpression(parts[1])).WithNameColon(NameColon(IdentifierName(parts[0])));
         }).ToArray();
-
         return parsed.Length == 0 ? attribute : attribute.WithArgumentList(AttributeArgumentList(SeparatedList(parsed)));
     }
+
+    sealed record Member(PropertyPath Target, TypeSyntax ChildType, bool IsCollection);
 }

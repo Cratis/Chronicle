@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -49,14 +50,15 @@ public class DeclarativeCodeGenerator
             lines.Add(".NoAutoMap()");
         }
         GenerateFromBlocks(definition, schema, lines);
-        DeclarativeRelationships.Joins(definition.Join, lines, isChild, DeclarativeExpressions.Set);
-        DeclarativeRelationships.Children(definition.Children, lines, schema, false, GenerateBlocks);
+        DeclarativeRelationships.Joins(definition.Join, lines, isChild);
+        var relationships = new DeclarativeRelationships.Scope(schema, lines, GenerateBlocks);
+        DeclarativeRelationships.Children(definition.Children, relationships, false);
         if (definition.Nested is not null)
         {
-            DeclarativeRelationships.Children(definition.Nested, lines, schema, true, GenerateBlocks);
+            DeclarativeRelationships.Children(definition.Nested, relationships, true);
         }
         GenerateFromEvery(definition, lines);
-        DeclarativeRelationships.Removals(definition, lines, schema, DeclarativeExpressions.Key, DeclarativeExpressions.ParentKey);
+        DeclarativeRelationships.Removals(definition, relationships);
     }
 
     static void GenerateFromBlocks(ProjectionDefinition definition, JsonSchema schema, List<string> lines)
@@ -72,7 +74,7 @@ public class DeclarativeCodeGenerator
             {
                 operations.Add(DeclarativeExpressions.ParentKey(from.Value.ParentKey, schema));
             }
-            operations.AddRange(from.Value.Properties.Select(property => DeclarativeExpressions.Operation(property.Key.Path, property.Value)));
+            operations.AddRange(from.Value.Properties.Select(property => DeclarativeExpressions.Operation(property.Key, property.Value)));
             var callback = operations.Count == 0 ? string.Empty : $"_ => _{string.Concat(operations)}";
             lines.Add($".From<{from.Key.Id.Value}>({callback})");
         }
@@ -100,7 +102,7 @@ public class DeclarativeCodeGenerator
         var parts = property.Split([$".{WellKnownExpressions.EventContext}."], StringSplitOptions.None);
         if (parts.Length == 1)
         {
-            return DeclarativeExpressions.Operation(property, expression);
+            return DeclarativeExpressions.Operation(new PropertyPath(property), expression);
         }
 
         var operation = DeclarativeExpressions.Normalize(expression) switch
