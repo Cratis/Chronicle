@@ -491,23 +491,23 @@ public partial class Observer(
         }
 
         await UnregisterReminderNamed(reminderName);
-        if (IsRetired || _removed || IsQuarantined)
-        {
-            return;
-        }
-
-        if (!_subscription.IsSubscribed)
+        if (CannotRecoverFromReminder)
         {
             return;
         }
 
         // Accept raw names registered by main as well as bounded episode-specific retry names.
-        foreach (var partition in Failures.Partitions.Where(partition => !partition.IsQuarantined &&
-            (PartitionReminderName(partition.Id) == reminderName || partition.Partition.ToString() == reminderName)))
+        foreach (var partition in Failures.Partitions.Where(partition => IsRetryReminderFor(partition, reminderName)))
         {
             await StartRecoverJobForFailedPartition(partition);
         }
     }
+
+    bool CannotRecoverFromReminder => IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed;
+
+    static bool IsRetryReminderFor(FailedPartition partition, string reminderName) =>
+        !partition.IsQuarantined &&
+        (PartitionReminderName(partition.Id) == reminderName || partition.Partition.ToString() == reminderName);
 
     /// <summary>
     /// Gets a retry reminder name in a namespace disjoint from the alert reminder, regardless of the partition key.
@@ -594,6 +594,25 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override async Task OnBeforeEnteringState(IState<ObserverState> state)
     {
+        ResetRecoveryFlagsForEntering(state);
+        _isQuarantined = state is QuarantinedObserver;
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (state is BaseObserverState observerState)
+            {
+                TrackQuarantineAlertFor(observerState);
+                State = State with { RunningState = observerState.RunningState };
+            }
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+    }
+
+    void ResetRecoveryFlagsForEntering(IState<ObserverState> state)
+    {
         // Any transition supersedes a recovery scheduled for when a requested leave enters Disconnected. Entering
         // Disconnected is how that leave completes, so only that keeps it.
         if (state is not Disconnected)
@@ -609,46 +628,33 @@ public partial class Observer(
             _retryRecoveryAfterQuarantine = false;
             _owedRecoveryAttempts = 0;
         }
+    }
 
-        _isQuarantined = state is QuarantinedObserver;
-        await _alertMutationLock.WaitAsync();
-        try
+    void TrackQuarantineAlertFor(BaseObserverState observerState)
+    {
+        var wasQuarantined = State.RunningState == ObserverRunningState.Quarantined;
+        var isQuarantined = observerState.RunningState == ObserverRunningState.Quarantined;
+        if (isQuarantined && !wasQuarantined)
         {
-            if (state is BaseObserverState observerState)
-            {
-                var wasQuarantined = State.RunningState == ObserverRunningState.Quarantined;
-                var isQuarantined = observerState.RunningState == ObserverRunningState.Quarantined;
-                if (isQuarantined && !wasQuarantined)
-                {
-                    _quarantineEpisodeId = Guid.NewGuid();
-                    ChangeAlertState();
-                }
-                else if (!isQuarantined && wasQuarantined)
-                {
-                    if (_quarantineEpisodeId is { } episode && !_alertEndings.ContainsKey(new(episode)))
-                    {
-                        RememberQuarantineEnding(Concepts.Alerts.AlertClearedReason.Cleared);
-                    }
-
-                    _quarantineEpisodeId = null;
-                    ChangeAlertState();
-                }
-
-                State = State with { RunningState = observerState.RunningState };
-            }
+            _quarantineEpisodeId = Guid.NewGuid();
+            ChangeAlertState();
         }
-        finally
+        else if (!isQuarantined && wasQuarantined)
         {
-            _alertMutationLock.Release();
+            if (_quarantineEpisodeId is { } episode && !_alertEndings.ContainsKey(new(episode)))
+            {
+                RememberQuarantineEnding(Concepts.Alerts.AlertClearedReason.Cleared);
+            }
+
+            _quarantineEpisodeId = null;
+            ChangeAlertState();
         }
     }
 
     /// <inheritdoc/>
     protected override async Task OnAfterEnteringState(IState<ObserverState> state)
     {
-        if (state is Observing or States.Replay ||
-            (state is Disconnected && !_recoverSubscriptionAfterQuarantine &&
-             _subscription.IsSubscribed && !_subscription.EventTypes.Any() && !State.SubscribesToAllEvents))
+        if (SettlesOwedRecovery(state))
         {
             // Settled: the observer is driven forward again, or routing legitimately disconnected an empty
             // explicitly-typed subscription. The initial Disconnected entry still owes its recovery.
@@ -667,14 +673,26 @@ public partial class Observer(
         }
     }
 
+    bool SettlesOwedRecovery(IState<ObserverState> state) =>
+        state is Observing or States.Replay || IsEmptySubscriptionDisconnect(state);
+
+    bool IsEmptySubscriptionDisconnect(IState<ObserverState> state) =>
+        state is Disconnected &&
+        !_recoverSubscriptionAfterQuarantine &&
+        _subscription.IsSubscribed &&
+        !_subscription.EventTypes.Any() &&
+        !State.SubscribesToAllEvents;
+
+    bool CannotWriteState => _stateWritingSuspended || !_observerExists;
+
     /// <inheritdoc/>
     protected override async Task WriteStateAsync()
     {
-        if (_stateWritingSuspended || !_observerExists) return;
+        if (CannotWriteState) return;
         await _stateWriteLock.WaitAsync();
         try
         {
-            if (_removed || _stateWritingSuspended || !_observerExists) return;
+            if (_removed || CannotWriteState) return;
 
             // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
             // so any write while quarantined persists the quarantine rather than a stale active snapshot.
@@ -756,11 +774,7 @@ public partial class Observer(
         eventTypes = eventTypes.ToArray();
         if (generationDelivery == EventGenerationDelivery.Pinned)
         {
-            var duplicate = eventTypes.GroupBy(_ => _.Id).FirstOrDefault(_ => _.Select(type => type.Generation).Distinct().Count() > 1);
-            if (duplicate is not null)
-            {
-                throw new ObserverPinsMultipleGenerationsOfEventType(duplicate.Key);
-            }
+            ThrowIfPinsMultipleGenerations(eventTypes);
 
             var eventTypesStorage = storage.GetEventStore(_observerKey.EventStore).EventTypes;
             foreach (var eventType in eventTypes)
@@ -779,7 +793,7 @@ public partial class Observer(
 
         // Automatic kernel subscription cannot revive a retired observer or a sealed activation.
         // Ordinary Subscribe keeps its explicit-registration semantics, including throwing when sealed.
-        if (additive && (_removed || IsRetired)) return;
+        if (IsAdditiveSubscriptionBlocked(additive)) return;
         ThrowIfSealed();
         if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
 
@@ -817,15 +831,12 @@ public partial class Observer(
                 {
                     // The quarantine belonged to a wiped world. Discard it only after all state has been reloaded,
                     // so routing cannot act on stale definitions or failures from that world.
-                    _recoverSubscriptionAfterQuarantine = false;
-                    _isPreparingCatchup = false;
-                    _catchupRecoveryAttempts = 0;
-                    _subscription = ObserverSubscription.Unsubscribed;
+                    DiscardQuarantineFromWipedWorld();
                     await TransitionTo<Routing>();
                 }
             }
 
-            if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
+            if (IsRetiredAndNotReactivating(reactivateRetired)) return;
             await BeginAlertLifecycle();
             if (recovering)
             {
@@ -852,6 +863,27 @@ public partial class Observer(
         }
     }
 
+    static void ThrowIfPinsMultipleGenerations(IEnumerable<EventType> eventTypes)
+    {
+        var duplicate = eventTypes.GroupBy(_ => _.Id).FirstOrDefault(_ => _.Select(type => type.Generation).Distinct().Count() > 1);
+        if (duplicate is not null)
+        {
+            throw new ObserverPinsMultipleGenerationsOfEventType(duplicate.Key);
+        }
+    }
+
+    bool IsRetiredAndNotReactivating(bool reactivateRetired) => !reactivateRetired && State.AlertDisposition == AlertDisposition.Retired;
+
+    bool IsAdditiveSubscriptionBlocked(bool additive) => additive && (_removed || IsRetired);
+
+    void DiscardQuarantineFromWipedWorld()
+    {
+        _recoverSubscriptionAfterQuarantine = false;
+        _isPreparingCatchup = false;
+        _catchupRecoveryAttempts = 0;
+        _subscription = ObserverSubscription.Unsubscribed;
+    }
+
     async Task SetUpSubscription<TObserverSubscriber>(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
@@ -876,44 +908,22 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
-        if (subscriberArgs is ConnectedClient connectedClient)
-        {
-            var target = new ObserverSubscriberTarget(siloAddress, connectedClient);
-            if (CanFanOutInto<TObserverSubscriber>(eventTypes, filters, generationDelivery))
-            {
-                // Another instance of the same client is already subscribed with an identical
-                // definition - add this instance as a fan-out target instead of replacing the
-                // subscription. The stable ordering keeps partition selection deterministic.
-                var targets = _subscription.Targets
-                    .Where(existing => existing.ConnectedClient!.ConnectionId != connectedClient.ConnectionId)
-                    .Append(target)
-                    .OrderBy(existing => existing.ConnectedClient!.ConnectionId.Value)
-                    .ToArray();
-                _subscription = _subscription with
-                {
-                    SiloAddress = targets[0].SiloAddress,
-                    Arguments = targets[0].ConnectedClient,
-                    Targets = targets
-                };
-            }
-            else
-            {
-                _subscription = new(
-                    _observerId,
-                    _observerKey,
-                    eventTypes,
-                    typeof(TObserverSubscriber),
-                    siloAddress,
-                    subscriberArgs,
-                    isReplayable,
-                    filters)
-                {
-                    Targets = [target],
-                    GenerationDelivery = generationDelivery
-                };
-            }
-        }
-        else
+        ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+
+        State = State with { SubscribesToAllEvents = false };
+        await WriteStateAsync();
+    }
+
+    void ApplySubscription<TObserverSubscriber>(
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        object? subscriberArgs,
+        bool isReplayable,
+        ObserverFilters? filters,
+        EventGenerationDelivery generationDelivery)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        if (subscriberArgs is not ConnectedClient connectedClient)
         {
             _subscription = new(
                 _observerId,
@@ -927,10 +937,42 @@ public partial class Observer(
             {
                 GenerationDelivery = generationDelivery
             };
+            return;
         }
 
-        State = State with { SubscribesToAllEvents = false };
-        await WriteStateAsync();
+        var target = new ObserverSubscriberTarget(siloAddress, connectedClient);
+        if (CanFanOutInto<TObserverSubscriber>(eventTypes, filters, generationDelivery))
+        {
+            // Another instance of the same client is already subscribed with an identical
+            // definition - add this instance as a fan-out target instead of replacing the
+            // subscription. The stable ordering keeps partition selection deterministic.
+            var targets = _subscription.Targets
+                .Where(existing => existing.ConnectedClient!.ConnectionId != connectedClient.ConnectionId)
+                .Append(target)
+                .OrderBy(existing => existing.ConnectedClient!.ConnectionId.Value)
+                .ToArray();
+            _subscription = _subscription with
+            {
+                SiloAddress = targets[0].SiloAddress,
+                Arguments = targets[0].ConnectedClient,
+                Targets = targets
+            };
+            return;
+        }
+
+        _subscription = new(
+            _observerId,
+            _observerKey,
+            eventTypes,
+            typeof(TObserverSubscriber),
+            siloAddress,
+            subscriberArgs,
+            isReplayable,
+            filters)
+        {
+            Targets = [target],
+            GenerationDelivery = generationDelivery
+        };
     }
 
     bool CanFanOutInto<TObserverSubscriber>(IEnumerable<EventType> eventTypes, ObserverFilters? filters, EventGenerationDelivery generationDelivery)
