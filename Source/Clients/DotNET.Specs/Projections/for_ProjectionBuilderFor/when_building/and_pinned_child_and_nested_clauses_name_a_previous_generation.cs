@@ -21,7 +21,7 @@ public class and_pinned_child_and_nested_clauses_name_a_previous_generation : gi
         _builder.Nested(model => model.Nested, nested => nested.From<First>().ClearWith<First>());
     }
 
-    void Because() => _definition = _builder.Build(EventGenerationDelivery.Pinned);
+    void Because() => _definition = _builder.BuildWithGenerationDelivery(EventGenerationDelivery.Pinned);
 
     [Fact] void should_pin_the_child_from_generation() => _definition.Children.Values.Single().From.Keys.Single().Generation.ShouldEqual(1U);
     [Fact] void should_pin_the_child_join_generation() => _definition.Children.Values.Single().Join.Keys.Single().Generation.ShouldEqual(1U);

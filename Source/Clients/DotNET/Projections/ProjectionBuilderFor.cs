@@ -126,15 +126,24 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     /// <summary>
     /// Build the projection definition.
     /// </summary>
+    /// <returns><see cref="ProjectionDefinition"/>.</returns>
+    /// <exception cref="Observation.MultipleGenerationsOfEventTypeInObserver">The pinned projection names several generations of one event type.</exception>
+    /// <exception cref="MultipleEventStoresDefined">Thrown when event types from multiple event stores are used without an explicit event sequence.</exception>
+    /// <exception cref="VariantMustDeclareEntersOnEvent">Thrown when the projection is declared as a variant without naming the event that activates it.</exception>
+    internal ProjectionDefinition Build() => BuildWithGenerationDelivery(GenerationDelivery);
+
+    /// <summary>
+    /// Build the projection definition with an explicit generation delivery policy.
+    /// </summary>
     /// <param name="generationDelivery">The client's generation delivery policy.</param>
     /// <returns><see cref="ProjectionDefinition"/>.</returns>
     /// <exception cref="Observation.MultipleGenerationsOfEventTypeInObserver">The pinned projection names several generations of one event type.</exception>
     /// <exception cref="MultipleEventStoresDefined">Thrown when event types from multiple event stores are used without an explicit event sequence.</exception>
     /// <exception cref="VariantMustDeclareEntersOnEvent">Thrown when the projection is declared as a variant without naming the event that activates it.</exception>
-    internal ProjectionDefinition Build(EventGenerationDelivery? generationDelivery = null)
+    internal ProjectionDefinition BuildWithGenerationDelivery(EventGenerationDelivery generationDelivery)
     {
         var effectiveDelivery = _isActive && !SubscribesToAllEvents
-            ? generationDelivery ?? GenerationDelivery
+            ? generationDelivery
             : EventGenerationDelivery.Compatibility;
         BuildDefinitions(effectiveDelivery);
         _enteringEventTypes.Clear();

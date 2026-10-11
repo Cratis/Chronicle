@@ -18,7 +18,7 @@ public class and_a_passive_projection_names_a_previous_generation : given.a_buil
         _builder.Passive();
     }
 
-    void Because() => _definition = _builder.Build(EventGenerationDelivery.Pinned);
+    void Because() => _definition = _builder.BuildWithGenerationDelivery(EventGenerationDelivery.Pinned);
 
     [Fact] void should_keep_compatibility_delivery() => _definition.GenerationDelivery.ShouldEqual(Contracts.Observation.EventGenerationDelivery.Compatibility);
     [Fact] void should_not_add_a_root_from_clause() => _definition.From.ShouldBeEmpty();

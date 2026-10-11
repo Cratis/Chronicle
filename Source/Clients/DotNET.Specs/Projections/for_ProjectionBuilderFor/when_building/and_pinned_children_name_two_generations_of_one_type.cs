@@ -15,7 +15,7 @@ public class and_pinned_children_name_two_generations_of_one_type : given.a_buil
         _builder.Children(model => model.OtherItems, child => child.From<Second>());
     }
 
-    void Because() => _error = Catch.Exception(() => _builder.Build(EventGenerationDelivery.Pinned));
+    void Because() => _error = Catch.Exception(() => _builder.BuildWithGenerationDelivery(EventGenerationDelivery.Pinned));
 
     [Fact] void should_reject_ambiguous_pins_across_children() => _error.ShouldBeOfExactType<MultipleGenerationsOfEventTypeInObserver>();
 }

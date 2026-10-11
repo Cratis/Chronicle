@@ -16,7 +16,7 @@ public class and_different_event_types_pin_different_generations : given.a_build
         _builder.Join<Second>(join => join.On(model => model.Name));
     }
 
-    void Because() => _definition = _builder.Build(EventGenerationDelivery.Pinned);
+    void Because() => _definition = _builder.BuildWithGenerationDelivery(EventGenerationDelivery.Pinned);
 
     [Fact] void should_pin_the_other_event_type() => _definition.From.Keys.Single().Id.ShouldEqual("Other");
     [Fact] void should_keep_the_other_events_generation() => _definition.From.Keys.Single().Generation.ShouldEqual(1U);

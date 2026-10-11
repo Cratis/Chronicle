@@ -12,7 +12,7 @@ public class and_pinned_from_names_a_previous_generation : given.a_builder_with_
 
     void Establish() => _builder.From<First>();
 
-    void Because() => _definition = _builder.Build(EventGenerationDelivery.Pinned);
+    void Because() => _definition = _builder.BuildWithGenerationDelivery(EventGenerationDelivery.Pinned);
 
     [Fact] void should_pin_the_person_event_type() => _definition.From.Keys.Single().Id.ShouldEqual("PinnedPerson");
     [Fact] void should_pin_the_previous_generation() => _definition.From.Keys.Single().Generation.ShouldEqual(1U);
