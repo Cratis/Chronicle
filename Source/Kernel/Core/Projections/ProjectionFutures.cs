@@ -17,19 +17,10 @@ public class ProjectionFutures : Grain<ProjectionFuturesState>, IProjectionFutur
         Task.FromResult<IEnumerable<ProjectionFuture>>(State.Futures);
 
     /// <inheritdoc/>
-    public async Task<int> AddFuture(ProjectionFuture future)
-    {
-        if (State.Futures.Any(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber))
-        {
-            return State.Futures.Count;
-        }
+    public Task<int> AddFuture(ProjectionFuture future) => AddFuture(future, pinned: false);
 
-        State.Futures.Add(future);
-        State.AddedFutures.Add(future);
-        await WriteStateAsync();
-        State.AddedFutures.Clear();
-        return State.Futures.Count;
-    }
+    /// <inheritdoc/>
+    public Task<int> AddPinnedFuture(ProjectionFuture future) => AddFuture(future, pinned: true);
 
     /// <inheritdoc/>
     public async Task ResolveFuture(ProjectionFutureId futureId)
@@ -42,5 +33,20 @@ public class ProjectionFutures : Grain<ProjectionFuturesState>, IProjectionFutur
         }
         await WriteStateAsync();
         State.ResolvedFutures.Clear();
+    }
+
+    async Task<int> AddFuture(ProjectionFuture future, bool pinned)
+    {
+        if (State.Futures.Any(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber &&
+            (!pinned || f.Event.Context.EventType == future.Event.Context.EventType)))
+        {
+            return State.Futures.Count;
+        }
+
+        State.Futures.Add(future);
+        State.AddedFutures.Add(future);
+        await WriteStateAsync();
+        State.AddedFutures.Clear();
+        return State.Futures.Count;
     }
 }

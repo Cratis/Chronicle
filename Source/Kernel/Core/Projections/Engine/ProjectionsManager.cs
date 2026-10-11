@@ -38,6 +38,7 @@ public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage s
         {
             try
             {
+                ProjectionGenerationDeliveryValidation.Validate(definition);
                 if (!readModelDefinitionsByIdentifier.TryGetValue(definition.ReadModel, out var readModelDefinition))
                 {
                     throw new InvalidOperationException($"ReadModelDefinition with Identifier '{definition.ReadModel.Value}' not found. Available: [{availableReadModelIdentifiers}]");

@@ -115,13 +115,33 @@ is the revision's stored hash only when the revision already matches the pin; ot
 `EventHash.NotSet`. SQL revisions made before this release cannot be distinguished from original
 content: those rows keep the existing generation-selection behavior until revised again.
 
-An observer can pin only one generation per event type. Registration rejects unregistered generations
-and handlers for multiple generations of the same type. If a pinned generation disappears from the
-registered definition later, delivery fails explicitly rather than substituting a schema. Changing a
-pin or delivery mode does not itself trigger a replay; request one when you need to rebuild prior state.
+A reactor or reducer can pin only one generation per event type. Registration rejects unregistered
+generations and handlers for multiple generations of the same type. If a pinned generation disappears
+from the registered definition later, delivery fails explicitly rather than substituting a schema.
+For reactors and reducers, changing a pin or delivery mode does not itself trigger a replay; request
+one when you need to rebuild prior state.
+
+The .NET option also opts typed materialized projections into pinned delivery. Each `From`, `Join`, child,
+key, parent-key, and removal clause uses the generation it names, including events read from storage
+to resolve joins or parent keys. A pinned projection can name only one generation per event type
+across all its clauses, including children and nested objects; registration rejects conflicting pins,
+just as it does for reactors and reducers. Different event types can pin different generations.
+Live, catch-up, and replay use the same generation-selection and release boundary.
+
+For a PDL definition saved with `GenerationDelivery = Pinned`, a bare `from PersonRegistered` resolves
+to the latest registered generation when you save it. That resolved generation is persisted as the
+pin; registering a newer generation later does not move it. The same rule applies to join and removal
+references, including those in children and nested objects. Saving the declaration again resolves its
+names against the generations registered at that time.
+
+PDL, which is owned by Screenplay, does not have generation-qualified event references. Use the
+[.NET projection builders](../projections/declarative/simple-projection.mdx) or model-bound attributes
+with the CLR event type for the generation you want when a clause must pin an explicit generation.
+Compatibility definitions keep the existing bare-name and identifier-only dispatch behavior.
 
 `GenerationalContent` remains on delivered events for compatibility in this major version. This option
-does not change projections, reads, webhooks, captures, or event-store subscriptions.
+does not change immediate/passive or wildcard (`all`) projections, reads, webhooks, captures, or
+event-store subscriptions.
 
 ## Protected values
 
