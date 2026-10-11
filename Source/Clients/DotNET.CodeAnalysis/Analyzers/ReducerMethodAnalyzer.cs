@@ -62,28 +62,19 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        var reducerFor = context.Compilation.GetTypeByMetadataName(WellKnownTypes.IReducerForName);
-        var readModel = methodSymbol.ContainingType.AllInterfaces.FirstOrDefault(_ =>
-            SymbolEqualityComparer.Default.Equals(_.OriginalDefinition, reducerFor))?.TypeArguments.FirstOrDefault();
-        var parameters = methodSymbol.Parameters;
-        if (readModel is null || parameters.Length == 0 ||
-            (!parameters.Any(_ => SymbolEqualityComparer.Default.Equals(_.Type, readModel)) &&
-             !IsEventType(parameters[0].Type, eventTypes, context.Compilation) &&
-             !ReturnsReadModel(methodSymbol.ReturnType, readModel, context.Compilation)))
+        var readModel = GetReadModel(methodSymbol.ContainingType, context.Compilation);
+        if (readModel is null || !LooksLikeReducerMethod(methodSymbol, readModel, eventTypes, context.Compilation))
         {
             return;
         }
 
-        var eventContext = context.Compilation.GetTypeByMetadataName(WellKnownTypes.EventContextName);
-        if (methodSymbol.IsStatic || parameters.Length is < 2 or > 3 || parameters.Any(_ => _.RefKind != RefKind.None) ||
-            !SymbolEqualityComparer.Default.Equals(parameters[1].Type, readModel) ||
-            (parameters.Length == 3 && !SymbolEqualityComparer.Default.Equals(parameters[2].Type, eventContext)) ||
-            !HasSupportedReturnType(methodSymbol, readModel, context.Compilation))
+        if (!HasDispatchableSignature(methodSymbol, readModel, context.Compilation))
         {
             context.ReportDiagnostic(Diagnostic.Create(SignatureRule, methodSymbol.Locations.FirstOrDefault(), methodSymbol.Name));
             return;
         }
 
+        var parameters = methodSymbol.Parameters;
         if (!IsEventType(parameters[0].Type, eventTypes, context.Compilation))
         {
             context.ReportDiagnostic(Diagnostic.Create(
@@ -93,6 +84,48 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
                 methodSymbol.Name));
         }
     }
+
+    static ITypeSymbol? GetReadModel(INamedTypeSymbol reducerType, Compilation compilation)
+    {
+        var reducerFor = compilation.GetTypeByMetadataName(WellKnownTypes.IReducerForName);
+        return reducerType.AllInterfaces
+            .FirstOrDefault(_ => SymbolEqualityComparer.Default.Equals(_.OriginalDefinition, reducerFor))?
+            .TypeArguments.FirstOrDefault();
+    }
+
+    static bool LooksLikeReducerMethod(IMethodSymbol method, ITypeSymbol readModel, ImmutableArray<INamedTypeSymbol> eventTypes, Compilation compilation)
+    {
+        var parameters = method.Parameters;
+        if (parameters.Length == 0)
+        {
+            return false;
+        }
+
+        return parameters.Any(_ => SymbolEqualityComparer.Default.Equals(_.Type, readModel)) ||
+            IsEventType(parameters[0].Type, eventTypes, compilation) ||
+            ReturnsReadModel(method.ReturnType, readModel, compilation);
+    }
+
+    static bool HasDispatchableSignature(IMethodSymbol method, ITypeSymbol readModel, Compilation compilation)
+    {
+        if (!HasInstanceParameterShape(method))
+        {
+            return false;
+        }
+
+        return SymbolEqualityComparer.Default.Equals(method.Parameters[1].Type, readModel) &&
+            HasOptionalEventContext(method.Parameters, compilation) &&
+            HasSupportedReturnType(method, readModel, compilation);
+    }
+
+    static bool HasInstanceParameterShape(IMethodSymbol method) =>
+        !method.IsStatic &&
+        method.Parameters.Length is 2 or 3 &&
+        method.Parameters.All(_ => _.RefKind == RefKind.None);
+
+    static bool HasOptionalEventContext(ImmutableArray<IParameterSymbol> parameters, Compilation compilation) =>
+        parameters.Length == 2 ||
+        SymbolEqualityComparer.Default.Equals(parameters[2].Type, compilation.GetTypeByMetadataName(WellKnownTypes.EventContextName));
 
     static bool IsEventType(ITypeSymbol type, ImmutableArray<INamedTypeSymbol> eventTypes, Compilation compilation) =>
         type.SpecialType != SpecialType.System_Object &&
