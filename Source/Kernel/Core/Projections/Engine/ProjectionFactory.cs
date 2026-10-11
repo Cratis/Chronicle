@@ -806,6 +806,17 @@ public class ProjectionFactory(
 
         ChildEveryEventMappings.Subscribe(projection, projectionDefinition.FromEvery, propertyMappersForEveryEventType);
 
+        LogUnmappedCollectionProperties(projection, projectionDefinition, childrenAccessorProperty, currentReadModelSchema, rootReadModel, eventTypeSchemas);
+    }
+
+    void LogUnmappedCollectionProperties(
+        IProjection projection,
+        ProjectionDefinition projectionDefinition,
+        PropertyPath childrenAccessorProperty,
+        JsonSchema currentReadModelSchema,
+        ReadModelDefinition rootReadModel,
+        IEnumerable<EventTypeSchema> eventTypeSchemas)
+    {
         foreach (var unmapped in FindUnmappedCollectionProperties(projectionDefinition, currentReadModelSchema, projection.AutoMap, projection.NoAutoMapProperties, eventTypeSchemas))
         {
             var propertyPath = childrenAccessorProperty.IsRoot ? unmapped.Property : $"{childrenAccessorProperty.Path}.{unmapped.Property}";
