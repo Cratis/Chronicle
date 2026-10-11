@@ -4,14 +4,14 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Chronicle.Testing.EventSequences.for_InMemoryConstraintsStorage;
+namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario.when_enforcing_scoped_constraints;
 
 /// <summary>
 /// A once-per-event-source constraint scoped per event stream is enforced within a stream and not across streams. Were
 /// the scope dropped on the way to the in-process kernel, the constraint would apply to the event source as a whole and
 /// the append in the second stream would be refused.
 /// </summary>
-public class when_an_event_type_constraint_is_scoped_per_event_stream : Specification, IDisposable
+public class with_an_event_type_constraint : Specification, IDisposable
 {
     static readonly EventStreamType _streamType = new("rota");
     static readonly EventSourceId _employee = EventSourceId.New();

@@ -171,10 +171,10 @@ internal sealed class TestingServices : IServices
                     services.AddSingleton(eventTypes());
                 }));
 
-        _observers = new(() => new KernelObserversService(
+        _observers = new(() => new ObserversForTesting(new KernelObserversService(
             grainFactory,
             storage,
-            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance)));
+            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance))));
 
         _failedPartitions = new(() => new KernelFailedPartitionsService(storage));
 

@@ -18,12 +18,14 @@ namespace Cratis.Chronicle.Testing;
 /// <param name="compliance">The <see cref="InProcessCompliance"/> shared by every collaborator in the scenario.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="eventTypes">Resolves the event types belonging to this connection's event store.</param>
+/// <param name="dispose">Releases the owning test store.</param>
 internal sealed class ChronicleConnectionForTesting(
     IGrainFactory grainFactory,
     IStorage storage,
     InProcessCompliance compliance,
     JsonSerializerOptions jsonSerializerOptions,
-    Func<IEventTypes> eventTypes) : IChronicleConnection, IChronicleServicesAccessor
+    Func<IEventTypes> eventTypes,
+    Action dispose) : IChronicleConnection, IChronicleServicesAccessor
 {
     readonly TestingServices _services = new(grainFactory, storage, compliance, jsonSerializerOptions, eventTypes);
 
@@ -37,7 +39,5 @@ internal sealed class ChronicleConnectionForTesting(
     public Task Connect() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public void Dispose()
-    {
-    }
+    public void Dispose() => dispose();
 }
