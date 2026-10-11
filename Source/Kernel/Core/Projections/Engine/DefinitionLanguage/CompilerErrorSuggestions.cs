@@ -32,24 +32,18 @@ internal static class CompilerErrorSuggestions
     /// <returns>The diagnostic suffix, or an empty string if there are no candidates.</returns>
     internal static string ForProperty(string path, JsonSchema schema) => Format(FindPropertyPaths(path.Split('.'), schema, string.Empty));
 
-    static IEnumerable<string> FindPropertyPaths(string[] parts, JsonSchema schema, string prefix)
-    {
-        foreach (var (name, property) in schema.ActualSchema.Properties.Where(_ => string.Equals(_.Key, parts[0], StringComparison.OrdinalIgnoreCase)))
+    static IEnumerable<string> FindPropertyPaths(string[] parts, JsonSchema schema, string prefix) =>
+        schema.ActualSchema.Properties
+            .Where(_ => string.Equals(_.Key, parts[0], StringComparison.OrdinalIgnoreCase))
+            .SelectMany(_ => FindPropertyPathsFrom(parts, _.Value, prefix + _.Key));
+
+    static IEnumerable<string> FindPropertyPathsFrom(string[] parts, JsonSchemaProperty property, string path) =>
+        parts.Length switch
         {
-            var path = prefix + name;
-            if (parts.Length == 1)
-            {
-                yield return path;
-            }
-            else if (property.ActualSchema.Type.HasFlag(JsonObjectType.Object))
-            {
-                foreach (var nestedPath in FindPropertyPaths(parts[1..], property.ActualSchema, path + "."))
-                {
-                    yield return nestedPath;
-                }
-            }
-        }
-    }
+            1 => [path],
+            _ when property.ActualSchema.Type.HasFlag(JsonObjectType.Object) => FindPropertyPaths(parts[1..], property.ActualSchema, path + "."),
+            _ => []
+        };
 
     static string Format(IEnumerable<string> candidates)
     {
