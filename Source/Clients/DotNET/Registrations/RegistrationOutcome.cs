@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Discovery;
 
 namespace Cratis.Chronicle.Registrations;
 
@@ -73,6 +74,13 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
     public bool IsSuccess => HasRun && Failure is null && Artifacts.All(_ => _.IsRegistered);
 
     /// <summary>
+    /// Gets the likely identity changes detected before this registration run, retained across background retries.
+    /// These are heuristic findings, not per-artifact registration failures.
+    /// Only reactor and event type findings prevent registration under the Fail policy.
+    /// </summary>
+    public IImmutableList<ArtifactIdentityDrift> IdentityDrift { get; init; } = ImmutableList<ArtifactIdentityDrift>.Empty;
+
+    /// <summary>
     /// Gets the declared artifacts that did not register, each carrying the failure that stopped it.
     /// </summary>
     public IEnumerable<ArtifactRegistration> Failures => Artifacts.Where(_ => !_.IsRegistered);
@@ -92,7 +100,8 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
         other is not null &&
         HasRun == other.HasRun &&
         Equals(Failure, other.Failure) &&
-        Artifacts.SequenceEqual(other.Artifacts);
+        Artifacts.SequenceEqual(other.Artifacts) &&
+        IdentityDrift.SequenceEqual(other.IdentityDrift);
 
     /// <inheritdoc/>
     public override int GetHashCode()
@@ -103,6 +112,11 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
         foreach (var artifact in Artifacts)
         {
             hashCode.Add(artifact);
+        }
+
+        foreach (var drift in IdentityDrift)
+        {
+            hashCode.Add(drift);
         }
 
         return hashCode.ToHashCode();
