@@ -198,18 +198,14 @@ public partial class EventSequenceStorage(
                 return Result<AppendedEvent, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable));
             }
 
-            var hash = contentHashes.TryGetValue(eventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
-            var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, tags, occurred, content, hash, subject, namedTags) with
-            {
-                GenerationalHashes = contentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
-            };
+            var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, tags, occurred, content, contentHashes, subject, namedTags);
             _events.Add(appended);
             _originalCausedByChains[sequenceNumber] = causedByChain.ToArray();
             TrackMetadata(appended, _originalCausedByChains[sequenceNumber]);
             _appendedGenerations[sequenceNumber] = eventType.Generation.Value;
             _generationHashes[sequenceNumber] = new Dictionary<EventTypeGeneration, EventHash>(contentHashes);
 
-            return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(appended);
+            return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(ToAppendAcknowledgment(appended, eventType, content, contentHashes));
         }
     }
 
@@ -245,7 +241,6 @@ public partial class EventSequenceStorage(
             for (var index = 0; index < eventsToAppend.Count; index++)
             {
                 var e = eventsToAppend[index];
-                var hash = e.ContentHashes.TryGetValue(e.EventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
                 var appendedEvent = BuildAppendedEvent(
                     e.SequenceNumber,
                     e.EventSourceType,
@@ -259,20 +254,17 @@ public partial class EventSequenceStorage(
                     e.Tags,
                     e.Occurred,
                     e.GenerationalContent,
-                    hash,
+                    e.ContentHashes,
                     e.Subject,
                     e.NamedTags,
-                    e.EventSource) with
-                {
-                    GenerationalHashes = e.ContentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
-                };
+                    e.EventSource);
 
                 _events.Add(appendedEvent);
                 _originalCausedByChains[e.SequenceNumber] = e.CausedByChain.ToArray();
                 TrackMetadata(appendedEvent, _originalCausedByChains[e.SequenceNumber]);
                 _appendedGenerations[e.SequenceNumber] = e.EventType.Generation.Value;
                 _generationHashes[e.SequenceNumber] = new Dictionary<EventTypeGeneration, EventHash>(e.ContentHashes);
-                appended.Add(appendedEvent);
+                appended.Add(ToAppendAcknowledgment(appendedEvent, e.EventType, e.GenerationalContent, e.ContentHashes));
             }
         }
 
@@ -758,6 +750,20 @@ public partial class EventSequenceStorage(
     static ImmutableArray<Causation> SnapshotCausation(IEnumerable<Causation> chain) =>
         chain.Select(cause => cause with { Properties = cause.Properties.ToImmutableDictionary() }).ToImmutableArray();
 
+    static AppendedEvent ToAppendAcknowledgment(
+        AppendedEvent stored,
+        EventType eventType,
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes) => stored with
+        {
+            Context = stored.Context with
+            {
+                EventType = eventType,
+                Hash = contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet
+            },
+            Content = content.TryGetValue(eventType.Generation, out var value) ? value : content.Values.FirstOrDefault() ?? new ExpandoObject()
+        };
+
     void TrackMetadata(AppendedEvent appended, IEnumerable<IdentityId> chain)
     {
         var context = appended.Context;
@@ -802,13 +808,15 @@ public partial class EventSequenceStorage(
         IEnumerable<Tag> tags,
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
-        EventHash hash,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes,
         Subject? subject = null,
         IReadOnlyCollection<NamedTag>? namedTags = null,
         EventSourceName? eventSource = null)
     {
+        // Default reads use the highest stored generation; append acknowledgments retain the appended one.
+        var highestGeneration = content.Keys.MaxBy(_ => _.Value) ?? eventType.Generation;
         var eventContext = new EventContext(
-            eventType,
+            eventType with { Generation = highestGeneration },
             eventSourceType,
             eventSourceId,
             eventStreamType,
@@ -821,7 +829,7 @@ public partial class EventSequenceStorage(
             causation,
             causedBy,
             tags,
-            hash,
+            contentHashes.TryGetValue(highestGeneration, out var hash) ? hash : EventHash.NotSet,
             Subject: subject?.IsSet is true ? subject : new Subject(eventSourceId.Value))
         {
             NamedTags = namedTags ?? [],
@@ -829,13 +837,14 @@ public partial class EventSequenceStorage(
             AppendedGeneration = eventType.Generation
         };
 
-        var eventContent = content.TryGetValue(eventType.Generation, out var generationContent)
+        var eventContent = content.TryGetValue(highestGeneration, out var generationContent)
             ? generationContent
             : content.Values.FirstOrDefault() ?? new ExpandoObject();
 
         return new AppendedEvent(eventContext, eventContent)
         {
-            GenerationalContent = content.ToDictionary(kvp => (int)kvp.Key.Value, kvp => Serialize(kvp.Value))
+            GenerationalContent = content.ToDictionary(kvp => (int)kvp.Key.Value, kvp => Serialize(kvp.Value)),
+            GenerationalHashes = contentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
         };
     }
 }

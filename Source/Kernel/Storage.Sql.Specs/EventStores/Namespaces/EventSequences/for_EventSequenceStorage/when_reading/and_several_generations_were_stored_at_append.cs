@@ -3,20 +3,21 @@
 
 using Cratis.Chronicle.Concepts.Events;
 
-namespace Cratis.Chronicle.Storage.InMemory.EventSequences.for_EventSequenceStorage.when_appending_an_event;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for_EventSequenceStorage.when_reading;
 
-public class and_appended_generation_is_recorded : given.a_storage_for_appended_generation
+public class and_several_generations_were_stored_at_append : given.a_storage_for_appended_generation
 {
     AppendedEvent _read;
 
-    async Task Because()
+    async Task Establish()
     {
         var entry = EventAt(EventSequenceNumber.First, 1);
         (await _storage.Append(entry.SequenceNumber, entry.EventSourceType, entry.EventSourceId, entry.EventStreamType, entry.EventStreamId, entry.EventType, entry.CorrelationId, entry.Causation, entry.CausedByChain, entry.Tags, entry.Occurred, entry.GenerationalContent, entry.ContentHashes)).IsSuccess.ShouldBeTrue();
-        _read = await _storage.GetEventAt(entry.SequenceNumber);
     }
 
-    [Fact] void should_record_the_original_generation() => _storage.GetAppendedGeneration(EventSequenceNumber.First).ShouldEqual((uint?)1);
+    async Task Because() => _read = await _storage.GetEventAt(EventSequenceNumber.First);
+
     [Fact] void should_read_the_highest_stored_generation() => _read.Context.EventType.Generation.ShouldEqual(new EventTypeGeneration(2));
     [Fact] void should_read_the_highest_generations_content() => ((IDictionary<string, object?>)_read.Content)["value"].ShouldEqual("migrated");
+    [Fact] void should_preserve_the_appended_generation() => _read.Context.AppendedGeneration.ShouldEqual(EventTypeGeneration.First);
 }
