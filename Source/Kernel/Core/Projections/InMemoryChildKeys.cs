@@ -36,18 +36,22 @@ internal static class InMemoryChildKeys
         return key with { ArrayIndexers = new ArrayIndexers(indexers) };
     }
 
-    static object? FindIdentifier(ExpandoObject state, ArrayIndexer indexer, ArrayIndexers ancestors)
+    static object? FindIdentifier(ExpandoObject state, ArrayIndexer indexer, ArrayIndexers ancestors) =>
+        indexer.IdentifierProperty.IsSet
+            ? FindChildren(state, indexer, ancestors)
+                .Select(child => indexer.IdentifierProperty.GetValue(child, ArrayIndexers.NoIndexers))
+                .FirstOrDefault(identifier => identifier is not null && string.Equals(identifier.ToString(), indexer.Identifier.ToString(), StringComparison.Ordinal))
+            : null;
+
+    static IEnumerable<object> FindChildren(ExpandoObject state, ArrayIndexer indexer, ArrayIndexers ancestors)
     {
-        if (!indexer.IdentifierProperty.IsSet ||
-            state.TryGetExistingPath(indexer.ArrayProperty, ancestors) is not IDictionary<string, object?> parent ||
-            !parent.TryGetValue(indexer.ArrayProperty.LastSegment.Value, out var collection) ||
-            collection is not IEnumerable<object> children)
+        if (state.TryGetExistingPath(indexer.ArrayProperty, ancestors) is not IDictionary<string, object?> parent)
         {
-            return null;
+            return [];
         }
 
-        return children
-            .Select(child => indexer.IdentifierProperty.GetValue(child, ArrayIndexers.NoIndexers))
-            .FirstOrDefault(identifier => identifier is not null && string.Equals(identifier.ToString(), indexer.Identifier.ToString(), StringComparison.Ordinal));
+        return parent.TryGetValue(indexer.ArrayProperty.LastSegment.Value, out var collection) && collection is IEnumerable<object> children
+            ? children
+            : [];
     }
 }
