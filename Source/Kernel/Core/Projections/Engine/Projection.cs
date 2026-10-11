@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Projections.Engine;
 public class Projection : IProjection, IDisposable
 {
     readonly Subject<ProjectionEventContext> _subject = new();
+    readonly Subject<ProjectionEventContext> _descendantEventSubject = new();
     KeyResolver? _allEventsKeyResolver;
     bool _allEventsResolvesToEventSourceId = true;
     Dictionary<EventTypeId, KeyResolver> _keyResolverByEventTypeId = [];
@@ -73,6 +74,7 @@ public class Projection : IProjection, IDisposable
         SubscribesToAllEvents = subscribesToAllEvents;
         _allEventsKeyResolver = allEventsKeyResolver;
         Event = FilterEventTypes(_subject);
+        EventIncludingDescendantEvents = Event.Merge(FilterEventTypes(_descendantEventSubject));
         Path = path;
         ChildrenPropertyPath = childrenPropertyPath;
         IdentifiedByProperty = identifiedByProperty;
@@ -152,6 +154,15 @@ public class Projection : IProjection, IDisposable
     /// </summary>
     internal CompositeDisposable Subscriptions { get; } = new();
 
+    /// <summary>
+    /// Gets the <see cref="IObservable{T}">observable</see> the mappings this level applies to its descendants' events subscribe to.
+    /// </summary>
+    /// <remarks>
+    /// Carries every event of <see cref="Event"/> plus the events provided through <see cref="OnDescendantEvent"/>, which
+    /// reach only these mappings.
+    /// </remarks>
+    internal IObservable<ProjectionEventContext> EventIncludingDescendantEvents { get; }
+
     /// <inheritdoc/>
     public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => SubscribesToAllEvents || _keyResolverByEventTypeId.ContainsKey(_.Event.Context.EventType.Id));
 
@@ -160,6 +171,9 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public void OnNext(ProjectionEventContext context) => _subject.OnNext(context);
+
+    /// <inheritdoc/>
+    public void OnDescendantEvent(ProjectionEventContext context) => _descendantEventSubject.OnNext(context);
 
     /// <inheritdoc/>
     public bool Accepts(EventType eventType) => SubscribesToAllEvents || _keyResolverByEventTypeId.ContainsKey(eventType.Id);
@@ -273,7 +287,9 @@ public class Projection : IProjection, IDisposable
     public void Dispose()
     {
         _subject.OnCompleted();
+        _descendantEventSubject.OnCompleted();
         Subscriptions.Dispose();
         _subject.Dispose();
+        _descendantEventSubject.Dispose();
     }
 }

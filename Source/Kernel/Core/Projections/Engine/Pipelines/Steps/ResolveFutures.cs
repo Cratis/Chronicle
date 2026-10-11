@@ -173,6 +173,7 @@ public class ResolveFutures(
                         JoinKey = childKey ?? key.Value
                     };
 
+                    ProvideToAncestors(childProjection, futureContext);
                     childProjection.OnNext(futureContext);
 
                     // Successfully resolved the future
@@ -200,6 +201,30 @@ public class ResolveFutures(
         futuresTracker.HasPending = futures.Any();
 
         return context with { Event = latestResolvedEvent };
+    }
+
+    /// <summary>
+    /// Provides a resolved future's event to every ancestor of the projection it belongs to, root first.
+    /// </summary>
+    /// <param name="childProjection">The projection the future belongs to.</param>
+    /// <param name="context">The <see cref="ProjectionEventContext"/> for the resolved future.</param>
+    /// <remarks>
+    /// Top-down handling runs an ancestor's mappings for its descendants' events on the way to the child. Deferring the
+    /// event discarded that changeset, so without this a child event arriving before its parent would leave the
+    /// ancestors' every-event mappings unapplied, and the read model would differ from one built in replay order.
+    /// </remarks>
+    static void ProvideToAncestors(IProjection childProjection, ProjectionEventContext context)
+    {
+        var ancestors = new List<IProjection>();
+        for (var current = childProjection.Parent; current is not null; current = current.ChildrenPropertyPath.IsRoot ? null : current.Parent)
+        {
+            ancestors.Insert(0, current);
+        }
+
+        foreach (var ancestor in ancestors)
+        {
+            ancestor.OnDescendantEvent(context with { OperationType = ancestor.GetOperationTypeFor(context.Event.Context.EventType) });
+        }
     }
 
     static IProjection? FindChildProjectionByPath(IProjection projection, PropertyPath childPath)

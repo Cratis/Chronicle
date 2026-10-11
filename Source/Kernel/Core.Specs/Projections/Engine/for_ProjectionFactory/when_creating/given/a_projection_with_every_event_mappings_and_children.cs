@@ -23,6 +23,7 @@ public class a_projection_with_every_event_mappings_and_children : a_child_colle
     protected Key _key;
     protected IDictionary<string, object?> _result;
     protected Changeset<AppendedEvent, ExpandoObject> _changeset;
+    protected bool _noteExists = true;
 
     void Establish()
     {
@@ -50,6 +51,19 @@ public class a_projection_with_every_event_mappings_and_children : a_child_colle
 
     protected async Task ProjectChildEvent(bool nested = false)
     {
+        var context = await CreateChildEventContext(nested);
+        _projection.OnNext(context);
+        var child = _projection.ChildProjections.Single();
+        child.OnNext(context with { OperationType = child.GetOperationTypeFor(context.Event.Context.EventType) });
+        if (nested)
+        {
+            child.ChildProjections.Single().OnNext(context with { OperationType = ProjectionOperationType.From });
+        }
+        _result = _changeset.CurrentState;
+    }
+
+    protected async Task<ProjectionEventContext> CreateChildEventContext(bool nested = false)
+    {
         _projection = await _factory.Create(_eventStore, _namespace, _definition, _readModel, []);
         var incoming = new AppendedEvent(
             EventContext.EmptyWithEventSourceId("child-stream") with { EventType = nested ? _replyUpdated : _noteUpdated, Occurred = _occurred, SequenceNumber = 2 },
@@ -66,17 +80,9 @@ public class a_projection_with_every_event_mappings_and_children : a_child_colle
             id = "parent",
             count = 0L,
             lastUpdated = DateTimeOffset.MinValue,
-            notes = new[] { new { id = 42, count = 0L, replies = new[] { new { id = "reply" } } } }
+            notes = _noteExists ? new[] { new { id = 42, count = 0L, replies = new[] { new { id = "reply" } } } } : []
         }.AsExpandoObject();
         _changeset = new(new ObjectComparer(), incoming, state);
-        var context = new ProjectionEventContext(_key, incoming, _changeset, _projection.GetOperationTypeFor(incoming.Context.EventType), false);
-        _projection.OnNext(context);
-        var child = _projection.ChildProjections.Single();
-        child.OnNext(context with { OperationType = child.GetOperationTypeFor(incoming.Context.EventType) });
-        if (nested)
-        {
-            child.ChildProjections.Single().OnNext(context with { OperationType = ProjectionOperationType.From });
-        }
-        _result = _changeset.CurrentState;
+        return new ProjectionEventContext(_key, incoming, _changeset, _projection.GetOperationTypeFor(incoming.Context.EventType), false);
     }
 }
