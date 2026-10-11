@@ -31,8 +31,16 @@ public class ReactorScenario(ReactorId id, Defaults defaults)
     /// </summary>
     /// <param name="eventSourceId">The event source identifier.</param>
     /// <param name="events">The events to provide in order.</param>
+    /// <param name="eventSourceType">The event source type for the input events.</param>
+    /// <param name="eventStreamType">The event stream type for the input events.</param>
+    /// <param name="eventStreamId">The event stream identifier for the input events.</param>
     /// <returns>A task completing after all callbacks complete.</returns>
-    internal async Task InvokeWith(EventSourceId eventSourceId, IEnumerable<object> events)
+    internal async Task InvokeWith(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        EventSourceType eventSourceType,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId)
     {
         var definition = _definition.Value;
         foreach (var @event in events)
@@ -42,10 +50,10 @@ public class ReactorScenario(ReactorId id, Defaults defaults)
                 defaults.EventStore.Name,
                 defaults.EventStore.Namespace,
                 eventType,
-                EventSourceType.Default,
+                eventSourceType,
                 eventSourceId,
-                EventStreamType.All,
-                EventStreamId.Default,
+                eventStreamType,
+                eventStreamId,
                 _nextSequenceNumber,
                 CorrelationId.New());
             _nextSequenceNumber += 1;

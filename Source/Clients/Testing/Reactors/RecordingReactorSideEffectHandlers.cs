@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Monads;
 
@@ -16,12 +18,18 @@ namespace Cratis.Chronicle.Testing.Reactors;
 sealed class RecordingReactorSideEffectHandlers(Func<Type, bool> isClaimedReturnType) : IReactorSideEffectHandlers
 {
     readonly List<object> _produced = [];
+    readonly List<ProducedEvent> _producedEvents = [];
 
     /// <summary>
     /// Gets the side effects the reactor produced, flattened — collections are expanded and
     /// <see cref="EventForEventSourceId"/> wrappers are unwrapped to the underlying event.
     /// </summary>
     public IReadOnlyList<object> Produced => _produced;
+
+    /// <summary>
+    /// Gets the produced events and their resolved destinations, excluding commands and other non-event side effects.
+    /// </summary>
+    public IReadOnlyList<ProducedEvent> ProducedEvents => _producedEvents;
 
     /// <inheritdoc/>
     public bool CanHandle(ReactorContext reactorContext, object value)
@@ -43,7 +51,11 @@ sealed class RecordingReactorSideEffectHandlers(Func<Type, bool> isClaimedReturn
     /// <inheritdoc/>
     Task<Result<ReactorSideEffectFailure>> IReactorSideEffectHandlers.Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
-        _produced.AddRange(Flatten(value));
+        foreach (var item in Flatten(value))
+        {
+            Record(item, reactorContext, eventStore);
+        }
+
         return Task.FromResult(Result.Success<ReactorSideEffectFailure>());
     }
 
@@ -54,13 +66,9 @@ sealed class RecordingReactorSideEffectHandlers(Func<Type, bool> isClaimedReturn
             case EventsWithConcurrencyScopes eventsWithConcurrencyScopes:
                 foreach (var @event in eventsWithConcurrencyScopes.Events)
                 {
-                    yield return @event.Event;
+                    yield return @event;
                 }
 
-                break;
-
-            case EventForEventSourceId forEventSourceId:
-                yield return forEventSourceId.Event;
                 break;
 
             case IEnumerable<object> collection:
@@ -78,5 +86,32 @@ sealed class RecordingReactorSideEffectHandlers(Func<Type, bool> isClaimedReturn
                 yield return value;
                 break;
         }
+    }
+
+    void Record(object item, ReactorContext reactorContext, IEventStore eventStore)
+    {
+        var destination = item as EventForEventSourceId;
+        var @event = destination?.Event ?? item;
+        _produced.Add(@event);
+        if (destination is null && !eventStore.EventTypes.HasFor(@event.GetType()))
+        {
+            return;
+        }
+
+        destination ??= new(reactorContext.GetEventSourceId(), @event)
+        {
+            EventSourceType = reactorContext.GetEventSourceType() ?? EventSourceType.Default,
+            EventStreamType = reactorContext.GetEventStreamType() ?? EventStreamType.All,
+            EventStreamId = reactorContext.GetEventStreamId() ?? EventStreamId.Default
+        };
+        var routing = destination.EventSource is null
+            ? null
+            : ResolvedEventRouting.Resolve(eventStore.EventSources, destination.EventSource, destination.EventStream, destination.EventSourceType, destination.EventStreamType);
+        _producedEvents.Add(new(
+            @event,
+            destination.EventSourceId,
+            routing?.SourceType ?? (string.IsNullOrEmpty(destination.EventSourceType.Value) ? EventSourceType.Default : destination.EventSourceType),
+            routing?.StreamType ?? (string.IsNullOrEmpty(destination.EventStreamType.Value) ? EventStreamType.All : destination.EventStreamType),
+            string.IsNullOrEmpty(destination.EventStreamId.Value) ? (EventStreamId)EventStreamId.Default : destination.EventStreamId));
     }
 }

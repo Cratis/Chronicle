@@ -15,6 +15,40 @@ namespace Cratis.Chronicle.Testing.Reactors;
 public class ReactorSourceGivenBuilder<TReactor>(ReactorScenario<TReactor> scenario, EventSourceId eventSourceId)
     where TReactor : class, IReactor
 {
+    readonly EventSourceType _eventSourceType = EventSourceType.Default;
+    readonly EventStreamType _eventStreamType = EventStreamType.All;
+    readonly EventStreamId _eventStreamId = EventStreamId.Default;
+
+    ReactorSourceGivenBuilder(
+        ReactorScenario<TReactor> scenario,
+        EventSourceId eventSourceId,
+        EventSourceType eventSourceType,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId)
+        : this(scenario, eventSourceId)
+    {
+        _eventSourceType = eventSourceType;
+        _eventStreamType = eventStreamType;
+        _eventStreamId = eventStreamId;
+    }
+
+    /// <summary>
+    /// Creates a builder that seeds events on the specified event source and stream route.
+    /// </summary>
+    /// <param name="eventSourceType">The event source type, or <see langword="null"/> for <see cref="EventSourceType.Default"/>.</param>
+    /// <param name="eventStreamType">The event stream type, or <see langword="null"/> for <see cref="EventStreamType.All"/>.</param>
+    /// <param name="eventStreamId">The event stream identifier, or <see langword="null"/> for <see cref="EventStreamId.Default"/>.</param>
+    /// <returns>A new builder carrying the route, leaving this builder unchanged.</returns>
+    /// <remarks>
+    /// The route is included in each seeded event's context. Omitted values use the same defaults as
+    /// appending to the event log. It does not affect pre-seeded read model instances.
+    /// </remarks>
+    public ReactorSourceGivenBuilder<TReactor> OnStream(
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default) =>
+        new(scenario, eventSourceId, eventSourceType ?? EventSourceType.Default, eventStreamType ?? EventStreamType.All, eventStreamId ?? EventStreamId.Default);
+
     /// <summary>
     /// Provides the given event instances to the reactor and awaits their handling.
     /// </summary>
@@ -26,7 +60,7 @@ public class ReactorSourceGivenBuilder<TReactor>(ReactorScenario<TReactor> scena
     /// <param name="events">The event instances to provide to the reactor, in order.</param>
     /// <returns>A <see cref="Task"/> that completes when the reactor has handled all events.</returns>
     public Task Events(params object[] events) =>
-        scenario.InvokeWith(eventSourceId, events);
+        scenario.InvokeWith(eventSourceId, events, _eventSourceType, _eventStreamType, _eventStreamId);
 
     /// <summary>
     /// Seeds a pre-built read model instance for this event source, materializing the reactor's read-model
