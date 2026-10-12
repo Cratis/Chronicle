@@ -58,6 +58,18 @@ Use `Cratis.Testing` instead of `Cratis.Chronicle.Testing` when the same spec al
 
 Application command execution scopes, including Chronicle transactions, belong to the outer Arc command pipeline. The in-process scenario helpers do not discover or invoke your application's `ICommandExecutionScope` implementations when processing an event append. Your application scopes still run around the application command; you do not need to register their dependencies with the scenario harness.
 
+## Explicit artifacts and lifetime
+
+The .NET scenarios accept per-run `Defaults` with `ChronicleOptions.ExplicitArtifacts`. The same nominated event types, reducers, reactors, constraints and migrations feed actual scenario processing. A plain `ReactorScenario<T>` requires explicit reactor nomination; it does not discover arbitrary classes by shape.
+
+<ChronicleClientTabs snippet="testing/explicit-artifacts/scenarios" />
+
+Create independent defaults/options for independent runs. Each scenario store captures its original recipes; changing shared options afterward does not rewrite an existing store. Do not mutate `Defaults.Instance` or the default artifact provider to configure a run.
+
+XUnit integration options are **host-lifetime**, matching `ChronicleOptions`: configure explicit artifacts before the fixture host/client/store is created. Reuse of that host keeps its first snapshot, even after rediscovery. Separate fixture hosts have isolated snapshots. The existing sharing boundary is the closed `ChronicleClientFixture<TChronicleFixture>` family; derived scenarios in the same family share its host. `AutoDiscoverArtifacts = false` disables assembly discovery, not explicit nominations or automatic client registration. It is different from `AutoDiscoverAndRegister = false`, which requires manual discovery and registration.
+
+See the [.NET explicit registration reference](../clients/dotnet/explicit-artifacts) for peer conflicts, migration binding and custom-provider limits.
+
 ## Topics
 
 | Guide | Description |
