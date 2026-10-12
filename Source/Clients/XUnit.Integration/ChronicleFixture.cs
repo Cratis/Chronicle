@@ -95,6 +95,8 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <remarks>
     /// Opt in only for in-process MongoDB fixtures. The default is false; out-of-process and remote kernels
     /// continue to use the existing kernel reset. Issued databases are dropped when this collection fixture is disposed.
+    /// The prefix is applied by the default MongoDB storage configuration; a fixture that overrides
+    /// <c language="csharp">GetStorageConfigurator</c> must pass the client fixture's <c language="csharp">DatabaseNamePrefix</c> to <c language="csharp">WithMongoDB</c> itself.
     /// </remarks>
     public virtual bool UsesPerContextMongoDBHost => false;
 

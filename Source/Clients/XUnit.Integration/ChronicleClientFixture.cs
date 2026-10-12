@@ -168,18 +168,13 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// </summary>
     public IServiceProvider Services => EnsureServicesScope();
 
+    /// <inheritdoc/>
+    string IChronicleSetupFixture.DatabaseNamePrefix => DatabaseNamePrefix;
+
     /// <summary>
     /// Gets the <see cref="IGrainFactory"/> for resolving grains.
     /// </summary>
     internal IGrainFactory GrainFactory => (this as IChronicleSetupFixture).GrainFactory;
-
-    /// <summary>
-    /// Gets the database prefix for this context's isolated MongoDB host.
-    /// </summary>
-    internal string DatabaseNamePrefix { get; } = string.Empty;
-
-    /// <inheritdoc/>
-    string IChronicleSetupFixture.DatabaseNamePrefix => DatabaseNamePrefix;
 
     /// <summary>
     /// Gets the factory belonging to this context, or the shared factory in other modes.
@@ -197,6 +192,15 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// Gets the <see cref="IEventStoreStorage"/> for the event store storage.
     /// </summary>
     internal IEventStoreStorage EventStoreStorage => (this as IChronicleSetupFixture).EventStoreStorage;
+
+    /// <summary>
+    /// Gets the database name prefix of this context's isolated MongoDB storage, or empty when storage is shared.
+    /// </summary>
+    /// <remarks>
+    /// A fixture that opts in through <see cref="ChronicleFixture.UsesPerContextMongoDBHost"/> and overrides the storage
+    /// configuration passes this prefix to <c language="csharp">WithMongoDB</c>.
+    /// </remarks>
+    protected internal string DatabaseNamePrefix { get; } = string.Empty;
 
     /// <summary>
     /// Gets the test <see cref="Assembly"/>.
@@ -424,10 +428,8 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 
     T EnsureInitialized<T>(Func<T> getObject)
     {
-        if (CurrentWebApplicationFactory is null)
-        {
-            InitializeFixture();
-        }
+        // Idempotent: the shared factory may already exist while this instance's reflection members do not.
+        InitializeFixture();
         return getObject();
     }
 
