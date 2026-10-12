@@ -128,7 +128,7 @@ public class UniqueConstraintBuilder(
     {
         ThrowIfNoEventTypesAdded();
 
-        var name = _name ?? owner?.Name ?? throw new MissingNameForUniqueConstraint();
+        var name = _name ?? (owner is null ? throw new MissingNameForUniqueConstraint() : ArtifactIdentity.ConstraintNameFor(owner, null));
 
         ConstraintViolationMessageProvider defaultMessageProvider = _ => string.Empty;
         var messageProvider = _messageProvider ?? defaultMessageProvider;

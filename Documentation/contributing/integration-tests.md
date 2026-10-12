@@ -155,6 +155,14 @@ For in-process mode, change the last two arguments to `"inprocess"` and `"mongod
 
 For database changes in out-of-process mode, set the second argument to `"postgresql"`, `"mssql"`, or `"sqlite"`.
 
+## Per-context storage isolation
+
+The in-process MongoDB lane starts a fresh host for each test context and gives its databases a unique prefix. A previous host can still flush writes after shutdown ([#4790](https://github.com/Cratis/Chronicle/issues/4790)); those writes now land in databases that the next context never reads. Context teardown awaits host disposal without wiping its databases in place. The collection fixture drops only the databases belonging to prefixes it issued when the collection ends.
+
+If you use `Cratis.Chronicle.XUnit.Integration` in your own suite, override `ChronicleFixture.UsesPerContextMongoDBHost` to return `true` for an in-process MongoDB fixture. It defaults to `false`, so package consumers keep the existing shared-host behavior unless they opt in. The prefix is applied by the default MongoDB storage configuration; if your fixture overrides `GetStorageConfigurator`, pass the fixture's `DatabaseNamePrefix` to `WithMongoDB` as `databaseNamePrefix`.
+
+Starting and stopping a host per context costs time: measured Projections shards took about 1.8–3.1 times as long as the shared-host baseline. [The performance follow-up (#4792)](https://github.com/Cratis/Chronicle/issues/4792) tracks that overhead. Out-of-process and remote-kernel lanes are not covered by this isolation; they still use the kernel reset.
+
 ## Consecutive runs
 
 The `Integration/Client` fixtures publish every container port on a random host port, so consecutive runs — or two runs at once — of that suite do not compete for a port. Docker's Ryuk reaper removes the containers when a run ends.

@@ -30,7 +30,7 @@ public class ClosesStreamConstraintsProvider(IClientArtifactsProvider clientArti
             if (property is not null) dimensions |= ClosedStreamDimensions.EventStreamId;
 
             return new ClosesStreamConstraintDefinition(
-                declaration.Name ?? type.Name,
+                ArtifactIdentity.ConstraintNameFor(type, declaration.Name),
                 _ => ConstraintViolationMessage.NotDefined,
                 [eventTypes.GetEventTypeFor(type).Id],
                 dimensions,
