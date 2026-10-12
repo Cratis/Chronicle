@@ -26,6 +26,7 @@ public abstract class ChronicleFixture : IChronicleFixture
     readonly Lock _containerLock = new();
 #endif
 
+    MongoDBContextStorage? _contextStorage;
     MongoDBDatabase? _eventStore;
     MongoDBDatabase? _eventStoreForNamespace;
     MongoDBDatabase? _readModels;
@@ -80,13 +81,24 @@ public abstract class ChronicleFixture : IChronicleFixture
     public INetwork Network { get; }
 
     /// <inheritdoc/>
-    public MongoDBDatabase EventStore => _eventStore ??= new(MongoDBContainer, Constants.EventStoreDatabaseName);
+    public MongoDBDatabase EventStore => _contextStorage?.EventStore ?? (_eventStore ??= new(MongoDBContainer, Constants.EventStoreDatabaseName));
 
     /// <inheritdoc/>
-    public MongoDBDatabase EventStoreForNamespace => _eventStoreForNamespace ??= new(MongoDBContainer, Constants.EventStoreNamespaceDatabaseName);
+    public MongoDBDatabase EventStoreForNamespace => _contextStorage?.EventStoreForNamespace ?? (_eventStoreForNamespace ??= new(MongoDBContainer, Constants.EventStoreNamespaceDatabaseName));
 
     /// <inheritdoc/>
-    public MongoDBDatabase ReadModels => _readModels ??= new(MongoDBContainer, Constants.ReadModelsDatabaseName);
+    public MongoDBDatabase ReadModels => _contextStorage?.ReadModels ?? (_readModels ??= new(MongoDBContainer, Constants.ReadModelsDatabaseName));
+
+    /// <summary>
+    /// Gets a value indicating whether each context owns a fresh in-process host with isolated MongoDB storage.
+    /// </summary>
+    /// <remarks>
+    /// Opt in only for in-process MongoDB fixtures. The default is false; out-of-process and remote kernels
+    /// continue to use the existing kernel reset. Issued databases are dropped when this collection fixture is disposed.
+    /// The prefix is applied by the default MongoDB storage configuration; a fixture that overrides
+    /// <c language="csharp">GetStorageConfigurator</c> must pass the client fixture's <c language="csharp">DatabaseNamePrefix</c> to <c language="csharp">WithMongoDB</c> itself.
+    /// </remarks>
+    public virtual bool UsesPerContextMongoDBHost => false;
 
     /// <summary>
     /// Gets the logger factory for creating loggers.
@@ -96,8 +108,35 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <inheritdoc/>
     public virtual async ValueTask DisposeAsync()
     {
-        await (_container?.DisposeAsync() ?? ValueTask.CompletedTask);
-        await Network.DisposeAsync();
+        if (_contextStorage is null)
+        {
+            await (_container?.DisposeAsync() ?? ValueTask.CompletedTask);
+            await Network.DisposeAsync();
+            return;
+        }
+
+        try
+        {
+            await DropContextDatabases();
+        }
+        finally
+        {
+            try
+            {
+                _contextStorage.ResetReaders();
+            }
+            finally
+            {
+                try
+                {
+                    await (_container?.DisposeAsync() ?? ValueTask.CompletedTask);
+                }
+                finally
+                {
+                    await Network.DisposeAsync();
+                }
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -162,6 +201,16 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <summary>
+    /// Starts a fresh MongoDB storage identity for a test context.
+    /// </summary>
+    /// <returns>The prefix for the new context.</returns>
+    internal string BeginMongoDBContext()
+    {
+        _contextStorage ??= new(name => new(MongoDBContainer, name));
+        return _contextStorage.BeginContext();
+    }
+
+    /// <summary>
     /// Builds the container with the specified network.
     /// </summary>
     /// <param name="network">The network to use.</param>
@@ -183,6 +232,16 @@ public abstract class ChronicleFixture : IChronicleFixture
             parameters.HostConfig = hostConfig;
         })
         : builder;
+
+    async Task DropContextDatabases()
+    {
+        var urlBuilder = new MongoUrlBuilder($"mongodb://{MongoDBContainer.Hostname}:{MongoDBContainer.GetMappedPublicPort(27017)}")
+        {
+            DirectConnection = true
+        };
+        using var client = new MongoClient(MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl()));
+        await _contextStorage!.DropDatabases(client);
+    }
 
     async Task StartContainer(IContainer container)
     {

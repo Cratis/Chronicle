@@ -11,6 +11,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Integration" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Kernel.Integration" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration.Specs" />
     </ItemGroup>

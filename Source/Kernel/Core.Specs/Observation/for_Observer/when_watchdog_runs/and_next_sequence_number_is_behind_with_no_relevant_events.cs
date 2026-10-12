@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
 
@@ -23,7 +24,7 @@ public class and_next_sequence_number_is_behind_with_no_relevant_events : given.
 
         _eventSequence
             .GetNextSequenceNumberGreaterOrEqualTo(_nextSequenceNumber, Arg.Any<IEnumerable<EventType>>())
-            .Returns(EventSequenceNumber.Unavailable);
+            .Returns(GetSequenceNumberError.NotFound);
     }
 
     async Task Because() => await _observer.RunWatchdogAsync();

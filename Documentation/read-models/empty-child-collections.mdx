@@ -9,7 +9,7 @@ A read model with a `[ChildrenFrom<T>]` collection — or a declarative `.Childr
 
 Chronicle never writes a children collection on behalf of the root event. A children path is owned exclusively by the child add and remove operations for the whole lifetime of the read model, and the root projection's initial state is applied with every children path removed.
 
-The reason is replay. Chronicle replays event source partitions independently and in parallel, so a `LineItemAdded` for one partition can be processed before the `OrderPlaced` for the order it belongs to. If the root event were allowed to write `Lines = []`, that empty array would erase the line item the sibling partition had already added.
+The root write must preserve children already stored, including during partition reprocessing. If a `LineItemAdded` has already added a child, allowing `OrderPlaced` to write `Lines = []` would erase it. Projection replay and catch-up each use a single step that reads events in sequence order; only reactors and reducers run that work independently per partition.
 
 ```mermaid
 sequenceDiagram

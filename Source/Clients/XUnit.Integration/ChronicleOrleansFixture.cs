@@ -34,12 +34,18 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     protected override async Task OnBeforeInitializeAsync()
     {
+        if (DatabaseNamePrefix.Length > 0)
+        {
+            await BootstrapKernel();
+            return;
+        }
+
         // The silo is reused across tests. Point the artifacts provider at the current
         // fixture so that DiscoverAll picks up this test's event types, reactors, etc.
         DelegatingClientArtifactsProvider.Instance?.SetCurrent(this);
 
         // Bootstrap before the first client registration as well as after every storage reset.
-        if (_webApplicationFactory is null)
+        if (CurrentWebApplicationFactory is null)
         {
             await BootstrapKernel();
             return;
