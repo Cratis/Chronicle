@@ -10,5 +10,5 @@ public class an_event_source_id : Specification
     void Because() => _key = CanonicalSequencingKey.From(given.golden_keys.Key(0));
 
     [Fact] void should_preserve_the_exact_canonical_bytes() => Convert.ToHexStringLower(_key.Span).ShouldEqual((string)given.golden_keys.Rows().ElementAt(0)[1]);
-    [Fact] void should_describe_the_ordinal_part() => _key.Describe().Parts[0].ShouldEqual(((ValueSequencingKey)given.golden_keys.Key(0)).Parts[0]);
+    [Fact] void should_describe_the_ordinal_part() => _key.Describe().Parts[0].ShouldEqual(((EventSourceIdSequencingKey)given.golden_keys.Key(0)).EventSourceId.Value);
 }

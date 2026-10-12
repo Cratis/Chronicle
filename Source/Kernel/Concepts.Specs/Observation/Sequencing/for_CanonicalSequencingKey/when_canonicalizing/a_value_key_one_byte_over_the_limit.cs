@@ -7,7 +7,7 @@ public class a_value_key_one_byte_over_the_limit : Specification
 {
     Exception? _error;
 
-    void Because() => _error = Catch.Exception(() => CanonicalSequencingKey.From(SequencingKey.ForEventSourceId(new string('a', 8188))));
+    void Because() => _error = Catch.Exception(() => CanonicalSequencingKey.From(new ValueSequencingKey([new string('a', 8188)])));
 
     [Fact] void should_reject_the_value_key() => _error.ShouldBeOfExactType<SequencingKeyTooLarge>();
 }

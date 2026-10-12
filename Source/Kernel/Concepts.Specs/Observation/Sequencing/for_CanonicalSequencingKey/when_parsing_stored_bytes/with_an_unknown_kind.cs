@@ -7,7 +7,7 @@ public class with_an_unknown_kind : Specification
 {
     Exception? _error;
 
-    void Because() => _error = Catch.Exception(() => CanonicalSequencingKey.FromStored(Convert.FromHexString("0200000000")));
+    void Because() => _error = Catch.Exception(() => CanonicalSequencingKey.FromStored(Convert.FromHexString("0300000000")));
 
     [Fact] void should_reject_noncanonical_bytes() => _error.ShouldBeOfExactType<InvalidCanonicalSequencingKey>();
 }

@@ -10,6 +10,11 @@ public sealed record SequencingKeyIdentity
 {
     SequencingKeyIdentity(SequencingKeyKind kind, SequencingKeyHash hash, CanonicalSequencingKey key, SequencingKeySlice slice)
     {
+        if (slice.Value >= SequencingKeySlice.Count)
+        {
+            throw new SequencingKeyIdentityMismatch("slice");
+        }
+
         Kind = kind;
         Hash = hash;
         Key = key;
@@ -69,7 +74,7 @@ public sealed record SequencingKeyIdentity
             throw new SequencingKeyIdentityMismatch("hash");
         }
 
-        if (slice is null || slice != SequencingKeySlice.From(key))
+        if (slice is null || slice.Value >= SequencingKeySlice.Count || slice != SequencingKeySlice.From(key))
         {
             throw new SequencingKeyIdentityMismatch("slice");
         }

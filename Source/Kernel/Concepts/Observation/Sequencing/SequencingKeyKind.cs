@@ -19,5 +19,10 @@ public enum SequencingKeyKind : byte
     /// <summary>
     /// A key for events whose value key could not be resolved.
     /// </summary>
-    Unresolved = 1
+    Unresolved = 1,
+
+    /// <summary>
+    /// A default event source id key whose text cannot be a Value key.
+    /// </summary>
+    EventSourceIdDigest = 2
 }

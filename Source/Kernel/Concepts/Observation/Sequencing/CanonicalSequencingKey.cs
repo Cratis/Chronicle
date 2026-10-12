@@ -27,16 +27,17 @@ public sealed record CanonicalSequencingKey
     public ReadOnlySpan<byte> Span => _bytes;
 
     /// <summary>
-    /// Canonicalizes a logical sequencing key without substituting invalid value text.
+    /// Canonicalizes a logical key, using a digest only for default event source ids or unresolved keys.
     /// </summary>
     /// <param name="key">The logical sequencing key.</param>
     /// <returns>The canonical key.</returns>
     /// <exception cref="InvalidSequencingKey">The key is missing or unsupported.</exception>
     public static CanonicalSequencingKey From(SequencingKey key) => key switch
     {
+        EventSourceIdSequencingKey eventSourceId => FromEventSourceId(eventSourceId),
         ValueSequencingKey value => FromValue(value),
         UnresolvedSequencingKey unresolved => FromUnresolved(unresolved),
-        _ => throw new InvalidSequencingKey("A value or unresolved key is required.")
+        _ => throw new InvalidSequencingKey("An event source id, value, or unresolved key is required.")
     };
 
     /// <summary>
@@ -85,7 +86,7 @@ public sealed record CanonicalSequencingKey
     }
 
     /// <summary>
-    /// Describes the key's parts, unresolved text, or digest for display.
+    /// Describes the key's parts, unresolved text, or digest for display; original event source ids remain on the logical key.
     /// </summary>
     /// <returns>The non-lossy display description.</returns>
     public SequencingKeyDescription Describe() => DescribeBytes(Span);
@@ -101,6 +102,26 @@ public sealed record CanonicalSequencingKey
 
     /// <inheritdoc/>
     public override int GetHashCode() => unchecked((int)SequencingKeySliceHash.Hash(Span));
+
+    static CanonicalSequencingKey FromEventSourceId(EventSourceIdSequencingKey key)
+    {
+        var text = key.EventSourceId.Value;
+        if (SequencingKeyText.TryByteCount(text, MaximumLength - 5, out var length))
+        {
+            var bytes = new byte[5 + length];
+            bytes[0] = (byte)SequencingKeyKind.Value;
+            var offset = 1;
+            WriteText(text, length, bytes, ref offset);
+
+            return new(bytes);
+        }
+
+        var digestBytes = new byte[33];
+        digestBytes[0] = (byte)SequencingKeyKind.EventSourceIdDigest;
+        SequencingKeyText.Utf16Digest(text).CopyTo(digestBytes, 1);
+
+        return new(digestBytes);
+    }
 
     static CanonicalSequencingKey FromValue(ValueSequencingKey key)
     {
@@ -170,6 +191,7 @@ public sealed record CanonicalSequencingKey
         {
             SequencingKeyKind.Value => DescribeValue(bytes),
             SequencingKeyKind.Unresolved => DescribeUnresolved(bytes),
+            SequencingKeyKind.EventSourceIdDigest => DescribeEventSourceIdDigest(bytes),
             _ => throw new InvalidCanonicalSequencingKey("The kind byte is unknown.")
         };
     }
@@ -224,6 +246,16 @@ public sealed record CanonicalSequencingKey
             default:
                 throw new InvalidCanonicalSequencingKey("The unresolved form byte is unknown.");
         }
+    }
+
+    static SequencingKeyDescription DescribeEventSourceIdDigest(ReadOnlySpan<byte> bytes)
+    {
+        if (bytes.Length != 33)
+        {
+            throw new InvalidCanonicalSequencingKey("The event source id digest must contain exactly thirty-two bytes.");
+        }
+
+        return new(SequencingKeyKind.EventSourceIdDigest, [], null, Convert.ToHexStringLower(bytes[1..]));
     }
 
     static string ReadText(ReadOnlySpan<byte> bytes, ref int offset)

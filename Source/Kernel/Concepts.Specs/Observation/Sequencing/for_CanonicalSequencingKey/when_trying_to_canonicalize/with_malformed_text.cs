@@ -9,7 +9,7 @@ public class with_malformed_text : Specification
     CanonicalSequencingKey? _key;
     CanonicalSequencingKeyRejection _rejection;
 
-    void Because() => _accepted = CanonicalSequencingKey.TryFrom(SequencingKey.ForEventSourceId("\uD800"), out _key, out _rejection);
+    void Because() => _accepted = CanonicalSequencingKey.TryFrom(new ValueSequencingKey(["\uD800"]), out _key, out _rejection);
 
     [Fact] void should_refuse_canonicalization() => _accepted.ShouldBeFalse();
     [Fact] void should_not_substitute_another_key() => _key.ShouldBeNull();

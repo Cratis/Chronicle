@@ -14,5 +14,6 @@ public class when_slicing_the_golden_keys : Specification
         SequencingKeyHash.From(key).ToString().ShouldEqual(hashHex);
         SequencingKeySliceHash.Hash(key.Span).ShouldEqual(hash);
         SequencingKeySlice.From(key).Value.ShouldEqual(slice);
+        (SequencingKeySlice.From(key).Value < SequencingKeySlice.Count).ShouldBeTrue();
     }
 }

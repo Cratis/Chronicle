@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 namespace Cratis.Chronicle.Concepts.Observation.Sequencing;
 
 /// <summary>
-/// Represents a logical value or unresolved sequencing key.
+/// Represents a logical event source id, value, or unresolved sequencing key.
 /// </summary>
 public abstract record SequencingKey
 {
@@ -17,7 +17,7 @@ public abstract record SequencingKey
     /// <exception cref="InvalidSequencingKey">A foreign record tries to derive from the closed hierarchy.</exception>
     protected SequencingKey(SequencingKey original)
     {
-        if (original is null || this is not ValueSequencingKey and not UnresolvedSequencingKey)
+        if (original is null || this is not EventSourceIdSequencingKey and not ValueSequencingKey and not UnresolvedSequencingKey)
         {
             throw new InvalidSequencingKey("The sequencing key hierarchy is closed.");
         }
@@ -31,20 +31,12 @@ public abstract record SequencingKey
     }
 
     /// <summary>
-    /// Creates the default value key for an event source id without substituting malformed text.
+    /// Creates a default event source id key, retaining its original text for delivery and display.
     /// </summary>
     /// <param name="eventSourceId">The event source identity.</param>
-    /// <returns>A single-part value key.</returns>
+    /// <returns>A logical key whose canonical form is a Value key or a bounded event source id digest.</returns>
     /// <exception cref="InvalidSequencingKey">The event source identity is missing.</exception>
-    public static ValueSequencingKey ForEventSourceId(EventSourceId eventSourceId)
-    {
-        if (eventSourceId is null || eventSourceId.Value is null)
-        {
-            throw new InvalidSequencingKey("An event source id is required.");
-        }
-
-        return new([eventSourceId.Value]);
-    }
+    public static EventSourceIdSequencingKey ForEventSourceId(EventSourceId eventSourceId) => new(eventSourceId);
 
     /// <summary>
     /// Creates an unresolved key for any non-null event type id.

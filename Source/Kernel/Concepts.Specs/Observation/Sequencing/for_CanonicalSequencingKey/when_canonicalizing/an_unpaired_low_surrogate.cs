@@ -7,7 +7,7 @@ public class an_unpaired_low_surrogate : Specification
 {
     Exception? _error;
 
-    void Because() => _error = Catch.Exception(() => CanonicalSequencingKey.From(SequencingKey.ForEventSourceId("a\uDC00b")));
+    void Because() => _error = Catch.Exception(() => CanonicalSequencingKey.From(new ValueSequencingKey(["a\uDC00b"])));
 
     [Fact] void should_reject_the_value_key() => _error.ShouldBeOfExactType<InvalidSequencingKeyText>();
 }

@@ -16,7 +16,7 @@ public sealed record SequencingKeyDescription
     /// <param name="kind">The key domain.</param>
     /// <param name="parts">The value parts.</param>
     /// <param name="text">The unresolved text, if present.</param>
-    /// <param name="digestHex">The unresolved digest, if present.</param>
+    /// <param name="digestHex">The event source id or unresolved UTF-16 digest, if present.</param>
     internal SequencingKeyDescription(SequencingKeyKind kind, ImmutableArray<string> parts, string? text, string? digestHex)
     {
         Kind = kind;
@@ -31,7 +31,7 @@ public sealed record SequencingKeyDescription
     public SequencingKeyKind Kind { get; }
 
     /// <summary>
-    /// Gets the value key parts, or an empty array for an unresolved key.
+    /// Gets the value key parts, or an empty array for an unresolved or event source id digest key.
     /// </summary>
     public ImmutableArray<string> Parts { get; }
 
