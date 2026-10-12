@@ -82,9 +82,24 @@ internal static class RegisteredObserverMetadata
             throw new InvalidExplicitArtifact(type, kind.ToString(), "A concrete closed observer type is required.");
         }
         var catalog = provider is null ? null : ExplicitArtifactCatalog.From(provider);
-        var markedReactor = type.IsAssignableTo(typeof(IReactor)) || type.IsDefined(typeof(ReactorAttribute)) || catalog?.IsExplicit(type, ExplicitArtifactKind.Reactor) == true;
-        var markedReducer = type.IsAssignableTo(typeof(IReducer)) || type.IsDefined(typeof(ReducerAttribute)) || catalog?.IsExplicit(type, ExplicitArtifactKind.Reducer) == true;
-        if ((kind == ExplicitArtifactKind.Reactor && markedReducer) || (kind == ExplicitArtifactKind.Reducer && markedReactor))
+        ValidateKinds(
+            type,
+            kind == ExplicitArtifactKind.Reactor || catalog?.IsExplicit(type, ExplicitArtifactKind.Reactor) == true,
+            kind == ExplicitArtifactKind.Reducer || catalog?.IsExplicit(type, ExplicitArtifactKind.Reducer) == true);
+    }
+
+    /// <summary>
+    /// Validates observer kind intent against every observer marker, including non-generic reducers.
+    /// </summary>
+    /// <param name="type">The nominated type.</param>
+    /// <param name="isReactor">Whether reactor intent was declared.</param>
+    /// <param name="isReducer">Whether reducer intent was declared.</param>
+    /// <exception cref="ConflictingArtifactKind">Both observer kinds are declared.</exception>
+    internal static void ValidateKinds(Type type, bool isReactor, bool isReducer)
+    {
+        var markedReactor = type.IsAssignableTo(typeof(IReactor)) || type.IsDefined(typeof(ReactorAttribute));
+        var markedReducer = type.IsAssignableTo(typeof(IReducer)) || type.IsDefined(typeof(ReducerAttribute));
+        if ((isReactor || markedReactor) && (isReducer || markedReducer))
         {
             throw new ConflictingArtifactKind(type, nameof(ExplicitArtifactKind.Reactor), nameof(ExplicitArtifactKind.Reducer));
         }

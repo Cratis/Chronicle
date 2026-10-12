@@ -200,13 +200,7 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
         {
             var isReactor = group.Any(_ => _.Kind == ExplicitArtifactKind.Reactor);
             var isReducer = group.Any(_ => _.Kind == ExplicitArtifactKind.Reducer);
-            var markedReactor = group.Key.IsAssignableTo(typeof(IReactor)) || group.Key.IsDefined(typeof(ReactorAttribute));
-            var markedReducer = group.Key.GetInterfaces().Any(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IReducerFor<>)) ||
-                group.Key.IsDefined(typeof(ReducerAttribute));
-            if ((isReactor && (isReducer || markedReducer)) || (isReducer && markedReactor))
-            {
-                throw new ConflictingArtifactKind(group.Key, nameof(ExplicitArtifactKind.Reactor), nameof(ExplicitArtifactKind.Reducer));
-            }
+            if (isReactor || isReducer) RegisteredObserverMetadata.ValidateKinds(group.Key, isReactor, isReducer);
         }
     }
 
