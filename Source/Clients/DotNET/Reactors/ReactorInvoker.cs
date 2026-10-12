@@ -8,6 +8,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
+using Cratis.Chronicle.Registrations;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors;
@@ -119,7 +120,7 @@ public class ReactorInvoker(
                 await middlewares.BeforeInvoke(reactorId, eventContext, content);
 
                 var arguments = _argumentsResolver is IRegisteredReactorMethodArgumentsResolver registeredResolver &&
-                    RegisteredId is { } registeredId && RegisteredEventSequenceId is { } registeredSequence
+                    method.GetParameters().Any(parameter => parameter.ParameterType == typeof(ReactorDelivery))
                     ? await registeredResolver.Resolve(
                         method,
                         activatedReactor.Instance,
@@ -127,7 +128,7 @@ public class ReactorInvoker(
                         eventContext,
                         eventStore,
                         serviceProvider,
-                        ReactorDelivery.For(registeredId, registeredSequence, eventContext))
+                        ResolveDelivery(reactorId, eventContext))
                     : await _argumentsResolver.Resolve(
                         method,
                         activatedReactor.Instance,
@@ -177,6 +178,18 @@ public class ReactorInvoker(
                 logger.ReactorMiddlewareAfterInvokeFailed(reactorId, eventTypeName, ex);
             }
         }
+    }
+
+    ReactorDelivery ResolveDelivery(ReactorId reactorId, EventContext eventContext)
+    {
+        var sequence = RegisteredEventSequenceId ?? RegisteredObserverMetadata.SequenceFor(
+            targetType,
+            targetType.GetCustomAttribute<ReactorAttribute>()?.EventSequenceId,
+            eventTypes,
+            eventStore?.Name ?? eventContext.EventStore,
+            () => _methodsByEventType.AllEventTypes.Select(eventTypes.GetEventTypeFor));
+
+        return ReactorDelivery.For(reactorId, sequence, eventContext);
     }
 
     async Task<ReactorInvocationResult?> HandleReturnValue(MethodInfo method, object? returnValue, EventContext eventContext)
