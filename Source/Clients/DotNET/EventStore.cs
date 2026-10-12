@@ -129,7 +129,7 @@ public partial class EventStore : IEventStore
         DecisionReadSchemas = schemaGenerator;
         DecisionReadJsonOptions = jsonSerializerOptions;
         _autoDiscoverAndRegister = autoDiscoverAndRegister;
-        _preparation = new();
+        _preparation = new(PublishLocalPreparationFailure);
         var explicitSnapshot = options.Value.ExplicitArtifacts.CreateSnapshot();
         _storeArtifacts = new(clientArtifactsProvider, explicitSnapshot);
         clientArtifactsProvider = _storeArtifacts;
@@ -502,7 +502,8 @@ public partial class EventStore : IEventStore
                 ThrowIfIdentityDriftMustFail(drift);
                 effectsStarted = true;
                 await RegisterAllArtifactsWithRetries(registerEventTypes, registerReadModels);
-                Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations) { IdentityDrift = drift };
+                Preparation.PublishRegistrationOutcome(failure =>
+                    Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, failure) { IdentityDrift = drift });
             });
         }
         catch (Exception exception)
@@ -513,7 +514,9 @@ public partial class EventStore : IEventStore
             // registered before the failure is reported alongside it, because a partial read side is what the
             // consumer now has. The connection lifecycle still gets the exception, and a later reconnect that
             // succeeds replaces this outcome wholesale.
-            Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, exception) { IdentityDrift = drift };
+            Preparation.PublishRegistrationOutcome(
+                failure => Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, failure) { IdentityDrift = drift },
+                exception);
             if (effectsStarted && exception is not (ArtifactIdentityDriftDetected or ArtifactPreparationReentered))
             {
                 StartBackgroundRegistrationRetry();
@@ -617,7 +620,7 @@ public partial class EventStore : IEventStore
                 catch (Exception exception) when (exception is ArtifactIdentityDriftDetected or ArtifactPreparationReentered || Preparation.LatestVerdict.IsFaulted)
                 {
                     // A failed local revision or payload is retained until explicit successful rediscovery.
-                    // RegisterAll already published its exact failure; retrying the same verdict cannot recover it.
+                    // The local revision published its own exact failure; retrying the same verdict cannot recover it.
                     return;
                 }
                 catch (Exception exception)

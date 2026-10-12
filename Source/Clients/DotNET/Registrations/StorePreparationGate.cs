@@ -6,7 +6,8 @@ namespace Cratis.Chronicle.Registrations;
 /// <summary>
 /// Publishes preparation verdicts before local work and serializes registration with subsequent rediscovery.
 /// </summary>
-internal sealed class StorePreparationGate
+/// <param name="preparationFailed">Publishes the exact failure of the current local revision.</param>
+internal sealed class StorePreparationGate(Action<Exception>? preparationFailed = null)
 {
     readonly object _lock = new();
     readonly ArtifactPreparationLease _lease = new();
@@ -72,7 +73,22 @@ internal sealed class StorePreparationGate
         if (owner is not { Active: true }) throw new ArtifactPreparationReentered();
         lock (_lock)
         {
-            owner.Revision.PayloadVerdict ??= Task.FromException(failure);
+            if (owner.Revision.PayloadVerdict is not null) return;
+            owner.Revision.PayloadVerdict = Task.FromException(failure);
+            RecordFailure(owner.Revision, failure);
+        }
+    }
+
+    /// <summary>
+    /// Publishes an outcome atomically with local verdicts, so an older transport result cannot overwrite a newer local failure.
+    /// </summary>
+    /// <param name="publish">The outcome publication operation.</param>
+    /// <param name="failure">The registration failure, or null for success.</param>
+    internal void PublishRegistrationOutcome(Action<Exception?> publish, Exception? failure = null)
+    {
+        lock (_lock)
+        {
+            publish(_current?.Failure ?? failure);
         }
     }
 
@@ -146,7 +162,11 @@ internal sealed class StorePreparationGate
         }
         catch (Exception exception)
         {
-            revision.Completion.TrySetException(exception);
+            lock (_lock)
+            {
+                RecordFailure(revision, exception);
+                revision.Completion.TrySetException(exception);
+            }
         }
         finally
         {
@@ -156,9 +176,17 @@ internal sealed class StorePreparationGate
         }
     }
 
+    void RecordFailure(Revision revision, Exception failure)
+    {
+        revision.Failure ??= failure;
+        if (ReferenceEquals(_current, revision)) preparationFailed?.Invoke(revision.Failure);
+    }
+
     sealed class Revision
     {
         internal volatile Task? PayloadVerdict;
+
+        internal Exception? Failure { get; set; }
 
         internal TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 

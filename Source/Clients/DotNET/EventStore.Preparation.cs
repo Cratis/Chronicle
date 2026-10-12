@@ -14,7 +14,7 @@ public partial class EventStore
     /// </summary>
     internal Task LatestPreparationVerdict => _preparation?.LatestVerdict ?? Task.CompletedTask;
 
-    StorePreparationGate Preparation => LazyInitializer.EnsureInitialized(ref _preparation);
+    StorePreparationGate Preparation => LazyInitializer.EnsureInitialized(ref _preparation, () => new(PublishLocalPreparationFailure));
 
     /// <summary>
     /// Rejects registration callback reentry before joining an unfinished task.
@@ -25,6 +25,9 @@ public partial class EventStore
     /// Detaches a failed store's constructor-installed callback before cache eviction.
     /// </summary>
     internal void DetachAutomaticRegistration() => Connection.Lifecycle.OnConnected -= RegisterAll;
+
+    void PublishLocalPreparationFailure(Exception failure) =>
+        Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, failure) { IdentityDrift = Registration.IdentityDrift };
 
     Task ValidateManualPreparation() => EventTypes is EventTypes native ? native.ValidatePreparation() : Task.CompletedTask;
 
