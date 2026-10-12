@@ -49,6 +49,7 @@ public class and_events_are_registered_without_markers : Specification
         artifacts.Reducers.Returns([]);
         var reactors = Substitute.For<IReactors>();
         var handler = Substitute.For<IReactorHandler>();
+        handler.ReactorType.Returns(reactorType);
         var handledEventTypes = ReactorInvoker.GetEventTypesFor(_registry, reactorType);
         handler.EventTypes.Returns(handledEventTypes);
         reactors.GetHandlerFor(reactorType).Returns(handler);

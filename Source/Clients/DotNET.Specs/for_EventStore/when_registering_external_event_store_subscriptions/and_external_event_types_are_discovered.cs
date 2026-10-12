@@ -33,6 +33,7 @@ public class and_external_event_types_are_discovered : Specification
         var eventTypes = new EventTypesForSpecifications([typeof(external_user_invited)]);
         var reactors = Substitute.For<IReactors>();
         var handler = Substitute.For<IReactorHandler>();
+        handler.ReactorType.Returns(typeof(external_event_reactor));
         handler.EventTypes.Returns(ReactorInvoker.GetEventTypesFor(eventTypes, typeof(external_event_reactor)));
         reactors.GetHandlerFor(clientArtifactsProvider.Reactors.Single()).Returns(handler);
 

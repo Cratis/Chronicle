@@ -721,10 +721,17 @@ public partial class EventStore : IEventStore
     async Task RegisterExternalEventStoreSubscriptionsAsync()
     {
         var currentStoreName = _eventStoreName.Value;
+        var reactorHandlers = Reactors is Reactors.Reactors reactors
+            ? reactors.Handlers
+            : _clientArtifactsProvider.Reactors.Select(Reactors.GetHandlerFor);
 
         var observerExternalSubscriptions = _clientArtifactsProvider.Reactors
             .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReactorAttribute>()?.EventSequenceId))
-            .Select(type => (Type: type, HandledEventTypes: Reactors.GetHandlerFor(type).EventTypes))
+            .Join(
+                reactorHandlers,
+                type => type,
+                handler => handler.ReactorType,
+                (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes))
             .Concat(_clientArtifactsProvider.Reducers
                 .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReducerAttribute>()?.EventSequenceId))
                 .Select(type => (Type: type, HandledEventTypes: Reducers.GetHandlerFor(type).EventTypes)))

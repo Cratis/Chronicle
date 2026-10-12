@@ -46,6 +46,7 @@ public class and_observers_with_event_store_attribute_are_combined_into_single_f
         foreach (var type in clientArtifactsProvider.Reactors)
         {
             var handler = Substitute.For<IReactorHandler>();
+            handler.ReactorType.Returns(type);
             handler.EventTypes.Returns(ReactorInvoker.GetEventTypesFor(eventTypes, type));
             reactors.GetHandlerFor(type).Returns(handler);
         }
