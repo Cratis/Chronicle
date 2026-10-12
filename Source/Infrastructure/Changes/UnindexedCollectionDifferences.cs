@@ -3,6 +3,7 @@
 
 using System.Collections;
 using System.Dynamic;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Changes;
@@ -132,7 +133,7 @@ public static class UnindexedCollectionDifferences
             .OfType<ExpandoObject>()
             .Cast<IDictionary<string, object?>>()
             .SingleOrDefault(_ =>
-                _.TryGetValue(indexer.IdentifierProperty.Path, out var identifier) &&
+                ChildIdentity.TryGetValue(_, indexer.IdentifierProperty, out var identifier) &&
                 Equals(identifier, indexer.Identifier));
     }
 }
