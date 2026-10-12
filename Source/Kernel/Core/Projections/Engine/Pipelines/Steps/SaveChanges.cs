@@ -68,7 +68,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
             }
 
             // TODO: Return the number of affected records and pass this along to the changeset storage
-            var failedPartitions = await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber, WriteModeFor(projection, context));
+            var failedPartitions = await ApplyMainChanges(projection, context, pendingSavesToFold);
 
             if (failedPartitions.Any())
             {
@@ -96,6 +96,14 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
         return context;
     }
 
+    Task<IEnumerable<FailedPartition>> ApplyMainChanges(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
+    {
+        var mode = WriteModeFor(projection, context);
+        return foldedFutureSaves.Length > 0
+            ? sink.ApplyChangesImmediately(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode)
+            : sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode);
+    }
+
     async Task ApplyPendingFutureSaves(ProjectionEventContext context)
     {
         var foldedSet = context.Changeset.HasChanges
@@ -111,13 +119,13 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
 
     async Task ApplyPendingFutureSave(ProjectionEventContext context, PendingFutureSave pendingSave)
     {
-        var failedPartitions = (await sink.ApplyChanges(pendingSave.Key, pendingSave.Changeset, context.Event.Context.SequenceNumber)).ToArray();
+        var failedPartitions = (await sink.ApplyChangesImmediately(pendingSave.Key, pendingSave.Changeset, context.Event.Context.SequenceNumber, SinkWriteMode.Always)).ToArray();
         foreach (var failedPartition in failedPartitions)
         {
             context.AddFailedPartition(failedPartition);
         }
 
-        if (failedPartitions.Length == 0)
+        if (!failedPartitions.Any(failure => Equals(failure.EventSourceId.Value, pendingSave.Key.Value)))
         {
             await ResolveSavedFuture(pendingSave);
         }
