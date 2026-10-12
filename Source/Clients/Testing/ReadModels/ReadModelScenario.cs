@@ -355,17 +355,20 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <param name="eventSourceType">The event source type.</param>
     /// <param name="eventStreamType">The event stream type.</param>
     /// <param name="eventStreamId">The event stream identifier.</param>
+    /// <param name="tags">Append tags to combine with static event tags.</param>
     internal void CollectEventsFor(
         EventSourceId eventSourceId,
         IEnumerable<object> events,
         EventSourceType eventSourceType,
         EventStreamType eventStreamType,
-        EventStreamId eventStreamId)
+        EventStreamId eventStreamId,
+        IEnumerable<string>? tags = null)
     {
+        var appendTags = tags?.ToArray() ?? [];
         _processed = false;
         foreach (var @event in events)
         {
-            _collectedEvents.Add(new(eventSourceId, @event, eventSourceType, eventStreamType, eventStreamId));
+            _collectedEvents.Add(new(eventSourceId, @event, eventSourceType, eventStreamType, eventStreamId, @event.GetType().GetTags().Concat(appendTags).Distinct(StringComparer.Ordinal).ToArray()));
         }
     }
 
@@ -450,7 +453,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 {
                     EventSourceType = e.EventSourceType,
                     EventStreamType = e.EventStreamType,
-                    EventStreamId = e.EventStreamId
+                    EventStreamId = e.EventStreamId,
+                    Tags = e.Tags
                 }),
                 EventStore(),
                 _eventTypes,

@@ -69,12 +69,15 @@ internal static class ReducerReadModelProcessor
                 @event.EventStreamType,
                 @event.EventStreamId,
                 (EventSequenceNumber)(ulong)index,
-                CorrelationId.NotSet);
+                CorrelationId.NotSet) with
+            {
+                Tags = @event.Event.GetType().GetTags().Concat(@event.Tags).Distinct(StringComparer.Ordinal).Select(tag => new Tag(tag)).ToArray()
+            };
         }).ToArray();
         var (prepared, _) = await ReadModelEvents.Prepare(eventStore, eventsList.Select(input => (input.EventSourceId, input.Event)).ToArray(), contexts);
-        var filters = new ObserverRouteFilter(reducerType, eventStore.EventSources);
+        var filters = new ObserverRouteFilter(reducerType, eventStore.EventSources, includeTagFilters: true);
         var eventsAndContexts = new List<EventAndContext>();
-        foreach (var index in Enumerable.Range(0, prepared.Length).Where(index => filters.Matches(prepared[index])))
+        foreach (var index in Enumerable.Range(0, prepared.Length).Where(index => filters.MatchesClient(contexts[index])))
         {
             var delivered = prepared[index];
             var type = new EventType(new(delivered.Context.EventType.Id.Value), new(delivered.Context.EventType.Generation.Value));
