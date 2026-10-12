@@ -21,11 +21,12 @@ internal sealed record ExplicitArtifactsSnapshot(
     ImmutableArray<(ReactorId Id, Action<IReactorBuilder> Define)> Reactors)
 {
     /// <summary>
-    /// Copies discovery and merges this snapshot into a store-local catalog.
+    /// Preserves empty options or merges nominated artifacts into a store-local catalog.
     /// </summary>
     /// <param name="discovered">The native discovery provider for this preparation revision.</param>
-    /// <returns>The immutable catalog for this revision.</returns>
-    internal ExplicitArtifactCatalog ApplyTo(IClientArtifactsProvider discovered) => new(discovered, this);
+    /// <returns>The original provider for empty options, otherwise the immutable catalog for this revision.</returns>
+    internal IClientArtifactsProvider ApplyTo(IClientArtifactsProvider discovered) =>
+        EventTypes.IsEmpty && Types.IsEmpty && Projections.IsEmpty && Reactors.IsEmpty ? discovered : new ExplicitArtifactCatalog(discovered, this);
 
     /// <summary>
     /// Applies the captured projection recipes before discovery.

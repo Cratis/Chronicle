@@ -55,10 +55,11 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
         SecurityForPropertiesProviders = Copy(discovered.SecurityForPropertiesProviders);
         AdditionalEventInformationProviders = Copy(discovered.AdditionalEventInformationProviders);
         EventSeeders = Copy(discovered.EventSeeders);
-        UniqueConstraints = Union(discovered.UniqueConstraints, EventTypes.Where(_ => _.GetProperties().Any(p => p.IsDefined(typeof(UniqueAttribute)))));
-        UniqueEventTypeConstraints = Union(discovered.UniqueEventTypeConstraints, EventTypes.Where(_ => _.IsDefined(typeof(UniqueAttribute))));
-        RemoveConstraintEventTypes = Union(discovered.RemoveConstraintEventTypes, EventTypes.Where(_ => _.IsDefined(typeof(RemoveConstraintAttribute))));
-        ClosesStreamEventTypes = Union(discovered.ClosesStreamEventTypes, EventTypes.Where(_ => _.IsDefined(typeof(ClosesStreamAttribute))));
+        var nominatedEvents = snapshot.EventTypes.Select(_ => _.Type).Distinct().ToArray();
+        UniqueConstraints = Union(discovered.UniqueConstraints, nominatedEvents.Where(_ => _.GetProperties().Any(p => p.IsDefined(typeof(UniqueAttribute)))));
+        UniqueEventTypeConstraints = Union(discovered.UniqueEventTypeConstraints, nominatedEvents.Where(_ => _.IsDefined(typeof(UniqueAttribute))));
+        RemoveConstraintEventTypes = Union(discovered.RemoveConstraintEventTypes, nominatedEvents.Where(_ => _.IsDefined(typeof(RemoveConstraintAttribute))));
+        ClosesStreamEventTypes = Union(discovered.ClosesStreamEventTypes, nominatedEvents.Where(_ => _.IsDefined(typeof(ClosesStreamAttribute))));
 
         _eventDeclarations = new(EventTypes, snapshot.EventTypes);
         _identities = snapshot.Types.GroupBy(_ => (_.Type, _.Kind)).ToFrozenDictionary(_ => _.Key, MergeIdentity);

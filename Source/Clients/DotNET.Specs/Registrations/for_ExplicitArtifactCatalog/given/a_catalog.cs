@@ -11,7 +11,7 @@ public class a_catalog : Specification
 {
     protected ExplicitArtifacts _options;
     protected IClientArtifactsProvider _discovered;
-    private protected ExplicitArtifactCatalog _catalog;
+    protected IClientArtifactsProvider _catalog;
     protected EventStoreName _store;
 
     void Establish()
@@ -40,7 +40,7 @@ public class a_catalog : Specification
     protected static CustomAttributeBuilder AttributeFor<T>(Type[] parameters, params object[] values)
         where T : Attribute => new(typeof(T).GetConstructor(parameters)!, values);
 
-    private protected EventTypeDescriptor DescriptorFor(Type type) => _catalog.GetEventDescriptorFor(type, _store);
+    private protected EventTypeDescriptor DescriptorFor(Type type) => ExplicitArtifactCatalog.From(_catalog)!.GetEventDescriptorFor(type, _store);
 
     public record PlainEvent;
 

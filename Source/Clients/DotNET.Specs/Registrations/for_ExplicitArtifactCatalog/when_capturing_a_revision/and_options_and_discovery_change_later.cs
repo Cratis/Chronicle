@@ -7,7 +7,7 @@ public class and_options_and_discovery_change_later : given.a_catalog
 {
     ExplicitArtifactsSnapshot _snapshot;
     List<Type> _nativeEvents;
-    ExplicitArtifactCatalog _nextRevision;
+    IClientArtifactsProvider _nextRevision;
 
     void Establish()
     {
@@ -28,5 +28,5 @@ public class and_options_and_discovery_change_later : given.a_catalog
     [Fact] void should_keep_the_original_discovery_revision_immutable() => _catalog.EventTypes.ShouldContainOnly(typeof(PlainEvent), typeof(OtherEvent));
     [Fact] void should_recapture_native_discovery_on_explicit_rediscovery() => _nextRevision.EventTypes.ShouldContainOnly(typeof(PlainEvent), typeof(OtherEvent), typeof(PlainArtifact));
     [Fact] void should_not_recapture_new_options_recipes() => _snapshot.EventTypes.Select(_ => _.Type).ShouldContainOnly(typeof(OtherEvent));
-    [Fact] void should_keep_the_captured_identity() => _nextRevision.GetEventDescriptorFor(typeof(OtherEvent), _store).EventType.Id.Value.ShouldEqual("captured");
+    [Fact] void should_keep_the_captured_identity() => ExplicitArtifactCatalog.From(_nextRevision)!.GetEventDescriptorFor(typeof(OtherEvent), _store).EventType.Id.Value.ShouldEqual("captured");
 }

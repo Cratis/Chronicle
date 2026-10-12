@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Registrations;
 /// <param name="snapshot">The options recipes captured at store construction.</param>
 internal sealed class StoreClientArtifactsProvider(IClientArtifactsProvider native, ExplicitArtifactsSnapshot snapshot) : IClientArtifactsProvider
 {
-    ExplicitArtifactCatalog? _catalog;
+    IClientArtifactsProvider? _catalog;
 
     /// <inheritdoc/>
     public IEnumerable<Type> EventTypes => Current.EventTypes;

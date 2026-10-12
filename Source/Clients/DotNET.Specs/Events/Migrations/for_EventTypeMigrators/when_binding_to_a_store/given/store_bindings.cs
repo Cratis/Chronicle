@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Events.Migrations.for_EventTypeMigrators.when_binding
 public class store_bindings : a_plain_migration
 {
     protected IClientArtifactsProvider _discovered;
-    private protected ExplicitArtifactCatalog _catalog;
+    protected IClientArtifactsProvider _catalog;
     protected IEventTypeMigrators _bound;
 
     void Establish()
