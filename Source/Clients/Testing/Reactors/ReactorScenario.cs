@@ -312,7 +312,8 @@ public class ReactorScenario<TReactor> : IDisposable
             argumentsResolver: new ScenarioReactorMethodArgumentsResolver(new ReactorMethodArgumentsResolver(), _absentReadModels),
             serviceProvider: serviceProvider)
         {
-            RegisteredId = RegisteredObserverMetadata.ReactorIdFor(_defaults.ClientArtifactsProvider, typeof(TReactor))
+            RegisteredId = RegisteredObserverMetadata.ReactorIdFor(_defaults.ClientArtifactsProvider, typeof(TReactor)),
+            RegisteredEventSequenceId = typeof(TReactor).GetEventSequenceId(_eventTypes, eventStore.Name)
         };
 
         foreach (var @event in events)

@@ -5,6 +5,7 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Microsoft.Extensions.Logging;
@@ -73,6 +74,11 @@ public class ReactorInvoker(
     internal ReactorId? RegisteredId { get; init; }
 
     /// <summary>
+    /// Gets the owning registration's resolved event sequence.
+    /// </summary>
+    internal EventSequenceId? RegisteredEventSequenceId { get; init; }
+
+    /// <summary>
     /// Gets all <see cref="EventType"/> for a specific reactor type.
     /// </summary>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event types.</param>
@@ -112,13 +118,23 @@ public class ReactorInvoker(
             {
                 await middlewares.BeforeInvoke(reactorId, eventContext, content);
 
-                var arguments = await _argumentsResolver.Resolve(
-                    method,
-                    activatedReactor.Instance,
-                    content,
-                    eventContext,
-                    eventStore,
-                    serviceProvider);
+                var arguments = _argumentsResolver is IRegisteredReactorMethodArgumentsResolver registeredResolver &&
+                    RegisteredId is { } registeredId && RegisteredEventSequenceId is { } registeredSequence
+                    ? await registeredResolver.Resolve(
+                        method,
+                        activatedReactor.Instance,
+                        content,
+                        eventContext,
+                        eventStore,
+                        serviceProvider,
+                        ReactorDelivery.For(registeredId, registeredSequence, eventContext))
+                    : await _argumentsResolver.Resolve(
+                        method,
+                        activatedReactor.Instance,
+                        content,
+                        eventContext,
+                        eventStore,
+                        serviceProvider);
 
                 var returnValue = method.Invoke(activatedReactor.Instance, arguments);
 

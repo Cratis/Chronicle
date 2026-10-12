@@ -739,7 +739,8 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             serviceProviderScope.ServiceProvider)
         {
             StoppingToken = cancellationToken,
-            RegisteredId = handler.Id
+            RegisteredId = handler.Id,
+            RegisteredEventSequenceId = handler.EventSequenceId
         };
 
         foreach (var @event in events.Events)
