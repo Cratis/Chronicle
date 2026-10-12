@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 public class MongoDBDatabase : IDisposable
 {
     readonly Subject<ChangeStreamDocument<BsonDocument>> _changes = new();
-    readonly MongoClient _mongoClient;
+    readonly MongoClient? _mongoClient;
 
     /// <summary>
     /// Initializes a new instance of <see cref="MongoDBDatabase"/>.
@@ -77,6 +77,12 @@ public class MongoDBDatabase : IDisposable
     }
 
     /// <summary>
+    /// Initializes a reader over a supplied database without starting a change stream.
+    /// </summary>
+    /// <param name="database">The database handle.</param>
+    internal MongoDBDatabase(IMongoDatabase database) => Database = database;
+
+    /// <summary>
     /// Gets the <see cref="IMongoDatabase"/> for the database.
     /// </summary>
     public IMongoDatabase Database { get; }
@@ -90,7 +96,7 @@ public class MongoDBDatabase : IDisposable
     public void Dispose()
     {
         _changes.Dispose();
-        _mongoClient.Dispose();
+        _mongoClient?.Dispose();
     }
 
     /// <summary>

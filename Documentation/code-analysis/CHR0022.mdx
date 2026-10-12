@@ -24,7 +24,7 @@ Warning
 
 A reactor observes events and produces side effects. When a handler **returns** an event, Chronicle appends it to the event log as a follow-up fact. Reactors are also re-run during replay operations — observer rewind, redaction, and revision — so a handler that appends an event and is not idempotent would append that event a second time on every replay, producing duplicate facts and, in turn, incorrect projected state.
 
-`[OnceOnly]` tells Chronicle to run the handler a single time per event source and to skip it during replays, so the side-effect event is appended exactly once. Side effects that are naturally idempotent, or that do not append events, don't need it — which is why the rule targets specifically the methods that *return* events.
+`[OnceOnly]` excludes the handler from replay; it does not mean once per event source or guarantee exactly-once side effects. Failed-partition recovery and crash redelivery can run the handler again, so it must still be idempotent. The rule targets methods that *return* events because replaying them can append duplicate facts. See [Once-only handlers](/chronicle/reactors/once-only/) for the distinction between replay and recovery.
 
 ## Related Rules
 

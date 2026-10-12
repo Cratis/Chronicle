@@ -28,6 +28,7 @@ public record MbChildrenFullOrder(
     [RemovedWith<MbChildrenFullLineItemRemoved>(key: nameof(MbChildrenFullLineItemRemoved.ItemId))]
     IEnumerable<MbChildrenFullOrderLine> Lines);
 
+[FromEvent<MbChildrenFullQuantityAdjusted>(key: nameof(MbChildrenFullQuantityAdjusted.ItemId))]
 public record MbChildrenFullOrderLine(
     [Key] Guid Id,
 

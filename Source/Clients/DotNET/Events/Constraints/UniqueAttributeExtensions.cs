@@ -24,7 +24,7 @@ public static class UniqueAttributeExtensions
     /// </summary>
     /// <param name="member">Type to get for that has <see cref="UniqueAttribute"/>.</param>
     /// <returns>Name of constraint.</returns>
-    public static ConstraintName GetConstraintName(this MemberInfo member) => member.GetCustomAttribute<UniqueAttribute>()?.Name ?? member.Name;
+    public static ConstraintName GetConstraintName(this MemberInfo member) => ArtifactIdentity.ConstraintNameFor(member, member.GetCustomAttribute<UniqueAttribute>()?.Name);
 
     /// <summary>
     /// Get the constraint message for a type adorned with <see cref="UniqueAttribute"/>, defaults to type name if not explicitly defined.

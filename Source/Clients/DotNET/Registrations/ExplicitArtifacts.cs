@@ -82,7 +82,7 @@ public class ExplicitArtifacts
     public ExplicitArtifacts RegisterProjection<TReadModel>(Action<IProjectionBuilderFor<TReadModel>> define, ProjectionId? id = null)
     {
         ArgumentNullException.ThrowIfNull(define);
-        return Add(new DeclarativeExplicitProjection<TReadModel>(define, id ?? new ProjectionId(typeof(TReadModel).FullName!)));
+        return Add(new DeclarativeExplicitProjection<TReadModel>(define, id ?? ArtifactIdentity.ModelProjectionIdFor(typeof(TReadModel))));
     }
 
     /// <summary>

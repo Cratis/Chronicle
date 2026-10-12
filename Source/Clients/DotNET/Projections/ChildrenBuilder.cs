@@ -63,7 +63,7 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
     /// <inheritdoc/>
     public IChildrenBuilder<TParentReadModel, TChildReadModel> FromEventProperty<TEvent>(Expression<Func<TEvent, TChildReadModel>> propertyExpression)
     {
-        _fromEventPropertyEventType = typeof(TEvent).GetEventType().ToContract();
+        _fromEventPropertyEventType = EventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
         _fromEventPropertyExpression = new EventContentPropertyExpression(ProjectionPropertyPaths.FromExpression(propertyExpression, _namingPolicy, ProjectionPathRole.Source));
         return this;
     }

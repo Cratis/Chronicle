@@ -44,7 +44,7 @@ internal class ModelBoundProjectionBuilder(
     {
         _fromEveryAttributes.Clear();
 
-        var projectionId = new ProjectionId(modelType.FullName!);
+        var projectionId = ArtifactIdentity.ModelProjectionIdFor(modelType);
         var readModelIdentifier = modelType.GetReadModelIdentifier();
         var fromEventSequenceAttr = modelType.GetCustomAttribute<EventSequenceAttribute>();
         var notRewindableAttr = modelType.GetCustomAttribute<NotRewindableAttribute>();
