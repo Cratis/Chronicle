@@ -19,6 +19,11 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
     where TStartup : class
 {
     /// <summary>
+    /// Gets the artifacts provider for this host.
+    /// </summary>
+    internal virtual IClientArtifactsProvider ClientArtifactsProvider => DelegatingClientArtifactsProvider.GetOrCreate(fixture);
+
+    /// <summary>
     /// Gets a value indicating whether the derived factory wires its own <see cref="IChronicleClient"/>
     /// (and the <see cref="IEventStore"/>/<see cref="IChronicleConnection"/> family derived from it) -
     /// for example an in-process Orleans silo that builds the client directly against its own grain
@@ -35,7 +40,7 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
     /// <inheritdoc/>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        var delegatingProvider = DelegatingClientArtifactsProvider.GetOrCreate(fixture);
+        var artifactsProvider = ClientArtifactsProvider;
 
         builder
             .UseContentRoot(contentRoot)
@@ -43,7 +48,7 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
             {
                 // Use delegating provider so the shared factory can serve artifacts
                 // from whichever test fixture is currently active.
-                services.AddSingleton<IClientArtifactsProvider>(delegatingProvider);
+                services.AddSingleton(artifactsProvider);
 
                 if (RegistersOwnChronicleClient)
                 {

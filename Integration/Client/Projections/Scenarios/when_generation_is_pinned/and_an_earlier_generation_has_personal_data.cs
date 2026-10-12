@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Integration.for_Reactors.when_generation_is_pinned;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Projections;
 
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_generation_is_pinned.and_an_earlier_generation_has_personal_data.context;
 

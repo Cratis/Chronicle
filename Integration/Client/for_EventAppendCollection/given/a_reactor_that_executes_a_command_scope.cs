@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc;
+using Cratis.Arc.Authorization;
 using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Integration.for_EventAppendCollection.given;
@@ -20,6 +22,18 @@ public class a_reactor_that_executes_a_command_scope(ChronicleFixture fixture) :
         RegisterArcActivitySource(services, "Cratis.Arc.Commands.CommandPipeline");
         services.AddSingleton<AReactorThatExecutesACommand>();
     }
+
+    protected override void ConfigureWebHostBuilder(IWebHostBuilder builder) =>
+        builder.ConfigureServices(services =>
+        {
+            // When this context's host is built, the commands registered above make the in-process kernel
+            // believe Arc is already configured, so it skips AddCratisArcCore and the command pipeline cannot
+            // resolve its authorization runtime. Add the core services here unless something already did.
+            if (services.All(descriptor => descriptor.ServiceType != typeof(IAuthorizationPolicyRuntime)))
+            {
+                services.AddCratisArcCore();
+            }
+        });
 
     static void RegisterArcActivitySource(IServiceCollection services, string typeName)
     {
