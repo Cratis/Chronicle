@@ -120,6 +120,11 @@ public class Reactors : IReactors, IReactorPartitionRecovery
     /// </summary>
     internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
 
+    /// <summary>
+    /// Gets the current discovered and runtime reactor handlers.
+    /// </summary>
+    internal IEnumerable<IReactorHandler> Handlers => _handlers.Values.Select(_ => _.Handler);
+
     /// <inheritdoc/>
     public Task Discover()
     {
@@ -402,7 +407,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
         var handler = CreateHandler(
             reactorType.GetReactorId(),
             reactorType,
-            reactorType.GetEventSequenceId(_eventStore.Name?.Value),
+            reactorType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name),
             ReactorInvoker.GetEventTypesFor(_eventStore.EventTypes, reactorType, _sideEffectHandlers));
 #pragma warning restore CA2000
         var eventSourceFilter = reactorType.GetEventSourceFilter(_eventStore.EventSources);

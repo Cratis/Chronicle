@@ -45,7 +45,7 @@ internal class ModelBoundProjectionBuilder(
     {
         _fromEveryAttributes.Clear();
 
-        var projectionId = new ProjectionId(modelType.FullName!);
+        var projectionId = ArtifactIdentity.ModelProjectionIdFor(modelType);
         var readModelIdentifier = modelType.GetReadModelIdentifier();
         var fromEventSequenceAttr = modelType.GetCustomAttribute<EventSequenceAttribute>();
         var notRewindableAttr = modelType.GetCustomAttribute<NotRewindableAttribute>();
@@ -514,7 +514,7 @@ internal class ModelBoundProjectionBuilder(
 
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<JoinAttribute<object>>())
         {
-            targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, memberName, propertyName);
+            targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, memberName, propertyName, childrenDef?.IdentifiedBy);
         }
 
         // A [RemovedWith] that sits alongside a [ChildrenFrom] on the same collection property means "remove the
@@ -692,7 +692,7 @@ internal class ModelBoundProjectionBuilder(
 
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<JoinAttribute<object>>())
         {
-            targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, property.Name, propertyName);
+            targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, property.Name, propertyName, childrenDef?.IdentifiedBy);
         }
 
         // A [RemovedWith] that sits alongside a [ChildrenFrom] on the same collection property means "remove the

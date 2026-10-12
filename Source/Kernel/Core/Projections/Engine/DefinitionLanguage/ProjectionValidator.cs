@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.Properties;
@@ -19,9 +20,11 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 /// </summary>
 /// <param name="readModelDefinitions">Available read model definitions.</param>
 /// <param name="eventTypeSchemas">Available event type schemas.</param>
+/// <param name="generationDelivery">Whether event references and schemas must be generation-exact.</param>
 public class ProjectionValidator(
     IEnumerable<ReadModelDefinition> readModelDefinitions,
-    IEnumerable<EventTypeSchema> eventTypeSchemas)
+    IEnumerable<EventTypeSchema> eventTypeSchemas,
+    EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility)
 {
     readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _readModelLookup = readModelDefinitions.DistinctBy(_ => _.Identifier).ToDictionary(_ => _.Identifier);
     readonly ILookup<EventTypeId, EventTypeSchema> _eventTypeLookup = eventTypeSchemas.DistinctBy(_ => _.Type).ToLookup(_ => _.Type.Id);
@@ -59,7 +62,7 @@ public class ProjectionValidator(
 
         if (!_readModelLookup.TryGetValue(readModelIdentifier, out var readModelDefinition))
         {
-            errors.Add($"Read model '{readModelIdentifier}' not found", projection.Location.Line, projection.Location.Column);
+            errors.Add($"Read model '{readModelIdentifier}' not found{CompilerErrorSuggestions.ForReadModel(readModelIdentifier.Value, _readModelLookup.Values)}", projection.Location.Line, projection.Location.Column);
             return null;
         }
 
@@ -224,13 +227,13 @@ public class ProjectionValidator(
         // A declaration names an event type by identifier, optionally with a generation, and events carry the content
         // of the highest generation they have - so the exact generation is used when named and stored, otherwise the
         // highest generation stored for the identifier.
-        schema = _eventTypeLookup[eventType.Id].SchemaFor(eventType);
+        schema = _eventTypeLookup[eventType.Id].SchemaFor(eventType, generationDelivery);
         return schema is not null;
     }
 
     void ValidateEventTypeExists(string eventName, SourceLocation location, CompilerErrors errors)
     {
-        var eventType = EventType.Parse(eventName);
+        var eventType = ProjectionEventTypeReference.Resolve(eventName, eventTypeSchemas, generationDelivery);
 
         if (!TryGetEventTypeSchema(eventType, out _))
         {
@@ -247,7 +250,7 @@ public class ProjectionValidator(
 
         foreach (var eventSpec in from.Events)
         {
-            var eventType = EventType.Parse(eventSpec.Event);
+            var eventType = ProjectionEventTypeReference.Resolve(eventSpec.Event, eventTypeSchemas, generationDelivery);
 
             if (!TryGetEventTypeSchema(eventType, out var eventTypeSchema))
             {
@@ -263,7 +266,7 @@ public class ProjectionValidator(
     {
         foreach (var joinEvent in join.Events)
         {
-            var eventType = EventType.Parse(joinEvent.Event);
+            var eventType = ProjectionEventTypeReference.Resolve(joinEvent.Event, eventTypeSchemas, generationDelivery);
 
             if (!TryGetEventTypeSchema(eventType, out var eventTypeSchema))
             {
@@ -281,7 +284,7 @@ public class ProjectionValidator(
 
         if (!parentSchema.Properties.TryGetValue(collectionPath.Path, out var collectionProperty))
         {
-            errors.Add($"Read model property '{collectionPath.Path}' not found", children.Location.Line, children.Location.Column);
+            errors.Add($"Read model property '{collectionPath.Path}' not found{CompilerErrorSuggestions.ForProperty(collectionPath.Path, parentSchema)}", children.Location.Line, children.Location.Column);
             return;
         }
 
@@ -316,7 +319,7 @@ public class ProjectionValidator(
     {
         foreach (var eventSpec in from.Events)
         {
-            var eventType = EventType.Parse(eventSpec.Event);
+            var eventType = ProjectionEventTypeReference.Resolve(eventSpec.Event, eventTypeSchemas, generationDelivery);
 
             if (!TryGetEventTypeSchema(eventType, out var eventTypeSchema))
             {
@@ -367,7 +370,7 @@ public class ProjectionValidator(
     {
         if (!TryResolveProperty(targetSchema, propertyName, out _))
         {
-            errors.Add($"Read model property '{propertyName}' not found", mapping.Location.Line, mapping.Location.Column);
+            errors.Add($"Read model property '{propertyName}' not found{CompilerErrorSuggestions.ForProperty(propertyName, targetSchema)}", mapping.Location.Line, mapping.Location.Column);
         }
     }
 
@@ -375,7 +378,7 @@ public class ProjectionValidator(
     {
         if (value is PathExpressionSyntax path && !TryResolveProperty(eventSchema, path.Path, out _))
         {
-            errors.Add($"Event property '{path.Path}' not found", value.Location.Line, value.Location.Column);
+            errors.Add($"Event property '{path.Path}' not found{CompilerErrorSuggestions.ForProperty(path.Path, eventSchema)}", value.Location.Line, value.Location.Column);
         }
     }
 
@@ -385,7 +388,7 @@ public class ProjectionValidator(
 
         if (!TryResolveProperty(targetSchema, targetPath, out var targetProperty))
         {
-            errors.Add($"Read model property '{targetPath}' not found", set.Location.Line, set.Location.Column);
+            errors.Add($"Read model property '{targetPath}' not found{CompilerErrorSuggestions.ForProperty(targetPath, targetSchema)}", set.Location.Line, set.Location.Column);
             return;
         }
 
@@ -396,7 +399,7 @@ public class ProjectionValidator(
 
             if (!TryResolveProperty(eventSchema, sourcePath, out var sourceProperty))
             {
-                errors.Add($"Event property '{sourcePath}' not found", set.Location.Line, set.Location.Column);
+                errors.Add($"Event property '{sourcePath}' not found{CompilerErrorSuggestions.ForProperty(sourcePath, eventSchema)}", set.Location.Line, set.Location.Column);
                 return;
             }
 
@@ -513,7 +516,7 @@ public class ProjectionValidator(
             // Validate that the property exists in the composite key type schema
             if (!keySchema.Properties.ContainsKey(part.Property))
             {
-                errors.Add($"Property '{part.Property}' not found in composite key type '{typeName}'", part.Location.Line, part.Location.Column);
+                errors.Add($"Property '{part.Property}' not found in composite key type '{typeName}'{CompilerErrorSuggestions.ForProperty(part.Property, keySchema)}", part.Location.Line, part.Location.Column);
                 continue;
             }
 
@@ -598,7 +601,7 @@ public class ProjectionValidator(
         Dictionary<string, (JsonObjectType Type, string? Format)> aggregatedEventProperties,
         CompilerErrors errors)
     {
-        var eventType = EventType.Parse(eventSpec.Event);
+        var eventType = ProjectionEventTypeReference.Resolve(eventSpec.Event, eventTypeSchemas, generationDelivery);
 
         if (!TryGetEventTypeSchema(eventType, out var eventTypeSchema))
         {

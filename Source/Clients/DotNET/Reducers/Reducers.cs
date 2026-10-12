@@ -121,7 +121,7 @@ public class Reducers : IReducers
                                 {
                                     var readModelType = reducerType.GetReadModelType();
                                     _reducerValidator.Validate(reducerType);
-                                    reducerType.GetEventSequenceId(_eventStore.Name?.Value);
+                                    reducerType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name);
                                     return CreateHandlerFor(reducerType, readModelType) as IReducerHandler;
                                 });
 
@@ -150,7 +150,7 @@ public class Reducers : IReducers
 
             foreach (var handler in _handlersByModelType.Values.Where(_ => _.IsActive))
             {
-                RegisterReducer(handler);
+                RegisterWhenDispatchable(handler);
             }
             _registered = true;
         }
@@ -165,7 +165,7 @@ public class Reducers : IReducers
         var reducerType = typeof(TReducer);
         var modelType = typeof(TReadModel);
         var handler = CreateHandlerFor(reducerType, modelType);
-        RegisterReducer(handler);
+        RegisterWhenDispatchable(handler);
         var handlersByType = new Dictionary<Type, IReducerHandler>(_handlersByType)
         {
             { reducerType, handler }
@@ -363,7 +363,7 @@ public class Reducers : IReducers
             _eventStore,
             reducerType.GetReducerId(),
             reducerType,
-            reducerType.GetEventSequenceId(_eventStore.Name?.Value),
+            reducerType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name),
             new ReducerInvoker(
                 _eventTypes,
                 _artifactActivator,
@@ -407,6 +407,19 @@ public class Reducers : IReducers
         _handlersByModelType = _handlersByType.ToFrozenDictionary(
             _ => _.Value.ReadModelType,
             _ => _.Value);
+    }
+
+    void RegisterWhenDispatchable(IReducerHandler handler)
+    {
+        if (handler.EventTypes.Any())
+        {
+            RegisterReducer(handler);
+            return;
+        }
+
+        _logger.ReducerHasNoDispatchableMethods(
+            handler.ReducerType,
+            SkippedReducerMethods.Describe(handler.ReducerType, handler.ReadModelType, _eventTypes.AllClrTypes));
     }
 
     void RegisterReducer(IReducerHandler handler)

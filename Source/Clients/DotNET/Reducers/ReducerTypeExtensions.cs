@@ -127,12 +127,7 @@ public static class ReducerTypeExtensions
     {
         TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(type);
         var reducerAttribute = type.GetCustomAttribute<ReducerAttribute>();
-        var id = reducerAttribute?.Id.Value ?? string.Empty;
-        return id switch
-        {
-            "" => new ReducerId(type.FullName ?? $"{type.Namespace}.{type.Name}"),
-            _ => new ReducerId(id)
-        };
+        return new ReducerId(ArtifactIdentity.ObserverIdFor(type, reducerAttribute?.Id.Value));
     }
 
     /// <summary>
@@ -233,6 +228,18 @@ public static class ReducerTypeExtensions
             .Select(t => t!)
             .Distinct()
             .ToList();
+
+    /// <summary>
+    /// Resolves a reducer's sequence using this client's registered event metadata.
+    /// </summary>
+    /// <param name="type">The reducer type.</param>
+    /// <param name="eventTypes">The event registry.</param>
+    /// <param name="currentStore">The current client's store.</param>
+    /// <returns>The selected event sequence.</returns>
+    internal static EventSequenceId GetEventSequenceId(this Type type, IEventTypes eventTypes, EventStoreName currentStore) =>
+        type.HasExplicitEventSequence() || Attribute.IsDefined(type, typeof(EventStoreAttribute))
+            ? type.GetEventSequenceId(currentStore.Value)
+            : ObserverEventTypes.InferSequence(type, eventTypes, currentStore);
 
     static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reducerType, string? currentEventStoreName)
     {

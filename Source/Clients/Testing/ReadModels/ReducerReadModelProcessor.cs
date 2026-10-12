@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-extern alias KernelConcepts;
-
 using System.Text.Json;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -11,8 +9,6 @@ using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Testing.Events;
 using Cratis.Execution;
 using Cratis.Serialization;
-
-using KernelObserverFilters = KernelConcepts::Cratis.Chronicle.Concepts.Observation.ObserverFilters;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
 
@@ -76,8 +72,7 @@ internal static class ReducerReadModelProcessor
                 CorrelationId.NotSet);
         }).ToArray();
         var (prepared, _) = await ReadModelEvents.Prepare(eventStore, eventsList.Select(input => (input.EventSourceId, input.Event)).ToArray(), contexts);
-        var (eventSourceType, eventStreamType) = reducerType.GetEventSourceFilter(eventStore.EventSources);
-        var filters = new KernelObserverFilters([], new(eventSourceType.Value), new(eventStreamType.Value));
+        var filters = new ObserverRouteFilter(reducerType, eventStore.EventSources);
         var eventsAndContexts = new List<EventAndContext>();
         foreach (var index in Enumerable.Range(0, prepared.Length).Where(index => filters.Matches(prepared[index])))
         {

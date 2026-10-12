@@ -66,6 +66,11 @@ public class Projections(
     internal event Action? Registered;
 
     /// <summary>
+    /// Gets the generation delivery policy supplied by the event store.
+    /// </summary>
+    internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
+    /// <summary>
     /// Gets all the <see cref="ProjectionDefinition">projection definitions</see>.
     /// </summary>
     internal IImmutableList<ProjectionDefinition> Definitions { get; private set; } = ImmutableList<ProjectionDefinition>.Empty;
@@ -183,6 +188,7 @@ public class Projections(
     {
         var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes, logger, eventStore.Name?.Value);
         var modelBoundDefinitions = modelBoundProjections.Discover();
+        ApplyGenerationDelivery(modelBoundDefinitions, modelBoundProjections.Failures);
         var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
             kvp => kvp.Key,
             kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
@@ -260,7 +266,7 @@ public class Projections(
     public Task<IProjectionHandler> Register<TReadModel>(Action<IProjectionBuilderFor<TReadModel>> define, ProjectionId? id = null)
     {
         ArgumentNullException.ThrowIfNull(define);
-        return RegisterExplicit<TReadModel>(new DeclarativeExplicitProjection<TReadModel>(define, id ?? new ProjectionId(typeof(TReadModel).FullName!)));
+        return RegisterExplicit<TReadModel>(new DeclarativeExplicitProjection<TReadModel>(define, id ?? ArtifactIdentity.ModelProjectionIdFor(typeof(TReadModel))));
     }
 
     /// <inheritdoc/>
@@ -462,7 +468,8 @@ public class Projections(
 
     ExplicitProjectionRegistration Build(IExplicitProjection projection)
     {
-        var definition = projection.Build(new(namingPolicy, eventTypes, jsonSerializerOptions, eventStore.Name?.Value));
+        var definition = projection.Build(new(namingPolicy, eventTypes, jsonSerializerOptions, eventStore.Name?.Value, GenerationDelivery));
+        ProjectionGenerationDeliveryValidation.Apply(definition, GenerationDelivery);
         var handler = new ProjectionHandler(eventStore, definition.Identifier, projection.ReadModelType, definition.ReadModel, definition.EventSequenceId);
         return new(definition, handler, projection.ContainerNameOverride);
     }
@@ -537,7 +544,8 @@ public class Projections(
                     artifactsActivator,
                     jsonSerializerOptions,
                     variantDeclarations,
-                    containerNames
+                    containerNames,
+                    GenerationDelivery
                 ]) as Catch<ProjectionDefinition>)!;
             if (createProjectionDefinitionResult.TryGetException(out var exception))
             {
@@ -549,8 +557,28 @@ public class Projections(
         }
 
         VariantReclassifier.CrossWireGroups(result, variantDeclarations);
+        ApplyGenerationDelivery(result, failures);
 
         return (result, failures, containerNames);
+    }
+
+    void ApplyGenerationDelivery(IDictionary<Type, ProjectionDefinition> definitions, IDictionary<Type, Exception> failures)
+    {
+        foreach (var (type, definition) in definitions.ToArray())
+        {
+            try
+            {
+                ProjectionGenerationDeliveryValidation.Apply(definition, GenerationDelivery);
+            }
+#pragma warning disable CA1031 // One invalid projection must not discard the other definitions.
+            catch (Exception exception)
+#pragma warning restore CA1031
+            {
+                logger.FailedToCreateProjectionDefinition(type, exception);
+                failures[type] = exception;
+                definitions.Remove(type);
+            }
+        }
     }
 
     sealed record ExplicitProjectionRegistration(ProjectionDefinition Definition, IProjectionHandler Handler, string? ContainerName);
@@ -565,7 +593,8 @@ public class Projections(
             IClientArtifactsActivator artifactsActivator,
             JsonSerializerOptions jsonSerializerOptions,
             IDictionary<Type, FluentVariantDeclaration> variantDeclarations,
-            IDictionary<Type, string> containerNames)
+            IDictionary<Type, string> containerNames,
+            Observation.EventGenerationDelivery generationDelivery)
         {
             try
             {
@@ -575,7 +604,7 @@ public class Projections(
                     return exception;
                 }
 
-                var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), type, namingPolicy, eventTypes, jsonSerializerOptions);
+                var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), type, namingPolicy, eventTypes, jsonSerializerOptions) { GenerationDelivery = generationDelivery };
                 activateArtifactResult.AsT0.Define(builder);
                 var definition = builder.Build();
 

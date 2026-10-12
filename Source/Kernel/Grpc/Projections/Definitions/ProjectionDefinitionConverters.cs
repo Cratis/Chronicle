@@ -24,6 +24,7 @@ internal static class ProjectionDefinitionConverters
     {
         return new()
         {
+            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)definition.GenerationDelivery,
             EventSequenceId = definition.EventSequenceId,
             Identifier = definition.Identifier,
             ReadModel = definition.ReadModel,
@@ -77,6 +78,6 @@ internal static class ProjectionDefinitionConverters
             Nested: contract.Nested.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value.ToChronicle()),
             SubscribesToAllEvents: contract.SubscribesToAllEvents,
             NoAutoMapProperties: contract.NoAutoMapProperties.Select(_ => new PropertyPath(_)).ToList()
-        );
+        ) { GenerationDelivery = (Concepts.Observation.EventGenerationDelivery)contract.GenerationDelivery };
     }
 }

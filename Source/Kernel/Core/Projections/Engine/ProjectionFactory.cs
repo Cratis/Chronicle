@@ -8,11 +8,13 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine.Expressions;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
@@ -40,6 +42,7 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// <param name="storage"><see cref="IEventStoreNamespaceStorage"/> for accessing underlying storage for the specific namespace.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="eventCompliance">Optional <see cref="IEventCompliance"/> for releasing stored join events before projecting them.</param>
+/// <param name="eventGenerationRelease">The pinned-generation release boundary for stored key and join events.</param>
 [Singleton]
 public class ProjectionFactory(
     IReadModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
@@ -49,7 +52,8 @@ public class ProjectionFactory(
     IKeyResolvers keyResolvers,
     IStorage storage,
     ILogger<ProjectionFactory> logger,
-    IEventCompliance? eventCompliance = null) : IProjectionFactory
+    IEventCompliance? eventCompliance = null,
+    IEventGenerationRelease? eventGenerationRelease = null) : IProjectionFactory
 {
     static readonly string[] _aggregateExpressions =
     [
@@ -64,11 +68,19 @@ public class ProjectionFactory(
     public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         readModelDefinition.Sink.EnsureReadModelSupported();
+        ProjectionGenerationDeliveryValidation.Validate(definition);
+        if (definition.GenerationDelivery == EventGenerationDelivery.Pinned &&
+            (eventGenerationRelease is null || definition.SubscribesToAllEvents))
+        {
+            throw new EventGenerationDeliveryNotSupported();
+        }
+
         var eventSequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(definition.EventSequenceId);
 
         // Only a join that releases a stored event needs the schema of the generation it was stored at.
-        var eventTypesStorage = eventCompliance is null ? null : storage.GetEventStore(eventStore).EventTypes;
+        var eventTypesStorage = eventCompliance is null && definition.GenerationDelivery != EventGenerationDelivery.Pinned ? null : storage.GetEventStore(eventStore).EventTypes;
         return CreateProjectionFrom(
+            eventStore,
             new(eventSequenceStorage, eventTypesStorage, eventTypeSchemas, readModelDefinition),
             new(definition, readModelDefinition.GetTargetSchema(), PropertyPath.Root, PropertyPath.Root),
             ProjectionPath.GetRootFor(definition.Identifier),
@@ -189,7 +201,7 @@ public class ProjectionFactory(
 
         void CoverFrom(FromDefinition fromDefinition, EventType eventType)
         {
-            var eventSchema = schemaList.SchemaFor(eventType)?.Schema;
+            var eventSchema = schemaList.SchemaFor(eventType, projectionDefinition.GenerationDelivery)?.Schema;
             foreach (var mapping in GetMergedFromProperties(fromDefinition, currentReadModelSchema, eventSchema, autoMap.AutoMap, autoMap.NoAutoMapProperties))
             {
                 covered.Add(mapping.Key.LastSegment.Value);
@@ -203,7 +215,7 @@ public class ProjectionFactory(
 
         foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
         {
-            var eventSchema = schemaList.SchemaFor(eventType)?.Schema;
+            var eventSchema = schemaList.SchemaFor(eventType, projectionDefinition.GenerationDelivery)?.Schema;
             foreach (var mapping in GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventSchema, autoMap.AutoMap, autoMap.NoAutoMapProperties))
             {
                 covered.Add(mapping.Key.LastSegment.Value);
@@ -339,7 +351,7 @@ public class ProjectionFactory(
         foreach (var (eventType, _) in level.Definition.RemovedWith)
         {
             var observable = projection.Event
-                    .WhereEventTypeEquals(eventType);
+                    .WhereEventTypeEquals(eventType, projection.GenerationDelivery);
             if (level.IsChild)
             {
                 projection.Subscriptions.Add(
@@ -376,7 +388,7 @@ public class ProjectionFactory(
         // values empty whenever the join source already exists at the time the row is created (the common production order).
         var autoMap = level.AutoMapSettings;
         var joins = level.Definition.Join;
-        var mergedFromProperties = GetMergedFromProperties(registration.Definition, level.Schema, context.EventTypeSchemas.SchemaFor(registration.EventType)?.Schema, autoMap.AutoMap, autoMap.NoAutoMapProperties);
+        var mergedFromProperties = GetMergedFromProperties(registration.Definition, level.Schema, context.EventTypeSchemas.SchemaFor(registration.EventType, level.Projection.GenerationDelivery)?.Schema, autoMap.AutoMap, autoMap.NoAutoMapProperties);
         var joinExpressions = level.IsChild && !level.IsNested
             ? joins.Where(join => join.Value.On == level.IdentifiedBy).ToArray()
             : joins.Where(join => mergedFromProperties.Exists(from => join.Value.On == from.Key)).ToArray();
@@ -478,24 +490,52 @@ public class ProjectionFactory(
         {
             projection.Subscriptions.Add(
                 projection.Event
-                       .WhereEventTypeEquals(eventType)
+                       .WhereEventTypeEquals(eventType, projection.GenerationDelivery)
                        .RemoveChildFromAll(
                            level.AccessorPath,
                            level.IdentifiedBy).Subscribe());
         }
     }
 
-    async Task<IProjection> CreateProjectionFrom(SubscriptionContext context, ProjectionTarget target, ProjectionPath path, bool isChild)
+    async Task<IProjection> CreateProjectionFrom(EventStoreName eventStore, SubscriptionContext context, ProjectionTarget target, ProjectionPath path, bool isChild)
     {
+        IDictionary<EventType, EventTypeSchema> pinnedSchemas = new Dictionary<EventType, EventTypeSchema>();
+        async Task<AppendedEvent> ReleaseStoredEvent(EventType pin, AppendedEvent storedEvent) =>
+            (await eventGenerationRelease!.Release(eventStore, [pin], pinnedSchemas, [storedEvent])).Single();
+
         // Phase 1: Create the projection structure with all parent-child relationships
         var (projection, childProjections, actualIdentifiedByProperty) = await CreateProjectionStructure(
             context,
             target.Definition.Identifier,
             target,
-            path);
+            path,
+            target.Definition.GenerationDelivery,
+            target.Definition.GenerationDelivery == EventGenerationDelivery.Pinned ? ReleaseStoredEvent : null);
 
         // Phase 2: Resolve events for all projections now that parent relationships are established
         ResolveEventsRecursively(projection, childProjections, target.Definition, actualIdentifiedByProperty, isChild);
+
+        if (target.Definition.GenerationDelivery == EventGenerationDelivery.Pinned)
+        {
+            var available = context.EventTypeSchemas.ToArray();
+            foreach (var pin in projection.EventTypes.Distinct())
+            {
+                var schema = available.SchemaFor(pin, EventGenerationDelivery.Pinned);
+                if (schema is null)
+                {
+                    if (!await context.EventTypesStorage!.HasFor(pin.Id, pin.Generation))
+                    {
+                        throw new PinnedEventTypeGenerationUnavailable(pin);
+                    }
+
+                    schema = (await context.EventTypesStorage.GetFor([pin])).SchemaFor(pin, EventGenerationDelivery.Pinned);
+                }
+
+                pinnedSchemas[pin] = schema ?? throw new PinnedEventTypeGenerationUnavailable(pin);
+            }
+
+            context = context with { EventTypeSchemas = pinnedSchemas.Values };
+        }
 
         // Phase 3: Setup subscriptions for all projections (root and children)
         var level = new ProjectionLevel(projection, target with { IdentifiedBy = actualIdentifiedByProperty }, isChild);
@@ -583,7 +623,7 @@ public class ProjectionFactory(
         {
             projection.Subscriptions.Add(
                 projection.Event
-                    .WhereEventTypeEquals(eventType)
+                    .WhereEventTypeEquals(eventType, projection.GenerationDelivery)
                     .ClearNested(nestedPropertyPath).Subscribe());
         }
 
@@ -613,12 +653,12 @@ public class ProjectionFactory(
         var autoMap = level.AutoMapSettings;
         foreach (var (eventType, fromDefinition) in level.Definition.From)
         {
-            var matchingSchema = context.EventTypeSchemas.SchemaFor(eventType);
+            var matchingSchema = context.EventTypeSchemas.SchemaFor(eventType, projection.GenerationDelivery);
             var mergedProperties = GetMergedFromProperties(fromDefinition, level.Schema, matchingSchema?.Schema, autoMap.AutoMap, autoMap.NoAutoMapProperties);
             var propertyMappers = mergedProperties.ConvertAll(p => ResolvePropertyMapper(projection, level.AccessorPath + p.Key, p.Value));
             propertyMappers.AddRange(everyEventMappers.ClaimFor(eventType.Id));
 
-            var fromObservable = projection.Event.WhereEventTypeEquals(eventType);
+            var fromObservable = projection.Event.WhereEventTypeEquals(eventType, projection.GenerationDelivery);
             projection.Subscriptions.Add(fromObservable.ProjectNested(propertyMappers).Subscribe());
             if (!projection.HasParent)
             {
@@ -631,7 +671,9 @@ public class ProjectionFactory(
         SubscriptionContext context,
         ProjectionId projectionId,
         ProjectionTarget target,
-        ProjectionPath path)
+        ProjectionPath path,
+        EventGenerationDelivery generationDelivery,
+        Func<EventType, AppendedEvent, Task<AppendedEvent>>? releaseStoredEvent)
     {
         var (projectionDefinition, currentReadModelSchema, childrenAccessorProperty, identifiedByProperty) = target;
         var rootReadModel = context.RootReadModel;
@@ -647,7 +689,9 @@ public class ProjectionFactory(
                 context,
                 projectionId,
                 new(kvp.Value, childrenProperty.Item?.ActualSchema ?? currentReadModelSchema, childrenAccessorProperty.AddArrayIndex(kvp.Key), kvp.Value.IdentifiedBy),
-                $"{path} -> ChildrenAt({kvp.Key.Path})");
+                $"{path} -> ChildrenAt({kvp.Key.Path})",
+                generationDelivery,
+                releaseStoredEvent);
         });
 
         var childResults = await Task.WhenAll(childProjectionTasks.ToArray());
@@ -673,7 +717,11 @@ public class ProjectionFactory(
             childProjections,
             projectionDefinition.SubscribesToAllEvents,
             projectionDefinition.SubscribesToAllEvents ? keyResolvers.FromEventSourceId : null,
-            projectionDefinition.Scope);
+            projectionDefinition.Scope)
+        {
+            GenerationDelivery = generationDelivery,
+            ReleaseStoredEvent = releaseStoredEvent
+        };
 
         // Set parent relationships immediately after creation
         // This ensures children have their Parent set before any event resolution
@@ -748,6 +796,8 @@ public class ProjectionFactory(
                 .Concat(projectionDefinition.FromDerivatives?.SelectMany(_ => _.EventTypes.Select(type => type.Id)) ?? [])
                 .ToHashSet());
 
+        ChildEveryEventMappings.Subscribe(projection, projectionDefinition.FromEvery, propertyMappersForEveryEventType);
+
         LogUnmappedCollectionProperties(level, context);
     }
 
@@ -770,7 +820,7 @@ public class ProjectionFactory(
         var valueProvider = eventValueProviderExpressionResolvers.Resolve(schemaProperty, fromEventProperty.PropertyExpression);
         projection.Subscriptions.Add(
             projection.Event
-                .WhereEventTypeEquals(fromEventProperty.Event)
+                .WhereEventTypeEquals(fromEventProperty.Event, projection.GenerationDelivery)
                 .AddChildFromEventProperty(level.AccessorPath, valueProvider).Subscribe());
     }
 
@@ -804,6 +854,7 @@ public class ProjectionFactory(
         var mappedEventTypeIds = projectionDefinition.From.Keys
             .Concat(projectionDefinition.Join.Keys)
             .Concat(projectionDefinition.FromDerivatives?.SelectMany(_ => _.EventTypes) ?? [])
+            .Concat(ChildEveryEventMappings.GetIncludedChildEventTypes(projection, projectionDefinition.FromEvery))
             .Select(_ => _.Id)
             .ToHashSet();
         projection.Event
@@ -836,11 +887,11 @@ public class ProjectionFactory(
         var autoMap = level.AutoMapSettings;
         foreach (var (eventType, joinDefinition) in level.Definition.Join)
         {
-            var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, level.Schema, context.EventTypeSchemas.SchemaFor(eventType)?.Schema, autoMap.AutoMap, autoMap.NoAutoMapProperties);
+            var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, level.Schema, context.EventTypeSchemas.SchemaFor(eventType, projection.GenerationDelivery)?.Schema, autoMap.AutoMap, autoMap.NoAutoMapProperties);
             var propertyMappers = mergedJoinProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, level.AccessorPath + kvp.Key, kvp.Value));
             propertyMappers.AddRange(everyEventMappers.ClaimFor(eventType.Id));
             var joinObservable = projection.Event
-                .WhereEventTypeEquals(eventType)
+                .WhereEventTypeEquals(eventType, projection.GenerationDelivery)
                 .Join(level.AccessorPath + joinDefinition.On, !level.IsNested && keyedFromEventTypeIds.Contains(eventType.Id));
 
             ProjectJoined(level, joinObservable, propertyMappers);
@@ -855,12 +906,12 @@ public class ProjectionFactory(
     {
         var projection = level.Projection;
         var schemaList = context.EventTypeSchemas.ToList();
-        var matchingSchema = schemaList.SchemaFor(registration.EventType);
+        var matchingSchema = schemaList.SchemaFor(registration.EventType, projection.GenerationDelivery);
         var mergedFromProperties = GetMergedFromProperties(registration.Definition, level.Schema, matchingSchema?.Schema, projection.AutoMap, projection.NoAutoMapProperties);
         var propertyMappers = mergedFromProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, level.AccessorPath + kvp.Key, kvp.Value));
         propertyMappers.AddRange(propertyMappersForAllEventTypes);
         return projection.Event
-            .WhereEventTypeEquals(registration.EventType)
+            .WhereEventTypeEquals(registration.EventType, projection.GenerationDelivery)
             .Project(
                 level.AccessorPath,
                 level.IdentifiedBy,
@@ -884,10 +935,10 @@ public class ProjectionFactory(
     {
         var (joinEventType, joinDefinition) = join;
         var autoMap = level.AutoMapSettings;
-        var joinEventSchema = context.EventTypeSchemas.SchemaFor(joinEventType)?.Schema;
+        var joinEventSchema = context.EventTypeSchemas.SchemaFor(joinEventType, level.Projection.GenerationDelivery)?.Schema;
         var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, level.Schema, joinEventSchema, autoMap.AutoMap, autoMap.NoAutoMapProperties);
         var joinPropertyMappers = mergedJoinProperties.Select(kvp => ResolvePropertyMapper(level.Projection, level.AccessorPath + kvp.Key, kvp.Value)).ToArray();
-        var resolvedJoin = fromObservable.ResolveJoin(context.EventSequenceStorage, joinEventType, level.AccessorPath + joinDefinition.On, logger, eventCompliance, joinEventSchema, context.EventTypesStorage);
+        var resolvedJoin = fromObservable.ResolveJoin(context.EventSequenceStorage, joinEventType, level.AccessorPath + joinDefinition.On, logger, eventCompliance, joinEventSchema, context.EventTypesStorage, level.Projection.GenerationDelivery == EventGenerationDelivery.Pinned ? storedEvent => level.Projection.ReleaseEvent(joinEventType, storedEvent) : null);
         ProjectJoined(level, resolvedJoin, joinPropertyMappers);
     }
 
