@@ -201,7 +201,7 @@ public class InMemorySink(
             return Task.FromResult<IEnumerable<FailedPartition>>([]);
         }
 
-        var joinsOnRemovedChildren = ApplyJoinsOnChildrenRemovedFromAll(changeset, eventSequenceNumber);
+        var childJoins = ApplyChildJoins(changeset, eventSequenceNumber);
 
         // Removing a child from every model that matches spans documents, so it cannot be expressed by
         // applying changes to the one being written - the persistent sinks run it across the container
@@ -216,9 +216,9 @@ public class InMemorySink(
             RemoveChildFromDocument(state, childRemovedFromAll);
         }
 
-        if (rootJoins.Any(joined => joined.HasKeyedFrom))
+        if (rootJoins.Any(joined => joined.HasKeyedFrom) || childJoins.Length > 0)
         {
-            // The joined update may have touched this same row. Apply only the keyed From changes
+            // The joined update may have touched this same row. Apply only the direct changes
             // on top of the now-current row, without replaying the join against the From key.
             lock (_collectionLock)
             {
@@ -229,7 +229,12 @@ public class InMemorySink(
             }
         }
 
-        var directChanges = changeset.Changes.Where(change => change is not Joined joined || !(rootJoins.Contains(joined) || joinsOnRemovedChildren.Contains(joined)));
+        var directChanges = changeset.Changes.Where(change => change is not Joined joined || !(rootJoins.Contains(joined) || childJoins.Contains(joined))).ToArray();
+        if (childJoins.Length > 0 && directChanges.Length == 0)
+        {
+            return Task.FromResult<IEnumerable<FailedPartition>>([]);
+        }
+
         var result = ApplyActualChanges(key, directChanges, state);
         ((dynamic)result).id = key.Value;
         bool wroteToPrimary;
@@ -515,13 +520,12 @@ public class InMemorySink(
                lastHandled < eventSequenceNumber.Value;
     }
 
-    Joined[] ApplyJoinsOnChildrenRemovedFromAll(IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
+    Joined[] ApplyChildJoins(IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
     {
-        // A join on a child the changeset removes from all is matched by the rows holding that child - the persistent
-        // sinks match it against the stored documents. Apply it to those rows before the removal takes the child away.
-        var removedChildKeys = changeset.Changes.OfType<ChildRemovedFromAll>().Select(removed => removed.Key).ToArray();
+        // Child joins enrich every stored parent holding the child, even when the changeset's initial state is empty.
+        // Apply them before a removal takes the child away, and consume them so they cannot replace a root directly.
         var joins = changeset.Changes.OfType<Joined>()
-            .Where(joined => !joined.ArrayIndexers.IsEmpty && removedChildKeys.Any(childKey => ValuesAreEqual(joined.ArrayIndexers.All.Last().Identifier, childKey)))
+            .Where(joined => !joined.ArrayIndexers.IsEmpty)
             .ToArray();
         if (joins.Length == 0)
         {
@@ -549,8 +553,9 @@ public class InMemorySink(
 
     List<object> ApplyJoinToRowsHoldingTheChild(Joined joined, EventSequenceNumber eventSequenceNumber)
     {
-        var childKey = joined.ArrayIndexers.All.Last().Identifier;
-        var rows = Collection.Where(row => TryFindValueInDocument(row.Value, joined.OnProperty.Segments.ToArray(), 0, childKey)).ToArray();
+        var indexer = joined.ArrayIndexers.All.Last();
+        var childPath = indexer.ArrayProperty + indexer.IdentifierProperty;
+        var rows = Collection.Where(row => joined.Changes.Any() && TryFindValueInDocument(row.Value, childPath.Segments.ToArray(), 0, indexer.Identifier)).ToArray();
         foreach (var (rowKey, row) in rows)
         {
             Collection[rowKey] = ApplyActualChanges(new Key(rowKey, joined.ArrayIndexers), joined.Changes, row.Clone());
