@@ -183,28 +183,20 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <inheritdoc/>
     public TBuilder Children<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TReadModel, TChildModel>> builderCallback)
     {
-        if (!targetProperty.TryGetPropertyPath(out var targetPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"the target property on read model '{typeof(TReadModel).FullName}'", targetProperty);
-        }
-
+        var targetPropertyPath = ProjectionPropertyPaths.FromExpression(targetProperty, namingPolicy, ProjectionPathRole.Target, $"the target property on read model '{typeof(TReadModel).FullName}'");
         var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit) { GenerationDelivery = GenerationDelivery };
         builderCallback(builder);
-        _buildChildren.Add(delivery => _childrenDefinitions[namingPolicy.GetPropertyName(targetPropertyPath)] = builder.Build(delivery));
+        _buildChildren.Add(delivery => _childrenDefinitions[targetPropertyPath] = builder.Build(delivery));
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public TBuilder Nested<TNestedModel>(Expression<Func<TReadModel, TNestedModel?>> targetProperty, Action<INestedBuilder<TReadModel, TNestedModel>> builderCallback)
     {
-        if (!targetProperty.TryGetPropertyPath(out var targetPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"the target property on read model '{typeof(TReadModel).FullName}'", targetProperty);
-        }
-
+        var targetPropertyPath = ProjectionPropertyPaths.FromExpression(targetProperty, namingPolicy, ProjectionPathRole.Target, $"the target property on read model '{typeof(TReadModel).FullName}'");
         var builder = new NestedBuilder<TReadModel, TNestedModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit) { GenerationDelivery = GenerationDelivery };
         builderCallback(builder);
-        _buildChildren.Add(delivery => _nestedDefinitions[namingPolicy.GetPropertyName(targetPropertyPath)] = builder.Build(delivery));
+        _buildChildren.Add(delivery => _nestedDefinitions[targetPropertyPath] = builder.Build(delivery));
         return (this as TBuilder)!;
     }
 
