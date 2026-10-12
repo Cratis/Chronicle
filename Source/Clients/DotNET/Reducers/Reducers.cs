@@ -542,10 +542,25 @@ public partial class Reducers : IReducers
                 });
     }
 
-    string GetFingerprint(Type reducerType) => _fingerprints.GetOrAdd(
-        reducerType,
-        static (type, reducers) => new Lazy<string>(() => reducers.CreateFingerprint(type)),
-        this).Value;
+    string GetFingerprint(Type reducerType) => ReducerCatalog.IsSelfReducer(reducerType)
+        ? CreateSelfFingerprint(reducerType)
+        : _fingerprints.GetOrAdd(
+            reducerType,
+            static (type, reducers) => new Lazy<string>(() => reducers.CreateFingerprint(type)),
+            this).Value;
+
+    string CreateSelfFingerprint(Type model)
+    {
+        try
+        {
+            return SelfReducerFingerprint.Create(_eventTypes, model);
+        }
+        catch (Exception error)
+        {
+            _logger.ReducerFingerprintFailed(model, error);
+            return SelfReducerFingerprint.CreateFallback(_eventTypes, model);
+        }
+    }
 
     string CreateFingerprint(Type reducerType)
     {

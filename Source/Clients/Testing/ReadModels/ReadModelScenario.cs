@@ -458,9 +458,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 }),
                 EventStore(),
                 _eventTypes,
-                ArtifactsActivator(),
                 ResolvedServiceProvider(),
-                _namingPolicy,
                 _initialState);
 
             // A reducer is single-instance; key its result by the event source id that passed its filters so that

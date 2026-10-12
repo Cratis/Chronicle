@@ -4,11 +4,9 @@
 using System.Text.Json;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Testing.Events;
 using Cratis.Execution;
-using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
 
@@ -36,9 +34,7 @@ internal static class ReducerReadModelProcessor
     /// <param name="events">The events to process.</param>
     /// <param name="eventStore">The scenario's shared test store.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event type metadata.</param>
-    /// <param name="artifactsActivator"><see cref="IClientArtifactsActivator"/> for instantiating the reducer.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> used when invoking the reducer.</param>
-    /// <param name="namingPolicy">The <see cref="INamingPolicy"/> for deriving the read model container name.</param>
     /// <param name="initialState">Optional initial read model state the reducer reduces on top of.</param>
     /// <returns>The reduced read model and the distinct event sources that passed the reducer's filters.</returns>
     /// <exception cref="ReducerFailed">Thrown when the reducer raises an error while processing the events.</exception>
@@ -47,15 +43,12 @@ internal static class ReducerReadModelProcessor
         IEnumerable<EventForEventSourceId> events,
         EventStoreForTesting eventStore,
         IEventTypes eventTypes,
-        IClientArtifactsActivator artifactsActivator,
         IServiceProvider serviceProvider,
-        INamingPolicy namingPolicy,
         TReadModel? initialState = null)
         where TReadModel : class
     {
         var readModelType = typeof(TReadModel);
-        var containerName = (ReadModelContainerName)namingPolicy.GetReadModelName(readModelType);
-        var invoker = new ReducerInvoker(eventTypes, artifactsActivator, reducerType, readModelType, containerName);
+        var invoker = eventStore.Reducers.GetHandlerForReadModelType(readModelType).Invoker;
 
         var eventsList = events.ToList();
         var contexts = eventsList.Select((@event, index) =>
