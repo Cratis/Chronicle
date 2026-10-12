@@ -167,7 +167,7 @@ public partial class Sink
         var current = LoadJsonColumnState(entry, column);
         var unwrappedState = UnwrapForJson(childAdded.State);
 
-        var identifierName = childAdded.IdentifiedByProperty.LastSegment.Value;
+        var identifierName = childAdded.IdentifiedByProperty;
         var identifierValue = UnwrapConceptValue(childAdded.Key);
         var list = current as IList<object?> ?? new List<object?>();
         if (pathSegments.Length == 1)
@@ -203,7 +203,7 @@ public partial class Sink
             return;
         }
 
-        var identifier = childRemoved.IdentifiedByProperty.LastSegment.Value;
+        var identifier = childRemoved.IdentifiedByProperty;
         var keyAsString = childRemoved.Key?.ToString();
         var retained = current.Where(item => !IsRemovedChild(item, identifier, childRemoved.Key, keyAsString)).ToList();
 

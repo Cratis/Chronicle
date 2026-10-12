@@ -5,6 +5,7 @@ using System.Collections;
 using System.Dynamic;
 using System.Globalization;
 using System.Text.Json;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Reflection;
@@ -185,9 +186,9 @@ internal static class JsonColumnDocuments
         return modified;
     }
 
-    internal static bool IsRemovedChild(object? item, string identifier, object? key, string? keyAsString)
+    internal static bool IsRemovedChild(object? item, PropertyPath identifier, object? key, string? keyAsString)
     {
-        if (item is not IDictionary<string, object?> dict || !dict.TryGetValue(identifier, out var value))
+        if (!ChildIdentity.TryGetValue(item, identifier, out var value))
         {
             return false;
         }
@@ -224,7 +225,7 @@ internal static class JsonColumnDocuments
 
     internal static ExpandoObject LocateOrCreateChild(IList<object?> list, ArrayIndexer indexer)
     {
-        var identifier = ChildIdentifier.For(indexer.IdentifierProperty.LastSegment.Value, UnwrapConceptValue(indexer.Identifier));
+        var identifier = ChildIdentifier.For(indexer.IdentifierProperty, UnwrapConceptValue(indexer.Identifier));
 
         var index = FindChildIndex(list, identifier, true);
         if (index >= 0)
@@ -233,7 +234,7 @@ internal static class JsonColumnDocuments
         }
 
         var fresh = new ExpandoObject();
-        ((IDictionary<string, object?>)fresh)[identifier.Name] = identifier.Value;
+        identifier.Name.SetValue(fresh, identifier.Value!, ArrayIndexers.NoIndexers);
         list.Add(fresh);
         return fresh;
     }
@@ -248,7 +249,7 @@ internal static class JsonColumnDocuments
         }
     }
 
-    internal static void UpsertChildInList(IList<object?> list, string identifierName, object? identifierValue, object? newChild)
+    internal static void UpsertChildInList(IList<object?> list, PropertyPath identifierName, object? identifierValue, object? newChild)
     {
         // Upsert by identifier so repeated ChildAdded events (e.g. during replay, or when a
         // projection re-introduces the same child after a redaction) update in place instead of
@@ -281,11 +282,11 @@ internal static class JsonColumnDocuments
             return;
         }
 
-        var parentIdentifier = ChildIdentifier.For(indexer.IdentifierProperty.LastSegment.Value, UnwrapConceptValue(indexer.Identifier));
+        var parentIdentifier = ChildIdentifier.For(indexer.IdentifierProperty, UnwrapConceptValue(indexer.Identifier));
 
         var parentDict = parentList
             .OfType<IDictionary<string, object?>>()
-            .FirstOrDefault(parent => parent.TryGetValue(parentIdentifier.Name, out var matchValue) && IdentifierMatches(matchValue, parentIdentifier, true));
+            .FirstOrDefault(parent => ChildIdentity.TryGetValue(parent, parentIdentifier.Name, out var matchValue) && IdentifierMatches(matchValue, parentIdentifier, true));
         if (parentDict is null)
         {
             return;
@@ -438,8 +439,7 @@ internal static class JsonColumnDocuments
     }
 
     static bool IsMatchingChild(object? child, ChildRemoval removal) =>
-        child is IDictionary<string, object?> dict &&
-        dict.TryGetValue(removal.Identifier, out var value) &&
+        ChildIdentity.TryGetValue(child, removal.Identifier, out var value) &&
         CompareLoose(value, removal.Key);
 
     static bool StartsWithColumn(IPropertyPathSegment[] segments, string columnName) =>
@@ -479,7 +479,7 @@ internal static class JsonColumnDocuments
     {
         for (var i = 0; i < list.Count; i++)
         {
-            if (list[i] is not IDictionary<string, object?> dict || !dict.TryGetValue(identifier.Name, out var stored))
+            if (!ChildIdentity.TryGetValue(list[i], identifier.Name, out var stored))
             {
                 continue;
             }
@@ -517,7 +517,7 @@ internal static class JsonColumnDocuments
     {
         foreach (var kvp in source)
         {
-            target[kvp.Key] = kvp.Value;
+            target[kvp.Key] = kvp.Value is IDictionary<string, object?> nested ? ToExpando(nested) : kvp.Value;
         }
     }
 
@@ -550,20 +550,20 @@ internal static class JsonColumnDocuments
 
     internal sealed class ChildIdentifier
     {
-        ChildIdentifier(string name, object? value)
+        ChildIdentifier(PropertyPath name, object? value)
         {
             Name = name;
             Value = value;
             AsString = value?.ToString();
         }
 
-        internal string Name { get; }
+        internal PropertyPath Name { get; }
 
         internal object? Value { get; }
 
         internal string? AsString { get; }
 
-        internal static ChildIdentifier For(string name, object? value) => new(name, value);
+        internal static ChildIdentifier For(PropertyPath name, object? value) => new(name, value);
     }
 
     /// <summary>
@@ -572,7 +572,7 @@ internal static class JsonColumnDocuments
     /// <param name="Segments">The segments of the path to the children collection.</param>
     /// <param name="Identifier">The name of the property identifying a child.</param>
     /// <param name="Key">The identifier value of the child to remove.</param>
-    internal sealed record ChildRemoval(IPropertyPathSegment[] Segments, string Identifier, object? Key);
+    internal sealed record ChildRemoval(IPropertyPathSegment[] Segments, PropertyPath Identifier, object? Key);
 
     /// <summary>
     /// Describes the upsert of a child into a collection nested in other collections.
@@ -582,5 +582,5 @@ internal static class JsonColumnDocuments
     /// <param name="IdentifierName">The name of the property identifying a child.</param>
     /// <param name="IdentifierValue">The identifier value of the child.</param>
     /// <param name="NewChild">The child to upsert.</param>
-    internal sealed record ChildUpsert(IPropertyPathSegment[] Segments, ArrayIndexers Indexers, string IdentifierName, object? IdentifierValue, object? NewChild);
+    internal sealed record ChildUpsert(IPropertyPathSegment[] Segments, ArrayIndexers Indexers, PropertyPath IdentifierName, object? IdentifierValue, object? NewChild);
 }

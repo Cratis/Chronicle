@@ -232,15 +232,15 @@ public static class ExpandoObjectExtensions
                                     : collection
                                         .Cast<IDictionary<string, object>>()
                                         .SingleOrDefault(item =>
-                                            item.TryGetValue(indexer.IdentifierProperty.Path, out var identifierValue) &&
-                                            identifierValue.IsEqualTo(indexer.Identifier));
+                                            ChildIdentity.TryGetValue(item, indexer.IdentifierProperty, out var identifierValue) &&
+                                            identifierValue!.IsEqualTo(indexer.Identifier));
 
                             if (element == default)
                             {
                                 element = new ExpandoObject()!;
                                 if (indexer.IdentifierProperty.IsSet)
                                 {
-                                    element[indexer.IdentifierProperty.Path] = indexer.Identifier;
+                                    indexer.IdentifierProperty.SetValue(element, indexer.Identifier, ArrayIndexers.NoIndexers);
                                 }
                                 currentTarget[segment.Value] = collection.Append((element as ExpandoObject)!).ToList();
                             }
@@ -296,7 +296,7 @@ public static class ExpandoObjectExtensions
     public static bool Contains(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key) =>
         items!.Any((IDictionary<string, object> _) =>
         {
-            if (!_.TryGetValue(identityProperty.Path, out var itemValue)) return false;
+            if (!ChildIdentity.TryGetValue(_, identityProperty, out var itemValue) || itemValue is null) return false;
             var convertedKey = TypeConversion.Convert(itemValue.GetType(), key);
             return itemValue.Equals(convertedKey);
         });
@@ -312,7 +312,7 @@ public static class ExpandoObjectExtensions
     {
         var item = items!.SingleOrDefault((IDictionary<string, object> _) =>
         {
-            if (!_.TryGetValue(identityProperty.Path, out var itemValue)) return false;
+            if (!ChildIdentity.TryGetValue(_, identityProperty, out var itemValue) || itemValue is null) return false;
             var convertedKey = TypeConversion.Convert(itemValue.GetType(), key);
             return itemValue.Equals(convertedKey);
         });
