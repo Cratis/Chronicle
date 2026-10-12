@@ -36,6 +36,8 @@ public class all_dependencies : Specification
         _eventStore.Name.Returns((EventStoreName)"test-store");
 
         _schemaGenerator = Substitute.For<IJsonSchemaGenerator>();
+        _schemaGenerator.Generate(Arg.Any<Type>(), Arg.Any<IEventTypes>()).Returns(call => _schemaGenerator.Generate(call.Arg<Type>()));
+        _schemaGenerator.GenerateLegacyEventType(Arg.Any<Type>(), Arg.Any<IEventTypes>()).Returns(call => _schemaGenerator.GenerateLegacyEventType(call.Arg<Type>()));
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _eventTypeMigrators = Substitute.For<IEventTypeMigrators>();
 

@@ -29,6 +29,8 @@ Reducers are ideal when you need to:
 
 In .NET, a reducer class must target only one read model. Implementing two closed `IReducerFor<TReadModel>` interfaces, including through inheritance, throws `TypeMustImplementOnlyOneReducer` during default artifact discovery. Split the class into one reducer per read model. [CHR0057](../code-analysis/CHR0057) reports this before runtime.
 
+The .NET client can also explicitly nominate a plain reducer and infer its single read model from supported instance-method signatures. The nullable-current contract still applies; static self reduction is not included. See [explicit artifact registration](../clients/dotnet/explicit-artifacts).
+
 ## Topics
 
 - [Getting Started](getting-started) - Learn how to create your first reducer

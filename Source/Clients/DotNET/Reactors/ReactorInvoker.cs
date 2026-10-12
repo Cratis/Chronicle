@@ -5,8 +5,10 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
+using Cratis.Chronicle.Registrations;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors;
@@ -68,6 +70,16 @@ public class ReactorInvoker(
     internal CancellationToken StoppingToken { get; init; }
 
     /// <summary>
+    /// Gets the owning registration's resolved observer identity, including explicit aliases.
+    /// </summary>
+    internal ReactorId? RegisteredId { get; init; }
+
+    /// <summary>
+    /// Gets the owning registration's resolved event sequence.
+    /// </summary>
+    internal EventSequenceId? RegisteredEventSequenceId { get; init; }
+
+    /// <summary>
     /// Gets all <see cref="EventType"/> for a specific reactor type.
     /// </summary>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event types.</param>
@@ -92,7 +104,7 @@ public class ReactorInvoker(
     /// <inheritdoc/>
     public async Task<ReactorInvocationResult> Invoke(object content, EventContext eventContext)
     {
-        var reactorId = targetType.GetReactorId();
+        var reactorId = RegisteredId ?? targetType.GetReactorId();
         var eventTypeName = content.GetType().Name;
         try
         {
@@ -107,13 +119,23 @@ public class ReactorInvoker(
             {
                 await middlewares.BeforeInvoke(reactorId, eventContext, content);
 
-                var arguments = await _argumentsResolver.Resolve(
-                    method,
-                    activatedReactor.Instance,
-                    content,
-                    eventContext,
-                    eventStore,
-                    serviceProvider);
+                var arguments = _argumentsResolver is IRegisteredReactorMethodArgumentsResolver registeredResolver &&
+                    method.GetParameters().Any(parameter => parameter.ParameterType == typeof(ReactorDelivery))
+                    ? await registeredResolver.Resolve(
+                        method,
+                        activatedReactor.Instance,
+                        content,
+                        eventContext,
+                        eventStore,
+                        serviceProvider,
+                        ResolveDelivery(reactorId, eventContext))
+                    : await _argumentsResolver.Resolve(
+                        method,
+                        activatedReactor.Instance,
+                        content,
+                        eventContext,
+                        eventStore,
+                        serviceProvider);
 
                 var returnValue = method.Invoke(activatedReactor.Instance, arguments);
 
@@ -156,6 +178,18 @@ public class ReactorInvoker(
                 logger.ReactorMiddlewareAfterInvokeFailed(reactorId, eventTypeName, ex);
             }
         }
+    }
+
+    ReactorDelivery ResolveDelivery(ReactorId reactorId, EventContext eventContext)
+    {
+        var sequence = RegisteredEventSequenceId ?? RegisteredObserverMetadata.SequenceFor(
+            targetType,
+            targetType.GetCustomAttribute<ReactorAttribute>()?.EventSequenceId,
+            eventTypes,
+            eventStore?.Name ?? eventContext.EventStore,
+            () => _methodsByEventType.AllEventTypes.Select(eventTypes.GetEventTypeFor));
+
+        return ReactorDelivery.For(reactorId, sequence, eventContext);
     }
 
     async Task<ReactorInvocationResult?> HandleReturnValue(MethodInfo method, object? returnValue, EventContext eventContext)

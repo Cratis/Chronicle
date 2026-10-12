@@ -12,7 +12,12 @@ public class with_the_delivery : given.a_resolver
     ReactorWithDependencies _reactor;
     object?[] _arguments;
 
-    void Establish() => _reactor = new ReactorWithDependencies();
+    void Establish()
+    {
+        _reactor = new ReactorWithDependencies();
+        _eventStore.EventTypes.Returns(new EventTypesForSpecifications([typeof(SomeEvent)]));
+        _eventStore.Name.Returns(_eventContext.EventStore);
+    }
 
     async Task Because() => _arguments = await _resolver.Resolve(
         MethodNamed(nameof(ReactorWithDependencies.WithDelivery)),

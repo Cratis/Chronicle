@@ -48,6 +48,7 @@ public class a_filtered_provider : all_dependencies
         Set(store, "_eventStoreName", new EventStoreName("current"));
         Set(store, "_clientArtifactsProvider", _clientArtifactsProvider);
         Set(store, "<EventTypes>k__BackingField", _registry);
+        Set(store, "<Reactors>k__BackingField", _reactors);
         Set(store, "<Projections>k__BackingField", projections);
         Set(store, "<Subscriptions>k__BackingField", subscriptions);
         await (Task)typeof(EventStore).GetMethod("RegisterExternalEventStoreSubscriptionsAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(store, [])!;

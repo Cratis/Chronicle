@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Schemas;
 /// Represents an implementation of <see cref="IJsonSchemaGenerator"/>.
 /// </summary>
 [Singleton]
-public class JsonSchemaGenerator : IJsonSchemaGenerator
+public partial class JsonSchemaGenerator : IJsonSchemaGenerator
 {
     static FieldInfo? _paramDefaultValueField;
 
@@ -294,12 +294,12 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
-    JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema, bool restorePropertiesWithDefaultValues)
+    JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema, bool restorePropertiesWithDefaultValues, Action<JsonObject, Type>? recordCompensation = null)
     {
         var type = context.TypeInfo.Type;
         var formatType = Nullable.GetUnderlyingType(type) ?? type;
 
-        if (RepresentConverterBackedType(type, context.PropertyInfo?.AttributeProvider) is { } represented)
+        if (RepresentConverterBackedType(type, context.PropertyInfo?.AttributeProvider, recordCompensation) is { } represented)
         {
             return represented;
         }
@@ -416,7 +416,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         {
             if (restorePropertiesWithDefaultValues)
             {
-                RestorePropertySchemasReplacedByDefaultValues(context.TypeInfo, schemaObj);
+                RestorePropertySchemasReplacedByDefaultValues(context.TypeInfo, schemaObj, recordCompensation);
             }
 
             if (context.PropertyInfo is null || schemaObj["properties"] is JsonObject)
@@ -438,8 +438,15 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             var compensationAttribute = type.GetCustomAttribute<CompensationForAttribute>();
             if (compensationAttribute is not null)
             {
-                var compensatedEventType = compensationAttribute.CompensatedEventType.GetEventType();
-                schemaObj[CompensationJsonSchemaExtensions.CompensationForKey] = compensatedEventType.Id.Value;
+                if (recordCompensation is not null)
+                {
+                    recordCompensation(schemaObj, compensationAttribute.CompensatedEventType);
+                }
+                else
+                {
+                    var compensatedEventType = compensationAttribute.CompensatedEventType.GetEventType();
+                    schemaObj[CompensationJsonSchemaExtensions.CompensationForKey] = compensatedEventType.Id.Value;
+                }
             }
         }
 
@@ -451,6 +458,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// </summary>
     /// <param name="typeInfo">The <see cref="JsonTypeInfo"/> of the object whose properties to restore.</param>
     /// <param name="schema">The object's schema node.</param>
+    /// <param name="recordCompensation">Optional unresolved structural compensation recorder.</param>
     /// <remarks>
     /// System.Text.Json's schema exporter describes a property served by a custom converter - a concept, for instance -
     /// with an empty schema that the node transform replaces. When the property's constructor parameter has a default value
@@ -460,14 +468,14 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// transform still sees the property, so the schema is produced here the same way it would be without the default,
     /// and the default is kept.
     /// </remarks>
-    void RestorePropertySchemasReplacedByDefaultValues(JsonTypeInfo typeInfo, JsonObject schema)
+    void RestorePropertySchemasReplacedByDefaultValues(JsonTypeInfo typeInfo, JsonObject schema, Action<JsonObject, Type>? recordCompensation)
     {
         if (schema["properties"] is not JsonObject properties) return;
 
         foreach (var property in typeInfo.Properties.Where(_ => _.AssociatedParameter is { HasDefaultValue: true }))
         {
             if (properties[property.Name] is not JsonObject propertySchema || !HasOnlyDefaultValue(propertySchema)) continue;
-            if (RepresentConverterBackedType(property.PropertyType, property.AttributeProvider) is not JsonObject restored) continue;
+            if (RepresentConverterBackedType(property.PropertyType, property.AttributeProvider, recordCompensation) is not JsonObject restored) continue;
 
             restored["default"] = propertySchema["default"]?.DeepClone();
             properties[property.Name] = restored;
@@ -479,8 +487,9 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// </summary>
     /// <param name="type">The declared <see cref="Type"/>.</param>
     /// <param name="attributeProvider">The property or parameter the type is declared on, if any.</param>
+    /// <param name="recordCompensation">Optional unresolved structural compensation recorder.</param>
     /// <returns>The schema node, or null when the type is not converter backed and its exported schema stands.</returns>
-    JsonNode? RepresentConverterBackedType(Type type, ICustomAttributeProvider? attributeProvider)
+    JsonNode? RepresentConverterBackedType(Type type, ICustomAttributeProvider? attributeProvider, Action<JsonObject, Type>? recordCompensation)
     {
         var formatType = Nullable.GetUnderlyingType(type) ?? type;
 
@@ -493,13 +502,13 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         if (formatType.GetCustomAttribute<JsonSchemaTypeAttribute>() is { } jsonSchemaType)
         {
             ThrowIfSelfReferencing(formatType, jsonSchemaType.Type);
-            return RepresentAs(jsonSchemaType.Type, type, attributeProvider);
+            return RepresentAs(jsonSchemaType.Type, type, attributeProvider, recordCompensation);
         }
 
         // Handle concept types - redirect to the underlying primitive type's schema
         if (type.IsConcept())
         {
-            return RepresentAs(type.GetConceptValueType(), type, attributeProvider);
+            return RepresentAs(type.GetConceptValueType(), type, attributeProvider, recordCompensation);
         }
 
         // Handle enumerables whose element type is a concept (e.g. IReadOnlyList<Requirement>).
@@ -515,7 +524,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             if (elementType?.IsConcept() == true)
             {
                 var underlyingItemType = elementType.GetConceptValueType();
-                var itemSchema = _serializerOptions.GetJsonSchemaAsNode(underlyingItemType, _exporterOptions);
+                var itemSchema = _serializerOptions.GetJsonSchemaAsNode(underlyingItemType, StructuralOptionsFor(recordCompensation));
 
                 // The element concept's own schema metadata has to be carried onto the item schema. This
                 // branch bypasses the scalar-concept path above, so without it a [PII] or [Encrypted] concept
@@ -551,6 +560,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <param name="representedAs">The <see cref="Type"/> whose schema describes what actually goes on the wire.</param>
     /// <param name="declaredType">The declared <see cref="Type"/> being represented.</param>
     /// <param name="attributeProvider">The property or parameter the type is declared on, if any.</param>
+    /// <param name="recordCompensation">Optional unresolved structural compensation recorder.</param>
     /// <returns>The schema node for <paramref name="representedAs"/>, carrying the declared type's metadata.</returns>
     /// <remarks>
     /// The declared type's compliance metadata has to travel onto the substituted schema — the classification
@@ -564,9 +574,9 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// default (e.g. 0 for ulong).
     /// </para>
     /// </remarks>
-    JsonNode RepresentAs(Type representedAs, Type declaredType, ICustomAttributeProvider? attributeProvider)
+    JsonNode RepresentAs(Type representedAs, Type declaredType, ICustomAttributeProvider? attributeProvider, Action<JsonObject, Type>? recordCompensation)
     {
-        var representedSchema = _serializerOptions.GetJsonSchemaAsNode(representedAs, _exporterOptions);
+        var representedSchema = _serializerOptions.GetJsonSchemaAsNode(representedAs, StructuralOptionsFor(recordCompensation));
         if (representedSchema is not JsonObject representedSchemaObject) return representedSchema;
 
         if (_metadataResolver.HasMetadataFor(declaredType))

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Sinks;
 
 namespace Cratis.Chronicle.Events;
@@ -63,7 +64,7 @@ internal sealed record EventTypeDescriptor
     /// <returns>The descriptor.</returns>
     internal static EventTypeDescriptor FromRegisteredType(Type type, EventType eventType, EventStoreName currentEventStore)
     {
-        var eventStore = type.GetEventStoreName();
+        var eventStore = EventTypeDeclarations.ResolveEventStore(type, candidate => candidate.GetEventStoreName());
         var visibility = eventStore is not null || type.IsDefined(typeof(PublicAttribute), false)
             ? EventTypeVisibility.Public
             : EventTypeVisibility.Private;
@@ -73,7 +74,7 @@ internal sealed record EventTypeDescriptor
             EventType = eventType,
             EventStore = eventStore,
             RegistrationVisibility = visibility,
-            PublicationEligibility = type.IsPublicEventType(currentEventStore),
+            PublicationEligibility = type.IsPublicEventType(currentEventStore) || eventStore == currentEventStore.Value,
             PublishingSequence = type.GetPublishingSequence()
         };
     }

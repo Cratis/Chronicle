@@ -63,7 +63,7 @@ public class ReactorScenario(ReactorId id, Defaults defaults)
 
     static IReactorDefinition CreateDefinition(ReactorId id, Defaults defaults)
     {
-        var registration = defaults.Options.ExplicitArtifacts.Reactors.FirstOrDefault(_ => _.Id == id);
+        var registration = ((Events.EventStoreForTesting)defaults.EventStore).ExplicitSnapshot.Reactors.FirstOrDefault(_ => _.Id == id);
         if (registration.Define is null)
         {
             throw new UnknownReactorId(id);

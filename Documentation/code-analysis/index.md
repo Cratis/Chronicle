@@ -64,6 +64,19 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0054](CHR0054) | Reactor method has an unsupported return type | Warning | A reactor method with an event parameter must return a shape Chronicle discovers as a handler |
 | [CHR0057](CHR0057) | An artifact must target one read model | Warning | A class implementing multiple closed projection or reducer interfaces fails during default artifact discovery; split it into one artifact per read model |
 
+## Explicit registration evidence
+
+CHR0001, CHR0002, CHR0003, CHR0005 and CHR0007 accept event types nominated by semantically bound `ExplicitArtifacts.RegisterEventType<T>()` or `RegisterEventType(typeof(T), ...)` calls anywhere in the same compilation, including another source file. Their existing diagnostic ids, severities and messages remain unchanged. Reactor return types and event sequences also use that evidence. Explicit `RegisterReactor` and `RegisterReducer` calls opt plain observers into the existing method-signature checks.
+
+This is **possible-registration evidence**, not whole-program verification:
+
+- Dead or conditional calls count even if never executed. A registration on one client does not prove membership on another client.
+- Calls hidden in a referenced library, reflection, plugin, configuration or open-generic wrapper are not proven. A literal closed generic or `typeof` call in source is the supported evidence shape; a variable containing a Type is not evaluated.
+- Callbacks, supplied ids, generations, store ownership and control flow are not interpreted. Other analyzer families remain marker-based; this does not make every rule aware of explicit metadata.
+- Plain migration method roles and endpoint relationships are validated at runtime; the migration-id analyzer does not prove them.
+
+Validate the actual store configuration at runtime. If registration is correct but invisible to these analyzers, suppress only the relevant CHR0001/2/3/5/7 diagnostic at that use site rather than disabling the analyzers globally. See [explicit artifact registration](../clients/dotnet/explicit-artifacts) for the registration and snapshot contract.
+
 ## Quick Fixes
 
 - CHR0001, CHR0002, CHR0003, CHR0005, and CHR0007 provide a code fix that adds the missing `[EventType]` attribute to the referenced type.

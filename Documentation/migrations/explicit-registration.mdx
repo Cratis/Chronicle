@@ -1,0 +1,18 @@
+---
+title: Register migrations explicitly
+description: Nominate migration recipes when event generations are registered at the composition root.
+---
+
+Explicit registration lets you keep event contracts free of client markers while declaring their generation relationship in the application. Register both endpoint event types with one stable id and adjacent generations, then nominate the migration recipe.
+
+<ChronicleClientTabs snippet="migrations/explicit-registration/recipes" />
+
+The example nominates the plain recipe. The typed alternative uses the same builder methods and receives the owning store's finalized event registry through its base constructor. Choose one recipe for that bridge, not both: duplicate migration bridges are rejected.
+
+Registration still produces the declarative migration definitions evaluated by the kernel. It does not change multi-version storage, append-time migration or backfill behavior described in [Migrations](./).
+
+## Preparation and validation
+
+Every explicitly nominated recipe is validated before registration effects, including recipes that discovery would otherwise never reach. Nomination does not implicitly register missing endpoints. Plain roles must be synchronous instance methods with the exact typed builders; static, async void, overloaded or ambiguous roles are rejected.
+
+Legacy typed migrations using the parameterless base constructor keep declaration-based endpoint validation. For explicit identities, use the registry-taking constructor or the plain recipe form. The [.NET API reference](../clients/dotnet/explicit-artifacts#typed-and-plain-migrations) documents the precise signatures, custom-provider compatibility and runtime activation limits.

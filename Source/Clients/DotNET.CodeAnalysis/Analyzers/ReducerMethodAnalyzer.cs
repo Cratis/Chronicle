@@ -41,18 +41,20 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
         context.EnableConcurrentExecution();
         context.RegisterCompilationStartAction(start =>
         {
+            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.Create(start.Compilation, start.CancellationToken));
             var eventTypes = new Lazy<ImmutableArray<INamedTypeSymbol>>(() =>
-                GetTypes(start.Compilation.GlobalNamespace).Where(HasEventTypeAttribute).ToImmutableArray());
-            start.RegisterSymbolAction(symbol => AnalyzeMethod(symbol, eventTypes), SymbolKind.Method);
+                GetTypes(start.Compilation.GlobalNamespace).Where(HasEventTypeAttribute)
+                    .Concat(evidence.Value.EventTypes.OfType<INamedTypeSymbol>()).Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default).ToImmutableArray());
+            start.RegisterSymbolAction(symbol => AnalyzeMethod(symbol, eventTypes, evidence.Value), SymbolKind.Method);
         });
     }
 
-    static void AnalyzeMethod(SymbolAnalysisContext context, Lazy<ImmutableArray<INamedTypeSymbol>> eventTypes)
+    static void AnalyzeMethod(SymbolAnalysisContext context, Lazy<ImmutableArray<INamedTypeSymbol>> eventTypes, ExplicitRegistrationEvidence evidence)
     {
         var methodSymbol = (IMethodSymbol)context.Symbol;
 
         // Check if the containing type implements IReducer
-        if (!WellKnownTypes.ImplementsIReducer(methodSymbol.ContainingType, context.Compilation))
+        if (!WellKnownTypes.ImplementsIReducer(methodSymbol.ContainingType, context.Compilation) && !evidence.IsReducer(methodSymbol.ContainingType))
         {
             return;
         }
@@ -63,7 +65,8 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        var readModel = GetReadModel(methodSymbol.ContainingType, context.Compilation);
+        var readModel = GetReadModel(methodSymbol.ContainingType, context.Compilation) ??
+            (evidence.IsReducer(methodSymbol.ContainingType) ? InferReadModel(methodSymbol.ContainingType, eventTypes, context.Compilation) : null);
         if (readModel is null || !LooksLikeReducerMethod(methodSymbol, readModel, eventTypes, context.Compilation))
         {
             return;
@@ -92,6 +95,16 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
         return reducerType.AllInterfaces
             .FirstOrDefault(_ => SymbolEqualityComparer.Default.Equals(_.OriginalDefinition, reducerFor))?
             .TypeArguments.FirstOrDefault();
+    }
+
+    static ITypeSymbol? InferReadModel(INamedTypeSymbol reducer, Lazy<ImmutableArray<INamedTypeSymbol>> eventTypes, Compilation compilation)
+    {
+        var candidates = reducer.GetMembers().OfType<IMethodSymbol>()
+            .Where(method => IsPublicInstanceMethod(method) && HasInstanceParameterShape(method) &&
+                IsEventType(method.Parameters[0].Type, eventTypes, compilation) &&
+                HasOptionalEventContext(method.Parameters, compilation) && HasSupportedReturnType(method, method.Parameters[1].Type, compilation))
+            .Select(method => method.Parameters[1].Type).Distinct<ITypeSymbol>(SymbolEqualityComparer.Default).ToArray();
+        return candidates.Length == 1 ? candidates[0] : null;
     }
 
     static bool IsPublicInstanceMethod(IMethodSymbol method) =>
@@ -133,7 +146,7 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
 
     static bool IsEventType(ITypeSymbol type, Lazy<ImmutableArray<INamedTypeSymbol>> eventTypes, Compilation compilation) =>
         type.SpecialType != SpecialType.System_Object &&
-        (HasEventTypeAttribute(type) || IsAssignableEventType(type, eventTypes, compilation));
+        (HasEventTypeAttribute(type) || eventTypes.Value.Any(@event => SymbolEqualityComparer.Default.Equals(@event, type)) || IsAssignableEventType(type, eventTypes, compilation));
 
     static bool IsAssignableEventType(ITypeSymbol type, Lazy<ImmutableArray<INamedTypeSymbol>> eventTypes, Compilation compilation) =>
         type is { IsSealed: false, TypeKind: TypeKind.Interface or TypeKind.Class } &&

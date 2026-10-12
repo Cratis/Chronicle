@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Testing.Reactors;
 /// <param name="absentReadModels">The read model types and keys declared deliberately absent.</param>
 internal sealed class ScenarioReactorMethodArgumentsResolver(
     IReactorMethodArgumentsResolver inner,
-    IReadOnlySet<(Type ReadModelType, string Key)> absentReadModels) : IReactorMethodArgumentsResolver
+    IReadOnlySet<(Type ReadModelType, string Key)> absentReadModels) : IReactorMethodArgumentsResolver, IRegisteredReactorMethodArgumentsResolver
 {
     /// <inheritdoc/>
     public async Task<object?[]> Resolve(
@@ -29,9 +29,32 @@ internal sealed class ScenarioReactorMethodArgumentsResolver(
         IServiceProvider? serviceProvider)
     {
         var arguments = await inner.Resolve(method, reactor, @event, eventContext, eventStore, serviceProvider);
+        ValidateReadModels(method, reactor, @event, eventContext, eventStore, arguments);
+        return arguments;
+    }
+
+    /// <inheritdoc/>
+    public async Task<object?[]> Resolve(
+        MethodInfo method,
+        object reactor,
+        object @event,
+        EventContext eventContext,
+        IEventStore? eventStore,
+        IServiceProvider? serviceProvider,
+        ReactorDelivery delivery)
+    {
+        var arguments = inner is IRegisteredReactorMethodArgumentsResolver registeredResolver
+            ? await registeredResolver.Resolve(method, reactor, @event, eventContext, eventStore, serviceProvider, delivery)
+            : await inner.Resolve(method, reactor, @event, eventContext, eventStore, serviceProvider);
+        ValidateReadModels(method, reactor, @event, eventContext, eventStore, arguments);
+        return arguments;
+    }
+
+    void ValidateReadModels(MethodInfo method, object reactor, object @event, EventContext eventContext, IEventStore? eventStore, object?[] arguments)
+    {
         if (eventStore is not EventStoreForTesting)
         {
-            return arguments;
+            return;
         }
 
         var parameters = method.GetParameters();
@@ -52,7 +75,5 @@ internal sealed class ScenarioReactorMethodArgumentsResolver(
                 throw new ReadModelNotSeededForReactorScenario(type, key, [.. readModels.GetSeededKeys(type)]);
             }
         }
-
-        return arguments;
     }
 }
