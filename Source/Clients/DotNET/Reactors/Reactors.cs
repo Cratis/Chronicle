@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Reactors;
 /// <summary>
 /// Represents an implementation of <see cref="IReactors"/>.
 /// </summary>
-public class Reactors : IReactors, IReactorPartitionRecovery
+public partial class Reactors : IReactors, IReactorPartitionRecovery
 {
 #if NET8_0
     static readonly object _registerLock = new();
@@ -136,11 +136,11 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             var pendingDefinitions = _pendingDefinitions.Select(_ => Define(_.Id, _.Define)).ToArray();
             var ids = runtimeRegistrations.Select(_ => _.Handler.Id)
                 .Concat(pendingDefinitions.Select(_ => _.Id))
-                .Concat(reactorTypes.Select(_ => _.GetReactorId()));
+                .Concat(reactorTypes.Select(ResolveId));
             var duplicate = ids.GroupBy(_ => _).FirstOrDefault(_ => _.Count() > 1);
             if (duplicate is not null)
             {
-                var collidingTypes = reactorTypes.Where(_ => _.GetReactorId() == duplicate.Key).Take(2).ToArray();
+                var collidingTypes = reactorTypes.Where(_ => ResolveId(_) == duplicate.Key).Take(2).ToArray();
                 if (collidingTypes.Length == 2)
                 {
                     throw new ReactorAlreadyRegistered(duplicate.Key, collidingTypes[0], collidingTypes[1]);
@@ -269,7 +269,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
 
     /// <inheritdoc/>
     public IReactorHandler GetHandlerFor<TReactor>()
-        where TReactor : IReactor => _handlers[typeof(TReactor).GetReactorId()].Handler;
+        where TReactor : IReactor => GetHandlerFor(typeof(TReactor));
 
     /// <inheritdoc/>
     public IReactorHandler GetHandlerById(ReactorId id)
@@ -308,14 +308,14 @@ public class Reactors : IReactors, IReactorPartitionRecovery
     /// <inheritdoc/>
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor(Type reactorType)
     {
-        var handler = _handlers[reactorType.GetReactorId()].Handler;
+        var handler = GetHandlerFor(reactorType);
         return handler.GetFailedPartitions();
     }
 
     /// <inheritdoc/>
     public async Task<ReactorPartitionRetryOutcome> RetryFailedPartitionFor(Type reactorType, Partition partition)
     {
-        var handler = _handlers[reactorType.GetReactorId()].Handler;
+        var handler = GetHandlerFor(reactorType);
         var response = await _servicesAccessor.Services.Observers.RetryPartition(new RetryPartition
         {
             EventStore = _eventStore.Name,
@@ -331,7 +331,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
     /// <inheritdoc/>
     public async Task<ReactorPartitionQuarantineClearResult> ClearFailedPartitionQuarantineFor(Type reactorType, Partition partition, bool retryImmediately = true)
     {
-        var handler = _handlers[reactorType.GetReactorId()].Handler;
+        var handler = GetHandlerFor(reactorType);
         var response = await _servicesAccessor.Services.Observers.ClearPartitionQuarantine(new ClearPartitionQuarantine
         {
             EventStore = _eventStore.Name,
@@ -350,7 +350,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
         where TReactor : IReactor
     {
         var reactorType = typeof(TReactor);
-        var handler = _handlers[reactorType.GetReactorId()].Handler;
+        var handler = GetHandlerFor(reactorType);
         return handler.GetState();
     }
 
@@ -359,7 +359,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
         where TReactor : IReactor
     {
         var reactorType = typeof(TReactor);
-        var handler = _handlers[reactorType.GetReactorId()].Handler;
+        var handler = GetHandlerFor(reactorType);
         return Replay(handler.Id);
     }
 
@@ -405,7 +405,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
     {
 #pragma warning disable CA2000 // Ownership of the handler transfers to the registration.
         var handler = CreateHandler(
-            reactorType.GetReactorId(),
+            ResolveId(reactorType),
             reactorType,
             reactorType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name),
             ReactorInvoker.GetEventTypesFor(_eventStore.EventTypes, reactorType, _sideEffectHandlers));
@@ -738,7 +738,8 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             _argumentsResolver,
             serviceProviderScope.ServiceProvider)
         {
-            StoppingToken = cancellationToken
+            StoppingToken = cancellationToken,
+            RegisteredId = handler.Id
         };
 
         foreach (var @event in events.Events)

@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
@@ -25,7 +26,7 @@ namespace Cratis.Chronicle.Reducers;
 /// <summary>
 /// Represents an implementation of <see cref="IReducers"/>.
 /// </summary>
-public class Reducers : IReducers
+public partial class Reducers : IReducers
 {
 #if NET8_0
     static readonly object _registerLock = new();
@@ -119,8 +120,7 @@ public class Reducers : IReducers
                                 _ => _,
                                 reducerType =>
                                 {
-                                    var readModelType = reducerType.GetReadModelType();
-                                    _reducerValidator.Validate(reducerType);
+                                    var readModelType = ResolveReadModel(reducerType);
                                     reducerType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name);
                                     return CreateHandlerFor(reducerType, readModelType) as IReducerHandler;
                                 });
@@ -361,7 +361,7 @@ public class Reducers : IReducers
     {
         var handler = new ReducerHandler(
             _eventStore,
-            reducerType.GetReducerId(),
+            ResolveId(reducerType),
             reducerType,
             reducerType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name),
             new ReducerInvoker(
@@ -370,7 +370,7 @@ public class Reducers : IReducers
                 reducerType,
                 readModelType,
                 _namingPolicy.GetReadModelName(readModelType)),
-            ShouldReducerBeActive(reducerType),
+            ShouldReducerBeActive(reducerType, readModelType),
             _reducerObservers);
 
         CancellationTokenRegistration? register = null;
@@ -653,15 +653,14 @@ public class Reducers : IReducers
         }
     }
 
-    bool ShouldReducerBeActive(Type reducerType)
+    bool ShouldReducerBeActive(Type reducerType, Type readModelType)
     {
-        var active = reducerType.IsActive();
+        var active = reducerType.GetCustomAttribute<ReducerAttribute>()?.IsActive ?? true;
         if (!active)
         {
             return false;
         }
 
-        var readModelType = reducerType.GetReadModelType();
         if (readModelType.IsPassive())
         {
             return false;

@@ -19,6 +19,7 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
 {
     readonly EventTypeDeclarations _eventDeclarations;
     readonly FrozenDictionary<(Type Type, ExplicitArtifactKind Kind), string> _identities;
+    readonly FrozenSet<(Type Type, ExplicitArtifactKind Kind)> _nominations;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ExplicitArtifactCatalog"/>.
@@ -36,6 +37,7 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
             ValidateConcreteType(recipe.Type, recipe.Kind.ToString());
         }
         ValidateObserverKinds(snapshot.Types);
+        _nominations = snapshot.Types.Select(_ => (_.Type, _.Kind)).ToFrozenSet();
 
         EventTypes = Union(discovered.EventTypes, snapshot.EventTypes.Select(_ => _.Type));
         Projections = Copy(discovered.Projections);
@@ -129,6 +131,26 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
     /// Gets every explicitly nominated migration, including ones unreachable from discovery's upgrades.
     /// </summary>
     internal ImmutableArray<Type> ExplicitMigrations { get; }
+
+    /// <summary>
+    /// Gets the current immutable catalog without changing manual discovery or capturing new options.
+    /// </summary>
+    /// <param name="provider">The store or direct artifact provider.</param>
+    /// <returns>The current catalog, if explicit discovery has run.</returns>
+    internal static ExplicitArtifactCatalog? From(IClientArtifactsProvider provider) => provider switch
+    {
+        ExplicitArtifactCatalog catalog => catalog,
+        StoreClientArtifactsProvider store => store.Current as ExplicitArtifactCatalog,
+        _ => null
+    };
+
+    /// <summary>
+    /// Checks explicit nomination independently of marker discovery.
+    /// </summary>
+    /// <param name="type">The artifact CLR type.</param>
+    /// <param name="kind">The nominated kind.</param>
+    /// <returns>Whether the snapshot explicitly nominated this artifact.</returns>
+    internal bool IsExplicit(Type type, ExplicitArtifactKind kind) => _nominations.Contains((type, kind));
 
     /// <summary>
     /// Gets effective store metadata without requiring event markers.

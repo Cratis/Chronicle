@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
@@ -718,8 +719,8 @@ public partial class EventStore : IEventStore
         var currentStoreName = _eventStoreName.Value;
 
         var observerExternalSubscriptions = _clientArtifactsProvider.Reactors
-            .Where(r => !ReactorTypeExtensions.HasExplicitEventSequence(r))
-            .Concat(_clientArtifactsProvider.Reducers.Where(r => !ReducerTypeExtensions.HasExplicitEventSequence(r)))
+            .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReactorAttribute>()?.EventSequenceId))
+            .Concat(_clientArtifactsProvider.Reducers.Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReducerAttribute>()?.EventSequenceId)))
             .Select(observerType =>
             {
                 var sourceStore = ObserverEventTypes.GetSourceStore(observerType, EventTypes, _eventStoreName);

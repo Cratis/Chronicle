@@ -68,6 +68,11 @@ public class ReactorInvoker(
     internal CancellationToken StoppingToken { get; init; }
 
     /// <summary>
+    /// Gets the owning registration's resolved observer identity, including explicit aliases.
+    /// </summary>
+    internal ReactorId? RegisteredId { get; init; }
+
+    /// <summary>
     /// Gets all <see cref="EventType"/> for a specific reactor type.
     /// </summary>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event types.</param>
@@ -92,7 +97,7 @@ public class ReactorInvoker(
     /// <inheritdoc/>
     public async Task<ReactorInvocationResult> Invoke(object content, EventContext eventContext)
     {
-        var reactorId = targetType.GetReactorId();
+        var reactorId = RegisteredId ?? targetType.GetReactorId();
         var eventTypeName = content.GetType().Name;
         try
         {

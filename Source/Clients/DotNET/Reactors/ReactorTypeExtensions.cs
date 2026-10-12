@@ -5,6 +5,7 @@ using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors.Validators;
+using Cratis.Chronicle.Registrations;
 using Cratis.Reflection;
 
 namespace Cratis.Chronicle.Reactors;
@@ -129,9 +130,7 @@ public static class ReactorTypeExtensions
     /// <param name="currentStore">The current client's store.</param>
     /// <returns>The selected event sequence.</returns>
     internal static EventSequenceId GetEventSequenceId(this Type type, IEventTypes eventTypes, EventStoreName currentStore) =>
-        type.HasExplicitEventSequence() || Attribute.IsDefined(type, typeof(EventStoreAttribute))
-            ? type.GetEventSequenceId(currentStore.Value)
-            : ObserverEventTypes.InferSequence(type, eventTypes, currentStore);
+        RegisteredObserverMetadata.SequenceFor(type, type.GetCustomAttribute<ReactorAttribute>()?.EventSequenceId, eventTypes, currentStore);
 
     static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reactorType, string? currentEventStoreName)
     {
