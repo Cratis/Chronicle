@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
@@ -16,6 +17,9 @@ namespace Cratis.Chronicle.Observation;
 
 internal static partial class ObserverLogMessages
 {
+    [LoggerMessage(LogLevel.Debug, "Retrying routing after a failed next-event lookup from {NextEventSequenceNumber}")]
+    internal static partial void WatchdogRetryingEventLookup(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
+
     [LoggerMessage(LogLevel.Debug, "Subscribing observer")]
     internal static partial void Subscribing(this ILogger<Observer> logger);
 
@@ -170,6 +174,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the catch-up job is missing while observer has catching-up partitions. Re-routing observer.")]
     internal static partial void WatchdogCatchupJobMissing(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Watchdog could not look up the next relevant event from {NextEventSequenceNumber}: {Error}. Keeping the observer position unchanged until the next check.")]
+    internal static partial void WatchdogNextEventLookupFailed(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber, GetSequenceNumberError error);
 
     [LoggerMessage(LogLevel.Debug, "Watchdog fast-forwarding NextEventSequenceNumber from {NextEventSequenceNumber} to tail {TailEventSequenceNumber} because there are no relevant events in that range.")]
     internal static partial void WatchdogFastForwardingNextEventSequenceNumber(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber, EventSequenceNumber tailEventSequenceNumber);
