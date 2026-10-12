@@ -71,6 +71,7 @@ internal static class ObserverEventTypes
             .Where(method => !method.IsSpecialName)
             .Select(method => method.GetParameters().FirstOrDefault()?.ParameterType)
             .OfType<Type>()
+            .SelectMany(type => type.GetEventTypes(eventTypes.AllClrTypes))
             .Where(type => IsCurrentEventType(type, eventTypes))
             .Distinct();
 
