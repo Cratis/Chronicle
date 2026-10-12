@@ -33,7 +33,11 @@ public class and_the_options_nominate_unmarked_types(context setup) : Given<cont
 
         protected override void ConfigureServices(IServiceCollection services)
         {
-            var options = new ChronicleOptions();
+            // Options.Create bypasses the host's PostConfigure pipeline, so preserve its storage-specific sink.
+            var options = new ChronicleOptions
+            {
+                DefaultSinkTypeId = GetDefaultSinkTypeId() ?? Sinks.WellKnownSinkTypes.MongoDB
+            };
             options.ExplicitArtifacts
                 .RegisterEventType<OrderPlaced>(_ => _.WithId(EventId))
                 .RegisterReactor<OrderNotifier>(ReactorId)
