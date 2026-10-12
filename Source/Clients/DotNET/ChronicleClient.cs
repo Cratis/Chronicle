@@ -415,8 +415,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
             }
 
             await _connection.Connect();
-            if (Options.AutoDiscoverAndRegister && !eventStore.Registration.HasRun)
+            if (Options.AutoDiscoverAndRegister && _connection.Lifecycle.IsConnected && !eventStore.Registration.HasRun)
             {
+                // Only a connected transport can register; the first connect may still be waiting on its watchdog.
                 // Connect may have reused an already-connected transport without firing the new store's callback.
                 await eventStore.RegisterAll();
             }
