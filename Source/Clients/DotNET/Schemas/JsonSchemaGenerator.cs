@@ -569,7 +569,8 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <para>
     /// The nullable marker has to be re-applied for the same reason: System.Text.Json's schema exporter does not
     /// propagate NRT nullable markers through custom converters, so the actual property nullability is read via
-    /// <see cref="NullabilityInfoContext"/>. When the property is nullable, '?' is appended to the format so that
+    /// <see cref="NullabilityInfoContext"/>. When the property is nullable, '?' is appended to the format, or
+    /// 'null' is included in the schema type for unformatted representations, so that
     /// <c language="csharp">IsNullable()</c> returns true and <c language="csharp">GetDefaultValue()</c> returns null rather than the primitive
     /// default (e.g. 0 for ulong).
     /// </para>
@@ -589,13 +590,19 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
             AddSecurityMetadata(representedSchemaObject, _securityMetadataResolver.GetMetadataFor(declaredType));
         }
 
-        if (PropertyIsNullable(declaredType, attributeProvider) &&
-            representedSchemaObject.TryGetPropertyValue("format", out var format))
+        if (PropertyIsNullable(declaredType, attributeProvider))
         {
-            var formatValue = format!.GetValue<string>();
-            if (!formatValue.EndsWith('?'))
+            if (representedSchemaObject.TryGetPropertyValue("format", out var format))
             {
-                representedSchemaObject["format"] = formatValue + "?";
+                var formatValue = format!.GetValue<string>();
+                if (!formatValue.EndsWith('?'))
+                {
+                    representedSchemaObject["format"] = formatValue + "?";
+                }
+            }
+            else if (representedSchemaObject["type"] is JsonValue type)
+            {
+                representedSchemaObject["type"] = new JsonArray(type.DeepClone(), "null");
             }
         }
 
