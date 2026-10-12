@@ -267,9 +267,11 @@ public partial class Reducers : IReducers
     public async Task<object?> GetInstanceById(Type readModelType, ReadModelKey readModelKey)
     {
         var handler = GetHandlerForReadModelType(readModelType);
-        var events = await _eventStore
+        var filter = ObserverEventFilter.For(handler.ReducerType, _eventStore.EventSources);
+        var events = (await _eventStore
             .GetEventSequence(handler.EventSequenceId)
-            .GetForEventSourceIdAndEventTypes((EventSourceId)readModelKey.Value, handler.EventTypes);
+            .GetForEventSourceIdAndEventTypes((EventSourceId)readModelKey.Value, handler.EventTypes))
+            .Where(@event => filter.Matches(@event.Context)).ToList();
 
         if (events.Count == 0)
         {
@@ -304,8 +306,10 @@ public partial class Reducers : IReducers
             ? orderedEvents.Take(eventCount.Value > int.MaxValue ? int.MaxValue : (int)eventCount.Value).ToList()
             : orderedEvents;
 
+        var filter = ObserverEventFilter.For(handler.ReducerType, _eventStore.EventSources);
         var result = new List<object>();
         foreach (var eventsForEventSource in eventsToReduce
+                     .Where(@event => filter.Matches(@event.Context))
                      .GroupBy(_ => _.Context.EventSourceId)
                      .Select(group => group.ToList()))
         {
@@ -432,7 +436,7 @@ public partial class Reducers : IReducers
             handler.Id,
             handler.EventSequenceId);
 
-        var eventSourceFilter = handler.ReducerType.GetEventSourceFilter(_eventStore.EventSources);
+        var filter = ObserverEventFilter.For(handler.ReducerType, _eventStore.EventSources);
         var registration = new RegisterReducer
         {
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
@@ -449,9 +453,9 @@ public partial class Reducers : IReducers
                 Tags = handler.ReducerType.GetTags().ToArray(),
                 Filters = new()
                 {
-                    FilterTags = handler.ReducerType.GetFilterTags().ToArray(),
-                    EventSourceType = eventSourceFilter.EventSourceType.Value,
-                    EventStreamType = eventSourceFilter.EventStreamType.Value
+                    FilterTags = filter.FilterTags.ToArray(),
+                    EventSourceType = filter.EventSourceType.Value,
+                    EventStreamType = filter.EventStreamType.Value
                 },
                 Hash = GetFingerprint(handler.ReducerType)
             }
