@@ -407,13 +407,27 @@ public class ChronicleClient : IChronicleClient, IDisposable
             Microsoft.Extensions.Options.Options.Create(Options),
             _loggerFactory);
 
-        if (Options.AutoDiscoverAndRegister)
+        try
         {
-            await eventStore.DiscoverAll();
-        }
+            if (Options.AutoDiscoverAndRegister)
+            {
+                await eventStore.DiscoverAll();
+            }
 
-        await _connection.Connect();
-        return eventStore;
+            await _connection.Connect();
+            if (Options.AutoDiscoverAndRegister && !eventStore.Registration.HasRun)
+            {
+                // Connect may have reused an already-connected transport without firing the new store's callback.
+                await eventStore.RegisterAll();
+            }
+
+            return eventStore;
+        }
+        catch
+        {
+            eventStore.DetachAutomaticRegistration();
+            throw;
+        }
     }
 
     /// <summary>

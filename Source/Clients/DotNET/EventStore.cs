@@ -47,7 +47,7 @@ namespace Cratis.Chronicle;
 /// <summary>
 /// Represents an implementation of <see cref="IEventStore"/>.
 /// </summary>
-public class EventStore : IEventStore
+public partial class EventStore : IEventStore
 {
     readonly EventStoreName _eventStoreName;
     readonly IChronicleServicesAccessor _servicesAccessor;
@@ -67,10 +67,13 @@ public class EventStore : IEventStore
     readonly DiscoveryReportBuilder? _discoveryReportBuilder;
     readonly ArtifactIdentityDriftDetector? _identityDriftDetector;
     readonly ArtifactIdentityDriftPolicy _identityDriftPolicy;
+    readonly bool _autoDiscoverAndRegister;
+    readonly StoreClientArtifactsProvider? _storeArtifacts;
     SingleFlightRegistration? _registerAllFlight;
     AsyncLocal<bool>? _backgroundRegistrationRetryContext;
     int _backgroundRegistrationRetryActive;
     Task? _backgroundRegistrationRetryTask;
+    StorePreparationGate? _preparation;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStore"/> class.
@@ -124,6 +127,11 @@ public class EventStore : IEventStore
         _jsonSerializerOptions = jsonSerializerOptions;
         DecisionReadSchemas = schemaGenerator;
         DecisionReadJsonOptions = jsonSerializerOptions;
+        _autoDiscoverAndRegister = autoDiscoverAndRegister;
+        _preparation = new();
+        var explicitSnapshot = options.Value.ExplicitArtifacts.CreateSnapshot();
+        _storeArtifacts = new(clientArtifactsProvider, explicitSnapshot);
+        clientArtifactsProvider = _storeArtifacts;
         _clientArtifactsProvider = clientArtifactsProvider;
         _reactorSideEffectHandlers = reactorSideEffectHandlers;
         Name = eventStoreName;
@@ -134,7 +142,9 @@ public class EventStore : IEventStore
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
         _activitySource = serviceProvider.GetRequiredKeyedService<IActivitySource<EventSequence>>(ClientActivity.SourceName);
         var types = TypeUniverse.For(serviceProvider);
-        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation, namingPolicy);
+        var eventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation, namingPolicy);
+        eventTypes.UseMigrationServices(serviceProvider);
+        EventTypes = eventTypes;
         EventSources = new EventSources.EventSources(this, clientArtifactsProvider);
         UnitOfWorkManager = new UnitOfWorkManager(
             this,
@@ -239,8 +249,8 @@ public class EventStore : IEventStore
 
         // Registrations made with the client while it was being configured belong to every event store it creates.
         // They are built by discovery, which is when the event types they refer to become known.
-        options.Value.ExplicitArtifacts.ApplyTo(projections);
-        options.Value.ExplicitArtifacts.ApplyTo(reactors);
+        explicitSnapshot.ApplyTo(projections);
+        explicitSnapshot.ApplyTo(reactors);
 
         Webhooks = new Webhooks.Webhooks(EventTypes, this, loggerFactory.CreateLogger<Webhooks.Webhooks>());
         ExternalServices = new ExternalServices.ExternalServices(this, loggerFactory.CreateLogger<ExternalServices.ExternalServices>());
@@ -401,28 +411,7 @@ public class EventStore : IEventStore
     internal Task? PendingBackgroundRegistrationRetry => _backgroundRegistrationRetryTask;
 
     /// <inheritdoc/>
-    public async Task DiscoverAll()
-    {
-        _logger.DiscoverAllArtifacts();
-
-        // We need to discover all event types first, as they are used by the other artifacts
-        await EventTypes.Discover();
-        await EventSources.Discover();
-
-        await Task.WhenAll(
-            Constraints.Discover(),
-            Reactors.Discover(),
-            Reducers.Discover(),
-            Projections.Discover(),
-            Seeding.Discover());
-
-        var report = BuildDiscoveryReport();
-        if (report is not null)
-        {
-            Discovery = report;
-            _logger.LogDiscovery(report, Name, Namespace);
-        }
-    }
+    public Task DiscoverAll() => Preparation.Discover(DiscoverAllLocal);
 
     /// <inheritdoc/>
     /// <remarks>
@@ -435,6 +424,7 @@ public class EventStore : IEventStore
     /// </remarks>
     public Task RegisterAll()
     {
+        Preparation.ThrowIfReentered();
         var flight = LazyInitializer.EnsureInitialized(
             ref _registerAllFlight,
             () => new SingleFlightRegistration(RegisterAllCore));
@@ -476,23 +466,43 @@ public class EventStore : IEventStore
         _logger.RegisterAllArtifacts();
         var isBackgroundRetry = _backgroundRegistrationRetryContext?.Value == true;
         var drift = isBackgroundRetry ? Registration.IdentityDrift : ImmutableList<ArtifactIdentityDrift>.Empty;
+        var effectsStarted = false;
 
         try
         {
-            if (!isBackgroundRetry)
+            await Preparation.Register(_autoDiscoverAndRegister ? DiscoverAllLocal : ValidateManualPreparation, async () =>
             {
-                drift = await DetectIdentityDrift();
-            }
+                Func<Task> registerEventTypes = EventTypes.Register;
+                Func<Task> registerReadModels = ReadModels.Register;
+                try
+                {
+                    if (EventTypes is EventTypes nativeEventTypes)
+                    {
+                        var payload = await nativeEventTypes.PrepareRegistration();
+                        registerEventTypes = () => nativeEventTypes.RegisterPrepared(payload);
+                    }
+                    if (ReadModels is ReadModels.ReadModels nativeReadModels)
+                    {
+                        var payload = nativeReadModels.PrepareRegistration();
+                        registerReadModels = () => nativeReadModels.RegisterPrepared(payload);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    Preparation.RecordPayloadFailure(exception);
+                    throw;
+                }
+                if (!isBackgroundRetry)
+                {
+                    drift = await DetectIdentityDrift();
+                }
 
-            // Background retries reuse the findings of the run that started them, so the policy still applies to them.
-            ThrowIfIdentityDriftMustFail(drift);
-
-            await RegisterAllArtifactsWithRetries();
-
-            // Everything that could be registered has been, and the kernel calls carrying it have returned - which is
-            // the first moment the outcome is a fact rather than a hope, and the only transition a consumer can
-            // observe.
-            Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations) { IdentityDrift = drift };
+                // Background retries reuse the findings of the run that started them, so the policy still applies.
+                ThrowIfIdentityDriftMustFail(drift);
+                effectsStarted = true;
+                await RegisterAllArtifactsWithRetries(registerEventTypes, registerReadModels);
+                Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations) { IdentityDrift = drift };
+            });
         }
         catch (Exception exception)
         {
@@ -503,7 +513,7 @@ public class EventStore : IEventStore
             // consumer now has. The connection lifecycle still gets the exception, and a later reconnect that
             // succeeds replaces this outcome wholesale.
             Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, exception) { IdentityDrift = drift };
-            if (exception is not ArtifactIdentityDriftDetected)
+            if (effectsStarted && exception is not (ArtifactIdentityDriftDetected or ArtifactPreparationReentered))
             {
                 StartBackgroundRegistrationRetry();
             }
@@ -641,6 +651,8 @@ public class EventStore : IEventStore
     /// <summary>
     /// Register every artifact, retrying the whole registration when the kernel does not accept it.
     /// </summary>
+    /// <param name="registerEventTypes">The effect operation for the prepared event payload.</param>
+    /// <param name="registerReadModels">The effect operation for the prepared read-model payload.</param>
     /// <returns>The task representing the operation.</returns>
     /// <remarks>
     /// Registration runs on the way up, so its failure is the host's failure. A kernel that is busy - catching up a
@@ -650,17 +662,17 @@ public class EventStore : IEventStore
     /// partial one, and the outcome is only published once the attempts are spent - a waiter never sees the failure
     /// of an attempt that a later one went on to succeed at.
     /// </remarks>
-    async Task RegisterAllArtifactsWithRetries()
+    async Task RegisterAllArtifactsWithRetries(Func<Task> registerEventTypes, Func<Task> registerReadModels)
     {
         var attempt = 1;
         while (true)
         {
             try
             {
-                await RegisterAllArtifacts();
+                await RegisterAllArtifacts(registerEventTypes, registerReadModels);
                 return;
             }
-            catch (Exception exception) when (attempt < _registrationRetry.MaxAttempts && exception is not ArtifactIdentityDriftDetected)
+            catch (Exception exception) when (attempt < _registrationRetry.MaxAttempts && exception is not (ArtifactIdentityDriftDetected or ArtifactPreparationReentered))
             {
                 var delay = _registrationBackoff.NextDelay(attempt);
                 _logger.RetryingRegisterAllArtifacts(exception, attempt, _registrationRetry.MaxAttempts, delay);
@@ -670,16 +682,18 @@ public class EventStore : IEventStore
         }
     }
 
-    async Task RegisterAllArtifacts()
+    async Task RegisterAllArtifacts(Func<Task> registerEventTypes, Func<Task> registerReadModels)
     {
+        Preparation.VerifyRegistrationLease();
+
         // Ensure the event store exists before registering artifacts.
         await _servicesAccessor.Services.EventStores.EnsureEventStore(new EnsureEventStoreRequest { Name = Name.Value }).EnsureSuccess();
 
         // We need to register event types and read models first, as they are used by the other artifacts
         await Task.WhenAll(
-            EventTypes.Register(),
+            registerEventTypes(),
             EventSources.Register(),
-            ReadModels.Register());
+            registerReadModels());
 
         // Register all observers before seeding to prevent race conditions where
         // seeded events arrive at the kernel before observers are registered
