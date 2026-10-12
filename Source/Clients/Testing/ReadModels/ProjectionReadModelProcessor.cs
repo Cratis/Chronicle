@@ -570,7 +570,7 @@ internal static class ProjectionReadModelProcessor
             var segments = childRemovedFromAll.ChildrenProperty.Segments.Select(segment => segment.Value).ToArray();
             foreach (var parentState in statesByKey.Values)
             {
-                RemoveFromCollection(parentState, segments, 0, childRemovedFromAll.IdentifiedByProperty.Path, childRemovedFromAll.Key);
+                RemoveFromCollection(parentState, segments, 0, childRemovedFromAll.IdentifiedByProperty, childRemovedFromAll.Key);
             }
         }
 
@@ -724,10 +724,10 @@ internal static class ProjectionReadModelProcessor
     static void ApplyChildRemoved(ExpandoObject state, ChildRemoved childRemoved)
     {
         var segments = childRemoved.ChildrenProperty.Segments.Select(s => s.Value).ToArray();
-        RemoveFromCollection(state, segments, 0, childRemoved.IdentifiedByProperty.Path, childRemoved.Key);
+        RemoveFromCollection(state, segments, 0, childRemoved.IdentifiedByProperty, childRemoved.Key);
     }
 
-    static void RemoveFromCollection(IDictionary<string, object?> current, string[] segments, int index, string identifiedByProperty, object key)
+    static void RemoveFromCollection(IDictionary<string, object?> current, string[] segments, int index, PropertyPath identifiedByProperty, object key)
     {
         if (index >= segments.Length || !current.TryGetValue(segments[index], out var value) || value is not System.Collections.IEnumerable enumerable)
         {
@@ -740,7 +740,7 @@ internal static class ProjectionReadModelProcessor
         {
             items.RemoveAll(item =>
                 item is ExpandoObject expando &&
-                ((IDictionary<string, object?>)expando).TryGetValue(identifiedByProperty, out var idValue) &&
+                ChildIdentity.TryGetValue(expando, identifiedByProperty, out var idValue) &&
                 Equals(NormalizeStateValue(idValue), NormalizeStateValue(key)));
             current[segments[index]] = items;
             return;
@@ -780,18 +780,15 @@ internal static class ProjectionReadModelProcessor
                     : collection
                         .OfType<ExpandoObject>()
                         .SingleOrDefault(item =>
-                        {
-                            var itemDictionary = (IDictionary<string, object?>)item;
-                            return itemDictionary.TryGetValue(indexer.IdentifierProperty.Path, out var value) &&
-                                   Equals(NormalizeStateValue(value), NormalizeStateValue(indexer.Identifier));
-                        });
+                            ChildIdentity.TryGetValue(item, indexer.IdentifierProperty, out var value) &&
+                            Equals(NormalizeStateValue(value), NormalizeStateValue(indexer.Identifier)));
 
             if (element is null)
             {
                 element = new ExpandoObject();
                 if (indexer.IdentifierProperty.IsSet)
                 {
-                    ((IDictionary<string, object?>)element)[indexer.IdentifierProperty.Path] = NormalizeStateValue(indexer.Identifier);
+                    indexer.IdentifierProperty.SetValue(element, NormalizeStateValue(indexer.Identifier)!, ArrayIndexers.NoIndexers);
                 }
 
                 collection.Add(element);
@@ -848,9 +845,6 @@ internal static class ProjectionReadModelProcessor
             return;
         }
 
-        var propertyName = childAdded.IdentifiedByProperty.LastSegment.Value;
-        var childStateDict = (IDictionary<string, object?>)childState;
-
-        childStateDict[propertyName] = NormalizeStateValue(childAdded.Key);
+        childAdded.IdentifiedByProperty.SetValue(childState, NormalizeStateValue(childAdded.Key)!, ArrayIndexers.NoIndexers);
     }
 }
