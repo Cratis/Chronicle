@@ -18,6 +18,11 @@ namespace Cratis.Chronicle.Events;
 public partial class EventTypes
 {
     /// <summary>
+    /// Gets the migrators prepared with this registry's owning-store binding and cache.
+    /// </summary>
+    internal IEventTypeMigrators PreparedMigrators => _storeMigrators ?? _eventTypeMigrators;
+
+    /// <summary>
     /// Supplies ordinary constructor dependencies for the custom-provider explicit migration overlay.
     /// </summary>
     /// <param name="serviceProvider">The owning store's constructor dependency provider.</param>

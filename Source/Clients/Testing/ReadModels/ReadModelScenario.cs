@@ -489,16 +489,12 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     }
 
     Type? FindReducerType(Type readModelType) =>
-        EventStore().ClientOptions.ExplicitArtifacts.Projections.Any(_ => _.ReadModelType == readModelType) ? null :
-        ClientArtifactsProvider.Reducers.FirstOrDefault(t =>
-            t.GetInterfaces().Any(i =>
-                i.IsGenericType &&
-                i.GetGenericTypeDefinition() == typeof(IReducerFor<>) &&
-                i.GetGenericArguments()[0] == readModelType));
+        EventStore().ExplicitSnapshot.Projections.Any(_ => _.ReadModelType == readModelType) ? null :
+        EventStore().Reducers.GetAllHandlers().FirstOrDefault(_ => _.ReadModelType == readModelType)?.ReducerType;
 
     Contracts.Projections.ProjectionDefinition? FindProjectionDefinition(Type readModelType)
     {
-        var explicitProjection = EventStore().ClientOptions.ExplicitArtifacts.Projections.FirstOrDefault(_ => _.ReadModelType == readModelType);
+        var explicitProjection = EventStore().ExplicitSnapshot.Projections.FirstOrDefault(_ => _.ReadModelType == readModelType);
         if (explicitProjection is not null)
         {
             return ((Projections.Projections)EventStore().Projections).Definitions

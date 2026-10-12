@@ -31,7 +31,7 @@ internal static class TestingEventTypes
         {
             var generations = group.Select(type => new KernelEvents::EventTypeGenerationDefinition(
                 new KernelEvents::EventTypeGeneration(type.Generation.Value),
-                schemas.Generate(eventTypes.GetClrTypeFor(type.Id, type.Generation)))).ToList();
+                schemas.Generate(eventTypes.GetClrTypeFor(type.Id, type.Generation), eventTypes))).ToList();
             var migrations = group.SelectMany(type => migrators.GetMigratorsFor(eventTypes.GetClrTypeFor(type.Id, type.Generation)))
                 .Select(CreateMigration).ToArray();
             foreach (var generation in migrations.SelectMany(migration => new[] { migration.FromGeneration, migration.ToGeneration }).Distinct()

@@ -6,6 +6,7 @@ using System.Runtime.ExceptionServices;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Testing.Events;
 using Cratis.Execution;
 using Cratis.Types;
@@ -41,7 +42,7 @@ namespace Cratis.Chronicle.Testing.Reactors;
 /// </remarks>
 /// <typeparam name="TReactor">The type of reactor under test.</typeparam>
 public class ReactorScenario<TReactor> : IDisposable
-    where TReactor : class, IReactor
+    where TReactor : class
 {
     readonly Defaults _defaults;
     readonly IReactorSideEffectHandlers? _sideEffectHandlers;
@@ -103,6 +104,11 @@ public class ReactorScenario<TReactor> : IDisposable
         IEventStore? eventStore = null)
     {
         _defaults = defaults;
+        if (!typeof(TReactor).IsAssignableTo(typeof(IReactor)) &&
+            ExplicitArtifactCatalog.From(defaults.ClientArtifactsProvider)?.IsExplicit(typeof(TReactor), ExplicitArtifactKind.Reactor) != true)
+        {
+            throw new InvalidExplicitArtifact(typeof(TReactor), "reactor", "A plain reactor scenario requires explicit registration in its per-run Defaults.");
+        }
         _eventTypes = defaults.EventTypes;
         _explicitServiceProvider = serviceProvider;
         _sideEffectHandlers = sideEffectHandlers;
@@ -304,7 +310,10 @@ public class ReactorScenario<TReactor> : IDisposable
                 new SubjectValuesProvider()
             ])),
             argumentsResolver: new ScenarioReactorMethodArgumentsResolver(new ReactorMethodArgumentsResolver(), _absentReadModels),
-            serviceProvider: serviceProvider);
+            serviceProvider: serviceProvider)
+        {
+            RegisteredId = RegisteredObserverMetadata.ReactorIdFor(_defaults.ClientArtifactsProvider, typeof(TReactor))
+        };
 
         foreach (var @event in events)
         {
