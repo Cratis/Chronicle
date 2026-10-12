@@ -5,6 +5,11 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Storage.Sql" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="humanizer" />
         <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
