@@ -11,6 +11,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Projections.ModelBound;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Registrations;
 using Cratis.Monads;
 using Cratis.Serialization;
@@ -64,6 +65,11 @@ public class Projections(
 
     /// <summary>Raised after definitions are registered successfully.</summary>
     internal event Action? Registered;
+
+    /// <summary>
+    /// Gets the fallback monitor used by native registries on custom stores.
+    /// </summary>
+    internal object ReadModelOwnershipSync { get; } = new();
 
     /// <summary>
     /// Gets the generation delivery policy supplied by the event store.
@@ -186,80 +192,20 @@ public class Projections(
     /// <inheritdoc/>
     public Task Discover()
     {
-        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes, logger, eventStore.Name?.Value);
-        var modelBoundDefinitions = modelBoundProjections.Discover();
-        ApplyGenerationDelivery(modelBoundDefinitions, modelBoundProjections.Failures);
-        var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
-            kvp => kvp.Key,
-            kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
-
-        var (definitionsByType, failures, containerNames) = FindAllProjectionDefinitions(
-            eventTypes,
-            clientArtifacts,
-            artifactsActivator,
-            jsonSerializerOptions);
-        _definitionsByType = definitionsByType;
-
-        _handlersByType = _definitionsByType.ToDictionary(
-                kvp => kvp.Key,
-                kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key.GetReadModelType(), kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
-
-        _modelBoundHandlers = modelBoundHandlers;
-
-        // The read model index holds one handler per read model, and asking for a projection by the model it maintains
-        // is the only handle a model-bound projection has. So a read model claimed twice leaves the second projection
-        // addressable only if it has a type of its own - and a model-bound one does not. Both are still registered and
-        // both still write to the read model, which is the part worth knowing about; say so rather than resolving it
-        // silently by declaration order.
-        var discoveredHandlersByModelType = new Dictionary<Type, IProjectionHandler>();
-        var claimedBy = new Dictionary<Type, string>();
-
-        foreach (var kvp in _handlersByType)
+        lock (ReadModelBuilderOwnership.SyncFor(eventStore, ReadModelOwnershipSync))
         {
-            var readModelType = kvp.Key.GetReadModelType();
-            if (discoveredHandlersByModelType.TryAdd(readModelType, kvp.Value))
+            var catalog = new Reducers.ReducerCatalog(clientArtifacts, eventTypes, new Reducers.ReducerValidator());
+            foreach (var model in clientArtifacts.Projections.Select(ProjectionTypeExtensions.GetReadModelType).Concat(clientArtifacts.ModelBoundProjections))
             {
-                claimedBy[readModelType] = kvp.Key.FullName ?? kvp.Key.Name;
+                ReadModelBuilderOwnership.Validate(eventStore, clientArtifacts, catalog, model, model, false);
             }
-            else
+            foreach (var model in _explicitProjections.Keys)
             {
-                logger.MoreThanOneProjectionForReadModel(readModelType, kvp.Key.FullName ?? kvp.Key.Name, claimedBy[readModelType]);
+                ReadModelBuilderOwnership.Validate(eventStore, clientArtifacts, catalog, model, model, false);
             }
+
+            return DiscoverCore();
         }
-
-        foreach (var kvp in _modelBoundHandlers)
-        {
-            if (!discoveredHandlersByModelType.TryAdd(kvp.Key, kvp.Value))
-            {
-                logger.MoreThanOneProjectionForReadModel(kvp.Key, $"the model-bound projection on {kvp.Key.Name}", claimedBy[kvp.Key]);
-            }
-        }
-
-        lock (_explicitLock)
-        {
-            _discoveredHandlersByModelType = discoveredHandlersByModelType;
-            _discoveredContainerNames = containerNames;
-
-            _discoveredDefinitions =
-                ((IEnumerable<ProjectionDefinition>)[
-                    .. _definitionsByType.Values.Select(_ => _).ToList(),
-                    .. modelBoundDefinitions.Values
-                ]).ToImmutableList();
-
-            _discoveredArtifactRegistrations =
-                ((IEnumerable<ArtifactRegistration>)[
-                    .. _definitionsByType.Keys.Select(type => new ArtifactRegistration(type, null)),
-                    .. modelBoundDefinitions.Keys.Select(type => new ArtifactRegistration(type, null)),
-                    .. failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)),
-                    .. modelBoundProjections.Failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value))
-                ]).ToImmutableList();
-
-            BuildAllExplicitProjections();
-            Compose();
-        }
-
-        _discovered = true;
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -374,35 +320,117 @@ public class Projections(
     IProjectionHandler GetHandlerForProjectionOrReadModelType(Type type) =>
         _handlersByType.TryGetValue(type, out var handler) ? handler : _handlersByModelType[type];
 
+    Task DiscoverCore()
+    {
+        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes, logger, eventStore.Name?.Value);
+        var modelBoundDefinitions = modelBoundProjections.Discover();
+        ApplyGenerationDelivery(modelBoundDefinitions, modelBoundProjections.Failures);
+        var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
+            kvp => kvp.Key,
+            kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
+
+        var (definitionsByType, failures, containerNames) = FindAllProjectionDefinitions(
+            eventTypes,
+            clientArtifacts,
+            artifactsActivator,
+            jsonSerializerOptions);
+        _definitionsByType = definitionsByType;
+
+        _handlersByType = _definitionsByType.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key.GetReadModelType(), kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
+
+        _modelBoundHandlers = modelBoundHandlers;
+
+        // The read model index holds one handler per read model, and asking for a projection by the model it maintains
+        // is the only handle a model-bound projection has. So a read model claimed twice leaves the second projection
+        // addressable only if it has a type of its own - and a model-bound one does not. Both are still registered and
+        // both still write to the read model, which is the part worth knowing about; say so rather than resolving it
+        // silently by declaration order.
+        var discoveredHandlersByModelType = new Dictionary<Type, IProjectionHandler>();
+        var claimedBy = new Dictionary<Type, string>();
+
+        foreach (var kvp in _handlersByType)
+        {
+            var readModelType = kvp.Key.GetReadModelType();
+            if (discoveredHandlersByModelType.TryAdd(readModelType, kvp.Value))
+            {
+                claimedBy[readModelType] = kvp.Key.FullName ?? kvp.Key.Name;
+            }
+            else
+            {
+                logger.MoreThanOneProjectionForReadModel(readModelType, kvp.Key.FullName ?? kvp.Key.Name, claimedBy[readModelType]);
+            }
+        }
+
+        foreach (var kvp in _modelBoundHandlers)
+        {
+            if (!discoveredHandlersByModelType.TryAdd(kvp.Key, kvp.Value))
+            {
+                logger.MoreThanOneProjectionForReadModel(kvp.Key, $"the model-bound projection on {kvp.Key.Name}", claimedBy[kvp.Key]);
+            }
+        }
+
+        lock (_explicitLock)
+        {
+            _discoveredHandlersByModelType = discoveredHandlersByModelType;
+            _discoveredContainerNames = containerNames;
+
+            _discoveredDefinitions =
+                ((IEnumerable<ProjectionDefinition>)[
+                    .. _definitionsByType.Values.Select(_ => _).ToList(),
+                    .. modelBoundDefinitions.Values
+                ]).ToImmutableList();
+
+            _discoveredArtifactRegistrations =
+                ((IEnumerable<ArtifactRegistration>)[
+                    .. _definitionsByType.Keys.Select(type => new ArtifactRegistration(type, null)),
+                    .. modelBoundDefinitions.Keys.Select(type => new ArtifactRegistration(type, null)),
+                    .. failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)),
+                    .. modelBoundProjections.Failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value))
+                ]).ToImmutableList();
+
+            BuildAllExplicitProjections();
+            Compose();
+        }
+
+        _discovered = true;
+        return Task.CompletedTask;
+    }
+
     async Task<IProjectionHandler> RegisterExplicit<TReadModel>(IExplicitProjection projection)
     {
         ExplicitProjectionRegistration registration;
-        lock (_explicitLock)
+        lock (ReadModelBuilderOwnership.SyncFor(eventStore, ReadModelOwnershipSync))
         {
-            var readModelType = projection.ReadModelType;
-            if (_discoveredHandlersByModelType.TryGetValue(readModelType, out var discovered))
+            lock (_explicitLock)
             {
-                // Asking for a discovered model-bound read model to be registered is asking for what is already there.
-                if (projection.IsModelBound && discovered.Id == projection.Id)
+                var readModelType = projection.ReadModelType;
+                ReadModelBuilderOwnership.Validate(eventStore, clientArtifacts, new Reducers.ReducerCatalog(clientArtifacts, eventTypes, new Reducers.ReducerValidator()), readModelType, readModelType, false);
+                if (_discoveredHandlersByModelType.TryGetValue(readModelType, out var discovered))
                 {
-                    return discovered;
+                    // Asking for a discovered model-bound read model to be registered is asking for what is already there.
+                    if (projection.IsModelBound && discovered.Id == projection.Id)
+                    {
+                        return discovered;
+                    }
+
+                    throw new ReadModelAlreadyHasProjection(readModelType, discovered.Id, projection.Id);
                 }
 
-                throw new ReadModelAlreadyHasProjection(readModelType, discovered.Id, projection.Id);
-            }
+                if (_explicitRegistrations.TryGetValue(readModelType, out var existing) && existing.Handler.Id != projection.Id)
+                {
+                    throw new ReadModelAlreadyHasProjection(readModelType, existing.Handler.Id, projection.Id);
+                }
 
-            if (_explicitRegistrations.TryGetValue(readModelType, out var existing) && existing.Handler.Id != projection.Id)
-            {
-                throw new ReadModelAlreadyHasProjection(readModelType, existing.Handler.Id, projection.Id);
+                // Built here rather than deferred so that a mistake in the definition reaches the caller who made it.
+                registration = Build(projection);
+                _explicitProjections[readModelType] = projection;
+                _registeredAtRuntime.Add(readModelType);
+                _explicitRegistrations = new(_explicitRegistrations) { [readModelType] = registration };
+                _explicitFailures = _explicitFailures.Where(_ => _.Key != readModelType).ToDictionary(_ => _.Key, _ => _.Value);
+                Compose();
             }
-
-            // Built here rather than deferred so that a mistake in the definition reaches the caller who made it.
-            registration = Build(projection);
-            _explicitProjections[readModelType] = projection;
-            _registeredAtRuntime.Add(readModelType);
-            _explicitRegistrations = new(_explicitRegistrations) { [readModelType] = registration };
-            _explicitFailures = _explicitFailures.Where(_ => _.Key != readModelType).ToDictionary(_ => _.Key, _ => _.Value);
-            Compose();
         }
 
         // Before the connection is up there is nothing to send to - the registration pass that runs once it is up

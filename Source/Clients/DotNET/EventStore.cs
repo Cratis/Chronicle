@@ -395,6 +395,11 @@ public partial class EventStore : IEventStore
     public DiscoveryReport Discovery { get; private set; } = DiscoveryReport.NotRun;
 
     /// <summary>
+    /// Gets the monitor coordinating read-model builder ownership within this store.
+    /// </summary>
+    internal object ReadModelOwnershipSync { get; } = new();
+
+    /// <summary>
     /// Gets the serializer owned by this event store.
     /// </summary>
     internal IEventSerializer EventSerializer { get; }
