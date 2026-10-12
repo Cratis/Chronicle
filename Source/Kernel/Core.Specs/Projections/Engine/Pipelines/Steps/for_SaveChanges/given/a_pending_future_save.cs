@@ -26,10 +26,11 @@ public class a_pending_future_save : a_save_changes_step
 
     protected virtual bool FoldIntoMainWrite => false;
 
-    void Establish()
+    async Task Establish()
     {
         _futures = Substitute.For<IProjectionFutures>();
         _writingSink = Substitute.For<ISink>();
+        await _writingSink.BeginBulk();
         _futureId = ProjectionFutureId.New();
         _futureKey = FoldIntoMainWrite ? _context.Key : new Key("future-key", ArrayIndexers.NoIndexers);
         _futureChangeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
@@ -37,7 +38,7 @@ public class a_pending_future_save : a_save_changes_step
         _futureChangeset.Changes.Returns([]);
         _context.Changeset.HasChanges.Returns(false);
         _context.AddPendingFutureSave(_futureKey, _futureChangeset, _futureId);
-        _writingSink.ApplyChanges(_futureKey, _futureChangeset, _context.EventSequenceNumber).Returns(_ =>
+        _writingSink.ApplyChangesImmediately(_futureKey, _futureChangeset, _context.EventSequenceNumber, SinkWriteMode.Always).Returns(_ =>
         {
             _operations.Add("write");
             return Task.FromResult<IEnumerable<FailedPartition>>([]);
