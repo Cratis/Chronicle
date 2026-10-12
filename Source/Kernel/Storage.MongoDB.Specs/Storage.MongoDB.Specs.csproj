@@ -7,6 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="../Core.Specs/Compliance/given/protected_values.cs" Link="Compliance/given/protected_values.cs" />
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Testcontainers" />
         <!-- Pulls Testcontainers' vulnerable SSH.NET forward — see Directory.Packages.props. -->
