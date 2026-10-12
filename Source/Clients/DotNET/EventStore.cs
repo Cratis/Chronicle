@@ -724,17 +724,20 @@ public partial class EventStore : IEventStore
 
         var observerExternalSubscriptions = _clientArtifactsProvider.Reactors
             .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReactorAttribute>()?.EventSequenceId))
-            .Concat(_clientArtifactsProvider.Reducers.Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReducerAttribute>()?.EventSequenceId)))
-            .Select(observerType =>
+            .Select(type => (Type: type, HandledEventTypes: Reactors.GetHandlerFor(type).EventTypes))
+            .Concat(_clientArtifactsProvider.Reducers
+                .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReducerAttribute>()?.EventSequenceId))
+                .Select(type => (Type: type, HandledEventTypes: Reducers.GetHandlerFor(type).EventTypes)))
+            .Select(observer =>
             {
-                var sourceStore = ObserverEventTypes.GetSourceStore(observerType, EventTypes, _eventStoreName);
-                return (observerType, sourceStore);
+                var sourceStore = ObserverEventTypes.GetSourceStore(observer.Type, EventTypes, _eventStoreName, observer.HandledEventTypes);
+                return (observer.HandledEventTypes, sourceStore);
             })
             .Where(item => item.sourceStore is not null && item.sourceStore != currentStoreName)
-            .GroupBy(item => item.sourceStore!, item => item.observerType)
+            .GroupBy(item => item.sourceStore!, item => item.HandledEventTypes)
             .ToDictionary(
                 g => g.Key,
-                g => g.SelectMany(observerType => ObserverEventTypes.GetIds(observerType, EventTypes)).Distinct().ToList());
+                g => ObserverEventTypes.GetIds(g.SelectMany(types => types)).ToList());
 
         // Merge with projection external event store references (already filtered by GetExternalEventStoreSubscriptions)
         var allByStore = new Dictionary<string, HashSet<EventTypeId>>();

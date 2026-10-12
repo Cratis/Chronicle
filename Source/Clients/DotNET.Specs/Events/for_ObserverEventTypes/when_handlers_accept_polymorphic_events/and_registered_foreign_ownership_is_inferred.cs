@@ -26,10 +26,10 @@ public class and_registered_foreign_ownership_is_inferred : an_explicit_store
         await _store.DiscoverAll();
         _reactor = _store.Reactors.GetHandlerFor(typeof(Observer));
         _reducer = _store.Reducers.GetHandlerFor(typeof(Reducer));
-        _reactorStore = ObserverEventTypes.GetSourceStore(typeof(Observer), _store.EventTypes, _store.Name);
-        _reducerStore = ObserverEventTypes.GetSourceStore(typeof(Reducer), _store.EventTypes, _store.Name);
-        _reactorIds = ObserverEventTypes.GetIds(typeof(Observer), _store.EventTypes);
-        _reducerIds = ObserverEventTypes.GetIds(typeof(Reducer), _store.EventTypes);
+        _reactorStore = ObserverEventTypes.GetSourceStore(typeof(Observer), _store.EventTypes, _store.Name, _reactor.EventTypes);
+        _reducerStore = ObserverEventTypes.GetSourceStore(typeof(Reducer), _store.EventTypes, _store.Name, _reducer.EventTypes);
+        _reactorIds = ObserverEventTypes.GetIds(_reactor.EventTypes);
+        _reducerIds = ObserverEventTypes.GetIds(_reducer.EventTypes);
     }
 
     [Fact] void should_infer_the_reactors_foreign_inbox_from_concrete_dispatch_events() => _reactor.EventSequenceId.Value.ShouldEqual("inbox-foreign");

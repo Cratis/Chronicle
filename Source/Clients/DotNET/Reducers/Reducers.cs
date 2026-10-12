@@ -121,7 +121,6 @@ public partial class Reducers : IReducers
                                 reducerType =>
                                 {
                                     var readModelType = ResolveReadModel(reducerType);
-                                    reducerType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name);
                                     return CreateHandlerFor(reducerType, readModelType) as IReducerHandler;
                                 });
 
@@ -363,7 +362,7 @@ public partial class Reducers : IReducers
             _eventStore,
             ResolveId(reducerType),
             reducerType,
-            reducerType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name),
+            reducerType.GetEventSequenceId(_eventTypes, _eventStore.Name, readModelType),
             new ReducerInvoker(
                 _eventTypes,
                 _artifactActivator,

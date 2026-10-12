@@ -7,18 +7,17 @@ using Cratis.Chronicle.EventSequences;
 namespace Cratis.Chronicle.Events;
 
 /// <summary>
-/// Resolves classic observer handler declarations against one client's event registry.
+/// Resolves observer routing from the same accepted event identities the owning invoker dispatches.
 /// </summary>
 internal static class ObserverEventTypes
 {
     /// <summary>
-    /// Gets the distinct registered identities consumed by an observer.
+    /// Gets the distinct registered identities consumed by an observer's invoker.
     /// </summary>
-    /// <param name="observerType">The observer type.</param>
-    /// <param name="eventTypes">The event registry.</param>
+    /// <param name="handledEventTypes">The invoker's accepted event identities.</param>
     /// <returns>The consumed event identifiers.</returns>
-    internal static IEnumerable<EventTypeId> GetIds(Type observerType, IEventTypes eventTypes) =>
-        GetHandlerTypes(observerType, eventTypes).Select(type => eventTypes.GetEventTypeFor(type).Id).Distinct().ToArray();
+    internal static IEnumerable<EventTypeId> GetIds(IEnumerable<EventType> handledEventTypes) =>
+        handledEventTypes.Select(type => type.Id).Distinct().ToArray();
 
     /// <summary>
     /// Resolves an observer's source store, honoring its explicit store override.
@@ -26,29 +25,31 @@ internal static class ObserverEventTypes
     /// <param name="observerType">The observer type.</param>
     /// <param name="eventTypes">The event registry.</param>
     /// <param name="currentStore">The current client's store.</param>
+    /// <param name="handledEventTypes">The owning invoker's accepted event identities.</param>
     /// <returns>The single source store, or null when there is none or several.</returns>
-    internal static string? GetSourceStore(Type observerType, IEventTypes eventTypes, EventStoreName currentStore)
+    internal static string? GetSourceStore(Type observerType, IEventTypes eventTypes, EventStoreName currentStore, IEnumerable<EventType> handledEventTypes)
     {
         if (observerType.GetCustomAttribute<EventStoreAttribute>() is { } declaredStore)
         {
             return declaredStore.EventStore;
         }
 
-        var stores = GetStores(observerType, eventTypes, currentStore);
+        var stores = GetStores(handledEventTypes, eventTypes, currentStore);
         return stores.Length == 1 ? stores[0] : null;
     }
 
     /// <summary>
-    /// Infers the event sequence from registered handler metadata.
+    /// Infers the event sequence from the owning invoker's accepted event identities.
     /// </summary>
     /// <param name="observerType">The observer type.</param>
     /// <param name="eventTypes">The event registry.</param>
     /// <param name="currentStore">The current client's store.</param>
+    /// <param name="handledEventTypes">The owning invoker's accepted event identities.</param>
     /// <returns>The inferred event sequence.</returns>
     /// <exception cref="MultipleEventStoresDefined">Handlers declare multiple source stores.</exception>
-    internal static EventSequenceId InferSequence(Type observerType, IEventTypes eventTypes, EventStoreName currentStore)
+    internal static EventSequenceId InferSequence(Type observerType, IEventTypes eventTypes, EventStoreName currentStore, IEnumerable<EventType> handledEventTypes)
     {
-        var stores = GetStores(observerType, eventTypes, currentStore);
+        var stores = GetStores(handledEventTypes, eventTypes, currentStore);
         if (stores.Length > 1)
         {
             throw new MultipleEventStoresDefined(observerType, stores);
@@ -59,36 +60,14 @@ internal static class ObserverEventTypes
             : EventSequenceId.Log;
     }
 
-    static string[] GetStores(Type observerType, IEventTypes eventTypes, EventStoreName currentStore) =>
-        GetHandlerTypes(observerType, eventTypes)
+    static string[] GetStores(IEnumerable<EventType> handledEventTypes, IEventTypes eventTypes, EventStoreName currentStore)
+    {
+        var handled = handledEventTypes.ToHashSet();
+        return eventTypes.AllClrTypes
+            .Where(type => handled.Contains(eventTypes.GetEventTypeFor(type)))
             .Select(type => eventTypes.GetDescriptorFor(type, currentStore).EventStore)
             .OfType<string>()
             .Distinct()
             .ToArray();
-
-    static IEnumerable<Type> GetHandlerTypes(Type observerType, IEventTypes eventTypes) =>
-        observerType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-            .Where(method => !method.IsSpecialName)
-            .Select(method => method.GetParameters().FirstOrDefault()?.ParameterType)
-            .OfType<Type>()
-            .SelectMany(type => type.GetEventTypes(eventTypes.AllClrTypes))
-            .Where(type => IsCurrentEventType(type, eventTypes))
-            .Distinct();
-
-    static bool IsCurrentEventType(Type type, IEventTypes eventTypes)
-    {
-        // Metadata inference is not handler validation. A filtered provider may omit a helper's
-        // parameter type; genuinely missing dispatch events are still rejected by the invoker.
-        if (!eventTypes.HasFor(type))
-        {
-            return false;
-        }
-
-        if (Attribute.IsDefined(type, typeof(EventTypeAttribute)))
-        {
-            return true;
-        }
-
-        return type != typeof(object) && !Attribute.IsDefined(type, typeof(EventTypeGenerationForAttribute));
     }
 }

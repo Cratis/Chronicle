@@ -37,6 +37,7 @@ public class an_explicit_store : Specification
     protected ServiceProvider _provider;
     protected SchemaGenerator _generator;
     protected IClientArtifactsActivator _activator;
+    protected IReactorSideEffectHandlers _registeredSideEffectHandlers;
     protected RegisterEventTypesRequest _payload;
     protected bool _auto;
 
@@ -44,6 +45,7 @@ public class an_explicit_store : Specification
     {
         _options = new() { ArtifactIdentityDrift = ArtifactIdentityDriftPolicy.Ignore };
         _activator = Substitute.For<IClientArtifactsActivator>();
+        _registeredSideEffectHandlers = Substitute.For<IReactorSideEffectHandlers>();
         _artifacts = Substitute.For<IClientArtifactsProvider>();
         _connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor, IKernelCapabilities>();
         ((IKernelCapabilities)_connection).Capabilities.Returns([KernelCapabilities.PreciseEventTypeSchemas]);
@@ -80,7 +82,7 @@ public class an_explicit_store : Specification
         _generator,
         new DefaultNamingPolicy(),
         _provider,
-        Substitute.For<IReactorSideEffectHandlers>(),
+        _registeredSideEffectHandlers,
         _activator,
         _auto,
         JsonSerializerOptions.Default,

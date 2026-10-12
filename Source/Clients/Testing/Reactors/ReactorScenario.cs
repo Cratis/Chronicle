@@ -313,7 +313,7 @@ public class ReactorScenario<TReactor> : IDisposable
             serviceProvider: serviceProvider)
         {
             RegisteredId = RegisteredObserverMetadata.ReactorIdFor(_defaults.ClientArtifactsProvider, typeof(TReactor)),
-            RegisteredEventSequenceId = typeof(TReactor).GetEventSequenceId(_eventTypes, eventStore.Name)
+            RegisteredEventSequenceId = typeof(TReactor).GetEventSequenceId(_eventTypes, eventStore.Name, _sideEffectHandlers ?? _recordingHandlers)
         };
 
         foreach (var @event in events)

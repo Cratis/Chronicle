@@ -48,9 +48,10 @@ internal static class RegisteredObserverMetadata
     /// <param name="observerSequence">The sequence declared on its observer attribute.</param>
     /// <param name="eventTypes">The owning registry.</param>
     /// <param name="currentStore">The current store.</param>
+    /// <param name="getHandledEventTypes">The owning invoker's accepted event identities, resolved only when inference is needed.</param>
     /// <returns>The resolved event sequence.</returns>
     /// <exception cref="EventStoreCannotBeCombinedWithExplicitEventSequence">A store and explicit sequence are both supplied.</exception>
-    internal static EventSequenceId SequenceFor(Type type, EventSequenceId? observerSequence, IEventTypes eventTypes, EventStoreName currentStore)
+    internal static EventSequenceId SequenceFor(Type type, EventSequenceId? observerSequence, IEventTypes eventTypes, EventStoreName currentStore, Func<IEnumerable<EventType>> getHandledEventTypes)
     {
         var store = type.GetCustomAttribute<EventStoreAttribute>();
         var sequence = type.GetCustomAttribute<EventSequenceAttribute>()?.Sequence;
@@ -64,7 +65,7 @@ internal static class RegisteredObserverMetadata
             return new($"{EventSequenceId.InboxPrefix}{store.EventStore}");
         }
 
-        return sequence ?? observerSequence ?? ObserverEventTypes.InferSequence(type, eventTypes, currentStore);
+        return sequence ?? observerSequence ?? ObserverEventTypes.InferSequence(type, eventTypes, currentStore, getHandledEventTypes());
     }
 
     /// <summary>
