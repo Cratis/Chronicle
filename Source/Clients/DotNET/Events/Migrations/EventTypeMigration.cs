@@ -27,10 +27,24 @@ public abstract class EventTypeMigration<TUpgrade, TPrevious> : IEventTypeMigrat
     /// than <typeparamref name="TPrevious"/>'s generation.
     /// </exception>
     protected EventTypeMigration()
+        : this(typeof(TPrevious).GetEventType(), typeof(TUpgrade).GetEventType())
     {
-        var previousEventType = typeof(TPrevious).GetEventType();
-        var upgradeEventType = typeof(TUpgrade).GetEventType();
+    }
 
+    /// <summary>
+    /// Resolves and validates adjacent migration endpoints in the owning store's registry.
+    /// </summary>
+    /// <param name="eventTypes">The owning store's finalized event registry.</param>
+    /// <exception cref="TypeIsNotAnEventType">Either endpoint is not registered in the owning store.</exception>
+    /// <exception cref="MigrationGenerationsMustShareEventTypeId">The registered endpoints have different identifiers.</exception>
+    /// <exception cref="InvalidMigrationGenerationGap">The registered endpoints are not adjacent generations.</exception>
+    protected EventTypeMigration(IEventTypes eventTypes)
+        : this(eventTypes.GetEventTypeFor(typeof(TPrevious)), eventTypes.GetEventTypeFor(typeof(TUpgrade)))
+    {
+    }
+
+    EventTypeMigration(EventType previousEventType, EventType upgradeEventType)
+    {
         if (previousEventType.Id != upgradeEventType.Id)
         {
             throw new MigrationGenerationsMustShareEventTypeId(typeof(TPrevious), typeof(TUpgrade), previousEventType.Id, upgradeEventType.Id);
