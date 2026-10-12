@@ -61,6 +61,11 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     public IServiceProvider Services { get; }
 
     /// <summary>
+    /// Gets the database name prefix of the current context's isolated MongoDB storage, or empty when storage is shared.
+    /// </summary>
+    internal string DatabaseNamePrefix => string.Empty;
+
+    /// <summary>
     /// Gets the <see cref="IGrainFactory"/> for the Orleans silo.
     /// </summary>
     internal IGrainFactory GrainFactory => Services.GetRequiredService<IGrainFactory>();

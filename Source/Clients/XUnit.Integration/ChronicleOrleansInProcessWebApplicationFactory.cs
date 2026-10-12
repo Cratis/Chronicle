@@ -63,6 +63,11 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     readonly IChronicleSetupFixture _fixture = fixture;
 
     /// <inheritdoc/>
+    internal override IClientArtifactsProvider ClientArtifactsProvider => _fixture.DatabaseNamePrefix.Length > 0
+        ? _fixture
+        : base.ClientArtifactsProvider;
+
+    /// <inheritdoc/>
     protected override bool RegistersOwnChronicleClient => true;
 
     /// <inheritdoc/>
@@ -84,7 +89,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             mongo =>
             {
                 mongo.Server = mongoServer;
-                mongo.Database = "orleans";
+                mongo.Database = $"{_fixture.DatabaseNamePrefix}orleans";
                 mongo.DirectConnection = true;
             },
             configureMongoDB);
@@ -142,7 +147,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var gatewayPort = GetFreePort();
         var clusterId = Guid.NewGuid().ToString("N");
 
-        var delegatingProvider = DelegatingClientArtifactsProvider.GetOrCreate(_fixture);
+        var artifactsProvider = ClientArtifactsProvider;
 
         builder.UseOrleans(silo =>
             {
@@ -166,7 +171,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 KernelGrpc::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     silo,
                     chronicleBuilder =>
-                        (configureStorage ?? (cb => cb.WithMongoDB(mongoServer, Constants.EventStore)))(chronicleBuilder));
+                        (configureStorage ?? (cb => cb.WithMongoDB(mongoServer, Constants.EventStore, databaseNamePrefix: _fixture.DatabaseNamePrefix)))(chronicleBuilder));
 
                 silo.AddActivityPropagation();
 
@@ -206,7 +211,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     // The shared silo serves artifacts from whichever test fixture is currently
                     // active; RemoveAll ensures this wins over convention-based discovery.
                     services.RemoveAll<IClientArtifactsProvider>();
-                    services.AddSingleton<IClientArtifactsProvider>(delegatingProvider);
+                    services.AddSingleton(artifactsProvider);
 
                     // A default, not an override: a host that configures its own naming policy gets PascalCase
                     // collection and element names in its specs otherwise, so a spec asserting on stored
