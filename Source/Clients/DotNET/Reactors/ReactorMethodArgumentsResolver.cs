@@ -61,7 +61,7 @@ public class ReactorMethodArgumentsResolver : IReactorMethodArgumentsResolver
 
         if (parameterType == typeof(ReactorDelivery))
         {
-            return ReactorDelivery.For(reactor, eventContext);
+            return ResolveDelivery(reactor, eventContext, eventStore);
         }
 
         if (eventStore is not null && IsReadModel(eventStore, parameterType))
@@ -78,6 +78,18 @@ public class ReactorMethodArgumentsResolver : IReactorMethodArgumentsResolver
         }
 
         return serviceProvider.GetRequiredService(parameterType);
+    }
+
+    static ReactorDelivery ResolveDelivery(object reactor, EventContext eventContext, IEventStore? eventStore)
+    {
+        if (eventStore is null)
+        {
+            return ReactorDelivery.For(reactor, eventContext);
+        }
+
+        var reactorType = reactor.GetType();
+        var sequence = reactorType.GetEventSequenceId(eventStore.EventTypes, eventStore.Name);
+        return ReactorDelivery.For(reactorType.GetReactorId(), sequence, eventContext);
     }
 
     static bool IsReadModel(IEventStore eventStore, Type type) =>
