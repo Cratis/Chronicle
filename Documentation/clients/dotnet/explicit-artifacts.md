@@ -46,7 +46,7 @@ A type explicitly nominated as both reactor and reducer, or against a contradict
 | `ForEventStore(EventStoreName)` | Owning store |
 | `PublishTo(EventSequenceId)` | Destination sequence for event-target publication |
 
-Registration visibility and publication eligibility are separate. Ownership in the current store, `[Public]`, or explicit `Public()` can grant eligibility; those contributions form a union. `Private()` never removes ownership-derived eligibility. It conflicts with a supplied public visibility declaration, but not with an ownership-derived default. A foreign-store event's default visibility is private unless a declaration says otherwise.
+Registration visibility and publication eligibility are separate. Ownership in the current store, `[Public]`, or explicit `Public()` can grant eligibility; those contributions form a union. `Private()` never removes ownership-derived eligibility. It conflicts with a supplied public visibility declaration, but not with an ownership-derived default. Declared store ownership, including a foreign store, defaults registration visibility to public. Foreign ownership alone does not grant publication eligibility.
 
 Absent visibility and sequence attributes supply no competing declaration. You can therefore add `Public()` or `PublishTo(customSequence)` to an otherwise marked event without conflicting with default private/outbox values. `PublishTo` alone does not make an event eligible for publication, and the event log is not a valid publication destination. The default destination is the outbox.
 
