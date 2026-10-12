@@ -614,9 +614,10 @@ public partial class EventStore : IEventStore
                     _logger.BackgroundRegistrationRetrySucceeded(attempt);
                     return;
                 }
-                catch (ArtifactIdentityDriftDetected)
+                catch (Exception exception) when (exception is ArtifactIdentityDriftDetected or ArtifactPreparationReentered || Preparation.LatestVerdict.IsFaulted)
                 {
-                    // A newly detected rename is deterministic, not another transient registration failure.
+                    // A failed local revision or payload is retained until explicit successful rediscovery.
+                    // RegisterAll already published its exact failure; retrying the same verdict cannot recover it.
                     return;
                 }
                 catch (Exception exception)
