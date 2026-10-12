@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
@@ -17,7 +16,7 @@ namespace Cratis.Chronicle.Reducers;
 /// </summary>
 public class ReducerInvoker : IReducerInvoker
 {
-    static readonly ConcurrentDictionary<(Type TargetType, Type ReadModelType), FrozenDictionary<Type, MethodInfo>> _methodsByEventTypeCache = [];
+    static readonly EventTypeRegistryCache<FrozenDictionary<Type, MethodInfo>> _methodsByEventTypeCache = new();
     readonly FrozenDictionary<Type, MethodInfo> _methodsByEventType;
     readonly IClientArtifactsActivator _artifactActivator;
     readonly Type _targetType;
@@ -41,10 +40,7 @@ public class ReducerInvoker : IReducerInvoker
         _targetType = targetType;
         ReadModelType = readModelType;
         ContainerName = containerName;
-        _methodsByEventType = _methodsByEventTypeCache.GetOrAdd(
-            (targetType, readModelType),
-            static (key, eventTypes) => BuildMethodsByEventType(key.TargetType, key.ReadModelType, eventTypes),
-            eventTypes.AllClrTypes);
+        _methodsByEventType = _methodsByEventTypeCache.Get(eventTypes, targetType, readModelType, types => BuildMethodsByEventType(targetType, readModelType, types));
 
         EventTypes = _methodsByEventType.Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
     }

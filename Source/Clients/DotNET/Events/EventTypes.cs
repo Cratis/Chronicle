@@ -26,6 +26,7 @@ public class EventTypes : IEventTypes
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly bool _enableEventTypeGenerationValidation;
     readonly INamingPolicy _namingPolicy;
+    FrozenDictionary<Type, EventTypeDescriptor> _descriptors = FrozenDictionary<Type, EventTypeDescriptor>.Empty;
     FrozenDictionary<EventType, Type> _typesByEventType = FrozenDictionary<EventType, Type>.Empty;
     FrozenDictionary<EventType, JsonSchema> _schemasByEventType = FrozenDictionary<EventType, JsonSchema>.Empty;
 
@@ -85,11 +86,7 @@ public class EventTypes : IEventTypes
     /// </exception>
     public Task Discover()
     {
-        var eventTypes = _clientArtifacts.EventTypes.Select(_ => new
-        {
-            ClrType = _,
-            EventType = _.GetEventType()
-        }).ToArray();
+        var eventTypes = _clientArtifacts.EventTypes.Select(type => EventTypeDescriptor.FromDeclaration(type, _eventStore.Name)).ToArray();
 
         var duplicate = eventTypes
             .GroupBy(_ => _.EventType)
@@ -102,6 +99,7 @@ public class EventTypes : IEventTypes
             throw new MultipleEventTypesWithSameIdFound(duplicate.Key, duplicate.Select(_ => _.ClrType));
         }
 
+        _descriptors = eventTypes.ToFrozenDictionary(_ => _.ClrType);
         _typesByEventType = eventTypes.ToFrozenDictionary(_ => _.EventType, _ => _.ClrType);
         _schemasByEventType = eventTypes.ToFrozenDictionary(_ => _.EventType, _ => _jsonSchemaGenerator.Generate(_.ClrType));
 
@@ -127,14 +125,14 @@ public class EventTypes : IEventTypes
             var latestEventType = latestEntry.Key;
             var latestClrType = latestEntry.Value;
             var latestSchema = _schemasByEventType[latestEventType];
-            var eventStoreName = latestClrType.GetEventStoreName();
+            var descriptor = _descriptors[latestClrType];
 
             var registration = new EventTypeRegistration
             {
                 Type = latestEventType.ToContract(),
                 Schema = latestSchema.ToJson(),
-                EventStore = eventStoreName ?? string.Empty,
-                Visibility = GetVisibility(latestClrType, eventStoreName)
+                EventStore = descriptor.EventStore ?? string.Empty,
+                Visibility = descriptor.RegistrationVisibility
             };
 
             // Pass 1: register the real schema for every CLR type that represents a generation in
@@ -251,14 +249,11 @@ public class EventTypes : IEventTypes
         .FirstOrDefault() ?? GetClrTypeFor(eventTypeId);
 
     /// <summary>
-    /// Gets the visibility to register an event type with: public when declared with <see cref="PublicAttribute"/> or when
-    /// it names an event store through <see cref="EventStoreAttribute"/> on the type or its assembly - its own or another service's - otherwise private.
+    /// Gets this registry's descriptor for a CLR type.
     /// </summary>
-    /// <param name="clrType">The CLR type of the event type.</param>
-    /// <param name="eventStoreName">The event store named by an <see cref="EventStoreAttribute"/> on the type or its assembly, if any.</param>
-    /// <returns>The <see cref="EventTypeVisibility"/>.</returns>
-    static EventTypeVisibility GetVisibility(Type clrType, string? eventStoreName) =>
-        eventStoreName is not null || clrType.IsDefined(typeof(PublicAttribute), false)
-            ? EventTypeVisibility.Public
-            : EventTypeVisibility.Private;
+    /// <param name="clrType">The registered CLR type.</param>
+    /// <returns>The descriptor.</returns>
+    /// <exception cref="TypeIsNotAnEventType">The CLR type is not registered.</exception>
+    internal EventTypeDescriptor GetDescriptorFor(Type clrType) =>
+        _descriptors.TryGetValue(clrType, out var descriptor) ? descriptor : throw new TypeIsNotAnEventType(clrType);
 }

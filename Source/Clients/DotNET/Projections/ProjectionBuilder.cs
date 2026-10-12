@@ -61,6 +61,11 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     readonly List<Type> _eventTypesToValidate = [];
     readonly List<Action<EventGenerationDelivery>> _buildChildren = [];
 
+    /// <summary>
+    /// Gets the registry used by this builder and its child builders.
+    /// </summary>
+    internal IEventTypes EventTypes => eventTypes;
+
     internal bool SubscribesToAllEvents { get; private set; }
 
     internal EventGenerationDelivery GenerationDelivery { get; init; }

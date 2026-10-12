@@ -78,7 +78,7 @@ public class EventSources(IEventStore? eventStore, IClientArtifactsProvider clie
     internal static EventSourceDefinition Describe(Type type)
     {
         var attribute = type.GetCustomAttribute<EventSourceAttribute>();
-        var name = attribute?.Name ?? DefaultNameFor(type);
+        var name = ArtifactIdentity.EventSourceNameFor(type);
         var streams = type.GetCustomAttributes<EventStreamAttribute>()
             .Select(_ => new EventStream(_.Name, _.Description, _.Concurrency))
             .ToArray();
@@ -91,9 +91,4 @@ public class EventSources(IEventStore? eventStore, IClientArtifactsProvider clie
 
         return new EventSourceDefinition(type, name, attribute?.Description ?? string.Empty, attribute?.Concurrency ?? ConcurrencyDimensions.None, streams);
     }
-
-    static string DefaultNameFor(Type type) =>
-        type.Name.Length > "EventSource".Length && type.Name.EndsWith("EventSource", StringComparison.Ordinal)
-            ? type.Name[..^"EventSource".Length]
-            : type.Name;
 }
