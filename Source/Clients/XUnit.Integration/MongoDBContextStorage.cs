@@ -44,14 +44,11 @@ internal sealed class MongoDBContextStorage(Func<string, MongoDBDatabase> create
     {
         ResetReaders();
 
-        // Ten hex digits leave room for the suite's longest namespace and change-reader database names.
-        // Retain every issued identity so even a random collision cannot reuse an earlier context's storage.
-        string prefix;
-        do
-        {
-            prefix = $"c{Guid.NewGuid():N}"[..11] + "_";
-        }
-        while (!_prefixes.Add(prefix));
+        // The longest logical database name is 52 bytes, leaving at most 11 bytes for its prefix.
+        // Each collection fixture owns its MongoDB container and this registry for that container's lifetime.
+        // A checked monotonic counter never reuses an identity; hexadecimal keeps even int.MaxValue within 10 bytes.
+        var prefix = $"c{checked(_prefixes.Count + 1):x}_";
+        _prefixes.Add(prefix);
 
         Prefix = prefix;
         return prefix;

@@ -18,12 +18,12 @@ public class and_other_databases_exist : Specification
         _storage = new(_ => throw new Exception("No reader should be created"));
         _firstDatabase = $"{_storage.BeginContext()}{Constants.ReadModelsDatabaseName}";
         _secondDatabase = $"{_storage.BeginContext()}chronicle+main";
-        _unissuedDatabase = $"c{new string('f', 10)}_unissued";
+        _unissuedDatabase = "c10_unissued";
         var cursor = Substitute.For<IAsyncCursor<string>>();
         cursor.Current.Returns([_firstDatabase, _secondDatabase, _unissuedDatabase, "testing", "orleans", "admin", "config", "local"]);
         cursor.MoveNextAsync(Arg.Any<CancellationToken>()).Returns(true, false);
         _client = Substitute.For<IMongoClient>();
-        _client.ListDatabaseNamesAsync(Arg.Any<ListDatabaseNamesOptions>(), Arg.Any<CancellationToken>()).Returns(cursor);
+        _client.ListDatabaseNamesAsync(Arg.Any<CancellationToken>()).Returns(cursor);
         _client.DropDatabaseAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
     }
 

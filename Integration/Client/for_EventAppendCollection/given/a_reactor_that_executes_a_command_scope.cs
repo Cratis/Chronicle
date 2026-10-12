@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc;
+using Cratis.Arc.Authorization;
 using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Integration.for_EventAppendCollection.given;
@@ -13,24 +15,20 @@ public class a_reactor_that_executes_a_command_scope(ChronicleFixture fixture) :
     public override IEnumerable<Type> EventTypes => [typeof(AnEventHappened), typeof(ACommandHandledEvent)];
     public override IEnumerable<Type> Reactors => [typeof(AReactorThatExecutesACommand)];
 
-    protected override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddCratisCommands();
-        RegisterArcActivitySource(services, "Cratis.Arc.Commands.CommandFilters");
-        RegisterArcActivitySource(services, "Cratis.Arc.Commands.CommandPipeline");
+    protected override void ConfigureServices(IServiceCollection services) =>
         services.AddSingleton<AReactorThatExecutesACommand>();
-    }
 
-    static void RegisterArcActivitySource(IServiceCollection services, string typeName)
-    {
-        var type = typeof(Arc.Commands.ICommandPipeline).Assembly.GetType(typeName)!;
-        var activitySourceType = typeof(Traces.ActivitySource<>).MakeGenericType(type);
-        var activitySourceInterfaceType = typeof(Traces.IActivitySource<>).MakeGenericType(type);
-        services.AddSingleton(activitySourceType, _ => Activator.CreateInstance(
-            activitySourceType,
-            new System.Diagnostics.ActivitySource(activitySourceType.FullName ?? activitySourceType.Name))!);
-        services.AddSingleton(activitySourceInterfaceType, sp => sp.GetRequiredService(activitySourceType));
-    }
+    protected override void ConfigureWebHostBuilder(IWebHostBuilder builder) =>
+        builder.ConfigureServices(services =>
+        {
+            // Commands need the full Arc core setup, not just AddCratisCommands. Register it on the host:
+            // the mutable per-test registry does not preserve Arc's keyed activity sources or singleton lifetimes.
+            // The in-process kernel may already have installed the same core services.
+            if (services.All(descriptor => descriptor.ServiceType != typeof(IAuthorizationPolicyRuntime)))
+            {
+                services.AddCratisArcCore();
+            }
+        });
 
     void Establish() => EventSourceId = EventSourceId.New();
 
