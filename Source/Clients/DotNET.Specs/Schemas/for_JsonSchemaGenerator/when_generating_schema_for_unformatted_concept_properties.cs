@@ -7,7 +7,9 @@ public class when_generating_schema_for_unformatted_concept_properties : given.a
 {
     JsonSchema _result;
 
-    void Because() => _result = _generator.Generate(typeof(given.TypeWithUnformattedConcepts));
+    void Establish() => _generator.Generate(typeof(given.TypeWithUnformattedConcepts));
+
+    void Because() => _result = _generator.GenerateForReadModel(typeof(given.TypeWithUnformattedConcepts));
 
     [Fact] void should_preserve_nullable_string_concept_nullability() => _result.ActualProperties["NullableString"].IsNullable().ShouldBeTrue();
     [Fact] void should_preserve_nullable_bool_concept_nullability() => _result.ActualProperties["NullableBool"].IsNullable().ShouldBeTrue();
