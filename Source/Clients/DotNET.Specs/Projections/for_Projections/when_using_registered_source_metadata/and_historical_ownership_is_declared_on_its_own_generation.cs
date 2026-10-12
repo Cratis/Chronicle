@@ -26,8 +26,9 @@ public class and_historical_ownership_is_declared_on_its_own_generation : an_exp
         _sequence = ((Projections)_store.Projections).Definitions.Single().EventSequenceId;
     }
 
-    [Fact] void should_keep_exact_generation_ownership_ahead_of_inherited_ownership() => _sequence.ShouldEqual("inbox-previous-owner");
-    [Fact] void should_collect_the_exact_generation_external_subscription() => _store.Projections.GetExternalEventStoreSubscriptions().Single().EventStoreName.ShouldEqual("previous-owner");
+    [Fact] void should_keep_exact_generation_descriptor_ownership_ahead_of_inherited_ownership() => _store.EventTypes.GetDescriptorFor(typeof(Previous), _store.Name).EventStore.ShouldEqual("previous-owner");
+    [Fact] void should_preserve_model_bound_source_selection_from_the_latest_generation() => _sequence.ShouldEqual("inbox-foreign");
+    [Fact] void should_collect_the_latest_generation_external_subscription() => _store.Projections.GetExternalEventStoreSubscriptions().Single().EventStoreName.ShouldEqual("foreign");
 
     [EventTypeGenerationFor<Current>(1)]
     public record Previous(string Name);

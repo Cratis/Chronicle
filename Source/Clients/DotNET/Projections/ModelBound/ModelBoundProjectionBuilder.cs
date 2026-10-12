@@ -236,9 +236,11 @@ internal class ModelBoundProjectionBuilder(
 
     EventSequenceId InferEventSequenceId(Type modelType, ProjectionDefinition definition, string? currentEventStoreName)
     {
+        // Model-bound projections have always selected source ownership from the latest registered generation,
+        // matching the single owner sent on the wire. Keep that source-selection contract while resolving facets through the registry.
         var eventStores = definition.From.Keys
             .Where(et => _eventTypes.HasFor(new EventTypeId(et.Id)))
-            .Select(et => _eventTypes.GetClrTypeFor(new EventTypeId(et.Id), new EventTypeGeneration(et.Generation)))
+            .Select(et => _eventTypes.GetClrTypeFor(new EventTypeId(et.Id)))
             .Select(type => _eventTypes.GetDescriptorFor(type, currentEventStoreName is null ? EventStoreName.NotSet : new(currentEventStoreName)).EventStore)
             .Where(name => name is not null)
             .Select(name => name!)

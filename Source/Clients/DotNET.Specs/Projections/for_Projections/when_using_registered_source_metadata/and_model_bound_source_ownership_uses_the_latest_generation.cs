@@ -6,9 +6,10 @@ using Cratis.Chronicle.Projections.ModelBound;
 
 namespace Cratis.Chronicle.Projections.for_Projections.when_using_registered_source_metadata;
 
-public class and_a_model_bound_source_uses_its_exact_generation : an_explicit_store
+public class and_model_bound_source_ownership_uses_the_latest_generation : an_explicit_store
 {
     string _sequence;
+    uint _observedGeneration;
 
     void Establish()
     {
@@ -21,10 +22,13 @@ public class and_a_model_bound_source_uses_its_exact_generation : an_explicit_st
     async Task Because()
     {
         await _store.DiscoverAll();
-        _sequence = ((Projections)_store.Projections).Definitions.Single().EventSequenceId;
+        var definition = ((Projections)_store.Projections).Definitions.Single();
+        _sequence = definition.EventSequenceId;
+        _observedGeneration = definition.From.Keys.Single().Generation;
     }
 
-    [Fact] void should_use_the_declared_sources_generation_instead_of_the_latest_generation() => _sequence.ShouldEqual("inbox-previous-owner");
+    [Fact] void should_preserve_model_bound_source_ownership_from_the_latest_generation() => _sequence.ShouldEqual("inbox-current-owner");
+    [Fact] void should_still_observe_the_explicitly_declared_event_generation() => _observedGeneration.ShouldEqual(1U);
 
     public record PreviousEvent(string Name);
     public record CurrentEvent(string Name);
