@@ -31,11 +31,17 @@ public class and_external_event_types_are_discovered : Specification
         clientArtifactsProvider.Reducers.Returns([]);
 
         var eventTypes = new EventTypesForSpecifications([typeof(external_user_invited)]);
+        var reactors = Substitute.For<IReactors>();
+        var handler = Substitute.For<IReactorHandler>();
+        handler.ReactorType.Returns(typeof(external_event_reactor));
+        handler.EventTypes.Returns(ReactorInvoker.GetEventTypesFor(eventTypes, typeof(external_event_reactor)));
+        reactors.GetHandlerFor(clientArtifactsProvider.Reactors.Single()).Returns(handler);
 
         _eventStore = (EventStore)RuntimeHelpers.GetUninitializedObject(typeof(EventStore));
         SetField("_eventStoreName", new EventStoreName("Lobby"));
         SetField("_clientArtifactsProvider", clientArtifactsProvider);
         SetAutoProperty("EventTypes", eventTypes);
+        SetAutoProperty("Reactors", reactors);
         SetAutoProperty("Projections", projections);
         SetAutoProperty("Subscriptions", _subscriptions);
     }

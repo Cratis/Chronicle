@@ -19,7 +19,7 @@ public class when_multiple_registered_stores_are_inferred : Specification
     void Because()
     {
         _reactorError = Catch.Exception(() => ReactorTypeExtensions.GetEventSequenceId(typeof(when_resolving_registered_handlers.Reactor), _registry, "current"));
-        _reducerError = Catch.Exception(() => ReducerTypeExtensions.GetEventSequenceId(typeof(when_resolving_registered_handlers.Reducer), _registry, "current"));
+        _reducerError = Catch.Exception(() => ReducerTypeExtensions.GetEventSequenceId(typeof(when_resolving_registered_handlers.Reducer), _registry, "current", typeof(when_resolving_registered_handlers.Model)));
     }
 
     [Fact] void should_reject_multiple_reactor_source_stores() => _reactorError.ShouldBeOfExactType<MultipleEventStoresDefined>();

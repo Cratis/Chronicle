@@ -2,6 +2,8 @@
   href: index.md
 - name: Get started
   href: getting-started.md
+- name: Explicit artifact registration
+  href: explicit-artifacts.md
 - name: Observing artifact registration
   href: registration-outcome.md
 - name: Discovery report and identity drift

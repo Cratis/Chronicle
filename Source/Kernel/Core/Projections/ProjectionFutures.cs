@@ -26,13 +26,29 @@ public class ProjectionFutures : Grain<ProjectionFuturesState>, IProjectionFutur
     public async Task ResolveFuture(ProjectionFutureId futureId)
     {
         var future = State.Futures.FirstOrDefault(f => f.Id == futureId);
+        var previousState = State;
         if (future is not null)
         {
-            State.Futures.Remove(future);
             State.ResolvedFutures.Add(future);
         }
-        await WriteStateAsync();
-        State.ResolvedFutures.Clear();
+
+        try
+        {
+            await WriteStateAsync();
+            if (future is not null)
+            {
+                State.Futures.Remove(future);
+            }
+        }
+        catch
+        {
+            State = previousState;
+            throw;
+        }
+        finally
+        {
+            State.ResolvedFutures.Clear();
+        }
     }
 
     async Task<int> AddFuture(ProjectionFuture future, bool pinned)
@@ -43,10 +59,23 @@ public class ProjectionFutures : Grain<ProjectionFuturesState>, IProjectionFutur
             return State.Futures.Count;
         }
 
-        State.Futures.Add(future);
+        var previousState = State;
         State.AddedFutures.Add(future);
-        await WriteStateAsync();
-        State.AddedFutures.Clear();
+        try
+        {
+            await WriteStateAsync();
+            State.Futures.Add(future);
+        }
+        catch
+        {
+            State = previousState;
+            throw;
+        }
+        finally
+        {
+            State.AddedFutures.Clear();
+        }
+
         return State.Futures.Count;
     }
 }

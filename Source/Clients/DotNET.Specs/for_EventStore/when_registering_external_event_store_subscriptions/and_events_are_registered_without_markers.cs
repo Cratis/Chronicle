@@ -47,10 +47,17 @@ public class and_events_are_registered_without_markers : Specification
         var artifacts = Substitute.For<IClientArtifactsProvider>();
         artifacts.Reactors.Returns([reactorType]);
         artifacts.Reducers.Returns([]);
+        var reactors = Substitute.For<IReactors>();
+        var handler = Substitute.For<IReactorHandler>();
+        handler.ReactorType.Returns(reactorType);
+        var handledEventTypes = ReactorInvoker.GetEventTypesFor(_registry, reactorType);
+        handler.EventTypes.Returns(handledEventTypes);
+        reactors.GetHandlerFor(reactorType).Returns(handler);
         var store = (EventStore)RuntimeHelpers.GetUninitializedObject(typeof(EventStore));
         Set(store, "_eventStoreName", new EventStoreName(currentStore));
         Set(store, "_clientArtifactsProvider", artifacts);
         Set(store, "<EventTypes>k__BackingField", _registry);
+        Set(store, "<Reactors>k__BackingField", reactors);
         Set(store, "<Projections>k__BackingField", projections);
         Set(store, "<Subscriptions>k__BackingField", subscriptions);
         await (Task)typeof(EventStore).GetMethod("RegisterExternalEventStoreSubscriptionsAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(store, [])!;

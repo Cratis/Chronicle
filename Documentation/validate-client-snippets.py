@@ -392,6 +392,7 @@ def main() -> int:
                 "--configuration",
                 "Release",
                 "-p:DisableProxyGenerator=true",
+                "-p:CratisProxiesOutputPath=",
                 "-p:DisableDockerBuild=true",
             ],
             cwd=REPO_ROOT,

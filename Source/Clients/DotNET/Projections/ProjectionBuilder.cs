@@ -214,11 +214,10 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <param name="eventType">The event type being observed.</param>
     protected void CollectEventStore(Type eventType)
     {
-        var eventStoreName = eventType.GetEventStoreName();
-        if (eventStoreName is not null && !_observedEventStores.Contains(eventStoreName))
-        {
-            _observedEventStores.Add(eventStoreName);
-        }
+        var stores = ProjectionEventTypes.Expand(eventType, eventTypes.AllClrTypes, GenerationDelivery)
+            .Select(type => eventTypes.GetDescriptorFor(type, EventStoreName.NotSet).EventStore)
+            .OfType<string>();
+        _observedEventStores.AddRange(stores.Except(_observedEventStores));
     }
 
     /// <summary>
