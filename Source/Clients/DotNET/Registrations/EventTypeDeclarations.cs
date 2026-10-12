@@ -56,6 +56,27 @@ internal sealed class EventTypeDeclarations
     }
 
     /// <summary>
+    /// Resolves ownership once for all descriptor consumers, inheriting a historical type's current-generation owner only when omitted.
+    /// </summary>
+    /// <param name="type">The event CLR type.</param>
+    /// <param name="getDeclaredStore">The peer-merged or legacy declared ownership lookup.</param>
+    /// <returns>The effective owning store, or null when none is declared.</returns>
+    /// <exception cref="InvalidExplicitArtifact">Historical references form a cycle.</exception>
+    internal static string? ResolveEventStore(Type type, Func<Type, string?> getDeclaredStore)
+    {
+        var originalType = type;
+        var visited = new HashSet<Type>();
+        while (visited.Add(type))
+        {
+            if (getDeclaredStore(type) is { } store) return store;
+            if (type.GetCustomAttribute<EventTypeGenerationForAttribute>() is not { } historical) return null;
+            type = historical.EventTypeClrType;
+        }
+
+        throw new InvalidExplicitArtifact(originalType, "event type", "Historical generation references form a cycle.");
+    }
+
+    /// <summary>
     /// Resolves independent registration visibility and publication eligibility for a store.
     /// </summary>
     /// <param name="type">The registered CLR type.</param>
@@ -64,7 +85,8 @@ internal sealed class EventTypeDeclarations
     internal EventTypeDescriptor GetDescriptorFor(Type type, EventStoreName currentStore)
     {
         var declaration = _declarations[type];
-        var store = declaration.EventStore?.Value.Value;
+        var store = ResolveEventStore(type, candidate =>
+            (_declarations.TryGetValue(candidate, out var registered) ? registered : FromMarkers(candidate)).EventStore?.Value.Value);
         var publicDeclaration = declaration.Visibility?.Value == EventTypeVisibility.Public;
         return new()
         {
