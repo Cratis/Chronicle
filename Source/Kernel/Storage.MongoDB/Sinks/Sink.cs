@@ -44,7 +44,7 @@ public class Sink(
     IChangesetConverter changesetConverter,
     IExpandoObjectConverter expandoObjectConverter,
     IReadModelChangeStreams changeStreams,
-    ILogger<Sink> logger) : ISink
+    ILogger<Sink> logger) : ISink, IDisposable
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class without a logger.
@@ -79,6 +79,7 @@ public class Sink(
     const int MaxBulkSizeInBytes = 48 * 1024 * 1024;
 
     readonly object _bulkLock = new();
+    readonly CancellationTokenSource _bulkCancellation = new();
     readonly List<WriteModel<BsonDocument>> _bulkOperations = [];
     readonly List<BulkBatch> _inFlight = [];
     readonly Dictionary<BulkBatch, BulkOutcome> _unreportedBulkOutcomes = [];
@@ -117,7 +118,7 @@ public class Sink(
     bool _bulkWindowHasFailedWrites;
 
     /// <summary>
-    /// Completes when the bulk window that <see cref="EndBulk"/> is closing has been flushed and left; set while it is.
+    /// Completes when the bulk window that <see cref="EndBulk()"/> is closing has been flushed and left; set while it is.
     /// </summary>
     /// <remarks>
     /// Guarded by <see cref="_bulkLock"/>. While it is set, no write is admitted into the window: a write accepted after
@@ -128,6 +129,9 @@ public class Sink(
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
+
+    /// <inheritdoc/>
+    public void Dispose() => _bulkCancellation.Dispose();
 
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
@@ -227,6 +231,7 @@ public class Sink(
         EventSequenceNumber eventSequenceNumber,
         SinkWriteOptions options)
     {
+        _bulkCancellation.Token.ThrowIfCancellationRequested();
         var plan = PlanWrite(key, changeset);
 
         if (changeset.HasBeenRemoved())
@@ -526,6 +531,7 @@ public class Sink(
     /// <inheritdoc/>
     public Task BeginBulk()
     {
+        _bulkCancellation.Token.ThrowIfCancellationRequested();
         lock (_bulkLock)
         {
             _isBulkMode = true;
@@ -591,16 +597,39 @@ public class Sink(
     /// closing finishes however many writers keep arriving. A write arriving while the window closes waits for it to
     /// finish and is then written directly, after the flushed batch.
     /// </remarks>
-    public async Task<IEnumerable<FailedPartition>> EndBulk()
+    public Task<IEnumerable<FailedPartition>> EndBulk() => EndBulk(CancellationToken.None);
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken)
     {
-        var closing = await BeginClosing();
+        FailedPartition[] pending;
+        lock (_bulkLock)
+        {
+            pending = _inFlight.SelectMany(batch => batch.Metadata.Values).Concat(_bulkOperationMetadata.Values)
+                .GroupBy(metadata => metadata.EventSourceId)
+                .Select(partition => new FailedPartition(partition.Key, partition.MinBy(metadata => metadata.SequenceNumber.Value).SequenceNumber)
+                {
+                    Reason = "MongoDB bulk write outcome unknown (shutdown deadline)"
+                }).ToArray();
+        }
+
+        await using var cancellation = cancellationToken.Register(_bulkCancellation.Cancel);
+        TaskCompletionSource closing;
+        try
+        {
+            closing = await BeginClosing(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return pending;
+        }
 
         // Bulk mode ends whatever the final flush does: a sink left in bulk mode would hold every later
         // write back until a thousand of them had queued up.
         try
         {
-            var drain = await DrainBulk();
-            if (drain.Queued is { } queued && TakeBatchError(queued) is { } error)
+            var drain = await DrainBulk(cancellationToken);
+            if (!cancellationToken.IsCancellationRequested && drain.Queued is { } queued && TakeBatchError(queued) is { } error)
             {
                 ExceptionDispatchInfo.Throw(error);
             }
@@ -629,7 +658,7 @@ public class Sink(
         }
     }
 
-    async Task<TaskCompletionSource> BeginClosing()
+    async Task<TaskCompletionSource> BeginClosing(CancellationToken cancellationToken)
     {
         var closing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         while (true)
@@ -646,7 +675,7 @@ public class Sink(
                 previousClosing = _closing.Task;
             }
 
-            await previousClosing;
+            await previousClosing.WaitAsync(cancellationToken);
         }
     }
 
@@ -1003,7 +1032,7 @@ public class Sink(
     /// <param name="whenQueued">Optional update of the bulk state, made atomically with queueing the operation.</param>
     /// <returns>True if the operation was queued; false if no bulk window is open and the caller must write directly.</returns>
     /// <remarks>
-    /// Checking the window and queueing happen under one lock, so <see cref="EndBulk"/> either flushes the operation or
+    /// Checking the window and queueing happen under one lock, so <see cref="EndBulk()"/> either flushes the operation or
     /// never admits it. While a window is closing, the caller waits for it to finish before it is told to write directly.
     /// </remarks>
     async Task<bool> AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber, Action? whenQueued = null)
@@ -1068,7 +1097,7 @@ public class Sink(
         return TakeBulkFailures([batch]);
     }
 
-    async Task<BulkDrain> DrainBulk()
+    async Task<BulkDrain> DrainBulk(CancellationToken cancellationToken = default)
     {
         BulkBatch? queued;
         BulkBatch[] pending;
@@ -1080,22 +1109,32 @@ public class Sink(
 
         if (queued is not null)
         {
-            await CompleteBulkBatch(queued);
+            // CompleteBulkBatch observes every driver failure, even if the driver ignores cancellation.
+            _ = CompleteBulkBatch(queued);
         }
 
-        // Completions never fault: a predecessor cannot cancel another batch's write.
-        // Visibility and exclusive reporting belong to the ledger, not to shared faulted tasks.
-        await Task.WhenAll(pending.Select(batch => batch.Completion.Task));
+        try
+        {
+            // Completions never fault: failures belong to the outcome ledger.
+            await Task.WhenAll(pending.Select(batch => batch.Completion.Task)).WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            foreach (var batch in pending.Where(batch => !batch.Completion.Task.IsCompleted))
+            {
+                RecordBulkOutcome(batch, UnknownBatchOutcome(batch, exception));
+            }
+        }
         return new(queued, pending);
     }
 
     async Task CompleteBulkBatch(BulkBatch batch)
     {
-        await Task.WhenAll(batch.Predecessors);
         BulkOutcome outcome;
         try
         {
-            outcome = new((await WriteBatch(batch)).ToArray(), null);
+            await Task.WhenAll(batch.Predecessors).WaitAsync(_bulkCancellation.Token);
+            outcome = new((await WriteBatch(batch, _bulkCancellation.Token)).ToArray(), null);
         }
         catch (Exception exception)
         {
@@ -1109,13 +1148,19 @@ public class Sink(
             ((ICollection<KeyValuePair<string, long>>)_bulkPendingDeletes).Remove(pendingDelete);
         }
 
-        batch.Completion.SetResult();
+        batch.Completion.TrySetResult();
     }
 
     void RecordBulkOutcome(BulkBatch batch, BulkOutcome outcome)
     {
         lock (_bulkLock)
         {
+            if (batch.HasOutcome)
+            {
+                return;
+            }
+
+            batch.HasOutcome = true;
             _unreportedBulkOutcomes.Add(batch, outcome);
             _bulkWindowHasFailedWrites |= outcome.Failures.Length > 0 || outcome.Error is not null;
             _inFlight.Remove(batch);
@@ -1192,7 +1237,7 @@ public class Sink(
         }
     }
 
-    async Task<IEnumerable<FailedPartition>> WriteBatch(BulkBatch batch)
+    async Task<IEnumerable<FailedPartition>> WriteBatch(BulkBatch batch, CancellationToken cancellationToken)
     {
         var remainingIndexes = Enumerable.Range(0, batch.Operations.Count).ToList();
         while (remainingIndexes.Count > 0)
@@ -1200,7 +1245,8 @@ public class Sink(
             var remaining = remainingIndexes.ConvertAll(index => batch.Operations[index]);
             try
             {
-                await Collection.BulkWriteAsync(remaining);
+                cancellationToken.ThrowIfCancellationRequested();
+                await Collection.BulkWriteAsync(remaining, cancellationToken: cancellationToken).WaitAsync(cancellationToken);
                 break;
             }
             catch (MongoBulkWriteException<BsonDocument> ex)
@@ -1534,6 +1580,7 @@ public class Sink(
     {
         public Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> FailedPartitions { get; } = [];
         public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool HasOutcome { get; set; }
     }
 
     sealed record BulkOutcome(FailedPartition[] Failures, Exception? Error);

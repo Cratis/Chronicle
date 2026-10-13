@@ -184,6 +184,24 @@ public class ReducerReplayHandler(
         return Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success());
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<Storage.Sinks.FailedPartition>> EndBulkFor(ObserverDetails observerDetails, CancellationToken cancellationToken)
+    {
+        if (!CanHandle(observerDetails))
+        {
+            return [];
+        }
+
+        var readModel = await ReadModelFor(observerDetails);
+        if (readModel is null)
+        {
+            return [];
+        }
+
+        var sink = await SinkFor(observerDetails, readModel);
+        return await sink.EndBulk(cancellationToken);
+    }
+
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Reducer;
 
     /// <summary>
