@@ -146,6 +146,7 @@ public class EventSeeding(
     /// <inheritdoc/>
     public async Task Discover()
     {
+        var pendingCount = _entries.Count;
         _discoveredGlobals = [];
         foreach (var seederType in _clientArtifactsProvider.EventSeeders)
         {
@@ -159,15 +160,16 @@ public class EventSeeding(
             await using var activatedSeeder = activatedSeederResult.AsT0;
             activatedSeeder.Instance.Seed(this);
         }
+
+        var discoveredEntries = _entries.Skip(pendingCount).ToList();
+        _discoveredGlobals = discoveredEntries.Where(_ => _.IsGlobal).ToList();
+        _entries.RemoveRange(pendingCount, _entries.Count - pendingCount);
+        _entries.AddRange(discoveredEntries.Where(_ => !_.IsGlobal));
     }
 
     /// <inheritdoc/>
     /// <exception cref="EventSeedingRoutingNotSupported">Thrown before sending entries when routing support is not confirmed by the kernel.</exception>
-    public async Task Register()
-    {
-        await RegisterEntries(_entries);
-        _entries.Clear();
-    }
+    public Task Register() => RegisterDiscovered();
 
     /// <summary>
     /// Shares automatic global seeding with the other stores created by this client.
@@ -183,18 +185,15 @@ public class EventSeeding(
     {
         if (_globalSeedRegistration is null)
         {
-            await Register();
+            await RegisterEntries([.. _entries, .. _discoveredGlobals]);
+            _entries.Clear();
+            _discoveredGlobals.Clear();
             return;
         }
 
-        var globals = _entries.Where(_ => _.IsGlobal).ToList();
-        if (globals.Count > 0)
-        {
-            _discoveredGlobals = globals;
-        }
         await _globalSeedRegistration.Run(_eventStoreName, async includeGlobals =>
         {
-            var entries = _entries.Where(_ => !_.IsGlobal).ToList();
+            var entries = _entries.ToList();
             if (includeGlobals) entries.AddRange(_discoveredGlobals);
             await RegisterEntries(entries);
             return includeGlobals && _discoveredGlobals.Count > 0;
