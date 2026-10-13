@@ -107,9 +107,10 @@ Sources: [.NET delivery identity](https://github.com/Cratis/Chronicle/blob/main/
 
 Adding another seed to an existing source can therefore add data through the kernel seeding path but remain unapplied in Elixir. A seed callback completing is also not the same as successful registration; check the owning client's registration outcome separately.
 
-In .NET, opening a store for a new namespace creates it and applies stored global seeds before the application's
-first write. Put development or sample data in `ForNamespace(...)`. Removing a global seed from code does not
-remove the stored entry: no removal API exists yet, and resetting the event store is the only way to clear it today.
+In .NET, opening a store for a new namespace creates it. The kernel then applies stored global seeds asynchronously,
+usually before the application's first write, but there is no ordering guarantee. Do not rely on that timing;
+put development or sample data in `ForNamespace(...)`. Removing a global seed from code does not remove the stored entry:
+no removal API exists yet, and resetting the event store is the only way to clear it today.
 A reset deletes store data.
 
 Sources: [.NET seeding](https://github.com/Cratis/Chronicle/blob/main/Source/Clients/DotNET/Seeding/EventSeeding.cs), [kernel seeding](https://github.com/Cratis/Chronicle/blob/main/Source/Kernel/Core/Seeding/EventSeeding.cs), [JVM seeding](https://github.com/Cratis/Chronicle.Kotlin/blob/main/Source/src/main/kotlin/io/cratis/chronicle/seeding/EventSeedingService.kt), [TypeScript seeding](https://github.com/Cratis/Chronicle.TypeScript/blob/main/Source/seeding/EventSeeding.ts), [Elixir seeding](https://github.com/Cratis/Chronicle.Elixir/blob/main/Source/chronicle/lib/chronicle/seeding.ex).

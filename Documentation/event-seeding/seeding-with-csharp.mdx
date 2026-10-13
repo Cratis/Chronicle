@@ -70,8 +70,9 @@ For larger solutions, split seeders by domain or feature:
 
 `For` and `ForEventSource` on the top-level builder define global seeds. The server stores them per event store,
 applies them to every existing namespace, and applies them once to each namespace created later.
-Opening a store for a new namespace creates that namespace and applies stored global seeds before your application's
-first write. Do not use global seeds for tenant-specific development or sample data.
+Opening a store for a new namespace creates that namespace. The kernel then applies stored global seeds asynchronously,
+usually before your application's first write, but there is no ordering guarantee. Do not rely on that timing;
+put development or sample data in `ForNamespace(...)` rather than the global builder.
 
 To target a specific namespace, use `ForNamespace` to get a scoped builder:
 
