@@ -113,19 +113,19 @@ For event source `book-42`, all four implementations produce these field values:
 | Event history | Title / ISBN | Borrowed? | Borrower |
 | --- | --- | --- | --- |
 | No events | No instance | — | — |
-| Registered("Dune", "9780441172719") | Dune / 9780441172719 | false | null |
+| Registered("Dune", "9780441172719") | Dune / 9780441172719 | false | not set |
 | Registered → Borrowed("Avery") | Dune / 9780441172719 | true | Avery |
-| Registered → Borrowed → Returned | Dune / 9780441172719 | false | null |
-| Registered → Borrowed → Registered("Dune", "9780441172719") | Dune / 9780441172719 | false | null |
-| Borrowed("Avery") without registration | null / null | true | Avery |
-| Returned without registration | null / null | false | null |
+| Registered → Borrowed → Returned | Dune / 9780441172719 | false | not set |
+| Registered → Borrowed → Registered("Dune", "9780441172719") | Dune / 9780441172719 | false | not set |
+| Borrowed("Avery") without registration | not set | true | Avery |
+| Returned without registration | not set | false | not set |
 
-`Id` is `book-42` in every existing instance. The snippets use distinct model type names so they can
+"Not set" means the field holds no value; each client shows that in its own way. `Id` is `book-42` in every existing instance. The snippets use distinct model type names so they can
 compile together; those names give them different registered identifiers and default containers.
 Equivalent field values do **not** make them interchangeable persisted documents.
 
 The borrower's name is personal data. The snippets mark both the event member and the destination
-member `[PII]`; a mapping does not transfer compliance annotations. In a real library, select the member
+member as personal data; a mapping does not transfer compliance annotations. In a real library, select the member
 as the append's subject rather than accepting the book ID fallback. Review [read-model compliance](../compliance/read-models.mdx)
 before deploying: projections retain per-property subject lineage, while reducer protection uses the
 batch's default subject resolved from its first event. Output equality alone does not prove equal
