@@ -296,6 +296,15 @@ else
     logger.EncryptionCertificateRingNotConfigured();
 }
 
+// Serve the Workbench under a configured prefix. UsePathBase strips the prefix when the reverse proxy passes it
+// through and leaves the path alone when the proxy has already stripped it, so both kinds of proxy work. It is
+// first so that nothing after it - the health port policy included - ever sees the prefix. (#4822)
+var workbenchBasePath = WorkbenchBasePath.Normalize(chronicleOptions.Workbench.BasePath);
+if (workbenchBasePath.Length > 0)
+{
+    app.UsePathBase(workbenchBasePath);
+}
+
 // Opt-in: when the dedicated health port is exclusive, nothing but the health endpoint is answered
 // on it. This is registered first so no later middleware or endpoint - Workbench static files, the
 // REST API, the OAuth flows, the fallback - ever observes such a request. The decision keys on
@@ -341,6 +350,7 @@ var workbenchStaticFileOptions = new StaticFileOptions();
 // Map workbench static files BEFORE authentication so they are publicly accessible
 if (serveWorkbench)
 {
+    workbenchFileProvider = WorkbenchBasePath.Apply(workbenchFileProvider!, workbenchBasePath);
     workbenchStaticFileOptions = new StaticFileOptions { FileProvider = workbenchFileProvider };
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = workbenchFileProvider });
     app.UseStaticFiles(workbenchStaticFileOptions);
