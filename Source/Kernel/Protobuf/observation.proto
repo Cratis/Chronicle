@@ -86,7 +86,7 @@ message FastForward {
 enum FastForwardOutcome {
    FastForwarded = 0;
    AlreadyAtTail = 1;
-   FAST_FORWARD_OUTCOME_Replaying = 2;
+   ObserverReplaying = 2;
    NotAvailable = 3;
 }
 message FastForwardResponse {
@@ -154,7 +154,7 @@ enum ObserverRunningState {
    OBSERVER_RUNNING_STATE_Unknown = 0;
    Active = 1;
    Suspended = 2;
-   OBSERVER_RUNNING_STATE_Replaying = 3;
+   Replaying = 3;
    OBSERVER_RUNNING_STATE_Disconnected = 4;
    Quarantined = 5;
 }

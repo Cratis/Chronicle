@@ -21,7 +21,7 @@ public enum FastForwardOutcome
     /// <summary>
     /// The observer is replaying, so it cannot be fast forwarded until the replay has completed.
     /// </summary>
-    Replaying = 2,
+    ObserverReplaying = 2,
 
     /// <summary>
     /// The observer is retired or removed, so nothing was changed.

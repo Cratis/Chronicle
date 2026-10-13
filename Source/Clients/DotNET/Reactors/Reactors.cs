@@ -378,7 +378,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 
     /// <inheritdoc/>
     public Task<FastForwardResult> FastForward<TReactor>()
-        where TReactor : IReactor => FastForward(GetHandlerFor(typeof(TReactor)).Id);
+        where TReactor : IReactor => FastForward(GetHandlerFor<TReactor>().Id);
 
     /// <inheritdoc/>
     public Task<FastForwardResult> FastForward(ReactorId reactorId) =>
