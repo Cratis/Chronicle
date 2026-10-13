@@ -24,6 +24,8 @@
   href: tls.md
 - name: Health Endpoint
   href: health-endpoint.md
+- name: Workbench
+  href: workbench.md
 - name: Identity Provider Certificate
   href: identity-provider-certificate.md
 - name: Client Bootstrap
