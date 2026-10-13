@@ -66,6 +66,40 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
     /// <inheritdoc/>
     public async Task EndCatchupFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.EndCatchupFor(observerDetails));
 
+    /// <inheritdoc/>
+    public async Task<Guid[]> FlushFor(ObserverDetails observerDetails, bool replay) =>
+        (await FlushAllFor(observerDetails, replay)).Values.SelectMany(windows => windows).ToArray();
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<SiloAddress, Guid[]>> FlushAllFor(ObserverDetails observerDetails, bool replay)
+    {
+        var hosts = await _managementGrain.GetHosts(true);
+        return await FlushSilosFor(hosts.Keys.ToDictionary(host => host, GetGrainService), observerDetails, replay);
+    }
+
+    /// <summary>
+    /// Flush every silo and preserve its identity alongside the window identities it reports.
+    /// </summary>
+    /// <param name="silos">The grain service for each active silo.</param>
+    /// <param name="observerDetails">The observer to flush.</param>
+    /// <param name="replay">Whether the observer is replaying.</param>
+    /// <returns>The windows confirmed by each silo.</returns>
+    /// <exception cref="ObserverFlushFailed">No active silo could confirm the writes.</exception>
+    internal static async Task<IReadOnlyDictionary<SiloAddress, Guid[]>> FlushSilosFor(
+        IReadOnlyDictionary<SiloAddress, IObserverService> silos,
+        ObserverDetails observerDetails,
+        bool replay)
+    {
+        var results = await Task.WhenAll(silos.Select(async silo =>
+            KeyValuePair.Create(silo.Key, await silo.Value.FlushFor(observerDetails, replay))));
+        if (results.Length == 0)
+        {
+            throw new ObserverFlushFailed();
+        }
+
+        return results.ToDictionary(result => result.Key, result => result.Value);
+    }
+
     /// <summary>
     /// Finalizes a projection replay across the silos of the cluster.
     /// </summary>

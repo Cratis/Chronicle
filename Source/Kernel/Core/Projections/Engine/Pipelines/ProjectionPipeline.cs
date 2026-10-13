@@ -106,6 +106,9 @@ public class ProjectionPipeline(
     public Task BeginBulk() => sink.BeginBulk();
 
     /// <inheritdoc/>
+    public Task<BulkFlushResult> FlushBulk() => sink.FlushBulk();
+
+    /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> EndBulk() => sink.EndBulk();
 
     /// <inheritdoc/>

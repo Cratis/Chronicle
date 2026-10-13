@@ -88,6 +88,20 @@ public class ObserverService(
         EnsureCatchupFinalized(results);
     }
 
+    /// <inheritdoc/>
+    public async Task<Guid[]> FlushFor(ObserverDetails observerDetails, bool replay)
+    {
+        var results = replay
+            ? await Task.WhenAll(replayHandlers.Select(handler => handler.FlushFor(observerDetails)))
+            : await Task.WhenAll(catchupHandlers.Select(handler => handler.FlushFor(observerDetails)));
+        if (results.Any(result => result.FailedPartitions.Any()))
+        {
+            throw new ObserverFlushFailed();
+        }
+
+        return results.Where(result => result.WindowId is not null).Select(result => result.WindowId!.Value).Distinct().ToArray();
+    }
+
     /// <summary>
     /// Ensure every applicable catch-up handler finished successfully.
     /// </summary>
