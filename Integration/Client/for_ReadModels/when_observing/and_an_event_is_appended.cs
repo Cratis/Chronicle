@@ -18,13 +18,13 @@ public class and_an_event_is_appended(context context) : Given<context>(context)
         public IEnumerable<ObservedWorkItem> Updated;
         Exception? _error;
 
-        public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
+        public override IEnumerable<Type> EventTypes => [typeof(WorkItemRecorded)];
 
         async Task Because()
         {
             var handler = await EventStore.Projections.Register<ObservedWorkItem>(projection => projection
                 .ContainerName("observed-work-items")
-                .From<SomeEvent>(from => from.Set(row => row.WorkItemId).ToEventSourceId()));
+                .From<WorkItemRecorded>(from => from.Set(row => row.WorkItemId).ToEventSourceId()));
             await handler.WaitTillActive();
             using var emitted = new SemaphoreSlim(0);
             var observation = EventStore.ReadModels.Observe<ObservedWorkItem>();
@@ -43,7 +43,7 @@ public class and_an_event_is_appended(context context) : Given<context>(context)
             await WaitForEmission(emitted);
             Initial = Updated;
 
-            await EventStore.EventLog.Append(WorkItemId, new SomeEvent(42));
+            await EventStore.EventLog.Append(WorkItemId, new WorkItemRecorded(42));
             await WaitForEmission(emitted);
         }
 
@@ -58,4 +58,11 @@ public class and_an_event_is_appended(context context) : Given<context>(context)
     [Fact] void should_emit_the_appended_work_item() => Context.Updated.ShouldContainOnly(new ObservedWorkItem(Guid.Parse(Context.WorkItemId.Value), 42));
 
     public record ObservedWorkItem([Key] Guid WorkItemId, int Number);
+
+    /// <summary>
+    /// The spec's own event type: a runtime projection over a shared event type outlives the fixture reset and can starve a later spec's projection (#4815).
+    /// </summary>
+    /// <param name="Number">The work item number.</param>
+    [EventType("ef9847e4-02ad-4dec-b574-5c4cbf3e5f0f")]
+    public record WorkItemRecorded(int Number);
 }
