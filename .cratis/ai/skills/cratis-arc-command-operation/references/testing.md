@@ -1,12 +1,20 @@
 <!-- cratis-ai-managed: skills/cratis-arc-command-operation/references/testing.md -->
 # Specify decisions, adapters, and pipeline composition
 
-Verified at **Arc v22.48.1**. These class excerpts follow the product's
-[standalone lesson](https://github.com/Cratis/Arc/blob/v22.48.1/Documentation/backend/csharp/testing/command-operations.md)
-and [Chronicle rejection lesson](https://github.com/Cratis/Arc/blob/v22.48.1/Documentation/backend/csharp/testing/command-operations-with-chronicle.md).
-Use `Cratis.Specifications.XUnit`, NSubstitute, and matching Arc packages in a
-separate spec project. Keep standalone and Chronicle scenarios in separate
-projects: Chronicle's discovered scenario extender changes the test environment.
+## Contents
+
+- Decision: direct Handle
+- Adapter: direct Execute and Compensate
+- Composition: forward failure and reverse compensation
+- Chronicle: a real commit rejection
+- Extend the failure coverage
+- Migrate an existing service-backed Handle
+
+Rechecked at **Arc v22.75.0**; operation assertions and these lessons are unchanged
+since 22.48.1. These class excerpts follow the product's
+[standalone lesson](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/testing/command-operations.md)
+and [Chronicle rejection lesson](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/testing/command-operations-with-chronicle.md).
+See "Observe and test on the backend" in SKILL.md.
 
 The standalone examples reuse `ReservationId`, `SeatId`, `ISeatReservations`,
 `ReserveSeat`, `BookSeat`, `SeatReservation`, and `BookSeats` from the
@@ -87,7 +95,9 @@ and invokers, not a recording stub. Register substitutes through `Services`
 before first execution; do not register a production external client.
 
 This case fails the second reservation. Both entered invocations must be
-compensated; the third must never start.
+compensated; the third must never start. It also explicitly specifies that the
+original provider error wording is preserved verbatim, so the fact names that
+requirement and asserts the exact message.
 
 ```csharp
 public class ReservationProviderUnavailable() : Exception("Reservation provider unavailable.");
@@ -121,7 +131,7 @@ public class when_the_second_reservation_fails : Specification
     ]));
 
     [Fact] void should_preserve_failure() => _result.ShouldNotBeSuccessful();
-    [Fact] void should_preserve_the_original_error() =>
+    [Fact] void should_preserve_the_specified_provider_error_wording() =>
         _result.ExceptionMessages.ShouldContain("Reservation provider unavailable.");
     [Fact] void should_record_only_entered_invocations() => _scenario.Operations.Count.ShouldEqual(2);
     [Fact] void should_observe_the_first_execution_completing() =>

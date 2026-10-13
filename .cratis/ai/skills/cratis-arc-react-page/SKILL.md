@@ -10,16 +10,29 @@ license: MIT
 Build the page from the generated Arc proxies and the Cratis Components
 wrappers. Do not hand-roll a table, a dialog, or a fetch.
 
+- An accepted `.play` model under the model root covers the behavior, or the
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
+  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
+  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
+  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
+  say so and do not author `.play` from memory.
+  Read the model's `screen` and `form` with
+  [from-screenplay.md](references/from-screenplay.md). Edit code here only for
+  infrastructure, clients, adapters, Screenplay code attachments, or gap-fill
+  scope (`cratis-screenplay-render-and-gap-fill`); never edit Stage-managed
+  output.
+
 ## Verified product sources
 
 This skill is verified against these exact package contracts:
 
 | Package | Version | Verified from |
 | --- | --- | --- |
-| `@cratis/components` | `4.6.0` | its package manifest (`exports`, peers), `Source/DataPage/*`, `Source/DataTables/*`, `Source/Dialogs/*`, `Source/CommandDialog/*`, `Source/MIGRATION.md` |
-| `@cratis/arc` | `>=20.3.1 <23` | peer range declared by `@cratis/components@4.6.0` |
-| `@cratis/arc.react` | `>=20.3.1 <23` | peer range declared by `@cratis/components@4.6.0` |
-| `react` | `^19.0.0` | peer of `@cratis/components@4.6.0` |
+| `@cratis/components` | `4.26.4` | its package manifest (`exports`, peers), `Source/DataPage/*`, `Source/DataTables/*`, `Source/Dialogs/*`, `Source/CommandDialog/*`, `Source/MIGRATION.md` |
+| `@cratis/arc` | `>=20.3.1 <23` | peer range declared by `@cratis/components@4.26.4` |
+| `@cratis/arc.react` | `>=20.3.1 <23` | peer range declared by `@cratis/components@4.26.4` |
+| `react` | `^19.0.0` | peer of `@cratis/components@4.26.4` |
 
 `@cratis/arc.react.mvvm` ships with `@cratis/arc.react` and is an explicit
 application dependency. Reverify before claiming another version.
@@ -39,6 +52,16 @@ import { Dialog } from '@cratis/components/Dialogs';
 import { DialogProps, DialogResult, useDialog } from '@cratis/arc.react/dialogs';
 ```
 
+## Initial focus
+
+`DialogInitialFocus.Confirm` is the default and *arms* the confirm button — a
+browser fires `click` from the `keydown` of Enter, so a held Enter confirms.
+For a destructive dialog use `DialogInitialFocus.Cancel`, which focuses the
+least destructive action and degrades to `Content` when the button set has
+nothing to dismiss with. `DialogInitialFocus.Content` focuses the title so
+nothing is armed. There is deliberately no "focus nothing" option — a modal
+must move focus into itself.
+
 ## Step 1 — Prerequisites
 
 - The backend query and command must already exist, and a Debug build must have
@@ -47,15 +70,29 @@ import { DialogProps, DialogResult, useDialog } from '@cratis/arc.react/dialogs'
   fix the C# source and rebuild instead of editing one.
 - The app must mount `CratisComponentsProvider` (from the package root,
   `@cratis/components`) above every Cratis component — it carries the locale,
-  the Components-owned labels and the toast region (`toaster`).
+  the Components-owned labels. Enable `toaster` (or mount one `<Toaster />`)
+  for notifications; without it even `toastCommandResult` displays nothing.
+  Mount exactly one toaster, not both. The `cratis` template already mounts
+  `<CratisComponentsProvider toaster>` **inside** `<Arc>` at Templates `v1.7.4`
+  (`Templates/Cratis/.frontend/main.tsx:12–19`); the missing-toaster/outside-Arc
+  workaround for `v1.7.2` no longer applies to that template version. Check an
+  older application's entry point rather than adding a second toaster.
 - The app must import the stylesheets explicitly; components do not import
   their own CSS:
 
-  ```ts
-  import '@cratis/components/tokens';   // the --cratis-* token seam
-  import '@cratis/components/styles';   // structural rules for every component
-  import '@cratis/components/theme';    // optional: the maintained baseline look
+  In `index.css`, imported by the entry with `import './index.css'`:
+
+  ```css
+  @import '@cratis/components/tokens';
+  @import '@cratis/components/styles';
+  @import '@cratis/components/theme'; /* optional baseline */
   ```
+
+  CSS subpath imports from TypeScript need ambient declarations on TypeScript 6;
+  use CSS `@import` to avoid TS2882. For a smaller bundle use `styles/base` plus
+  the needed area sheets (`DataPage/styles`, etc.); area order does not matter.
+  Import `reflect-metadata` at the entry point; it remains required. `tsyringe`
+  is optional for Components but installed by Arc React.
 
   Components has no vendor UI dependency — do not install PrimeReact or an icon
   font for it. Menu icons are React component types (`react-icons` works).
@@ -113,7 +150,7 @@ compound members; `MenuItem` and `Column` are also **named exports** of the
 subpath (there is no `DataPage.Column`). Pass `dataKey` whenever the read model has an
 identity.
 
-See [data-page.md](references/data-page.md) for every prop, and
+Read [data-page.md](references/data-page.md) when configuring DataPage props; it lists every prop, and
 [data-tables.md](references/data-tables.md) when you need a table without the
 page chrome.
 
@@ -143,8 +180,8 @@ const [CreateAccountWrapper, showCreateAccount] = useDialog(CreateAccountDialog)
 <CreateAccountWrapper />
 ```
 
-Render the wrapper returned by `useDialog` once in the tree. See
-[dialogs.md](references/dialogs.md) for the full dialog contract.
+Render the wrapper returned by `useDialog` once in the tree. Read
+[dialogs.md](references/dialogs.md) when implementing dialog opening, closing, input, response, validation, or focus behavior; it gives the full dialog contract.
 
 ## Step 5 — Command dialogs
 
@@ -246,10 +283,11 @@ const [selected, setSelected] = useState<AccountSummary | null>(null);
 The **same `query` prop** takes a snapshot query or an observable query. There
 is no separate `observableQuery` prop: `DataPage` inspects the query prototype
 and picks the snapshot or observable table itself. Pass an observable query and
-the page stays live; pass a snapshot query and call `onRefresh` after a command
-succeeds.
+the page stays live. `onRefresh` only forwards a caller callback to the details
+component; it never refetches the table. DataPage has no snapshot refresh handle.
+Use an observable query when commands must update the list.
 
-Read [queries-and-commands.md](references/queries-and-commands.md) for the
+Read [queries-and-commands.md](references/queries-and-commands.md) when using generated proxy hooks, implementing paging, or handling command results; it covers the
 generated proxy hooks, their exact return tuples, paging, and how to read a
 command result.
 
@@ -281,8 +319,8 @@ export const AccountsPage = withViewModel(AccountsViewModel, ({ viewModel }) => 
 ```
 
 `withViewModel` applies `makeAutoObservable` itself — do not call it in the
-constructor. See [mvvm.md](references/mvvm.md) for injection, route parameters,
-props handling, and teardown.
+constructor. Read [mvvm.md](references/mvvm.md) when implementing view-model injection, route parameters,
+props handling, or teardown.
 
 ## Quick decision guide
 
@@ -303,8 +341,8 @@ props handling, and teardown.
 ## Verify
 
 - Every Cratis Components import uses a subpath, not the root barrel.
-- `CratisComponentsProvider` wraps the tree and the three stylesheets are
-  imported once at the app entry point.
+- `CratisComponentsProvider` wraps the tree, one toaster is mounted for
+  notifications, and the CSS entries are imported once via the app's CSS file.
 - `DataPage` receives `title`, `query`, `emptyMessage`, and children, and
   `dataKey` when the read model has an identity.
 - Columns sit in `<DataPage.Columns>`; menu items sit in
@@ -337,19 +375,7 @@ props handling, and teardown.
 - The backend command or read model behind the page: `cratis-arc-command`,
   `cratis-chronicle-read-model`.
 - Specifying page behavior with specs: `cratis-application-react-specifications`.
-- An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
-  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
-  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
-  `cratis-screenplay-modeling-lifecycle`): change the model first with
-  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
-  say so and do not author `.play` from memory.
-  Read the model's `screen` and `form` with
-  [from-screenplay.md](references/from-screenplay.md). Edit code here only for
-  infrastructure, clients, adapters, Screenplay code attachments, or gap-fill
-  scope (`cratis-screenplay-render-and-gap-fill`); never edit Stage-managed
-  output.
 
 ## Lineage
 
-See [references/provenance.md](references/provenance.md).
+Read [references/provenance.md](references/provenance.md) when checking source attribution or adaptation permissions.

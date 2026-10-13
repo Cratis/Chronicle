@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Captures;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
@@ -153,14 +152,13 @@ public class CaptureEventsSubscriptions(
     async Task<(string Sequence, EventType[] EventTypes)> Resolve(EventStoreName eventStore, CaptureDefinition definition)
     {
         ThrowWhenNotEvents(definition);
-        var schemas = await GetSchemas(eventStore, definition);
-        var errors = EventsCaptureSequence.Resolve(definition.Source.Sequence, schemas, out var sequence);
-        if (errors.Count > 0 || string.IsNullOrWhiteSpace(sequence))
+        var resolved = await EventsCaptureSequence.ResolveFor(storage.GetEventStore(eventStore).EventTypes, definition.Source);
+        if (resolved.Errors.Count > 0 || string.IsNullOrWhiteSpace(resolved.Sequence))
         {
-            throw new UnsupportedCaptureCapability($"The capture '{definition.Name}' cannot read from an inbox: {string.Join("; ", errors)}");
+            throw new UnsupportedCaptureCapability($"The capture '{definition.Name}' cannot read from an inbox: {string.Join("; ", resolved.Errors)}");
         }
 
-        return (sequence, [.. schemas.Select(schema => schema.Type)]);
+        return (resolved.Sequence, [.. resolved.Schemas.Select(schema => schema.Type)]);
     }
 
     async Task<string?> ResolveForRemoval(EventStoreName eventStore, CaptureDefinition definition)
@@ -171,18 +169,15 @@ public class CaptureEventsSubscriptions(
             return definition.Source.Sequence;
         }
 
-        EventsCaptureSequence.Resolve(null, await GetSchemas(eventStore, definition), out var sequence);
-        if (string.IsNullOrWhiteSpace(sequence))
+        var resolved = await EventsCaptureSequence.ResolveFor(storage.GetEventStore(eventStore).EventTypes, definition.Source);
+        if (string.IsNullOrWhiteSpace(resolved.Sequence))
         {
             logger.CouldNotResolveCaptureSequence(definition.Name);
             return null;
         }
 
-        return sequence;
+        return resolved.Sequence;
     }
-
-    async Task<EventTypeSchema[]> GetSchemas(EventStoreName eventStore, CaptureDefinition definition) =>
-        [.. await storage.GetEventStore(eventStore).EventTypes.GetFor((definition.Source.Events ?? []).Select(name => new EventTypeId(name)))];
 
     async Task SubscribeIn(EventStoreName eventStore, EventStoreNamespaceName @namespace, CaptureDefinition definition, string sequence, EventType[] eventTypes) =>
 

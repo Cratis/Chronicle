@@ -29,6 +29,9 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
     const string ChildrenFromAttributeName = "ChildrenFromAttribute";
     const string NestedAttributeName = "NestedAttribute";
     const string NotProjectedAttributeName = "NotProjectedAttribute";
+    const string VariantOfAttributeName = "VariantOfAttribute";
+    const string EntersOnAttributeName = "EntersOnAttribute";
+    const string GlobalForAttributeName = "GlobalForAttribute";
 
     static readonly HashSet<string> ModelBoundMappingAttributeNames = new(StringComparer.Ordinal)
     {
@@ -76,11 +79,20 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
                 () => BuildEventsByChildType(compilationStart.Compilation),
                 LazyThreadSafetyMode.ExecutionAndPublication);
 
-            compilationStart.RegisterSymbolAction(symbolContext => AnalyzeType(symbolContext, eventsByChildType), SymbolKind.NamedType);
+            // A variant is also populated by the handlers every variant of its group shares, declared on a separate
+            // [GlobalFor<TIdentity>] type, so those events count as subscribed for each variant of that identity.
+            var sharedEventsByIdentity = new Lazy<Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>>>(
+                () => BuildSharedEventsByIdentity(compilationStart.Compilation),
+                LazyThreadSafetyMode.ExecutionAndPublication);
+
+            compilationStart.RegisterSymbolAction(symbolContext => AnalyzeType(symbolContext, eventsByChildType, sharedEventsByIdentity), SymbolKind.NamedType);
         });
     }
 
-    static void AnalyzeType(SymbolAnalysisContext context, Lazy<Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>>> eventsByChildType)
+    static void AnalyzeType(
+        SymbolAnalysisContext context,
+        Lazy<Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>>> eventsByChildType,
+        Lazy<Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>>> sharedEventsByIdentity)
     {
         var typeSymbol = (INamedTypeSymbol)context.Symbol;
 
@@ -91,6 +103,19 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
         if (eventsByChildType.Value.TryGetValue(typeSymbol, out var inheritedEvents))
         {
             subscribedEvents.AddRange(inheritedEvents);
+        }
+
+        // A variant is entered by its [EntersOn<TEvent>] event, which AutoMap binds like any other subscribed event,
+        // and it shares the handlers of its group's [GlobalFor<TIdentity>] types.
+        var variantIdentity = GetVariantIdentity(typeSymbol);
+        if (variantIdentity is not null)
+        {
+            subscribedEvents.AddRange(GetEnteringEvents(typeSymbol));
+
+            if (sharedEventsByIdentity.Value.TryGetValue(variantIdentity, out var sharedEvents))
+            {
+                subscribedEvents.AddRange(sharedEvents);
+            }
         }
 
         // Only a model-bound projection is analyzed: it must carry at least one model-bound mapping attribute
@@ -148,7 +173,7 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
 
     static bool IsModelBoundProjection(INamedTypeSymbol typeSymbol)
     {
-        if (typeSymbol.GetAttributes().Any(IsModelBoundMappingAttribute))
+        if (GetVariantIdentity(typeSymbol) is not null || typeSymbol.GetAttributes().Any(IsModelBoundMappingAttribute))
         {
             return true;
         }
@@ -230,6 +255,57 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
         }
 
         return eventsByChildType;
+    }
+
+    static INamedTypeSymbol? GetModelBoundTypeArgument(INamedTypeSymbol typeSymbol, string attributeName) =>
+        typeSymbol.GetAttributes()
+            .Where(attribute => attribute.AttributeClass is { } attributeClass &&
+                                attributeClass.Name == attributeName &&
+                                attributeClass.ContainingNamespace?.ToDisplayString() == ModelBoundNamespace)
+            .Select(attribute => attribute.AttributeClass!.TypeArguments.FirstOrDefault())
+            .OfType<INamedTypeSymbol>()
+            .FirstOrDefault();
+
+    static INamedTypeSymbol? GetVariantIdentity(INamedTypeSymbol typeSymbol) => GetModelBoundTypeArgument(typeSymbol, VariantOfAttributeName);
+
+    static IEnumerable<INamedTypeSymbol> GetEnteringEvents(INamedTypeSymbol typeSymbol) =>
+        typeSymbol.GetAttributes()
+            .Where(attribute => attribute.AttributeClass is { } attributeClass &&
+                                attributeClass.Name == EntersOnAttributeName &&
+                                attributeClass.ContainingNamespace?.ToDisplayString() == ModelBoundNamespace)
+            .Select(attribute => attribute.AttributeClass!.TypeArguments.FirstOrDefault())
+            .OfType<INamedTypeSymbol>();
+
+    /// <summary>
+    /// Maps every variant identity to the events its <c language="csharp">[GlobalFor&lt;TIdentity&gt;]</c> types map.
+    /// </summary>
+    /// <param name="compilation">The compilation to scan.</param>
+    /// <returns>The events the shared handlers of each identity subscribe to, keyed by identity.</returns>
+    /// <remarks>
+    /// Only types declared in this compilation are scanned, so a shared handler in a referenced assembly cannot be
+    /// seen. The analyzer stays conservative in the other direction here: it can only report more, never guess.
+    /// </remarks>
+    static Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>> BuildSharedEventsByIdentity(Compilation compilation)
+    {
+        var sharedEvents = new Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>>(SymbolEqualityComparer.Default);
+
+        foreach (var type in GetAllTypes(compilation.Assembly.GlobalNamespace))
+        {
+            if (GetModelBoundTypeArgument(type, GlobalForAttributeName) is not { } identity)
+            {
+                continue;
+            }
+
+            if (!sharedEvents.TryGetValue(identity, out var events))
+            {
+                events = [];
+                sharedEvents[identity] = events;
+            }
+
+            events.AddRange(GetSubscribedEventTypes(type));
+        }
+
+        return sharedEvents;
     }
 
     static IEnumerable<INamedTypeSymbol> GetAllTypes(INamespaceSymbol namespaceSymbol)

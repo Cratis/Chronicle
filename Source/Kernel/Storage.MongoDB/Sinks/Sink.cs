@@ -113,6 +113,8 @@ public class Sink(
     long _pendingDeleteVersion;
     int _currentBulkSize;
     volatile bool _isBulkMode;
+    BulkWindowId? _bulkWindowId;
+    bool _bulkWindowHasFailedWrites;
 
     /// <summary>
     /// Completes when the bulk window that <see cref="EndBulk"/> is closing has been flushed and left; set while it is.
@@ -527,12 +529,45 @@ public class Sink(
         lock (_bulkLock)
         {
             _isBulkMode = true;
+            _bulkWindowId = new(Guid.NewGuid());
+            _bulkWindowHasFailedWrites = false;
             _inFlight.Clear();
             ClearBulkOperations();
         }
 
         ClearBulkState();
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task<BulkFlushResult> FlushBulk()
+    {
+        BulkWindowId? windowId;
+        lock (_bulkLock)
+        {
+            windowId = _bulkWindowId;
+        }
+
+        var drain = await DrainBulk();
+        lock (_bulkLock)
+        {
+            // Never confirm a window that was replaced or closed while its writes were draining.
+            if (windowId != _bulkWindowId)
+            {
+                throw new BulkWindowLost();
+            }
+
+            var failures = TakeBulkFailures(drain.Batches);
+
+            // Claiming an outcome is not proof that its failed partitions have been recorded durably.
+            // Keep the window tainted for its lifetime, independently of exclusive failure reporting.
+            if (_bulkWindowHasFailedWrites && failures.Count == 0)
+            {
+                throw new BulkWindowHasFailedWrites();
+            }
+
+            return new(windowId, failures);
+        }
     }
 
     void ClearBulkOperations()
@@ -577,6 +612,8 @@ public class Sink(
             lock (_bulkLock)
             {
                 _isBulkMode = false;
+                _bulkWindowId = null;
+                _bulkWindowHasFailedWrites = false;
                 _inFlight.Clear();
                 ClearBulkOperations();
             }
@@ -1080,6 +1117,7 @@ public class Sink(
         lock (_bulkLock)
         {
             _unreportedBulkOutcomes.Add(batch, outcome);
+            _bulkWindowHasFailedWrites |= outcome.Failures.Length > 0 || outcome.Error is not null;
             _inFlight.Remove(batch);
             foreach (var failure in outcome.Failures)
             {

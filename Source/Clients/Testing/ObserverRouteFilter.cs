@@ -5,6 +5,7 @@ extern alias KernelConcepts;
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSources;
+using Cratis.Chronicle.Observation;
 
 using KernelAppendedEvent = KernelConcepts::Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using KernelEventContext = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventContext;
@@ -13,38 +14,51 @@ using KernelObserverFilters = KernelConcepts::Cratis.Chronicle.Concepts.Observat
 namespace Cratis.Chronicle.Testing;
 
 /// <summary>
-/// Applies the kernel's source and stream observer filters to synthetic scenario input, without tag filtering.
+/// Applies kernel observer route filters, with optional tag matching, and exposes the shared passive-read matcher.
 /// </summary>
-/// <param name="observerType">The observer type declaring the filters.</param>
-/// <param name="eventSources">The registered event source definitions used to resolve typed filters.</param>
-internal sealed class ObserverRouteFilter(Type observerType, IEventSources eventSources)
+internal sealed class ObserverRouteFilter
 {
-    readonly KernelObserverFilters _filters = CreateFilters(observerType, eventSources);
+    readonly ObserverEventFilter _clientFilter;
+    readonly KernelObserverFilters _filters;
 
     /// <summary>
-    /// Checks whether a prepared kernel event matches the observer's route filters.
+    /// Initializes filters using the owning source definitions.
+    /// </summary>
+    /// <param name="observerType">The observer type.</param>
+    /// <param name="eventSources">The registered source definitions.</param>
+    /// <param name="includeTagFilters">Whether to include tags; existing reactor and projection callers retain route-only matching.</param>
+    internal ObserverRouteFilter(Type observerType, IEventSources eventSources, bool includeTagFilters = false)
+    {
+        _clientFilter = ObserverEventFilter.For(observerType, eventSources);
+        _filters = new(includeTagFilters ? _clientFilter.FilterTags : [], new(_clientFilter.EventSourceType.Value), new(_clientFilter.EventStreamType.Value));
+    }
+
+    /// <summary>
+    /// Checks a prepared event against the kernel's observer filters.
     /// </summary>
     /// <param name="appendedEvent">The prepared event.</param>
-    /// <returns>Whether the event's route matches.</returns>
+    /// <returns>Whether the event matches.</returns>
     internal bool Matches(KernelAppendedEvent appendedEvent) => _filters.Matches(appendedEvent);
 
     /// <summary>
-    /// Checks whether a synthetic client context matches the observer's route filters.
+    /// Checks a synthetic context against the kernel's observer filters.
     /// </summary>
     /// <param name="context">The synthetic context.</param>
-    /// <returns>Whether the context's route matches.</returns>
-    internal bool Matches(EventContext context) => Matches(KernelAppendedEvent.Empty() with
+    /// <returns>Whether the context matches.</returns>
+    internal bool MatchesContext(EventContext context) => Matches(KernelAppendedEvent.Empty() with
     {
         Context = KernelEventContext.Empty with
         {
             EventSourceType = new(context.EventSourceType.Value),
-            EventStreamType = new(context.EventStreamType.Value)
+            EventStreamType = new(context.EventStreamType.Value),
+            Tags = context.Tags.Select(tag => new KernelConcepts::Cratis.Chronicle.Concepts.Events.Tag(tag.Value)).ToArray()
         }
     });
 
-    static KernelObserverFilters CreateFilters(Type observerType, IEventSources eventSources)
-    {
-        var (eventSourceType, eventStreamType) = observerType.GetEventSourceFilter(eventSources);
-        return new([], new(eventSourceType.Value), new(eventStreamType.Value));
-    }
+    /// <summary>
+    /// Checks a context through the same tag and category matcher used by passive reducer reads.
+    /// </summary>
+    /// <param name="context">The seeded context.</param>
+    /// <returns>Whether the context passes the shared client filters.</returns>
+    internal bool MatchesClient(EventContext context) => _clientFilter.Matches(context);
 }

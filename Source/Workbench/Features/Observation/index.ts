@@ -7,6 +7,7 @@ export * from './ClearObserverQuarantine';
 export * from './ClearPartitionQuarantine';
 export * from './FailedPartitionAttemptDetails';
 export * from './FailedPartitionDetails';
+export * from './FastForward';
 export * from './GetFailedPartitions';
 export * from './GetObserversForEventType';
 export * from './GetReplayableObserversForEventTypes';

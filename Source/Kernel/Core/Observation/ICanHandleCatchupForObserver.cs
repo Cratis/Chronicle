@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Observation;
@@ -46,4 +47,11 @@ public interface ICanHandleCatchupForObserver
     /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
     /// <returns>Awaitable task.</returns>
     Task<Result<Error>> EndCatchupFor(ObserverDetails observerDetails);
+
+    /// <summary>
+    /// Drain buffered writes for a progress checkpoint without ending catch-up.
+    /// </summary>
+    /// <param name="observerDetails">The observer to flush.</param>
+    /// <returns>The open window and its buffered write failures.</returns>
+    Task<BulkFlushResult> FlushFor(ObserverDetails observerDetails) => Task.FromResult(new BulkFlushResult(null, []));
 }

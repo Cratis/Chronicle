@@ -1,6 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-engineering-effect-boundaries/references/failure-archetypes.md -->
 # The six cited failure archetypes
 
+## Contents
+
+- 1. A swallowed conflict reported as a successful release
+- 2. A generator that degrades silently
+- 3. A renderer that quietly renders less
+- 4. A container that stays `Running` after startup threw
+- 5. A constraint that only one implementation enforces
+- 6. A fan-out that succeeded 29 times out of 36 and said "done"
+- What the six have in common
+
 These are the six manifestations the 2026-08-24 Cratis organization-wide review
 identified as one disease: silent failure on an effect boundary. Each is a real,
 tracked defect. Read them as the shape of the mistake, not as a list of fixed

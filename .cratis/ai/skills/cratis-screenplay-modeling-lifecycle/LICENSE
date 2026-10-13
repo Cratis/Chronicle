@@ -1,0 +1,38 @@
+# cratis-ai-managed: skills/cratis-screenplay-modeling-lifecycle/LICENSE
+Copyright (c) Cratis. All rights reserved.
+Licensed under the MIT license. See LICENSE file in the canonical Cratis/AI repository for full license information.
+
+## Third-party notices
+
+Portions of this skill (the per-phase Input / Carry-forward / Gate structure, the interview
+phase, the interview trail, mid-workflow entry, the final output list and the quality checklist)
+are adapted from TrogonStack/agentskills, plugin `trogonstack-eventmodeling`, commit
+7b249d3ee42d8b7e11fa564141ebd5fbc37aadf1. The items are listed in `references/provenance.md`.
+That work is licensed under the MIT License, reproduced in full below.
+
+MIT License
+
+Copyright (c) 2025 Straw Hat, LLC
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+This skill also adapts material from agentic-engineer by Martin Dilger and Nebulit GmbH
+(https://github.com/Nebulit-GmbH/agentic-engineer, commit 07b0f30648d663cb588d7e2c7aa031af9dfc21f2;
+https://nebulit.de), used with the explicit consent of Martin Dilger and Nebulit GmbH. The adapted
+material remains credited to Martin Dilger and Nebulit GmbH.

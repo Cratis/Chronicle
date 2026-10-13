@@ -3,7 +3,7 @@ title: Explicit artifact registration
 description: Configure marker-free .NET artifacts, their identities, and their store-local registration lifetime.
 ---
 
-Use `ChronicleOptions.ExplicitArtifacts` when your contract types cannot reference Chronicle or you want to nominate artifacts at the composition root. Existing attributes and interfaces keep working. A plain type is not discovered merely because its methods look like handlers: nominate it explicitly.
+Use `ChronicleOptions.ExplicitArtifacts` when your contract types cannot reference Chronicle or you want to nominate artifacts at the composition root. Existing attributes and interfaces keep working. Plain reactors and classic instance reducers still require nomination. A concrete, non-generic model with the exact public static self-reduction shape is the exception: it is discovered structurally. See [self-reducing read models](/chronicle/reducers/self-reducing-read-models/).
 
 ## Declare artifacts before creating stores
 
@@ -62,7 +62,9 @@ An empty explicit snapshot leaves the supplied provider untouched. With nominati
 
 ## Plain observers and constraint definers
 
-A nominated reactor uses the existing instance-method dispatch, dependency injection, filters, tags, sequence selection and replay behavior. A nominated reducer infers exactly one read model from supported instance `(event, current[, EventContext])` methods. The current read model must be nullable. Supported returns remain the read model, `Task<read model>` and classic `Task`; classic mutation-only `Task` keeps its existing null-return semantics. Static self-reducing models are not part of this API.
+A nominated reactor uses the existing instance-method dispatch, dependency injection, filters, tags, sequence selection and replay behavior. A nominated classic reducer infers exactly one read model from supported instance `(event, current[, EventContext])` methods. Declare current state nullable; nullable-oblivious declarations retain compatibility. Supported returns remain the read model, `Task<read model>` and classic `Task`; classic mutation-only `Task` keeps its existing null-return semantics.
+
+The same `RegisterReducer<T>(id)` and `RegisterReducer(typeof(T), id)` APIs also accept a self-reducing model. Its public static `Reduce(event, model? current[, EventContext])` returns the model or `Task<model>`, including nullable results. No model is activated and no new nomination API is needed. Explicit near misses fail with `InvalidSelfReducerSignature`. Implementing `IReducer` always keeps a type classic, even if it has a self-shaped static helper. A self model with another builder in the same store catalog fails with `AmbiguousReadModelBuilder` before registration effects.
 
 A plain constraint definer exposes exactly one public synchronous instance `void Define(IConstraintBuilder)` method. Existing `IConstraint` implementations keep their direct interface path. A nominated event source keeps its declared streams and metadata; an explicit name changes the registered identity, not its declaration-only description helpers.
 

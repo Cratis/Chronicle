@@ -150,6 +150,21 @@ public interface IProjections
     Task<JobId> Replay(ProjectionId projectionId);
 
     /// <summary>
+    /// Fast forward a projection to the tail of the event log, skipping every event it has not yet handled without invoking it.
+    /// </summary>
+    /// <typeparam name="TProjection">Type of projection to fast forward.</typeparam>
+    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    Task<FastForwardResult> FastForward<TProjection>()
+        where TProjection : IProjection;
+
+    /// <summary>
+    /// Fast forward a specific projection by its identifier to the tail of the event log, skipping every event it has not yet handled without invoking it.
+    /// </summary>
+    /// <param name="projectionId"><see cref="ProjectionId"/> to fast forward.</param>
+    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    Task<FastForwardResult> FastForward(ProjectionId projectionId);
+
+    /// <summary>
     /// Get the external event store subscription requirements derived from all discovered projection definitions.
     /// </summary>
     /// <remarks>

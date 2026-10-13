@@ -79,7 +79,13 @@ public class CaptureEventsSubscriber(
                 return ObserverSubscriberResult.Failed(lastHandled, $"The declaration of capture '{capture.Name}' is invalid");
             }
 
-            if (definition.Source.Type != SourceType.Events || definition.Source.Sequence != _key.EventSequenceId.Value)
+            if (definition.Source.Type != SourceType.Events)
+            {
+                return ObserverSubscriberResult.Failed(lastHandled, $"The capture '{capture.Name}' does not read from '{_key.EventSequenceId}'");
+            }
+
+            var resolved = await EventsCaptureSequence.ResolveFor(eventStoreStorage.EventTypes, definition.Source);
+            if (resolved.Errors.Count > 0 || resolved.Sequence != _key.EventSequenceId.Value)
             {
                 return ObserverSubscriberResult.Failed(lastHandled, $"The capture '{capture.Name}' does not read from '{_key.EventSequenceId}'");
             }

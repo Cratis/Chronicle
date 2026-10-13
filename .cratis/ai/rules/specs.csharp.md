@@ -12,14 +12,15 @@ Extends the base [specs.md](./specs.md) (folder structure, naming, philosophy) w
 
 > **Which spec surface?**
 > - **Framework / library code** (Chronicle kernel, Arc pipeline, source generators, Fundamentals): the `Specification` base + NSubstitute in this file is the dominant mode — unit-test the classes under test in isolation. Reach for a `*Scenario` helper (in [specs.scenarios.csharp.md](./specs.scenarios.csharp.md)) **only** when testing the very engine your repo provides — Arc → `CommandScenario`, Chronicle → the event/projection/reactor scenarios. The **cratis-application-slice-specifications** skill is application-oriented, not for general framework specs.
-> - **Event-sourced applications on Cratis** (commands, projections, reducers, reactors, constraints): use this base **plus** the in-process scenario family — see **[specs.scenarios.csharp.md](./specs.scenarios.csharp.md)** (`profile: application`) and the **cratis-application-slice-specifications** skill.
+> - **Event-sourced applications on Cratis** (commands, projections, reducers, reactors, constraints): use this base plus a direct call by default for pure decisions; add the in-process scenario family only where pipelines, validation, constraints, projections or wiring contribute proof — see **[specs.scenarios.csharp.md](./specs.scenarios.csharp.md)** (`profile: application`) and the **cratis-application-slice-specifications** skill.
 
 `Cratis.Specifications` keeps the approach of Machine.Specifications (MSpec): `Establish → Because → should_` maps to "Given → When → Then" and keeps each spec focused on *one setup, one action, one set of assertions*.
 
 ## Frameworks
 
-- [xUnit](https://xunit.net/) for execution.
-- [Cratis.Specifications](https://github.com/Cratis/Specifications) for BDD specification by example — the `Specification` base class discovers `Establish`/`Because`/`Destroy` by convention (no attributes).
+- [xUnit](https://xunit.net/) **2.x** for execution (not v3).
+- Reference `Cratis.Specifications.XUnit` **4.1.1** for the `Specification` base, convention lifecycle and `ShouldXxx` assertions; the namespace remains `Cratis.Specifications`. Its `Cratis.Specifications` dependency supplies `Catch` and `SpecificationMethods`, not the base or assertions.
+- 4.x targets net8.0/net9.0/net10.0; net48 requires 3.x. `Cratis.Specifications.NUnit` is an alternative with `[Test]` and public test methods; xUnit remains the house default.
 - [NSubstitute](https://nsubstitute.github.io/) for mocking collaborators.
 - Spec projects are named `<Source>.Specs`.
 
@@ -45,7 +46,11 @@ public class when_combining_parts : Specification
 | `void Establish()` | setup, before `Because()` | each class in the chain has its own, run base-first — never call `base.Establish()` |
 | `void Because()` | the single action under test | only in concrete spec files, never in a reusable context |
 | `[Fact] void should_*()` | one assertion per fact | use the `ShouldXxx()` extension methods |
-| `void Destroy()` | teardown after each test | |
+| `void Destroy()` | teardown after each fact by default | once per eligible class with shared lifecycle opt-in |
+
+Shared lifecycle is optional (4.1.0+): add `[assembly: Xunit.TestFramework("Cratis.Specifications.SpecificationTestFramework", "Cratis.Specifications.XUnit")]`. Eligible classes derive from `Specification`, have one public parameterless constructor, do not implement `IDisposable`, and contain only plain facts. Construction, Establish/Because and Destroy run once; all facts share the instance and must not mutate it. Initialization failure fails every fact. Other classes keep per-fact execution. Keep the stock lifecycle by default; details are in the **cratis-specifications-csharp** skill's shared-lifecycle reference.
+
+CRSPEC0001–CRSPEC0007 are warnings bundled in `.Specifications`, `.XUnit`, and `.NUnit` 4.0.0+. With warnings as errors, a non-`should_` fact, multiple specs per file (given contexts exempt), a fact on a given context, a `should_` without a test attribute, explicit base lifecycle calls, non-public specs with facts, or `Because` on a given context fail the build. Follow **cratis-specification-by-example**; do not suppress these diagnostics.
 
 ## Reusable layered contexts
 
@@ -88,7 +93,9 @@ async Task Because() => _error = await Catch.Exception(_sut.DoSomething);
 
 ## Assertion extension methods
 
-From `Cratis.Specifications`: `.ShouldEqual(expected)`, `.ShouldBeTrue()`, `.ShouldBeFalse()`, `.ShouldBeNull()`, `.ShouldNotBeNull()`, `.ShouldBeEmpty()`, `.ShouldNotBeEmpty()`, `.ShouldContain(item)`, `.ShouldNotContain(item)`, `.ShouldContainOnly(items)`, `.ShouldBeOfExactType<T>()`, `.ShouldBeGreaterThan(n)`, `.ShouldBeLessThan(n)`.
+From the `Cratis.Specifications.XUnit` package (namespace `Cratis.Specifications`): `.ShouldEqual(expected)`, `.ShouldBeTrue()`, `.ShouldBeFalse()`, `.ShouldBeNull()`, `.ShouldNotBeNull()`, `.ShouldBeEmpty()`, `.ShouldNotBeEmpty()`, `.ShouldContain(item)`, `.ShouldNotContain(item)`, `.ShouldContainOnly(items)`, `.ShouldBeOfExactType<T>()`, `.ShouldBeGreaterThan(n)`, `.ShouldBeLessThan(n)`.
+
+Additional helpers include `ShouldNotEqual`, `ShouldBeSame`/`ShouldNotBeSame`, `ShouldMatch(Func<T, bool>)`, `ShouldBeInRange`, inclusive comparisons `ShouldBeGreaterThanOrEqual`/`ShouldBeLessThanOrEqual`, `ShouldContainSingleItem`, `ShouldEachConformTo`, ordered collection `ShouldEqual(IEnumerable<T>)`, collection `ShouldContain(Predicate<T>)`, `ShouldBeAssignableFrom<T>`, and string `ShouldContain(substring, StringComparison)`. `Catch.Exception` accepts `Action` or `Func<Task>`; `Catch.Exception<T>(Action)` catches only T.
 
 ## Conventions
 
