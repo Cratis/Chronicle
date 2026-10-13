@@ -11,19 +11,19 @@ using Microsoft.CodeAnalysis.Operations;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that checks if types appended to event sequences have the EventType attribute.
+/// Analyzer that checks if types appended to event sequences are declared or registered event types.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class EventSequenceAppendAnalyzer : DiagnosticAnalyzer
 {
     static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticIds.EventTypeMustHaveAttributeWhenAppended,
-        title: "Event type must have [EventType] attribute",
-        messageFormat: "Type '{0}' must be marked with [EventType] attribute when appended to an event sequence",
+        title: "Event type must have [EventType] or [EventTypeGenerationFor<T>] attribute",
+        messageFormat: "Type '{0}' must be marked with [EventType] or [EventTypeGenerationFor<T>] when appended to an event sequence",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "The [EventType] attribute registers a type in Chronicle's event type registry, which is required for serialization, routing, and replay. Add [EventType(\"<guid>\")] to the class being appended, or replace it with a dedicated event type class already marked with [EventType].");
+        description: "The [EventType] attribute declares an event type, and [EventTypeGenerationFor<T>] declares a previous generation of an event type. Appended events must be declared or explicitly registered with Chronicle for serialization, routing, and replay.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
@@ -85,8 +85,8 @@ public class EventSequenceAppendAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // Check if the event type has the EventType attribute
-        if (!evidence.IsEventType(eventType, context.Compilation))
+        // Previous generations are valid append payloads, independently of observer dispatch rules.
+        if (!evidence.IsEventType(eventType, context.Compilation) && !WellKnownTypes.HasEventTypeGenerationForAttribute(eventType))
         {
             var diagnostic = Diagnostic.Create(
                 Rule,
