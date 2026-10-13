@@ -48,6 +48,8 @@ public class EventSeeding(
     readonly ILogger<EventSeeding> _logger = logger;
     readonly List<SeedingEntry> _entries = [];
     readonly IEventSources? _eventSources;
+    GlobalSeedRegistration? _globalSeedRegistration;
+    List<SeedingEntry> _discoveredGlobals = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSeeding"/> class with typed routing support.
@@ -144,6 +146,7 @@ public class EventSeeding(
     /// <inheritdoc/>
     public async Task Discover()
     {
+        _discoveredGlobals = [];
         foreach (var seederType in _clientArtifactsProvider.EventSeeders)
         {
             var activatedSeederResult = _artifactActivator.Activate<ICanSeedEvents>(_serviceProvider, seederType);
@@ -162,13 +165,67 @@ public class EventSeeding(
     /// <exception cref="EventSeedingRoutingNotSupported">Thrown before sending entries when routing support is not confirmed by the kernel.</exception>
     public async Task Register()
     {
-        if (_entries.Count == 0)
+        await RegisterEntries(_entries);
+        _entries.Clear();
+    }
+
+    /// <summary>
+    /// Shares automatic global seeding with the other stores created by this client.
+    /// </summary>
+    /// <param name="registration">The per-client connection registry.</param>
+    internal void UseGlobalSeedRegistration(GlobalSeedRegistration registration) => _globalSeedRegistration = registration;
+
+    /// <summary>
+    /// Registers discovered seeds, retaining globals so a reconnect can offer them again.
+    /// </summary>
+    /// <returns>The registration task.</returns>
+    internal async Task RegisterDiscovered()
+    {
+        if (_globalSeedRegistration is null)
+        {
+            await Register();
+            return;
+        }
+
+        var globals = _entries.Where(_ => _.IsGlobal).ToList();
+        if (globals.Count > 0)
+        {
+            _discoveredGlobals = globals;
+        }
+        await _globalSeedRegistration.Run(_eventStoreName, async includeGlobals =>
+        {
+            var entries = _entries.Where(_ => !_.IsGlobal).ToList();
+            if (includeGlobals) entries.AddRange(_discoveredGlobals);
+            await RegisterEntries(entries);
+            return includeGlobals && _discoveredGlobals.Count > 0;
+        });
+        _entries.Clear();
+    }
+
+    /// <summary>
+    /// Creates a new empty seeding buffer with the same event-store dependencies.
+    /// </summary>
+    /// <returns>A new <see cref="IEventSeeding"/> instance.</returns>
+    internal IEventSeeding CreateEmpty() => new EventSeeding(
+        _eventStoreName,
+        _connection,
+        _eventTypes,
+        _eventSerializer,
+        _clientArtifactsProvider,
+        _serviceProvider,
+        _artifactActivator,
+        _logger,
+        _eventSources);
+
+    async Task RegisterEntries(List<SeedingEntry> entries)
+    {
+        if (entries.Count == 0)
         {
             return;
         }
 
         var servicesAccessor = (IChronicleServicesAccessor)_connection;
-        if (_entries.Exists(entry =>
+        if (entries.Exists(entry =>
             (!string.IsNullOrEmpty(entry.EventSourceType?.Value) && entry.EventSourceType != EventSourceType.Default) ||
             (!string.IsNullOrEmpty(entry.EventStreamType?.Value) && entry.EventStreamType != EventStreamType.All) ||
             (!string.IsNullOrEmpty(entry.EventStreamId?.Value) && entry.EventStreamId.Value != EventStreamId.Default)))
@@ -188,8 +245,8 @@ public class EventSeeding(
         }
 
         // Organize entries into global and namespaced groups
-        var globalEntries = _entries.Where(e => e.IsGlobal).ToList();
-        var namespacedEntries = _entries.Where(e => !e.IsGlobal).GroupBy(e => e.TargetNamespace);
+        var globalEntries = entries.Where(e => e.IsGlobal).ToList();
+        var namespacedEntries = entries.Where(e => !e.IsGlobal).GroupBy(e => e.TargetNamespace);
 
         var globalByEventTypeEntries = new List<Contracts.Seeding.EventTypeSeedEntries>();
         var globalByEventSourceEntries = new List<Contracts.Seeding.EventSourceSeedEntries>();
@@ -303,24 +360,7 @@ public class EventSeeding(
             GlobalByEventSource = globalByEventSourceEntries,
             NamespacedEntries = namespaced
         }).EnsureSuccess();
-
-        _entries.Clear();
     }
-
-    /// <summary>
-    /// Creates a new empty seeding buffer with the same event-store dependencies.
-    /// </summary>
-    /// <returns>A new <see cref="IEventSeeding"/> instance.</returns>
-    internal IEventSeeding CreateEmpty() => new EventSeeding(
-        _eventStoreName,
-        _connection,
-        _eventTypes,
-        _eventSerializer,
-        _clientArtifactsProvider,
-        _serviceProvider,
-        _artifactActivator,
-        _logger,
-        _eventSources);
 
     void AddRoutedEntries(IEnumerable<EventForEventSourceId> events, bool isGlobal, EventStoreNamespaceName targetNamespace, EventTypeId? explicitEventTypeId = default)
     {

@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Registrations;
+using Cratis.Chronicle.Seeding;
 
 namespace Cratis.Chronicle;
 
@@ -15,6 +16,13 @@ public partial class EventStore
     internal Task LatestPreparationVerdict => _preparation?.LatestVerdict ?? Task.CompletedTask;
 
     StorePreparationGate Preparation => LazyInitializer.EnsureInitialized(ref _preparation, () => new(PublishLocalPreparationFailure));
+
+    /// <summary>
+    /// Shares discovered global seed registration with the client's other namespace stores.
+    /// </summary>
+    /// <param name="registration">The per-client connection registry.</param>
+    internal void UseGlobalSeedRegistration(GlobalSeedRegistration registration) =>
+        ((EventSeeding)Seeding).UseGlobalSeedRegistration(registration);
 
     /// <summary>
     /// Rejects registration callback reentry before joining an unfinished task.
