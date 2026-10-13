@@ -597,10 +597,12 @@ public class Sink(
     /// closing finishes however many writers keep arriving. A write arriving while the window closes waits for it to
     /// finish and is then written directly, after the flushed batch.
     /// </remarks>
-    public Task<IEnumerable<FailedPartition>> EndBulk() => EndBulk(CancellationToken.None);
+    public Task<IEnumerable<FailedPartition>> EndBulk() => EndBulk(isShutdown: false, CancellationToken.None);
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken)
+    public Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken) => EndBulk(isShutdown: true, cancellationToken);
+
+    async Task<IEnumerable<FailedPartition>> EndBulk(bool isShutdown, CancellationToken cancellationToken)
     {
         FailedPartition[] pending;
         lock (_bulkLock)
@@ -613,6 +615,7 @@ public class Sink(
                 }).ToArray();
         }
 
+        // Cancellation is terminal for this sink by design: this path runs while its silo is stopping.
         await using var cancellation = cancellationToken.Register(_bulkCancellation.Cancel);
         TaskCompletionSource closing;
         try
@@ -621,6 +624,7 @@ public class Sink(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            _bulkCancellation.Cancel();
             return pending;
         }
 
@@ -629,15 +633,22 @@ public class Sink(
         try
         {
             var drain = await DrainBulk(cancellationToken);
-            if (!cancellationToken.IsCancellationRequested && drain.Queued is { } queued && TakeBatchError(queued) is { } error)
+            if (!isShutdown && drain.Queued is { } queued && TakeBatchError(queued) is { } error)
             {
                 ExceptionDispatchInfo.Throw(error);
             }
 
-            return TakeBulkFailures(drain.Batches);
+            return TakeBulkFailures(drain.Batches, logErrors: isShutdown);
         }
         finally
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                // WaitAsync can finish before the deadline's cancellation callback runs. Disposing the
+                // registration would then remove that callback, so cancel the driver explicitly too.
+                _bulkCancellation.Cancel();
+            }
+
             lock (_bulkLock)
             {
                 _isBulkMode = false;
@@ -1200,7 +1211,7 @@ public class Sink(
         }
     }
 
-    List<FailedPartition> TakeBulkFailures(IEnumerable<BulkBatch> batches)
+    List<FailedPartition> TakeBulkFailures(IEnumerable<BulkBatch> batches, bool logErrors = false)
     {
         var failures = new List<FailedPartition>();
         lock (_bulkLock)
@@ -1211,6 +1222,11 @@ public class Sink(
                 {
                     // An unclaimed exception becomes failures for its affected keys. Its owner may
                     // instead claim and throw it, but never both: each entry is handed out once.
+                    if (logErrors && outcome.Error is not null)
+                    {
+                        logger.ShutdownBulkWriteOutcomeUnknown(Collection.CollectionNamespace.CollectionName, readModel.Identifier, outcome.Error.GetType().Name, outcome.Failures.Length);
+                    }
+
                     failures.AddRange(outcome.Failures);
                 }
             }

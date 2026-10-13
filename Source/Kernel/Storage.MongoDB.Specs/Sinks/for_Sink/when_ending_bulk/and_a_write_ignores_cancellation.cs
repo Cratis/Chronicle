@@ -11,6 +11,7 @@ public class and_a_write_ignores_cancellation : given.a_sink_with_gated_bulk_wri
 {
     readonly CancellationTokenSource _deadline = new();
     readonly TaskCompletionSource _driverStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _driverCancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource<BulkWriteResult<BsonDocument>> _driver = new(TaskCreationOptions.RunContinuationsAsynchronously);
     CancellationToken _driverToken;
     IEnumerable<FailedPartition> _failures;
@@ -20,6 +21,7 @@ public class and_a_write_ignores_cancellation : given.a_sink_with_gated_bulk_wri
         _collection.BulkWriteAsync(Arg.Any<IEnumerable<WriteModel<BsonDocument>>>(), Arg.Any<BulkWriteOptions>(), Arg.Any<CancellationToken>()).Returns(info =>
         {
             _driverToken = info.ArgAt<CancellationToken>(2);
+            _driverToken.Register(() => _driverCancelled.TrySetResult());
             _driverStarted.SetResult();
             return _driver.Task;
         });
@@ -33,6 +35,7 @@ public class and_a_write_ignores_cancellation : given.a_sink_with_gated_bulk_wri
         await _driverStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await _deadline.CancelAsync();
         _failures = await stop.WaitAsync(TimeSpan.FromSeconds(5));
+        await _driverCancelled.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     void Destroy()

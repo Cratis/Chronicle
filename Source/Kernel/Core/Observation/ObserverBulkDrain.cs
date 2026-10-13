@@ -23,11 +23,22 @@ internal class ObserverBulkDrain(IGrainFactory grainFactory, ILogger<ObserverSer
     {
         try
         {
+            // Observe and log the sink's outcome even if it arrives after the bounded wait ends.
+            // The observer may no longer be reachable then, so failure recording still uses only the remaining budget.
+            await DrainAndRecord(observer, endBulk, cancellationToken).WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.DrainFailed(exception, observer.Key);
+        }
+    }
+
+    async Task DrainAndRecord(ObserverDetails observer, Func<CancellationToken, Task<IEnumerable<Storage.Sinks.FailedPartition>>> endBulk, CancellationToken cancellationToken)
+    {
+        try
+        {
             // Invoke even at an expired deadline, so the sink can cancel an already-running bulk write.
-            var drain = endBulk(cancellationToken);
-            var failures = drain.IsCompletedSuccessfully
-                ? (await drain).ToArray()
-                : (await drain.WaitAsync(cancellationToken)).ToArray();
+            var failures = (await endBulk(cancellationToken)).ToArray();
             foreach (var failure in failures)
             {
                 logger.DrainPartitionFailed(observer.Key, failure.EventSourceId, failure.EventSequenceNumber, failure.Reason);
