@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Configuration;
+using Grpc.AspNetCore.Server;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc.Server;
 
 namespace Cratis.Chronicle.Server;
@@ -23,6 +26,12 @@ public static class GrpcServiceRegistrations
         {
             options.EnableDetailedErrors = true;
             options.Interceptors.Add<StreamingCallInterceptor>();
+        });
+        services.AddOptions<GrpcServiceOptions>().Configure<IOptions<ChronicleOptions>>((grpc, chronicle) =>
+        {
+            // Without this the server keeps ASP.NET Core's 4 MB receive limit while the clients allow themselves 100 MB.
+            grpc.MaxReceiveMessageSize = chronicle.Value.MaxReceiveMessageSize;
+            grpc.MaxSendMessageSize = chronicle.Value.MaxSendMessageSize;
         });
         services.AddGeneratedGrpcServices();
 
