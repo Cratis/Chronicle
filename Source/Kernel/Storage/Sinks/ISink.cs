@@ -106,6 +106,13 @@ public interface ISink
     Task<IEnumerable<FailedPartition>> EndBulk();
 
     /// <summary>
+    /// End bulk operation mode within a shutdown deadline.
+    /// </summary>
+    /// <param name="cancellationToken">The token bounding the drain.</param>
+    /// <returns>Failed partitions, including batches whose outcome is unknown after cancellation.</returns>
+    Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken) => EndBulk();
+
+    /// <summary>
     /// Enter replay state.
     /// </summary>
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
