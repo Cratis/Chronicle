@@ -9,6 +9,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="../Core.Specs/Compliance/given/protected_values.cs" Link="Compliance/given/protected_values.cs" />
+        <ProjectReference Include="../Core/Core.csproj" />
         <PackageReference Include="Testcontainers" />
         <PackageReference Include="SSH.NET" />
         <ProjectReference Include="../Storage.Sql/Storage.Sql.csproj" />
