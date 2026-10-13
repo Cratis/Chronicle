@@ -12,9 +12,10 @@ public class and_they_were_held_back_while_preparing_a_catch_up : given.a_detect
         _detector.HeldBack(_q, [10UL], SuspectedSkipReason.HeldBackWhilePreparingCatchUp);
         _detector.Evaluate(11UL);
         _reportsBeforeHandover = _reports.Count;
-        _detector.Evaluate(11UL, atRoundHandover: true);
+        _detector.PreparationEnded();
+        _detector.Evaluate(11UL);
     }
 
     [Fact] void should_not_report_before_the_round_hands_over() => _reportsBeforeHandover.ShouldEqual(0);
-    [Fact] void should_report_at_the_handover() => _reports.Count.ShouldEqual(1);
+    [Fact] void should_report_once_preparation_has_ended() => _reports.Count.ShouldEqual(1);
 }

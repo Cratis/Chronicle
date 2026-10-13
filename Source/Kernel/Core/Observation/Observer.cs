@@ -881,6 +881,7 @@ public partial class Observer(
     {
         _recoverSubscriptionAfterQuarantine = false;
         _isPreparingCatchup = false;
+        NotePreparationEnded();
         _catchupRecoveryAttempts = 0;
         _subscription = ObserverSubscription.Unsubscribed;
     }

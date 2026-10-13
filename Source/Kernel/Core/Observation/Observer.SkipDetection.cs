@@ -129,7 +129,16 @@ public partial class Observer
         }
     }
 
-    void EvaluateSuspectedSkips(bool atRoundHandover = false) => Skips.Evaluate(State.NextEventSequenceNumber, atRoundHandover);
+    void EvaluateSuspectedSkips() => Skips.Evaluate(State.NextEventSequenceNumber);
+
+    /// <summary>
+    /// Releases the ownership that catch-up preparation held over live events, then evaluates what the position has passed.
+    /// </summary>
+    void NotePreparationEnded()
+    {
+        Skips.PreparationEnded();
+        EvaluateSuspectedSkips();
+    }
 
     void SeedSuspectedSkipOwnership() =>
         Skips.SeedJobOwned(State.InFlightPartitions.Concat(State.CatchingUpPartitions).Concat(State.ReplayingPartitions).ToArray());

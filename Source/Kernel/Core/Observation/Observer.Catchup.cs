@@ -28,6 +28,7 @@ public partial class Observer
         {
             logger.SkippingCatchUpBecauseObserverIsReplaying();
             _isPreparingCatchup = false;
+            NotePreparationEnded();
             return;
         }
 
@@ -174,7 +175,8 @@ public partial class Observer
         }
 
         Skips.RoundConcluded(FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
-        EvaluateSuspectedSkips(atRoundHandover: true);
+        Skips.PreparationEnded();
+        EvaluateSuspectedSkips();
         Skips.ClearJobReported();
         await WriteStateAsync();
 
@@ -249,6 +251,7 @@ public partial class Observer
             {
                 logger.NoCatchUpJobTookOwnership();
                 _isPreparingCatchup = false;
+                NotePreparationEnded();
                 return Task.CompletedTask;
             },
             concludedJobs: _concludedCatchUpJobs);

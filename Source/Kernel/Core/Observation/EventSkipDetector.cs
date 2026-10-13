@@ -245,11 +245,22 @@ internal sealed class EventSkipDetector(Func<Key, bool> isOwnedByObserver, Actio
     });
 
     /// <summary>
+    /// Records that catch-up preparation ended, whether by a round handing over or by any path that lowers it. Events held
+    /// back while it was preparing were owned by it until now.
+    /// </summary>
+    internal void PreparationEnded() => Run(() =>
+    {
+        foreach (var held in _pending.Values)
+        {
+            held.ReleasePreparation();
+        }
+    });
+
+    /// <summary>
     /// Reports held back events the observer's position has moved past and that nothing covers.
     /// </summary>
     /// <param name="next">The observer's next event sequence number.</param>
-    /// <param name="atRoundHandover">Whether a catch-up round is handing over. Events held back while the round was preparing are owned by it until then, so only the handover evaluates them.</param>
-    internal void Evaluate(EventSequenceNumber next, bool atRoundHandover = false)
+    internal void Evaluate(EventSequenceNumber next)
     {
         if (!MayHavePendingBelow(next))
         {
@@ -261,7 +272,7 @@ internal sealed class EventSkipDetector(Func<Key, bool> isOwnedByObserver, Actio
             var reports = new List<(Key Partition, ulong First, int Count, SuspectedSkipReason Reason)>();
             foreach (var partition in _pending.Keys.ToArray())
             {
-                EvaluatePartition(partition, next.Value, atRoundHandover, reports);
+                EvaluatePartition(partition, next.Value, reports);
             }
 
             RecomputePendingMinimum();
@@ -359,11 +370,11 @@ internal sealed class EventSkipDetector(Func<Key, bool> isOwnedByObserver, Actio
                 return;
             }
 
-            held = new(reason);
+            held = new();
             _pending[partition] = held;
         }
 
-        if (held.Add(sequenceNumber) && sequenceNumber < _pendingMinimum)
+        if (held.Add(sequenceNumber, reason) && sequenceNumber < _pendingMinimum)
         {
             _pendingMinimum = sequenceNumber;
         }
@@ -425,24 +436,17 @@ internal sealed class EventSkipDetector(Func<Key, bool> isOwnedByObserver, Actio
     void RecomputePendingMinimum() =>
         _pendingMinimum = _pending.Count == 0 ? ulong.MaxValue : _pending.Values.Min(_ => _.Minimum);
 
-    void EvaluatePartition(Key partition, ulong next, bool atRoundHandover, List<(Key Partition, ulong First, int Count, SuspectedSkipReason Reason)> reports)
+    void EvaluatePartition(Key partition, ulong next, List<(Key Partition, ulong First, int Count, SuspectedSkipReason Reason)> reports)
     {
         var held = _pending[partition];
-        if (held.Reason == SuspectedSkipReason.HeldBackWhilePreparingCatchUp && !atRoundHandover)
-        {
-            return;
-        }
-
         var crossed = held.TakeBelow(next);
-        var uncovered = crossed.Where(_ => !IsCovered(partition, _)).ToArray();
         var canReport = !_jobReportedSaturated && !IsOwned(partition);
-        if (!canReport)
+        var uncovered = crossed.Where(_ => !IsCovered(partition, _.SequenceNumber)).ToArray();
+        var unowned = canReport ? uncovered.Where(_ => !_.OwnedByPreparation).ToArray() : [];
+        held.Restore(uncovered.Except(unowned));
+        foreach (var group in unowned.GroupBy(_ => _.Reason))
         {
-            held.Restore(uncovered);
-        }
-        else if (uncovered.Length > 0)
-        {
-            reports.Add((partition, uncovered[0], uncovered.Length, held.Reason));
+            reports.Add((partition, group.Min(_ => _.SequenceNumber), group.Count(), group.Key));
         }
 
         if (held.IsEmpty)
@@ -453,45 +457,64 @@ internal sealed class EventSkipDetector(Func<Key, bool> isOwnedByObserver, Actio
 
     readonly record struct Advance(Key Partition, ulong Before, ulong After);
 
-    sealed class HeldBackEvents(SuspectedSkipReason reason)
+    readonly record struct HeldEvent(ulong SequenceNumber, SuspectedSkipReason Reason, bool OwnedByPreparation);
+
+    sealed class HeldEventComparer : IComparer<HeldEvent>
     {
-        readonly List<ulong> _sequenceNumbers = [];
+        internal static readonly HeldEventComparer Instance = new();
 
-        public SuspectedSkipReason Reason { get; } = reason;
+        public int Compare(HeldEvent x, HeldEvent y) => x.SequenceNumber.CompareTo(y.SequenceNumber);
+    }
 
-        public bool IsEmpty => _sequenceNumbers.Count == 0;
+    sealed class HeldBackEvents
+    {
+        readonly List<HeldEvent> _events = [];
 
-        public ulong Minimum => _sequenceNumbers[0];
+        public bool IsEmpty => _events.Count == 0;
 
-        public bool Add(ulong sequenceNumber)
+        public ulong Minimum => _events[0].SequenceNumber;
+
+        public bool Add(ulong sequenceNumber, SuspectedSkipReason reason)
         {
-            var index = _sequenceNumbers.BinarySearch(sequenceNumber);
-            if (index >= 0 || _sequenceNumbers.Count >= MaxSequenceNumbersPerPartition)
+            var index = _events.BinarySearch(new(sequenceNumber, reason, false), HeldEventComparer.Instance);
+            if (index >= 0 || _events.Count >= MaxSequenceNumbersPerPartition)
             {
                 return false;
             }
 
-            _sequenceNumbers.Insert(~index, sequenceNumber);
+            _events.Insert(~index, new(sequenceNumber, reason, reason == SuspectedSkipReason.HeldBackWhilePreparingCatchUp));
             return true;
         }
 
-        public ulong[] TakeBelow(ulong next)
+        public HeldEvent[] TakeBelow(ulong next)
         {
-            var taken = _sequenceNumbers.Where(_ => _ < next).ToArray();
-            _sequenceNumbers.RemoveRange(0, taken.Length);
+            var taken = _events.Where(_ => _.SequenceNumber < next).ToArray();
+            _events.RemoveRange(0, taken.Length);
             return taken;
         }
 
-        public void Restore(IEnumerable<ulong> sequenceNumbers)
+        public void Restore(IEnumerable<HeldEvent> events)
         {
-            foreach (var sequenceNumber in sequenceNumbers)
+            foreach (var @event in events)
             {
-                Add(sequenceNumber);
+                var index = _events.BinarySearch(@event, HeldEventComparer.Instance);
+                if (index < 0 && _events.Count < MaxSequenceNumbersPerPartition)
+                {
+                    _events.Insert(~index, @event);
+                }
             }
         }
 
-        public void RemoveAtOrBelow(ulong position) => _sequenceNumbers.RemoveAll(_ => _ <= position);
+        public void ReleasePreparation()
+        {
+            for (var i = 0; i < _events.Count; i++)
+            {
+                _events[i] = _events[i] with { OwnedByPreparation = false };
+            }
+        }
 
-        public void RemoveAtOrAbove(ulong position) => _sequenceNumbers.RemoveAll(_ => _ >= position);
+        public void RemoveAtOrBelow(ulong position) => _events.RemoveAll(_ => _.SequenceNumber <= position);
+
+        public void RemoveAtOrAbove(ulong position) => _events.RemoveAll(_ => _.SequenceNumber >= position);
     }
 }
