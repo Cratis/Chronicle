@@ -94,8 +94,8 @@ public static class EventsCaptureSequence
 
     static void DeriveFromOrigin(EventTypeSchema[] schemas, List<string> errors, ref string sequence)
     {
-        var origins = schemas.Select(schema => schema.Origin).Distinct().ToArray();
-        if (origins.Length == 1 && origins[0].Length > 0)
+        var origins = schemas.Select(schema => schema.Origin).Where(origin => origin.Length > 0).Distinct().ToArray();
+        if (origins.Length == 1 && schemas.All(schema => schema.Origin.Length > 0))
         {
             sequence = $"{EventSequenceId.InboxPrefix}{origins[0]}";
             return;
@@ -110,7 +110,7 @@ public static class EventsCaptureSequence
             .Select(schema => $"'{schema.Type.Id}' has no origin; register it with the [EventStore] of its owner"));
         if (origins.Length > 1)
         {
-            errors.Add($"The 'from' events originate from several event stores ({string.Join(", ", origins.Where(origin => origin.Length > 0).Order())}); they must all originate from one event store - split into one capture per origin");
+            errors.Add($"The 'from' events originate from several event stores ({string.Join(", ", origins.Order())}); they must all originate from one event store - split into one capture per origin");
         }
     }
 }

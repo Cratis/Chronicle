@@ -9,12 +9,15 @@ namespace Cratis.Chronicle.Captures.Engine.DeclarationLanguage;
 /// Carries legacy events-source settings alongside the source accepted by Screenplay.
 /// </summary>
 /// <param name="Source">The source to parse, retaining the original line numbers.</param>
-/// <param name="Sequence">The first legacy sequence setting, if present.</param>
+/// <param name="Sequence">The first legacy sequence setting in the last source block, if present.</param>
 /// <param name="Names">The original event names keyed by their parser-safe placeholders.</param>
 internal partial record LegacyEventsSource(string Source, string? Sequence, IReadOnlyDictionary<string, string> Names)
 {
     [GeneratedRegex(@"^(?<setting>sequence|from)(?:\s+(?<value>.*))?$", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex Setting { get; }
+
+    [GeneratedRegex(@"^source\s+(?<kind>.*)$", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex SourceHeader { get; }
 
     [GeneratedRegex(@"^[A-Za-z_][\w.]*$", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex EventName { get; }
@@ -28,13 +31,14 @@ internal partial record LegacyEventsSource(string Source, string? Sequence, IRea
     {
         var lines = source.Split('\n');
         var names = new Dictionary<string, string>();
+        var events = new HashSet<string>(StringComparer.Ordinal);
         string? sequence = null;
         int? sourceIndent = null;
         for (var index = 0; index < lines.Length; index++)
         {
             var line = lines[index];
-            var content = line.Trim();
-            if (content.Length == 0 || content.StartsWith("//", StringComparison.Ordinal) || content.StartsWith('#'))
+            var content = StripComments(line).Trim();
+            if (content.Length == 0)
             {
                 continue;
             }
@@ -45,9 +49,17 @@ internal partial record LegacyEventsSource(string Source, string? Sequence, IRea
                 sourceIndent = null;
             }
 
-            if (content == "source events")
+            var header = SourceHeader.Match(content);
+            if (header.Success)
             {
-                sourceIndent = indent;
+                sequence = null;
+                events.Clear();
+                sourceIndent = header.Groups["kind"].Value == "events" ? indent : null;
+                if (sourceIndent is not null)
+                {
+                    lines[index] = $"{line[..indent]}source events{(line.EndsWith('\r') ? "\r" : string.Empty)}";
+                }
+
                 continue;
             }
 
@@ -68,6 +80,10 @@ internal partial record LegacyEventsSource(string Source, string? Sequence, IRea
                 sequence ??= value;
                 lines[index] = line.EndsWith('\r') ? "\r" : string.Empty;
             }
+            else if (value.Length > 0 && !events.Add(value))
+            {
+                lines[index] = line.EndsWith('\r') ? "\r" : string.Empty;
+            }
             else if (value.Length > 0 && !EventName.IsMatch(value))
             {
                 var placeholder = names.FirstOrDefault(pair => pair.Value == value).Key;
@@ -84,8 +100,45 @@ internal partial record LegacyEventsSource(string Source, string? Sequence, IRea
 
                 lines[index] = $"{line[..indent]}from {placeholder}{(line.EndsWith('\r') ? "\r" : string.Empty)}";
             }
+            else if (value.Length > 0)
+            {
+                lines[index] = $"{line[..indent]}from {value}{(line.EndsWith('\r') ? "\r" : string.Empty)}";
+            }
         }
 
         return new(string.Join('\n', lines), sequence, names);
+    }
+
+    /// <summary>
+    /// Mirrors the internal Screenplay 4.149.0 SourceLineSplitter's quote-aware comment handling.
+    /// </summary>
+    /// <param name="text">The source line.</param>
+    /// <returns>The text before the first comment outside double quotes or backtick templates.</returns>
+    static string StripComments(string text)
+    {
+        var inQuotes = false;
+        var inTemplate = false;
+        for (var index = 0; index < text.Length; index++)
+        {
+            var character = text[index];
+            if (character == '\\' && inQuotes && index + 1 < text.Length)
+            {
+                index++;
+            }
+            else if (character == '"' && !inTemplate)
+            {
+                inQuotes = !inQuotes;
+            }
+            else if (character == '`' && !inQuotes)
+            {
+                inTemplate = !inTemplate;
+            }
+            else if (!inQuotes && !inTemplate && (character == '#' || (character == '/' && index + 1 < text.Length && text[index + 1] == '/')))
+            {
+                return text[..index];
+            }
+        }
+
+        return text;
     }
 }
