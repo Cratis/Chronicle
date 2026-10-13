@@ -3,12 +3,15 @@
 
 using System.Collections.Frozen;
 using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Registrations;
 
 namespace Cratis.Chronicle.Reducers;
 
 public partial class Reducers
 {
+    ReducerCatalog Catalog => new(_clientArtifacts, _eventTypes, _reducerValidator);
+
     /// <inheritdoc/>
     public Task<IReducerHandler> Register(Type reducerType)
     {
@@ -17,9 +20,11 @@ public partial class Reducers
         {
             throw new ConflictingArtifactKind(reducerType, nameof(ExplicitArtifactKind.Reactor), nameof(ExplicitArtifactKind.Reducer));
         }
-        var modelType = RegisteredReducerReadModel.Infer(reducerType, _eventTypes);
-        lock (_registerLock)
+        var descriptor = Catalog.GetForRegistration(reducerType);
+        var modelType = descriptor.ReadModelType;
+        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
         {
+            ReadModelBuilderOwnership.Validate(_eventStore, _clientArtifacts, Catalog, modelType, reducerType, descriptor.IsSelfReducing);
             var handler = CreateHandlerFor(reducerType, modelType);
             RegisterWhenDispatchable(handler);
             var byType = new Dictionary<Type, IReducerHandler>(_handlersByType) { { reducerType, handler } };
@@ -38,15 +43,5 @@ public partial class Reducers
 
     ReducerId ResolveId(Type type) => RegisteredObserverMetadata.ReducerIdFor(_clientArtifacts, type);
 
-    Type ResolveReadModel(Type type)
-    {
-        if (ExplicitArtifactCatalog.From(_clientArtifacts)?.IsExplicit(type, ExplicitArtifactKind.Reducer) == true || !type.IsAssignableTo(typeof(IReducer)))
-        {
-            RegisteredObserverMetadata.Validate(type, ExplicitArtifactKind.Reducer, _clientArtifacts);
-            return RegisteredReducerReadModel.Infer(type, _eventTypes);
-        }
-
-        _reducerValidator.Validate(type);
-        return type.GetReadModelType();
-    }
+    Type ResolveReadModel(Type type) => Catalog.Get(type).ReadModelType;
 }

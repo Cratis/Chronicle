@@ -68,6 +68,9 @@ internal static class ReadModelEvents
                 EventSourceType = contexts is not null ? new(contexts[index].EventSourceType.Value) : new((seededEvents?[index].EventSourceType ?? EventSourceType.Default).Value),
                 EventStreamType = contexts is not null ? new(contexts[index].EventStreamType.Value) : new((seededEvents?[index].EventStreamType ?? EventStreamType.All).Value),
                 EventStreamId = contexts is not null ? new(contexts[index].EventStreamId.Value) : new((seededEvents?[index].EventStreamId ?? EventStreamId.Default).Value),
+                Tags = contexts is not null
+                    ? contexts[index].Tags.Select(tag => new KernelEvents::Tag(tag.Value)).ToArray()
+                    : (seededEvents?[index].Tags ?? input.Event.GetType().GetTags().ToArray()).Select(tag => new KernelEvents::Tag(tag)).ToArray(),
                 SequenceNumber = contexts is null ? new((ulong)index) : new(contexts[index].SequenceNumber.Value),
                 Occurred = contexts is null ? KernelEvents::EventContext.Empty.Occurred.AddTicks(index) : contexts[index].Occurred
             };

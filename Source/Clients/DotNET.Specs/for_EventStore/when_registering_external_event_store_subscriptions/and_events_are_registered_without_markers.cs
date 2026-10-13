@@ -8,6 +8,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reducers;
 
 namespace Cratis.Chronicle.Specs.for_EventStore.when_registering_external_event_store_subscriptions;
 
@@ -58,6 +59,7 @@ public class and_events_are_registered_without_markers : Specification
         Set(store, "_clientArtifactsProvider", artifacts);
         Set(store, "<EventTypes>k__BackingField", _registry);
         Set(store, "<Reactors>k__BackingField", reactors);
+        Set(store, "<Reducers>k__BackingField", Substitute.For<IReducers>());
         Set(store, "<Projections>k__BackingField", projections);
         Set(store, "<Subscriptions>k__BackingField", subscriptions);
         await (Task)typeof(EventStore).GetMethod("RegisterExternalEventStoreSubscriptionsAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(store, [])!;

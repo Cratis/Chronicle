@@ -542,6 +542,7 @@ internal static class ProjectionReadModelProcessor
         if (!statesByKey.TryGetValue(stateKey, out var state))
         {
             state = createSeedState();
+            SetKeyOnSeedState(projection, state, key);
             statesByKey[stateKey] = state;
         }
 
@@ -587,6 +588,34 @@ internal static class ProjectionReadModelProcessor
 
         statesByKey[stateKey] = removed ? new ExpandoObject() : ApplyActualChanges(key, changeset.Changes, state);
         return removed;
+    }
+
+    /// <summary>
+    /// Puts the resolved key on a new root instance's state under the read model's key property, as the live
+    /// pipeline's SetInitialState step does, so a join keyed on the identifier resolves while the instance is being created.
+    /// </summary>
+    /// <param name="projection">The <see cref="KernelProjectionEngine::IProjection"/> the instance belongs to.</param>
+    /// <param name="state">The state of the new instance.</param>
+    /// <param name="key">The resolved <see cref="KernelKey"/> of the instance.</param>
+    static void SetKeyOnSeedState(KernelProjectionEngine::IProjection projection, ExpandoObject state, KernelKey key)
+    {
+        if (projection.HasParent || key.Value is null)
+        {
+            return;
+        }
+
+        var schema = projection.TargetReadModelSchema;
+        var keyPropertyName = schema.HasKeyProperty() ? schema.GetKeyProperty().Name : schema.GetLikelyKeyPropertyName();
+        if (keyPropertyName is null)
+        {
+            return;
+        }
+
+        var dictionary = (IDictionary<string, object?>)state;
+        if (!dictionary.TryGetValue(keyPropertyName, out var existing) || existing is null)
+        {
+            dictionary[keyPropertyName] = key.Value;
+        }
     }
 
     static KernelReadModels::ReadModelDefinition BuildKernelReadModelDefinition(Type readModelType, JsonSchema schema)

@@ -17,18 +17,21 @@ public class ReadModelSourceGivenBuilder<TReadModel>(ReadModelScenario<TReadMode
     readonly EventSourceType _eventSourceType = EventSourceType.Default;
     readonly EventStreamType _eventStreamType = EventStreamType.All;
     readonly EventStreamId _eventStreamId = EventStreamId.Default;
+    readonly IReadOnlyList<string> _tags = [];
 
     ReadModelSourceGivenBuilder(
         ReadModelScenario<TReadModel> scenario,
         EventSourceId eventSourceId,
         EventSourceType eventSourceType,
         EventStreamType eventStreamType,
-        EventStreamId eventStreamId)
+        EventStreamId eventStreamId,
+        IReadOnlyList<string> tags)
         : this(scenario, eventSourceId)
     {
         _eventSourceType = eventSourceType;
         _eventStreamType = eventStreamType;
         _eventStreamId = eventStreamId;
+        _tags = tags;
     }
 
     /// <summary>
@@ -51,7 +54,15 @@ public class ReadModelSourceGivenBuilder<TReadModel>(ReadModelScenario<TReadMode
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default) =>
-        new(scenario, eventSourceId, eventSourceType ?? EventSourceType.Default, eventStreamType ?? EventStreamType.All, eventStreamId ?? EventStreamId.Default);
+        new(scenario, eventSourceId, eventSourceType ?? EventSourceType.Default, eventStreamType ?? EventStreamType.All, eventStreamId ?? EventStreamId.Default, _tags);
+
+    /// <summary>
+    /// Creates a builder that associates append tags with its seeded events.
+    /// </summary>
+    /// <param name="tags">Tags to combine with existing builder tags and static event tags.</param>
+    /// <returns>A new builder carrying a snapshot of the tags, leaving this builder unchanged.</returns>
+    public ReadModelSourceGivenBuilder<TReadModel> WithTags(params string[] tags) =>
+        new(scenario, eventSourceId, _eventSourceType, _eventStreamType, _eventStreamId, _tags.Concat(tags).Distinct(StringComparer.Ordinal).ToArray());
 
     /// <summary>
     /// Collects the provided event instances for this event source to be processed together with all other
@@ -66,7 +77,7 @@ public class ReadModelSourceGivenBuilder<TReadModel>(ReadModelScenario<TReadMode
     /// <returns>A completed <see cref="Task"/>.</returns>
     public Task Events(params object[] events)
     {
-        scenario.CollectEventsFor(eventSourceId, events, _eventSourceType, _eventStreamType, _eventStreamId);
+        scenario.CollectEventsFor(eventSourceId, events, _eventSourceType, _eventStreamType, _eventStreamId, _tags);
         return Task.CompletedTask;
     }
 

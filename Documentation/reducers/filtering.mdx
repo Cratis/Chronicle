@@ -2,6 +2,10 @@
 
 A reducer observes all events that match its handler method signatures by default. You can restrict which events a reducer receives by placing filter attributes on the reducer class. Chronicle evaluates these filters before dispatching an event — events that do not match are dropped before they ever reach the reducer.
 
+For [self reducers](self-reducing-read-models), place these attributes on the model. The same matching applies to passive reads and reducer scenarios, using stored or seeded metadata. Multiple tags are OR alternatives; source and stream categories must also match. Unspecified source and `All` stream filters are wildcards; an explicit `Default` source filter is not. Stream-id subscription filtering is not supported.
+
+A bounded collection read takes its event-type-selected prefix before metadata rejection, not the first N accepted events. Inbox forwarding currently drops tags for both reducer forms ([#4823](https://github.com/Cratis/Chronicle/issues/4823)); [external-store route filters](external-event-store-subscriptions#forwarded-metadata-limitation) do not depend on tags.
+
 ## Filter attributes
 
 | Attribute | Filters by | Matches when |

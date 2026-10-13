@@ -331,7 +331,7 @@ public class ReactorScenario<TReactor> : IDisposable
                 CorrelationId.New());
 
             _nextSequenceNumber += 1;
-            if (!filters.Matches(context))
+            if (!filters.MatchesContext(context))
             {
                 continue;
             }

@@ -16,6 +16,8 @@ public class when_getting_instances : given.all_dependencies
 
     class MyEvent;
 
+    class MyReducer;
+
     IReducerHandler _handler = null!;
     IReducerInvoker _invoker = null!;
     IEventSequence _eventSequence = null!;
@@ -24,6 +26,7 @@ public class when_getting_instances : given.all_dependencies
     void Establish()
     {
         _handler = Substitute.For<IReducerHandler>();
+        _handler.ReducerType.Returns(typeof(MyReducer));
         _handler.EventSequenceId.Returns(new EventSequenceId("my-sequence"));
         _handler.EventTypes.Returns([new EventType("my-event-type", 1)]);
 

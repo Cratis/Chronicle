@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Testing.Events;
@@ -16,6 +17,8 @@ public class when_preparing_routed_input : Specification
     string _storedStreamType;
     string _storedStreamId;
     ulong _storedCount;
+    string[] _storedTags;
+    string[] _deliveredTags;
 
     void Establish()
     {
@@ -25,7 +28,7 @@ public class when_preparing_routed_input : Specification
 
     async Task Because()
     {
-        IReadOnlyList<ReadModelEvent> seeds = [new(_source, new RoutedEventRecorded("stored"), "Order", "Payments", "2026-10")];
+        IReadOnlyList<ReadModelEvent> seeds = [new(_source, new RoutedEventRecorded("stored"), "Order", "Payments", "2026-10", ["stored-tag", "append-tag"])];
         IReadOnlyList<(EventSourceId EventSourceId, object Event)> events = seeds.Select(seed => (seed.EventSourceId, seed.Event)).ToArray();
 
         // Kernel types are private dependencies; inspect persisted routing at the internal Testing boundary.
@@ -39,11 +42,16 @@ public class when_preparing_routed_input : Specification
         _storedSourceType = (string)Value(Value(context, "EventSourceType")!, "Value")!;
         _storedStreamType = (string)Value(Value(context, "EventStreamType")!, "Value")!;
         _storedStreamId = (string)Value(Value(context, "EventStreamId")!, "Value")!;
+        _storedTags = Tags(context);
+        var delivered = ((Array)prepared.GetType().GetField("Item1")!.GetValue(prepared)!).GetValue(0)!;
+        _deliveredTags = Tags(Value(delivered, "Context")!);
         var count = (await Invoke(storage.GetType().GetMethod("GetCount")!, storage, []))!;
         _storedCount = (ulong)Value(count, "Value")!;
     }
 
     void Destroy() => _store.Dispose();
+
+    static string[] Tags(object context) => ((IEnumerable)Value(context, "Tags")!).Cast<object>().Select(tag => (string)Value(tag, "Value")!).ToArray();
 
     static object? Value(object instance, string name) => instance.GetType().GetProperty(name)!.GetValue(instance);
 
@@ -59,4 +67,6 @@ public class when_preparing_routed_input : Specification
     [Fact] void should_persist_the_stream_type() => _storedStreamType.ShouldEqual("Payments");
     [Fact] void should_persist_the_stream_id() => _storedStreamId.ShouldEqual("2026-10");
     [Fact] void should_store_the_seed() => _storedCount.ShouldEqual(1UL);
+    [Fact] void should_persist_effective_seed_tags() => _storedTags.ShouldContainOnly("stored-tag", "append-tag");
+    [Fact] void should_deliver_the_persisted_tags() => _deliveredTags.ShouldContainOnly("stored-tag", "append-tag");
 }
