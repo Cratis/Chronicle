@@ -19,6 +19,7 @@
         "cratis/arc/core",
         "cratis/arc/csharp",
         "cratis/arc/ef-core",
+        "cratis/arc/go",
         "cratis/arc/identity",
         "cratis/arc/java",
         "cratis/arc/kotlin",
@@ -28,6 +29,7 @@
         "cratis/chronicle",
         "cratis/chronicle/client-dotnet",
         "cratis/chronicle/client-elixir",
+        "cratis/chronicle/client-go",
         "cratis/chronicle/client-java",
         "cratis/chronicle/client-kotlin",
         "cratis/chronicle/client-python",
@@ -54,9 +56,11 @@
         "cratis/full/kotlin",
         "cratis/full/typescript",
         "cratis/fundamentals",
+        "cratis/fundamentals/go",
         "cratis/fundamentals/type-discovery",
         "cratis/language/csharp",
         "cratis/language/elixir",
+        "cratis/language/go",
         "cratis/language/java",
         "cratis/language/kotlin",
         "cratis/language/typescript",
@@ -74,6 +78,7 @@
       "languages": [
         "csharp",
         "elixir",
+        "go",
         "java",
         "kotlin",
         "language-agnostic",
@@ -114,6 +119,7 @@
         "cratis/arc/core",
         "cratis/chronicle/core",
         "cratis/fundamentals",
+        "cratis/screenplay",
         "cratis/specifications/dotnet"
       ],
       "languages": [
@@ -125,6 +131,7 @@
       "composes": [
         "cratis/arc/core",
         "cratis/fundamentals",
+        "cratis/screenplay",
         "cratis/specifications/dotnet"
       ],
       "languages": [
@@ -137,6 +144,7 @@
         "cratis/chronicle/client-dotnet",
         "cratis/chronicle/core",
         "cratis/fundamentals",
+        "cratis/screenplay",
         "cratis/specifications/dotnet"
       ],
       "languages": [
@@ -152,6 +160,7 @@
         "cratis/components",
         "cratis/fundamentals",
         "cratis/language/csharp",
+        "cratis/screenplay",
         "cratis/specifications/dotnet",
         "cratis/specifications/typescript"
       ],
@@ -165,7 +174,8 @@
       "id": "cratis/application/elixir",
       "composes": [
         "cratis/chronicle/client-elixir",
-        "cratis/language/elixir"
+        "cratis/language/elixir",
+        "cratis/screenplay"
       ],
       "languages": [
         "elixir"
@@ -176,7 +186,8 @@
       "composes": [
         "cratis/arc/client-kotlin",
         "cratis/chronicle/client-java",
-        "cratis/language/java"
+        "cratis/language/java",
+        "cratis/screenplay"
       ],
       "languages": [
         "java"
@@ -187,7 +198,8 @@
       "composes": [
         "cratis/arc/client-kotlin",
         "cratis/chronicle/client-kotlin",
-        "cratis/language/kotlin"
+        "cratis/language/kotlin",
+        "cratis/screenplay"
       ],
       "languages": [
         "kotlin"
@@ -214,6 +226,7 @@
       "composes": [
         "cratis/chronicle/client-typescript",
         "cratis/language/typescript",
+        "cratis/screenplay",
         "cratis/specifications/typescript"
       ],
       "languages": [
@@ -241,7 +254,10 @@
       "availableTargets": [
         "cratis-arc-command-kotlin",
         "cratis-arc-query-kotlin",
-        "cratis-arc-validation-kotlin"
+        "cratis-arc-validation-kotlin",
+        "cratis-arc-testing-kotlin",
+        "cratis-arc-identity-and-tenancy-kotlin",
+        "cratis-arc-spring-data-kotlin"
       ],
       "languages": [
         "java",
@@ -255,6 +271,7 @@
         "cratis-arc-command-execution",
         "cratis-arc-command-operation",
         "cratis-arc-command-validation",
+        "cratis-arc-hosting",
         "cratis-arc-observable-query-http",
         "cratis-arc-query-paging"
       ],
@@ -288,6 +305,19 @@
       ],
       "languages": [
         "csharp"
+      ]
+    },
+    {
+      "id": "cratis/arc/go",
+      "composes": [
+        "cratis/language/go",
+        "cratis/fundamentals/go"
+      ],
+      "availableTargets": [
+        "cratis-arc-go"
+      ],
+      "languages": [
+        "go"
       ]
     },
     {
@@ -399,6 +429,19 @@
       ]
     },
     {
+      "id": "cratis/chronicle/client-go",
+      "composes": [
+        "cratis/language/go",
+        "cratis/fundamentals/go"
+      ],
+      "availableTargets": [
+        "cratis-chronicle-client-go"
+      ],
+      "languages": [
+        "go"
+      ]
+    },
+    {
       "id": "cratis/chronicle/client-java",
       "composes": [
         "cratis/chronicle/client-kotlin"
@@ -448,9 +491,11 @@
     {
       "id": "cratis/chronicle/core",
       "availableTargets": [
+        "cratis-chronicle-decision-reads",
         "cratis-chronicle-event-constraints",
         "cratis-chronicle-event-modeling",
         "cratis-chronicle-event-type-migration",
+        "cratis-chronicle-hosting",
         "cratis-chronicle-projection",
         "cratis-chronicle-reactor",
         "cratis-chronicle-read-model",
@@ -571,9 +616,23 @@
       ]
     },
     {
+      "id": "cratis/codescene",
+      "availableTargets": [
+        "guiding-refactoring-with-code-health",
+        "prioritizing-technical-debt",
+        "risk-based-testing-with-code-health",
+        "safeguarding-ai-generated-code"
+      ],
+      "languages": [
+        "language-agnostic"
+      ]
+    },
+    {
       "id": "cratis/components",
       "availableTargets": [
         "cratis-components-accessibility",
+        "cratis-components-common-controls",
+        "cratis-components-data-surfaces",
         "cratis-components-schema-editor",
         "cratis-components-stepper-command-dialog",
         "cratis-components-styling",
@@ -703,10 +762,23 @@
     {
       "id": "cratis/fundamentals",
       "availableTargets": [
-        "cratis-fundamentals-concept"
+        "cratis-fundamentals-concept",
+        "cratis-fundamentals-telemetry"
       ],
       "languages": [
         "csharp"
+      ]
+    },
+    {
+      "id": "cratis/fundamentals/go",
+      "composes": [
+        "cratis/language/go"
+      ],
+      "availableTargets": [
+        "cratis-fundamentals-concept-go"
+      ],
+      "languages": [
+        "go"
       ]
     },
     {
@@ -731,6 +803,12 @@
       "id": "cratis/language/elixir",
       "languages": [
         "elixir"
+      ]
+    },
+    {
+      "id": "cratis/language/go",
+      "languages": [
+        "go"
       ]
     },
     {
@@ -798,6 +876,7 @@
         "cratis-screenplay-automations-and-translations",
         "cratis-screenplay-captures-and-reactions",
         "cratis-screenplay-command-surface",
+        "cratis-screenplay-delivery-planning",
         "cratis-screenplay-discovery",
         "cratis-screenplay-event-modeling",
         "cratis-screenplay-legacy-extraction",
@@ -882,6 +961,7 @@
         "cratis/engineering/core",
         "cratis/engineering/csharp",
         "cratis/engineering/elixir",
+        "cratis/engineering/go",
         "cratis/engineering/kotlin",
         "cratis/engineering/react",
         "cratis/engineering/typescript"
@@ -891,6 +971,7 @@
         "typescript",
         "kotlin",
         "elixir",
+        "go",
         "react",
         "language-agnostic"
       ]
@@ -915,7 +996,8 @@
         "cratis/engineering/core"
       ],
       "availableTargets": [
-        "cratis-engineering-csharp-conventions"
+        "cratis-engineering-csharp-conventions",
+        "cratis-orleans-jobs"
       ],
       "languages": [
         "csharp"
@@ -928,6 +1010,16 @@
       ],
       "languages": [
         "elixir"
+      ]
+    },
+    {
+      "id": "cratis/engineering/go",
+      "composes": [
+        "cratis/engineering/core",
+        "cratis/language/go"
+      ],
+      "languages": [
+        "go"
       ]
     },
     {

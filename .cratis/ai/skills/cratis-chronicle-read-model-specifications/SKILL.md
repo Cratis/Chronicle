@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-read-model-specifications
-description: Specify projection and reducer behavior with ReadModelScenario from Cratis.Chronicle.Testing — seeding events through Given and asserting on the materialized instance. Use when the behavior under specification is how events become read-model state. Do not use to create a read model and do not use for raw event append behavior.
+description: Specify declarative projections and reducer wiring with ReadModelScenario from Cratis.Chronicle.Testing — seeding events through Given and asserting on the materialized instance; start with Specification plus a direct call for pure reducer decisions. Use when the behavior under specification is how events become read-model state. Do not use to create a read model and do not use for raw event append behavior.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-read-model-specifications/SKILL.md -->
@@ -11,17 +11,22 @@ license: MIT
 against a sequence of events. No Chronicle server, no database, no network — the
 events go in, the materialized instance comes out.
 
-For a read-model specification the **`Given` *is* the act**. There is no
-separate `When`: seeding the events is what makes the projection run.
+Pure reducer decisions use `Specification` plus a direct method call by
+default, with the event and current state supplied explicitly. Add
+`ReadModelScenario<TReadModel>` only where declarative projection behavior,
+event dispatch, filtering, metadata or read-model wiring contribute proof.
+
+For a read-model scenario specification the **`Given` *is* the act**. There
+is no separate `When`: seeding the events is what makes the projection run.
 
 ## Verified product sources
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle.Testing` | `18.3.0` | `ReadModelScenario<TReadModel>` and its `Given` builder |
+| `Cratis.Chronicle.Testing` | `19.50.1` | `ReadModelScenario<TReadModel>` and its `Given` builder |
 | `Cratis.Specifications.XUnit` | `4.x` | The `Specification` base and the `ShouldXxx` assertions |
 
-> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
+Source: `Source/Clients/Testing/ReadModels/` at **Cratis/Chronicle v19.50.0**.
 
 ```bash
 dotnet add package Cratis.Chronicle.Testing
@@ -43,7 +48,7 @@ version.
   readmodel` rows are the contract). Decide this with the decision rule in
   `cratis-screenplay-modeling-lifecycle`: model-first only when an accepted
   model under the model root covers this scope, or the repository is opted in
-  (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set `mcpServers.screenplay.root`
+  (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set `mcpServers.screenplay.root`
   in `.cratis/ai.json`); an empty directory, install output, a `.play` file
   outside the root or an uncommitted draft does not count, and framework, infrastructure, client, adapter and not-opted-in
   brownfield work stays code-first. Opted in but no model for this scope: model
@@ -57,7 +62,7 @@ version.
 
 ## When you need this
 
-- A reducer builds state from a sequence of events.
+- A reducer's event dispatch, filtering or read-model wiring needs proof.
 - A fluent `IProjectionFor<T>` maps event properties onto read-model properties.
 - A model-bound projection — `[FromEvent<T>]`, `[SetFrom<T>]`, `[Key]` — maps
   correctly.
@@ -78,6 +83,12 @@ var scenario = new ReadModelScenario<CartSummary>(new CartSummary { ItemCount = 
 Further constructors take a service provider, a `Defaults`, or both, alongside
 the initial state. Use the named-parameter form when you need only one of them:
 `new ReadModelScenario<T>(initialState: null, serviceProvider: services)`.
+Scenarios implement `IDisposable`; call `_scenario.Dispose()` in `Destroy()`.
+`WithProjection(Action<IProjectionBuilderFor<T>>)` supplies an inline projection
+and wins over discovery, **including a discovered reducer**. Per-run `Defaults`
+can take a client artifacts provider, service provider and options;
+`InMemoryClientArtifactsProvider` and `ChronicleOptions.ExplicitArtifacts` let a
+specification isolate registrations without global discovery.
 
 ## Step 2 — Seed the events
 
@@ -98,6 +109,12 @@ await scenario.Given.ForEventSource(anotherOrderId).Events(new OrderCreated("ord
 `ForEventSourceId(...)` is an alias for `ForEventSource(...)`. The builder also
 offers `.ReadModel(instance)` to pin a materialized instance for code that calls
 `IReadModels.GetInstanceById` rather than deriving it from events.
+
+For a filtered reducer, seed the routing metadata as well:
+`Given.ForEventSource(id).OnStream(eventSourceType, eventStreamType, eventStreamId).Events(...)`.
+`[EventSourceType]`, `[EventStreamType]` and `[FromEventSource<T>]` filters are honored;
+unrouted seeds no longer reach a handler for another stream. Child-before-parent
+writes are retried when the parent later arrives; decimal seeds retain exact values.
 
 Events are processed in the order supplied. Seed before asserting, and do not
 try to separate a "setup" `Given` from an "act" `Given` — for a read model they
@@ -127,7 +144,7 @@ specific reason in the skip message.
 
 ## Step 4 — Know what the scenario picked
 
-The scenario finds a handler for `TReadModel` in this order:
+Without an explicit `WithProjection`, the scenario finds a handler for `TReadModel` in this order:
 
 1. A **reducer** — a class implementing `IReducerFor<TReadModel>`.
 2. A **fluent projection** — a class implementing `IProjectionFor<TReadModel>`.
@@ -168,8 +185,9 @@ public class and_two_items_are_priced : Specification
 #endif
 ```
 
-Wrap every file in `#if DEBUG … #endif` so specification code ships only in
-Debug, and keep one outcome per `should_` fact.
+Wrap files in `#if DEBUG … #endif` only when they compile into the application
+assembly, so specification code ships only in Debug. Dedicated spec projects
+need no wrapper. Keep one outcome per `should_` fact.
 
 ## Step 6 — Cover the read model, not just one event
 
@@ -199,6 +217,7 @@ one, derive it from the projection and say so. Then check each line:
 ## Lineage
 
 Step 6 is adapted in our own words from ideas recorded in `references/provenance.md`.
+Read `references/view-lifecycle-checks.md` when delivering a read model from a contract: population, update and removal checks per property and event.
 
 ## What breaks
 

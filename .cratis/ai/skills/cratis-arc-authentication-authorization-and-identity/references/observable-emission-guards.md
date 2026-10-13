@@ -1,7 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/observable-emission-guards.md -->
 # Observable query emission guards
 
-Verified against `Cratis.Arc.Core` `22.41.1` (`Cratis.Arc.Queries`).
+## Contents
+
+- The opt-in
+- Verdicts
+- The context
+- Fail closed, and its blast radius
+- Cost
+- What a guard does not protect
+
+Verified against `Cratis.Arc.Core` `22.75.0` (`Cratis.Arc.Queries`).
 
 Authorization for an observable query runs **once, when the subscription is
 established**. It decides whether the caller may obtain the live stream. It does
@@ -34,7 +43,9 @@ public class SessionMustStillBeActive(ISessions sessions) : IGuardObservableQuer
 Arc API, and never an always-true stub.
 
 It runs on **every emission** of **every subscription**, on **every transport**:
-the multiplexed hub, WebSocket and SSE.
+the multiplexed hub, WebSocket and SSE. Since 22.69.1 it also runs with
+read-model interceptors on plain HTTP snapshots, waits and long polls.
+Source: [Arc v22.75.0 ObservableQueryHttp.cs](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Arc.Core/Queries/ObservableQueryHttp.cs).
 
 ## Verdicts
 
@@ -96,9 +107,10 @@ a failure.
 
 ## What a guard does not protect
 
-- The HTTP **snapshot** path (`ObservableQueryHttp`, including
-  `waitForFirstResult=true`) is not an emission guard path. Apply subscription-time
-  authorization and safe data selection to every query.
+- Plain HTTP **is** guarded at v22.75.0: suppression returns 202 until an allowed
+  emission (or the wait deadline), denial returns unauthorized with no data.
+  Before 22.69.1 that path was unguarded. Keep safe data selection and initial
+  authorization on every query regardless of transport.
 - A guard is not a substitute for the subscription-time declaration: the
   `[Authorize]`/`[Roles]`/policy on the read model still decides who may subscribe.
 - Interceptor masking is not an access control; the producer must never yield

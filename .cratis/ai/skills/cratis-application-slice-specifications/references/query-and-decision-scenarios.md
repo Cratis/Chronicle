@@ -1,0 +1,66 @@
+<!-- cratis-ai-managed: skills/cratis-application-slice-specifications/references/query-and-decision-scenarios.md -->
+# Query and decision scenarios
+
+<!-- Copyright (c) Cratis. All rights reserved. -->
+<!-- Licensed under the MIT license. See LICENSE file in the project root for full license information. -->
+
+Verified at **Arc v22.75.0**. Use the plain `Specification` base for pure decisions;
+these helpers add proof of framework composition, not HTTP transport.
+
+## Query pipeline
+
+`QueryScenario<TReadModel>` is in `Cratis.Arc.Testing.Queries` (`Cratis.Arc.Testing`).
+Configure `Services` before the first call. `Perform(nameof(Model.Method),
+arguments?, paging?, sorting?, cancellationToken?)` returns `QueryResult` through
+conversion, validation, authorization and rendering. Use `QueryArguments` from
+`Cratis.Arc.Queries`; there is no principal parameter. Register the principal
+under test with `ICurrentPrincipalAccessor` in `Services`. Scheme-selected queries
+fail closed in-process: HTTP authentication needs a hosted integration spec.
+
+At Arc 22.75.1+ (re-verified at 22.76.0), both query and command scenarios preserve
+explicit `ICurrentPrincipalAccessor`, `ICurrentPrincipalOverride` and
+`IAuthorizationPolicyRuntime` registrations rather than replacing them with defaults.
+Configure them before first execution and specify both authorized and denied callers.
+Source: `Source/DotNET/Testing/ScenarioServices.cs`, `Queries/QueryScenario.cs`,
+`Commands/CommandScenario.cs`.
+
+`Observe(...)` returns a disposable `QueryObservation`; `Initial` includes the
+first result or rejection and `Next(timeout?, cancellationToken?)` reads the next
+buffered emission (not necessarily distinct). Default deadlines are five seconds;
+timeouts throw. Dispose asynchronously to await cleanup. Interceptors and guards
+run when emissions are consumed. MongoDB `.Observe()` still needs a real DB with
+change streams; the harness does not emulate it.
+
+The discovered `IQueryScenarioExtender` supports additional context/services.
+With `Cratis.Arc.Chronicle.Testing` and its Queries namespace, use
+`Given.ForEventSource(id).ReadModel(instance)` or `.Events(...)` before performing.
+The query must read that source via injected `IReadModels`; seeding does not
+replace arbitrary stores or produce later observable emissions after appends.
+
+## Guarded decisions
+
+Call `new CommandScenario<TCommand>().UseDecisionReads()` before seeding. This
+mode shares **one real in-process event log** among given events, guarded reads,
+constraints and returned appends. Seed actual events, not pinned read models.
+`Given.ForEventSource(id).OnRoute(route).Events(...)` preserves routing;
+`scenario.EventRoutes.For<TSource>(stream).WithStreamId(...)` creates the route.
+Queue interference using `AppendConcurrently(id, route, event)` and assert a
+nonempty decision is rejected on the intended boundary. An empty identical-retry
+append deliberately returns no scope and cannot prove the conflict guard.
+
+`ShouldHaveCompletedStream(type, id)` proves successful completion.
+`DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly)` checks projection
+admission in assembly-wide specs. These APIs are in
+`Cratis.Arc.Chronicle.Testing.Commands`. Routed seeding is refused in legacy mode.
+
+The old warnings that command `Given` never reaches the event log and that its
+read-model dictionary is the only backing are **legacy-mode** warnings, not a
+reason to fake protected decision readers. Keep non-key enumeration/provider
+boundaries explicit in either mode; decision mode is not a MongoDB substitute.
+
+## Sources
+
+- [Query scenarios](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/testing/query-scenario.md)
+- [Stream decisions and routed specs](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/chronicle/commands/stream-decisions.md)
+- [Decision-mode extension](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Chronicle.Testing/Commands/CommandScenarioChronicleExtensions.cs)
+- [Admission assertion](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Chronicle.Testing/Commands/DecisionReadAdmissions.cs)

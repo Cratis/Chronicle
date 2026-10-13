@@ -1,6 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-arc-react-page/references/from-screenplay.md -->
 # From a Screenplay model to an Arc React page
 
+## Contents
+
+- What is verified, and what is not
+- Worked model
+- Level 1 and 2: `screen`
+- `form` and `field`
+- Interactions: `on`, `uses`, `behavior`
+- Reconcile before you finish
+- Verify
+
 Use this when the page you are asked to build, or change, is described by a
 `screen` or `form` in a `.play` model. The model is the specification; the page
 is how that specification looks in React. Read the model first, build the page
@@ -14,9 +24,14 @@ Three different claims are mixed in any "screen to page" mapping. Keep them apar
 
 | Claim | Status | Evidence |
 | --- | --- | --- |
-| What each `screen`, `form` and interaction construct means | Verified | Screenplay `v4.64.0`: `Documentation/screenplay/{screens,forms,interactions}.md` |
+| What each `screen`, `form` and interaction construct means | Verified | Screenplay `v4.66.0`: `Documentation/screenplay/{screens,forms,interactions}.md` |
 | What Stage does with a screen | Verified: it draws it through Scene, it does not write a React page | Stage `v4.24.0`: `Documentation/reference/stage-rendering.md` ("It does not generate screens for it"), `Documentation/reference/default-scene-composition.md` ("does not ... generate per-screen TypeScript components"), `Source/Contracts/Scene/ScreenDirectiveConverter.cs` (`data`, `action`, `section`, `title`, `table`, `summary` become Scene elements) |
-| Which Components and Arc API gives a page the same behavior | Verified API; the pairing is this skill's convention | `@cratis/components` `v4.6.0` (`DataPage`, `DataTables`, `CommandDialog`, `CommandForm`) and the sibling references |
+| Which Components and Arc API gives a page the same behavior | Verified API; the pairing is this skill's convention | `@cratis/components` `v4.26.4` (`DataPage`, `DataTables`, `CommandDialog`, `CommandForm`) and the sibling references |
+
+A hand-written Arc React page and a Scene-rendered screen are different surfaces;
+they share Components, not ownership or runtime APIs. Scene is the experimental
+UI model/runtime in Stage output; read `cratis-stage-rendering-and-sandbox`
+`references/scene-runtime.md` when inspecting that generated surface.
 
 So no product source maps a `.play` screen to an Arc React page. A hand-written
 page is a **gap-fill** (`cratis-screenplay-render-and-gap-fill`) with the `.play`
@@ -111,7 +126,7 @@ field because `berthId` is the identifier, not something the user types.
 | `action X` with `navigate to S [by p]` | Navigate to the page for `S` after the command succeeds, in `onSuccess`; pass `p` from the response or the row | Assumption: `screens.md` does not say when it navigates. The form's `on submit` is defined as "after a successful submit"; confirm with the model owner |
 | `on row-click navigate to S by p` | `DataPage` and `DataTableForQuery` forward no row-click prop at `4.6.0` (only `DataTableCore` has `onRowClick`, and it takes rows, not a query). Use controlled `selection` and `onSelectionChange` to navigate, or a link in a `Column` `body` | Gap: selection is not a click; report which you chose |
 | `section`, `sidebar`, `main`, `template MasterDetail` | Page layout. Keep the section names as component names so the page can be compared to the model. `MasterDetail` over a list is `detailsComponent` | Convention: Components has no screen-template concept |
-| `title`, `label`, `message` written as `$strings.key` | The text of that key in the `.strings` file for the locale, never retyped from memory | Verified token ([internationalization.md](https://github.com/Cratis/Screenplay/blob/v4.64.0/Documentation/screenplay/internationalization.md)); the runtime mechanism is application-owned |
+| `title`, `label`, `message` written as `$strings.key` | The text of that key in the `.strings` file for the locale, never retyped from memory | Verified token ([internationalization.md](https://github.com/Cratis/Screenplay/blob/v4.66.0/Documentation/screenplay/internationalization.md)); the runtime mechanism is application-owned |
 | `ui profile`, `theme`, `layout`, `arrangement` | Not page code. Theming is `cratis-components-styling`; the shell is the application's | Design-only |
 | A Level 3 `react` block | The block is already the implementation, with typed `Props`. Port it into a component that honors those `Props` | Convention |
 | `file Screens/X.tsx` | That file is the page. The model keeps the contract; the file must still show the declared data and actions | Stage's handling of the file reference is not verified |
@@ -139,7 +154,7 @@ restate a rule ([queries-and-commands.md](queries-and-commands.md)).
 
 ## Interactions: `on`, `uses`, `behavior`
 
-The action set is closed ([interactions.md](https://github.com/Cratis/Screenplay/blob/v4.64.0/Documentation/screenplay/interactions.md)).
+The action set is closed ([interactions.md](https://github.com/Cratis/Screenplay/blob/v4.66.0/Documentation/screenplay/interactions.md)).
 
 | Model action | Page |
 | --- | --- |

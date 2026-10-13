@@ -1,6 +1,17 @@
 <!-- cratis-ai-managed: skills/cratis-arc-react-page/references/data-page.md -->
 # DataPage reference
 
+## Contents
+
+- Compound members
+- `DataPageProps`
+- Snapshot versus observable
+- `MenuItemProps`
+- `IDetailsComponentProps<TDataType>`
+- `Column`
+- Type name caution
+- Layout
+
 `DataPage` is the standard list page: an action menubar, a data table, and an
 optional details pane in one component. Import from
 `@cratis/components/DataPage`.
@@ -28,17 +39,22 @@ Three static members exist:
 | --- | --- | --- |
 | `title` | `string` | required — menubar title |
 | `query` | `Constructor<TQuery>` | required — a snapshot **or** observable query proxy |
-| `emptyMessage` | `string` | required — shown when the query returns no rows |
+| `emptyMessage` | `string` | required — only a real empty result |
+| `loadingMessage` / `failureMessage` / `unauthorizedMessage` | `ReactNode` | query-state rows; defaults from `messages.dataTable.loading/failed/unauthorized` |
 | `children` | `ReactNode` | required — `DataPage.Columns` and optionally `DataPage.MenuItems` |
 | `queryArguments` | `TArguments` | forwarded to the query |
 | `dataKey` | `string \| undefined` | row identity; pass whenever the read model has one |
-| `selection` | `any \| undefined \| null` | controlled selection |
+| `selection` | `any \| undefined \| null` | controlled single selection |
+| `selectionMode` | `'single' \| 'multiple'` | default single |
+| `selectedItems` / `onSelectedItemsChange` | `TDataType[]` / `(items: TDataType[]) => void` | multiple selection; omit `selectedItems` for internal state |
 | `onSelectionChange` | `(event: DataTableSelectionChangeEvent<any>) => void` | `event.value` is the row or `null` |
 | `detailsComponent` | `React.FC<IDetailsComponentProps<any>>` | rendered beside the table for the selected row |
 | `globalFilterFields` | `string[] \| undefined` | enables the global search box over these fields |
 | `defaultFilters` | `DataTableFilterMeta` | initial per-column filter state |
-| `onRefresh` | `() => void` | invoked to re-fetch a snapshot query |
+| `onRefresh` | `() => void` | forwarded unchanged to details; DataPage never invokes it or refetches |
 | `actionsAriaLabel` | `string` | accessible name of the actions menubar, default `'Actions'` |
+| `globalSearchPlaceholder` / `globalSearchAriaLabel` | `string` | search copy and accessible name |
+| `paginatorClassName` / `paginatorAriaLabels` | class / label overrides | paginator presentation and localization |
 | `tableClassName` | `string` | class on the inner table |
 | `tablePt` | `DataTableParts` | per-part attributes on the inner data table (`tablePtOptions`/`tableUnstyled` are accepted no-ops) |
 | `menubarClassName` | `string` | class on the action menubar |
@@ -51,8 +67,14 @@ Three static members exist:
 There is no `observableQuery` prop. `DataPage` inspects the query prototype at
 render time: a snapshot query renders the snapshot table, anything else renders
 the observable table. Pass an observable query proxy and the page pushes
-updates automatically; pass a snapshot query and re-fetch through `onRefresh`
-after a command succeeds.
+updates automatically. There is no snapshot refresh handle on DataPage;
+`onRefresh` is only a caller-owned callback forwarded to the details component.
+Do not promise it will rerun the table's query.
+
+Until the first result, query tables show a loading row, not an empty row. Error
+and unauthorized results show a failure row; `empty-row` means a real empty
+result. While refreshing, the table marks `aria-busy`. Style status rows with
+`tablePt.loadingRow/loadingCell/failureRow/failureCell`.
 
 ## `MenuItemProps`
 
@@ -102,9 +124,10 @@ declaration the table reads.
 | `dataType` | `'text' \| 'numeric' \| 'date' \| 'boolean'` |
 | `showFilterMatchModes` | `boolean` |
 | `filterElement` | `(options: ColumnFilterElementOptions) => ReactNode` |
+| `filterOptions` | `{ label: string; value: unknown }[]` — list choices instead of a free-form input |
 | `filterLabels` | `Partial<ColumnFilterMenuLabels>` |
 | `filterPt` | `ColumnFilterMenuParts` — parts of the filter popup |
-| `selectionMode` | `'single'` — the only implemented value; there is no checkbox multi-selection |
+| `selectionMode` | `'single' \| 'multiple'` — selectors, including checkbox multi-selection |
 | `style` / `className` | `React.CSSProperties` / `string` |
 | `headerStyle` / `headerClassName` | `React.CSSProperties` / `string` |
 | `bodyStyle` / `bodyClassName` | `React.CSSProperties` / `string` |
@@ -118,10 +141,8 @@ Use `body` for a computed or formatted cell:
 ## Type name caution
 
 `ColumnProps` from `@cratis/components/DataPage` is the **column declaration**
-type re-exported from `DataTables` (the explicit named re-export shadows the
-`DataPage.Columns` wrapper's own `ColumnProps`, which is not reachable from the
-subpath). Import it from `@cratis/components/DataTables` when you want the
-reference to say so.
+type re-exported from `DataTables`. `ColumnsProps` is also exported from the
+DataPage subpath: it is the props type of the `DataPage.Columns` wrapper.
 
 ## Layout
 

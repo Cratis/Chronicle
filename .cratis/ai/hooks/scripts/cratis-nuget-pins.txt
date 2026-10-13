@@ -4,9 +4,16 @@
 # each into the full Cratis closure found in the local NuGet cache. Sources: the
 # "Verified product sources" sections of the skills under skills/.
 # Update a pin only together with the skill whose verified version moved.
-Cratis.Arc 22.10.4
-Cratis.Arc.Chronicle 22.10.4
-Cratis.Chronicle 16.45.2
-Cratis.Chronicle 17.0.1
-Cratis.Chronicle.CodeAnalysis 16.45.3
-Cratis.Fundamentals 7.18.2
+Cratis.Arc 22.75.0
+Cratis.Arc.Chronicle 22.75.0
+Cratis.Chronicle 19.50.1
+Cratis.Chronicle.CodeAnalysis 19.50.1
+Cratis.Fundamentals 7.23.0
+Cratis.Metrics.Roslyn 7.23.0
+Cratis.OpenTelemetry 7.23.0
+Cratis.Orleans 1.16.3
+Cratis.Orleans.Chronicle 1.16.3
+Cratis.Orleans.Storage.MongoDB 1.16.3
+Cratis.Orleans.Storage.Sql 1.16.3
+Cratis.Specifications 4.1.1
+Cratis.Specifications.XUnit 4.1.1
