@@ -102,7 +102,11 @@ internal sealed class DatabaseOwnership(SqlDatabaseCatalog catalog, Func<string,
         };
     }
 
-    // Namespace databases carry the namespace schema (NS-*) and the Cratis.Orleans jobs schema (Cratis-Orleans-Jobs-*).
+    /// <summary>
+    /// Tests whether a migration belongs to a namespace database: the namespace schema (<c>NS-*</c>) or the Cratis.Orleans jobs schema (<c>Cratis-Orleans-Jobs-*</c>).
+    /// </summary>
+    /// <param name="migration">The migration identifier.</param>
+    /// <returns>Whether the migration belongs to a namespace database.</returns>
     static bool IsNamespaceMigration(string migration) =>
         migration.StartsWith("NS-", StringComparison.Ordinal) || migration.StartsWith("Cratis-Orleans-Jobs-", StringComparison.Ordinal);
 
