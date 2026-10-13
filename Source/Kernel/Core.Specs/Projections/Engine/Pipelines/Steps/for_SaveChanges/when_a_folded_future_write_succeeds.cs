@@ -12,7 +12,7 @@ public class when_a_folded_future_write_succeeds : given.a_pending_future_save
     void Establish()
     {
         _context.Changeset.HasChanges.Returns(true);
-        _writingSink.ApplyChanges(_context.Key, _context.Changeset, _context.EventSequenceNumber, SinkWriteMode.OnlyWhenAdvancingWatermark).Returns(_ =>
+        _writingSink.ApplyChangesImmediately(_context.Key, _context.Changeset, _context.EventSequenceNumber, SinkWriteMode.OnlyWhenAdvancingWatermark).Returns(_ =>
         {
             _operations.Add("write");
             return Task.FromResult<IEnumerable<FailedPartition>>([]);
@@ -23,5 +23,5 @@ public class when_a_folded_future_write_succeeds : given.a_pending_future_save
 
     [Fact] void should_resolve_the_future_after_the_main_write() => _operations.ShouldEqual(["write", "resolve"]);
     [Fact] void should_remove_the_persisted_future_once() => _futures.Received(1).ResolveFuture(_futureId);
-    [Fact] void should_not_attempt_a_separate_future_write() => _writingSink.DidNotReceive().ApplyChanges(_futureKey, _futureChangeset, _context.EventSequenceNumber);
+    [Fact] void should_not_attempt_a_separate_future_write() => _writingSink.DidNotReceive().ApplyChangesImmediately(_futureKey, _futureChangeset, _context.EventSequenceNumber, SinkWriteMode.Always);
 }

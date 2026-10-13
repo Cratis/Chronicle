@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Json;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Events.Migrations;
@@ -20,6 +21,15 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEvent
     const string RenameExpression = "$rename";
     const string DefaultValueExpression = "$defaultValue";
     const string MapValuesExpression = "$mapValues";
+
+    static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        Converters =
+        {
+            new EnumerableConceptAsJsonConverterFactory(),
+            new ConceptAsJsonConverterFactory()
+        }
+    };
 
     readonly Dictionary<PropertyExpression, JsonNode> _properties = [];
 
@@ -76,7 +86,7 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEvent
     {
         _properties[(PropertyExpression)targetProperty.Value] = new JsonObject
         {
-            [DefaultValueExpression] = JsonValue.Create(value)
+            [DefaultValueExpression] = JsonSerializer.SerializeToNode(value, _jsonSerializerOptions)
         };
     }
 
@@ -117,6 +127,6 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEvent
         null => null,
         Enum enumValue => JsonSerializer.SerializeToNode(
             Convert.ChangeType(enumValue, Enum.GetUnderlyingType(enumValue.GetType()), CultureInfo.InvariantCulture)),
-        _ => JsonSerializer.SerializeToNode(value, value.GetType())
+        _ => JsonSerializer.SerializeToNode(value, value.GetType(), _jsonSerializerOptions)
     };
 }

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
@@ -76,5 +75,5 @@ static class RemovedWithExtensions
     /// <param name="expression">The key expression to convert.</param>
     /// <returns>The converted key expression.</returns>
     static string ApplyNamingPolicy(INamingPolicy namingPolicy, string expression) =>
-        expression.StartsWith('$') ? expression : namingPolicy.GetPropertyName(new PropertyPath(expression));
+        expression.StartsWith('$') ? expression : (string)ProjectionPropertyPaths.Resolve(expression, namingPolicy, ProjectionPathRole.Source);
 }

@@ -14,7 +14,7 @@ public class when_a_rejected_future_write_leaves_its_stored_future : given.a_sto
     void Establish()
     {
         _failure = new FailedPartition(_futureKey, _context.EventSequenceNumber);
-        _writingSink.ApplyChanges(_futureKey, _futureChangeset, _context.EventSequenceNumber).Returns(Task.FromResult<IEnumerable<FailedPartition>>([_failure]));
+        _writingSink.ApplyChangesImmediately(_futureKey, _futureChangeset, _context.EventSequenceNumber, SinkWriteMode.Always).Returns(Task.FromResult<IEnumerable<FailedPartition>>([_failure]));
     }
 
     async Task Because()

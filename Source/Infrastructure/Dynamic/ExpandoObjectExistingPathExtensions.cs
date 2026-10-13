@@ -54,7 +54,7 @@ public static class ExpandoObjectExistingPathExtensions
                 else
                 {
                     current = children.SingleOrDefault(child =>
-                        ((IDictionary<string, object?>)child).TryGetValue(indexer.IdentifierProperty.Path, out var identifier) &&
+                        ChildIdentity.TryGetValue(child, indexer.IdentifierProperty, out var identifier) &&
                         identifier?.IsEqualTo(indexer.Identifier) == true);
                 }
             }

@@ -554,7 +554,7 @@ public partial class Sink : ISink
             return;
         }
 
-        var removal = new ChildRemoval(childRemoved.ChildrenProperty.Segments.ToArray(), childRemoved.IdentifiedByProperty.LastSegment.Value, childRemoved.Key);
+        var removal = new ChildRemoval(childRemoved.ChildrenProperty.Segments.ToArray(), childRemoved.IdentifiedByProperty, childRemoved.Key);
         var entries = await scope.DbContext.Entries.ToListAsync();
         var modified = false;
         foreach (var entry in entries)

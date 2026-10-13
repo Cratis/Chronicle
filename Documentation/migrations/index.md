@@ -76,3 +76,4 @@ Register new generations **only after every kernel silo has been upgraded**. New
 ## Topics
 
 - [C# client usage](dotnet-client)
+- [Explicit registration](explicit-registration) — nominate migration recipes for registered generation identities

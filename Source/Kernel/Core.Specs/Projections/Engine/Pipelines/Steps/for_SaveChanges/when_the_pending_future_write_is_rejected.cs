@@ -12,7 +12,7 @@ public class when_the_pending_future_write_is_rejected : given.a_pending_future_
     void Establish()
     {
         _failure = new FailedPartition(_futureKey, _context.EventSequenceNumber);
-        _writingSink.ApplyChanges(_futureKey, _futureChangeset, _context.EventSequenceNumber).Returns(Task.FromResult<IEnumerable<FailedPartition>>([_failure]));
+        _writingSink.ApplyChangesImmediately(_futureKey, _futureChangeset, _context.EventSequenceNumber, SinkWriteMode.Always).Returns(Task.FromResult<IEnumerable<FailedPartition>>([_failure]));
     }
 
     async Task Because() => _result = await _step.Perform(_projection, _context);

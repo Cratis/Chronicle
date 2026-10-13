@@ -26,8 +26,8 @@ public class when_resolving_registered_handlers : Specification
         foreach (var registry in new[] { _foreign, _local, _local, _foreign })
         {
             _reactorSequences.Add(ReactorTypeExtensions.GetEventSequenceId(typeof(Reactor), registry, "current"));
-            _reducerSequences.Add(ReducerTypeExtensions.GetEventSequenceId(typeof(Reducer), registry, "current"));
-            _ids.Add(ObserverEventTypes.GetIds(typeof(Reactor), registry).ToArray());
+            _reducerSequences.Add(ReducerTypeExtensions.GetEventSequenceId(typeof(Reducer), registry, "current", typeof(Model)));
+            _ids.Add(ObserverEventTypes.GetIds(ReactorInvoker.GetEventTypesFor(registry, typeof(Reactor))).ToArray());
         }
     }
 

@@ -4,7 +4,9 @@
 using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.Reactors.Validators;
+using Cratis.Chronicle.Registrations;
 using Cratis.Reflection;
 
 namespace Cratis.Chronicle.Reactors;
@@ -127,11 +129,15 @@ public static class ReactorTypeExtensions
     /// <param name="type">The reactor type.</param>
     /// <param name="eventTypes">The event registry.</param>
     /// <param name="currentStore">The current client's store.</param>
+    /// <param name="sideEffectHandlers">The owning invoker's synchronous return classification.</param>
     /// <returns>The selected event sequence.</returns>
-    internal static EventSequenceId GetEventSequenceId(this Type type, IEventTypes eventTypes, EventStoreName currentStore) =>
-        type.HasExplicitEventSequence() || Attribute.IsDefined(type, typeof(EventStoreAttribute))
-            ? type.GetEventSequenceId(currentStore.Value)
-            : ObserverEventTypes.InferSequence(type, eventTypes, currentStore);
+    internal static EventSequenceId GetEventSequenceId(this Type type, IEventTypes eventTypes, EventStoreName currentStore, IReactorSideEffectHandlers? sideEffectHandlers = null) =>
+        RegisteredObserverMetadata.SequenceFor(
+            type,
+            type.GetCustomAttribute<ReactorAttribute>()?.EventSequenceId,
+            eventTypes,
+            currentStore,
+            () => ReactorInvoker.GetEventTypesFor(eventTypes, type, sideEffectHandlers));
 
     static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reactorType, string? currentEventStoreName)
     {

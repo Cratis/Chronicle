@@ -17,16 +17,7 @@ public static class PropertyValidator
     /// <param name="propertyName">The property name to validate.</param>
     /// <exception cref="InvalidPropertyForType">Thrown when the property does not exist on the type.</exception>
     /// <returns>The validated property name.</returns>
-    public static string ValidatePropertyExists<T>(string propertyName)
-    {
-        var type = typeof(T);
-        if (type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase) is null)
-        {
-            throw new InvalidPropertyForType(type, propertyName);
-        }
-
-        return propertyName;
-    }
+    public static string ValidatePropertyExists<T>(string propertyName) => ValidatePropertyExists(typeof(T), propertyName);
 
     /// <summary>
     /// Validates that a property name exists on a given type.
@@ -37,9 +28,12 @@ public static class PropertyValidator
     /// <returns>The validated property name.</returns>
     public static string ValidatePropertyExists(Type type, string propertyName)
     {
-        if (type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase) is null)
+        var currentType = type;
+        foreach (var segment in propertyName.Split('.'))
         {
-            throw new InvalidPropertyForType(type, propertyName);
+            var property = currentType.GetProperty(segment, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
+                ?? throw new InvalidPropertyForType(type, propertyName);
+            currentType = property.PropertyType;
         }
 
         return propertyName;

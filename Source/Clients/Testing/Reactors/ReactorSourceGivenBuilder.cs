@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Testing.Reactors;
 /// <param name="scenario">The <see cref="ReactorScenario{TReactor}"/> to drive.</param>
 /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate with the provided events.</param>
 public class ReactorSourceGivenBuilder<TReactor>(ReactorScenario<TReactor> scenario, EventSourceId eventSourceId)
-    where TReactor : class, IReactor
+    where TReactor : class
 {
     readonly EventSourceType _eventSourceType = EventSourceType.Default;
     readonly EventStreamType _eventStreamType = EventStreamType.All;

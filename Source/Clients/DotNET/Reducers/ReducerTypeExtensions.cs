@@ -5,6 +5,7 @@ using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reducers.Validators;
+using Cratis.Chronicle.Registrations;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -235,11 +236,15 @@ public static class ReducerTypeExtensions
     /// <param name="type">The reducer type.</param>
     /// <param name="eventTypes">The event registry.</param>
     /// <param name="currentStore">The current client's store.</param>
+    /// <param name="readModelType">The registered reducer's model type.</param>
     /// <returns>The selected event sequence.</returns>
-    internal static EventSequenceId GetEventSequenceId(this Type type, IEventTypes eventTypes, EventStoreName currentStore) =>
-        type.HasExplicitEventSequence() || Attribute.IsDefined(type, typeof(EventStoreAttribute))
-            ? type.GetEventSequenceId(currentStore.Value)
-            : ObserverEventTypes.InferSequence(type, eventTypes, currentStore);
+    internal static EventSequenceId GetEventSequenceId(this Type type, IEventTypes eventTypes, EventStoreName currentStore, Type readModelType) =>
+        RegisteredObserverMetadata.SequenceFor(
+            type,
+            type.GetCustomAttribute<ReducerAttribute>()?.EventSequenceId,
+            eventTypes,
+            currentStore,
+            () => ReducerInvoker.GetEventTypesFor(eventTypes, type, readModelType));
 
     static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reducerType, string? currentEventStoreName)
     {
