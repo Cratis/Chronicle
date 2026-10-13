@@ -1,5 +1,6 @@
 export * from './ClearPartitionQuarantineOutcome';
 export * from './ClearPartitionQuarantineResult';
+export * from './EventGenerationDelivery';
 export * from './FailureKind';
 export * from './ObserverRemovalOutcome';
 export * from './ObserverRemovalResult';
