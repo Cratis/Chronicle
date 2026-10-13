@@ -15,7 +15,6 @@ namespace Cratis.Chronicle.Reducers;
 internal static class SelfReducerFingerprint
 {
     const BindingFlags DeclaredMethods = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
-    static readonly string[] _hookNames = ["BeginReplay", "EndReplay", "BeginReplayPartition", "EndReplayPartition"];
 
     /// <summary>
     /// Creates a fingerprint for the owning registry's selected static transitions and hooks.
@@ -73,7 +72,7 @@ internal static class SelfReducerFingerprint
 
     static IEnumerable<MethodInfo> SelectedMethods(IEventTypes eventTypes, Type model) =>
         SelfReducerMethods.Get(eventTypes, model).Values
-            .Concat(SelfReducerMethods.DeclaredMethods(model).Where(method => method.IsPublic && method.IsStatic && _hookNames.Contains(method.Name)))
+            .Concat(new SelfReducerReplayHooks(eventTypes, model).Methods)
             .Distinct().OrderBy(GetMemberIdentity, StringComparer.Ordinal).ThenBy(method => method.Module.ScopeName, StringComparer.Ordinal);
 
     static void AppendImplementation(IncrementalHash hash, MethodInfo method)

@@ -668,6 +668,12 @@ public partial class Reducers : IReducers
 
     async Task HandleReplayNotification(IReducerHandler handler, ReplayState replayState, string partition)
     {
+        if (handler.Invoker is SelfReducerInvoker self)
+        {
+            await self.ReplayHooks.Invoke(_serviceProvider, replayState, partition);
+            return;
+        }
+
         await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
         var activatedReducerResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReducerType);
         if (activatedReducerResult.TryGetException(out var ex))

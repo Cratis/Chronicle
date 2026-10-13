@@ -27,8 +27,14 @@ internal sealed class SelfReducerInvoker : IReducerInvoker
         ReadModelType = readModelType;
         ContainerName = containerName;
         _methods = SelfReducerMethods.Get(eventTypes, readModelType);
+        ReplayHooks = new(eventTypes, readModelType);
         EventTypes = _methods.Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
     }
+
+    /// <summary>
+    /// Gets the validated optional notification hooks without model activation.
+    /// </summary>
+    public SelfReducerReplayHooks ReplayHooks { get; }
 
     /// <inheritdoc/>
     public IImmutableList<EventType> EventTypes { get; }
