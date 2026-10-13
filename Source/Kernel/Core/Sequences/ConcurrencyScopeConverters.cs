@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.EventSequences;
+using Cratis.Monads;
+
 namespace Cratis.Chronicle.Sequences;
 
 /// <summary>
@@ -57,13 +60,30 @@ internal static class ConcurrencyScopeConverters
     /// <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScopes"/>.
     /// </summary>
     /// <param name="scopes">The scopes to convert.</param>
-    /// <returns>The converted scopes.</returns>
-    public static Concepts.EventSequences.Concurrency.ConcurrencyScopes ToChronicle(this IEnumerable<EventSourceConcurrencyScope> scopes) =>
-        new(scopes
-            .Where(eventSourceScope => !string.IsNullOrWhiteSpace(eventSourceScope.EventSourceId) && eventSourceScope.Scope is not null)
-            .ToDictionary(
-                eventSourceScope => new Concepts.Events.EventSourceId(eventSourceScope.EventSourceId),
-                eventSourceScope => eventSourceScope.Scope.ToChronicle()));
+    /// <returns>The converted scopes, or an append error if one event source carries conflicting scopes.</returns>
+    public static Result<Concepts.EventSequences.Concurrency.ConcurrencyScopes, AppendError> ToChronicle(this IEnumerable<EventSourceConcurrencyScope> scopes)
+    {
+        var converted = new Dictionary<Concepts.Events.EventSourceId, Concepts.EventSequences.Concurrency.ConcurrencyScope>();
+        foreach (var eventSourceScope in scopes.Where(scope => !string.IsNullOrWhiteSpace(scope.EventSourceId) && scope.Scope is not null))
+        {
+            var eventSourceId = new Concepts.Events.EventSourceId(eventSourceScope.EventSourceId);
+            var scope = eventSourceScope.Scope.ToChronicle();
+            if (converted.TryGetValue(eventSourceId, out var existing) && !AreEqual(existing, scope))
+            {
+                return new AppendError($"Conflicting concurrency scopes for event source '{eventSourceId}'.");
+            }
+
+            converted[eventSourceId] = scope;
+        }
+
+        return new Concepts.EventSequences.Concurrency.ConcurrencyScopes(converted);
+    }
+
+    static bool AreEqual(Concepts.EventSequences.Concurrency.ConcurrencyScope first, Concepts.EventSequences.Concurrency.ConcurrencyScope second) =>
+        first with { EventTypes = null } == second with { EventTypes = null } &&
+        (first.EventTypes is null
+            ? second.EventTypes is null
+            : second.EventTypes is not null && first.EventTypes.ToHashSet().SetEquals(second.EventTypes));
 
     /// <summary>
     /// Resolve the expected <see cref="Concepts.Events.EventSequenceNumber"/> a scope asks to be validated against.
