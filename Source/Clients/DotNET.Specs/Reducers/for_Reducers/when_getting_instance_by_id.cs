@@ -17,6 +17,8 @@ public class when_getting_instance_by_id : given.all_dependencies
 
     class MyEvent;
 
+    class MyReducer;
+
     readonly ReadModelKey _readModelKey = "event-source-id";
     IReducerHandler _handler = null!;
     IReducerInvoker _invoker = null!;
@@ -26,6 +28,7 @@ public class when_getting_instance_by_id : given.all_dependencies
     void Establish()
     {
         _handler = Substitute.For<IReducerHandler>();
+        _handler.ReducerType.Returns(typeof(MyReducer));
         _handler.EventSequenceId.Returns(new EventSequenceId("my-sequence"));
         _handler.EventTypes.Returns([new EventType("my-event-type", 1)]);
 

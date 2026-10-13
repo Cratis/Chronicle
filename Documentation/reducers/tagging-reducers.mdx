@@ -8,6 +8,8 @@ Tags provide a way to organize and categorize your reducers for better discovera
 Kotlin and Java tag a reducer with `@Tag`, which is repeatable and takes any number of tags. Elixir's `use Chronicle.Reducers.Reducer` and TypeScript's `reducer()` expose no way to attach descriptive tags to the reducer itself.
 :::
 
+For [self reducers](self-reducing-read-models), place descriptive tags on the read model itself. They remain observer labels, not append-time event tags or delivery filters.
+
 ## Adding Tags
 
 You can tag reducers in multiple ways:
