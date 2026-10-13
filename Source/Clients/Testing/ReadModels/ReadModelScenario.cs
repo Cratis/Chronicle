@@ -538,6 +538,36 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 
     Contracts.Projections.ProjectionDefinition? BuildFluentProjectionDefinition(Type projectionType, Type readModelType)
     {
+        var variantDeclarations = new Dictionary<Type, FluentVariantDeclaration>();
+        var definition = CreateFluentDefinition(projectionType, readModelType, variantDeclarations);
+
+        if (!variantDeclarations.TryGetValue(projectionType, out var declaration))
+        {
+            return definition;
+        }
+
+        // A fluent variant is told what removes it only once its siblings are known, which discovery does after
+        // building every projection. Do the same for the group this projection belongs to, so entering the variant
+        // moves the entity out of the others here as it does under a running kernel.
+        var definitions = new Dictionary<Type, Contracts.Projections.ProjectionDefinition> { [projectionType] = definition };
+        foreach (var siblingType in ClientArtifactsProvider.Projections.Where(candidate => candidate != projectionType))
+        {
+            var siblingReadModelType = siblingType.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0];
+            var siblingDeclarations = new Dictionary<Type, FluentVariantDeclaration>();
+            var sibling = CreateFluentDefinition(siblingType, siblingReadModelType, siblingDeclarations);
+            if (siblingDeclarations.TryGetValue(siblingType, out var siblingDeclaration) && siblingDeclaration.Identity == declaration.Identity)
+            {
+                variantDeclarations[siblingType] = siblingDeclaration;
+                definitions[siblingType] = sibling;
+            }
+        }
+
+        VariantReclassifier.CrossWireGroups(definitions, variantDeclarations);
+        return definition;
+    }
+
+    Contracts.Projections.ProjectionDefinition CreateFluentDefinition(Type projectionType, Type readModelType, IDictionary<Type, FluentVariantDeclaration> variantDeclarations)
+    {
         var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(readModelType);
         var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<TReadModel>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)
             ?? throw new ProjectionDefinitionBuildFailed(projectionType, new InvalidOperationException("CreateAndDefine method not found on ProjectionDefinitionCreator."));
@@ -549,7 +579,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 _namingPolicy,
                 _eventTypes,
                 ArtifactsActivator(),
-                _jsonSerializerOptions
+                _jsonSerializerOptions,
+                variantDeclarations
             ])!;
 
         if (result.TryGetException(out var exception))
