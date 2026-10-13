@@ -36,8 +36,8 @@ public class and_failure_preserves_progress_and_watcher_parity : given.emitted_m
     [Fact] void should_fail_sync_and_async_folds_for_both_styles() => _results.All(result => !result.IsSuccess).ShouldBeTrue();
     [Fact] void should_keep_only_pre_failure_state() => _results.Select(result => ((IState)result.ReadModelState!).Amount).ShouldEqual([1, 1, 1, 1]);
     [Fact] void should_stop_progress_before_the_failure() => _results.All(result => result.LastSuccessfullyObservedEvent == (EventSequenceNumber)1UL).ShouldBeTrue();
-    [Fact] void should_preserve_classic_watcher_notifications_even_on_failure() => _observers.Received(2).NotifyChange((EventStoreNamespaceName)"namespace", (ReadModelKey)"one", new ClassicState(1), false);
-    [Fact] void should_notify_self_watchers_even_on_failure() => _observers.Received(2).NotifyChange((EventStoreNamespaceName)"namespace", (ReadModelKey)"one", new SelfState(1), false);
+    [Fact] void should_not_notify_classic_watchers_on_failure() => _observers.DidNotReceive().NotifyChange(Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReadModelKey>(), Arg.Any<ClassicState>(), Arg.Any<bool>());
+    [Fact] void should_not_notify_self_watchers_on_failure() => _observers.DidNotReceive().NotifyChange(Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReadModelKey>(), Arg.Any<SelfState>(), Arg.Any<bool>());
 
     public interface IState
     {
