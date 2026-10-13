@@ -54,7 +54,7 @@ public class and_self_dispatch_matches_classic_source_inference : Specification
         var handler = Substitute.For<IReducerHandler>();
         handler.ReducerType.Returns(type);
         handler.EventTypes.Returns(invoker.EventTypes);
-        reducers.GetHandlerFor(type).Returns(handler);
+        reducers.GetAllHandlers().Returns([handler]);
         var projections = Substitute.For<IProjections>();
         projections.GetExternalEventStoreSubscriptions().Returns([]);
         var store = (EventStore)RuntimeHelpers.GetUninitializedObject(typeof(EventStore));

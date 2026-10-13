@@ -7,6 +7,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reducers;
 
 namespace Cratis.Chronicle.Specs.for_EventStore.when_registering_external_event_store_subscriptions;
 
@@ -42,6 +43,7 @@ public class and_external_event_types_are_discovered : Specification
         SetField("_clientArtifactsProvider", clientArtifactsProvider);
         SetAutoProperty("EventTypes", eventTypes);
         SetAutoProperty("Reactors", reactors);
+        SetAutoProperty("Reducers", Substitute.For<IReducers>());
         SetAutoProperty("Projections", projections);
         SetAutoProperty("Subscriptions", _subscriptions);
     }

@@ -20,7 +20,7 @@ public partial class Reducers
         {
             throw new ConflictingArtifactKind(reducerType, nameof(ExplicitArtifactKind.Reactor), nameof(ExplicitArtifactKind.Reducer));
         }
-        var descriptor = Catalog.Get(reducerType);
+        var descriptor = Catalog.GetForRegistration(reducerType);
         var modelType = descriptor.ReadModelType;
         lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
         {

@@ -28,11 +28,6 @@ namespace Cratis.Chronicle.Reducers;
 /// </summary>
 public partial class Reducers : IReducers
 {
-#if NET8_0
-    static readonly object _registerLock = new();
-#else
-    static readonly Lock _registerLock = new();
-#endif
     static readonly ConcurrentDictionary<Type, Lazy<string>> _fingerprints = new();
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly IEventStore _eventStore;
@@ -83,7 +78,7 @@ public partial class Reducers : IReducers
     {
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
-            lock (_registerLock)
+            lock (ReadModelBuilderOwnership.SyncFor(eventStore, ReadModelOwnershipSync))
             {
                 _registered = false;
                 RecreateHandlersForReconnect();
@@ -108,6 +103,7 @@ public partial class Reducers : IReducers
 
     /// <summary>
     /// Gets the fallback monitor used by native registries on custom stores.
+    /// The shared ownership monitor also serializes registration, reconnect and cancellation writes; no second lock is acquired.
     /// </summary>
     internal object ReadModelOwnershipSync { get; } = new();
 
@@ -128,12 +124,7 @@ public partial class Reducers : IReducers
     /// <inheritdoc/>
     public async Task Register()
     {
-        if (_registered)
-        {
-            return;
-        }
-
-        lock (_registerLock)
+        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
         {
             if (_registered)
             {
@@ -393,9 +384,12 @@ public partial class Reducers : IReducers
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>
         {
-            _handlersByType = _handlersByType.Where(_ => _.Key != reducerType).ToFrozenDictionary();
-            _handlersByModelType = _handlersByModelType.Where(_ => _.Key != readModelType).ToFrozenDictionary();
-            register?.Dispose();
+            lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+            {
+                _handlersByType = _handlersByType.Where(_ => !ReferenceEquals(_.Value, handler)).ToFrozenDictionary();
+                _handlersByModelType = _handlersByModelType.Where(_ => !ReferenceEquals(_.Value, handler)).ToFrozenDictionary();
+                register?.Dispose();
+            }
         });
 
         return handler;
@@ -428,8 +422,7 @@ public partial class Reducers : IReducers
 
     bool IsDiscoverable(Type type)
     {
-        if (SelfReducerMethods.IsDiscoveryCandidate(type) && !SelfReducerMethods.HasSelfShape(type) &&
-            Registrations.ExplicitArtifactCatalog.From(_clientArtifacts)?.IsExplicit(type, Registrations.ExplicitArtifactKind.Reducer) != true)
+        if (!Catalog.IsDiscoverable(type))
         {
             _logger.SelfReducerNearMiss(type);
             return false;

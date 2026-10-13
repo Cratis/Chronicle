@@ -22,6 +22,32 @@ internal sealed class ReducerCatalog(IClientArtifactsProvider artifacts, IEventT
     internal static bool IsSelfReducer(Type type) => SelfReducerMethods.HasSelfShape(type);
 
     /// <summary>
+    /// Applies discovery acceptance without rejecting diagnostic-only near-misses.
+    /// </summary>
+    /// <param name="type">The discovered candidate.</param>
+    /// <returns>Whether discovery accepts the candidate.</returns>
+    internal bool IsDiscoverable(Type type) =>
+        !SelfReducerMethods.IsDiscoveryCandidate(type) || IsSelfReducer(type) ||
+        ExplicitArtifactCatalog.From(artifacts)?.IsExplicit(type, ExplicitArtifactKind.Reducer) == true;
+
+    /// <summary>
+    /// Resolves runtime nominations using the existing classic instance-model inference.
+    /// </summary>
+    /// <param name="type">The nominated CLR type.</param>
+    /// <returns>The reducer descriptor.</returns>
+    internal ReducerDescriptor GetForRegistration(Type type)
+    {
+        if (IsSelfReducer(type))
+        {
+            return Get(type);
+        }
+
+        SelfReducerMethods.ValidateExplicit(type);
+        RegisteredObserverMetadata.Validate(type, ExplicitArtifactKind.Reducer, artifacts);
+        return new(type, RegisteredReducerReadModel.Infer(type, eventTypes), false);
+    }
+
+    /// <summary>
     /// Resolves the model and declaration style without activating an artifact.
     /// </summary>
     /// <param name="type">The nominated or discovered CLR type.</param>

@@ -53,7 +53,7 @@ internal static class ReadModelBuilderOwnership
         conflicts.AddRange(artifacts.Projections.Where(type => ProjectionTypeExtensions.GetReadModelType(type) == model));
         conflicts.AddRange(artifacts.ModelBoundProjections.Where(type => type == model));
         conflicts.AddRange(ExplicitArtifactCatalog.From(artifacts)?.ProjectionReadModelTypes.Where(type => type == model) ?? []);
-        conflicts.AddRange(artifacts.Reducers.Where(type => type != builder && catalog.Get(type).ReadModelType == model));
+        conflicts.AddRange(artifacts.Reducers.Where(type => type != builder && catalog.IsDiscoverable(type) && catalog.Get(type).ReadModelType == model));
         conflicts.AddRange(store.Projections?.GetAllHandlers().Where(handler => handler.ReadModelType == model).Select(handler => handler.ReadModelType) ?? []);
         conflicts.AddRange(store.Reducers?.GetAllHandlers().Where(handler => handler.ReadModelType == model && handler.ReducerType != builder).Select(handler => handler.ReducerType) ?? []);
         if (conflicts.Count > 0)

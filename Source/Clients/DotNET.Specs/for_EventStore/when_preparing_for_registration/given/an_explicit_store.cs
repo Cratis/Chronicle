@@ -22,6 +22,7 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Serialization;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -40,6 +41,7 @@ public class an_explicit_store : Specification
     protected IReactorSideEffectHandlers _registeredSideEffectHandlers;
     protected RegisterEventTypesRequest _payload;
     protected bool _auto;
+    protected ILoggerFactory _loggerFactory = NullLoggerFactory.Instance;
 
     void Establish()
     {
@@ -88,7 +90,7 @@ public class an_explicit_store : Specification
         JsonSerializerOptions.Default,
         false,
         Options.Create(_options),
-        NullLoggerFactory.Instance);
+        _loggerFactory);
 
     void Destroy() => _provider.Dispose();
 
