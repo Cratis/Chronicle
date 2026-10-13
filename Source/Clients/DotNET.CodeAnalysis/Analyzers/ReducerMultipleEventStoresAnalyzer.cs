@@ -30,13 +30,22 @@ public class ReducerMultipleEventStoresAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSymbolAction(AnalyzeNamedType, SymbolKind.NamedType);
+        context.RegisterCompilationStartAction(start =>
+        {
+            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.Create(start.Compilation, start.CancellationToken));
+            start.RegisterSymbolAction(symbol => AnalyzeNamedType(symbol, evidence), SymbolKind.NamedType);
+        });
     }
 
-    static void AnalyzeNamedType(SymbolAnalysisContext context)
+    static void AnalyzeNamedType(SymbolAnalysisContext context, Lazy<ExplicitRegistrationEvidence> evidence)
     {
         var namedTypeSymbol = (INamedTypeSymbol)context.Symbol;
 
+        if (SelfReducerPolicy.IsSelf(namedTypeSymbol, context.Compilation))
+        {
+            AnalyzeSelf(context, namedTypeSymbol, evidence.Value);
+            return;
+        }
         if (!WellKnownTypes.ImplementsIReducer(namedTypeSymbol, context.Compilation))
         {
             return;
@@ -61,6 +70,30 @@ public class ReducerMultipleEventStoresAnalyzer : DiagnosticAnalyzer
                 namedTypeSymbol.Locations.FirstOrDefault(),
                 namedTypeSymbol.Name,
                 string.Join(", ", eventStores.Select(WellKnownTypes.FormatEventStoreName)));
+            context.ReportDiagnostic(diagnostic);
+        }
+    }
+
+    static void AnalyzeSelf(SymbolAnalysisContext context, INamedTypeSymbol model, ExplicitRegistrationEvidence evidence)
+    {
+        if (SelfReducerPolicy.Attributes(model).Any(attribute => attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.EventStoreAttributeName)) return;
+        var handlers = SelfReducerPolicy.Methods(model).Where(method => SelfReducerPolicy.IsValid(method, model, context.Compilation)).ToArray();
+        var events = SelfReducerPolicy.Types(context.Compilation.Assembly.GlobalNamespace)
+            .Where(type => WellKnownTypes.HasEventTypeAttribute(type) || WellKnownTypes.HasEventTypeGenerationForAttribute(type))
+            .Concat(evidence.EventTypes.OfType<INamedTypeSymbol>());
+        var stores = events.Where(type => handlers.Any(method => context.Compilation.ClassifyCommonConversion(type, method.Parameters[0].Type) is { IsImplicit: true, IsUserDefined: false }))
+            .Select(WellKnownTypes.GetExplicitEventStoreName).Where(store => store is not null).Distinct().ToArray();
+        if (stores.Length > 1)
+        {
+            // Visible registrations can belong to different clients; runtime ownership remains authoritative.
+            var diagnostic = Diagnostic.Create(
+                Rule,
+                model.Locations.FirstOrDefault(),
+                DiagnosticSeverity.Warning,
+                null,
+                null,
+                model.Name,
+                string.Join(", ", stores.Select(store => WellKnownTypes.FormatEventStoreName(store!))));
             context.ReportDiagnostic(diagnostic);
         }
     }

@@ -12,13 +12,13 @@ third-party theme engine, preset or provider underneath it: what a Cratis
 application looks like is decided by three Cratis-owned stylesheet entries and
 the `--cratis-*` custom properties they read. Getting the setup wrong shows up as
 components rendering completely unstyled, which is the single most common
-first-run problem — and it is fixed with two `import` lines.
+first-run problem — start by checking the CSS entry.
 
 ## Verified product sources
 
 | Package | Version | Verified from |
 | --- | --- | --- |
-| `@cratis/components` | `4.6.0` | its package manifest (`exports`, no vendor UI dependency or peer), `Source/tokens.css`, `Source/MIGRATION.md`, `Documentation/Styling/*`, `Documentation/Common/cratis-components-provider.md`, `Documentation/renderers/*` |
+| `@cratis/components` | `4.26.4` | its package manifest (`exports`, no vendor UI dependency or peer), `Source/tokens.css`, `Source/MIGRATION.md`, `Documentation/Styling/*`, `Documentation/Common/cratis-components-provider.md`, `Documentation/renderers/*` |
 
 Components declares **no** PrimeReact, PrimeIcons or PrimeUI dependency or peer.
 React Aria supplies focus, overlay, collection and date behavior *internally* —
@@ -32,23 +32,39 @@ license are the application's.
 
 Two things, or the components render unstyled:
 
-1. **Import the stylesheets, in this order**, once, at the entry point:
+1. **Import the stylesheets, in this order**, in `index.css`; the entry point
+   imports that file with `import './index.css'`:
 
-   ```ts
-   import '@cratis/components/tokens';   // the semantic --cratis-* seam, with conservative light defaults on :root
-   import '@cratis/components/styles';   // structural rules for every component, in low-priority Cratis layers
-   import '@cratis/components/theme';    // optional: the maintained baseline look, dark mode, forced colors
+   ```css
+   @import '@cratis/components/tokens';
+   @import '@cratis/components/styles';
+   @import '@cratis/components/theme'; /* optional baseline */
    ```
 
+   Direct CSS subpath imports from TypeScript need ambient declarations on
+   TypeScript 6, otherwise TS2882. To avoid the roughly 32 KiB gzip aggregate,
+   replace `styles` with `styles/base` and the needed `<subpath>/styles` entries
+   (for example `Dialogs/styles`, `DataTables/styles`). Area order does not matter.
+
    `tokens` first — `styles` and `theme` both read it. `styles` also carries the
-   split-pane CSS the `DataPage` details pane needs, so it is not optional even
-   in a fully custom-styled app. `styles` contains **no** Tailwind Preflight, no
+   split-pane CSS the `DataPage` details pane needs; use the aggregate or the
+   corresponding area sheets even in a fully custom-styled app. `styles` contains **no** Tailwind Preflight, no
    global reset and no copy of the token values.
 
 2. **Mount `CratisComponentsProvider`** (from the package root,
    `@cratis/components`) above every Cratis component. It carries `locale` and
    the Components-owned `messages`, and mounts the toast region with `toaster`;
-   it carries **no** styling. The Components 3 renderer keys — `license`, `theme`,
+   it carries **no** theme. `toaster` accepts `boolean | ToasterProps`: without
+   it or a standalone `<Toaster />`, no toast appears; mount one, never both.
+   Message groups are `paginator`, `datePicker`, `dropdown`, `dialog`, `stepper`,
+   `notifications`, `dataTable`, `filter`, `columnFilter`, `toolbar`. `locales`
+   is deprecated. `value.icons` replaces `close`, `remove`, `expand`,
+   `sortAscending`, `sortDescending`, `previous`, `next`, `clear`; a component
+   prop wins over the provider, then the built-in glyph (`null` draws none).
+   `useCratisIcon()` resolves that vocabulary. Provider props also include
+   `overlayEnvironment`, `rendererSetup` (non-secret booleans), experimental
+   `libraryMode` (`strict` / `degrade`) and `rendererFallback` (`core` / `throw`).
+   The Components 3 renderer keys — `license`, `theme`,
    `defaults`, global `pt`, `ptOptions`, `ripple`, `unstyled`, z-index — are a
    type error on purpose, so a migrated app cannot compile a provider whose
    visual configuration silently does nothing.
@@ -73,8 +89,10 @@ A theme is **CSS**. No JavaScript preset, provider option or wrapper class is
 required for the normal whole-application setup. The product's CSS is written
 *outside* a cascade layer, so it wins over all three Components layers
 (`cratis-theme`, `cratis-components`, `cratis-utilities`) without specificity
-tricks; if the product uses its own layers, declare their order explicitly after
-the Components imports.
+tricks for structural rules. Tokens and theme are unlayered: their overrides
+still need the correct specificity. If the product uses layers, name the
+`cratis-*` layers in its **first** layer-order statement, before any stylesheet
+(see Tailwind below).
 
 ### Baseline theme and dark mode
 
@@ -92,7 +110,14 @@ document.documentElement.classList.toggle('cratis-dark', darkMode);
   wins over an ambient root `cratis-dark`.
 - An independently themed island puts `cratis-theme` on the subtree and adds
   `cratis-dark` or `cratis-light` there (on the same element, or on an ancestor).
-- Override any `--cratis-*` variable *after* the theme import to adapt it.
+- A plain `:root` override after `theme` loses to dark selectors such as
+  `:root.cratis-dark`, `.cratis-theme.cratis-dark`, and the system-dark
+  `:root:not(.cratis-light)`. Match the scheme selectors' specificity and place
+  overrides after the import, including subtree selectors when using islands.
+  Or omit `theme` and use the product-theme setup below.
+- Components 4.22.1+ maps Arc's `--color-error` / `--color-error-bg` in both dark
+  schemes. A product theme omitting `theme` must define those variables itself;
+  do not carry forward the old dark-error contrast workaround.
 
 ### Product theme
 
@@ -189,7 +214,8 @@ The typed part families: `ButtonParts`/`IconButtonParts` (`root`, `icon`,
 (`root`, `trigger`, `value`, `clear`, `indicator`, `popover`, `listbox`, `option`,
 `filter`, `multiple`); `DataTableParts` (`root`, `search`, `searchInput`,
 `tableContainer`, `table`, `head`, `headerRow`, `headerCell`, `body`, `row`,
-`cell`, `emptyRow`, `emptyCell`); `TablePaginatorParts` (`root`, `range`, `info`,
+`cell`, `emptyRow`, `emptyCell`, `loadingRow`, `loadingCell`, `failureRow`,
+`failureCell`); `TablePaginatorParts` (`root`, `range`, `info`,
 `first`, `previous`, `next`, `last`); `StepperParts` (`root`, `list`, `step`,
 `header`, `number`, `title`, `separator`, `panels`, `panel`);
 `ToasterPassThrough` (`region`, `toast`, `icon`, `content`, `title`,
@@ -219,7 +245,11 @@ The default renderer is built in; omit `library` on the provider. Three optional
 adapter packages exist — `@cratis/components.mui` (MUI 9),
 `@cratis/components.primereact` (PrimeReact 11), `@cratis/components.primereact10`
 — and each adapts exactly **nine primitive slots**: button, icon-button, text
-input, text area, checkbox, radio, switch, progress bar, surface. Pass the
+input, text area, checkbox, radio, switch, progress bar (`common.progress`, not
+`common.progressBar`), surface. Install and upgrade each adapter at **exactly
+the same version** as `@cratis/components`; Node >=22 is required. The broader
+renderer contract also has an atomic `common.tooltip` slot accepting any React
+node, but it is not one of the nine stable presentation slots. Pass the
 adapter's manifest to the provider's `library` prop. Dialogs, dropdowns, tables,
 date pickers, tooltips, paginators, toasts and steppers stay Components-owned
 regardless; an adapter never restores a vendor's public API, and the vendor's
@@ -233,16 +263,23 @@ Tailwind is **one supported way to write the CSS above, not the Cratis default.*
 It is a fine tool for authoring the token mapping and part rules; it is not a
 substitute for them. Components' own internal utilities are prefixed (`cratis:*`)
 and are not public styling hooks. `styles` ships no Preflight and no reset of its
-own; if the application uses Tailwind's Preflight or its own cascade layers,
-declare the layer order explicitly after the Components imports (Components says
-nothing more specific than that — verify the result in the running app).
+own. A host with layers must put this order in its **first** `@layer` statement,
+parsed before any stylesheet (for example an inline `<style>` in the host):
+
+```css
+@layer properties, theme, base, cratis-theme, cratis-components, cratis-utilities, components, utilities;
+```
+
+Components layers belong above the product reset and below product utilities.
+Declaring them after the imports cannot reorder layers already established;
+otherwise component rules beat product utilities and `pt` classes lose.
 
 ## Verify
 
 - No PrimeReact / PrimeIcons / PrimeUI package remains in the manifest unless the
   application itself imports it directly — and then it has its own provider.
-- `CratisComponentsProvider` (root import) wraps the tree and carries only
-  `locale`, `messages` and `toaster`.
+- `CratisComponentsProvider` (root import) wraps the tree with locale/messages;
+  exactly one toaster is mounted when notifications are used.
 - `@cratis/components/tokens` and `@cratis/components/styles` are imported once
   at the entry point, tokens first; `theme` is imported or deliberately omitted;
   product CSS comes after.

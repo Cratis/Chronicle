@@ -26,8 +26,17 @@ public class UniqueConstraintsStorage(
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
 
     /// <inheritdoc/>
-    public async Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "") =>
-        await GetValuesCollectionFor(definition.Name, scopeKey).DeleteManyAsync(Builders<UniqueConstraintValueIndex>.Filter.Empty);
+    public async Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "")
+    {
+        if (definition.Mode == UniqueConstraintMode.PerValue)
+        {
+            await GetValuesCollectionFor(definition.Name, scopeKey).DeleteManyAsync(Builders<UniqueConstraintValueIndex>.Filter.Empty);
+        }
+        else
+        {
+            await GetCollectionFor(definition.Name, scopeKey).DeleteManyAsync(Builders<UniqueConstraintIndex>.Filter.Empty);
+        }
+    }
 
     /// <inheritdoc/>
     public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")

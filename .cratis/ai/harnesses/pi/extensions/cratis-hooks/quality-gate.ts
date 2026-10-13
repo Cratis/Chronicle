@@ -203,9 +203,15 @@ export function gateTimeoutSeconds(requested?: number, environment = process.env
 	return Math.min(MAX_GATE_TIMEOUT_SECONDS, Math.max(MIN_GATE_TIMEOUT_SECONDS, Math.round(candidate)));
 }
 
-/** The gate ids a `CRATIS_HOOKS_GATE_DRYRUN=1` run says it would execute, in order. */
+/** Unique planned gate labels, in order, with package counts for multi-directory runs. */
 export function parseGatePlan(dryRunStderr: string): string[] {
-	return [...dryRunStderr.matchAll(/^cratis-quality-gate: RUN\s+(\S+)/gm)].map((match) => match[1]);
+	const directories = new Map<string, Set<string>>();
+	for (const match of dryRunStderr.matchAll(/^cratis-quality-gate: RUN[ \t]+(\S+)[^\n]*(?:\n[ \t]+\$[^\n]*\(cwd: (.*)\))?/gm)) {
+		const locations = directories.get(match[1]) ?? new Set<string>();
+		locations.add(match[2] ?? "unknown");
+		directories.set(match[1], locations);
+	}
+	return [...directories].map(([gate, locations]) => locations.size > 1 ? `${gate} (${locations.size} packages)` : gate);
 }
 
 /** Where cratis-quality-gate.sh writes each gate's full log for a session (mirrors hook_state_dir in hook-lib.sh). */
@@ -216,7 +222,7 @@ export function gateLogDirectory(sessionId: string, environment = process.env): 
 }
 
 /** The gate log written most recently since `sinceMs` — the gate that is running, or was when it stopped. */
-export function latestGateLog(directory: string, sinceMs: number): { gate: string; file: string } | undefined {
+export function latestGateLog(directory: string, sinceMs: number): { gate: string; cwd?: string; file: string } | undefined {
 	let latest: { gate: string; file: string; mtime: number } | undefined;
 	try {
 		for (const name of fs.readdirSync(directory)) {
@@ -229,7 +235,22 @@ export function latestGateLog(directory: string, sinceMs: number): { gate: strin
 	} catch {
 		return undefined;
 	}
-	return latest && { gate: latest.gate, file: latest.file };
+	if (!latest) return undefined;
+	// The script writes identity before command output. Bound the read even for enormous logs.
+	let descriptor: number | undefined;
+	try {
+		descriptor = fs.openSync(latest.file, "r");
+		const buffer = Buffer.alloc(8192);
+		const length = fs.readSync(descriptor, buffer, 0, buffer.length, 0);
+		const header = buffer.subarray(0, length).toString("utf8").split("\n", 1)[0];
+		const identity = /^cratis-quality-gate: LOG (\S+) \(cwd: (.*)\)$/.exec(header);
+		if (identity) return { gate: identity[1], cwd: identity[2], file: latest.file };
+	} catch {
+		// Older or unreadable logs keep their existing filename-based display.
+	} finally {
+		if (descriptor !== undefined) fs.closeSync(descriptor);
+	}
+	return { gate: latest.gate, file: latest.file };
 }
 
 const MAX_LOG_TAIL_BYTES = 64 * 1024;

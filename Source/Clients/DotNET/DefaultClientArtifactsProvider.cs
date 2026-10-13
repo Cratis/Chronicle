@@ -316,7 +316,8 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
                 _reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
                 _readModelReactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReadModelReactor>() && !_.IsGenericType).ToArray();
                 _reactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();
-                _reducers = FindArtifacts(assembliesProvider.DefinedTypes.Where(_ => !_.IsGenericType), typeof(IReducerFor<>), (type, _) => new TypeMustImplementOnlyOneReducer(type));
+                _reducers = FindArtifacts(assembliesProvider.DefinedTypes.Where(_ => !_.IsGenericType), typeof(IReducerFor<>), (type, _) => new TypeMustImplementOnlyOneReducer(type))
+                    .Concat(assembliesProvider.DefinedTypes.Where(SelfReducerMethods.IsDiscoveryCandidate)).Distinct().ToArray();
                 _additionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanProvideAdditionalEventInformation>()).ToArray();
                 _constraintTypes = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IConstraint) && _.IsAssignableTo(typeof(IConstraint))).ToArray();
                 _uniqueConstraints = _eventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();

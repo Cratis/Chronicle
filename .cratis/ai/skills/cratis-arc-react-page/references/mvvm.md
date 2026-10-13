@@ -1,6 +1,17 @@
 <!-- cratis-ai-managed: skills/cratis-arc-react-page/references/mvvm.md -->
 # MVVM reference
 
+## Contents
+
+- When to use it
+- Setup
+- The view model
+- `withViewModel`
+- Props, route parameters, and query parameters
+- Injectable abstractions
+- `observer`
+- Testing
+
 The Arc MVVM layer keeps page logic in plain TypeScript classes and leaves the
 component declarative. `@cratis/arc.react.mvvm` builds on tsyringe for
 injection and MobX for reactivity.

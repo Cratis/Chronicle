@@ -65,7 +65,8 @@ public class when_another_request_sets_the_password_first : Specification
             _grainFactory,
             _storage,
             Microsoft.Extensions.Options.Options.Create(new Configuration.ChronicleOptions()),
-            _eventSerializer));
+            _eventSerializer,
+            CorrelationId.New()));
 
     [Fact] void should_report_that_setup_already_completed() => _exception.ShouldBeOfExactType<InitialAdminPasswordAlreadyUsed>();
 }

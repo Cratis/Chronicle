@@ -1,0 +1,11 @@
+# cratis-ai-managed: skills/cratis-screenplay-automations-and-translations/assets/pending-certificates.play
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// Minimal parent for the queue query excerpt; the complete behavior remains in todo-list-example.md.
+module Certificates
+  feature Sending
+    slice StateView CertificatesToSend
+      readmodel PendingCertificate
+        enrolmentId Uuid
+      // @excerpt

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Observation;
@@ -52,6 +53,22 @@ public interface ICanHandleReplayForObserver
     /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
     /// <returns>Awaitable task.</returns>
     Task<Result<Error>> EndReplayFor(ObserverDetails observerDetails);
+
+    /// <summary>
+    /// Ends this silo's bulk window at shutdown without promoting a replay.
+    /// </summary>
+    /// <param name="observerDetails">The observer whose window is open.</param>
+    /// <param name="cancellationToken">The shared stop deadline.</param>
+    /// <returns>Failed partitions, including unknown write outcomes.</returns>
+    Task<IEnumerable<FailedPartition>> EndBulkFor(ObserverDetails observerDetails, CancellationToken cancellationToken) =>
+        Task.FromResult<IEnumerable<FailedPartition>>([]);
+
+    /// <summary>
+    /// Drain buffered writes for a progress checkpoint without closing the replay's bulk window.
+    /// </summary>
+    /// <param name="observerDetails">The observer to flush.</param>
+    /// <returns>The open window and its buffered write failures.</returns>
+    Task<BulkFlushResult> FlushFor(ObserverDetails observerDetails) => Task.FromResult(new BulkFlushResult(null, []));
 
     /// <summary>
     /// Write everything held back for a replay of a specific observer, without ending the replay.

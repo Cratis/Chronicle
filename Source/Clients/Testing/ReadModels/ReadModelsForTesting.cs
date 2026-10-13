@@ -1,8 +1,20 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Linq.Expressions;
+using System.Reactive;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
+using System.Text.Json;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Sinks;
+using Cratis.Chronicle.Testing.Events;
+using Cratis.Json;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
 
@@ -15,6 +27,39 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 public class ReadModelsForTesting(IReadModels inner) : IReadModels
 {
     readonly Dictionary<(string Identifier, string Key), object> _instances = [];
+    readonly EventStoreForTesting? _store;
+    readonly bool _foldReads;
+    IEventSequence? _eventLog;
+
+    /// <summary>
+    /// Initializes a test read model surface that observes collections rebuilt from an event log.
+    /// </summary>
+    /// <param name="inner">The inner read model surface.</param>
+    /// <param name="eventLog">The scenario event log to observe.</param>
+    /// <remarks>
+    /// Observation requires an inner testing surface with an owning store so that artifact discovery,
+    /// services, and event storage match the supplied log. Otherwise Observe throws ReadModelCannotBeObserved.
+    /// </remarks>
+    public ReadModelsForTesting(IReadModels inner, IEventSequence eventLog)
+        : this(inner)
+    {
+        _eventLog = eventLog;
+        _store = (inner as ReadModelsForTesting)?._store;
+    }
+
+    /// <summary>
+    /// Initializes observation using the owning scenario's discovered artifacts and services.
+    /// </summary>
+    /// <param name="inner">The inner read model surface.</param>
+    /// <param name="eventLog">The event log.</param>
+    /// <param name="store">The owning scenario store.</param>
+    /// <param name="foldReads">Whether snapshot reads rebuild from the scenario's own log.</param>
+    internal ReadModelsForTesting(IReadModels inner, IEventSequence eventLog, EventStoreForTesting store, bool foldReads = false)
+        : this(inner, eventLog)
+    {
+        _store = store;
+        _foldReads = foldReads;
+    }
 
     /// <summary>
     /// Gets the <see cref="IMaterializedReadModels"/> for working with materialized read model instances.
@@ -34,25 +79,58 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     /// throws GrainNotAvailableInTestScenario in-process. This matches what the interface's nullable return
     /// already promises for "the instance does not exist" (#3927).
     /// </remarks>
-    public Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null)
+    public async Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
-        var identifier = typeof(TReadModel).GetReadModelIdentifier();
-        return Task.FromResult(_instances.TryGetValue((identifier, key.Value), out var instance) ? (TReadModel)instance : default!);
+        var instance = await GetInstanceById(typeof(TReadModel), key, sessionId);
+        return instance is null ? default! : (TReadModel)instance;
     }
 
     /// <inheritdoc/>
     /// <remarks>
     /// See the generic overload above - the same reasoning applies here (#3927).
     /// </remarks>
-    public Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null)
+    public async Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
         var identifier = readModelType.GetReadModelIdentifier();
-        return Task.FromResult(_instances.TryGetValue((identifier, key.Value), out var instance) ? instance : null!);
+        if (_instances.TryGetValue((identifier, key.Value), out var instance)) return instance;
+        if (!_foldReads) return null!;
+
+        var instances = await Rebuild(readModelType, _eventLog!, _store!);
+        using var sink = ProjectionReadModelProcessor.CreateSink(readModelType, _store!.JsonSchemaGenerator);
+        var canonicalKey = sink.GetKeyValue(new(key.Value, ArrayIndexers.NoIndexers));
+        return instances.TryGetValue(canonicalKey, out instance) ? instance : null!;
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null) =>
-        inner.GetInstances<TReadModel>(eventCount);
+    public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null)
+    {
+        if (!_foldReads) return await inner.GetInstances<TReadModel>(eventCount);
+
+        var instances = await Rebuild(typeof(TReadModel), _eventLog!, _store!, eventCount);
+        return instances.Values.Cast<TReadModel>().ToArray();
+    }
+
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
+    {
+        var log = _eventLog ?? throw new ReadModelCannotBeObserved(typeof(TReadModel), "An event log is not available in this test scenario");
+        var metadata = StoreForObservation(typeof(TReadModel));
+        var predicate = filter?.Compile();
+        var source = Observable.Create<IEnumerable<TReadModel>>(observer =>
+        {
+            var signals = new Subject<Unit>();
+            var rebuilds = signals.Select(_ => Observable.FromAsync(() => Rebuild<TReadModel>(log, metadata)))
+                .Concat()
+                .Select(set => (IEnumerable<TReadModel>)(predicate is null ? set.ToArray() : set.Where(predicate).ToArray()))
+                .DistinctUntilChanged(set => JsonSerializer.Serialize(set, Globals.JsonSerializerOptions))
+                .Subscribe(observer);
+            var appends = log.AppendOperations.Where(batch => batch.Any(append => append.Result.IsSuccess))
+                .Subscribe(_ => signals.OnNext(Unit.Default), signals.OnError, signals.OnCompleted);
+            signals.OnNext(Unit.Default);
+            return new CompositeDisposable(appends, rebuilds, signals);
+        });
+        return new ReadModelObservation<TReadModel>(source);
+    }
 
     /// <inheritdoc/>
     public Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey) =>
@@ -77,6 +155,11 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     /// <inheritdoc/>
     public Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances) =>
         inner.Release(instances);
+
+    /// <summary>
+    /// Keeps the ReadModelScenario surface unsupported: its collected events are not appended to the log.
+    /// </summary>
+    internal void DisableObservation() => _eventLog = null;
 
     /// <summary>
     /// Gets the keys of the instances seeded for a read model type.
@@ -109,5 +192,63 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     {
         var identifier = typeof(TReadModel).GetReadModelIdentifier();
         _instances[(identifier, eventSourceId.Value)] = instance;
+    }
+
+    static bool IsPassive(Type readModelType, EventStoreForTesting store)
+    {
+        if (readModelType.IsPassive()) return true;
+        return store.Projections is IKnowPassiveProjections passive && passive.IsPassive(readModelType);
+    }
+
+    EventStoreForTesting StoreForObservation(Type readModelType)
+    {
+        var store = _store ?? throw new ReadModelCannotBeObserved(readModelType, "The owning test store is not available for artifact discovery and event storage");
+        if (!store.Projections.HasFor(readModelType) && !store.Reducers.HasFor(readModelType))
+        {
+            throw new UnknownReadModel(readModelType);
+        }
+
+        if (IsPassive(readModelType, store))
+        {
+            throw new ReadModelCannotBeObserved(readModelType, "Passive read models have no materialized sink");
+        }
+
+        if (readModelType.IsEventTypeTarget())
+        {
+            throw new ReadModelCannotBeObserved(readModelType, "Event targets publish events instead of storing a collection");
+        }
+
+        return store;
+    }
+
+    async Task<IEnumerable<TReadModel>> Rebuild<TReadModel>(IEventSequence log, EventStoreForTesting store)
+    {
+        var instances = await Rebuild(typeof(TReadModel), log, store);
+        return instances.Values.Cast<TReadModel>().ToArray();
+    }
+
+    async Task<IReadOnlyDictionary<object, object>> Rebuild(Type readModelType, IEventSequence log, EventStoreForTesting store, EventCount? eventCount = null)
+    {
+        if (!store.Projections.HasFor(readModelType) && !store.Reducers.HasFor(readModelType)) throw new UnknownReadModel(readModelType);
+
+        var events = await log.GetFromSequenceNumber(EventSequenceNumber.First);
+        var selectedEvents = eventCount is null || eventCount == EventCount.Unlimited
+            ? events
+            : events.Where((_, index) => (ulong)index < eventCount.Value);
+        var folded = await ReadModelFolder.Fold(store, readModelType, selectedEvents);
+        var identifier = readModelType.GetReadModelIdentifier().Value;
+        using var sink = ProjectionReadModelProcessor.CreateSink(readModelType, store.JsonSchemaGenerator);
+        var instances = new Dictionary<object, object>();
+        foreach (var pair in _instances.Where(pair => pair.Key.Identifier == identifier))
+        {
+            instances[sink.GetKeyValue(new(pair.Key.Key, ArrayIndexers.NoIndexers))] = pair.Value;
+        }
+
+        foreach (var (key, instance) in folded)
+        {
+            instances[sink.GetKeyValue(new(key.Value, ArrayIndexers.NoIndexers))] = instance;
+        }
+
+        return instances;
     }
 }

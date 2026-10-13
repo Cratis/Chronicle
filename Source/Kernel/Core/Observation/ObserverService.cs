@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Monads;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -21,16 +22,31 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="replayHandlers">All instances of <see cref="ICanHandleReplayForObserver"/>.</param>
 /// <param name="catchupHandlers">All instances of <see cref="ICanHandleCatchupForObserver"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="stopBudget">The shared stop deadline.</param>
+/// <param name="grainFactory">The grain factory for recording failed partitions.</param>
 [Reentrant]
 public class ObserverService(
     GrainId grainId,
     Silo silo,
     IInstancesOf<ICanHandleReplayForObserver> replayHandlers,
     IInstancesOf<ICanHandleCatchupForObserver> catchupHandlers,
-    ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IObserverService
+    ILoggerFactory loggerFactory,
+    IShutdownDrainBudget stopBudget,
+    IGrainFactory grainFactory) : GrainService(grainId, silo, loggerFactory), IObserverService
 {
+    readonly ObserverServiceDrain _drain = new();
+    readonly ILogger<ObserverService> _logger = loggerFactory.CreateLogger<ObserverService>();
+    readonly ObserverBulkDrain _bulkDrain = new(grainFactory, loggerFactory.CreateLogger<ObserverService>());
+
     /// <inheritdoc/>
-    public async Task BeginReplayFor(ObserverDetails observerDetails)
+    public override async Task Stop()
+    {
+        await _drain.Stop(EndWindow, stopBudget.Begin());
+        await base.Stop();
+    }
+
+    /// <inheritdoc/>
+    public Task BeginReplayFor(ObserverDetails observerDetails) => Run(observerDetails, true, async () =>
     {
         if (!RebuildsReadModel(observerDetails))
         {
@@ -40,53 +56,71 @@ public class ObserverService(
 
         var results = await Task.WhenAll(replayHandlers.Select(handler => handler.BeginReplayFor(observerDetails)));
         EnsureReplayStarted(results);
-    }
+    });
 
     /// <inheritdoc/>
-    public async Task ResumeReplayFor(ObserverDetails observerDetails) => await ForEachReplayHandler(handler => handler.ResumeReplayFor(observerDetails));
+    public Task ResumeReplayFor(ObserverDetails observerDetails) => Run(observerDetails, true, () => ForEachReplayHandler(handler => handler.ResumeReplayFor(observerDetails)));
 
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails) => _ = await TryFinalizeReplayFor(observerDetails);
 
     /// <inheritdoc/>
-    public async Task<bool> TryFinalizeReplayFor(ObserverDetails observerDetails)
+    public Task<bool> TryFinalizeReplayFor(ObserverDetails observerDetails) => _drain.Run(observerDetails, true, async () =>
     {
         var results = await Task.WhenAll(replayHandlers.Select(handler => handler.EndReplayFor(observerDetails)));
-        return EnsureReplayFinalized(results);
-    }
+        var finalized = EnsureReplayFinalized(results);
+        _drain.Ended(observerDetails, true);
+        return finalized;
+    });
 
     /// <inheritdoc/>
-    public async Task AbandonReplayFor(ObserverDetails observerDetails)
+    public Task AbandonReplayFor(ObserverDetails observerDetails) => Run(observerDetails, true, async () =>
     {
         var results = await Task.WhenAll(replayHandlers.Select(handler => handler.AbandonReplayFor(observerDetails)));
         EnsureReplayAbandoned(results);
-    }
+        _drain.Ended(observerDetails, true);
+    });
 
     /// <inheritdoc/>
-    public async Task<bool> FlushReplayFor(ObserverDetails observerDetails)
+    public Task<bool> FlushReplayFor(ObserverDetails observerDetails) => _drain.Run(observerDetails, true, async () =>
     {
         var results = await Task.WhenAll(replayHandlers.Select(handler => handler.FlushReplayFor(observerDetails)));
         return results.All(result => !result.TryGetError(out var error) || error == ICanHandleReplayForObserver.Error.CannotHandle);
-    }
+    });
 
     /// <inheritdoc/>
-    public async Task BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition) => await ForEachReplayHandler(handler => handler.BeginReplayPartitionFor(observerDetails, partition));
+    public Task BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition) => Run(observerDetails, true, () => ForEachReplayHandler(handler => handler.BeginReplayPartitionFor(observerDetails, partition)));
 
     /// <inheritdoc/>
-    public async Task EndReplayPartitionFor(ObserverDetails observerDetails, Key partition) => await ForEachReplayHandler(handler => handler.EndReplayPartitionFor(observerDetails, partition));
+    public Task EndReplayPartitionFor(ObserverDetails observerDetails, Key partition) => Run(observerDetails, true, () => ForEachReplayHandler(handler => handler.EndReplayPartitionFor(observerDetails, partition)));
 
     /// <inheritdoc/>
-    public async Task BeginCatchupFor(ObserverDetails observerDetails) => await ForEachCatchupHandler(handler => handler.BeginCatchupFor(observerDetails));
+    public Task BeginCatchupFor(ObserverDetails observerDetails) => Run(observerDetails, false, () => ForEachCatchupHandler(handler => handler.BeginCatchupFor(observerDetails)));
 
     /// <inheritdoc/>
-    public async Task ResumeCatchupFor(ObserverDetails observerDetails) => await ForEachCatchupHandler(handler => handler.ResumeCatchupFor(observerDetails));
+    public Task ResumeCatchupFor(ObserverDetails observerDetails) => Run(observerDetails, false, () => ForEachCatchupHandler(handler => handler.ResumeCatchupFor(observerDetails)));
 
     /// <inheritdoc/>
-    public async Task EndCatchupFor(ObserverDetails observerDetails)
+    public Task EndCatchupFor(ObserverDetails observerDetails) => Run(observerDetails, false, async () =>
     {
         var results = await Task.WhenAll(catchupHandlers.Select(handler => handler.EndCatchupFor(observerDetails)));
         EnsureCatchupFinalized(results);
-    }
+        _drain.Ended(observerDetails, false);
+    });
+
+    /// <inheritdoc/>
+    public Task<Guid[]> FlushFor(ObserverDetails observerDetails, bool replay) => _drain.Run(observerDetails, replay, async () =>
+    {
+        var results = replay
+            ? await Task.WhenAll(replayHandlers.Select(handler => handler.FlushFor(observerDetails)))
+            : await Task.WhenAll(catchupHandlers.Select(handler => handler.FlushFor(observerDetails)));
+        if (results.Any(result => result.FailedPartitions.Any()))
+        {
+            throw new ObserverFlushFailed();
+        }
+
+        return results.Where(result => result.WindowId is not null).Select(result => result.WindowId!.Value).Distinct().ToArray();
+    });
 
     /// <summary>
     /// Ensure every applicable catch-up handler finished successfully.
@@ -179,6 +213,32 @@ public class ObserverService(
         }
 
         return finalized;
+    }
+
+    Task<bool> Run(ObserverDetails observer, bool replay, Func<Task> callback) => _drain.Run(observer, replay, async () =>
+    {
+        await callback();
+        return true;
+    });
+
+    async Task EndWindow(ObserverDetails observer, bool replay, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _logger.DrainDeadlinePassed(observer.Key);
+            }
+
+            var work = replay
+                ? replayHandlers.Select(handler => _bulkDrain.Drain(observer, token => handler.EndBulkFor(observer, token), cancellationToken))
+                : catchupHandlers.Select(handler => _bulkDrain.Drain(observer, token => handler.EndBulkFor(observer, token), cancellationToken));
+            await Task.WhenAll(work);
+        }
+        catch (Exception exception)
+        {
+            _logger.DrainFailed(exception, observer.Key);
+        }
     }
 
     async Task ForEachReplayHandler(Func<ICanHandleReplayForObserver, Task> callback)

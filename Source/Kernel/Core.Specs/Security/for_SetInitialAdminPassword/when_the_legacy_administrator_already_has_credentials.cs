@@ -24,7 +24,7 @@ public class when_the_legacy_administrator_already_has_credentials : Specificati
     }
 
     async Task Because() => _exception = await Catch.Exception(() => new SetInitialAdminPassword(_userId, "new-password", "new-password")
-        .Handle(Substitute.For<IGrainFactory>(), _storage, Options.Create(new Configuration.ChronicleOptions()), Substitute.For<IEventSerializer>()));
+        .Handle(Substitute.For<IGrainFactory>(), _storage, Options.Create(new Configuration.ChronicleOptions()), Substitute.For<IEventSerializer>(), CorrelationId.New()));
 
     [Fact] void should_not_allow_anonymous_credential_replacement() => _exception.ShouldBeOfExactType<InitialAdminPasswordAlreadyUsed>();
 }

@@ -4,6 +4,8 @@
 External event store inbox routing is currently C#-only — it depends on the `[EventStore]` attribute on event types or reducers, which doesn't exist in Kotlin, Elixir, or TypeScript.
 :::
 
+[Self reducers](self-reducing-read-models) use the same inbox routing. Their subscription event set comes from the owning registry's selected static transitions; query methods and other helpers do not add subscription events.
+
 ## Automatic Inbox Routing
 
 When all event types reduced by a reducer come from the same source event store, Chronicle routes the reducer to the matching inbox sequence automatically:
@@ -45,6 +47,10 @@ This is invalid and fails:
 
 - At runtime with `EventStoreCannotBeCombinedWithExplicitEventSequence`.
 - At compile time with analyzer rule `CHR0014`.
+
+## Forwarded metadata limitation
+
+Inbox forwarding preserves event-source and stream-route metadata but currently drops append tags. This affects classic and self reducers equally: do not rely on tag filters selecting imported events until [#4823](https://github.com/Cratis/Chronicle/issues/4823) is delivered. Route filters remain available on the forwarded events.
 
 ## See Also
 

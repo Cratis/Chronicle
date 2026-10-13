@@ -28,6 +28,15 @@ public interface IObservers
     Task ReplayPartition(ReplayPartition command, CallContext context = default);
 
     /// <summary>
+    /// Fast forward an observer to the tail of its event sequence, skipping everything it has not yet handled.
+    /// </summary>
+    /// <param name="command">The fast forward command.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A <see cref="FastForwardResponse"/> describing what happened.</returns>
+    [Operation]
+    Task<FastForwardResponse> FastForward(FastForward command, CallContext context = default);
+
+    /// <summary>
     /// Retry a failed partition for an observer.
     /// </summary>
     /// <param name="command">The retry command.</param>

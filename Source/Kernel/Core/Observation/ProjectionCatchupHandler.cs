@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
@@ -48,6 +49,32 @@ public class ProjectionCatchupHandler(
                 ? ICanHandleCatchupForObserver.Error.Unknown
                 : Result<ICanHandleCatchupForObserver.Error>.Success();
         });
+
+    /// <inheritdoc/>
+    public async Task<BulkFlushResult> FlushFor(ObserverDetails observerDetails)
+    {
+        if (!CanHandle(observerDetails) || !projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+        {
+            return new(null, []);
+        }
+
+        var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
+        var result = await pipeline.FlushBulk();
+        await ProjectionBulkFailures.Record(grainFactory, observerDetails, result.FailedPartitions);
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<Storage.Sinks.FailedPartition>> EndBulkFor(ObserverDetails observerDetails, CancellationToken cancellationToken)
+    {
+        if (!CanHandle(observerDetails) || !projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+        {
+            return [];
+        }
+
+        var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
+        return await pipeline.EndBulk(cancellationToken);
+    }
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
 

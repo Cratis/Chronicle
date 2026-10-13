@@ -395,6 +395,11 @@ public partial class EventStore : IEventStore
     public DiscoveryReport Discovery { get; private set; } = DiscoveryReport.NotRun;
 
     /// <summary>
+    /// Gets the monitor coordinating read-model builder ownership within this store.
+    /// </summary>
+    internal object ReadModelOwnershipSync { get; } = new();
+
+    /// <summary>
     /// Gets the serializer owned by this event store.
     /// </summary>
     internal IEventSerializer EventSerializer { get; }
@@ -734,7 +739,11 @@ public partial class EventStore : IEventStore
                 (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes))
             .Concat(_clientArtifactsProvider.Reducers
                 .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReducerAttribute>()?.EventSequenceId))
-                .Select(type => (Type: type, HandledEventTypes: Reducers.GetHandlerFor(type).EventTypes)))
+                .Join(
+                    Reducers.GetAllHandlers(),
+                    type => type,
+                    handler => handler.ReducerType,
+                    (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes)))
             .Select(observer =>
             {
                 var sourceStore = ObserverEventTypes.GetSourceStore(observer.Type, EventTypes, _eventStoreName, observer.HandledEventTypes);

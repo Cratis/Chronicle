@@ -42,15 +42,14 @@ internal class CaptureDefinitionSyntaxVisitor : ICaptureSyntaxVisitor<CaptureDef
         Route: GetSetting(source, "route"),
         Path: GetSetting(source, "path"),
         Topic: GetSetting(source, "topic"),
-        Sequence: GetSetting(source, "sequence"),
-        Events: [.. source.Settings.Where(setting => setting.Name == "from").Select(setting => setting.Value).OfType<string>()]);
+        Events: [.. CaptureEventsSource.Events(source).Select(setting => setting.Value).OfType<string>()]);
 
     static SourceType ConvertSourceType(CaptureSourceSyntax source) => source.Kind switch
     {
         "api" => SourceType.Api,
         "webhook" => SourceType.Webhook,
         "message" => SourceType.Message,
-        "events" => SourceType.Events,
+        CaptureEventsSource.Kind => SourceType.Events,
         _ => throw new UnsupportedCaptureSyntax(source)
     };
 
@@ -129,6 +128,7 @@ internal class CaptureDefinitionSyntaxVisitor : ICaptureSyntaxVisitor<CaptureDef
         SourceItemExpressionSyntax item => $"$.{item.Path}",
         ContextExpressionSyntax context => $"$context.{context.Path}",
         EnvironmentExpressionSyntax env => $"$env.{env.Name}",
+        IdentityExpressionSyntax identity => throw new UnsupportedCaptureSyntax(identity),
         EventSourceIdExpressionSyntax => WellKnownExpressions.EventSourceId,
         EventContextExpressionSyntax eventContext => $"{WellKnownExpressions.EventContext}({eventContext.Path})",
         CausedByExpressionSyntax causedBy => causedBy.Property is null

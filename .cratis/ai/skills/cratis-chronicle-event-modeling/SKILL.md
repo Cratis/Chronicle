@@ -8,8 +8,8 @@ license: MIT
 # Chronicle event modeling
 
 > **Model-first check.** If an accepted model under the model root covers this scope, or the
-> repository is opted in (the root, default `.cratis/screenplay/`, holds a committed `.play`
-> file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project explicitly set `mcpServers.screenplay.root` in
+> repository is opted in (the root, the folder holding the project's `.play` files, holds a committed `.play`
+> file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project explicitly set `mcpServers.screenplay.root` in
 > `.cratis/ai.json`), the model is the source of truth: use
 > `cratis-screenplay-event-modeling` (and the lifecycle in
 > `cratis-screenplay-modeling-lifecycle`, which holds the master definition)
@@ -38,12 +38,17 @@ and the request is wiring or a narrow fix.
 
 ## Verified product sources
 
-This skill is verified against these exact sources:
+Verified against **Cratis/Chronicle v19.50.1**:
+`Source/Clients/DotNET.CodeAnalysis/DiagnosticIds.cs`,
+`ProtectedValues/EncryptedAttribute.cs`, `EventSources/`, `Events/PublicAttribute.cs`,
+`Sinks/PublishToAttribute.cs`, and `Events/Constraints/ClosesStreamAttribute.cs`
+(paths under `Source/Clients/DotNET/` unless otherwise stated).
+Current version pins: `cratis-screenplay-toolchain` `references/versions.md`.
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Chronicle` | `18.3.0` | event types, event-source identities, subjects, `[PII]` |
-| `Cratis.Chronicle.CodeAnalysis` | `18.3.0` | `CHR0012`, `CHR0026`, `CHR0034`, `CHR0035` |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Chronicle` | event types, event-source identities, subjects, `[PII]`, `[Encrypted]` |
+| `Cratis.Chronicle.CodeAnalysis` | `CHR0012`, `CHR0026`, `CHR0034`, `CHR0035`, `CHR0052` |
 
 Reverify product sources before claiming support for another version.
 
@@ -89,6 +94,29 @@ Do not append an event for derived or aggregate state. Project it from the sourc
 events instead; an event that records a total is a fact that can disagree with
 its own inputs.
 
+## Public facts and streams that end
+
+Declare source vocabulary with `IEventSource`, `[EventSource]` and `[EventStream]`;
+use **cratis-chronicle-client-dotnet** for append routing and
+**cratis-chronicle-reactor** for `[FromEventSource<T>]` filters. A stream that
+ends needs an explicit lifetime and scope: does closing cover one source, a
+period across sources, or every stream of a source type? Prefer a past-tense
+closing fact with `[ClosesStream]`; use **cratis-chronicle-event-constraints** for
+manual scope completion, reopening and its crash/reindex limits. Closing refuses
+new appends; it does not erase history or stop projection replay. Specify a
+late append refusal and an unrelated scope remaining open.
+
+`[Public]` permits an event type to leave the event log; `[PublishTo("sequence")]`
+selects publication for projection/reducer output. Private types cannot go to
+outbox, and the event log is not a publication target. Translate inbox facts
+into local facts at the boundary rather than treating external contracts as
+local commands. Named tags are plaintext, indexed metadata: never personal data.
+
+State-dependent decisions need **cratis-chronicle-decision-reads** when their
+read facts must remain valid at append; an ordinary passive read alone does not
+close the read/append race. Arc command integration belongs to
+**cratis-arc-command-validation**.
+
 ## Information completeness — trace every field to an event
 
 This is the check that pays for itself, and it belongs at modeling time rather
@@ -108,7 +136,10 @@ Chronicle is allowed where the rule needs it (an injected read model read by
 explicit key, or a `[Passive]` projection for a command-side decision); see
 Cross-slice patterns in `rules/vertical-slices.md`. Make such a read deliberate
 and name it in the brief, with the consistency it needs: a rule that must hold
-under concurrency uses the DCB pattern rather than a stale materialized read.
+under concurrency needs enrolled guarded reads, not plain injection or a stale
+materialized snapshot. In Arc v22.75.0 use `IStreamReads`/`StreamDecision` for one
+stream or `[ProtectedDecision]` + admitted `DecisionRead<T>` for projected state;
+`Result<,>` alone supplies rejection, not a concurrency guard.
 
 ## Compliance modeling
 
@@ -125,15 +156,19 @@ operates on the subject and the subject follows the stream.
 - Set `[Subject]` only when the person is not the event source. A stored
   read-model document carries one subject — do not mix several people's personal
   data into one document.
-- Never place `[PII]` on an event-source id: Chronicle cannot encrypt it, and
-  analyzer `CHR0034` rejects it. When the natural identifier is itself
+- Never place `[PII]` or `[Encrypted]` on an event-source id: Chronicle cannot encrypt it, and
+  analyzers `CHR0034` and `CHR0052` reject them. When the natural identifier is itself
   sensitive, model a surrogate stream id and carry the sensitive value as a
   `[PII]` property.
 - Do not place `[Key]` or `[Subject]` on an `EventSourceId<T>` value — it is
   already both, and analyzer `CHR0026` says so.
 - Bearer tokens, magic links, and signed URLs are not durable facts. Model a
   keyed hash or an opaque reference, never the secret. Chronicle has no attribute
-  that withholds a value from the log.
+  that withholds a value from the log. Where an operational secret must genuinely be
+  retained (an API key, a signing secret), mark it `[Encrypted]` (encrypted at rest,
+  recoverable, not a PII erasure subject; never on a `[PII]` value or an event-source id)
+  and keep it out of the causation chain with Arc's `[NotAudited]`; see `cratis-arc-command`
+  and `cratis-chronicle-compliance`.
 
 If a subject boundary cannot be made person-level without changing product
 behavior, **stop and surface that trade-off** before implementing.

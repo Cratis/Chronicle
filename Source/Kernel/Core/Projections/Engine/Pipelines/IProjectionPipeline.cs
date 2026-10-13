@@ -46,10 +46,23 @@ public interface IProjectionPipeline
     Task BeginBulk();
 
     /// <summary>
+    /// Drain the sink's buffered writes without closing its bulk window.
+    /// </summary>
+    /// <returns>The window identity and any buffered write failures.</returns>
+    Task<BulkFlushResult> FlushBulk();
+
+    /// <summary>
     /// End bulk operation mode.
     /// </summary>
     /// <returns>The partitions whose writes failed during the final flush.</returns>
     Task<IEnumerable<FailedPartition>> EndBulk();
+
+    /// <summary>
+    /// Ends the bulk window within the shutdown deadline.
+    /// </summary>
+    /// <param name="cancellationToken">The shared deadline token.</param>
+    /// <returns>The failed or unknown partitions.</returns>
+    Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken) => EndBulk();
 
     /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.

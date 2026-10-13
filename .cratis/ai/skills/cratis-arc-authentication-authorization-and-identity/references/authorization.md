@@ -1,7 +1,22 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/authorization.md -->
 # Authorization
 
-Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.41.1`. Everything below
+## Contents
+
+- Versions differ — check the one you run
+- Attributes
+- Composition and precedence
+- Named policies
+- Guests and anonymous policies
+- Evaluation order
+- Baselines: two separate mechanisms
+- Default access by hosting model
+- The filters and results
+- Direct calls bypass authorization
+- The principal and system actors
+- Protected decisions and validators
+
+Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.75.0`. Everything below
 describes that version and is in `Cratis.Arc.Authorization` unless stated.
 
 ## Versions differ — check the one you run
@@ -18,12 +33,18 @@ another.
 | `22.26.0` | `Cratis:Arc:Introspection` options. |
 | `22.30.0` | `IFallbackAuthorizationEvaluator` and `AuthorizationPolicyContext.ReceivedAt`. |
 | `22.31.0` | Opt-in policy evaluation for unauthenticated callers. |
+| `22.31.2` | Identity/declaration continuity rechecked around policy evaluation. |
+| `22.43.0` | Forwarded identity headers require host-wide trust opt-in. |
+| `22.44.2` | Guest-policy endpoints reachable over HTTP, including with authenticated fallback. |
+| `22.45.0` | Discovery anonymous only in Development by default. |
+| `22.46.0` | Identity cookie no longer read or written by the backend. |
+| `22.51.0` | `IdentityDiscovery` controls users/tenants/details schema separately. |
 | `22.39.0` | Protected decisions arrive; the validator boundary at the end of this page is verified at `22.41.1`. |
 
 If you are on a version before `22.21.0`, either upgrade, or use only Arc's
 attributes with roles and treat everything else as unenforced. Do not write a
 policy-protected endpoint on a version before `22.23.0`. The rest of this page
-is `22.41.1` behavior.
+is `22.75.0` behavior.
 
 ## Attributes
 
@@ -128,10 +149,11 @@ opt-in:
 - Only a declaration made **entirely** of opted-in policies, with no roles and no
   schemes, can evaluate guests. Roles and schemes always require authentication.
 
-⚠️ The opt-in governs Arc's pipeline verdict only. Today the HTTP layer can reject
-a guest before the policy runs: a Core host with any authentication handler, or an
-ASP.NET Core `FallbackPolicy` that requires authentication, returns 401 first
-(tracked in Cratis/Arc#2948). Test guest endpoints through the real HTTP host.
+Since 22.44.2, guest-policy endpoints accept unauthenticated callers on both HTTP
+hosts, even with an authenticated fallback policy, when every declared policy
+opts in. Test through the real HTTP host, not only the in-process verdict.
+Source at v22.75.0: `Documentation/backend/csharp/introspection/index.md` and the
+host authorization specs under `Source/DotNET`.
 
 ⚠️ Because a method replaces its type, a method-level guest policy on a read model
 with a type-level `[Roles("Admin")]` is reachable by guests when the policy
@@ -302,4 +324,8 @@ service). So an authorization or ownership rule put in such a validator — or i
 `[Unprotected]` command's validator — is **not decision-safe**. Put
 state-dependent permission and ownership rules in `Provide()` or `Handle()` using
 `DecisionRead<T>` or `IDecisionReads`, and route to the validation and Chronicle
-guidance. Validators that read decision state are tracked in Arc#2831.
+guidance. Arc constructs/certifies discoverable parameterless validators;
+factory-supplied or altered rules fail closed. Keep static/service-locator state
+out of them too: certification is not proof of input purity. Validators that
+read decision state are tracked in Arc#2831.
+Source: [Arc v22.75.0 protected validator boundary](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/chronicle/read-models/injecting-into-commands.md).
