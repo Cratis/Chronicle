@@ -23,6 +23,16 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
     /// <inheritdoc/>
     public Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "")
     {
+        if (definition.Mode != UniqueConstraintMode.PerValue)
+        {
+            foreach (var entry in _index.Where(_ => _.Key.ConstraintName == definition.Name.Value && _.Key.ScopeKey == scopeKey))
+            {
+                _index.TryRemove(entry);
+            }
+
+            return Task.CompletedTask;
+        }
+
         foreach (var entry in _values.Where(_ => _.Key.ConstraintName == definition.Name.Value && _.Key.ScopeKey == scopeKey))
         {
             _values.TryRemove(entry);

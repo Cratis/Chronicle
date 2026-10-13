@@ -29,6 +29,13 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
     /// <inheritdoc/>
     public async Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "")
     {
+        if (definition.Mode != UniqueConstraintMode.PerValue)
+        {
+            await using var sourceScope = await database.UniqueConstraintTable(eventStore, @namespace, GetTableName(definition.Name, scopeKey));
+            await sourceScope.DbContext.Entries.ExecuteDeleteAsync();
+            return;
+        }
+
         await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
         await scope.DbContext.Entries.ExecuteDeleteAsync();
     }

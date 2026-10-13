@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Testing.Events;
 using Cratis.Execution;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
@@ -31,24 +30,21 @@ internal static class ReducerReadModelProcessor
     /// <typeparam name="TReadModel">Type of read model produced by the reducer.</typeparam>
     /// <param name="reducerType">The registered classic or self-reducer declaration.</param>
     /// <param name="events">The events to process.</param>
-    /// <param name="eventStore">The scenario's shared test store.</param>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event type metadata.</param>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> used when invoking the reducer.</param>
+    /// <param name="context">The storage, artifacts, services and original event contexts for the fold.</param>
     /// <param name="initialState">Optional initial read model state the reducer reduces on top of.</param>
-    /// <param name="eventContexts">Optional original contexts when reading the store's event log.</param>
     /// <returns>The reduced read model and the distinct event sources that passed the reducer's filters.</returns>
     /// <exception cref="ReducerFailed">Thrown when the reducer raises an error while processing the events.</exception>
     public static async Task<(TReadModel? State, IReadOnlyList<EventSourceId> EventSourceIds)> Process<TReadModel>(
         Type reducerType,
         IEnumerable<EventForEventSourceId> events,
-        EventStoreForTesting eventStore,
-        IEventTypes eventTypes,
-        IServiceProvider serviceProvider,
-        TReadModel? initialState = null,
-        IReadOnlyList<EventContext>? eventContexts = null)
+        ReadModelFoldContext context,
+        TReadModel? initialState = null)
         where TReadModel : class
     {
-        var readModelType = typeof(TReadModel);
+        var readModelType = context.ReadModelType;
+        var eventStore = context.EventStore;
+        var eventTypes = context.EventTypes;
+        var eventContexts = context.EventContexts;
         var invoker = eventStore.Reducers.GetHandlerForReadModelType(readModelType).Invoker;
 
         var eventsList = events.ToList();
@@ -80,7 +76,7 @@ internal static class ReducerReadModelProcessor
             eventsAndContexts.Add(new(content, contexts[index] with { EventType = type }));
         }
 
-        var result = await invoker.Invoke(serviceProvider, eventsAndContexts, initialState);
+        var result = await invoker.Invoke(context.ServiceProvider, eventsAndContexts, initialState);
 
         // A reducer that raised an error must not surface its partial state as a successful projection —
         // the real reducer pipeline discards the result and pauses the partition. Fail loud instead so the
