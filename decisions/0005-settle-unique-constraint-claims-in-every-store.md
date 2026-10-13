@@ -1,11 +1,11 @@
 ---
 id: 0005-settle-unique-constraint-claims-in-every-store
 title: Settle unique-constraint claims in the store, in every provider
-status: proposed
+status: accepted
 stage: none
 class: contract
 reversibility: costly
-proposed: 2026-10-12
+decided: 2026-10-13
 decider: woksin
 applies-to:
   - Source/Kernel/Storage.InMemory/Events/Constraints/**
@@ -19,7 +19,7 @@ applies-to:
 <!-- markdownlint-disable-next-line MD025 -->
 # Settle unique-constraint claims in the store, in every provider
 
-Proposed on 2026-10-12 for Cratis/Chronicle#3744; woksin is the intended decider, pending acceptance.
+Accepted on 2026-10-13 by woksin for Cratis/Chronicle#3744, with the changes recorded below.
 
 ## Context
 
@@ -42,11 +42,11 @@ This crosses every storage provider, changes a persisted schema and reverses par
 Every storage provider settles a unique-constraint claim itself, when the claim is saved, and reports a lost claim as `DuplicateUniqueConstraintValue`. The kernel reindex tolerates duplicate history. `DuplicateUniqueConstraintValue` stays diagnostic: the event is already durable when the index is written, so the append is not failed.
 
 1. **InMemory** keeps an owner map keyed by (constraint, scope, value) next to the per-source index and changes both under one lock. `Save` throws when another source owns the value and leaves the existing claim untouched; the same source reclaiming is a no-op; moving to a new value releases the old one. `Remove` drops both entries and `IsAllowed` is a direct lookup.
-2. **SQL** puts a unique index on `Value` on every provider, named `IX_<table>_Value`, and bounds `Value` to 200 characters on SQL Server (the length per-value tables use), replacing the unbounded column. The bounding runs only behind a guard that never truncates: if any existing value is longer than 200 characters the narrowing is skipped and a warning is logged. `EnsureValueColumnIsUnbounded` is replaced by an `EnsureValueIndexIsUnique` step, because leaving it in place would widen the column again and drop the index on SQL Server. PostgreSQL and SQLite keep `TEXT`, which can already be indexed.
+2. **SQL** puts a unique index on `Value` on every provider, named `IX_<table>_Value`, and bounds `Value` to 200 characters on SQL Server (the length per-value tables use), replacing the unbounded column. The bounding runs only behind a guard that never truncates: the guard counts rows whose value is longer than 200 characters and runs that length check and the `ALTER` in one transaction, so a value cannot slip in between. If any such row exists the narrowing is skipped and a warning is logged. Legacy pre-hash rows block narrowing; in that case the warning names the legacy-rows issue. `EnsureValueColumnIsUnbounded` is replaced by an `EnsureValueIndexIsUnique` step, because leaving it in place would widen the column again and drop the index on SQL Server. PostgreSQL and SQLite keep `TEXT`, which can already be indexed.
 3. **SQL violation translation.** `SavePerEventSource` catches the unique violation through the existing `IsUniqueViolation`, clears the change tracker and decides from the data rather than the error text. If a different source owns the value it throws `DuplicateUniqueConstraintValue`; the failed update rolls back, so the previous claim survives. If the same source won a primary-key insert race, it retries as an update.
 4. **A rejected value move keeps the old claim**, as MongoDB does today. A source that tries to move onto a value another source holds stays where it was.
-5. **Kernel reindex.** In default mode `ReindexConstraintsStep` clears the whole scope at the first event it sees for that scope, as per-value mode already does with `ClearValues`; `ClearValues` and its documentation are extended to cover default mode. The step catches `DuplicateUniqueConstraintValue` per event, logs it and continues. When history contains duplicates, **the first claimant in log order wins**, which is what an append would have decided. This changes MongoDB's reindex, which today fails on the first duplicate and leaves the index half built.
-6. **One policy for existing duplicates, shared by all providers.** When the unique index cannot be created because the table already holds duplicates, fall back to a non-unique index (none on SQL Server if the column could not be narrowed), log a warning with the table name and the number of duplicate values, delete nothing, and try again the next time the table is upgraded. An operator removes the losing rows or runs a reindex once item 5 has shipped. This is MongoDB's `EnsureIndex` behavior (`when_duplicates_already_exist`), adopted for SQL.
+5. **Kernel reindex.** In default mode `ReindexConstraintsStep` clears the whole scope at the first event it sees for that scope, as per-value mode already does with `ClearValues`; `ClearValues` and its documentation are extended to cover default mode. The step catches `DuplicateUniqueConstraintValue` per event, logs it and continues. When history contains duplicates, **the first claimant in log order wins**, which is what an append would have decided. A live append during the reindex window can beat a historical claimant, so "first in log order" holds for history only. This changes MongoDB's reindex, which today fails on the first duplicate and leaves the index half built.
+6. **One policy for existing duplicates, shared by all providers.** When the unique index cannot be created because the table already holds duplicates, fall back to a non-unique index (none on SQL Server if the column could not be narrowed), log a warning with the table name and the number of duplicate values, delete nothing, and try again at the next process start. The warning is logged once per table per process. On SQL Server, case-insensitive collations can surface duplicates that differ only by case. An operator removes the losing rows or runs a reindex once item 5 has shipped. This is MongoDB's `EnsureIndex` behavior (`when_duplicates_already_exist`), adopted for SQL.
 
 ## Options considered
 
@@ -66,7 +66,7 @@ Nothing ships. SQL and InMemory keep accepting duplicate holders in default mode
 
 ## Timeline and scope
 
-Delivery is three patch PRs, in this order:
+Implementation order: kernel reindex fix, then InMemory, then SQL (including a SQL Server integration run). Delivery is three patch PRs, in this order:
 
 1. **Kernel reindex fix** (item 5). It also repairs MongoDB, and it must land first so a settled store never meets a reindex that fails on the first duplicate.
 2. **InMemory owner map** (item 1).
@@ -81,22 +81,24 @@ Out of scope:
 - A shadow-table reindex, and an operator alert in addition to the log warning.
 - Changing `DuplicateUniqueConstraintValue` from diagnostic to rejecting.
 
-### Questions for the decider
+### Resolutions
 
-- (a) Narrow SQL Server `Value` to `NVARCHAR(200)` behind the never-truncate guard. This partly reverses `0f5bfdce1`.
-- (b) Adopt the fall-back-and-warn policy of item 6 and declare it shared by all providers.
-- (c) A rejected value move keeps the old claim, as MongoDB does, rather than releasing it.
-- (d) "First claimant in log order wins" becomes the reindex rule for duplicate history. This changes MongoDB's reindex.
+The decider accepted all four questions with the refinements folded into the items above.
+
+- (a) SQL Server `Value` is narrowed to `NVARCHAR(200)` behind the never-truncate guard (item 2). This partly reverses `0f5bfdce1`.
+- (b) The fall-back-and-warn policy is shared by all providers (item 6).
+- (c) A rejected value move keeps the old claim, as MongoDB does (item 4).
+- (d) "First claimant in log order wins" is the reindex rule for duplicate history, which changes MongoDB's reindex (item 5).
 
 ## Verification
 
-**Done when:** in every provider a second event source cannot hold a value that another holds, and the attempt reports `DuplicateUniqueConstraintValue` with the first holder intact; releasing the holder frees the value; a reindex over duplicate or stale-claim history completes instead of failing, with the first claimant in log order holding each value; and upgrading a SQL table that already holds duplicates keeps every row, logs the table and duplicate count, and retries on the next upgrade.
+**Done when:** in every provider a second event source cannot hold a value that another holds, and the attempt reports `DuplicateUniqueConstraintValue` with the first holder intact; releasing the holder frees the value; a reindex over duplicate or stale-claim history completes instead of failing, with the first claimant in log order holding each value; and upgrading a SQL table that already holds duplicates keeps every row, logs the table and duplicate count, and retries at the next process start.
 
 **Verify by:**
 
 - InMemory specs under `for_UniqueConstraintsStorage/when_saving`: `and_two_sources_claim_the_same_value` (throws, the first source stays sole holder), `and_the_holder_releases_after_a_rejected_claim`, `and_a_source_moves_onto_a_held_value` (old claim kept), and a concurrent-claims spec using `Task.WhenAll`. The existing `and_the_holder_has_moved_on_to_another_value` stays green. Each is red before the change.
 - The same cases against the SQLite fixture in `Storage.Sql.Specs` (`given/a_unique_constraints_storage.cs`), changed to create tables through the real `UniqueConstraintMigrator`.
-- SQL migrator specs on real databases, using the PostgreSQL fixture in `Storage.Sql.Specs` and the SQL Server fixture under `Integration/Client`: a legacy-shaped table (unbounded column, non-unique index) is upgraded to a unique index; a table with duplicates falls back and keeps every row; a SQL Server value longer than 200 characters is skipped, not truncated; a second run changes nothing.
+- SQL migrator specs on real databases, using the PostgreSQL fixture in `Storage.Sql.Specs` and the SQL Server fixture under `Integration/Client`: a legacy-shaped table (unbounded column, non-unique index) is upgraded to a unique index; a table with duplicates falls back, keeps every row and warns once per process; a SQL Server value longer than 200 characters is skipped, not truncated, and legacy pre-hash rows block narrowing with a warning that names the legacy-rows issue; a second run changes nothing.
 - Kernel specs `for_ReindexConstraintsStep/when_reindexing_duplicate_history` (does not fail, first claimant wins) and `when_a_stale_claim_shares_a_replayed_value`, on the real InMemory storage.
 - The cross-provider integration run, including SQL Server, is green on the SQL PR.
 
