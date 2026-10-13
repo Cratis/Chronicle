@@ -76,7 +76,7 @@ public class EventStoreSubscriptionObserverSubscriber(
                     @event.Context.CorrelationId,
                     @event.Context.Causation,
                     @event.Context.CausedBy,
-                    [],
+                    @event.Context.Tags,
                     ConcurrencyScope.None,
                     occurred: @event.Context.Occurred,
                     subject: @event.Context.Subject);

@@ -34,9 +34,9 @@ public class and_external_events_arrive_through_the_inferred_inbox(context setup
             var source = EventSourceId.New();
             var outbox = producer.GetEventSequence(EventSequenceId.Outbox);
 
-            // Inbox forwarding preserves routes but currently drops append tags (#4823).
-            (await outbox.Append(source, new ExternalAdded(100), eventStreamType: "Other", eventSourceType: "Orders")).IsSuccess.ShouldBeTrue();
-            var append = await outbox.Append(source, new ExternalAdded(7), eventStreamType: "Payments", eventSourceType: "Orders");
+            (await outbox.Append(source, new ExternalAdded(100), eventStreamType: "Other", eventSourceType: "Orders", tags: ["important"])).IsSuccess.ShouldBeTrue();
+            (await outbox.Append(source, new ExternalAdded(100), eventStreamType: "Payments", eventSourceType: "Orders", tags: ["ignored"])).IsSuccess.ShouldBeTrue();
+            var append = await outbox.Append(source, new ExternalAdded(7), eventStreamType: "Payments", eventSourceType: "Orders", tags: ["important", "blue"]);
             append.IsSuccess.ShouldBeTrue();
             foreach (var handler in handlers) await handler.WaitTillReachesEventSequenceNumber(append.SequenceNumber);
             Self = await consumer.ReadModels.GetInstanceById<SelfTotal>(source);
@@ -49,18 +49,18 @@ public class and_external_events_arrive_through_the_inferred_inbox(context setup
     [Fact] void should_infer_the_foreign_inbox_sequence() => Context.Sequence.ShouldEqual("inbox-4731-source");
     [Fact] void should_union_and_deduplicate_the_actual_dispatch_events() => Context.SubscriptionEvents.ShouldEqual<string>(["4731-external-added"]);
     [Fact] void should_release_the_foreign_event_into_the_self_model() => Context.Self.Total.ShouldEqual(7);
-    [Fact] void should_preserve_the_foreign_metadata_filter_for_both_forms() => Context.ClassicState.Total.ShouldEqual(Context.Self.Total);
+    [Fact] void should_preserve_the_foreign_route_and_tag_filters_for_both_forms() => Context.ClassicState.Total.ShouldEqual(Context.Self.Total);
 
     [EventType("4731-external-added"), EventStore("4731-source")]
     public record ExternalAdded(int Amount);
-    [EventSourceType("Orders"), EventStreamType("Payments")]
+    [EventSourceType("Orders"), EventStreamType("Payments"), FilterEventsByTag("important")]
     public record SelfTotal(int Total)
     {
         public static SelfTotal Reduce(ExternalAdded e, SelfTotal? current) => new((current?.Total ?? 0) + e.Amount);
         public static string Helper(string value) => value;
     }
     public record ClassicTotal(int Total);
-    [EventSourceType("Orders"), EventStreamType("Payments")]
+    [EventSourceType("Orders"), EventStreamType("Payments"), FilterEventsByTag("important")]
     public class Classic : IReducerFor<ClassicTotal>
     {
         public ClassicTotal Apply(ExternalAdded e, ClassicTotal? current) => new((current?.Total ?? 0) + e.Amount);
