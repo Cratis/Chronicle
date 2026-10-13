@@ -58,6 +58,13 @@ public interface IProjectionPipeline
     Task<IEnumerable<FailedPartition>> EndBulk();
 
     /// <summary>
+    /// Ends the bulk window within the shutdown deadline.
+    /// </summary>
+    /// <param name="cancellationToken">The shared deadline token.</param>
+    /// <returns>The failed or unknown partitions.</returns>
+    Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken) => EndBulk();
+
+    /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +14,9 @@ namespace Cratis.Chronicle.EventSequences;
 
 internal static partial class AppendedEventsQueueLogMessages
 {
+    [LoggerMessage(LogLevel.Error, "Shutdown deadline passed with {PendingItems} unfinished appended-event batches for {EventSequence}")]
+    internal static partial void DrainUnfinished(this ILogger<AppendedEventsQueue> logger, EventSequenceKey eventSequence, int pendingItems);
+
     [LoggerMessage(LogLevel.Error, "Failed notifying observers")]
     internal static partial void NotifyingObserversFailed(this ILogger<AppendedEventsQueue> logger, Exception exception);
 

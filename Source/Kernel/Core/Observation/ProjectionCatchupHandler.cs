@@ -64,6 +64,18 @@ public class ProjectionCatchupHandler(
         return result;
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<Storage.Sinks.FailedPartition>> EndBulkFor(ObserverDetails observerDetails, CancellationToken cancellationToken)
+    {
+        if (!CanHandle(observerDetails) || !projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+        {
+            return [];
+        }
+
+        var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
+        return await pipeline.EndBulk(cancellationToken);
+    }
+
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
 
     async Task<Result<ICanHandleCatchupForObserver.Error>> DoWork(
