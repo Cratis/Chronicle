@@ -16,7 +16,7 @@ public class when_confirmation_does_not_match : Specification
     void Establish() => _storage = Substitute.For<IStorage>();
 
     async Task Because() => _exception = await Catch.Exception(() => new SetInitialAdminPassword(UserId.NotSet, "password-one", "password-two")
-        .Handle(Substitute.For<IGrainFactory>(), _storage, Options.Create(new Configuration.ChronicleOptions()), Substitute.For<IEventSerializer>()));
+        .Handle(Substitute.For<IGrainFactory>(), _storage, Options.Create(new Configuration.ChronicleOptions()), Substitute.For<IEventSerializer>(), CorrelationId.New()));
 
     [Fact] void should_reject_the_confirmation() => _exception.ShouldBeOfExactType<PasswordConfirmationMismatch>();
     [Fact] void should_not_read_user_storage() => _storage.DidNotReceive().System.Users.GetById(Arg.Any<UserId>());

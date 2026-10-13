@@ -43,12 +43,13 @@ public record ReopenStreamScope(
     /// <param name="grainFactory">The grain factory.</param>
     /// <param name="causation">The request causation.</param>
     /// <param name="principalAccessor">The current principal.</param>
+    /// <param name="correlationId">The server-generated correlation identifier for the repair.</param>
     /// <returns>The repair outcome.</returns>
-    public async Task<ReopenStreamScopeOutcome> Handle(IGrainFactory grainFactory, RequestCausation causation, ICurrentPrincipalAccessor principalAccessor)
+    public async Task<ReopenStreamScopeOutcome> Handle(IGrainFactory grainFactory, RequestCausation causation, ICurrentPrincipalAccessor principalAccessor, [GeneratedValue] CorrelationId correlationId)
     {
         var sequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         var scope = ClosedStreamConverters.ToScope(EventSourceId, EventSourceType, EventStreamType, EventStreamId);
-        var result = await sequence.ReopenCompletedStream(scope, Reason, CorrelationId.New(), Causation?.ToChronicle() ?? causation.GetCurrentChain(), principalAccessor.Current.ToIdentity());
+        var result = await sequence.ReopenCompletedStream(scope, Reason, correlationId, Causation?.ToChronicle() ?? causation.GetCurrentChain(), principalAccessor.Current.ToIdentity());
 
         return result.TryGetError(out var error) ? new(false, error) : new(true, ReopenStreamScopeError.None);
     }
