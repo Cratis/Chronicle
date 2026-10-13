@@ -36,6 +36,51 @@ Everything else is untouched. gRPC clients connect to the same address as before
 
 For the example above, the Workbench is served at `https://admin.example.com/my-instance/chronicle/`, and the proxy only needs to route that path to the kernel's main port.
 
+## Reverse proxy examples
+
+The setting is the same whichever way the proxy treats the prefix. Keep TLS enabled on the kernel, and let the proxy either trust its certificate or validate it, as you would for any backend. Only the Workbench is path-routed; gRPC clients connect to the kernel directly and never use the prefix.
+
+### Traefik
+
+Pass the prefix through:
+
+```yaml
+labels:
+  - traefik.enable=true
+  - traefik.http.routers.chronicle.rule=PathPrefix(`/my-instance/chronicle`)
+  - traefik.http.services.chronicle.loadbalancer.server.port=35000
+  - traefik.http.services.chronicle.loadbalancer.server.scheme=https
+```
+
+Or strip it first, by adding a `stripprefix` middleware to the router. Chronicle behaves the same:
+
+```yaml
+  - traefik.http.routers.chronicle.middlewares=chronicle-strip
+  - traefik.http.middlewares.chronicle-strip.stripprefix.prefixes=/my-instance/chronicle
+```
+
+### nginx
+
+A `proxy_pass` without a path passes the prefix through. Adding a trailing slash strips it:
+
+```nginx
+# Prefix passed through
+location /my-instance/chronicle/ {
+    proxy_pass https://chronicle:35000;
+}
+
+# Prefix stripped
+location /my-instance/chronicle/ {
+    proxy_pass https://chronicle:35000/;
+}
+```
+
+Chronicle streams live updates to the Workbench over server-sent events and WebSockets, so keep response buffering off and allow connection upgrades. In nginx that is `proxy_buffering off;`, `proxy_http_version 1.1;` and the `Upgrade` and `Connection` headers.
+
+### Try it
+
+The [WorkbenchBehindProxy sample](https://github.com/Cratis/Chronicle/tree/main/Samples/WorkbenchBehindProxy) runs two instances behind Traefik, one for each style, with `docker compose up`.
+
 ## Why a setting and not a forwarded header
 
 Chronicle does not read `X-Forwarded-Prefix`. The kernel trusts forwarded headers from loopback and from the proxies you list in `forwardedHeaders`, and a prefix taken from a header would let anything that can reach the kernel rewrite the page it serves. An explicit setting is also what a deployment on Kubernetes already has at hand: it is configuration of that instance.
