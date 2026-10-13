@@ -15,18 +15,18 @@ public interface IHandleEventsForObserver : IJobStep<HandleEventsForObserverArgu
     /// Advances the step's progress to a new successfully handled <see cref="EventSequenceNumber"/>.
     /// </summary>
     /// <param name="lastHandledEventSequenceNumber">The last handled event sequence number.</param>
-    /// <returns>The task representing the operation.</returns>
+    /// <returns>The last confirmed durable event sequence number.</returns>
     /// <remarks>
     /// The checkpoint is persisted with debouncing (see <see cref="Configuration.Jobs.StepCheckpointBatchInterval"/>):
     /// the handled position advances every call, but persisted state only advances after the buffered writes are
     /// confirmed durable on every silo. Resume re-reads from the last durable checkpoint.
     /// </remarks>
-    Task ReportNewSuccessfullyHandledEvent(EventSequenceNumber lastHandledEventSequenceNumber);
+    Task<EventSequenceNumber> ReportNewSuccessfullyHandledEvent(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Confirm buffered writes before advancing the durable checkpoint.
     /// </summary>
     /// <param name="start">Whether to establish the window baseline before handling a new range.</param>
-    /// <returns>The task representing the operation.</returns>
-    Task FlushCheckpoint(bool start = false);
+    /// <returns>The last confirmed durable event sequence number.</returns>
+    Task<EventSequenceNumber> FlushCheckpoint(bool start = false);
 }

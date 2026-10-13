@@ -38,11 +38,18 @@ public class TestableHandleEventsForObserver(
     IObserverServiceClient observerServiceClient,
     ILogger<HandleEventsForObserver> logger,
     IEventGenerationRelease? eventGenerationRelease = null)
-    : HandleEventsForObserver(state, throttle, storage, eventCompliance, grainFactory, subscriberSelector, configurationProvider, observerServiceClient, logger, eventGenerationRelease), IGrainType
+    : HandleEventsForObserver(GuardedState(state), throttle, storage, eventCompliance, grainFactory, subscriberSelector, configurationProvider, observerServiceClient, logger, eventGenerationRelease), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForObserver).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance)!;
     static readonly FieldInfo _subscriptionField = typeof(HandleEventsForObserver).GetField("_subscription", BindingFlags.NonPublic | BindingFlags.Instance)!;
     readonly IHandleEventsForObserver _selfReference = Substitute.For<IHandleEventsForObserver>();
+    static readonly AsyncLocal<bool> _onGrainPath = new();
+    static readonly AsyncLocal<bool> _guardStateAccess = new();
+
+    /// <summary>
+    /// Gets or sets whether persistent state access outside the simulated grain reference is rejected.
+    /// </summary>
+    public bool GuardStateAccess { get; set; }
 
     /// <inheritdoc/>
     public Type GrainType => typeof(IHandleEventsForObserver);
@@ -60,8 +67,8 @@ public class TestableHandleEventsForObserver(
         _observerField.SetValue(this, observer);
         _subscriptionField.SetValue(this, subscription);
         _selfReference.ReportNewSuccessfullyHandledEvent(Arg.Any<Concepts.Events.EventSequenceNumber>())
-            .Returns(call => ReportNewSuccessfullyHandledEvent(call.Arg<Concepts.Events.EventSequenceNumber>()));
-        _selfReference.FlushCheckpoint(Arg.Any<bool>()).Returns(call => FlushCheckpoint(call.Arg<bool>()));
+            .Returns(call => OnGrainPath(() => ReportNewSuccessfullyHandledEvent(call.Arg<Concepts.Events.EventSequenceNumber>())));
+        _selfReference.FlushCheckpoint(Arg.Any<bool>()).Returns(call => OnGrainPath(() => FlushCheckpoint(call.Arg<bool>())));
     }
 
     /// <summary>
@@ -70,6 +77,36 @@ public class TestableHandleEventsForObserver(
     /// <param name="currentState">The current state of the job step.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>The result of the step.</returns>
-    public Task<Catch<JobStepResult>> InvokePerformStep(HandleEventsForObserverState currentState, CancellationToken cancellationToken = default) =>
-        PerformStep(currentState, cancellationToken);
+    public async Task<Catch<JobStepResult>> InvokePerformStep(HandleEventsForObserverState currentState, CancellationToken cancellationToken = default)
+    {
+        _guardStateAccess.Value = GuardStateAccess;
+        return await PerformStep(currentState, cancellationToken);
+    }
+
+    static IPersistentState<HandleEventsForObserverState> GuardedState(IPersistentState<HandleEventsForObserverState> inner)
+    {
+        var guarded = Substitute.For<IPersistentState<HandleEventsForObserverState>>();
+        guarded.State.Returns(_ => !_guardStateAccess.Value || _onGrainPath.Value
+            ? inner.State
+            : throw new given.StateAccessOutsideActivation());
+        guarded.Etag.Returns(_ => inner.Etag);
+        guarded.RecordExists.Returns(_ => inner.RecordExists);
+        guarded.WriteStateAsync().Returns(_ => inner.WriteStateAsync());
+        guarded.ReadStateAsync().Returns(_ => inner.ReadStateAsync());
+        guarded.ClearStateAsync().Returns(_ => inner.ClearStateAsync());
+        return guarded;
+    }
+
+    async Task<T> OnGrainPath<T>(Func<Task<T>> action)
+    {
+        _onGrainPath.Value = true;
+        try
+        {
+            return await action();
+        }
+        finally
+        {
+            _onGrainPath.Value = false;
+        }
+    }
 }

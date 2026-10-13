@@ -61,6 +61,7 @@ public class HandleEventsForObserver(
 
     IHandleEventsForObserver _selfGrainReference = null!;
     EventSequenceNumber _lastHandled = EventSequenceNumber.Unavailable;
+    EventSequenceNumber _lastDurableCheckpoint = EventSequenceNumber.Unavailable;
     JobStepCheckpointDebounce _durableCheckpoints = new(1);
     IReadOnlyDictionary<SiloAddress, Guid[]>? _windows;
     Exception? _checkpointFailure;
@@ -91,7 +92,7 @@ public class HandleEventsForObserver(
     }
 
     /// <inheritdoc/>
-    public async Task ReportNewSuccessfullyHandledEvent(EventSequenceNumber lastHandledEventSequenceNumber)
+    public async Task<EventSequenceNumber> ReportNewSuccessfullyHandledEvent(EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginJobStepScope(State);
         _lastHandled = lastHandledEventSequenceNumber;
@@ -103,10 +104,12 @@ public class HandleEventsForObserver(
         {
             throw new ObserverFlushFailed();
         }
+
+        return State.LastSuccessfullyHandledEventSequenceNumber;
     }
 
     /// <inheritdoc/>
-    public async Task FlushCheckpoint(bool start = false)
+    public async Task<EventSequenceNumber> FlushCheckpoint(bool start = false)
     {
         if (start)
         {
@@ -148,6 +151,7 @@ public class HandleEventsForObserver(
             }
 
             _durableCheckpoints.Persisted();
+            return State.LastSuccessfullyHandledEventSequenceNumber;
         }
         catch (Exception error)
         {
@@ -207,6 +211,9 @@ public class HandleEventsForObserver(
     protected override async Task<Catch<JobStepResult>> PerformStep(HandleEventsForObserverState currentState, CancellationToken cancellationToken)
     {
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+
+        // PerformStep runs outside the activation. Only grain calls may access persistent State.
+        _lastDurableCheckpoint = currentState.LastSuccessfullyHandledEventSequenceNumber;
         _subscription = await _observer.GetSubscription();
         try
         {
@@ -240,7 +247,7 @@ public class HandleEventsForObserver(
                 .ToDictionary(_ => _.Type);
 
             // Baseline every window before dispatch: losing a silo before the first checkpoint must be detectable.
-            await _selfGrainReference.FlushCheckpoint(start: true);
+            _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint(start: true);
 
             using var events = await eventSequenceStorage.GetRange(
                 currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
@@ -281,7 +288,7 @@ public class HandleEventsForObserver(
                     if (cancellationToken.IsCancellationRequested)
                     {
                         LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
-                        return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(State.LastSuccessfullyHandledEventSequenceNumber)));
+                        return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
                     }
 
                     var partition = partitionEvents[0].Context.EventSourceId;
@@ -298,8 +305,8 @@ public class HandleEventsForObserver(
                         var exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
                         lastEventSequenceNumberAttempted = partitionEvents[0].Context.SequenceNumber;
                         await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace, handleEventsException.ToFailureKind());
-                        await _selfGrainReference.FlushCheckpoint();
-                        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(State.LastSuccessfullyHandledEventSequenceNumber), exceptionMessages, exceptionStackTrace));
+                        _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint();
+                        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(_lastDurableCheckpoint), exceptionMessages, exceptionStackTrace));
                     }
                     if (handleEventsResult.TryGetResult(out var handledEventsResult))
                     {
@@ -333,8 +340,8 @@ public class HandleEventsForObserver(
                 logger.HandledAllEvents(lastSuccessfullyHandledEventSequenceNumber);
             }
 
-            await _selfGrainReference.FlushCheckpoint();
-            return JobStepResult.Succeeded(CreateResult(State.LastSuccessfullyHandledEventSequenceNumber) with
+            _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint();
+            return JobStepResult.Succeeded(CreateResult(_lastDurableCheckpoint) with
             {
                 LastScannedEventSequenceNumber = lastScannedEventSequenceNumber
             });
@@ -342,7 +349,7 @@ public class HandleEventsForObserver(
         catch (TaskCanceledException)
         {
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
-            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(State.LastSuccessfullyHandledEventSequenceNumber)));
+            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
         }
         catch (Exception e)
         {
@@ -353,7 +360,7 @@ public class HandleEventsForObserver(
             }
 
             logger.FailedWithPartialSuccess(e, lastSuccessfullyHandledEventSequenceNumber);
-            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(State.LastSuccessfullyHandledEventSequenceNumber), e));
+            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(_lastDurableCheckpoint), e));
         }
     }
 
@@ -458,7 +465,7 @@ public class HandleEventsForObserver(
         switch (eventObserverResult.State)
         {
             case ObserverSubscriberState.Ok:
-                await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
+                _lastDurableCheckpoint = await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
                 var okCountsPerEventType = handledEvents
                     .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
                     .CountByEventType();
@@ -476,10 +483,10 @@ public class HandleEventsForObserver(
                 var lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                 logger.EventHandlerDisconnected(partition, lastSuccessfullyHandledEventSequenceNumber);
                 await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, [SubscriberDisconnected], string.Empty, FailureKind.Disconnected);
-                await _selfGrainReference.FlushCheckpoint();
+                _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint();
                 return (
                     JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-                        CreateResult(State.LastSuccessfullyHandledEventSequenceNumber),
+                        CreateResult(_lastDurableCheckpoint),
                         [SubscriberDisconnected],
                         string.Empty)),
                     lastSuccessfullyHandledEventSequenceNumber);
@@ -504,7 +511,7 @@ public class HandleEventsForObserver(
                 ? failedEvent.Context.SequenceNumber
                 : eventObserverResult.LastSuccessfulObservation.Next();
 
-            await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
+            _lastDurableCheckpoint = await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
             var failedCountsPerEventType = handledEvents
                 .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
@@ -519,10 +526,10 @@ public class HandleEventsForObserver(
         logger.FailedHandlingEvents(partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);
         var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
         await _observer.PartitionFailed(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace, FailureKind.Handling);
-        await _selfGrainReference.FlushCheckpoint();
+        _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint();
         return (
             JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-                CreateResult(State.LastSuccessfullyHandledEventSequenceNumber),
+                CreateResult(_lastDurableCheckpoint),
                 eventObserverResult.ExceptionMessages,
                 eventObserverResult.ExceptionStackTrace)),
             lastSuccessfullyHandledEventSequenceNumber);

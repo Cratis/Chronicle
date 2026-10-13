@@ -8,7 +8,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_flushing_an_open_
 public class and_the_write_outcome_is_unknown : given.a_sink_with_gated_bulk_writes
 {
     BulkFlushResult _result;
-    BulkFlushResult _next;
+    Exception? _nextError;
+    BulkFlushResult _newWindow;
 
     async Task Establish()
     {
@@ -21,10 +22,13 @@ public class and_the_write_outcome_is_unknown : given.a_sink_with_gated_bulk_wri
     async Task Because()
     {
         _result = await _sink.FlushBulk();
-        _next = await _sink.FlushBulk();
+        _nextError = await Catch.Exception(_sink.FlushBulk);
+        await _sink.BeginBulk();
+        _newWindow = await _sink.FlushBulk();
     }
 
     [Fact] void should_report_the_failed_partition() => _result.FailedPartitions.Select(failure => failure.EventSourceId).ShouldContainOnly(_firstKey);
-    [Fact] void should_report_the_failure_only_once() => _next.FailedPartitions.ShouldBeEmpty();
-    [Fact] void should_keep_the_window_open() => _next.WindowId.ShouldEqual(_result.WindowId);
+    [Fact] void should_reject_durability_after_the_outcome_is_claimed() => _nextError.ShouldBeOfExactType<BulkWindowHasFailedWrites>();
+    [Fact] void should_allow_a_new_window_to_confirm_durability() => _newWindow.FailedPartitions.ShouldBeEmpty();
+    [Fact] void should_replace_the_failed_window_identity() => (_newWindow.WindowId != _result.WindowId).ShouldBeTrue();
 }

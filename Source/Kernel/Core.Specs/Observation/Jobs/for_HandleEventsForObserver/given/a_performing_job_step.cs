@@ -158,5 +158,6 @@ public class a_performing_job_step : Specification
             JobStepId.New(),
             new JobStepKey(JobId.New(), "event-store", "event-store-namespace"));
         _jobStep.SetupForTesting(_observer, subscription);
+        _jobStep.GuardStateAccess = true;
     }
 }
