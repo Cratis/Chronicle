@@ -94,7 +94,15 @@ public record AppendManyForEventSources(
         var causationChain = Causation?.ToChronicle() ?? causation.GetCurrentChain();
         var identity = CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity();
         var scopes = (ConcurrencyScopes ?? []).ToChronicle();
+        if (scopes.TryGetError(out var error))
+        {
+            return Task.FromResult(new AppendManyResult
+            {
+                CorrelationId = correlationId,
+                Errors = [error]
+            });
+        }
 
-        return eventSequence.AppendMany(events, correlationId, causationChain, identity, scopes);
+        return eventSequence.AppendMany(events, correlationId, causationChain, identity, scopes.AsT0);
     }
 }

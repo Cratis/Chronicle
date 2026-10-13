@@ -80,6 +80,11 @@ public class ChronicleOptions : IValidatableObject
     public Events Events { get; init; } = new Events();
 
     /// <summary>
+    /// Gets the shared shutdown drain configuration.
+    /// </summary>
+    public Shutdown Shutdown { get; init; } = new();
+
+    /// <summary>
     /// Feature toggles for Chronicle.
     /// </summary>
     public Features Features { get; init; } = new Features();

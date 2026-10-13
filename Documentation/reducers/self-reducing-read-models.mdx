@@ -127,7 +127,7 @@ Hooks follow the existing notification stream. A full replay sends global begin/
 - `Watch` supports reducers, but `GetWatcherFor` remains projection-only. A failed fold can still notify watchers; a notification is not proof of successful persistence ([#4817](https://github.com/Cratis/Chronicle/issues/4817)).
 - Inbox forwarding currently drops append tags for both classic and self reducers. Source/stream routes are preserved; do not rely on tags crossing stores until [#4823](https://github.com/Cratis/Chronicle/issues/4823) is delivered.
 - Generation delivery, revisions and PII use the shared reducer engine. Passive/history queries retain classic query-generation behavior; they do not acquire pinned observer-delivery guarantees.
-- Reducer decision reads remain unsupported. Container naming follows the existing naming policy; there is no reducer `ContainerName` override.
+- Reducer decision reads remain unsupported: a self-reducing model is refused like any reducer, so a rule that must hold when writers race needs a flat projection and a [decision read](../read-models/decision-reads.mdx). A passive or materialized self-reducing read does not guard an append. Container naming follows the existing naming policy; there is no reducer `ContainerName` override.
 
 Use [ReadModelScenario](../testing/read-models/scenario) for transitions and metadata-filter examples. It substitutes compliance and does not prove encryption, erasure, storage, replay or transport behavior; those require real-kernel specifications.
 
