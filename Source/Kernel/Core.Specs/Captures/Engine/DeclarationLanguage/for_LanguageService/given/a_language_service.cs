@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Captures;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Captures.Engine.DeclarationLanguage.for_LanguageService.given;
 
@@ -11,7 +12,7 @@ public class a_language_service : Specification
 
     void Establish()
     {
-        _languageService = new LanguageService();
+        _languageService = new LanguageService(NullLogger<LanguageService>.Instance);
     }
 
     protected CaptureDefinition Compile(string definition)
