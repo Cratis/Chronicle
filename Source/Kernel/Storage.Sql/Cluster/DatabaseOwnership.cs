@@ -96,11 +96,15 @@ internal sealed class DatabaseOwnership(SqlDatabaseCatalog catalog, Func<string,
         namespaceTables.UnionWith(["Jobs", "JobSteps", "FailedJobSteps", "__cratis_named_tags"]);
         return kind switch
         {
-            DatabaseKind.EventStore => history.Any(migration => !migration.StartsWith("NS-", StringComparison.Ordinal)) || tables.Keys.Any(storeTables.Contains),
-            DatabaseKind.Namespace => history.Any(migration => migration.StartsWith("NS-", StringComparison.Ordinal)) || tables.Keys.Any(table => namespaceTables.Contains(table) && !storeTables.Contains(table)),
+            DatabaseKind.EventStore => history.Any(migration => !IsNamespaceMigration(migration)) || tables.Keys.Any(storeTables.Contains),
+            DatabaseKind.Namespace => history.Any(IsNamespaceMigration) || tables.Keys.Any(table => namespaceTables.Contains(table) && !storeTables.Contains(table)),
             _ => tables.Keys.Any(table => table != "__EFMigrationsHistory" && !storeTables.Contains(table) && !namespaceTables.Contains(table))
         };
     }
+
+    // Namespace databases carry the namespace schema (NS-*) and the Cratis.Orleans jobs schema (Cratis-Orleans-Jobs-*).
+    static bool IsNamespaceMigration(string migration) =>
+        migration.StartsWith("NS-", StringComparison.Ordinal) || migration.StartsWith("Cratis-Orleans-Jobs-", StringComparison.Ordinal);
 
     static bool IsNamespaceTable(string[] columns) =>
         _eventColumns.All(column => columns.Contains(column, StringComparer.Ordinal)) ||

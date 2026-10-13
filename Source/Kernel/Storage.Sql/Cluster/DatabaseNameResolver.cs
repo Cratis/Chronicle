@@ -54,7 +54,7 @@ internal sealed class DatabaseNameResolver(string connectionString)
         var existing = await Query(context, DatabaseIdentity.Cluster).SingleOrDefaultAsync();
         if (existing is not null)
         {
-            if (existing.PhysicalName != _catalog.ClusterName)
+            if (!await _catalog.Equal(existing.PhysicalName, _catalog.ClusterName))
             {
                 throw new DatabaseNameBindingFailure("The configured cluster database does not match its reserved DatabaseNames binding.");
             }
