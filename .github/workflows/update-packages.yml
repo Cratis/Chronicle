@@ -12,6 +12,6 @@ jobs:
       # Castle.Core is pinned in Directory.Packages.props: 5.2.x breaks NSubstitute class proxies.
       # Cratis.Screenplay 4.141 changes the capture and projection languages; adopt it deliberately
       # (https://github.com/Cratis/Chronicle/issues/4799) and then remove it from this list.
-      nuget-package-exclusions: Castle.Core,Cratis.Screenplay
+      nuget-package-exclusions: Castle.Core
     secrets:
       PAT_WORKFLOWS: ${{ secrets.PAT_WORKFLOWS }}
