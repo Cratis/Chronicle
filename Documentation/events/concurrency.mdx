@@ -5,6 +5,10 @@ uid: Chronicle.ConcurrencyScope
 
 Concurrency control in Chronicle ensures that multiple operations don't interfere with each other when appending events to the same event source. Chronicle provides a sophisticated concurrency control mechanism through the `ConcurrencyScope` concept, which allows you to define precisely how concurrency should be handled based on formalized event metadata tags.
 
+:::caution[A scope guards a decision only if its position is captured before you read]
+The default scope is built when you append: the client reads the tail then and uses it as the expected position. That covers only the moment between that read and the write. It does not cover the time you spent reading state and deciding. To guard a decision, capture the position before you read the facts, or use a [decision read](../read-models/decision-reads.mdx), which does it for you. A read model you read through `IReadModels` captures nothing. See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx).
+:::
+
 ## Understanding ConcurrencyScope
 
 A `ConcurrencyScope` defines the boundaries and constraints for concurrent operations when appending events. It uses formalized, well-known event metadata tags that are indexed by Chronicle to scope concurrency control to specific aspects of your events, providing fine-grained control over when concurrency violations should be detected. These tags are separate from any user-controlled event tags you may add for categorization. See [Event Metadata Tags](../concepts/event-metadata-tags.md) for details.
@@ -167,3 +171,4 @@ One caveat on the diagnostic itself: `IAppendResult.ConcurrencyCheckPerformed` i
 5. **Use concurrency scope strategies**: Inject `IConcurrencyScopeStrategies` to get a built-in strategy (such as optimistic concurrency) instead of hand-rolling sequence-number lookups
 6. **Assert the check ran**: Read `IAppendResult.ConcurrencyCheckPerformed` when a behavior depends on serialization — [a skipped check looks exactly like a passing one](#telling-a-skipped-check-from-a-passing-one)
 7. **Adopt the first-append check per behavior**: Turn on [the first-append check](#checking-it--opt-in) where two writers must not both open the same partition, ahead of it becoming the default in the next major version
+8. **Capture the position before you read**: A scope protects a decision only if its position was taken before the facts were read. See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) and the [editing conflict scenario](../dynamic-consistency-boundary/scenarios.mdx#an-editing-conflict)
