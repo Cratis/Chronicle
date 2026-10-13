@@ -11,8 +11,11 @@ public class and_scope_has_a_matching_stream : given.a_before_first_batch
 {
     void Establish()
     {
-        _history.Add(EventToAppendFor(_eventSourceId));
-        _scopes[_eventSourceId] = _scopes[_eventSourceId] with { EventStreamId = EventStreamId.Default, EventStreamType = EventStreamType.All };
+        var streamId = new EventStreamId("target-stream");
+        var streamType = new EventStreamType("target-type");
+        _events = _events.ConvertAll(@event => @event with { eventStreamId = streamId, eventStreamType = streamType });
+        _history.Add(EventToAppendFor(_eventSourceId) with { eventStreamId = streamId, eventStreamType = streamType });
+        _scopes[_eventSourceId] = _scopes[_eventSourceId] with { EventStreamId = streamId, EventStreamType = streamType };
     }
 
     async Task Because() => _result = await AppendWithScopes();
