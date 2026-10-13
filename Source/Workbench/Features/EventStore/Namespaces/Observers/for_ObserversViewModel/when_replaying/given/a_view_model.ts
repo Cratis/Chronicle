@@ -19,7 +19,7 @@ export class a_view_model {
         this.removeObserver = new RemoveObserver();
         this.removeObserverSucceedsWith(ObserverRemovalOutcome.removed);
         this.dialogs = sinon.createStubInstance(Dialogs);
-        this.fastForward = sinon.createStubInstance(FastForward);
+        this.fastForward = new FastForward();
         this.fastForward.execute = sinon.stub().resolves({ isSuccess: true, response: new FastForwardResult(), onException: sinon.stub() });
 
         this.params = { eventStore: 'eventStore', namespace: 'namespace' };
