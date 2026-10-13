@@ -1,6 +1,6 @@
 - name: Code Analysis Rules
   href: index.md
-- name: CHR0001 - Event type must have [EventType] attribute
+- name: CHR0001 - Event type must have an event declaration attribute
   href: CHR0001.mdx
 - name: CHR0002 - Declarative projection event type must have [EventType] attribute
   href: CHR0002.mdx
