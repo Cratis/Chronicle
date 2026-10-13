@@ -26,7 +26,7 @@ public class and_it_returns_a_generic_value_task : given.a_non_awaited_assertion
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.NonAwaitedAssertionAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.NonAwaitedAssertion, Microsoft.CodeAnalysis.DiagnosticSeverity.Warning));
+        new ExpectedDiagnostic(DiagnosticIds.NonAwaitedAssertion, Microsoft.CodeAnalysis.DiagnosticSeverity.Error));
 
     [Fact] Task should_report_the_discarded_assertion() => _result;
 }

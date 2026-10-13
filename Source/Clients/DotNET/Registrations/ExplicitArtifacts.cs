@@ -30,7 +30,7 @@ namespace Cratis.Chronicle.Registrations;
 /// discovery.
 /// </para>
 /// </remarks>
-public class ExplicitArtifacts
+public partial class ExplicitArtifacts
 {
 #if NET8_0
     readonly object _lock = new();
@@ -39,6 +39,9 @@ public class ExplicitArtifacts
 #endif
     readonly List<IExplicitProjection> _projections = [];
     readonly List<(ReactorId Id, Action<IReactorBuilder> Define)> _reactors = [];
+    readonly List<EventTypeRegistration> _eventTypes = [];
+    readonly List<ExplicitArtifactRegistration> _types = [];
+    int _ordinal;
 
     /// <summary>
     /// Gets the explicitly registered projections.

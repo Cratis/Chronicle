@@ -39,7 +39,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="reducerObservers"><see cref="IReducerObservers"/> for managing reducer observers.</param>
 /// <param name="materializedReadModels">The <see cref="IMaterializedReadModels"/> for materialized read model operations.</param>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
-public class ReadModels(
+public partial class ReadModels(
     IEventStore eventStore,
     INamingPolicy namingPolicy,
     IProjections projections,
@@ -70,59 +70,8 @@ public class ReadModels(
     /// <inheritdoc/>
     public async Task Register()
     {
-        var readModels = new List<IHaveReadModel>();
-
-        readModels.AddRange(projections.GetAllHandlers());
-        readModels.AddRange(reducers.GetAllHandlers());
-
-        var readModelDefinitions = readModels.ConvertAll(readModel =>
-        {
-            var observerType = readModel switch
-            {
-                IProjectionHandler => ReadModelObserverType.Projection,
-                IReducerHandler => ReadModelObserverType.Reducer,
-                _ => ReadModelObserverType.Projection
-            };
-
-            var observerIdentifier = readModel switch
-            {
-                IProjectionHandler projectionHandler => projectionHandler.Id.Value,
-                IReducerHandler reducerHandler => reducerHandler.Id.Value,
-                _ => string.Empty
-            };
-
-            if (eventTypes.IsEventTarget(readModel.ReadModelType))
-            {
-                return CreateEventTargetDefinition(readModel.ReadModelType, observerType, observerIdentifier);
-            }
-
-            return new ReadModelDefinition
-            {
-                Type = new()
-                {
-                    Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
-                    Generation = ReadModelGeneration.First,
-                },
-                ContainerName = GetContainerNameFor(readModel.ReadModelType),
-                DisplayName = readModel.ReadModelType.Name,
-                Sink = new()
-                {
-                    ConfigurationId = Guid.Empty,
-                    TypeId = GetSinkTypeIdFor(readModel.ReadModelType)
-                },
-                Schema = schemaGenerator.GenerateForReadModel(readModel.ReadModelType).ToJson(),
-                Indexes = GetIndexesForType(readModel.ReadModelType, string.Empty),
-                ObserverType = observerType,
-                ObserverIdentifier = observerIdentifier
-            };
-        });
-
-        await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
-        {
-            EventStore = eventStore.Name,
-            Owner = ReadModelOwner.Client,
-            ReadModels = readModelDefinitions
-        });
+        var payload = PrepareRegistration();
+        await RegisterPrepared(payload);
     }
 
     /// <inheritdoc/>
@@ -557,8 +506,8 @@ public class ReadModels(
             },
             Schema = (eventStore.Connection is Connections.IKernelCapabilities capabilities &&
                 capabilities.Capabilities.Contains(Contracts.Clients.KernelCapabilities.PreciseEventTypeSchemas)
-                    ? schemaGenerator.Generate(eventTargetType)
-                    : schemaGenerator.GenerateLegacyEventType(eventTargetType)).ToJson(),
+                    ? schemaGenerator.Generate(eventTargetType, eventTypes)
+                    : schemaGenerator.GenerateLegacyEventType(eventTargetType, eventTypes)).ToJson(),
             Indexes = [],
             ObserverType = observerType,
             ObserverIdentifier = observerIdentifier

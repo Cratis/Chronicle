@@ -42,6 +42,7 @@ public class and_they_were_registered_on_the_options : Specification
 
         var schemaGenerator = Substitute.For<IJsonSchemaGenerator>();
         schemaGenerator.Generate(Arg.Any<Type>()).Returns(new JsonSchema());
+        schemaGenerator.Generate(Arg.Any<Type>(), Arg.Any<IEventTypes>()).Returns(call => schemaGenerator.Generate(call.Arg<Type>()));
         schemaGenerator.GenerateForReadModel(Arg.Any<Type>()).Returns(new JsonSchema());
 
         var servicesForClient = new ServiceCollection();

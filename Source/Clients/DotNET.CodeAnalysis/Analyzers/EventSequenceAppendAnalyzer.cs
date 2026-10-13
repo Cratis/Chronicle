@@ -33,10 +33,14 @@ public class EventSequenceAppendAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSyntaxNodeAction(AnalyzeInvocation, SyntaxKind.InvocationExpression);
+        context.RegisterCompilationStartAction(start =>
+        {
+            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.Create(start.Compilation, start.CancellationToken));
+            start.RegisterSyntaxNodeAction(node => AnalyzeInvocation(node, evidence.Value), SyntaxKind.InvocationExpression);
+        });
     }
 
-    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context)
+    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context, ExplicitRegistrationEvidence evidence)
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
         var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation);
@@ -82,7 +86,7 @@ public class EventSequenceAppendAnalyzer : DiagnosticAnalyzer
         }
 
         // Check if the event type has the EventType attribute
-        if (!WellKnownTypes.HasEventTypeAttribute(eventType))
+        if (!evidence.IsEventType(eventType, context.Compilation))
         {
             var diagnostic = Diagnostic.Create(
                 Rule,

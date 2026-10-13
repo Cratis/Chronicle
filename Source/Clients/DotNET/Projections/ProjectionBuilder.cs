@@ -183,28 +183,20 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <inheritdoc/>
     public TBuilder Children<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TReadModel, TChildModel>> builderCallback)
     {
-        if (!targetProperty.TryGetPropertyPath(out var targetPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"the target property on read model '{typeof(TReadModel).FullName}'", targetProperty);
-        }
-
+        var targetPropertyPath = ProjectionPropertyPaths.FromExpression(targetProperty, namingPolicy, ProjectionPathRole.Target, $"the target property on read model '{typeof(TReadModel).FullName}'");
         var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit) { GenerationDelivery = GenerationDelivery };
         builderCallback(builder);
-        _buildChildren.Add(delivery => _childrenDefinitions[namingPolicy.GetPropertyName(targetPropertyPath)] = builder.Build(delivery));
+        _buildChildren.Add(delivery => _childrenDefinitions[targetPropertyPath] = builder.Build(delivery));
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public TBuilder Nested<TNestedModel>(Expression<Func<TReadModel, TNestedModel?>> targetProperty, Action<INestedBuilder<TReadModel, TNestedModel>> builderCallback)
     {
-        if (!targetProperty.TryGetPropertyPath(out var targetPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"the target property on read model '{typeof(TReadModel).FullName}'", targetProperty);
-        }
-
+        var targetPropertyPath = ProjectionPropertyPaths.FromExpression(targetProperty, namingPolicy, ProjectionPathRole.Target, $"the target property on read model '{typeof(TReadModel).FullName}'");
         var builder = new NestedBuilder<TReadModel, TNestedModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit) { GenerationDelivery = GenerationDelivery };
         builderCallback(builder);
-        _buildChildren.Add(delivery => _nestedDefinitions[namingPolicy.GetPropertyName(targetPropertyPath)] = builder.Build(delivery));
+        _buildChildren.Add(delivery => _nestedDefinitions[targetPropertyPath] = builder.Build(delivery));
         return (this as TBuilder)!;
     }
 
@@ -222,11 +214,10 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <param name="eventType">The event type being observed.</param>
     protected void CollectEventStore(Type eventType)
     {
-        var eventStoreName = eventType.GetEventStoreName();
-        if (eventStoreName is not null && !_observedEventStores.Contains(eventStoreName))
-        {
-            _observedEventStores.Add(eventStoreName);
-        }
+        var stores = ProjectionEventTypes.Expand(eventType, eventTypes.AllClrTypes, GenerationDelivery)
+            .Select(type => eventTypes.GetDescriptorFor(type, EventStoreName.NotSet).EventStore)
+            .OfType<string>();
+        _observedEventStores.AddRange(stores.Except(_observedEventStores));
     }
 
     /// <summary>

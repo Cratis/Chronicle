@@ -43,10 +43,14 @@ public class DeclarativeProjectionAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSyntaxNodeAction(AnalyzeInvocation, SyntaxKind.InvocationExpression);
+        context.RegisterCompilationStartAction(start =>
+        {
+            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.Create(start.Compilation, start.CancellationToken));
+            start.RegisterSyntaxNodeAction(node => AnalyzeInvocation(node, evidence.Value), SyntaxKind.InvocationExpression);
+        });
     }
 
-    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context)
+    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context, ExplicitRegistrationEvidence evidence)
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
 
@@ -92,7 +96,7 @@ public class DeclarativeProjectionAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            if (!WellKnownTypes.HasEventTypeAttribute(typeArgument))
+            if (!evidence.IsEventType(typeArgument, context.Compilation))
             {
                 var diagnostic = Diagnostic.Create(
                     Rule,

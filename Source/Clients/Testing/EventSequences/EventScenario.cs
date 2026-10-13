@@ -136,6 +136,19 @@ public class EventScenario(
         return JsonSerializer.Serialize(stored.Content);
     }
 
+    /// <summary>
+    /// Reads the stored append generation independently of the generation selected for query delivery.
+    /// </summary>
+    /// <param name="sequenceNumber">The stored position.</param>
+    /// <returns>The original generation, if recorded.</returns>
+    internal async Task<EventTypeGeneration?> ReadAppendedGenerationAtRest(EventSequenceNumber sequenceNumber)
+    {
+        var sequence = _created.Root.Store.GetNamespace(new KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName(namespaceName.Value))
+            .GetEventSequence(new(eventSequenceId.Value));
+        var stored = await sequence.GetStoredGenerations(new(sequenceNumber.Value));
+        return stored?.AppendedGeneration is { } generation ? new EventTypeGeneration(generation.Value) : null;
+    }
+
     static (IEventLog Log, TestingEventStore Root) Create(EventSequenceId sequence, EventStoreName store, EventStoreNamespaceName ns, ICanProvideConstraints? provider, Defaults defaults)
     {
         var root = new TestingEventStore(store, ns, () => defaults.EventTypes);

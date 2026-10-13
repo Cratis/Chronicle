@@ -120,7 +120,8 @@ public class EventStoreForTesting : IEventStore, IDisposable
             ServiceProvider.GetService<IOptions<ChronicleOptions>>()?.Value);
         ClientOptions = configuredOptions ?? new ChronicleOptions();
         _jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
-        ClientArtifactsProvider = clientArtifactsProvider;
+        ExplicitSnapshot = ClientOptions.ExplicitArtifacts.CreateSnapshot();
+        ClientArtifactsProvider = ExplicitSnapshot.ApplyTo(clientArtifactsProvider);
         _namingPolicy = new CamelCaseNamingPolicy();
         var loggerFactory = new NullLoggerFactory();
         _artifactActivator = new ClientArtifactsActivator(ServiceProvider, loggerFactory);
@@ -138,10 +139,10 @@ public class EventStoreForTesting : IEventStore, IDisposable
         Connection = TestingStore.Connection;
 
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, ServiceProvider);
-        EventTypeMigrators = eventTypeMigrators;
-
         _eventTypes = new EventTypes(this, JsonSchemaGenerator, ClientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation: false, namingPolicy: _namingPolicy);
+        _eventTypes.UseMigrationServices(ServiceProvider);
         _eventTypes.Discover().GetAwaiter().GetResult();
+        EventTypeMigrators = _eventTypes.PreparedMigrators;
 
         // The in-memory event log validates appends against the same definitions a real Kernel would hold.
         _eventSources = new EventSources.EventSources(this, ClientArtifactsProvider);
@@ -159,7 +160,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
             _artifactActivator,
             _jsonSerializerOptions,
             NullLogger<Projections.Projections>.Instance);
-        ClientOptions.ExplicitArtifacts.ApplyTo(_projections);
+        ExplicitSnapshot.ApplyTo(_projections);
         _projections.Discover().GetAwaiter().GetResult();
 
         _reducers = new Reducers.Reducers(
@@ -203,7 +204,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
             NullLogger<Chronicle.ReadModels.ReadModels>.Instance);
 
         _constraintProvider = TestingEventStore.DiscoverConstraints(ClientArtifactsProvider, _eventTypes, _artifactActivator);
-        TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, eventTypeMigrators, _eventSources.All).GetAwaiter().GetResult();
+        TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, EventTypeMigrators, _eventSources.All).GetAwaiter().GetResult();
 
         _readModelsForTesting = new ReadModelsForTesting(realReadModels, EventLog, this);
         ReadModels = _readModelsForTesting;
@@ -333,6 +334,11 @@ public class EventStoreForTesting : IEventStore, IDisposable
     internal ChronicleOptions ClientOptions { get; }
 
     /// <summary>
+    /// Gets the original immutable recipes for this scenario store.
+    /// </summary>
+    internal ExplicitArtifactsSnapshot ExplicitSnapshot { get; }
+
+    /// <summary>
     /// Gets the <see cref="IJsonSchemaGenerator"/> used by this event store.
     /// </summary>
     internal IJsonSchemaGenerator JsonSchemaGenerator { get; }
@@ -455,8 +461,8 @@ public class EventStoreForTesting : IEventStore, IDisposable
             new ReactorMethodArgumentsResolver(),
             NullLogger<ReactorsImpl>.Instance,
             Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
-        ClientOptions.ExplicitArtifacts.ApplyTo(reactors);
-        if (ClientOptions.ExplicitArtifacts.Reactors.Any())
+        ExplicitSnapshot.ApplyTo(reactors);
+        if (ExplicitSnapshot.Reactors.Length > 0 || ExplicitSnapshot.Types.Any(_ => _.Kind == ExplicitArtifactKind.Reactor))
         {
             reactors.Discover().GetAwaiter().GetResult();
         }

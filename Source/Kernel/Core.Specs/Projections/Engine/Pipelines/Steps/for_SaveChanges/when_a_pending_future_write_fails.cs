@@ -26,7 +26,7 @@ public class when_a_pending_future_write_fails : given.a_save_changes_step
         _context.AddPendingFutureSave(key, changeset);
         _failure = new FailedPartition(key, _context.EventSequenceNumber);
         _failingSink = Substitute.For<ISink>();
-        _failingSink.ApplyChanges(key, changeset, _context.EventSequenceNumber).Returns(Task.FromResult<IEnumerable<FailedPartition>>([_failure]));
+        _failingSink.ApplyChangesImmediately(key, changeset, _context.EventSequenceNumber, SinkWriteMode.Always).Returns(Task.FromResult<IEnumerable<FailedPartition>>([_failure]));
     }
 
     async Task Because() => _result = await new SaveChanges(_failingSink, Substitute.For<IChangesetStorage>(), true, Substitute.For<ILogger<SaveChanges>>()).Perform(_projection, _context);

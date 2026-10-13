@@ -40,7 +40,7 @@ public class ReducerInvoker : IReducerInvoker
         _targetType = targetType;
         ReadModelType = readModelType;
         ContainerName = containerName;
-        _methodsByEventType = _methodsByEventTypeCache.Get(eventTypes, targetType, readModelType, types => BuildMethodsByEventType(targetType, readModelType, types));
+        _methodsByEventType = GetMethodsFor(eventTypes, targetType, readModelType);
 
         EventTypes = _methodsByEventType.Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
     }
@@ -135,6 +135,19 @@ public class ReducerInvoker : IReducerInvoker
                 [],
                 string.Empty);
     }
+
+    /// <summary>
+    /// Gets the registered event identities from the same dispatch map used by reducer invocation.
+    /// </summary>
+    /// <param name="eventTypes">The owning event registry.</param>
+    /// <param name="targetType">The reducer CLR type.</param>
+    /// <param name="readModelType">The registered reducer's model type.</param>
+    /// <returns>The accepted event identities.</returns>
+    internal static IImmutableList<EventType> GetEventTypesFor(IEventTypes eventTypes, Type targetType, Type readModelType) =>
+        GetMethodsFor(eventTypes, targetType, readModelType).Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
+
+    static FrozenDictionary<Type, MethodInfo> GetMethodsFor(IEventTypes eventTypes, Type targetType, Type readModelType) =>
+        _methodsByEventTypeCache.Get(eventTypes, targetType, readModelType, types => BuildMethodsByEventType(targetType, readModelType, types));
 
     static FrozenDictionary<Type, MethodInfo> BuildMethodsByEventType(Type targetType, Type readModelType, IEnumerable<Type> eventTypes)
     {

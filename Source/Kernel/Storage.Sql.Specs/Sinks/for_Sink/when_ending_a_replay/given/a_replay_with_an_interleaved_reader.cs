@@ -9,12 +9,12 @@ using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.given;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_ending_a_replay.given;
 
-public class a_replay_with_an_interleaved_reader : Contract.an_accumulating_read_model<file_backed_sql_sink_harness>
+public class a_replay_with_an_interleaved_reader : Contract.an_accumulating_read_model<SqlSinkHarness>
 {
     protected ISink _reader;
     protected Func<Task> _afterPrimaryRename = () => Task.CompletedTask;
 
-    file_backed_sql_sink_harness _sqlHarness;
+    SqlSinkHarness _sqlHarness;
 
     async Task Establish()
     {
@@ -24,7 +24,7 @@ public class a_replay_with_an_interleaved_reader : Contract.an_accumulating_read
         await _sink.ApplyChanges(_key, ChangesetSettingCountTo(2), 42UL);
     }
 
-    protected override file_backed_sql_sink_harness CreateHarness() => _sqlHarness = new()
+    protected override SqlSinkHarness CreateHarness() => _sqlHarness = new()
     {
         Interceptors = [new after_primary_rename(() => _afterPrimaryRename())]
     };
