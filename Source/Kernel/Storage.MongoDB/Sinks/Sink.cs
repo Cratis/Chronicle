@@ -1152,14 +1152,20 @@ public class Sink(
             outcome = UnknownBatchOutcome(batch, exception);
         }
 
-        RecordBulkOutcome(batch, outcome);
-        foreach (var pendingDelete in batch.FlushedPendingDeletes)
+        try
         {
-            // A newer mark belongs to a delete queued after this batch was detached.
-            ((ICollection<KeyValuePair<string, long>>)_bulkPendingDeletes).Remove(pendingDelete);
+            RecordBulkOutcome(batch, outcome);
+            foreach (var pendingDelete in batch.FlushedPendingDeletes)
+            {
+                // A newer mark belongs to a delete queued after this batch was detached.
+                ((ICollection<KeyValuePair<string, long>>)_bulkPendingDeletes).Remove(pendingDelete);
+            }
         }
-
-        batch.Completion.TrySetResult();
+        finally
+        {
+            // The batch runs detached, so whoever awaits its completion must never be left waiting.
+            batch.Completion.TrySetResult();
+        }
     }
 
     void RecordBulkOutcome(BulkBatch batch, BulkOutcome outcome)
