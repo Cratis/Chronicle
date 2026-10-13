@@ -61,8 +61,7 @@ public partial class Observer
     /// <returns>The reason, or null if the events are not held back for a reason that catch-up or replay answers.</returns>
     SuspectedSkipReason? HeldBackReasonFor(Key partition)
     {
-        if (IsRetired || _removed || !_observerExists || !_subscription.IsSubscribed || Failures.IsFailed(partition) ||
-            IsQuarantined || State.RunningState != ObserverRunningState.Active)
+        if (!CanHoldBackForCatchUpOrReplay(partition))
         {
             return null;
         }
@@ -79,6 +78,13 @@ public partial class Observer
 
         return State.CatchingUpPartitions.Contains(partition) ? SuspectedSkipReason.HeldBackWhileCatchingUp : null;
     }
+
+    bool CanHoldBackForCatchUpOrReplay(Key partition) =>
+        IsObserverLive() && _subscription.IsSubscribed && !Failures.IsFailed(partition) && IsActiveAndNotQuarantined();
+
+    bool IsObserverLive() => !IsRetired && !_removed && _observerExists;
+
+    bool IsActiveAndNotQuarantined() => !IsQuarantined && State.RunningState == ObserverRunningState.Active;
 
     void NoteHeldBackEvents(Key partition, IEnumerable<AppendedEvent> events)
     {

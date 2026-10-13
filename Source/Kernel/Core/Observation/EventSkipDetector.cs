@@ -106,14 +106,14 @@ internal sealed class EventSkipDetector(Func<Key, bool> isOwnedByObserver, Actio
     /// <param name="next">The observer's next event sequence number.</param>
     internal void DiscardedBelowNext(Key partition, IEnumerable<EventSequenceNumber> sequenceNumbers, EventSequenceNumber next) => Run(() =>
     {
-        if (_jobOwnedSaturated || _jobReportedSaturated || _advances.Count == 0 || IsOwned(partition))
+        if (!CanSuspectDiscards(partition))
         {
             return;
         }
 
         var suspected = sequenceNumbers
             .Select(_ => _.Value)
-            .Where(_ => _ < next.Value && !IsCovered(partition, _) && !IsObserverWideCovered(_) && WasPassedByAnotherPartition(partition, _))
+            .Where(_ => _ < next.Value && IsUncoveredAndPassed(partition, _))
             .Order()
             .ToArray();
         if (suspected.Length > 0)
@@ -220,7 +220,7 @@ internal sealed class EventSkipDetector(Func<Key, bool> isOwnedByObserver, Actio
     /// <param name="after">The position after.</param>
     internal void Advanced(Key partition, EventSequenceNumber before, EventSequenceNumber after) => Run(() =>
     {
-        if (!before.IsActualValue || !after.IsActualValue || after.Value <= before.Value)
+        if (!IsForwardMove(before, after))
         {
             return;
         }
@@ -238,7 +238,7 @@ internal sealed class EventSkipDetector(Func<Key, bool> isOwnedByObserver, Actio
     /// <param name="through">The furthest position reported.</param>
     internal void RoundConcluded(EventSequenceNumber through) => Run(() =>
     {
-        if (through.IsActualValue && (_observerWideThrough is null || through.Value > _observerWideThrough))
+        if (ExtendsObserverWideReach(through))
         {
             _observerWideThrough = through.Value;
         }
@@ -250,7 +250,7 @@ internal sealed class EventSkipDetector(Func<Key, bool> isOwnedByObserver, Actio
     /// <param name="next">The observer's next event sequence number.</param>
     internal void Evaluate(EventSequenceNumber next)
     {
-        if (_faulted || _pending.Count == 0 || next.Value <= _pendingMinimum)
+        if (!MayHavePendingBelow(next))
         {
             return;
         }
@@ -288,6 +288,9 @@ internal sealed class EventSkipDetector(Func<Key, bool> isOwnedByObserver, Actio
         _jobReportedSaturated = false;
     });
 
+    static bool IsForwardMove(EventSequenceNumber before, EventSequenceNumber after) =>
+        before.IsActualValue && after.IsActualValue && after.Value > before.Value;
+
     void Run(Action action)
     {
         if (_faulted)
@@ -318,7 +321,24 @@ internal sealed class EventSkipDetector(Func<Key, bool> isOwnedByObserver, Actio
         _jobOwned[partition] = ++_tickets;
     }
 
-    bool IsOwned(Key partition) => _jobOwnedSaturated || _jobOwned.ContainsKey(partition) || isOwnedByObserver(partition);
+    bool CanSuspectDiscards(Key partition) =>
+        !IsSaturated() && _advances.Count > 0 && !IsOwned(partition);
+
+    bool IsSaturated() => _jobOwnedSaturated || _jobReportedSaturated;
+
+    bool IsUncoveredAndPassed(Key partition, ulong sequenceNumber) =>
+        !IsCovered(partition, sequenceNumber) &&
+        !IsObserverWideCovered(sequenceNumber) &&
+        WasPassedByAnotherPartition(partition, sequenceNumber);
+
+    bool ExtendsObserverWideReach(EventSequenceNumber through) =>
+        through.IsActualValue && (_observerWideThrough is null || through.Value > _observerWideThrough);
+
+    bool MayHavePendingBelow(EventSequenceNumber next) =>
+        !_faulted && _pending.Count > 0 && next.Value > _pendingMinimum;
+
+    bool IsOwned(Key partition) =>
+        _jobOwnedSaturated || _jobOwned.ContainsKey(partition) || isOwnedByObserver(partition);
 
     bool IsCovered(Key partition, ulong sequenceNumber) =>
         (_unknownCoverageCeiling is { } ceiling && sequenceNumber <= ceiling) ||
