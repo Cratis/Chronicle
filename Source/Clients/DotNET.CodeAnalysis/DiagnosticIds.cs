@@ -288,4 +288,24 @@ public static class DiagnosticIds
     /// A type implements multiple closed projection or reducer interfaces.
     /// </summary>
     public const string MultipleArtifactInterfaces = "CHR0057";
+
+    /// <summary>
+    /// A static self-reducer method has a near-miss signature.
+    /// </summary>
+    public const string SelfReducerMethodSignatureMustMatchAllowed = "CHR0058";
+
+    /// <summary>
+    /// A self-reducer lifecycle hook has an invalid declaration shape.
+    /// </summary>
+    public const string SelfReducerLifecycleHookSignatureMustMatchAllowed = "CHR0059";
+
+    /// <summary>
+    /// Self-reducer handlers have definite declaration-level ambiguity.
+    /// </summary>
+    public const string SelfReducerMethodMustBeUnambiguous = "CHR0060";
+
+    /// <summary>
+    /// A self-reducer read model has conflicting visible builder ownership.
+    /// </summary>
+    public const string ReadModelBuilderOwnershipMustBeUnambiguous = "CHR0061";
 }
