@@ -596,9 +596,20 @@
                 "actions": {
                     "replay": "Replay",
                     "clearQuarantine": "Clear quarantine",
+                    "fastForward": "Fast forward",
                     "remove": "Remove"
                 },
                 "dialogs": {
+                    "fastForward": {
+                        "title": "Fast forward observer",
+                        "message": "Fast forward '{observerId}' to the end of the event sequence?\n\nEvery event it has not yet handled is skipped without being observed, and its failed partitions are discarded. Read models it maintains are not rebuilt and will miss the effect of the skipped events.\n\nThis cannot be undone, other than by replaying the observer.",
+                        "resultTitle": "Fast forward",
+                        "fastForwarded": "'{observerId}' was fast forwarded.",
+                        "alreadyAtTail": "'{observerId}' is already at the end of the event sequence.",
+                        "replaying": "'{observerId}' is replaying and cannot be fast forwarded until the replay has completed.",
+                        "notAvailable": "'{observerId}' is retired or removed and cannot be fast forwarded.",
+                        "failed": "Fast forward of '{observerId}' failed: {error}"
+                    },
                     "removeObserver": {
                         "title": "Remove observer",
                         "message": "Remove '{observerId}' and everything the event store keeps for it?\n\nThis deletes its definition, its state and handled counts in every namespace of this event store, its failed partitions and, if it is a projection, its projection definition. Read models and their data are not touched.\n\nThis cannot be undone. The observer comes back only if the code that declared it registers it again - and it will then start over from the beginning of the event sequence.",

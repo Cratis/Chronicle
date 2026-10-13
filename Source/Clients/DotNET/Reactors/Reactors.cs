@@ -376,6 +376,14 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         return Guid.TryParse(response.JobId, out var value) ? new JobId(value) : JobId.NotSet;
     }
 
+    /// <inheritdoc/>
+    public Task<FastForwardResult> FastForward<TReactor>()
+        where TReactor : IReactor => FastForward(GetHandlerFor(typeof(TReactor)).Id);
+
+    /// <inheritdoc/>
+    public Task<FastForwardResult> FastForward(ReactorId reactorId) =>
+        ObserverFastForwarder.FastForward(_servicesAccessor.Services.Observers, _eventStore.Name, _eventStore.Namespace, reactorId);
+
     /// <summary>
     /// Add a fluent reactor definition that is built and registered by the next <see cref="Discover"/>.
     /// </summary>
