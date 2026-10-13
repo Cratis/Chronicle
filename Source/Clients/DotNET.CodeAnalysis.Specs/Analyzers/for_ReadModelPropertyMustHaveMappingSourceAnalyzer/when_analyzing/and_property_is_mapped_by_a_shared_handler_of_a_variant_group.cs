@@ -6,7 +6,7 @@ using Cratis.Chronicle.CodeAnalysis.Specs.Testing;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_ReadModelPropertyMustHaveMappingSourceAnalyzer.when_analyzing;
 
 /// <summary>
-/// A <c>[GlobalFor]</c> type maps a member for every variant of its group, so a variant property that only the shared
+/// A <c language="csharp">[GlobalFor]</c> type maps a member for every variant of its group, so a variant property that only the shared
 /// handler populates has a mapping source even though the variant itself declares none.
 /// </summary>
 public class and_property_is_mapped_by_a_shared_handler_of_a_variant_group : given.a_read_model_property_must_have_mapping_source_analyzer
