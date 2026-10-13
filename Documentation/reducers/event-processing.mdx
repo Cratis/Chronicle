@@ -20,6 +20,8 @@ Reducers use convention-based method discovery. Chronicle automatically finds an
 
 ### When more than one method matches
 
+This section describes classic instance reducers. [Self reducers](self-reducing-read-models#handler-selection) use public static `Reduce` methods and uniquely most-specific dispatch; ambiguity fails rather than using method-name or context-overload tie-breaking.
+
 Discovery matches on the parameter types, so a helper you extract out of a reducer method keeps the same shape the reducer method has and matches the same event type. When that happens, Chronicle picks one method per event type, in this order:
 
 1. **A public method beats a non-public one.** Reducer methods are public by convention; anything else is an implementation detail, so a private helper never displaces the method that calls it.
@@ -41,7 +43,7 @@ Each reducer method is called for a single event source:
 Events are guaranteed to be processed in sequence order:
 
 1. Events are ordered by their sequence number
-2. Each method is called once per event
+2. Each event in the delivered batch invokes its selected method; retries and replays can deliver it again
 3. The return value becomes the `current` parameter for the next event
 
 ## Method Signatures
@@ -129,6 +131,8 @@ Skip processing based on conditions:
 <ChronicleClientTabs snippet="reducers/event-processing/conditional-processing-pattern" />
 
 ## Error Handling
+
+A failed fold does not persist a successful prefix of that batch. Watchers can still be notified on a failed fold, so a `Watch` notification is not a persistence-success signal ([#4817](https://github.com/Cratis/Chronicle/issues/4817)). This limitation is shared by classic and self reducers.
 
 ### Handling Invalid State
 

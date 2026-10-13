@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Captures;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.ExternalServices;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
@@ -104,20 +103,8 @@ public class CaptureValidator(IStorage storage) : ICaptureValidator
             messages.Add(new("An events source must name at least one public event type to capture from, e.g. 'from ShipmentDispatched'"));
         }
 
-        var schemas = new List<EventTypeSchema>();
-        foreach (var eventType in events.Distinct())
-        {
-            if (await eventStoreStorage.EventTypes.HasFor(new EventTypeId(eventType)))
-            {
-                schemas.Add(await eventStoreStorage.EventTypes.GetFor(new EventTypeId(eventType)));
-            }
-            else
-            {
-                messages.Add(new($"There is no event type named '{eventType}' to capture from"));
-            }
-        }
-
-        messages.AddRange(EventsCaptureSequence.Resolve(source.Sequence, schemas, out _).Select(error => new CaptureValidationMessage(error)));
+        var resolved = await EventsCaptureSequence.ResolveFor(eventStoreStorage.EventTypes, source);
+        messages.AddRange(resolved.Errors.Select(error => new CaptureValidationMessage(error)));
 
         if (!string.IsNullOrWhiteSpace(source.Poll))
         {

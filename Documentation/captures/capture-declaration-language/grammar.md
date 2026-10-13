@@ -31,14 +31,22 @@ Directive        = SourceBlock
                  | NestedBlock
                  | ChildrenBlock ;
 
-SourceBlock      = "source", SourceType, NL,
+SourceBlock      = EventsSource
+                 | "source", SourceType, NL,
                    INDENT,
                      { SourceProperty },
                    DEDENT ;
 
-SourceType       = "api" | "webhook" | "message" | "events" ;
+SourceType       = "api" | "webhook" | "message" ;
 
-SourceProperty   = ("api" | "route" | "poll" | "path" | "topic" | "sequence" | "from"), LineValue, NL ;
+SourceProperty   = ("api" | "route" | "poll" | "path" | "topic"), LineValue, NL ;
+
+EventsSource     = "source", "events", NL,
+                   INDENT,
+                     FromEvent, { FromEvent },
+                   DEDENT ;
+
+FromEvent        = "from", LineValue, NL ;
 
 KeyDirective     = "key", LineValue, NL ;
 
@@ -105,3 +113,6 @@ The parser grammar is complemented by compiler validation rules:
 - Exactly one `key` directive is required
 - At most one root `map` block is allowed
 - Every `append` block must contain one `when` clause
+- Every `from` event in an events source must be registered as public with the same nonempty origin; Chronicle derives the inbox from that origin
+
+Legacy `sequence inbox-<event store>` lines in an events source are deprecated but still accepted, with a deprecation warning. The named inbox must match every event's origin. They are omitted from the grammar for new declarations above.

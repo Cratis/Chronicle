@@ -10,4 +10,10 @@ namespace Cratis.Chronicle.Captures.Engine.DeclarationLanguage;
 /// </summary>
 /// <param name="node">The <see cref="SyntaxNode"/> that is not supported.</param>
 public class UnsupportedCaptureSyntax(SyntaxNode node)
-    : Exception($"Capture syntax node of type '{node.GetType().Name}' at line {node.Location.Line}, column {node.Location.Column} is not supported");
+    : Exception($"Capture syntax node of type '{node.GetType().Name}' at line {node.Location.Line}, column {node.Location.Column} is not supported")
+{
+    /// <summary>
+    /// Gets the unsupported node, including its original source location.
+    /// </summary>
+    public SyntaxNode Node { get; } = node;
+}

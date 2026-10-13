@@ -23,6 +23,7 @@ using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Captures.for_CaptureEventsSubscriber.given;
@@ -32,7 +33,6 @@ public class a_capture_events_subscriber : Specification
     protected const string Declaration = """
         capture ShipmentTracking
           source events
-            sequence inbox-fulfillment
             from ShipmentDispatched
             from ShipmentDelivered
           key $eventSourceId
@@ -97,6 +97,11 @@ public class a_capture_events_subscriber : Specification
         });
 
         eventTypes.HasFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>()).Returns(true);
+        foreach (var name in new[] { "ShipmentDispatched", "ShipmentDelivered" })
+        {
+            eventTypes.GetFor(new EventTypeId(name), Arg.Any<EventTypeGeneration?>())
+                .Returns(new EventTypeSchema(new EventType(name, EventTypeGeneration.First), EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema(), EventTypeVisibility.Public, "fulfillment"));
+        }
         eventTypes.GetFor(new EventTypeId("OrderShipped"), Arg.Any<EventTypeGeneration?>())
             .Returns(new EventTypeSchema(new EventType("OrderShipped", EventTypeGeneration.First), EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema()));
 
@@ -116,7 +121,7 @@ public class a_capture_events_subscriber : Specification
 
         _silo = new TestKitSilo();
         _silo.AddService(_storage);
-        _silo.AddService<ILanguageService>(new LanguageService());
+        _silo.AddService<ILanguageService>(new LanguageService(NullLogger<LanguageService>.Instance));
         _silo.AddService<ICaptureEventTranslator>(new CaptureEventTranslator(new CaptureChangeDetector(), new WhenClauseEvaluator(), new CaptureContentMapper()));
         _silo.AddService(new JsonSerializerOptions());
         _silo.AddService(Substitute.For<ILogger<CaptureEventsSubscriber>>());

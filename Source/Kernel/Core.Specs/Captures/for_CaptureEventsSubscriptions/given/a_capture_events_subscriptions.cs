@@ -63,8 +63,8 @@ public class a_capture_events_subscriptions : Specification
 
         RegisterPublic("ShipmentDispatched", "fulfillment");
         RegisterPublic("ShipmentDelivered", "fulfillment");
-        _eventTypes.GetFor(Arg.Any<IEnumerable<EventTypeId>>()).Returns(call =>
-            call.Arg<IEnumerable<EventTypeId>>().Select(id => _schemas[id.Value]).ToArray());
+        _eventTypes.HasFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>()).Returns(call => _schemas.ContainsKey(call.Arg<EventTypeId>().Value));
+        _eventTypes.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>()).Returns(call => _schemas[call.Arg<EventTypeId>().Value]);
 
         _grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(call =>
         {
