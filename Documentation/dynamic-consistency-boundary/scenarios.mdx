@@ -86,7 +86,7 @@ Two people open the same project and both rename it. The second save should not 
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/editing-conflict" variants="csharp" />
 
-Return the revision with the form, and send it back with the change. The scope rejects the append when a `ProjectRenamed` event for that project was appended after that revision. Narrowing to `ProjectRenamed` means another person editing a different field does not cause a conflict. List every event type that should invalidate the user's view, and no others.
+Order matters. Capture the revision first, then load the data for the form, and return the revision with the form. Load the data from the event log, a passive read model or a decision read, so it includes every event up to the captured revision. Do not load it from a materialized read model: it updates asynchronously and may lag behind the captured tail. The revision would then claim the user saw events the form never showed, and the scope would accept a save made over a change the user did not see. Send the revision back with the change. The scope rejects the append when a `ProjectRenamed` event for that project was appended after that revision. Narrowing to `ProjectRenamed` means another person editing a different field does not cause a conflict. List every event type that should invalidate the user's view, and no others.
 
 If the project has no events yet, the tail is not a usable position. Create it with a constraint or `ExpectingNoMatchingEvent()` instead.
 

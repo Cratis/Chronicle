@@ -156,4 +156,4 @@ Materialized projections are the right choice when:
 | Materialized, read after waiting | Asynchronously; the caller waits | Includes the caller's own append | O(1) read, plus the wait |
 | Materialized projections | Asynchronously | Eventual | O(1) — stored result |
 
-None of these guards an append. Only constraints, concurrency scopes and decision reads do. These are not mutually exclusive. A real application often uses materialized projections for high-volume list views, passive read models for authoritative state checks, and an explicit wait in the few places where one caller must read its own write.
+None of these guards an append: passive read models are fresh, but they are still unguarded, because nothing checks at append time that the state you read is unchanged. Only constraints, concurrency scopes and decision reads do. These are not mutually exclusive. A real application often uses materialized projections for high-volume list views, passive read models for authoritative state checks, and an explicit wait in the few places where one caller must read its own write.

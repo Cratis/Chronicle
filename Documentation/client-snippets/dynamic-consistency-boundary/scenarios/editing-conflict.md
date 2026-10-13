@@ -8,7 +8,8 @@ public record ProjectRenamed(string Name);
 
 public static class RenameProject
 {
-    // Return this with the form. It is the last event the user could have seen for the project.
+    // Capture this BEFORE you load the form data, then return it with the form. Load the data from the
+    // event log or a passive read model (a fresh fold), never from a materialized read model.
     public static Task<EventSequenceNumber> GetRevision(IEventLog eventLog, EventSourceId projectId) =>
         eventLog.GetTailSequenceNumber(projectId);
 

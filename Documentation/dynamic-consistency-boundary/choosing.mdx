@@ -93,7 +93,7 @@ A decision read does not use the stored read model. For each attempt the client:
 2. Folds the key's events in a fresh session and starts a session cleanup request without waiting for it.
 3. Retries, up to three attempts in total, if the fold stopped short of the second tail or ran past the first.
 
-The first read of each model type in a process makes two more calls to list definitions. At commit the kernel runs one filtered tail query for each guarded key, in parallel. An append with no guard runs none.
+The first read of each model type in a process makes two more calls to list definitions. At commit the kernel runs one filtered tail query for each guarded key, in parallel. An append with no guard of your own still gets the default optimistic check: the client reads a tail when the append is made (the first append into a scope is unchecked unless configured otherwise) and the kernel validates it at commit. That protects only the short window between that read and the commit, not the decision you made earlier.
 
 | Mechanism | Round trips | Work per read | Grows with |
 |---|---|---|---|
