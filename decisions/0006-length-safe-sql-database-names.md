@@ -1,12 +1,12 @@
 ---
 id: 0006-length-safe-sql-database-names
 title: Keep derived SQL database names within the provider's length limit and bind them once
-status: proposed
+status: accepted
 stage: none
 class: contract
 reversibility: costly
-decided:
-decider:
+decided: 2026-10-13
+decider: woksin
 applies-to:
   - Source/Kernel/Storage.Sql/Database.cs
   - Source/Kernel/Storage.Sql/Cluster/**
@@ -16,7 +16,7 @@ applies-to:
 <!-- markdownlint-disable-next-line MD025 -->
 # Keep derived SQL database names within the provider's length limit and bind them once
 
-Proposed for Cratis/Chronicle#4849.
+Accepted on 2026-10-13 by woksin for Cratis/Chronicle#4849.
 
 ## Context
 
