@@ -121,12 +121,15 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return expandoObject;
     }
 
+    static bool HasProtectedValueMetadata(JsonSchema schema) =>
+        schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any();
+
     JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty)
     {
         // Compliance handlers replace protected scalar values with opaque strings while the registered schema
         // intentionally remains the schema of the plaintext event. Keep those strings opaque until the
         // compliance manager releases them instead of coercing ciphertext through the plaintext scalar type.
-        if (value is string compliantValue && schemaProperty.GetComplianceMetadata().Any())
+        if (value is string compliantValue && HasProtectedValueMetadata(schemaProperty))
         {
             return JsonValue.Create(compliantValue);
         }
@@ -236,7 +239,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 return ConvertJsonValueToSchemaType(jsonNode, schemaProperty);
             }
             catch (Exception ex) when (
-                schemaProperty.GetComplianceMetadata().Any() &&
+                HasProtectedValueMetadata(schemaProperty) &&
                 jsonNode.AsValue().TryGetValue<string>(out _) &&
                 ex is FormatException or InvalidCastException or InvalidOperationException or OverflowException)
             {
@@ -268,7 +271,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         var value = jsonNode.AsValue();
 
-        var isCompliant = schemaProperty.GetComplianceMetadata().Any();
+        var isCompliant = HasProtectedValueMetadata(schemaProperty);
 
         // Nullable enum values are represented as a discriminated union with a null value. We need to get the actual property definition.
         // Other types could also be represented in this manner and it is therefor important to get the actual property definition.

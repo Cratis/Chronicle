@@ -40,6 +40,7 @@ internal static class ReducerReadModelProcessor
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> used when invoking the reducer.</param>
     /// <param name="namingPolicy">The <see cref="INamingPolicy"/> for deriving the read model container name.</param>
     /// <param name="initialState">Optional initial read model state the reducer reduces on top of.</param>
+    /// <param name="eventContexts">Optional original contexts when reading the store's event log.</param>
     /// <returns>The reduced read model and the distinct event sources that passed the reducer's filters.</returns>
     /// <exception cref="ReducerFailed">Thrown when the reducer raises an error while processing the events.</exception>
     public static async Task<(TReadModel? State, IReadOnlyList<EventSourceId> EventSourceIds)> Process<TReadModel>(
@@ -50,7 +51,8 @@ internal static class ReducerReadModelProcessor
         IClientArtifactsActivator artifactsActivator,
         IServiceProvider serviceProvider,
         INamingPolicy namingPolicy,
-        TReadModel? initialState = null)
+        TReadModel? initialState = null,
+        IReadOnlyList<EventContext>? eventContexts = null)
         where TReadModel : class
     {
         var readModelType = typeof(TReadModel);
@@ -58,7 +60,7 @@ internal static class ReducerReadModelProcessor
         var invoker = new ReducerInvoker(eventTypes, artifactsActivator, reducerType, readModelType, containerName);
 
         var eventsList = events.ToList();
-        var contexts = eventsList.Select((@event, index) =>
+        var contexts = eventContexts ?? eventsList.Select((@event, index) =>
         {
             return EventContext.From(
                 eventStore.Name,
@@ -71,7 +73,7 @@ internal static class ReducerReadModelProcessor
                 (EventSequenceNumber)(ulong)index,
                 CorrelationId.NotSet);
         }).ToArray();
-        var (prepared, _) = await ReadModelEvents.Prepare(eventStore, eventsList.Select(input => (input.EventSourceId, input.Event)).ToArray(), contexts);
+        var (prepared, _) = await ReadModelEvents.Prepare(eventStore, eventsList.Select(input => (input.EventSourceId, input.Event)).ToArray(), contexts, persist: eventContexts is null);
         var filters = new ObserverRouteFilter(reducerType, eventStore.EventSources);
         var eventsAndContexts = new List<EventAndContext>();
         foreach (var index in Enumerable.Range(0, prepared.Length).Where(index => filters.Matches(prepared[index])))
