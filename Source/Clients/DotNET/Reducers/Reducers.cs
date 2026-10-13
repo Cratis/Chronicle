@@ -264,6 +264,14 @@ public partial class Reducers : IReducers
     }
 
     /// <inheritdoc/>
+    public Task<FastForwardResult> FastForward<TReducer>()
+        where TReducer : IReducer => FastForward(_handlersByType[typeof(TReducer)].Id);
+
+    /// <inheritdoc/>
+    public Task<FastForwardResult> FastForward(ReducerId reducerId) =>
+        ObserverFastForwarder.FastForward(_servicesAccessor.Services.Observers, _eventStore.Name, _eventStore.Namespace, reducerId);
+
+    /// <inheritdoc/>
     public async Task<object?> GetInstanceById(Type readModelType, ReadModelKey readModelKey)
     {
         var handler = GetHandlerForReadModelType(readModelType);

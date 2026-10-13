@@ -176,4 +176,19 @@ public interface IReducers
     /// <param name="reducerId"><see cref="ReducerId"/> to replay.</param>
     /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reducer is not replayable or its observer is not in a state it can replay from (disconnected, quarantined); reconnect or release it before replaying.</returns>
     Task<JobId> Replay(ReducerId reducerId);
+
+    /// <summary>
+    /// Fast forward a reducer to the tail of the event log, skipping every event it has not yet handled without invoking it.
+    /// </summary>
+    /// <typeparam name="TReducer">Type of reducer to fast forward.</typeparam>
+    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    Task<FastForwardResult> FastForward<TReducer>()
+        where TReducer : IReducer;
+
+    /// <summary>
+    /// Fast forward a specific reducer by its identifier to the tail of the event log, skipping every event it has not yet handled without invoking it.
+    /// </summary>
+    /// <param name="reducerId"><see cref="ReducerId"/> to fast forward.</param>
+    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    Task<FastForwardResult> FastForward(ReducerId reducerId);
 }
