@@ -18,6 +18,11 @@ public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : I
     /// <inheritdoc/>
     public async Task Create(EventStoreNamespaceName name, DateTimeOffset created)
     {
+        if (database is Database sql)
+        {
+            await sql.BindNamespace(eventStore, name);
+        }
+
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.Namespaces.AddAsync(new Namespace { Name = name.ToString(), Created = created });
         await scope.DbContext.SaveChangesAsync();
@@ -34,6 +39,11 @@ public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : I
     /// <inheritdoc/>
     public async Task Ensure(EventStoreNamespaceName name)
     {
+        if (database is Database sql)
+        {
+            await sql.BindNamespace(eventStore, name);
+        }
+
         await using var scope = await database.EventStore(eventStore);
         var result = await scope.DbContext.Namespaces.FindAsync(name.ToString());
         if (result is null)
