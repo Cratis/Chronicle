@@ -17,6 +17,11 @@ internal sealed class ReadModelFold<TReadModel>
     where TReadModel : class
 {
     /// <summary>
+    /// Gets the runtime read model type, including for an untyped fold.
+    /// </summary>
+    public Type ReadModelType { get; init; } = typeof(TReadModel);
+
+    /// <summary>
     /// Gets the owning store.
     /// </summary>
     public required EventStoreForTesting EventStore { get; init; }
@@ -68,6 +73,10 @@ internal sealed class ReadModelFold<TReadModel>
         IReadOnlyList<EventContext>? eventContexts = null)
     {
         var eventsList = events.ToList();
+        var context = new ReadModelFoldContext(EventStore, EventTypes, SchemaGenerator, ServiceProvider, ReadModelType)
+        {
+            EventContexts = eventContexts
+        };
         if (ReducerType is not null)
         {
             var (reduced, distinctEventSourceIds) = await ReducerReadModelProcessor.Process(
@@ -79,11 +88,8 @@ internal sealed class ReadModelFold<TReadModel>
                     EventStreamId = e.EventStreamId,
                     Tags = e.Tags
                 }),
-                EventStore,
-                EventTypes,
-                ServiceProvider,
-                InitialState,
-                eventContexts);
+                context,
+                InitialState);
 
             var reducerInstances = new Dictionary<EventSourceId, TReadModel>();
             if (reduced is not null && distinctEventSourceIds.Count == 1)
@@ -99,15 +105,12 @@ internal sealed class ReadModelFold<TReadModel>
             return await ProjectionReadModelProcessor.Process(
                 ProjectionDefinition,
                 eventsList.Select(e => (e.EventSourceId, e.Event)),
-                EventStore,
-                EventTypes,
-                SchemaGenerator,
+                context,
                 InitialState,
                 StrictEventSubscription,
-                eventContexts,
                 seededEvents: eventsList);
         }
 
-        throw new NoReadModelHandlerFound(typeof(TReadModel));
+        throw new NoReadModelHandlerFound(ReadModelType);
     }
 }
