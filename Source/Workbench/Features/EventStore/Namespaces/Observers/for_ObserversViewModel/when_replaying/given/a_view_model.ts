@@ -10,11 +10,13 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 
 export class a_view_model {
     constructor() {
-        this.replay = sinon.createStubInstance(Replay);
+        // Real command instances, not stub instances: generated commands keep their values in private fields,
+        // which can only be set on an object the class actually constructed.
+        this.replay = new Replay();
         this.replay.execute = sinon.stub().returns({ onException: sinon.stub() });
-        this.clearObserverQuarantine = sinon.createStubInstance(ClearObserverQuarantine);
+        this.clearObserverQuarantine = new ClearObserverQuarantine();
         this.clearObserverQuarantine.execute = sinon.stub().returns({ onException: sinon.stub() });
-        this.removeObserver = sinon.createStubInstance(RemoveObserver);
+        this.removeObserver = new RemoveObserver();
         this.removeObserverSucceedsWith(ObserverRemovalOutcome.removed);
         this.dialogs = sinon.createStubInstance(Dialogs);
 

@@ -109,6 +109,16 @@ instances and delegates everything else to the real read model implementation. O
 back from it: the rest of that surface is the production one and wants a running Chronicle, so reading the
 instances the scenario itself materialized means `Instances` or `InstanceForEventSourceId`, not `GetInstances`.
 
+## Observing read models
+
+The testing event store supports [collection observations](../../read-models/observing-read-models.mdx) through `ReadModels.Observe<T>()`. It rebuilds the complete collection from its scenario event log on subscription and after successful appends, including batch appends and unit-of-work commits. Projections process events in log order; reducers fold each event source separately. Explicitly seeded instances are included, and the optional filter is applied to the rebuilt set. Unchanged sets do not emit again.
+
+Own and dispose the subscription just as you would in production. After the last subscriber leaves, or the subject completes or is disposed, further appends produce no emissions for that observation. The harness uses the projection and reducer processors described below; it does not verify kernel transport, sink notifications, or read-model compliance protection.
+
+`ReadModelsForTesting(inner, eventLog)` also provides this behavior when you have an existing scenario log. When `inner` comes from the testing event store, its artifact catalog, explicit projections, and injected services are retained; otherwise default artifact discovery is used. The constructor without an event log refuses observation with `ReadModelCannotBeObserved`. Passive read models and event-target types are refused just as they are by the client.
+
+`ReadModelScenario<T>.ReadModels.Observe<T>()` remains unsupported: that scenario collects its own input rather than appending it to the event log. Use `Instance`, `Instances`, or `InstanceForEventSourceId` to assert on that scenario's output.
+
 ## Per-run projections and artifacts
 
 When a test generates artifacts for one run, give that scenario its own artifact catalog. The next

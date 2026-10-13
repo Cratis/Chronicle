@@ -70,12 +70,12 @@ public partial class JsonSchemaGenerator
         return new(node, compensations.ToFrozenDictionary(ReferenceEqualityComparer.Instance));
     }
 
-    JsonSchemaExporterOptions StructuralOptionsFor(Action<JsonObject, Type>? recordCompensation) => recordCompensation is null
+    JsonSchemaExporterOptions StructuralOptionsFor(Action<JsonObject, Type>? recordCompensation, bool preserveUnformattedNullability) => recordCompensation is null && !preserveUnformattedNullability
         ? _exporterOptions
         : new()
         {
             TreatNullObliviousAsNonNullable = true,
-            TransformSchemaNode = (context, schema) => TransformNode(context, schema, restorePropertiesWithDefaultValues: false, recordCompensation)
+            TransformSchemaNode = (context, schema) => TransformNode(context, schema, restorePropertiesWithDefaultValues: false, recordCompensation, preserveUnformattedNullability)
         };
 
     /// <summary>
