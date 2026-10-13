@@ -77,3 +77,9 @@ Use a callback to compose the message dynamically from violation context:
 ## How constraints are enforced
 
 When a constraint is registered, the Chronicle Kernel creates the indexes required to enforce it. Constraints are evaluated server-side during append, ensuring data integrity regardless of the client.
+
+## Rebuilding an index
+
+When a constraint changes, Chronicle rebuilds its index from the event sequence in log order. It clears all claims in each scope before replaying that scope's first event, so stale claims do not block historical values.
+
+If the store rejects a duplicate claim during the rebuild, Chronicle logs a warning, skips that claim, and continues. The first historical claimant keeps the value until an event releases or replaces it. A live append during the rebuild can claim a value before its historical claimant is replayed; the log-order rule applies to history, not to concurrent live appends.

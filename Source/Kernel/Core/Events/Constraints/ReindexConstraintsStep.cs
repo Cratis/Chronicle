@@ -46,7 +46,7 @@ public class ReindexConstraintsStep(
     /// <param name="definition">The <see cref="UniqueConstraintDefinition"/> being reindexed.</param>
     /// <param name="event">The <see cref="AppendedEvent"/> being processed.</param>
     /// <param name="content">The released (plaintext) content of the event.</param>
-    /// <param name="seen">The already-cleared entries: per source and scope in per-event-source mode, or per scope with an unspecified source in per-value mode.</param>
+    /// <param name="seen">The already-cleared scopes, each paired with an unspecified event source.</param>
     /// <param name="validator">The <see cref="UniqueConstraintValidator"/> that updates the index.</param>
     /// <param name="uniqueConstraintsStorage">The <see cref="IUniqueConstraintsStorage"/> to update.</param>
     /// <returns>Awaitable task.</returns>
@@ -63,20 +63,12 @@ public class ReindexConstraintsStep(
             @event.Context.EventStreamType,
             @event.Context.EventStreamId);
 
-        // One step owns the complete sequence for every changed definition. Retained values must be cleared
-        // for the whole scope before its first event is replayed, not as each owner is encountered: a later
-        // owner may still hold a value that an earlier owner claimed and released in the history being rebuilt.
-        var sourceToClear = definition.Mode == UniqueConstraintMode.PerValue ? EventSourceId.Unspecified : @event.Context.EventSourceId;
-        if (seen.Add((sourceToClear, scopeKey)))
+        // One step owns the complete sequence for every changed definition. Both retention modes must clear
+        // the whole scope before its first event is replayed, not as each owner is encountered: a later
+        // owner may still hold a stale value that an earlier owner claimed in the history being rebuilt.
+        if (seen.Add((EventSourceId.Unspecified, scopeKey)))
         {
-            if (definition.Mode == UniqueConstraintMode.PerValue)
-            {
-                await uniqueConstraintsStorage.ClearValues(definition, scopeKey);
-            }
-            else
-            {
-                await uniqueConstraintsStorage.Remove(@event.Context.EventSourceId, definition, scopeKey);
-            }
+            await uniqueConstraintsStorage.ClearValues(definition, scopeKey);
         }
 
         var context = new ConstraintValidationContext(
@@ -186,7 +178,14 @@ public class ReindexConstraintsStep(
 
                     foreach (var definition in changedDefinitions)
                     {
-                        await ReindexEvent(definition, @event, content, seenConstraintEntries[definition.Name], validators[definition.Name], uniqueConstraintsStorage);
+                        try
+                        {
+                            await ReindexEvent(definition, @event, content, seenConstraintEntries[definition.Name], validators[definition.Name], uniqueConstraintsStorage);
+                        }
+                        catch (DuplicateUniqueConstraintValue error)
+                        {
+                            logger.SkippingDuplicateUniqueConstraintClaim(definition.Name, @event.Context.EventSourceId, @event.Context.SequenceNumber, error);
+                        }
                     }
                 }
             }
