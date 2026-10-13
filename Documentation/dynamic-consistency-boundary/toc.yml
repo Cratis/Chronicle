@@ -2,3 +2,9 @@
   href: index.md
 - name: Chronicle
   href: chronicle.md
+- name: Choosing how a rule holds
+  href: choosing.mdx
+- name: Scenarios
+  href: scenarios.mdx
+- name: Questions and answers
+  href: faq.md
