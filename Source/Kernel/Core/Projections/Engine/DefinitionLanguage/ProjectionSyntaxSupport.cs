@@ -43,7 +43,8 @@ internal sealed class ProjectionSyntaxSupport(CompilerErrors errors) : Screenpla
         [typeof(ContextExpressionSyntax)] = "Command and query contexts are not event contexts; use $eventContext",
         [typeof(EnvironmentExpressionSyntax)] = "Environment values are not stored event data",
         [typeof(StringsExpressionSyntax)] = "Localized strings are not stored event data",
-        [typeof(SourceItemExpressionSyntax)] = "Source items belong to captures, not stored event projections"
+        [typeof(SourceItemExpressionSyntax)] = "Source items belong to captures, not stored event projections",
+        [typeof(IdentityExpressionSyntax)] = "Identity values belong to the acting user, not stored event data"
     };
 
     /// <inheritdoc/>
