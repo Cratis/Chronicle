@@ -55,6 +55,15 @@ public interface ICanHandleReplayForObserver
     Task<Result<Error>> EndReplayFor(ObserverDetails observerDetails);
 
     /// <summary>
+    /// Ends this silo's bulk window at shutdown without promoting a replay.
+    /// </summary>
+    /// <param name="observerDetails">The observer whose window is open.</param>
+    /// <param name="cancellationToken">The shared stop deadline.</param>
+    /// <returns>Failed partitions, including unknown write outcomes.</returns>
+    Task<IEnumerable<FailedPartition>> EndBulkFor(ObserverDetails observerDetails, CancellationToken cancellationToken) =>
+        Task.FromResult<IEnumerable<FailedPartition>>([]);
+
+    /// <summary>
     /// Drain buffered writes for a progress checkpoint without closing the replay's bulk window.
     /// </summary>
     /// <param name="observerDetails">The observer to flush.</param>

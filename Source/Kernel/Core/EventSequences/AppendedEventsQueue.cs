@@ -47,6 +47,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly IMeter<AppendedEventsQueue> _meter;
     readonly IActivitySource<AppendedEventsQueue> _activitySource;
     readonly ILogger<AppendedEventsQueue> _logger;
+    readonly IShutdownDrainBudget? _stopBudget;
     readonly Channel<IReadOnlyList<AppendedEvent>> _channel;
     readonly int _queueDepletionWaitTimeoutMs;
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
@@ -55,6 +56,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     int _pendingItems;
     Task _queueTask = Task.CompletedTask;
     bool _isDisposed;
+    bool _isDraining;
     IMeterScope<AppendedEventsQueue>? _metrics;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
 
@@ -67,19 +69,22 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
     /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="stopBudget">The shared deadline; optional for standalone specification queues.</param>
     public AppendedEventsQueue(
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
         [FromKeyedServices(WellKnown.MeterName)] IMeter<AppendedEventsQueue> meter,
         [FromKeyedServices(WellKnown.MeterName)] IActivitySource<AppendedEventsQueue> activitySource,
         IOptions<ChronicleOptions> options,
-        ILogger<AppendedEventsQueue> logger)
+        ILogger<AppendedEventsQueue> logger,
+        IShutdownDrainBudget? stopBudget = null)
     {
         _taskFactory = taskFactory;
         _grainFactory = grainFactory;
         _meter = meter;
         _activitySource = activitySource;
         _logger = logger;
+        _stopBudget = stopBudget;
 
         var eventsConfig = options.Value.Events;
         _queueDepletionWaitTimeoutMs = eventsConfig.QueueDepletionWaitTimeoutMilliseconds;
@@ -112,10 +117,28 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <inheritdoc/>
-    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        Dispose();
-        return Task.CompletedTask;
+        _isDraining = true;
+        _channel.Writer.TryComplete();
+
+        // An ordinary grain deactivation must not start or consume the kernel's future shutdown budget.
+        using var standaloneDeadline = _stopBudget?.IsStopping != true
+            ? new CancellationTokenSource(_stopBudget?.Timeout ?? TimeSpan.FromSeconds(8))
+            : null;
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, standaloneDeadline?.Token ?? _stopBudget!.Token);
+        try
+        {
+            await _queueTask.WaitAsync(deadline.Token);
+        }
+        catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+        {
+            _logger.DrainUnfinished(_eventSequenceKey, _pendingItems);
+        }
+        finally
+        {
+            Dispose();
+        }
     }
 
     /// <inheritdoc/>
@@ -129,6 +152,12 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// </remarks>
     public Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
+        if (_isDisposed || _isDraining)
+        {
+            // Events are durable; a new owner catches up from the observers' persisted cursors.
+            return Task.CompletedTask;
+        }
+
         var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
         using var span = _activitySource.Enqueue();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
@@ -219,23 +248,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         _isDisposed = true;
         _channel.Writer.TryComplete();
-
-        if (!_queueTask.IsCompleted)
-        {
-            try
-            {
-                _queueTask.Wait(1000);
-            }
-            catch { }
-        }
-
-        if (_queueTask.Status is
-                TaskStatus.RanToCompletion or
-                TaskStatus.Canceled or
-                TaskStatus.Faulted)
-        {
-            _queueTask.Dispose();
-        }
 
         _metrics?.Dispose();
     }
