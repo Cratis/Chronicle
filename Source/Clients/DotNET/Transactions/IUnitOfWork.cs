@@ -97,6 +97,16 @@ public interface IUnitOfWork : IDisposable
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes) =>
         throw new UnitOfWorkBatchEnrollmentNotSupported(GetType());
 
+    /// <summary>
+    /// Attaches a contributor for the lifetime of an enrollment scope, such as one command invocation.
+    /// </summary>
+    /// <param name="contributor">The contributor to consult before enrollment.</param>
+    /// <returns>A handle that removes only this registration on disposal.</returns>
+    /// <exception cref="UnitOfWorkEnrollmentContributorsNotSupported">The implementation does not support contributors.</exception>
+    /// <exception cref="UnitOfWorkMutatedDuringEnrollment">A contributor attempted to change registrations.</exception>
+    IDisposable AddEnrollmentContributor(IUnitOfWorkEnrollmentContributor contributor) =>
+        throw new UnitOfWorkEnrollmentContributorsNotSupported(GetType());
+
     /// <summary>Enroll a protected read as a commit dependency.</summary>
     /// <param name="read">The protected read.</param>
     /// <exception cref="UnitOfWorkDecisionReadsNotSupported">This implementation does not support decision reads.</exception>
