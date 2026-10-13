@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Linq.Expressions;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -61,6 +63,21 @@ public interface IReadModels
     /// <param name="eventCount">Optional maximum number of events to process. Defaults to <see cref="EventCount.Unlimited"/>.</param>
     /// <returns>Collection of read model instances.</returns>
     Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null);
+
+    /// <summary>
+    /// Observes the full collection of a projection- or reducer-backed read model, initially and after changes.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="filter">Optional filter, compiled once and applied client-side after release.</param>
+    /// <returns>A subject that replays the latest collection. Its dedicated stream stops when the last subscriber leaves, on completion, or on disposal.</returns>
+    /// <exception cref="UnknownReadModel">No projection or reducer handles the read model.</exception>
+    /// <remarks>
+    /// The default implementation refuses collection observation. Existing or custom implementations remain usable
+    /// through the other members of this interface and must override this method to support collection observation.
+    /// </remarks>
+    /// <exception cref="ReadModelCannotBeObserved">The implementation does not support collection observation, or the read model is passive or targets an event sequence.</exception>
+    ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
+        => throw new ReadModelCannotBeObserved(typeof(TReadModel), "this implementation does not support collection observation");
 
     /// <summary>
     /// Get snapshots of a read model grouped by CorrelationId by walking through events from the beginning.

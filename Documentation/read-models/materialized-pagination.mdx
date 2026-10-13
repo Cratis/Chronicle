@@ -68,6 +68,8 @@ The parameters use strongly-typed concepts that convert implicitly from `int`:
 
 ## Observing Changes
 
+For a complete live collection with optional client-side filtering, use [Observing Read Models](observing-read-models.mdx). `IReadModels.Observe<T>()` has no 50-instance default window; `Materialized.ObserveInstances` below observes only the requested page.
+
 `ObserveInstances` returns an `IObservable<IEnumerable<TReadModel>>` that emits a new page snapshot whenever the underlying stored data changes. This is useful for live-updating UIs, dashboards, and monitoring tools.
 
 <ChronicleClientTabs snippet="read-models/materialized-pagination/observing" />
