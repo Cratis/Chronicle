@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Registrations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -24,6 +25,7 @@ public class a_health_check : Specification
         _connection.Lifecycle.Returns(_lifecycle);
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.Connection.Returns(_connection);
+        _eventStore.Registration.Returns(RegistrationOutcome.NotRun);
         _client = Substitute.For<IChronicleClient>();
         _client.GetEventStore(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>()).Returns(_eventStore);
 
