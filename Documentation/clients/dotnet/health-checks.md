@@ -21,6 +21,7 @@ The check is registered under the name **`chronicle`**, with the tags **`chronic
 | Connected, but artifact registration has not completed | Failure status |
 | Connected, but registration stopped with an exception or any declared projection artifact failed | Failure status |
 | Connected and `Registration.IsSuccess` is `true` | Healthy |
+| Connected, `AutoDiscoverAndRegister` is off, and the application has not run `RegisterAll` | Healthy |
 
 A registration failure carries the run's exception on the result, when there was one, and the
 failed artifact type names in `Data["failedArtifacts"]`. Partial registration is not ready, even
