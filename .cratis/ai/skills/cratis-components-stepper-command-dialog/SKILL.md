@@ -15,8 +15,8 @@ field across every step is valid.
 
 | Package | Version | Verified from |
 | --- | --- | --- |
-| `@cratis/components` | `4.6.0` | its package manifest, `Source/CommandDialog/*` (`StepperCommandDialog`, `CommandStepper`, `StepperPanel`), `Documentation/StepperCommandDialog/*`, `Documentation/CommandStepper/*` |
-| `@cratis/arc.react` | `>=20.3.1 <23` | peer range declared by `@cratis/components@4.6.0` |
+| `@cratis/components` | `4.26.4` | its package manifest, `Source/CommandDialog/*` (`StepperCommandDialog`, `CommandStepper`, `StepperPanel`), `Documentation/StepperCommandDialog/*`, `Documentation/CommandStepper/*` |
+| `@cratis/arc.react` | `>=20.3.1 <23` | peer range declared by `@cratis/components@4.26.4` |
 
 ## Choose it over `CommandDialog` when
 
@@ -67,7 +67,8 @@ export const CreateProjectDialog = () => {
 
 Rules:
 
-- Every `StepperPanel` needs a `header` — it is the step label.
+- Give every `StepperPanel` a `header` — the house convention for a named step.
+  Its type is optional `ReactNode`, not a required string.
 - All `CommandForm` fields inside any panel bind to the **same** command
   instance through their `value` accessor.
 - Each command property belongs on exactly one step.
@@ -145,6 +146,7 @@ Dialog-level props:
 | `isValid` | `boolean` | extra validity gate on top of form validity |
 | `onConfirm` / `onCancel` / `onClose` | close gates | — |
 | `onBeforeExecute` | `(values) => values` | transformer; must return the values |
+| `confirmBeforeExecute` | `(values) => boolean \| Promise<boolean>` | after validation and transformation; only `true` executes |
 | `style` / `contentStyle` | `CSSProperties` | — |
 | `resizable` | `boolean` | `false` — accepted but has no effect |
 
@@ -156,11 +158,16 @@ Stepper-level props (inherited from the stepper customization surface):
 | `headerPosition` | `'top' \| 'bottom'` | `'top'` |
 | `linear` | `boolean` | `true` |
 | `start` / `end` | `React.ReactNode` | extra content beside the step headers |
-| `onChangeStep` | `(event: { index: number }) => void` | — |
+| `onChangeStep` | `(event: { index: number }) => void` | once per accepted move: header, Previous, Next |
 
 Command-form props (`initialValues`, `currentValues`, `validateOn`,
 `validateOnInit`, `onSuccess`, `onValidationFailure`, `onFailed`,
-`autoServerValidate`, …) all apply as well.
+`autoServerValidate`, …) all apply as well. Horizontal steppers show names below
+numbers and wrap (4.26.3+). Panels are named by their headers through
+`aria-labelledby`; custom header ids are preserved.
+
+While `confirmBeforeExecute` is pending, fields are disabled; changed command
+values discard approval and skip execution. Confirm the new values again.
 
 ### Two part targets
 
@@ -168,8 +175,8 @@ The inherited `pt` (`StepperParts`: `root`, `list`, `step`, `header`, `number`,
 `title`, `separator`, `panels`, `panel`) targets the **inner stepper**. Use
 `dialogPt` (`DialogParts`) and `dialogClassName` to reach the **outer dialog**.
 Getting these the wrong way round is the usual cause of a `pt` that appears to do
-nothing. (`ptOptions`/`unstyled` and their `dialog*` twins are accepted for
-Components 3 source compatibility and do nothing.)
+nothing. (`ptOptions`/`unstyled` are compatibility no-ops;
+`dialogPtOptions`/`dialogUnstyled` are also deprecated no-ops.)
 
 ## Dismissal while the command runs
 
@@ -182,7 +189,8 @@ needs one.
 
 `CommandStepper` (same subpath) is the stepper without the dialog chrome, for
 embedding a wizard directly in a page. It takes the same `StepperPanel`
-children.
+children. It reports `onException`, `onUnauthorized`, and `onFailed` (including
+validation failures), and guards against double submission.
 
 ## Common mistakes
 
@@ -200,7 +208,7 @@ children.
 ## Route near misses
 
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
   `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
   output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
   `cratis-screenplay-modeling-lifecycle`): change the model first with

@@ -251,6 +251,9 @@ Use `buttons={null}` for dialogs that contain their own internal actions (e.g. a
 | Prop | Type | Notes |
 |---|---|---|
 | `title` | `string` | Header text |
+| `subtitle` | `ReactNode` | Secondary header content |
+| `placement` | `'center' \| 'start' \| 'end'` | Defaults to center; start/end are RTL-aware side sheets |
+| `closeIcon` | `ReactNode` | Header dismissal glyph; `null` hides only the glyph |
 | `visible` | `boolean` | Controlled open state; defaults to `true` |
 | `buttons` | `DialogButtons \| ReactNode \| null` | Prefer `DialogButtons` enum; `null` for no footer |
 | `isValid` | `boolean` | Disables the confirm button when `false` |
@@ -265,5 +268,11 @@ Use `buttons={null}` for dialogs that contain their own internal actions (e.g. a
 | `dismissable` | `boolean` | Header close, Escape and backdrop dismissal (when not busy) |
 | `style` / `contentStyle` / `className` | | Modal-root and content-region styling |
 | `pt` | `DialogParts` | Per-part attributes: `backdrop`, `positioner`, `root`, `header`, `title`, `close`, `content`, `footer`, `confirm`, `cancel` |
+
+`CommandDialog` forwards these Dialog presentation props (since Components 4.14.1).
+It also accepts `confirmBeforeExecute(values) => boolean | Promise<boolean>`:
+after validation and `onBeforeExecute`, only `true` executes. Fields are disabled
+while confirmation is pending; changed command values discard approval without executing.
+This is a pre-execution gate, unlike the post-success `onConfirm` close gate.
 
 `resizable`, `ptOptions` and `unstyled` are accepted for source compatibility and do nothing. There is no `modal`, `draggable`, `footer` or `onHide` — the dialog is always modal, the footer comes from `buttons`, and closing is reported through `onCancel`/`onClose`. Style the dialog through its parts (`pt`, or `[data-cratis-part='root']` selectors), never through React Aria class names.

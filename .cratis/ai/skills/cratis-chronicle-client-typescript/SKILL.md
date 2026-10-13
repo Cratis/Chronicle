@@ -12,29 +12,48 @@ Chronicle server. It is not a browser library and it is not the Arc TypeScript
 proxy layer — an Arc frontend calls generated command and query proxies over
 HTTP and never sees this package.
 
+## Common pitfalls
+
+| Pitfall | Why it bites |
+| --- | --- |
+| Naming a reactor method after the handler's purpose | Use the camelCase event class name or explicit `@handles(EventType)` |
+| `instanceof` on the event inside a handler | It is a `JSON.parse`d plain object, not your class |
+| Event fields with no `@field` types under `tsx` | No type metadata is emitted; unresolved members make registration fail |
+| Two `@eventType()` classes sharing a class name | The id defaults to the class name and they collide |
+| Deploying compiled `dist/*.js` with default discovery | Compiled-JS entries do not scan; import artifact modules explicitly |
+| Omitting a side-effect import of an artifact module | Its decorator never runs, so it is never registered |
+| Forgetting `import 'reflect-metadata'` at the entry point | Decorators do not work at runtime |
+| Forgetting to install `@cratis/fundamentals` | It is a peer dependency and is not installed for you |
+| Importing `ChronicleConnectionString` | There is no `./connection` export; pass a string |
+| Carrying a pre-6.0 stream forward | Pass all three route dimensions explicitly; omitted routes now resolve to `Default`/`All`/`Default` |
+| A connection string with no credentials | Silently falls back to the development client credentials |
+| Shipping the default TLS behavior | `skipTlsValidation` defaults to `true` |
+| Constructor-injecting without an `artifactActivator` | By default the client constructs the artifact itself |
+| Side-effect reactor without `@onceOnly()` | Reactors run again on kernel replay by default since 6.9.0 |
+| Reading `result.sequenceNumber` as a number | It is a `bigint` behind `.value` |
+| A `@globalFor` mapping targeting a property one variant lacks | `GlobalHandlerPropertyNotOnVariant` when the group is built, not a silently skipped mapping |
+| Expecting a `@globalFor`-only class to appear as a projection | It is never registered on its own; it is merged into its variants |
+
 ## Verified product sources
 
-This skill was written against `Cratis/Chronicle.TypeScript` at tag `v4.0.0`
-(commit `bed0b86`) and re-verified at **`v5.1.0`** (published on npm as
-`5.1.0`): every class, function and option this skill names exists there. The
-`4→5` major is the Chronicle 17/18 wire migration (internal gRPC shapes; it adds
-`ensureCommandResponse` for server-side command results). The `file:line`
-citations below were taken at `v4.0.0` and may have shifted.
+Verified against `Cratis/Chronicle.TypeScript` tag **`v6.51.0`**, reading
+`Source/**` and `Documentation/getting-started.md`, `testing.md`,
+`migrate-append-routing.md` and `reactors.md`. Source paths below refer to that tag.
 
 | Package | Version | Where |
 | --- | --- | --- |
-| `@cratis/chronicle` | `5.1.0` | npm; `Source/package.json` carries a `1.0.0` placeholder |
-| `@cratis/chronicle.contracts` | `18.2.0` | `Source/package.json` dependency at `v5.1.0` |
-| `@cratis/fundamentals` | `^7.14.0` | **peer dependency** — you install it |
+| `@cratis/chronicle` | `6.51.0` | npm; `Source/package.json` carries a `1.0.0` placeholder |
+| `@cratis/chronicle.contracts` | `19.31.10` | Client's pinned dependency, not the latest contracts package |
+| `@cratis/fundamentals` | `^7.22.4` | **peer dependency** — you install it |
 
 > **Do not read the version out of the repository.** `Source/package.json` says
 > `1.0.0`; `publish-version.js` overwrites it at publish time. Take the version
 > from npm.
 
-**`v4.0.0` is a major bump and it changed real API.** Guidance written against
-`3.x` is wrong in at least three places — event tags did not exist, reducers took
-two arguments, and two event-store RPCs were renamed. Do not carry `3.x` examples
-forward.
+**Upgrade the kernel first.** The 5.x→6.0.0 migration changes omitted append
+routes and requires compatibility checks (kernel 18.4.1+); registered event
+sources introduced in 6.49.0 require kernel 19.30+. Reactors replay by default
+since 6.9.0, so review side-effect handlers when upgrading.
 
 ## Project setup
 
@@ -43,27 +62,31 @@ yarn add @cratis/chronicle @cratis/fundamentals reflect-metadata
 ```
 
 `@cratis/fundamentals` is a peer dependency, so it does not arrive on its own.
-`reflect-metadata` must be imported **once, at the entry point**, before any
-decorated class is loaded (`Documentation/getting-started.md:16-27`):
+`reflect-metadata` is now a regular dependency. Import it **once, at the entry
+point**, before any decorated class is loaded:
 
 ```typescript
 import 'reflect-metadata';
 ```
 
-The package is **ESM-only** (`"type": "module"`, `Source/package.json:34`) and
-requires decorator support:
+The package is **ESM-only** and needs Node.js **22.19+** for its `undici`
+dependency (the client itself has no `engines` field). Standard TC39 decorators
+are supported (TypeScript 5.2+) and are the documentation default:
 
 ```jsonc
-// tsconfig.json
+// tsconfig.json — standard decorator mode
 {
     "compilerOptions": {
-        "experimentalDecorators": true,
-        "emitDecoratorMetadata": true
+        "target": "ES2022",
+        "lib": ["ES2022", "ESNext.Decorators"]
     }
 }
 ```
 
-Both are set in the shipped sample (`Samples/Console/tsconfig.json:12-13`).
+Legacy mode with `experimentalDecorators: true` and
+`emitDecoratorMetadata: true` still works. Standard decorators and esbuild/tsx
+emit no type metadata: declare every serialized property with `@field(Type)`
+from `@cratis/fundamentals`; default values are only an inference fallback.
 
 ## Connecting
 
@@ -80,41 +103,35 @@ try {
 }
 ```
 
-`IChronicleClient` is four members — `Source/IChronicleClient.ts:16-39`:
-
-| Member | Line |
-| --- | --- |
-| `readonly options: ChronicleOptions` | `:18` |
-| `getEventStore(name, namespace?): Promise<IEventStore>` | `:27` |
-| `getEventStores(): Promise<EventStoreName[]>` | `:33` |
-| `dispose(): void` | `:38` |
+`IChronicleClient` (`Source/IChronicleClient.ts`) exposes `readonly options`,
+`getEventStore(name, namespace?): Promise<IEventStore>`,
+`getEventStores(): Promise<EventStoreName[]>`, and `dispose(): void`.
 
 `ChronicleClient`'s constructor takes exactly one argument —
-`constructor(readonly options: ChronicleOptions)`, `Source/ChronicleClient.ts:58`.
+`constructor(readonly options: ChronicleOptions)` (`Source/ChronicleClient.ts`).
 
 **Connecting is implicit and lazy.** There is no `connect()`. The constructor
 starts a health-check watchdog and kicks off artifact discovery; the actual
 connect happens on the first `getEventStore`/`getEventStores` through an internal
 `ensureConnected()`. `getEventStore` also *creates* the store if it does not
-exist — it calls `ensureEventStore` (`Source/ChronicleClient.ts:135`).
+exist — it calls `ensureEventStore`.
 
-`dispose()` is **synchronous** (`Source/ChronicleClient.ts:193`), not
+`dispose()` is **synchronous**, not
 `Symbol.dispose` or `Symbol.asyncDispose`. After disposal every call throws.
 
 ### Options
 
-`ChronicleOptions` has a **private constructor**
-(`Source/ChronicleOptions.ts:67`); use a static factory:
+`ChronicleOptions` has a **private constructor** (`Source/ChronicleOptions.ts`);
+use `ChronicleOptions.fromConnectionString(connectionString, options?)` or
+`ChronicleOptions.development(options?)`.
 
-- `ChronicleOptions.fromConnectionString(connectionString, options?)` — `:92`
-- `ChronicleOptions.development(options?)` — `:116`
-
-The optional bag accepts `clientArtifactsProvider`, `discoveryPatterns`, and
-`defaultSinkTypeId`. `defaultSinkTypeId` defaults to `WellKnownSinks.MongoDB`
-(`:84`).
+The optional bag accepts `telemetry`, `logger`, `clientArtifactsProvider`,
+`discoveryPatterns`, `defaultSinkTypeId`, `reactorResultHandler`,
+`artifactActivator`, and `readModelNamingPolicy`. `defaultSinkTypeId` defaults
+to `WellKnownSinks.MongoDB`.
 
 > `programIdentifier`, `softwareVersion`, and `softwareCommit` exist on the type
-> (`:69-71`) but **neither public factory forwards them**, so they cannot be set.
+> but **neither public factory forwards them**, so they cannot be set.
 > Do not write guidance that configures them.
 
 ### The connection string
@@ -130,7 +147,7 @@ Two facts to carry into production guidance:
   is not validated, because a development kernel serves a self-signed
   certificate. Set `?skipTlsValidation=false` against a real server.
 - **A connection string with no credentials silently falls back to the
-  development client credentials** (`Source/connection/ChronicleConnection.ts:319-326`; the constants live in `ChronicleConnectionString.ts:453-454`).
+  development client credentials** (`Source/connection/ChronicleConnection.ts`).
   An anonymous-looking connection string is not anonymous; it is
   `chronicle-dev-client`.
 
@@ -146,55 +163,51 @@ The subpath exports that do exist: `.`, `./events`, `./eventSequences`,
 `./seeding`, `./readModels`, `./projections`, `./jobs`, `./webhooks`,
 `./externalServices`, `./identities`, `./observation`, `./sinks`, `./schemas`,
 `./types`, `./artifacts`, `./identity`, `./auditing`, `./correlation`,
-`./transactions`.
+`./transactions`, `./confidentiality`, `./patterns`, `./testing`, and
+`./package.json`. Event-source APIs are root exports; there is no
+`./eventSources` subpath. `IncompatibleChronicleServer` and
+`RejectedChronicleCredentials` are also root exports.
 
 ## Event types
 
 ```typescript
+// Excerpt: replace the domain placeholders with your event and value types.
+import { field } from '@cratis/fundamentals';
 import { eventType } from '@cratis/chronicle';
 
 @eventType()
 export class <EventName> {
-    constructor(readonly <property>: <Type> = <default>) {}
+    @field(<RuntimeType>) <property>: <Type>;
+    constructor(<property>: <Type>) { this.<property> = <property>; }
 }
 ```
 
-Seven overloads — `Source/events/eventTypeDecorator.ts:54-60`:
-
-```typescript
-export function eventType(): ClassDecorator;
-export function eventType(id: string): ClassDecorator;
-export function eventType(id: string, generation: number): ClassDecorator;
-export function eventType(id: string, generation: number, tombstone: boolean): ClassDecorator;
-export function eventType(generation: number): ClassDecorator;
-export function eventType(generation: number, tombstone: boolean): ClassDecorator;
-export function eventType(tombstone: boolean): ClassDecorator;
-```
+`eventType` supports no args, `id`, `id/generation`, `id/generation/tombstone`,
+`generation`, `generation/tombstone`, or `tombstone`
+(`Source/events/eventTypeDecorator.ts`); both decorator modes work.
 
 **The event type id defaults to the class name** — `new EventTypeId(id || constructor.name)`
-at `:91`. Two classes with the same name in different modules collide on the wire.
+in the decorator. Two classes with the same name in different modules collide
+on the wire.
 
-**Give constructor parameters default values.** Member discovery walks explicit
-`@field` declarations from `@cratis/fundamentals` first, then tracked properties,
-then the properties present on a *default-constructed* instance, then
-`design:paramtypes` — `Source/types/TypeIntrospector.ts:52-60`, with the reason
-spelled out at `:40-48`: **esbuild and tsx do not emit `design:type` or
-`design:paramtypes`**. Under `tsx`, a class whose constructor parameters have no
-defaults and no `@field` decorators produces no members and an empty schema. Every
-sample event carries defaults for exactly this reason.
+**Use explicit `@field` declarations.** `Source/types/TypeIntrospector.ts` checks
+field metadata before inference from tracked properties, default-constructed
+instances and legacy metadata. Use `@field(Array, { genericArguments: [Item] })`
+for typed arrays; concepts need `static readonly valueType`. A property the
+client cannot type makes registration fail — do not rely on constructor-only
+properties under standard decorators or tsx.
 
-Tag an event type at declaration with `@tag(...)` / `@tags(...)` —
-`Source/events/tagDecorator.ts:30`, `:42`.
+Tag an event type at declaration with `@tag(...)` / `@tags(...)`.
 
 ## Appending
 
 `IEventLog` is an empty extension of `IEventSequence`
-(`Source/eventSequences/IEventLog.ts:10`); the surface is on `IEventSequence`:
+(`Source/eventSequences/IEventLog.ts`); the surface is on `IEventSequence`:
 
 ```typescript
-append(eventSourceId: string, event: object, options?: AppendOptions): Promise<AppendResult>;               // :44
-appendMany(eventSourceId: string, events: object[], options?: AppendOptions): Promise<AppendResult[]>;       // :53
-appendMany(events: EventForEventSourceId[], options?: AppendOptions): Promise<AppendResult[]>;               // :61
+append(eventSourceId: string, event: object, options?: AppendOptions): Promise<AppendResult>;
+appendMany(eventSourceId: string, events: object[], options?: AppendOptions): Promise<AppendResult[]>;
+appendMany(events: EventForEventSourceId[], options?: AppendOptions): Promise<AppendResult[]>;
 ```
 
 ```typescript
@@ -206,22 +219,25 @@ if (!result.isSuccess) {
 
 - **The event source id is a plain `string`.** There is no `EventSourceId` value
   type at this boundary.
-- `AppendResult` — `Source/eventSequences/AppendResult.ts:15-38`: `sequenceNumber`,
-  `constraintViolations`, `concurrencyViolation?`, `errors`, `isSuccess`, and
-  `waitForCompletion(timeoutMs?)` which defaults to 5000 ms.
+- `AppendResult` (`Source/eventSequences/AppendResult.ts`): `sequenceNumber`,
+  `constraintViolations` (including the constraint name), `concurrencyViolation?`,
+  `errors`, `isSuccess`, and `waitForCompletion({ timeoutMs, signal }?)`
+  (timeout defaults to 5000 ms).
 - **`sequenceNumber` wraps a `bigint`.** Read it as `result.sequenceNumber.value`.
   `EventContext.sequenceNumber` is a `bigint` too.
-- `AppendOptions` — `Source/eventSequences/AppendOptions.ts`: `correlationId?`,
-  `eventSourceId?`, `concurrencyScope?`, `concurrencyScopes?`, and **`tags?`**
-  (`:22-29`, since `4.0.0`; unchanged at `5.1.0`).
+- `AppendOptions` (`Source/eventSequences/AppendOptions.ts`): `correlationId`,
+  `sourceType`, `streamType`, `streamId`, `subject`, `occurred`, `tags`, `namedTags`,
+  `concurrencyScope`, `concurrencyScopes`, `eventSource`, and `eventStream`.
+  The reserved legacy `eventSourceId` option does not override the method's id.
 
-> **Single `append()` cannot target a stream or a subject.** It hardcodes
-> `EventSourceType: 'Default'`, `EventStreamType: 'Default'`,
-> `EventStreamId: eventSourceId`, and `Subject: eventSourceId`
-> (`Source/eventSequences/EventSequence.ts:100-120`). Only `tags` became a real
-> option in `4.0.0` (`:118`). To target a different stream or subject, use the
-> `EventForEventSourceId[]` overload, whose entries carry `eventStreamType`,
-> `eventStreamId`, `eventSourceType`, `subject`, and `tags`.
+**Single `append()` supports routing and subject options.** Since 6.0.0 an
+unspecified route is omitted on the wire; the kernel resolves source `Default`,
+stream type `All`, stream id `Default`. Subject precedence is the explicit option,
+then the event's `@subject()` property, then its event source id.
+
+To continue a pre-6.0 stream, pass **all three** dimensions explicitly:
+`{ sourceType: 'Default', streamType: 'Default', streamId: id }`.
+See `Documentation/migrate-append-routing.md` at the verified tag.
 
 Correlation id, identity, and the causation chain are picked up from the ambient
 module-level managers (`identityProvider`, `causationManager`,
@@ -236,37 +252,32 @@ await unitOfWork.commit();
 ```
 
 `ITransactionalEventSequence` returns `Promise<void>`, not an `AppendResult`;
-results are on the unit of work.
+results are on the unit of work. Since 6.51.0 transactional appends retain
+routing, subject, occurrence, tags and concurrency scopes in enrollment order;
+conflicting scopes for one source throw `ConflictingConcurrencyScopesInUnitOfWork`
+before enrollment.
 
 ## Observing
 
-### Handlers are found by camelCase method name
+### Handlers use camelCase names or `@handles(EventType)`
 
-This is the defining convention of this client, and it is **not** the parameter
-type. `Source/reactors/Reactors.ts:378-381` computes the method name from the
-event class name and looks it up on the prototype:
+The default is the camelCase event class name, **not** parameter-type dispatch.
+An unmatched name is simply never called. Reactors and reducers also support
+`@handles(EventType)` on a public instance method: one handler per event;
+a reactor handler cannot combine it with `@replay`.
 
-```typescript
-const className = (eventTypeClass as Function).name;
-const methodName = className.charAt(0).toLowerCase() + className.slice(1);
-
-if (typeof proto[methodName] === 'function') { /* it is a handler */ }
-```
-
-Reducers do the same (`Source/reducers/Reducers.ts:454-460`). A handler whose
-method name does not match is simply never called — **there is no error**.
-
-> The docstring at `Source/reactors/reactor.ts:28-29` claims dispatch is by the
-> first parameter's type. **It is wrong**, and it is still wrong at `5.1.0`. The
-> code is the authority; so are the client snippets under `Documentation/`, which
-> state the name rule explicitly.
+**Reactors replay by default since 6.9.0.** Use class `@onceOnly()` (not inherited)
+or method `@onceOnly()` for effects that must not run on replay; `@replay(EventType)`
+provides a separate replay handler. This never prevents failed-partition
+redelivery or proves exactly-once effects.
 
 ```typescript
-import { reactor } from '@cratis/chronicle/reactors';
+import { onceOnly, reactor } from '@cratis/chronicle/reactors';
 import { EventContext, EventForEventSourceId } from '@cratis/chronicle';
 
 @reactor()
 export class <ReactorName> {
+    @onceOnly()
     async <eventName>(event: <EventName>, context: EventContext): Promise<EventForEventSourceId> {
         return {
             eventSourceId: '<other-event-source-id>',
@@ -279,126 +290,46 @@ export class <ReactorName> {
 A returned event, array, or `EventForEventSourceId` is appended as a side effect;
 a failed side-effect append fails the partition.
 
-> **The handler receives `JSON.parse(event.Content)` — a plain object, not an
-> instance of your event class** (`Source/reactors/Reactors.ts:297`, `:320`;
-> `Source/reducers/Reducers.ts:377`). `instanceof` checks and methods on the event
-> class do not work. Read properties only.
+Reactor arguments are `(event, context, services, delivery)`
+(`Source/reactors/ReactorDispatcher.ts`). `ReactorServices` exposes
+`{ eventStore, readModels, signal }` for the observation's owning store/namespace.
+`ReactorDelivery` supplies an idempotency identity, not an exactly-once guarantee.
 
-`@reducer(id?, eventSequenceId?, readModel?, isActive?)` —
-`Source/reducers/reducer.ts:58`. Passing `readModel` also registers that type as a
-read model. **The reducer handler takes three arguments (`4.0.0` through `5.1.0`)** —
-`reducerInstance[methodName](content, currentState, context)`
-(`Source/reducers/Reducers.ts:400`). The third is optional by arity, and a handler
-may be sync or async.
+> **Event content is parsed JSON, not an instance of your event class.**
+> `instanceof` checks and event methods do not work. Read properties only.
 
-Restrict an observer to tagged events with `@filterEventsByTag(value)` —
-`Source/events/filterEventsByTagDecorator.ts:36`.
+`@reducer(id?, eventSequenceId?, readModel?, isActive?)` also registers the supplied
+read model type. Reducers receive `(content, currentState, context)` and may be
+sync or async.
+
+Filter with `@filterEventsByTag(value)`, `@eventSourceType(...)`, or
+`@eventStreamType(...)`. `reactorResultHandler` handles application-owned returns.
 
 ### Read models and projections
 
-`store.readModels` — `Source/readModels/IReadModels.ts`: `getInstanceById(type, key, sessionId?)`
-(`:38`), `getInstances(type, eventCount?)` (`:46`), `getSnapshotsById` (`:54`),
-`watch(type): AsyncIterable<ReadModelChangeset<T>>` (`:61`), plus `materialized`
-for paged access.
+Read through `store.readModels`; projections are model-bound (decorators) or
+fluent (`@projection`). Constraints use `@unique`/`@removeConstraint` or a builder.
 
-Two projection styles:
-
-- **Model-bound** — decorators on the read model, from
-  `@cratis/chronicle/projections`: `fromEvent`, `fromEvery`, `fromAll`, `setFrom`,
-  `setFromContext`, `setValue`, `join`, `addFrom`, `subtractFrom`, `increment`,
-  `decrement`, `count`, `childrenFrom`, `nested`, `clearWith`, `removedWith`,
-  `removedWithJoin`, `noAutoMap`, `notRewindable`, `passive`.
-- **Declarative** — `@projection(id?, readModelType?, eventSequenceId?)` on a class
-  implementing `IProjectionFor<TReadModel>` with
-  `define(builder: IProjectionBuilderFor<TReadModel>): void`.
-
-Constraints are `@constraint()` on a class implementing `IConstraint` with a
-`define(builder)`; the builder gives `unique(...)`, `uniqueFor(...)`,
-`perEventSourceType`, `perEventStreamType`, `perEventStreamId`. **There are no
-model-bound constraint decorators in this client** — the class-plus-builder form
-is the only one.
+Read [references/read-models-and-projections.md](references/read-models-and-projections.md) when reading a read model instance, choosing a projection style, or declaring a constraint.
 
 ### Variants — mutually exclusive read models for one entity's lifecycle
 
-> Requires `@cratis/chronicle` `6.2.0` or later — newer than this skill's
-> `5.1.0` baseline (`Source/projections/VariantReclassifier.ts` and siblings).
-> Reverify before claiming support; take the version from npm.
+One entity with mutually exclusive lifecycle shapes is modeled as variants, with `@variantOf`/`@entersOn`/`@globalFor` or the fluent `.variantOf()`/`.entersOn()`; every variant needs an entering event.
 
-Some entities do not have one shape for their whole lifetime — a work item is a
-backlog entry until a pull request exists for it, then it is a pull request
-until it merges. **Model-bound** — `@variantOf(identity, key)` and
-`@entersOn(eventType, key?)`, alongside the ordinary `@fromEvent`/`@setFrom`
-decorators:
+Read [references/variants.md](references/variants.md) when a read model for one entity changes shape over its lifecycle, or when you meet `VariantMustDeclareEntersOnEvent` or `GlobalHandlerPropertyNotOnVariant`.
 
-```typescript
-class WorkItem {}   // anchors the group; not itself a read model
+## Artifact discovery
 
-@variantOf(WorkItem, 'id')
-@entersOn(IssueCreated)
-@fromEvent(IssueCreated)
-@readModel()
-class BacklogItem {
-    id = '';
-    @setFrom(IssueCreated, 'title') title = '';
-}
+`ChronicleOptions.discoveryPatterns` defaults to `**/*.ts` and `**/*.tsx` only
+for TypeScript entries (`.ts/.tsx/.mts/.cts`), Vitest, or tsx/ts-node/type-stripping
+loader arguments. It excludes declaration files, `node_modules`, `dist`, `build`,
+`.git`, `.vscode`, and `*.spec/test.ts(x)` (`Source/ChronicleOptions.ts`).
 
-@variantOf(WorkItem, 'id')
-@entersOn(PullRequestCreated)
-@fromEvent(PullRequestCreated)
-@fromEvent(BuildCompleted)          // not the entering event -> update-only join
-@readModel()
-class PullRequestItem {
-    id = '';
-    @setFrom(PullRequestCreated, 'pullRequestUrl') pullRequestUrl = '';
-    @setFrom(BuildCompleted, 'buildStatus') buildStatus = '';
-}
-```
-
-`entersOn` is repeatable (a variant may enter on more than one event) and its
-`key` argument names an *event* property, defaulting to the event source id. A
-mapping shared by every variant of an identity goes on a class decorated
-`@globalFor(identity)` instead of being repeated on each variant — every
-variant it targets must actually declare the property it maps, or
-`GlobalHandlerPropertyNotOnVariant` is thrown when the group is built. A class
-carrying only `@globalFor` is never itself registered as a projection.
-
-**Declarative** — `variantOf` and `entersOn` are members of
-`IProjectionBuilderFor<TReadModel>` itself:
-
-```typescript
-@projection()
-class PullRequestItemProjection implements IProjectionFor<PullRequestItem> {
-    define(builder: IProjectionBuilderFor<PullRequestItem>): void {
-        builder
-            .variantOf(WorkItem, m => m.id)
-            .entersOn(PullRequestCreated)
-            .from(BuildCompleted);   // update-only, same reason
-    }
-}
-```
-
-**A variant that declares no `@entersOn`/`entersOn(...)` throws
-`VariantMustDeclareEntersOnEvent`** when the group is built — a variant that
-could never be entered could never be written to at all, since every other
-handler on it is update-only.
-
-## Discovery is a runtime file glob — this is the biggest difference
-
-`ChronicleOptions.discoveryPatterns` defaults to
-`['**/*.ts', '!**/*.d.ts', '!**/node_modules', '!**/dist', '!**/build', '!**/.git', '!**/.vscode', '!**/*.spec.ts', '!**/*.test.ts']`
-(`Source/ChronicleOptions.ts:73-83`), and the client `import()`s every matching
-file at construction time so that the decorators run. Registration is into a
+**A compiled-JS entry defaults to `[]`.** Decorators register when their module is
+imported, so side-effect imports of artifacts remain load-bearing in production.
+Explicit patterns always win; `[]` disables scanning. The client imports matching
+files at construction; failed imports name the file. Registration uses a
 process-wide static map.
-
-Two consequences that decide whether an application works at all:
-
-1. **The default pattern matches `.ts`, not `.js`.** It works under a
-   TypeScript-capable runtime — the sample runs `tsx index.ts` — and a compiled
-   `dist/*.js` deployment discovers **nothing** unless `discoveryPatterns` is
-   overridden.
-2. **Decorators only register when their module is imported.** Side-effect imports
-   of event, reactor, reducer, and projection modules are load-bearing; the sample
-   does exactly this with a comment saying why.
 
 `EventStore.registerArtifacts()` registers event types first, then everything else
 in parallel, and re-runs for every cached event store on reconnect.
@@ -414,54 +345,56 @@ in parallel, and re-runs for every cached event store on reconnect.
 - Failed operations are retried once after reconnecting, keyed on gRPC status
   codes 4/13/14 plus a substring match over the error text.
 
-> **The client version reported to the kernel is a hardcoded `'1.0.0'`** with a
-> TODO — `Source/ChronicleClient.ts:429`, alongside `ClientType: 'TypeScript'`
-> (`:434`). The Chronicle 17 server-side compatibility check therefore sees a
-> placeholder from this client, and grepping `Source/` for `CheckCompatibility`,
-> `ProtocolVersion`, or descriptor-set handling finds nothing. **Do not tell
-> developers this client negotiates protocol compatibility** — it does not.
+The client reports its **installed package version**, read from
+`@cratis/chronicle/package.json`, and performs `CheckCompatibility` with
+`ProtocolVersion` and the contracts descriptor set before a connection is usable
+and before event-sequence calls. `IncompatibleChronicleServer` is a permanent
+verdict, not retried (`Source/connection/CompatibilityPreflight.ts`).
+Three consecutive credential rejections cause `RejectedChronicleCredentials`.
+A failed token request is logged and the call proceeds without a token (allowing
+an auth-less kernel); tokens come from the selected server, not the first host.
 
-## No dependency injection
+Since 6.43.0 built-in spans use `cratis.chronicle.client.*` and scope
+`Cratis.Chronicle.Client`; metrics use seconds. Legacy millisecond metrics and
+`chronicle.*` attributes are retired except the retained exact-string
+`chronicle.sequence_number`. Historical constants, `ChronicleMetrics`, and
+`telemetry.spanNames` are deprecated; migrate dashboards.
 
-There is none, and none is planned in the source: no container integration, no
-`addChronicle`-style registration. Reactors, reducers, projections, constraints,
-and seeders are instantiated by the client itself, so **constructor injection does
-not work**. Use module-scope collaborators, as the shipped sample does.
+## Artifact activation
 
-## Common pitfalls
+There is no built-in container. By default the client constructs artifacts.
+For reactor/reducer constructor dependencies supply `artifactActivator` in
+`ChronicleOptions`: activation is per delivered batch and can implement
+`ActivatedArtifact.run/complete/dispose` around handlers and returned effects.
 
-| Pitfall | Why it bites |
+## Testing without a kernel
+
+Read [references/testing.md](references/testing.md) when specifying appends,
+reactors or read models with `EventScenario`, `ReactorScenario`, or
+`ReadModelScenario`. Unsupported shapes fail explicitly; they need kernel tests.
+
+## More surface
+
+| Need | Public surface and boundary |
 | --- | --- |
-| Naming a reactor method after the handler's purpose | Dispatch is by the camelCase event class name; a mismatch is silently never called |
-| `instanceof` on the event inside a handler | It is a `JSON.parse`d plain object, not your class |
-| Event class with no default constructor values under `tsx` | No decorator metadata is emitted, so the schema comes out empty |
-| Two `@eventType()` classes sharing a class name | The id defaults to the class name and they collide |
-| Deploying compiled `dist/*.js` with default discovery | The default glob matches `**/*.ts`; nothing is discovered |
-| Omitting a side-effect import of an artifact module | Its decorator never runs, so it is never registered |
-| Forgetting `import 'reflect-metadata'` at the entry point | Decorators do not work at runtime |
-| Forgetting to install `@cratis/fundamentals` | It is a peer dependency and is not installed for you |
-| Importing `ChronicleConnectionString` | There is no `./connection` export; pass a string |
-| Expecting single `append()` to set a stream or subject | Those fields are hardcoded; use the `EventForEventSourceId[]` overload |
-| A connection string with no credentials | Silently falls back to the development client credentials |
-| Shipping the default TLS behavior | `skipTlsValidation` defaults to `true` |
-| Constructor-injecting a dependency into a reactor | There is no DI; the client constructs it |
-| Carrying a `3.x` example forward | Tags, the reducer context parameter, and two RPC names changed in `4.0.0` |
-| Reading `result.sequenceNumber` as a number | It is a `bigint` behind `.value` |
-| A `@globalFor` mapping targeting a property one variant lacks | `GlobalHandlerPropertyNotOnVariant` when the group is built, not a silently skipped mapping |
-| Expecting a `@globalFor`-only class to appear as a projection | It is never registered on its own; it is merged into its variants |
+| Registered sources/streams | Root `@eventSource`, repeatable `@eventStream`, `ConcurrencyDimensions`, `store.eventSources`; append `eventSource/eventStream`. Kernel 19.30+; see `Source/eventSources/` |
+| Named tags | `namedTags` on appends; batches cannot combine them with registered event sources |
+| Personal data and retained secrets | `@pii`, `@subject`, `store.pii`; `@encrypted` with `EncryptionScope` from `./confidentiality`; release through `readModels.release*`. Never combine PII/encrypted or put either on `eventSourceId` |
+| Subject migration | Subject uses `@subject()` since 6.41.1; earlier appended events used the source id for protection keys |
+| Operational catalogs | `store.observers` (list/remove), `store.patterns`; mutations need authority |
+| Diagnostics/privacy | `ChronicleOptions.telemetry` and per-client `logger`; source ids are omitted by default, raw/HMAC recording is opt-in |
 
 ## Verify
 
 - The installed version is the one you intended, taken from npm, and
   `@cratis/fundamentals` is installed alongside it.
 - `reflect-metadata` is imported exactly once, at the entry point.
-- `experimentalDecorators` and `emitDecoratorMetadata` are both on.
-- Every event class either has `@field` declarations or default constructor
-  values, and its schema is non-empty at runtime.
-- `discoveryPatterns` matches the files that actually ship in the deployed
-  artifact.
-- Every reactor and reducer handler is named as the exact camelCase of its event
-  class, and an appended event demonstrably reaches it.
+- Decorator mode is consistent: standard mode uses explicit `@field` types;
+  legacy mode uses `experimentalDecorators` with `emitDecoratorMetadata`.
+- Every serialized property has a runtime type and a non-empty schema.
+- Compiled-JS deployments import artifacts, or configure explicit discovery.
+- Every handler uses exact camelCase naming or `@handles(EventType)`, and an
+  appended event demonstrably reaches it; side-effect replay policy is explicit.
 - A production connection string carries credentials and `skipTlsValidation=false`.
 - `client.dispose()` runs on shutdown.
 - Every variant group has at least one `@entersOn`/`entersOn(...)` per variant,

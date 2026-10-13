@@ -6,15 +6,14 @@
   State Change, State View, Chronicle runtime guarantees, evidence. Now `references/checklists.md`;
   the render workflow links here and keeps no second copy. References renamed to the corpus skills.
 
-## Adapted closely (Martin Dilger and Nebulit GmbH, with agreement)
+## Adapted closely (Martin Dilger and Nebulit GmbH)
 
 Source: https://github.com/Nebulit-GmbH/agentic-engineer at commit `07b0f30648d663cb588d7e2c7aa031af9dfc21f2`,
-by Martin Dilger and Nebulit GmbH (https://nebulit.de). The repository carries no licence file; this material
-is adapted with the agreement of Martin Dilger and Nebulit GmbH.
+by Martin Dilger and Nebulit GmbH (https://nebulit.de), used with the explicit consent of Martin Dilger and Nebulit GmbH.
 
 | Source file | Used in | How |
 |---|---|---|
-| `.claude/skills/build-state-change/SKILL.md`: final verification checklist (commands, events, specifications, nothing invented) | `references/checklists.md` "State Change"; `SKILL.md` steps 2-3 and "Gate" | Adapted closely; slice.json becomes the `.play` slice or agreed outline, emmett types become Arc commands and Chronicle events |
+| `.claude/skills/build-state-change/SKILL.md`: final verification checklist (commands, events, specifications, nothing invented) | `references/checklists.md` "State Change"; `SKILL.md` steps 2-3 and "Gate" | Adapted closely; slice.json becomes the `.play` slice or agreed outline, emmett types become Arc commands and Chronicle events; the six checks are kept as the closing "Final verification" tick-list in `references/checklists.md`. Not adopted: the Emmett decide/evolve structure, `routes.ts` and the state complexity guide |
 | `.claude/skills/build-state-view/SKILL.md`: final checklist (every field has a source, subscribed events equal modeled events, no extra columns, one test per specification) | `references/checklists.md` "State View" | Adapted closely; migration, `canHandle` and Knex items translated to read-model properties, projection sources and storage mapping; Knex connection items not adopted (Emmett specific) |
 | `.claude/skills/build-automation/SKILL.md`: checklist (every processor implemented, command fields map only from the trigger, no invented conditions, idempotency specified, no routes, processor registered in startup and event store bootstrap verified) | `references/checklists.md` "Automation and Translation" including "Real startup participation" | Adapted closely; processor/DLQ items translated to the Chronicle reactor and its failure behavior; startup registration translated to discovery, event store and event sequence checks; `start()`/`stop()`, processor-id and `schema.migrate()` not adopted (Emmett specific) |
 | `.build-kit/lib/backend-prompt.md`: one slice per iteration, planned can be only added specifications, the slice is always true, done criteria, escalating ambiguity, progress report, consolidated patterns, learnings filter | `references/build-prompts.md` sections 3-5; `SKILL.md` steps 4-6 and "Gate" | Restored from #493 and adapted closely; `index.json`, `progress.txt`, board status, `<promise>` sentinels, per-step progress appends, commit and merge steps, and the slice-only done gate not adopted (replaced by the result packet, the completion gate and separate git authorization) |

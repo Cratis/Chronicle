@@ -15,13 +15,13 @@ A vertical slice owns a single behavior: the command or query, the events it pro
 
 This file is the reference for *what* goes in each part of a slice. Layout, slice types, workflow, and quality gates are in [general.md](./general.md).
 
-**Model-first check.** Before changing a slice, look for it in the accepted `.play` model (in the committed tree: `git ls-tree -r --name-only HEAD -- <root>` lists it; its HEAD version remains the contract until working-tree edits are committed) under the model root (default `.cratis/screenplay/`, or the root set by `mcpServers.screenplay.root` in `.cratis/ai.json`). A `.play` file outside the root or an untracked or uncommitted draft is not a contract. If an accepted model covers it, change the model and render or gap-fill from it; never edit Stage-managed files. See Phase 0 in [application-profile.md](./application-profile.md).
+**Model-first check.** Before changing a slice, look for it in the accepted `.play` model (in the committed tree: `git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured; its HEAD version remains the contract until working-tree edits are committed) under the model root (the folder holding the project's `.play` files, or the root set by `mcpServers.screenplay.root` in `.cratis/ai.json`). A `.play` file outside the root or an untracked or uncommitted draft is not a contract. If an accepted model covers it, change the model and render or gap-fill from it; never edit Stage-managed files. See Phase 0 in [application-profile.md](./application-profile.md).
 
 ## Technical stack
 
 - .NET / C# (ASP.NET Core) — **Cratis Arc** for CQRS / model-bound commands and queries, **Cratis Chronicle** for event sourcing, MongoDB or EF Core for read models.
 - React + TypeScript (Vite) — Cratis Components 4.x + Arc-generated proxies, MVVM. Vitest + Mocha/Chai/Sinon for frontend specs.
-- xUnit + Cratis.Specifications + NSubstitute for C# specs (the `*Scenario` family — see [specs.md](./specs.md)).
+- xUnit + Cratis.Specifications + NSubstitute for C# specs (`Specification` plus a direct call by default for pure decisions; add the `*Scenario` family only where pipelines, validation, constraints, projections or wiring contribute proof — see [specs.md](./specs.md)).
 
 ## Proxy generation — the build dependency
 
@@ -55,10 +55,10 @@ Every domain identifier or named value is a typed record — raw `string`/`Guid`
 - **[contract] Chronicle stream identities** derive from `EventSourceId<T>` with an `IComparable` underlying primitive. Add `NotSet`, `New()`, or a `T` → derived-id operator only when the domain API justifies it; typed empty/zero values are real specified stream IDs. The base conversion surface does not construct every derived domain record automatically.
 
 ```csharp
-public record AuthorId(Guid Value) : EventSourceId<Guid>(Value)
+public record AuthorId(Guid Value) : EventSourceId<Guid>(Value), IGeneratable<AuthorId>
 {
     public static readonly AuthorId NotSet = new(Guid.Empty);
-    public static AuthorId New() => new(Guid.NewGuid());
+    public static AuthorId New() => new(GenerateValue.Uuid());
     public static implicit operator AuthorId(Guid value) => new(value);
 }
 
@@ -67,6 +67,8 @@ public record AuthorName(string Value) : ConceptAs<string>(Value)
     public static implicit operator AuthorName(string value) => new(value);
 }
 ```
+
+`IGeneratable<T>` and `GenerateValue` need Cratis.Fundamentals 7.23.0 or later. Arc and Chronicle can resolve an older version; add a direct reference or keep a plain `static New()` until then (see [concepts.md](./concepts.md)).
 
 **[convention] Placement:** slice-specific concept → in the slice file; feature-shared → feature folder; module-shared → module folder; app-wide → `Common/`. Scan `Common/` and the feature folder before creating a new concept. See [concepts.md](./concepts.md) for full patterns, or invoke the **cratis-fundamentals-concept** skill.
 
@@ -87,7 +89,7 @@ The command carries input from the caller. `Handle()` is defined directly on the
 | Reusable value invariant (length, format, range) | `ConceptValidator<T>` on the concept type |
 | Command-input / cross-field / pre-handler rule (incl. injected read-model/service/identity checks) | `CommandValidator<TCommand>` with `RuleFor(...)` |
 | Handler needs fetched/computed data before it can build the event | `Provide()` — fetches the data; may validate it and short-circuit |
-| State-dependent rule that must hold **under concurrency** | inject the read model into `Handle()`, return `Result<TEvent, ValidationResult>` |
+| State-dependent rule that must hold **under concurrency** | `IStreamReads`/`StreamDecision` for one stream, or `[ProtectedDecision]` + `DecisionRead<T>` for admitted projected state; plain injection is advisory |
 | Uniqueness | Chronicle `[Unique]` / `IConstraint` (race-safe) — not a read-model pre-check |
 | Genuinely exceptional failure (bug, missing infra) | `throw` a domain exception |
 
@@ -106,18 +108,19 @@ for the versioned boundary and supported alternatives.
 
 A command's **property values** are recorded on the causation of every event it appends, alongside the command's name, so an event says not only which command produced it but what that command was asked to do. The causation is written into the event log and stays there for as long as the events do — a value recorded there cannot be taken back out by changing code.
 
-Two markings keep a value off the chain, and both are honored on the property, the declaring type, the positional record parameter, **and the property's type**:
+Two markings keep a value off the chain (`[PII]` from Chronicle, `[NotAudited]` from Arc), and both are honored on the property, the declaring type, the positional record parameter, **and the property's type**:
 
 | Marking | For | Also does |
 | --- | --- | --- |
 | `[PII]` | personal data | encrypts it in the event, enrolls it in erasure |
-| `[NotAudited]` | a secret that is not personal data — password, token, API key, card number | nothing else; it only withholds |
+| `[NotAudited]` | a secret that is not personal data — a password or token given as a command input, an API key, a card number | nothing else; it only withholds. A credential (password, token) is never put on an event: store a hash or a reference. A secret the system must retain on an event is also `[Encrypted]` |
 
-They are **not interchangeable**: `[PII]` on a password would encrypt it and enroll it in GDPR erasure, which is wrong; `[NotAudited]` on a name does nothing for an erasure request, which is also wrong.
+They are **not interchangeable**: `[PII]` on a password would encrypt it and enroll it in GDPR erasure, which is wrong; `[NotAudited]` on a name does nothing for an erasure request, which is also wrong. An operational secret the system retains on an event (a third-party API key, a company's bank account number) needs **both** `[Encrypted]` (`Cratis.Chronicle.ProtectedValues`, Chronicle 19.32.0+; at rest, no erasure) and `[NotAudited]` (off the chain); either alone leaves a gap. A credential used for authentication is never retained: the command marks it `[NotAudited]` and the event carries only a hash or a reference. Never combine `[PII]` with `[Encrypted]` (`CHR0053`), and neither goes on an event source id (`CHR0034`, `CHR0052`).
 
 **Prefer marking the concept**, exactly as with `[PII]` — mark `ApiKey` once and every command taking one is covered:
 
 ```csharp
+[Encrypted]
 [NotAudited]
 public record ApiKey(string Value) : ConceptAs<string>(Value);
 ```
@@ -162,7 +165,7 @@ Return the event(s) directly — Arc appends them; never inject `IEventLog` to a
 | `(EventSourceId, TEvent)` | command decides the event source id (tuple order doesn't matter) |
 | `(TResponse, TEvent)` | a response value plus an event |
 | `IEnumerable<object>` | multiple events; `EventForEventSourceId(id, @event)` wrappers for cross-stream |
-| `Result<TEvent, ValidationResult>` | success event or a typed validation error (concurrency-sensitive rule) |
+| `Result<TEvent, ValidationResult>` | success event or a typed validation error; does not itself guard concurrency |
 | `ICommandOperation` / `CommandOperations` | immediate server-side work after event enrollment, never the client response |
 | `void` | no event |
 
@@ -180,7 +183,25 @@ Three attributes scope an append broad→narrow, and each one *also* (only with 
 
 Each attribute always tags the appended events (visible in `EventContext`). **Only when the command also carries `concurrency: true`** does each dimension join the server-side `ConcurrencyScope` (plus the event source id), with the optimistic strategy supplying the expected tail sequence number. A command **without** `concurrency: true` contributes no scope of its own, and the append falls to whatever concurrency strategy the event sequence is configured with — by default the optimistic one, scoped to the event source. So the attribute chooses *which dimensions* bound the check, not whether a check happens at all. Reach for it on high-contention state transitions where a stale read would let two commands both "win" — it narrows the boundary so appends that are genuinely independent stop colliding (concurrency failures surface on `CommandResult`/`AppendResult`). Adopt it deliberately per behavior, not as a blanket default.
 
-When the stream id is known only at runtime, implement `ICanProvideEventStreamId.GetEventStreamId()` instead of `[EventStreamId]`. ⚠️ Combining `ICanProvideEventStreamId` with a non-null `[EventStreamId]` attribute on the same command throws `AmbiguousEventStreamId` when that command is executed (the check runs while Arc builds the command context, not at startup) — pick one (or set the attribute value to `null` to defer to the interface).
+At Arc v22.75.0, prefer `IStreamReads.ForCommand()` in `Provide()` and return
+`StreamDecision.Append(...)` when deciding over one routed stream. For projected
+state use `[ProtectedDecision]` + `DecisionRead<T>`; plain injection and keyed
+reads are advisory, including in `Handle()`. Protected projections must be
+Chronicle-admitted (direct source key, known events; not reducers, joins, children
+or passive shapes); validators must be parameterless and certified by Arc.
+Exact returned scopes replace automatic `concurrency: true` capture.
+
+`[EventStreamId("{ReportingScopeId}:{Period}")]` resolves command property values
+after validation; concepts supply their underlying values. An interface can
+compute an id too. `AmbiguousEventStreamId` rejects any non-NotSet attribute
+value combined with `ICanProvideEventStreamId`, including a template; pick one.
+`[EventSource<TSource>(stream)]` selects a definition-backed route on commands and
+aggregate roots. `EventRoute`/`IEventRoutes` reuse it; explicit wrapper routing
+wins over command context. `[EventTag]`, `ICanProvideEventTags`, returned
+`EventTags` and discovered `ICanProvideCommandEventTags` add tags to returned
+events. `CompleteStream` runs after commit, not atomically with append, and closes
+stream type/id across the log, not just one source. Read the Arc command skill's
+`references/decisions-and-routing.md` for source-pinned contracts and limitations.
 
 ### Event-source id resolution order **[contract]**
 
@@ -205,6 +226,7 @@ Apply authorization attributes on the `[Command]` record or query method. **[con
 - **[contract] No arguments for new events** — the type name is the identifier. Use `generation:`/id only when evolving an existing contract (invoke the **cratis-chronicle-event-type-migration** skill).
 - **[contract] Past-tense, one-purpose names** (`AuthorRegistered`, not `Updated`/`FormSubmitted`) — Chronicle requires past-tense, single-purpose facts. Self-describing without slice context.
 - **[contract] Avoid nullable properties** — Chronicle's analyzer warns on nullable event members; model optional facts as a separate event, or resolve a nullable command input to a non-null sentinel before constructing the event.
+- **[contract] `Handle()` never returns a nullable event or `null` for "nothing to do"** — Arc treats a `null` result as success with nothing appended, so the caller is told a command succeeded that never happened. Missing state or a failed rule is a rejection: return `Result<TEvent, ValidationResult>` with `ValidationResult.Error(...)`, or reject in a validator or `Provide()`. Optional `ICommandOperation` returns are a separate contract and unaffected.
 - **[contract] Never carry the event-source id** — it's implicit in the event context.
 - **[convention] No `DateTimeOffset`/`DateTime` properties** that duplicate `EventContext.Occurred` — Chronicle records the wall-clock timestamp of every event there. Read it in projections/reducers via `[SetFromContext<T>]` or fluent `.Set(m => m.X).ToEventContextProperty(c => c.Occurred)`. Use `DateOnly` only for a business date the user explicitly supplies.
 - **[convention] Every `[EventType]` has an XML `<summary>`** (Cratis C# doc convention) recording why the event exists and what each value means.
@@ -228,6 +250,14 @@ public record AuthorRegistered(AuthorName Name);
 ## Read Models and Queries
 
 **[contract]** `[ReadModel]` records expose queries as `public static` methods; dependencies are plain method parameters (no `[FromServices]`). Default to model-bound projection shape; drop to fluent only when needed. For step-by-step creation, invoke the **cratis-chronicle-read-model** skill.
+
+Use `[ReadModel(RequireQueryAttribute = true)]` with `[Query]` on intended
+endpoints when public folds/helpers exist (ARC0026/ARCCHR0019). `[Query]` alone
+does not hide siblings; private/compiler-generated statics are never queries.
+A `CancellationToken` is supplied by Arc; concept arguments come from the caller,
+not DI. Bad GET/QUERY argument conversions return 400. Single-instance MongoDB/EF
+observations emit `default` on absence/deletion/filter exit: guard `hasData` and
+`isReady` in React. Verified at Arc v22.75.0; see the read-model query reference.
 
 ### Query return shapes **[contract]**
 
@@ -265,7 +295,7 @@ query reference for versioned behavior and composition trade-offs.
 
 ### Choosing read-model access in command-side code **[convention]**
 
-Ladder, first that fits: (1) direct read-model (DCB) injection — only when keyed by the command's own event-source id; (2) a `[Passive]` projection; (3) `IReadModels.GetInstanceById<T>((EventSourceId)key)` for a different/derived key; (4) a materialized projection. A lookup *interface* is justified **only** for a genuine non-key search (e.g. find-by-email) — never to wrap a keyed `GetInstanceById`.
+Ladder, first that fits: (1) advisory direct read-model injection — only when keyed by the command's own event-source id; (2) a `[Passive]` projection; (3) `IReadModels.GetInstanceById<T>((EventSourceId)key)` for a different/derived key; (4) a materialized projection. A lookup *interface* is justified **only** for a genuine non-key search (e.g. find-by-email) — never to wrap a keyed `GetInstanceById`.
 
 **[contract] Passive state is not sink state.** `IMongoCollection<T>` cannot
 compute a passive read model; any leftover documents are not maintained state.
@@ -332,7 +362,7 @@ public Task AuthorRegistered(AuthorRegistered @event, EventContext context) => .
 **[contract]** Chronicle encrypts `[PII]`-marked values per subject; decryption is transparent to observers and queries (read models injected into a `CommandValidator<T>` or `Handle()` decrypt transparently under the command's resolved subject before validation/handler logic runs).
 
 - Prefer **concept-level `[PII]`** (on the `ConceptAs<T>` type) so the marker travels everywhere automatically; use property-level `[PII]` only when a value is personal in one event context but not everywhere.
-- `[PII]` also keeps the value **off the causation chain** when it is a command property — see [Causation](#causation--what-a-command-records-contract). A secret that is not personal data needs `[NotAudited]` instead; `[PII]` is the wrong tool for a password.
+- `[PII]` also keeps the value **off the causation chain** when it is a command property — see [Causation](#causation--what-a-command-records-contract). A retained operational secret that is not personal data needs `[Encrypted]` plus `[NotAudited]` instead; `[PII]` is the wrong tool for it, and a password is never retained at all (store a hash).
 - **`[PII]` is found at any nesting depth, and may mark a whole value object.** A `[PII]` concept inside a value object is encrypted where it sits (siblings stay readable). Marking the **value object type** (or a property typed as one) with `[PII]` classifies every value it holds — Chronicle pushes the marker down to the individual values, so the document keeps its shape and each value is separately encrypted rather than fused into one blob.
 - Projection-backed read models inherit PII lineage automatically — don't add `[PII]` to their properties. Reducer-backed models: a `[PII]`-concept-typed property is detected automatically; add property-level `[PII]` only for a primitive/non-PII-concept property populated from PII source data.
 - ⚠️ **`[PII]` cannot be applied to `EventSourceId`/`EventSourceId<T>`** — Chronicle throws `PIINotSupportedOnEventSourceId` at runtime because the identifier is the encryption-key lookup. If the identifier itself is sensitive, use a random `Guid`-backed surrogate as the event source id and store the sensitive value in a `[PII]` property.
@@ -363,7 +393,13 @@ Redaction is a system-event request that removes payload availability from the e
 
 Cross-slice access is **read-only and goes through Chronicle** — inject another slice's read model (validator/`Provide()`/`Handle()`), read by explicit key with `IReadModels.GetInstanceById`, mark a `[Passive]` projection for command-side decisions, or react to its events. **Never** instantiate or DI another slice's command/handler/service.
 
-**DCB (Dynamic Consistency Boundary):** a command's consistency boundary is exactly the state its validator/`Provide()`/`Handle()` reads — determined at runtime, not pre-declared. Pair with `concurrency: true` stream metadata when a stale read could let two commands both "win."
+**DCB (Dynamic Consistency Boundary):** the boundary is the event state explicitly
+enrolled in guarded decisions, not every model a command reads. Use stream
+reads/exact scopes or `[ProtectedDecision]` + admitted `DecisionRead<T>`;
+plain validator/`Provide()`/`Handle()` injection is advisory. Stream-level
+`concurrency: true` scopes are another explicit boundary, not protection for an
+arbitrary snapshot. Specify conflicts with `UseDecisionReads()` and actual seeded
+events, not pinned models.
 
 ## Dialogs
 

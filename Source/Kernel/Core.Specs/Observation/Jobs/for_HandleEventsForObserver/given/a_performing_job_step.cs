@@ -27,6 +27,7 @@ public class a_performing_job_step : Specification
     protected TestKitSilo _silo = new();
     protected Storage.IStorage _storage;
     protected IObserver _observer;
+    protected IObserverServiceClient _observerServiceClient;
     protected IConfigurationForObserverProvider _configurationProvider;
     protected Observers _observersConfig;
     protected ISomeObserverType _observerSubscriber;
@@ -106,6 +107,10 @@ public class a_performing_job_step : Specification
         _silo.AddProbe(_ => _observer);
         _silo.AddProbe(_ => _observerSubscriber);
         _silo.AddService(_storage);
+        _observerServiceClient = Substitute.For<IObserverServiceClient>();
+        _observerServiceClient.FlushAllFor(Arg.Any<ObserverDetails>(), Arg.Any<bool>())
+            .Returns(Task.FromResult<IReadOnlyDictionary<SiloAddress, Guid[]>>(new Dictionary<SiloAddress, Guid[]> { [SiloAddress.Zero] = [] }));
+        _silo.AddService(_observerServiceClient);
         _silo.AddService(Substitute.For<IJobStepThrottle>());
         _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
 
@@ -148,9 +153,11 @@ public class a_performing_job_step : Specification
             LastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable
         };
 
+        _stateStorage.State = _performState;
         _jobStep = await _silo.CreateGrainAsync<TestableHandleEventsForObserver>(
             JobStepId.New(),
             new JobStepKey(JobId.New(), "event-store", "event-store-namespace"));
         _jobStep.SetupForTesting(_observer, subscription);
+        _jobStep.GuardStateAccess = true;
     }
 }
