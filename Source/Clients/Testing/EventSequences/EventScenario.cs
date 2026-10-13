@@ -7,6 +7,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Testing.Events;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
@@ -32,7 +33,7 @@ public class EventScenario(
     ICanProvideConstraints? constraintProvider,
     Defaults defaults) : IDisposable
 {
-    readonly (IEventLog Log, TestingEventStore Root) _created = Create(eventSequenceId, eventStoreName, namespaceName, constraintProvider, defaults);
+    readonly (IEventLog Log, TestingEventStore Root, Lazy<IReadModels> ReadModels) _created = Create(eventSequenceId, eventStoreName, namespaceName, constraintProvider, defaults);
 
     /// <summary>
     /// Initializes a scenario with constraints discovered from the loaded assemblies.
@@ -111,6 +112,15 @@ public class EventScenario(
     public IEventLog EventLog => _created.Log;
 
     /// <summary>
+    /// Gets the read models projected or reduced from this scenario's own events.
+    /// </summary>
+    /// <remarks>
+    /// Reads and collection observations share the storage and event log used by <see cref="Given"/>,
+    /// <see cref="When"/> and <see cref="EventLog"/>. Artifacts are discovered from this scenario's defaults.
+    /// </remarks>
+    public IReadModels ReadModels => _created.ReadModels.Value;
+
+    /// <summary>
     /// Gets the selected sequence, the same instance as <see cref="EventLog"/>.
     /// </summary>
     public IEventSequence EventSequence => _created.Log;
@@ -149,7 +159,7 @@ public class EventScenario(
         return stored?.AppendedGeneration is { } generation ? new EventTypeGeneration(generation.Value) : null;
     }
 
-    static (IEventLog Log, TestingEventStore Root) Create(EventSequenceId sequence, EventStoreName store, EventStoreNamespaceName ns, ICanProvideConstraints? provider, Defaults defaults)
+    static (IEventLog Log, TestingEventStore Root, Lazy<IReadModels> ReadModels) Create(EventSequenceId sequence, EventStoreName store, EventStoreNamespaceName ns, ICanProvideConstraints? provider, Defaults defaults)
     {
         var root = new TestingEventStore(store, ns, () => defaults.EventTypes);
         var eventSources = new EventSources.EventSources(null, defaults.ClientArtifactsProvider);
@@ -158,7 +168,14 @@ public class EventScenario(
         var constraints = new InProcessConstraints(provider ?? new EmptyConstraintProvider());
         constraints.Discover().GetAwaiter().GetResult();
         var clientSequence = root.CreateSequence(sequence, defaults.EventSerializer, constraints, eventSources);
-        return (clientSequence as IEventLog ?? EventLogForSequence.Create(clientSequence), root);
+        var log = clientSequence as IEventLog ?? EventLogForSequence.Create(clientSequence);
+        var readModels = new Lazy<IReadModels>(() => new EventStoreForTesting(
+            ((EventStoreForTesting)defaults.EventStore).ServiceProvider,
+            defaults.ClientArtifactsProvider,
+            defaults.Options,
+            root,
+            log).ReadModels);
+        return (log, root, readModels);
     }
 
     static ICanProvideConstraints DiscoverConstraints(Defaults defaults)

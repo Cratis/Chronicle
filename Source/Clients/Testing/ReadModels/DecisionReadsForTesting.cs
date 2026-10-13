@@ -81,10 +81,10 @@ internal sealed class DecisionReadsForTesting(EventStoreForTesting eventStore, D
             var (_, instances) = await ProjectionReadModelProcessor.Process<T>(
                 definition,
                 events.Select(_ => (_.Context.EventSourceId, _.Content)),
-                eventStore,
-                eventStore.EventTypes,
-                eventStore.JsonSchemaGenerator,
-                eventContexts: events.Select(_ => _.Context).ToArray());
+                new ReadModelFoldContext(eventStore, eventStore.EventTypes, eventStore.JsonSchemaGenerator, eventStore.ServiceProvider, typeof(T))
+                {
+                    EventContexts = events.Select(_ => _.Context).ToArray()
+                });
             instances.TryGetValue((EventSourceId)key, out instance);
         }
         var scopeBoundary = boundary.IsUnavailable ? EventSequenceNumber.BeforeFirst : boundary;

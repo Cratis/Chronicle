@@ -115,13 +115,29 @@ BODY_SNIPPETS = {
 SITE_CONCEPTS_PREFIX = "site-concepts/"
 SITE_CONCEPTS_NAMESPACE_ROOT = "Cratis.Chronicle.Docs.SiteConcepts"
 
+# The Dynamic Consistency Boundary guides compile the same way: one generator-only namespace per
+# page, so each page's snippets share the domain types they introduce (events, read models) without
+# colliding with the global names used elsewhere. Unlike the Concepts guides, these snippets keep
+# their using directives inside the namespace, so an ASP.NET Core import used by one snippet cannot
+# make Chronicle's attributes ambiguous for the others.
+DCB_PREFIX = "dynamic-consistency-boundary/"
+DCB_NAMESPACE_ROOT = "Cratis.Chronicle.Docs.DynamicConsistencyBoundary"
 
-def site_concepts_namespace(relative_path: str) -> str | None:
-    if not relative_path.startswith(SITE_CONCEPTS_PREFIX):
+
+def page_namespace(relative_path: str, prefix: str, root: str) -> str | None:
+    if not relative_path.startswith(prefix):
         return None
 
-    page = relative_path[len(SITE_CONCEPTS_PREFIX):].split("/", 1)[0]
-    return f"{SITE_CONCEPTS_NAMESPACE_ROOT}.{''.join(part.capitalize() for part in page.split('-'))}"
+    page = relative_path[len(prefix):].split("/", 1)[0]
+    return f"{root}.{''.join(part.capitalize() for part in page.split('-'))}"
+
+
+def site_concepts_namespace(relative_path: str) -> str | None:
+    return page_namespace(relative_path, SITE_CONCEPTS_PREFIX, SITE_CONCEPTS_NAMESPACE_ROOT)
+
+
+def dcb_namespace(relative_path: str) -> str | None:
+    return page_namespace(relative_path, DCB_PREFIX, DCB_NAMESPACE_ROOT)
 
 # This excerpt is from an ASP.NET Core action. Supply only the action context
 # and a final response in the compiler harness; keep the public snippet intact.
@@ -277,6 +293,12 @@ def generate_source() -> str:
     for path in files:
         relative_path = snippet_key(path)
         snippet_usings, body = split_usings(extract_snippet(path))
+        dcb_ns = dcb_namespace(relative_path)
+        if dcb_ns is not None:
+            scoped_usings = "\n".join(sorted(set(snippet_usings)))
+            declarations.append(f"namespace {dcb_ns}\n{{\n{textwrap.indent(scoped_usings, '    ')}\n\n{textwrap.indent(body, '    ')}\n}}")
+            continue
+
         # The action snippet qualifies HttpContext in its compiler-only wrapper.
         # A global ASP.NET Core import would make Chronicle's [Tags] ambiguous.
         usings.update(

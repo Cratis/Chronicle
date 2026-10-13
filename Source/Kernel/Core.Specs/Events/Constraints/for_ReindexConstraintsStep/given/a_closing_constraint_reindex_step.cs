@@ -28,6 +28,7 @@ public class a_closing_constraint_reindex_step : Specification
     protected ClosesStreamConstraintDefinition _closing;
     protected Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage _rows;
     protected IClosedStreamsConstraintStorage _closures;
+    protected IUniqueConstraintsStorage _uniqueStorage;
     protected ReindexConstraintsStepState _state;
     protected ReindexConstraintsStep _step;
     protected Catch<JobStepResult> _result;
@@ -53,7 +54,8 @@ public class a_closing_constraint_reindex_step : Specification
         eventStore.EventTypes.Returns(eventTypes);
         @namespace.GetEventSequence(EventSequenceId.Log).Returns(sequence);
         @namespace.GetClosedStreamsConstraints(EventSequenceId.Log).Returns(_closures);
-        @namespace.GetUniqueConstraintsStorage(EventSequenceId.Log).Returns(Substitute.For<IUniqueConstraintsStorage>());
+        _uniqueStorage = Substitute.For<IUniqueConstraintsStorage>();
+        @namespace.GetUniqueConstraintsStorage(EventSequenceId.Log).Returns(_uniqueStorage);
         eventTypes.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>()).Returns(call =>
             new EventTypeSchema(new EventType(call.Arg<EventTypeId>(), EventTypeGeneration.First), EventTypeOwner.Server, EventTypeSource.Code, new JsonSchema()));
         sequence.GetFromSequenceNumber(EventSequenceNumber.First, cancellationToken: Arg.Any<CancellationToken>()).Returns(_ => new EventCursor(_events));

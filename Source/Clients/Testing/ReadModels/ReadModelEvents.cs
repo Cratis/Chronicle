@@ -46,7 +46,7 @@ internal static class ReadModelEvents
         var converter = new ExpandoObjectConverter(new TypeFormats());
         var migrations = new KernelSequences::Migrations.EventTypeMigrations(root.Storage, converter);
         var calculator = new KernelSequences::EventHashCalculator();
-        var storage = root.Store.GetNamespace(new(root.Namespace.Value)).GetEventSequence(persist ? SequenceId : KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId.Log);
+        var storage = root.Store.GetNamespace(new(root.Namespace.Value)).GetEventSequence(persist ? SequenceId : new(store.EventLog.Id.Value));
         var storedCount = (await storage.GetCount()).Value;
         var result = new KernelEvents::AppendedEvent[events.Count];
         for (var index = 0; index < events.Count; index++)

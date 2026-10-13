@@ -41,6 +41,16 @@ Chronicle provides two ways to define constraints:
 | [Model-bound](model-bound/index.md) | Declaring constraints directly on event types using attributes — no separate class needed. **Preferred for most scenarios.** |
 | [Declarative](declarative/) | Complex rules spanning multiple event types with different property names, or when you need a callback for constraint violation messages. |
 
+## When a constraint is not enough
+
+A constraint checks a fixed rule about values and event types. It cannot count, sum or compare, so it cannot express "at most five courses per student" or "no more than the stock on hand". For a rule that depends on state, use a [decision read](../read-models/decision-reads.mdx) and a guarded append. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) compares the options, and [Scenarios](../dynamic-consistency-boundary/scenarios.mdx) shows each as code.
+
+Know the limits of what a constraint covers:
+
+- It is checked in one namespace and one event sequence. It does not span either.
+- It is checked inside the append. The index that records the claim is updated after the event is durable. If that update fails, the failure is logged, and a later duplicate can pass until the constraint is reindexed.
+- It is not checked again when the kernel renumbers an append after a duplicate sequence number.
+
 ## Topics
 
 - [Declarative](declarative/toc.yml)
