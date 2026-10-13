@@ -159,7 +159,8 @@ There is no application-wide switch in Arc or Chronicle that makes protection th
 | The decision-read model has no `Id` property, or its shape is refused | `DecisionReadRefused`, with a reason | Loud | Fix the model. Check with `Admit<T>()` in a test |
 | The read model is keyed on a different event source than the one where the facts are written | The model is empty or partial, and the guard watches the wrong source | Silent | Append every fact the rule needs on the source you read |
 | New keys can join the set the rule counts over | A key nobody read is in nobody's guard | Silent | Model the rule on one key that carries the facts |
-| Revise, redact, a migration, another event sequence, a foreign writer, or a projection definition changed elsewhere | A decision read does not detect them | Silent | Treat them as outside the guarantee |
+| Revise, redact, a migration, another event sequence, or a projection definition changed elsewhere | A decision read does not detect them | Silent | Treat them as outside the guarantee |
+| A writer decides on the same rule without a guard | A guard detects its event whoever wrote it, but the unguarded writer's own decision is not protected and can break the rule | Silent | Guard every writer that decides on the rule, or use a constraint, which the kernel checks for every append |
 | A conflict | The append is rejected and nothing is written. Chronicle does not retry | Loud | Read again and resubmit |
 | A constraint's claim cannot be recorded after the event is durable | The event stays. A later duplicate can pass until you reindex the constraint | Silent, logged | Watch for the logged failure, and reindex |
 | A constraint across namespaces or event sequences | Constraints do not span them | Silent | Design the unique value per namespace |

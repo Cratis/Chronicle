@@ -71,7 +71,7 @@ No. When the kernel renumbers an append after a duplicate sequence number, it va
 
 ## What does a decision read not guard?
 
-Revise and redact, a migration that replaces a generation, other event sequences, data outside the event log, foreign writers that do not follow the same rules, and a projection definition changed outside this client. See [Limits and assumptions](../read-models/decision-reads.mdx#limits-and-assumptions).
+Revise and redact, a migration that replaces a generation, other event sequences, data outside the event log, and a projection definition changed outside this client. A guard detects every matching event appended after its boundary, whoever wrote it, but it protects only decisions that carry a guard: a writer that decides without one can still break the rule. See [Limits and assumptions](../read-models/decision-reads.mdx#limits-and-assumptions).
 
 ## What kernel version do I need?
 
