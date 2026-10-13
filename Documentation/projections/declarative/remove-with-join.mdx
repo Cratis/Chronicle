@@ -2,10 +2,6 @@
 
 The `RemovedWithJoin<>()` method allows you to remove child items from collections when events from other streams indicate that related data should be removed. This is particularly useful in scenarios where the removal event occurs on a different stream than the one that originally added the child.
 
-:::note[Client coverage]
-Every example on this page combines declarative child collections with joins, both of which are currently a C#-only mechanism (see [Children](./children) and [Joins](./joins)). Kotlin and Java have no fluent child-collection API, TypeScript's builder throws `not implemented yet` for child collections, and Elixir has no verified, working pattern for embedding a child collection into a parent read model. These examples are shown in C# only until child projection scopes are implemented for the other clients.
-:::
-
 ## Understanding RemoveWithJoin vs RemovedWith
 
 - **`RemovedWith<>()`**: Removes children based on events from the same stream

@@ -11,8 +11,6 @@ Either way the whole result set comes back in one call, so this is not the tool 
 
 <ChronicleClientTabs snippet="read-models/getting-collection-instances/basic" />
 
-Kotlin currently exposes single-instance read-model lookup only, so collection reads are not shown for that client.
-
 For a **materialized** read model the kernel pages through the sink until it has read every stored instance, releases compliance-protected values, and returns them. For a **passive** read model it replays the events that feed the read model and returns the state that falls out, which is strongly consistent and proportional to the length of the history.
 
 ## Filter in memory

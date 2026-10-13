@@ -24,14 +24,16 @@ In this example:
 
 Types are automatically discovered by the presence of:
 
-- Any class/record level projection mapping attributes (FromEvent, Passive, NotRewindable, etc.)
-- Any projection mapping attribute (SetFrom, AddFrom, Join, etc.)
+- Class/record-level projection annotations such as `FromEvent` or `NotRewindable`, or event-sequence selection
+- Member mapping attributes such as `SetFrom`, `AddFrom`, or `Join`
 
-No explicit marker attribute is required on the type itself.
+No explicit marker is required on the type. `[Passive]` alone is not a discovery signal: it configures
+how an already-defined model is read, and can also configure a reducer model.
 
 ## Key Features
 
-Model-bound projections support all projection engine capabilities:
+Model-bound projections cover the common projection operations below. Specialized builder features,
+such as fluent dynamic dictionary counters, do not all have attribute equivalents.
 
 - **Property Mapping**: SetFrom, AddFrom, SubtractFrom, SetFromContext
 - **FromEvery**: Set properties from all events
@@ -39,7 +41,7 @@ Model-bound projections support all projection engine capabilities:
 - **Relationships**: Join, Children (with unlimited nesting depth)
 - **Removal**: RemovedWith, RemovedWithJoin
 - **Convention-based**: FromEvent for automatic property matching
-- **Configuration**: FromEventSequence, NotRewindable, Passive
+- **Configuration**: EventSequence, NotRewindable, Passive
 - **Variants**: Mutually exclusive read model shapes for the same logical entity
 - **Fully Recursive**: All attributes work at any nesting level - children, grandchildren, and beyond
 
@@ -62,17 +64,9 @@ See the following pages for detailed information on each feature:
 
 ## When to Use
 
-Prefer model-bound projections by default:
-
-- They keep projection metadata next to the read model
-- They cover the common Chronicle projection capabilities without a separate class
-- They make the happy path concise and consistent across features
-
-Use fluent projections (`IProjectionFor<T>`) as a fallback when the projection cannot be expressed cleanly with model-bound attributes:
-
-- You need projection construction that is more dynamic or procedural
-- You intentionally want to separate the read model from the projection definition
-- You need specialized builder features that do not map naturally to attributes
+Start with model-bound attributes, use fluent mappings when the definition needs structure, and use
+reducer code when state transitions are clearer; a self-reducing model is the default for new reducers.
+[Choose how to build a read model](../choosing-a-read-model-style.mdx) works through the trade-offs.
 
 ## Comparison with Fluent Projections
 

@@ -3,7 +3,21 @@ title: Self-reducing read models
 description: Declare static state transitions on a read model without a separate reducer class.
 ---
 
-Keep a read model's transitions beside its state when a separate reducer adds no useful separation. A self reducer uses the same reducer pipeline, storage, filtering and replay machinery as a classic reducer; only the invocation adapter differs.
+Keep a read model's transitions beside its state when a separate reducer adds no useful separation.
+Start with model-bound projection attributes, use fluent mappings when the definition needs structure,
+and choose reducer code when state transitions read better; a self-reducing model is the default for
+new reducers. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx) shows
+when fold-time dependencies or a shared contract call for a separate `IReducerFor<T>` instead.
+
+A self reducer uses the same reducer pipeline, storage, filtering, and replay machinery as a classic
+reducer. Only discovery and invocation differ.
+
+:::caution[Check existing models when upgrading]
+An existing concrete, non-generic model with a complete public static `Reduce(event, nullable current[, EventContext])`
+shape becomes a reducer after upgrading, even if you add no marker. Review existing static helpers and
+remove any competing builder before registering that model. Near misses warn and are skipped by
+implicit discovery; explicit registration rejects them.
+:::
 
 ## Declare the transitions
 
@@ -33,21 +47,54 @@ Types implementing `IReducer` or `IReducerFor<T>` always remain classic, even wi
 
 ### Arc query endpoints
 
-Arc's default query discovery is separate from Chronicle's reducer discovery: a static `Reduce` returning its read model would otherwise be picked up as a query. With an Arc version that ships `RequireQueryAttribute`, mark the combined model `[ReadModel(RequireQueryAttribute = true)]` and mark only intended query methods `[Query]`. This prevents `Reduce` from becoming a query endpoint without reserving names globally. Older Arc versions do not gain this endpoint suppression from Chronicle.
+In an Arc application, keep `[ReadModel]`, the static `Reduce` methods, and query methods on the same
+record. Before Arc 22.90.0, use `[ReadModel(RequireQueryAttribute = true)]` and mark intended
+queries `[Query]` to prevent `Reduce` becoming an endpoint. From Arc 22.90.0, Arc's automatic
+query discovery excludes methods taking the read model itself. Chronicle's discovery does not change
+older Arc versions.
 
-See Arc's [model-bound read models and queries](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/queries/model-bound/index.md) for its query discovery contract.
+See Arc's [model-bound read models and queries](/arc/backend/csharp/queries/model-bound/) for the query contract.
 
-## Configuration and explicit registration
+## Register the model
 
-Place reducer configuration on the model itself: `[Reducer]` for identity, sequence and activity; shared sequence, event-store, tag and route attributes for their existing purposes.
-
-<ChronicleClientTabs snippet="reducers/self-reducing-read-models/configuration" />
-
-Use the existing generic or `Type` `RegisterReducer` APIs at the composition root. There is no separate self-reducer registration API. Equal explicit and discovered declarations coalesce; incompatible identities fail rather than silently replacing each other. Store snapshots and reconnect lifetime follow [explicit artifact registration](../clients/dotnet/explicit-artifacts).
+Default discovery recognizes the complete static shape in your application's artifact catalog.
+Register the events through `[EventType]` or explicit nominations; assembly membership alone does not
+make a type an event. With manual or explicit artifact registration, nominate the model before
+creating the store, using the existing generic or `Type` `RegisterReducer` APIs:
 
 <ChronicleClientTabs snippet="reducers/self-reducing-read-models/explicit-registration" />
 
-In the same client catalog, a self model cannot also be maintained by another reducer, a fluent projection, or genuine model-bound projection mappings: `AmbiguousReadModelBuilder` rejects that ownership conflict. Shared configuration such as `[Passive]`, `[Reducer]`, sequence selection and filters does not by itself establish projection ownership. Remove the old builder when moving a model to self reduction.
+There is no separate self-reducer registration API. Equal explicit and discovered declarations
+coalesce; incompatible identities fail. Store snapshots and reconnect lifetime follow
+[explicit artifact registration](../clients/dotnet/explicit-artifacts.md).
+
+In the same client catalog, a self model cannot also be maintained by another reducer, a fluent
+projection, or genuine model-bound projection mappings: `AmbiguousReadModelBuilder` rejects the
+conflict. Shared configuration such as `[Passive]`, `[Reducer]`, sequence selection, and filters does
+not by itself establish projection ownership. Remove the previous builder before switching.
+
+## Test the transitions
+
+Use [ReadModelScenario](../testing/read-models/scenario.mdx) to fold the same events through the
+registered self reducer. This example checks accumulation, removal, and creation after removal:
+
+<ChronicleClientTabs snippet="reducers/self-reducing-read-models/testing" />
+
+The model is absent after `SelfBalanceCleared`; the next addition receives null current and starts a
+new balance. Also cover an empty history and each event that can arrive without prior state. Scenarios
+substitute compliance and storage, so they do not prove encryption, erasure, replay, or transport.
+
+## Configure observation and reads
+
+Place reducer configuration on the model itself: `[Reducer]` controls identity, sequence, and activity.
+Sequence, event-store, descriptive tag, and metadata-filter attributes keep their existing purposes.
+
+<ChronicleClientTabs snippet="reducers/self-reducing-read-models/configuration" />
+
+Read an instance with `eventStore.ReadModels.GetInstanceById<SelfAccountBalance>(eventSourceId)`.
+Materialized reads use the stored state. Put `[Passive]` on the model for on-demand by-ID folding;
+`[Reducer(isActive: false)]` only stops active maintenance and does not make reads passive. Compare
+[passive reducers](passive-reducers.mdx) before changing the read behavior.
 
 ## Handler selection
 
