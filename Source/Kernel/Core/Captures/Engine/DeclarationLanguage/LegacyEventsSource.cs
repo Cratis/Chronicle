@@ -16,7 +16,7 @@ internal partial record LegacyEventsSource(string Source, string? Sequence, IRea
     [GeneratedRegex(@"^(?<setting>sequence|from)(?:\s+(?<value>.*))?$", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex Setting { get; }
 
-    [GeneratedRegex(@"^source\s+(?<kind>.*)$", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"^source\s+(?<kind>[A-Za-z_]\w*)$", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex SourceHeader { get; }
 
     [GeneratedRegex(@"^[A-Za-z_][\w.]*$", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
