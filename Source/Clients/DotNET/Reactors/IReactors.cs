@@ -177,4 +177,19 @@ public interface IReactors
     /// <param name="reactorId"><see cref="ReactorId"/> to replay.</param>
     /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reactor is not replayable or its observer is not in a state it can replay from (disconnected, quarantined); reconnect or release it before replaying.</returns>
     Task<JobId> Replay(ReactorId reactorId);
+
+    /// <summary>
+    /// Fast forward a reactor to the tail of the event log, skipping every event it has not yet handled without invoking it.
+    /// </summary>
+    /// <typeparam name="TReactor">Type of reactor to fast forward.</typeparam>
+    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    Task<FastForwardResult> FastForward<TReactor>()
+        where TReactor : IReactor;
+
+    /// <summary>
+    /// Fast forward a specific reactor by its identifier to the tail of the event log, skipping every event it has not yet handled without invoking it.
+    /// </summary>
+    /// <param name="reactorId"><see cref="ReactorId"/> to fast forward.</param>
+    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    Task<FastForwardResult> FastForward(ReactorId reactorId);
 }
