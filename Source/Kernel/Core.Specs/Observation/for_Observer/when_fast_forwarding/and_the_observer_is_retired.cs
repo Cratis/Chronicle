@@ -11,6 +11,5 @@ public class and_the_observer_is_retired : given.a_retired_observer
 
     async Task Because() => _result = await _observer.FastForward();
 
-
     [Fact] void should_report_not_available() => _result.Outcome.ShouldEqual(FastForwardOutcome.NotAvailable);
 }
