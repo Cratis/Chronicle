@@ -44,6 +44,7 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
         ModelBoundProjections = Copy(discovered.ModelBoundProjections);
         Reactors = Union(discovered.Reactors, Nominated(ExplicitArtifactKind.Reactor));
         Reducers = Union(discovered.Reducers, Nominated(ExplicitArtifactKind.Reducer));
+        ProjectionReadModelTypes = snapshot.Projections.Select(projection => projection.ReadModelType).ToImmutableArray();
         ConstraintTypes = Union(discovered.ConstraintTypes, Nominated(ExplicitArtifactKind.Constraint));
         EventSources = Union(discovered.EventSources, Nominated(ExplicitArtifactKind.EventSource));
         EventTypeMigrators = Union(discovered.EventTypeMigrators, Nominated(ExplicitArtifactKind.Migration));
@@ -132,6 +133,11 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
     /// Gets every explicitly nominated migration, including ones unreachable from discovery's upgrades.
     /// </summary>
     internal ImmutableArray<Type> ExplicitMigrations { get; }
+
+    /// <summary>
+    /// Gets the models claimed by captured explicit projection recipes.
+    /// </summary>
+    internal ImmutableArray<Type> ProjectionReadModelTypes { get; }
 
     /// <summary>
     /// Gets the current immutable catalog without changing manual discovery or capturing new options.

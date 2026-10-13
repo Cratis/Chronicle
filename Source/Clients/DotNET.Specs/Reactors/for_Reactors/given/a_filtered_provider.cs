@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Reducers;
 
 namespace Cratis.Chronicle.Reactors.for_Reactors.given;
 
@@ -49,6 +50,7 @@ public class a_filtered_provider : all_dependencies
         Set(store, "_clientArtifactsProvider", _clientArtifactsProvider);
         Set(store, "<EventTypes>k__BackingField", _registry);
         Set(store, "<Reactors>k__BackingField", _reactors);
+        Set(store, "<Reducers>k__BackingField", Substitute.For<IReducers>());
         Set(store, "<Projections>k__BackingField", projections);
         Set(store, "<Subscriptions>k__BackingField", subscriptions);
         await (Task)typeof(EventStore).GetMethod("RegisterExternalEventStoreSubscriptionsAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(store, [])!;

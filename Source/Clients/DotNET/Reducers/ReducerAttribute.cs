@@ -6,14 +6,14 @@ using Cratis.Chronicle.EventSequences;
 namespace Cratis.Chronicle.Reducers;
 
 /// <summary>
-/// Optional attribute used to adorn classes to configure a reducer. The reducer will have to implement <see cref="IReducerFor{TReadModel}"/>.
+/// Configures a classic reducer or a read model declaring static self-reduction methods.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of <see cref="ReducerAttribute"/>.
 /// </remarks>
 /// <param name="id">Optional identifier. If not specified, it will default to the fully qualified type name.</param>
 /// <param name="eventSequence">Optional the name of the event sequence to observe. When not specified, the event sequence is inferred from the event types handled by the reducer.</param>
-/// <param name="isActive">Optional whether or not the reducer is active or not. If its passive, it won't run actively on the Kernel.</param>
+/// <param name="isActive">Whether the observer runs actively on the Kernel. False does not enable passive read-model reads; use ReadModels.PassiveAttribute on the model for those.</param>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 public sealed class ReducerAttribute(string id = "", string? eventSequence = default, bool isActive = true) : Attribute
 {

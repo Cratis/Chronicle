@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Testing.Events;
-using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
 
@@ -24,9 +23,6 @@ internal static class ReadModelFolder
     public static async Task<IReadOnlyDictionary<EventSourceId, TReadModel>> Fold<TReadModel>(EventStoreForTesting store, IEnumerable<AppendedEvent> events, bool useOriginalContexts)
         where TReadModel : class
     {
-        var namingPolicy = new CamelCaseNamingPolicy();
-        using var loggerFactory = new NullLoggerFactory();
-        var activator = new ClientArtifactsActivator(store.ServiceProvider, loggerFactory);
         var hasExplicitProjection = store.ClientOptions.ExplicitArtifacts.Projections.Any(projection => projection.ReadModelType == typeof(TReadModel));
         var reducerType = !hasExplicitProjection && store.Reducers.HasFor<TReadModel>()
             ? store.Reducers.GetHandlerForReadModelType(typeof(TReadModel)).ReducerType
@@ -38,9 +34,7 @@ internal static class ReadModelFolder
             EventStore = store,
             EventTypes = store.EventTypes,
             SchemaGenerator = store.JsonSchemaGenerator,
-            Activator = activator,
             ServiceProvider = store.ServiceProvider,
-            NamingPolicy = namingPolicy,
             ReducerType = reducerType,
             ProjectionDefinition = definition
         };
@@ -62,5 +56,5 @@ internal static class ReadModelFolder
         return projected;
     }
 
-    static ReadModelEvent ToInput(AppendedEvent e) => new(e.Context.EventSourceId, e.Content, e.Context.EventSourceType, e.Context.EventStreamType, e.Context.EventStreamId);
+    static ReadModelEvent ToInput(AppendedEvent e) => new(e.Context.EventSourceId, e.Content, e.Context.EventSourceType, e.Context.EventStreamType, e.Context.EventStreamId, e.Context.Tags.Select(tag => tag.Value).ToArray());
 }

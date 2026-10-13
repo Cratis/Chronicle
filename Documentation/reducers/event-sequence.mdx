@@ -2,6 +2,8 @@
 
 By default, reducers observe the default event log. You can override this by specifying a different event sequence using either the `[EventSequence]` attribute or the `eventSequence` parameter on the `[Reducer]` attribute.
 
+For a [self reducer](self-reducing-read-models), place sequence configuration on the model itself. It has the same sequence selection and external-store routing rules as a classic reducer; a sequence attribute alone does not make it a model-bound projection.
+
 ## Using the `[EventSequence]` Attribute
 
 Apply `[EventSequence]` directly to your reducer class to pin it to a specific event sequence:

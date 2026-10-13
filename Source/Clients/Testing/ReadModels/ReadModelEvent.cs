@@ -13,9 +13,11 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// <param name="EventSourceType">The type of event source.</param>
 /// <param name="EventStreamType">The type of event stream.</param>
 /// <param name="EventStreamId">The event stream identifier.</param>
+/// <param name="Tags">The effective static and append tags captured when seeded.</param>
 internal record ReadModelEvent(
     EventSourceId EventSourceId,
     object Event,
     EventSourceType EventSourceType,
     EventStreamType EventStreamType,
-    EventStreamId EventStreamId);
+    EventStreamId EventStreamId,
+    IReadOnlyList<string> Tags);
