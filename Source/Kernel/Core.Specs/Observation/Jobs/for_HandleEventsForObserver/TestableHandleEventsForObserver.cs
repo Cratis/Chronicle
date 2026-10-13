@@ -23,6 +23,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving subscriber grains.</param>
 /// <param name="subscriberSelector">The <see cref="IObserverSubscriberSelector"/> for selecting the target client instance.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for the observer's subscriber timeout.</param>
+/// <param name="observerServiceClient">The client for confirming buffered writes.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 public class TestableHandleEventsForObserver(
@@ -34,9 +35,10 @@ public class TestableHandleEventsForObserver(
     IGrainFactory grainFactory,
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
+    IObserverServiceClient observerServiceClient,
     ILogger<HandleEventsForObserver> logger,
     IEventGenerationRelease? eventGenerationRelease = null)
-    : HandleEventsForObserver(state, throttle, storage, eventCompliance, grainFactory, subscriberSelector, configurationProvider, logger, eventGenerationRelease), IGrainType
+    : HandleEventsForObserver(state, throttle, storage, eventCompliance, grainFactory, subscriberSelector, configurationProvider, observerServiceClient, logger, eventGenerationRelease), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForObserver).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance)!;
     static readonly FieldInfo _subscriptionField = typeof(HandleEventsForObserver).GetField("_subscription", BindingFlags.NonPublic | BindingFlags.Instance)!;
@@ -57,6 +59,9 @@ public class TestableHandleEventsForObserver(
     {
         _observerField.SetValue(this, observer);
         _subscriptionField.SetValue(this, subscription);
+        _selfReference.ReportNewSuccessfullyHandledEvent(Arg.Any<Concepts.Events.EventSequenceNumber>())
+            .Returns(call => ReportNewSuccessfullyHandledEvent(call.Arg<Concepts.Events.EventSequenceNumber>()));
+        _selfReference.FlushCheckpoint(Arg.Any<bool>()).Returns(call => FlushCheckpoint(call.Arg<bool>()));
     }
 
     /// <summary>

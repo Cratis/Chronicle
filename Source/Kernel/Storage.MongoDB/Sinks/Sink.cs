@@ -113,6 +113,7 @@ public class Sink(
     long _pendingDeleteVersion;
     int _currentBulkSize;
     volatile bool _isBulkMode;
+    BulkWindowId? _bulkWindowId;
 
     /// <summary>
     /// Completes when the bulk window that <see cref="EndBulk"/> is closing has been flushed and left; set while it is.
@@ -527,12 +528,35 @@ public class Sink(
         lock (_bulkLock)
         {
             _isBulkMode = true;
+            _bulkWindowId = new(Guid.NewGuid());
             _inFlight.Clear();
             ClearBulkOperations();
         }
 
         ClearBulkState();
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task<BulkFlushResult> FlushBulk()
+    {
+        BulkWindowId? windowId;
+        lock (_bulkLock)
+        {
+            windowId = _bulkWindowId;
+        }
+
+        var drain = await DrainBulk();
+        lock (_bulkLock)
+        {
+            // Never confirm a window that was replaced or closed while its writes were draining.
+            if (windowId != _bulkWindowId)
+            {
+                throw new BulkWindowLost();
+            }
+
+            return new(windowId, TakeBulkFailures(drain.Batches));
+        }
     }
 
     void ClearBulkOperations()
@@ -577,6 +601,7 @@ public class Sink(
             lock (_bulkLock)
             {
                 _isBulkMode = false;
+                _bulkWindowId = null;
                 _inFlight.Clear();
                 ClearBulkOperations();
             }

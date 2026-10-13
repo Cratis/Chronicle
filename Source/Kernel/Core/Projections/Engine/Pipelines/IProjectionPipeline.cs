@@ -46,6 +46,12 @@ public interface IProjectionPipeline
     Task BeginBulk();
 
     /// <summary>
+    /// Drain the sink's buffered writes without closing its bulk window.
+    /// </summary>
+    /// <returns>The window identity and any buffered write failures.</returns>
+    Task<BulkFlushResult> FlushBulk();
+
+    /// <summary>
     /// End bulk operation mode.
     /// </summary>
     /// <returns>The partitions whose writes failed during the final flush.</returns>

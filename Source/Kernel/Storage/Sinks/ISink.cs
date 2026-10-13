@@ -94,6 +94,12 @@ public interface ISink
     Task BeginBulk();
 
     /// <summary>
+    /// Drain buffered writes while keeping the bulk window open.
+    /// </summary>
+    /// <returns>The window identity and unreported buffered write failures.</returns>
+    Task<BulkFlushResult> FlushBulk() => Task.FromResult(new BulkFlushResult(null, []));
+
+    /// <summary>
     /// End bulk operation mode.
     /// </summary>
     /// <returns>The unreported partitions whose buffered writes failed, including those from the final flush.</returns>

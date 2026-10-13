@@ -93,4 +93,12 @@ public interface IObserverService : IGrainService
     /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
     /// <returns>Awaitable task.</returns>
     Task EndCatchupFor(ObserverDetails observerDetails);
+
+    /// <summary>
+    /// Flush this silo's buffered writes for a durable progress checkpoint.
+    /// </summary>
+    /// <param name="observerDetails">The observer to flush.</param>
+    /// <param name="replay">Whether to flush replay handlers instead of catch-up handlers.</param>
+    /// <returns>The identities of this silo's open bulk windows.</returns>
+    Task<Guid[]> FlushFor(ObserverDetails observerDetails, bool replay);
 }
