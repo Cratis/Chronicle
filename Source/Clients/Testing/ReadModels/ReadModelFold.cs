@@ -6,7 +6,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Testing.Events;
-using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
 
@@ -33,19 +32,9 @@ internal sealed class ReadModelFold<TReadModel>
     public required IJsonSchemaGenerator SchemaGenerator { get; init; }
 
     /// <summary>
-    /// Gets the artifact activator.
-    /// </summary>
-    public required IClientArtifactsActivator Activator { get; init; }
-
-    /// <summary>
     /// Gets the service provider.
     /// </summary>
     public required IServiceProvider ServiceProvider { get; init; }
-
-    /// <summary>
-    /// Gets the naming policy.
-    /// </summary>
-    public required INamingPolicy NamingPolicy { get; init; }
 
     /// <summary>
     /// Gets the selected reducer, if any.
@@ -87,13 +76,12 @@ internal sealed class ReadModelFold<TReadModel>
                 {
                     EventSourceType = e.EventSourceType,
                     EventStreamType = e.EventStreamType,
-                    EventStreamId = e.EventStreamId
+                    EventStreamId = e.EventStreamId,
+                    Tags = e.Tags
                 }),
                 EventStore,
                 EventTypes,
-                Activator,
                 ServiceProvider,
-                NamingPolicy,
                 InitialState,
                 eventContexts);
 

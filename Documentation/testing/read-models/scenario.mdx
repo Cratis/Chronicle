@@ -61,6 +61,14 @@ Projections have no source-type or stream-type filters: they consume the event t
 subscribe to, across every route. Use context mappings such as `[SetFromContext<TEvent>]` to inspect the
 route in a projected property.
 
+## Seed tagged self-reducer events
+
+`WithTags(params string[] tags)` adds append tags to seeded events. It returns a new builder, and preserves `OnStream` metadata in either call order. The effective tags combine the event's static/inherited `Tag`/`Tags` with the builder's append tags; named tags remain separate and do not satisfy `FilterEventsByTag`.
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/self-reducer-tags" />
+
+Classic and self reducers use the same registry-selected invoker and metadata matcher. Filter tags are OR alternatives, while tag/source/stream categories are AND requirements. Descriptive tags on the reducer do not become filters. This adds reducer tag fidelity without changing projection or reactor scenario selection; compliance, replay and real-store behavior still need kernel-backed specifications.
+
 ## Event input serialization
 
 In the .NET scenario, seeded events for projection-backed read models pass through the `IEventSerializer` supplied by
@@ -133,12 +141,11 @@ migration, seeding, event-source, compliance, and security provider types throug
 
 Pass `ChronicleOptions` as the third argument to `new Defaults(artifacts, serviceProvider, options)`;
 use `null` for the service provider when you do not need dependency injection. Configure
-`options.ExplicitArtifacts.RegisterProjection<TReadModel>(...)` or `RegisterReadModel<TReadModel>()`
-before constructing the defaults. Explicit projections use the same discovery recipes as the client
+`options.ExplicitArtifacts.RegisterProjection<TReadModel>(...)`, `RegisterReadModel<TReadModel>()`, or
+`RegisterReducer<TReadModel>()` for a self model before constructing the defaults. Explicit projections use the same discovery recipes as the client
 and do not need a projection class or an entry in the provider's projection collections.
 
-`ReadModelScenario<TReadModel>(null, defaults)` selects the explicitly registered projection before
-discovered handlers. `WithProjection` still takes precedence over it. Pass the same defaults to
+`ReadModelScenario<TReadModel>(null, defaults)` honors the explicitly registered builder. `WithProjection` still takes precedence over it. Pass the same defaults to
 `EventScenario` or `ReactorScenario<TReactor>` to retain the run's artifact catalog and settings.
 The test event store applies registrations in-process; appending through an event scenario does not
 start observer delivery or automatically run those projections and reactors.
@@ -150,9 +157,9 @@ reflection-based discovery resolves that registry once per process from project-
 assemblies. Supplying `Defaults` uses its `IClientArtifactsProvider` instead, so each run can discover a different
 set of handlers. Without an inline projection, handlers are selected in this order:
 
-1. **Reducer** — a class implementing `IReducerFor<TReadModel>`.
+1. **Reducer** — a classic `IReducerFor<TReadModel>`, explicitly nominated plain instance reducer, or structurally recognized self-reducing model.
 2. **Fluent projection** — a class implementing `IProjectionFor<TReadModel>`.
-3. **Model-bound projection** — `TReadModel` itself carries `[FromEvent<T>]` or `[Key]` attributes.
+3. **Model-bound projection** — `TReadModel` carries genuine projection mappings such as `[FromEvent<T>]`; a key or shared observer configuration alone does not establish mapping ownership.
 
 `WithProjection` takes precedence over all three, including a discovered reducer. If none are found and no
 inline projection was supplied, `NoReadModelHandlerFound` is thrown.
