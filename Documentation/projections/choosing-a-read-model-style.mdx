@@ -48,8 +48,8 @@ It is another projection input, not the code-first default.
 
 :::caution[Arc query discovery]
 In Arc applications, keep `[ReadModel]`, static `Reduce` methods, and query methods on the same record.
-With Arc versions before `ARC_VERSION_TBD`, use `[ReadModel(RequireQueryAttribute = true)]` and mark
-intended query methods `[Query]`. From `ARC_VERSION_TBD`, Arc excludes methods taking the read model
+With Arc versions before 22.90.0, use `[ReadModel(RequireQueryAttribute = true)]` and mark
+intended query methods `[Query]`. From Arc 22.90.0, Arc excludes methods taking the read model
 itself from automatic query discovery, so `Reduce` does not become a query endpoint.
 See [Arc's model-bound queries](/arc/backend/csharp/queries/model-bound/) for the query contract.
 :::

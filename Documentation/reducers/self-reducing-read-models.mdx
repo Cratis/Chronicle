@@ -48,8 +48,8 @@ Types implementing `IReducer` or `IReducerFor<T>` always remain classic, even wi
 ### Arc query endpoints
 
 In an Arc application, keep `[ReadModel]`, the static `Reduce` methods, and query methods on the same
-record. Before `ARC_VERSION_TBD`, use `[ReadModel(RequireQueryAttribute = true)]` and mark intended
-queries `[Query]` to prevent `Reduce` becoming an endpoint. From `ARC_VERSION_TBD`, Arc's automatic
+record. Before Arc 22.90.0, use `[ReadModel(RequireQueryAttribute = true)]` and mark intended
+queries `[Query]` to prevent `Reduce` becoming an endpoint. From Arc 22.90.0, Arc's automatic
 query discovery excludes methods taking the read model itself. Chronicle's discovery does not change
 older Arc versions.
 
