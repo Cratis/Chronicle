@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
+using System.Linq.Expressions;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -306,6 +308,31 @@ public partial class ReadModels(
     }
 
     /// <inheritdoc/>
+    public ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
+    {
+        var readModelType = typeof(TReadModel);
+        if (!projections.HasFor(readModelType) && !reducers.HasFor(readModelType))
+        {
+            throw new UnknownReadModel(readModelType);
+        }
+
+        if (IsPassive(readModelType))
+        {
+            throw new ReadModelCannotBeObserved(readModelType, "Passive read models have no materialized sink");
+        }
+
+        if (readModelType.IsEventTypeTarget())
+        {
+            throw new ReadModelCannotBeObserved(readModelType, "Event targets publish events instead of storing a collection");
+        }
+
+        var predicate = filter?.Compile();
+        var instances = materializedReadModels.ObserveInstances<TReadModel>(InstanceCountToSkip.Zero, InstanceCount.Unlimited);
+        return new ReadModelObservation<TReadModel>(instances.Select(set =>
+            (IEnumerable<TReadModel>)(predicate is null ? set.ToArray() : set.Where(predicate).ToArray())));
+    }
+
+    /// <inheritdoc/>
     public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
     {
         if (reducers.HasFor<TReadModel>())
@@ -508,9 +535,10 @@ public partial class ReadModels(
     /// projection when resolving the instance by key instead of reading an empty sink and returning null.
     /// </remarks>
     SinkTypeId GetSinkTypeIdFor(Type readModelType) =>
-        readModelType.IsPassive() || (projections is IKnowPassiveProjections passiveProjections && passiveProjections.IsPassive(readModelType))
-            ? SinkTypeId.None
-            : _defaultSinkTypeId;
+        IsPassive(readModelType) ? SinkTypeId.None : _defaultSinkTypeId;
+
+    bool IsPassive(Type readModelType) =>
+        readModelType.IsPassive() || (projections is IKnowPassiveProjections passiveProjections && passiveProjections.IsPassive(readModelType));
 
     List<IndexDefinition> GetIndexesForType(Type type, string prefix)
     {
