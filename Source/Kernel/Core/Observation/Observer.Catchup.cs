@@ -174,7 +174,7 @@ public partial class Observer
         }
 
         Skips.RoundConcluded(FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
-        EvaluateSuspectedSkips();
+        EvaluateSuspectedSkips(atRoundHandover: true);
         Skips.ClearJobReported();
         await WriteStateAsync();
 

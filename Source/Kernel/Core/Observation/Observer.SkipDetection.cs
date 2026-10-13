@@ -129,7 +129,7 @@ public partial class Observer
         }
     }
 
-    void EvaluateSuspectedSkips() => Skips.Evaluate(State.NextEventSequenceNumber);
+    void EvaluateSuspectedSkips(bool atRoundHandover = false) => Skips.Evaluate(State.NextEventSequenceNumber, atRoundHandover);
 
     void SeedSuspectedSkipOwnership() =>
         Skips.SeedJobOwned(State.InFlightPartitions.Concat(State.CatchingUpPartitions).Concat(State.ReplayingPartitions).ToArray());

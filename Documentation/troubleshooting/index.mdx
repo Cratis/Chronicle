@@ -92,6 +92,8 @@ The appended-events queue writes a different warning when handing events to an o
 
 Warnings are rate-limited to 10 per observer, or per queue, per minute. When more were suspected, a further warning says how many were not logged. The counters are never limited.
 
+A suspicion is also raised for an event that a catch-up round delivered when the live copy of that event only reached the observer after the round had finished, because the appended-events queue lagged behind a whole round. The event was handled, so there is nothing to replay.
+
 Investigate whether the partition's read model or side effects reflect the event. If they do not, consider replaying the partition with [`cratis chronicle observers replay-partition`](/cli/chronicle/observers/#replay-partition). For a reactor, remember that a replay skips handlers marked [`[OnceOnly]`](/chronicle/reactors/once-only/). To retry a partition that failed, see [My reactor throws and the stream seems stuck](#my-reactor-throws-and-the-stream-seems-stuck).
 
 ## A constraint is rejecting an append I expected to succeed
