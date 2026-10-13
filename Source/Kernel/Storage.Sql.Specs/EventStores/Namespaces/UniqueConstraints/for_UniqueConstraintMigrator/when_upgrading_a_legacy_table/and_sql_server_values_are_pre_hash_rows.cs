@@ -33,5 +33,5 @@ public class and_sql_server_values_are_pre_hash_rows(SqlServerFixture fixture) :
     [Fact] void should_block_narrowing_even_if_the_row_fits_200_characters() => _length.ShouldEqual(-1);
     [Fact] void should_leave_the_unbounded_column_without_an_index() => _unique.ShouldEqual(-1);
     [Fact] void should_keep_the_legacy_value() => _savedValue.ShouldEqual("legacy@example.com");
-    [Fact] void should_name_the_legacy_rows_issue_in_the_skip_warning() => _warnings.Single().ShouldContain("legacy pre-hash constraint rows issue");
+    [Fact] void should_name_the_legacy_rows_issue_in_the_skip_warning() => _warnings.Single().ShouldContain("https://github.com/Cratis/Chronicle/issues/4866");
 }
