@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_projection_catch_up_rou
 /// Reproduces https://github.com/Cratis/Chronicle/issues/4600: A@10 arrives after the projection cursor drains,
 /// then live B@12 advances the observer. Correct behavior must recover the dropped A@10 at handover.
 /// </summary>
-public class and_live_delivery_for_another_partition_arrived : given.an_observer_with_subscription_for_specific_event_type
+public class and_live_delivery_for_another_partition_arrived : given.an_observer_with_skip_detection
 {
     readonly TaskCompletionSource _cursorDrained = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _completeRound = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -58,5 +58,6 @@ public class and_live_delivery_for_another_partition_arrived : given.an_observer
     [Fact] void should_currently_skip_the_catching_up_partition_event() => _subscriber.DidNotReceive().OnNext((Key)"A", Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
     [Fact] void should_handle_the_other_partition_live() => _subscriber.Received(1).OnNext((Key)"B", Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
     [Fact] void should_currently_keep_the_live_position_past_the_dropped_event() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)13UL);
+    [Fact] void should_report_one_suspected_skip() => _suspectedSkips.ShouldEqual(1);
     [Fact] void should_currently_probe_only_above_the_skipped_event() => _eventSequence.DidNotReceive().GetNextSequenceNumberGreaterOrEqualTo(Arg.Is<EventSequenceNumber>(number => number <= (EventSequenceNumber)10UL), Arg.Any<IEnumerable<EventType>>());
 }

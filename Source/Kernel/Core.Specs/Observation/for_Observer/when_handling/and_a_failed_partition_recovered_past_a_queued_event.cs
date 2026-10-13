@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 /// Reproduces https://github.com/Cratis/Chronicle/issues/4748: P recovers at 103 before queued Q@102 arrives.
 /// Correct behavior must deliver Q@102 despite the unrelated partition's recovery position.
 /// </summary>
-public class and_a_failed_partition_recovered_past_a_queued_event : given.an_observer_with_subscription_for_specific_event_type
+public class and_a_failed_partition_recovered_past_a_queued_event : given.an_observer_with_skip_detection
 {
     readonly TaskCompletionSource _deliveryQueued = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _releaseDelivery = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -47,5 +47,6 @@ public class and_a_failed_partition_recovered_past_a_queued_event : given.an_obs
 
     [Fact] void should_currently_skip_the_queued_event() => _subscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
     [Fact] void should_currently_advance_past_the_queued_event() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)104UL);
+    [Fact] void should_report_one_suspected_skip() => _suspectedSkips.ShouldEqual(1);
     [Fact] void should_clear_the_recovered_failure() => _failedPartitionsStorage.State.IsFailed((Key)"P").ShouldBeFalse();
 }

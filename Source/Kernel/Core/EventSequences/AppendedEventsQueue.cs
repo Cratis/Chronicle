@@ -52,6 +52,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
     readonly Lock _subscriptionsLock = new();
     readonly List<AppendedEventsQueueObserverSubscription> _subscriptions = [];
+    readonly SuspectedSkipWarningLimiter _suspectedUndeliveredLimiter = new();
     int _pendingItems;
     Task _queueTask = Task.CompletedTask;
     bool _isDisposed;
@@ -541,6 +542,55 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         using var span = _activitySource.Dispatch();
         span?.Activity?.Tag(observerKey);
-        await observer.Handle(partition, events);
+        try
+        {
+            await observer.Handle(partition, events);
+        }
+        catch (Exception)
+        {
+            ReportSuspectedUndeliveredEvents(partition, events, observerKey);
+            throw;
+        }
     }
+
+    /// <summary>
+    /// Counts and logs events whose dispatch to an observer failed. The queue cannot tell whether the observer got to
+    /// handle them, so they are only suspected to be undelivered. A failure of this telemetry never replaces the
+    /// failure being reported.
+    /// </summary>
+    /// <param name="partition">The partition of the events.</param>
+    /// <param name="events">The events whose dispatch failed.</param>
+    /// <param name="observerKey">The <see cref="ObserverKey"/> of the observer.</param>
+#pragma warning disable RCS1075 // Telemetry failures are deliberately swallowed: they must never replace the dispatch failure being reported
+    void ReportSuspectedUndeliveredEvents(EventSourceId partition, AppendedEvent[] events, ObserverKey observerKey)
+    {
+        try
+        {
+            _metrics?.EventsSuspectedUndelivered(events.Length, observerKey.ObserverId);
+        }
+        catch (Exception)
+        {
+            // Observation only.
+        }
+
+        try
+        {
+            if (!_suspectedUndeliveredLimiter.TryAdmit(out var suppressed))
+            {
+                return;
+            }
+
+            if (suppressed > 0)
+            {
+                _logger.SuspectedUndeliveredWarningsSuppressed(suppressed, _suspectedUndeliveredLimiter.WindowSeconds);
+            }
+
+            _logger.SuspectedUndeliveredEvents(events.Length, events[0].Context.SequenceNumber, events[^1].Context.SequenceNumber, partition, observerKey);
+        }
+        catch (Exception)
+        {
+            // Observation only.
+        }
+    }
+#pragma warning restore RCS1075
 }

@@ -148,6 +148,7 @@ public partial class Observer(
         _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
         _observerId = _observerKey.ObserverId;
         State = State with { Identifier = _observerId };
+        SeedSuspectedSkipOwnership();
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
@@ -1123,6 +1124,7 @@ public partial class Observer(
             // bounded turns of its own that repeated subscribes do not multiply - see Observer.PartitionRecovery.cs.
             // Clearing quarantine on a subscribed observer owes the same recovery.
             await TryRecoverAllFailedPartitions();
+            SeedSuspectedSkipOwnership();
             await TransitionTo<CatchingUpInFlight>();
         }
         finally

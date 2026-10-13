@@ -42,6 +42,7 @@ public partial class Observer
         // routing in between and replace it.
         if (State.RunningState != ObserverRunningState.Replaying)
         {
+            Skips.Reset();
             var canReplay = await CanTransitionTo<Replay>();
             await TransitionTo<Replay>();
             if (State.RunningState != ObserverRunningState.Replaying)
@@ -95,6 +96,7 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        Skips.Reset();
 
         var eventTypeIds = replayedEventTypes.Select(_ => _.Id).ToHashSet();
         if (eventTypeIds.Count > 0 && replayedPartitions.Count > 0)
@@ -163,6 +165,7 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FinishedReplayForPartition(partition);
         State.ReplayingPartitions.Remove(partition);
         if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
@@ -186,9 +189,10 @@ public partial class Observer
             }
         }
 
-        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: true);
+        EvaluateSuspectedSkips();
     }
 
     async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, bool retainOtherCounts)
@@ -230,6 +234,7 @@ public partial class Observer
         });
 
         State.ReplayingPartitions.Add(partition);
+        Skips.JobStarted(partition);
         await WriteStateAsync();
     }
 

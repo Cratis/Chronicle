@@ -99,9 +99,11 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FailingPartitionRecovered(partition);
         await ResolveFailedPartition(partition, lastHandledEventSequenceNumber);
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+        EvaluateSuspectedSkips();
     }
 
     /// <inheritdoc/>
@@ -124,7 +126,8 @@ public partial class Observer
             if (IsRetired || _removed) return;
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
-            HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+            Skips.Delivered(partition, lastHandledEventSequenceNumber);
+            HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
             await WriteStateAsync();
         }
         finally
@@ -299,7 +302,7 @@ public partial class Observer
             if (IsRetired || _removed) return;
             if (lastHandled is not null)
             {
-                HandleNewLastHandledEvent(lastHandled);
+                HandleNewLastHandledEventForPartition(partition, lastHandled);
             }
 
             if (Failures.TryGet(partition, out var failure))
