@@ -270,6 +270,7 @@ hostBuilder
    });
 
 var app = builder.Build();
+_ = app.Services.GetRequiredService<IShutdownDrainBudget>();
 
 logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
