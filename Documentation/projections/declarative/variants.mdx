@@ -49,6 +49,11 @@ variant, but it can never create one.
 it into an update-only join — keyed on the same property `.VariantOf<T>(_ => _.Id)` declared — before the
 definition ever reaches the projection engine. The entering event stays the only door into the variant.
 
+Because it is a join, it is also resolved when the variant is created: the join is re-resolved against the
+last stored event of the joined stream whenever the variant handles its own event. A `BuildCompleted`
+appended before the entering event never creates the variant on its own, but its value is on the variant the
+moment the entering event creates it.
+
 If a non-entering event also has an explicit `.Join<TEvent>()`, reclassification combines its `From`
 mappings with that join, including mappings inherited through `.From<BaseEvent>()`. The explicit join
 keeps its `On` and key settings and wins on conflicting property mappings, regardless of registration order.

@@ -221,6 +221,14 @@ Both same-event-source children (parent and child events share one event source)
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/children" />
 
+## Variants
+
+`ReadModelScenario` projects variants the way a running kernel does, for both model-bound (`[VariantOf<T>]`) and
+fluent (`.VariantOf<T>(...)`) variants. It discovers the other variants of the group from the registered
+artifacts, so entering one variant removes the entity from the others, and a non-entering event that was seeded
+before the entering event is on the variant when it is created. Use one scenario per variant, seeded with the
+same events, to specify a move from one variant to the next.
+
 ## Multiple instances (joins and cross-stream)
 
 In .NET, `Instance` returns a single threaded result, which is ambiguous when events span more than one event source — for example a `[Join]`, whose join-source event materializes a second instance. For those specs, assert against a specific instance with `InstanceForEventSourceId`, which resolves the intended instance from the sink even when another source's event was seeded first:
