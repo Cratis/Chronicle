@@ -16,7 +16,6 @@ public class ShutdownDrainBudget : IShutdownDrainBudget, IDisposable
 {
     readonly CancellationTokenSource _deadline = new();
     readonly CancellationTokenRegistration _stopping;
-    readonly TimeSpan _effectiveTimeout;
     int _started;
 
     /// <summary>
@@ -28,8 +27,8 @@ public class ShutdownDrainBudget : IShutdownDrainBudget, IDisposable
     /// <param name="logger">The logger.</param>
     public ShutdownDrainBudget(IOptions<ChronicleOptions> options, IOptions<HostOptions> hostOptions, IHostApplicationLifetime lifetime, ILogger<ShutdownDrainBudget> logger)
     {
-        _effectiveTimeout = EffectiveTimeout(options.Value.Shutdown.DrainTimeout, hostOptions.Value.ShutdownTimeout);
-        logger.EffectiveDrainBudget(_effectiveTimeout);
+        Timeout = EffectiveTimeout(options.Value.Shutdown.DrainTimeout, hostOptions.Value.ShutdownTimeout);
+        logger.EffectiveDrainBudget(Timeout);
         _stopping = lifetime.ApplicationStopping.Register(() => Begin());
     }
 
@@ -40,14 +39,14 @@ public class ShutdownDrainBudget : IShutdownDrainBudget, IDisposable
     public bool IsStopping => Volatile.Read(ref _started) != 0;
 
     /// <inheritdoc/>
-    public TimeSpan Timeout => _effectiveTimeout;
+    public TimeSpan Timeout { get; }
 
     /// <inheritdoc/>
     public CancellationToken Begin()
     {
         if (Interlocked.Exchange(ref _started, 1) == 0)
         {
-            _deadline.CancelAfter(_effectiveTimeout);
+            _deadline.CancelAfter(Timeout);
         }
 
         return Token;

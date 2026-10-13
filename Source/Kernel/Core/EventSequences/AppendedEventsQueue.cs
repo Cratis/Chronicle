@@ -121,8 +121,9 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         _isDraining = true;
         _channel.Writer.TryComplete();
+
         // An ordinary grain deactivation must not start or consume the kernel's future shutdown budget.
-        using var standaloneDeadline = _stopBudget is null || !_stopBudget.IsStopping
+        using var standaloneDeadline = _stopBudget?.IsStopping != true
             ? new CancellationTokenSource(_stopBudget?.Timeout ?? TimeSpan.FromSeconds(8))
             : null;
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, standaloneDeadline?.Token ?? _stopBudget!.Token);
