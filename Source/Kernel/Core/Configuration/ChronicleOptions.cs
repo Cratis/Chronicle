@@ -167,6 +167,11 @@ public class ChronicleOptions : IValidatableObject
     public PatternDetection PatternDetection { get; init; } = new PatternDetection();
 
     /// <summary>
+    /// Gets or inits the configuration for how the Workbench is served.
+    /// </summary>
+    public WorkbenchOptions Workbench { get; init; } = new WorkbenchOptions();
+
+    /// <summary>
     /// Gets or inits the TLS configuration.
     /// </summary>
     public Tls Tls { get; init; } = new Tls();
