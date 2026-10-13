@@ -18,6 +18,11 @@ internal sealed class ReadModelFold<TReadModel>
     where TReadModel : class
 {
     /// <summary>
+    /// Gets the runtime read model type, including for an untyped fold.
+    /// </summary>
+    public Type ReadModelType { get; init; } = typeof(TReadModel);
+
+    /// <summary>
     /// Gets the owning store.
     /// </summary>
     public required EventStoreForTesting EventStore { get; init; }
@@ -95,7 +100,8 @@ internal sealed class ReadModelFold<TReadModel>
                 ServiceProvider,
                 NamingPolicy,
                 InitialState,
-                eventContexts);
+                eventContexts,
+                ReadModelType);
 
             var reducerInstances = new Dictionary<EventSourceId, TReadModel>();
             if (reduced is not null && distinctEventSourceIds.Count == 1)
@@ -117,9 +123,10 @@ internal sealed class ReadModelFold<TReadModel>
                 InitialState,
                 StrictEventSubscription,
                 eventContexts,
-                seededEvents: eventsList);
+                seededEvents: eventsList,
+                readModelType: ReadModelType);
         }
 
-        throw new NoReadModelHandlerFound(typeof(TReadModel));
+        throw new NoReadModelHandlerFound(ReadModelType);
     }
 }

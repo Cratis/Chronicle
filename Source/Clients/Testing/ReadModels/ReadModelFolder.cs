@@ -20,21 +20,24 @@ internal static class ReadModelFolder
     /// <param name="store">The store supplying discovered artifacts.</param>
     /// <param name="events">The ordered log snapshot.</param>
     /// <param name="useOriginalContexts">Whether the events belong to this store's log.</param>
+    /// <param name="readModelType">Optional runtime type when folding through the non-generic read-model surface.</param>
     /// <returns>The rebuilt instances indexed by their materialized keys.</returns>
-    public static async Task<IReadOnlyDictionary<EventSourceId, TReadModel>> Fold<TReadModel>(EventStoreForTesting store, IEnumerable<AppendedEvent> events, bool useOriginalContexts)
+    public static async Task<IReadOnlyDictionary<EventSourceId, TReadModel>> Fold<TReadModel>(EventStoreForTesting store, IEnumerable<AppendedEvent> events, bool useOriginalContexts, Type? readModelType = null)
         where TReadModel : class
     {
+        readModelType ??= typeof(TReadModel);
         var namingPolicy = new CamelCaseNamingPolicy();
         using var loggerFactory = new NullLoggerFactory();
         var activator = new ClientArtifactsActivator(store.ServiceProvider, loggerFactory);
-        var hasExplicitProjection = store.ClientOptions.ExplicitArtifacts.Projections.Any(projection => projection.ReadModelType == typeof(TReadModel));
-        var reducerType = !hasExplicitProjection && store.Reducers.HasFor<TReadModel>()
-            ? store.Reducers.GetHandlerForReadModelType(typeof(TReadModel)).ReducerType
+        var hasExplicitProjection = store.ClientOptions.ExplicitArtifacts.Projections.Any(projection => projection.ReadModelType == readModelType);
+        var reducerType = !hasExplicitProjection && store.Reducers.HasFor(readModelType)
+            ? store.Reducers.GetHandlerForReadModelType(readModelType).ReducerType
             : null;
         var definition = ((Projections.Projections)store.Projections).Definitions.FirstOrDefault(definition =>
-            definition.ReadModel == typeof(TReadModel).GetReadModelIdentifier().Value);
+            definition.ReadModel == readModelType.GetReadModelIdentifier().Value);
         var fold = new ReadModelFold<TReadModel>
         {
+            ReadModelType = readModelType,
             EventStore = store,
             EventTypes = store.EventTypes,
             SchemaGenerator = store.JsonSchemaGenerator,
@@ -61,6 +64,16 @@ internal static class ReadModelFolder
         var (_, projected) = await fold.Process(inputs, useOriginalContexts ? appended.Select(e => e.Context).ToArray() : null);
         return projected;
     }
+
+    /// <summary>
+    /// Rebuilds a collection for the runtime type accepted by IReadModels.
+    /// </summary>
+    /// <param name="store">The owning store.</param>
+    /// <param name="readModelType">The read model type.</param>
+    /// <param name="events">The ordered log snapshot.</param>
+    /// <returns>The instances indexed by their materialized keys.</returns>
+    internal static Task<IReadOnlyDictionary<EventSourceId, object>> Fold(EventStoreForTesting store, Type readModelType, IEnumerable<AppendedEvent> events) =>
+        Fold<object>(store, events, true, readModelType);
 
     static ReadModelEvent ToInput(AppendedEvent e) => new(e.Context.EventSourceId, e.Content, e.Context.EventSourceType, e.Context.EventStreamType, e.Context.EventStreamId);
 }

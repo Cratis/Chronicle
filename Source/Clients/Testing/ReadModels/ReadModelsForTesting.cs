@@ -6,7 +6,6 @@ using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -29,6 +28,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
 {
     readonly Dictionary<(string Identifier, string Key), object> _instances = [];
     readonly EventStoreForTesting? _store;
+    readonly bool _foldReads;
     IEventSequence? _eventLog;
 
     /// <summary>
@@ -53,10 +53,12 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     /// <param name="inner">The inner read model surface.</param>
     /// <param name="eventLog">The event log.</param>
     /// <param name="store">The owning scenario store.</param>
-    internal ReadModelsForTesting(IReadModels inner, IEventSequence eventLog, EventStoreForTesting store)
+    /// <param name="foldReads">Whether snapshot reads rebuild from the scenario's own log.</param>
+    internal ReadModelsForTesting(IReadModels inner, IEventSequence eventLog, EventStoreForTesting store, bool foldReads = false)
         : this(inner, eventLog)
     {
         _store = store;
+        _foldReads = foldReads;
     }
 
     /// <summary>
@@ -77,25 +79,36 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     /// throws GrainNotAvailableInTestScenario in-process. This matches what the interface's nullable return
     /// already promises for "the instance does not exist" (#3927).
     /// </remarks>
-    public Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null)
+    public async Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
-        var identifier = typeof(TReadModel).GetReadModelIdentifier();
-        return Task.FromResult(_instances.TryGetValue((identifier, key.Value), out var instance) ? (TReadModel)instance : default!);
+        var instance = await GetInstanceById(typeof(TReadModel), key, sessionId);
+        return instance is null ? default! : (TReadModel)instance;
     }
 
     /// <inheritdoc/>
     /// <remarks>
     /// See the generic overload above - the same reasoning applies here (#3927).
     /// </remarks>
-    public Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null)
+    public async Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
         var identifier = readModelType.GetReadModelIdentifier();
-        return Task.FromResult(_instances.TryGetValue((identifier, key.Value), out var instance) ? instance : null!);
+        if (_instances.TryGetValue((identifier, key.Value), out var instance)) return instance;
+        if (!_foldReads) return null!;
+
+        var instances = await Rebuild(readModelType, _eventLog!, _store!);
+        using var sink = ProjectionReadModelProcessor.CreateSink(readModelType, _store!.JsonSchemaGenerator);
+        var canonicalKey = sink.GetKeyValue(new(key.Value, ArrayIndexers.NoIndexers));
+        return instances.TryGetValue(canonicalKey, out instance) ? instance : null!;
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null) =>
-        inner.GetInstances<TReadModel>(eventCount);
+    public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null)
+    {
+        if (!_foldReads) return await inner.GetInstances<TReadModel>(eventCount);
+
+        var instances = await Rebuild(typeof(TReadModel), _eventLog!, _store!, eventCount);
+        return instances.Values.Cast<TReadModel>().ToArray();
+    }
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
@@ -210,16 +223,25 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
 
     async Task<IEnumerable<TReadModel>> Rebuild<TReadModel>(IEventSequence log, EventStoreForTesting store)
     {
+        var instances = await Rebuild(typeof(TReadModel), log, store);
+        return instances.Values.Cast<TReadModel>().ToArray();
+    }
+
+    async Task<IReadOnlyDictionary<object, object>> Rebuild(Type readModelType, IEventSequence log, EventStoreForTesting store, EventCount? eventCount = null)
+    {
+        if (!store.Projections.HasFor(readModelType) && !store.Reducers.HasFor(readModelType)) throw new UnknownReadModel(readModelType);
+
         var events = await log.GetFromSequenceNumber(EventSequenceNumber.First);
-        var fold = typeof(ReadModelFolder).GetMethod(nameof(ReadModelFolder.Fold), BindingFlags.Public | BindingFlags.Static)!
-            .MakeGenericMethod(typeof(TReadModel));
-        var folded = await (Task<IReadOnlyDictionary<EventSourceId, TReadModel>>)fold.Invoke(null, [store, events, true])!;
-        var identifier = typeof(TReadModel).GetReadModelIdentifier().Value;
-        using var sink = ProjectionReadModelProcessor.CreateSink(typeof(TReadModel), store.JsonSchemaGenerator);
-        var instances = new Dictionary<object, TReadModel>();
+        var selectedEvents = eventCount is null || eventCount == EventCount.Unlimited
+            ? events
+            : events.Where((_, index) => (ulong)index < eventCount.Value);
+        var folded = await ReadModelFolder.Fold(store, readModelType, selectedEvents);
+        var identifier = readModelType.GetReadModelIdentifier().Value;
+        using var sink = ProjectionReadModelProcessor.CreateSink(readModelType, store.JsonSchemaGenerator);
+        var instances = new Dictionary<object, object>();
         foreach (var pair in _instances.Where(pair => pair.Key.Identifier == identifier))
         {
-            instances[sink.GetKeyValue(new(pair.Key.Key, ArrayIndexers.NoIndexers))] = (TReadModel)pair.Value;
+            instances[sink.GetKeyValue(new(pair.Key.Key, ArrayIndexers.NoIndexers))] = pair.Value;
         }
 
         foreach (var (key, instance) in folded)
@@ -227,6 +249,6 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
             instances[sink.GetKeyValue(new(key.Value, ArrayIndexers.NoIndexers))] = instance;
         }
 
-        return instances.Values.ToArray();
+        return instances;
     }
 }

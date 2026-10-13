@@ -63,6 +63,7 @@ namespace Cratis.Chronicle.Testing.Events;
 public class EventStoreForTesting : IEventStore, IDisposable
 {
     readonly ReadModelsForTesting _readModelsForTesting;
+    readonly IEventLog? _scenarioEventLog;
     readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly EventTypes _eventTypes;
@@ -112,9 +113,23 @@ public class EventStoreForTesting : IEventStore, IDisposable
     /// <param name="serviceProvider">Optional service provider for resolving artifacts, options, and logging.</param>
     /// <param name="clientArtifactsProvider">Artifacts to discover.</param>
     /// <param name="options">Optional Chronicle settings, including explicit artifacts and the unit-of-work lifecycle policy.</param>
-#pragma warning disable CA2000 // Dispose objects before losing scope
     public EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options)
+        : this(serviceProvider, clientArtifactsProvider, options, null, null)
     {
+    }
+
+    /// <summary>
+    /// Adopts an event scenario's already seeded storage and selected event log for read-model folding.
+    /// </summary>
+    /// <param name="serviceProvider">The artifact service provider.</param>
+    /// <param name="clientArtifactsProvider">Artifacts to discover.</param>
+    /// <param name="options">The scenario's client settings.</param>
+    /// <param name="testingStore">The scenario's storage, or null to create a new store.</param>
+    /// <param name="eventLog">The scenario's selected event log, or null to create one.</param>
+#pragma warning disable CA2000 // Dispose objects before losing scope
+    internal EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options, TestingEventStore? testingStore, IEventLog? eventLog)
+    {
+        _scenarioEventLog = eventLog;
         ServiceProvider = serviceProvider ?? new DefaultServiceProvider();
         var configuredOptions = options ?? (ServiceProvider is DefaultServiceProvider ? null :
             ServiceProvider.GetService<IOptions<ChronicleOptions>>()?.Value);
@@ -135,7 +150,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
             _namingPolicy);
 
         // Discovery needs a connection first; the root resolves the registry only after discovery.
-        TestingStore = new TestingEventStore(Name, Namespace, () => _eventTypes!);
+        TestingStore = testingStore ?? new TestingEventStore("testing", "default", () => _eventTypes!);
         Connection = TestingStore.Connection;
 
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, ServiceProvider);
@@ -204,9 +219,12 @@ public class EventStoreForTesting : IEventStore, IDisposable
             NullLogger<Chronicle.ReadModels.ReadModels>.Instance);
 
         _constraintProvider = TestingEventStore.DiscoverConstraints(ClientArtifactsProvider, _eventTypes, _artifactActivator);
-        TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, EventTypeMigrators, _eventSources.All).GetAwaiter().GetResult();
+        if (testingStore is null)
+        {
+            TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, EventTypeMigrators, _eventSources.All).GetAwaiter().GetResult();
+        }
 
-        _readModelsForTesting = new ReadModelsForTesting(realReadModels, EventLog, this);
+        _readModelsForTesting = new ReadModelsForTesting(realReadModels, EventLog, this, foldReads: eventLog is not null);
         ReadModels = _readModelsForTesting;
         DecisionReads.RegisterTesting(this, new DecisionReadsForTesting(
             this,
@@ -253,10 +271,10 @@ public class EventStoreForTesting : IEventStore, IDisposable
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
     /// <inheritdoc/>
-    public EventStoreName Name => "testing";
+    public EventStoreName Name => TestingStore.Name;
 
     /// <inheritdoc/>
-    public EventStoreNamespaceName Namespace => "default";
+    public EventStoreNamespaceName Namespace => TestingStore.Namespace;
 
     /// <inheritdoc/>
     public IChronicleConnection Connection { get; }
@@ -274,7 +292,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
     public IConstraints Constraints => _constraints.Value;
 
     /// <inheritdoc/>
-    public IEventLog EventLog => (IEventLog)GetEventSequence(EventSequenceId.Log);
+    public IEventLog EventLog => _scenarioEventLog ?? (IEventLog)GetEventSequence(EventSequenceId.Log);
 
     /// <inheritdoc/>
     public IReactors Reactors => _reactors.Value;

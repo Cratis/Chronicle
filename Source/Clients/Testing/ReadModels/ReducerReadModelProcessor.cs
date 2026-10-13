@@ -41,6 +41,7 @@ internal static class ReducerReadModelProcessor
     /// <param name="namingPolicy">The <see cref="INamingPolicy"/> for deriving the read model container name.</param>
     /// <param name="initialState">Optional initial read model state the reducer reduces on top of.</param>
     /// <param name="eventContexts">Optional original contexts when reading the store's event log.</param>
+    /// <param name="readModelType">Optional runtime read model type for an untyped fold.</param>
     /// <returns>The reduced read model and the distinct event sources that passed the reducer's filters.</returns>
     /// <exception cref="ReducerFailed">Thrown when the reducer raises an error while processing the events.</exception>
     public static async Task<(TReadModel? State, IReadOnlyList<EventSourceId> EventSourceIds)> Process<TReadModel>(
@@ -52,10 +53,11 @@ internal static class ReducerReadModelProcessor
         IServiceProvider serviceProvider,
         INamingPolicy namingPolicy,
         TReadModel? initialState = null,
-        IReadOnlyList<EventContext>? eventContexts = null)
+        IReadOnlyList<EventContext>? eventContexts = null,
+        Type? readModelType = null)
         where TReadModel : class
     {
-        var readModelType = typeof(TReadModel);
+        readModelType ??= typeof(TReadModel);
         var containerName = (ReadModelContainerName)namingPolicy.GetReadModelName(readModelType);
         var invoker = new ReducerInvoker(eventTypes, artifactsActivator, reducerType, readModelType, containerName);
 
