@@ -9,6 +9,10 @@ namespace Cratis.Chronicle.Storage.Sql.for_Database.when_resolving_a_namespace;
 [Collection(PostgreSqlCollection.Name)]
 public class and_the_shared_legacy_database_has_only_jobs_history(PostgreSqlFixture fixture) : given.a_postgresql_database(fixture)
 {
+    const string JobsHistoryOnly =
+        "CREATE TABLE \"__EFMigrationsHistory\" (\"MigrationId\" varchar(150) PRIMARY KEY, \"ProductVersion\" varchar(32) NOT NULL); " +
+        "INSERT INTO \"__EFMigrationsHistory\" VALUES ('Cratis-Orleans-Jobs-v1_0_0', '10.0.0')";
+
     Exception _error;
 
     async Task Establish()
@@ -17,10 +21,7 @@ public class and_the_shared_legacy_database_has_only_jobs_history(PostgreSqlFixt
         var legacy = LogicalStoreName[..63];
         await SeedStore(Store);
         await CreateLegacyDatabase(legacy);
-        await Execute(
-            ConnectionFor(legacy),
-            "CREATE TABLE \"__EFMigrationsHistory\" (\"MigrationId\" varchar(150) PRIMARY KEY, \"ProductVersion\" varchar(32) NOT NULL); " +
-            "INSERT INTO \"__EFMigrationsHistory\" VALUES ('Cratis-Orleans-Jobs-v1_0_0', '10.0.0')");
+        await Execute(ConnectionFor(legacy), JobsHistoryOnly);
     }
 
     async Task Because() => _error = await Catch.Exception(async () =>
