@@ -136,7 +136,7 @@ By default a concurrency scope protects a sequence you are *extending*. With the
 
 #### Why a generated identifier needs proof
 
-Picture a small shop. Customers get a `CustomerId` (`cus_` plus a ULID). Orders get an `OrderId`, a TypeID with a time part and no tenant. Invitations get an `InviteCode`, a short NanoId. Support staff issue an `ApiKey`, 32 random bytes that are a secret. Every one of these is minted by your code, and each one becomes the event source of a new stream.
+Picture a small shop. Customers get a `CustomerId` (`cus_` plus a ULID). Orders get an `OrderId`, a TypeID with a time part and no tenant. Invitations get an `InviteCode`, a short NanoId. Support staff issue an `ApiKey`: 32 random bytes that are a secret. The key itself never becomes an identifier. Its stream is identified by a separate, non-sensitive `ApiKeyId`. The `CustomerId`, `OrderId`, `InviteCode` and `ApiKeyId` are minted by your code, and each one becomes the event source of a new stream.
 
 A well-chosen generator makes a collision astronomically unlikely, but "unlikely" is a property of the generator, not of your event store. Nothing stops the same value from being produced twice by a bug, a replayed request, a seeded test generator or a clock that stepped back. If it happens, the second "new" stream silently appends onto the first, and two customers share one history.
 
@@ -164,7 +164,7 @@ The fix on your side is short: generate a new identifier and append again, as th
 
 A ULID or a TypeID carries enough randomness that you will probably never see a collision. An `InviteCode` does not: a NanoId of six or eight characters is meant to be typed by a person, and at that size collisions are a matter of when. For identifiers like that, the freshness check is how you find out, and the retry loop is part of the design rather than an edge case.
 
-The same applies to an `ApiKey` and to anything else where the identifier also serves as a secret or an address. Freshness tells you the stream is new; it says nothing about keeping the value private. Arc's `[NotAudited]` only keeps a value out of a command's causation. It does not stop the value from reaching the event content or the event log, so treat what you append for a secret with the [compliance](../compliance/index.md) tools.
+The `ApiKey` shows the limit of this check. Freshness applies to the stream's identifier, here the `ApiKeyId`, and says nothing about keeping a value private. **Never use a secret as an event source id.** Event source ids, like the rest of event metadata, are stored in plaintext and cannot be encrypted, and marking one `[PII]` is rejected. Keep the raw key out of events entirely, and record only a fingerprint such as a hash of it, or mark a payload property `[PII]` when you must store it. See [personal data in events](../compliance/pii.mdx) for the rule and the surrogate-identifier pattern. Arc's `[NotAudited]` only keeps a value out of a command's causation; it does not protect the value anywhere else.
 
 #### Choosing a guard
 
