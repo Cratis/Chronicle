@@ -24,38 +24,14 @@ internal static class ReadModelFolder
     public static async Task<IReadOnlyDictionary<EventSourceId, TReadModel>> Fold<TReadModel>(EventStoreForTesting store, IEnumerable<AppendedEvent> events, bool useOriginalContexts, Type? readModelType = null)
         where TReadModel : class
     {
-        readModelType ??= typeof(TReadModel);
-        var hasExplicitProjection = store.ClientOptions.ExplicitArtifacts.Projections.Any(projection => projection.ReadModelType == readModelType);
-        var reducerType = !hasExplicitProjection && store.Reducers.HasFor(readModelType)
-            ? store.Reducers.GetHandlerForReadModelType(readModelType).ReducerType
-            : null;
-        var definition = ((Projections.Projections)store.Projections).Definitions.FirstOrDefault(definition =>
-            definition.ReadModel == readModelType.GetReadModelIdentifier().Value);
-        var fold = new ReadModelFold<TReadModel>
-        {
-            ReadModelType = readModelType,
-            EventStore = store,
-            EventTypes = store.EventTypes,
-            SchemaGenerator = store.JsonSchemaGenerator,
-            ServiceProvider = store.ServiceProvider,
-            ReducerType = reducerType,
-            ProjectionDefinition = definition
-        };
+        var fold = CreateFold<TReadModel>(store, readModelType ?? typeof(TReadModel));
         var appended = events.ToArray();
-        var inputs = appended.Select(ToInput).ToArray();
-        if (reducerType is not null)
+        if (fold.ReducerType is not null)
         {
-            var instances = new Dictionary<EventSourceId, TReadModel>();
-            foreach (var group in appended.GroupBy(e => e.Context.EventSourceId))
-            {
-                var (primary, _) = await fold.Process(group.Select(ToInput), useOriginalContexts ? group.Select(e => e.Context).ToArray() : null);
-                if (primary is not null) instances[group.Key] = primary;
-            }
-
-            return instances;
+            return await ReduceEventSources(fold, appended, useOriginalContexts);
         }
 
-        var (_, projected) = await fold.Process(inputs, useOriginalContexts ? appended.Select(e => e.Context).ToArray() : null);
+        var (_, projected) = await fold.Process(appended.Select(ToInput), OriginalContexts(appended, useOriginalContexts));
         return projected;
     }
 
@@ -68,6 +44,47 @@ internal static class ReadModelFolder
     /// <returns>The instances indexed by their materialized keys.</returns>
     internal static Task<IReadOnlyDictionary<EventSourceId, object>> Fold(EventStoreForTesting store, Type readModelType, IEnumerable<AppendedEvent> events) =>
         Fold<object>(store, events, true, readModelType);
+
+    static ReadModelFold<TReadModel> CreateFold<TReadModel>(EventStoreForTesting store, Type readModelType)
+        where TReadModel : class =>
+        new()
+        {
+            ReadModelType = readModelType,
+            EventStore = store,
+            EventTypes = store.EventTypes,
+            SchemaGenerator = store.JsonSchemaGenerator,
+            ServiceProvider = store.ServiceProvider,
+            ReducerType = FindReducerType(store, readModelType),
+            ProjectionDefinition = ((Projections.Projections)store.Projections).Definitions.FirstOrDefault(definition =>
+                definition.ReadModel == readModelType.GetReadModelIdentifier().Value)
+        };
+
+    static Type? FindReducerType(EventStoreForTesting store, Type readModelType)
+    {
+        if (store.ClientOptions.ExplicitArtifacts.Projections.Any(projection => projection.ReadModelType == readModelType)) return null;
+        if (!store.Reducers.HasFor(readModelType)) return null;
+
+        return store.Reducers.GetHandlerForReadModelType(readModelType).ReducerType;
+    }
+
+    static async Task<IReadOnlyDictionary<EventSourceId, TReadModel>> ReduceEventSources<TReadModel>(
+        ReadModelFold<TReadModel> fold,
+        IEnumerable<AppendedEvent> events,
+        bool useOriginalContexts)
+        where TReadModel : class
+    {
+        var instances = new Dictionary<EventSourceId, TReadModel>();
+        foreach (var group in events.GroupBy(e => e.Context.EventSourceId))
+        {
+            var (primary, _) = await fold.Process(group.Select(ToInput), OriginalContexts(group, useOriginalContexts));
+            if (primary is not null) instances[group.Key] = primary;
+        }
+
+        return instances;
+    }
+
+    static EventContext[]? OriginalContexts(IEnumerable<AppendedEvent> events, bool useOriginalContexts) =>
+        useOriginalContexts ? events.Select(e => e.Context).ToArray() : null;
 
     static ReadModelEvent ToInput(AppendedEvent e) => new(e.Context.EventSourceId, e.Content, e.Context.EventSourceType, e.Context.EventStreamType, e.Context.EventStreamId, e.Context.Tags.Select(tag => tag.Value).ToArray());
 }

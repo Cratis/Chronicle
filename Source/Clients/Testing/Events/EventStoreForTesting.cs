@@ -150,7 +150,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
             _namingPolicy);
 
         // Discovery needs a connection first; the root resolves the registry only after discovery.
-        TestingStore = testingStore ?? new TestingEventStore("testing", "default", () => _eventTypes!);
+        TestingStore = AdoptOrCreateStorage(testingStore);
         Connection = TestingStore.Connection;
 
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, ServiceProvider);
@@ -219,12 +219,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
             NullLogger<Chronicle.ReadModels.ReadModels>.Instance);
 
         _constraintProvider = TestingEventStore.DiscoverConstraints(ClientArtifactsProvider, _eventTypes, _artifactActivator);
-        if (testingStore is null)
-        {
-            TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, EventTypeMigrators, _eventSources.All).GetAwaiter().GetResult();
-        }
-
-        _readModelsForTesting = new ReadModelsForTesting(realReadModels, EventLog, this, foldReads: eventLog is not null);
+        _readModelsForTesting = CreateReadModelsForStorage(realReadModels, testingStore);
         ReadModels = _readModelsForTesting;
         DecisionReads.RegisterTesting(this, new DecisionReadsForTesting(
             this,
@@ -426,6 +421,19 @@ public class EventStoreForTesting : IEventStore, IDisposable
     internal void RegisterReadModelInstance<TReadModel>(EventSourceId eventSourceId, TReadModel instance)
         where TReadModel : class =>
         _readModelsForTesting.RegisterInstance(eventSourceId, instance);
+
+    TestingEventStore AdoptOrCreateStorage(TestingEventStore? scenarioStorage) =>
+        scenarioStorage ?? new TestingEventStore("testing", "default", () => _eventTypes);
+
+    ReadModelsForTesting CreateReadModelsForStorage(IReadModels inner, TestingEventStore? scenarioStorage)
+    {
+        if (scenarioStorage is null)
+        {
+            TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, EventTypeMigrators, _eventSources.All).GetAwaiter().GetResult();
+        }
+
+        return new ReadModelsForTesting(inner, EventLog, this, foldReads: _scenarioEventLog is not null);
+    }
 
     IEventSequence CreateEventSequence(EventSequenceId id)
     {

@@ -17,7 +17,6 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.InMemory.Sinks;
-using Cratis.Chronicle.Testing.Events;
 using Cratis.Json;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
@@ -99,18 +98,14 @@ internal static class ProjectionReadModelProcessor
     /// <typeparam name="TReadModel">Type of read model produced by the projection.</typeparam>
     /// <param name="projectionDefinition">The client-side <see cref="Contracts.Projections.ProjectionDefinition"/>.</param>
     /// <param name="events">The events with their associated <see cref="EventSourceId"/> to process.</param>
-    /// <param name="eventStore">The scenario's shared test store.</param>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event type metadata.</param>
-    /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for building the read model and event schemas.</param>
+    /// <param name="context">The storage, artifacts, services and original event contexts for the fold.</param>
     /// <param name="initialState">Optional initial read model state.</param>
     /// <param name="strictEventSubscription">
     /// When <see langword="false"/> (the default), a seeded event the projection does not subscribe to is
     /// silently skipped, matching the production engine. When <see langword="true"/>, such an event raises
     /// <see cref="UnsubscribedEventSeeded"/> instead.
     /// </param>
-    /// <param name="eventContexts">Optional original contexts carrying event stream routing.</param>
     /// <param name="seededEvents">Optional routed synthetic input, used when original contexts are not supplied.</param>
-    /// <param name="readModelType">Optional runtime read model type for an untyped fold.</param>
     /// <returns>
     /// A tuple of the primary projected read model (the instance for the first key resolved, exposed as
     /// <c language="csharp">Instance</c>, or <see langword="null"/> if the projection did not apply any changes) and a
@@ -123,18 +118,17 @@ internal static class ProjectionReadModelProcessor
     public static async Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> Process<TReadModel>(
         Contracts.Projections.ProjectionDefinition projectionDefinition,
         IEnumerable<(EventSourceId EventSourceId, object Event)> events,
-        EventStoreForTesting eventStore,
-        IEventTypes eventTypes,
-        IJsonSchemaGenerator jsonSchemaGenerator,
+        ReadModelFoldContext context,
         TReadModel? initialState = null,
         bool strictEventSubscription = false,
-        IReadOnlyList<EventContext>? eventContexts = null,
-        IReadOnlyList<ReadModelEvent>? seededEvents = null,
-        Type? readModelType = null)
+        IReadOnlyList<ReadModelEvent>? seededEvents = null)
         where TReadModel : class
     {
-        readModelType ??= typeof(TReadModel);
-        var schema = jsonSchemaGenerator.GenerateForReadModel(readModelType);
+        var readModelType = context.ReadModelType;
+        var eventStore = context.EventStore;
+        var eventTypes = context.EventTypes;
+        var eventContexts = context.EventContexts;
+        var schema = context.SchemaGenerator.GenerateForReadModel(readModelType);
 
         var kernelReadModelDefinition = BuildKernelReadModelDefinition(readModelType, schema);
         var kernelProjectionDefinition = KernelGrpc::Cratis.Chronicle.Services.Projections.Definitions.ProjectionDefinitionConverters.ToChronicle(
