@@ -32,10 +32,6 @@ Call `ExcludeChildProjections()` to keep every-event mappings local to the level
 
 Use a root `FromAll` mapping only when the parent must also observe unrelated event types in the sequence. Its child-inclusion flag is true, so child-only events update their containing parent too. Use `FromEvery` for audit metadata that should follow just the projection's handled events.
 
-:::note[Client coverage]
-This example depends on declarative child collections, which are currently C#-only (see [Children](./children)). It stays C#-only until child projection scopes are available in the other clients.
-:::
-
 <ChronicleClientTabs snippet="projections/declarative/from-every/with-children" />
 
 ## Multiple Declarations

@@ -24,19 +24,14 @@ flowchart LR
 
 ## How you'll define one
 
-Projections join **events** (never other read models), and mapping is automatic by default — name a
-read model property the same as an event property and it just maps. For a read model backed by events,
-you usually choose between three styles:
+Start with model-bound attributes, move to fluent `IProjectionFor<T>` when the mapping needs structure,
+and use a reducer when the logic reads better as state transitions; a self-reducing model is the default
+for new reducer code. [Choose how to build a read model](choosing-a-read-model-style.mdx) compares the
+forms on the same event history and explains when separation or dependency injection warrants an
+`IReducerFor<T>`, when to nominate a plain class, and when tooling-authored PDL fits.
 
-| Style | What it looks like | Reach for it when |
-| --- | --- | --- |
-| [Model-bound](model-bound/) | Attributes on the read model record (`[FromEvent<T>]`, `[Key]`, `[ChildrenFrom<T>]`) | **The default.** Most projections — it's the least boilerplate and reads as the model itself. |
-| [Declarative](declarative/) | A fluent `IProjectionFor<T>` definition | The mapping needs logic the attributes can't express cleanly. |
-| [Reducer](/chronicle/reducers/) | An `IReducerFor<T>` that receives the event, current state, and event context | The read model is easier to express as state transitions or calculations over previous state. |
-
-[Choose a read-model style](choosing-a-read-model-style) builds the same read model as a
-model-bound projection, a declarative projection, and a reducer so the trade-offs are visible side by
-side.
+Projections join **events** (never other read models). Fluent mappings use AutoMap by default;
+model-bound projections opt into event mappings with attributes such as `[FromEvent<T>]`.
 
 ## Choose your consistency
 
@@ -44,8 +39,8 @@ The one decision worth making up front is *when* the read model has to be correc
 
 | | [Materialized (eventual)](eventual-consistency) | [Passive (on demand)](declarative/passive.mdx) |
 | --- | --- | --- |
-| **When it updates** | Shortly after the event is appended (the default) | Never stored — computed from its events each time you read it |
-| **Cost** | Cheap reads, scales freely | Each read replays that instance's history |
+| **When it updates** | Shortly after the event is appended (the default) | Computed on demand, without a persistent sink |
+| **Cost** | Cheap reads, scales freely | First read folds the history; cached projection state can apply only newer events |
 | **Use it for** | Almost everything — lists, dashboards, history | A value you must read back correctly *right now*, such as state a command decides on |
 
 Start materialized. Make a read model passive only when a workflow genuinely can't tolerate it being a
@@ -59,7 +54,7 @@ No projection updates synchronously inside the append, and a read cannot enforce
 | Topic | Description |
 | ------ | ----------- |
 | [Architecture](architecture) | How the projection engine turns events into read models |
-| [Choose a read-model style](choosing-a-read-model-style) | Compare model-bound, declarative, and reducer approaches on the same read model |
+| [Choose how to build a read model](choosing-a-read-model-style.mdx) | One decision path, worked examples, capabilities, and switching costs |
 | [Model-Bound Projections](model-bound/) | Build read models with attributes — the default style |
 | [Declarative Projections](declarative/) | Build read models with the fluent `IProjectionFor<T>` API |
 | [Immediate Projections](immediate-projections.md) | Why there is no synchronous projection mode, and what to use instead |
