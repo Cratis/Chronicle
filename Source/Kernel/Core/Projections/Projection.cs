@@ -12,10 +12,13 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Projections.Engine;
+using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Recommendations;
@@ -23,6 +26,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Orleans.Providers;
 using Orleans.Utilities;
@@ -139,6 +143,10 @@ public class Projection(
         DiscardingTheEngineOnFailure(eventStoreNamespace, () => ProjectForSingleReadModel(eventStoreNamespace, initialState, events));
 
     /// <inheritdoc/>
+    public Task<SingleReadModelProjectionState> FoldForSingleReadModel(EventStoreNamespaceName eventStoreNamespace, SingleReadModelProjectionState initialState, IEnumerable<AppendedEvent> events) =>
+        DiscardingTheEngineOnFailure(eventStoreNamespace, () => FoldSingleReadModel(eventStoreNamespace, initialState, events));
+
+    /// <inheritdoc/>
     public Task<IEnumerable<ExpandoObject>> Process(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events) =>
         DiscardingTheEngineOnFailure(eventStoreNamespace, () => Project(eventStoreNamespace, events));
 
@@ -233,6 +241,30 @@ public class Projection(
         return !onlyPropertyUpdatesAlongsideJoin && !isRootLevelJoin;
     }
 
+    static void PrepareSingleReadModelSink(PreviewSink sink, Key key, AppendedEvent @event, SingleReadModelProjectionState state)
+    {
+        // SetInitialState may fill a placeholder's missing properties in place. Keep that working
+        // state separate: only its recorded changes reach the instance, just as in a materialized sink.
+        if (state.Exists)
+        {
+            var workingState = state.Model.Clone();
+            ((IDictionary<string, object?>)workingState)[WellKnownProperties.ReadModelInstanceInitialized] = state.IsInitialized;
+            sink.Set(key.Value.ToString()!, workingState, @event.Context.SequenceNumber);
+        }
+        else
+        {
+            sink.Remove(key.Value.ToString()!);
+        }
+    }
+
+    static void SeedSingleReadModelAtCreation(EngineProjection projection, ProjectionEventContext context)
+    {
+        if (context.NeedsInitialState && !context.Changeset.HasJoined())
+        {
+            context.Changeset.AddPropertiesFrom(projection.InitialModelState, projection.GetChildrenPropertyPaths());
+        }
+    }
+
     static ExpandoObject WithIdentifier(PreviewReadModel readModel, string identifierPropertyName)
     {
         ((IDictionary<string, object?>)readModel.State)[identifierPropertyName] = readModel.KeyValue;
@@ -300,6 +332,56 @@ public class Projection(
         }
 
         return state;
+    }
+
+    async Task<SingleReadModelProjectionState> FoldSingleReadModel(EventStoreNamespaceName eventStoreNamespace, SingleReadModelProjectionState initialState, IEnumerable<AppendedEvent> events)
+    {
+        var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
+        var eventSequenceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace).GetEventSequence(State.EventSequenceId);
+        var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
+        var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
+        var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
+        var result = initialState.Exists ? initialState with { Model = initialState.Model.Clone() } : SingleReadModelProjectionState.Empty;
+
+        foreach (var @event in events)
+        {
+            var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, NullSink.Instance, @event);
+            if (keyResult is not ResolvedKey resolved)
+            {
+                continue;
+            }
+
+            var key = resolved.Key;
+
+            PrepareSingleReadModelSink(sink, key, @event, result);
+            var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, result.Model);
+            var context = new ProjectionEventContext(key, @event, changeset, projection.GetOperationTypeFor(@event.Context.EventType), false);
+            context = await initialize.Perform(projection, context);
+            await HandleEventFor(projection, context, NullSink.Instance, eventSequenceStorage);
+            SeedSingleReadModelAtCreation(projection, context);
+            result = ApplySingleReadModelChanges(projection, context, result);
+        }
+
+        return result;
+    }
+
+    SingleReadModelProjectionState ApplySingleReadModelChanges(EngineProjection projection, ProjectionEventContext context, SingleReadModelProjectionState state)
+    {
+        var changeset = context.Changeset;
+        if (changeset.HasBeenRemoved())
+        {
+            return SingleReadModelProjectionState.Empty;
+        }
+
+        if (!ShouldMaterializeReadModel(state.Exists, context.Key, [.. changeset.Changes], CreatesInstance(projection, context)))
+        {
+            return state;
+        }
+
+        var model = InMemoryChanges.Apply(context.Key, changeset.Changes, state.Model);
+        ((IDictionary<string, object?>)model)[_identifierPropertyName] = context.Key.Value.ToString();
+        ReadModelSubjects.TrackChanges(model, changeset.Changes, context.Event);
+        return new(model, true, state.IsInitialized || CreatesInstance(projection, context));
     }
 
     async Task<IEnumerable<ExpandoObject>> Project(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events)

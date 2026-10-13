@@ -117,18 +117,21 @@ public class StronglyConsistentPerKeyReadBenchmark : IDisposable, IAsyncDisposab
     /// <summary>
     /// Appends one event to the measured key before an iteration.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the append to the measured key fails.</exception>
     [IterationSetup(Target = nameof(ProjectionWarmAfterOwnAppend))]
     public void AppendToMeasuredKey() => _expectedValue = AppendToKey(_key, "measured");
 
     /// <summary>
     /// Appends one event to another key before an iteration.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the append to the other key fails.</exception>
     [IterationSetup(Target = nameof(ProjectionWarmAfterOtherAppend))]
     public void AppendToOtherKey() => AppendToKey(_otherKey, "other");
 
     /// <summary>
     /// Verifies the value returned by the measured read outside the timed region.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the measured read does not reflect the expected value.</exception>
     [IterationCleanup(Targets = new[] { nameof(ProjectionCold), nameof(ProjectionWarm), nameof(ProjectionWarmAfterOwnAppend), nameof(ProjectionWarmAfterOtherAppend) })]
     public void ValidateProjectionValue()
     {
@@ -196,11 +199,8 @@ public class StronglyConsistentPerKeyReadBenchmark : IDisposable, IAsyncDisposab
 
     async Task<BenchmarkPassiveReadModel> ReadProjection(ReadModelSessionId? sessionId)
     {
-        var instance = await _helper!.EventStore.ReadModels.GetInstanceById<BenchmarkPassiveReadModel>(_key, sessionId);
-        if (instance is null)
-        {
-            throw new InvalidOperationException("The passive read model instance was not found.");
-        }
+        var instance = await _helper!.EventStore.ReadModels.GetInstanceById<BenchmarkPassiveReadModel>(_key, sessionId)
+            ?? throw new InvalidOperationException("The passive read model instance was not found.");
         _projectedValue = instance.Value;
 
         return instance;
