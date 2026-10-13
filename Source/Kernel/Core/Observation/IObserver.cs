@@ -515,6 +515,13 @@ public interface IObserver : IGrainWithStringKey
     Task ClearFailedPartitions();
 
     /// <summary>
+    /// Fast forward the observer to the tail of the event sequence, skipping all events it has not yet handled
+    /// without invoking its subscriber.
+    /// </summary>
+    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    Task<FastForwardResult> FastForward();
+
+    /// <summary>
     /// Attempt to recover all failed partitions.
     /// </summary>
     /// <returns>Awaitable task.</returns>

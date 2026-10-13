@@ -1,8 +1,20 @@
 <!-- cratis-ai-managed: skills/cratis-arc-command-operation/references/execution-and-recovery.md -->
 # Operation execution and recovery reference
 
-Verified at **Arc v22.48.1** against the
-[product reference](https://github.com/Cratis/Arc/blob/v22.48.1/Documentation/backend/csharp/commands/operations/reference.md)
+## Contents
+
+- Declaration contract
+- Returned values
+- Nine-step ordering
+- Commit and recovery
+- Backend observations
+- Optional failure context
+- Cancellation and budget
+- Supported scopes
+- Troubleshooting
+
+Rechecked at **Arc v22.75.0** (operation/recovery sources unchanged since 22.48.1), against the
+[product reference](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/commands/operations/reference.md)
 and `Source/DotNET/Arc.Core/Commands/`. Types below are in
 `Cratis.Arc.Commands`. Start with [the skill](../SKILL.md) to choose the boundary.
 

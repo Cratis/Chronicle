@@ -1,6 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-specifications-csharp/references/integration-specs.md -->
 # Out-of-process Chronicle integration specifications
 
+## Contents
+
+- Structure
+- Seeding preconditions
+- Command execution overloads
+- Assertion helpers
+- Asynchronous follow-ups
+- In-process MongoDB context isolation (19.51.0)
+- Rules
+
 Reserve these for the host, transport, serialization, or real-infrastructure
 boundary the in-process scenario helpers cannot reach. They exercise a complete
 behavior — HTTP request through command handling, append, constraint checking,
@@ -116,6 +126,26 @@ void Destroy() => _collector.Dispose();
 
 `IEventAppendCollection` is part of the Chronicle testing API. The timeout is a
 deadline, not a sleep — it turns a hang into a named failure.
+
+## In-process MongoDB context isolation (19.51.0)
+
+For an **in-process MongoDB** suite using `Cratis.Chronicle.XUnit.Integration`,
+override `ChronicleFixture.UsesPerContextMongoDBHost` to return `true`. It defaults
+to `false`: consumers otherwise retain shared-host behavior. Each context gets a
+fresh host and unique database prefix, so writes flushed by an earlier host after
+shutdown cannot alter the next context's events or projections.
+
+The default storage configuration applies the prefix. If your client fixture
+overrides `GetStorageConfigurator`, pass its `DatabaseNamePrefix` to `WithMongoDB`
+as `databaseNamePrefix`. Context teardown awaits host disposal without wiping its
+databases in place; collection teardown drops only prefixes it issued. Starting
+one host per context costs time. This does not isolate out-of-process or remote
+kernels, which retain kernel reset.
+
+Source-verified at Chronicle `v19.51.0:Source/Clients/XUnit.Integration/ChronicleFixture.cs`,
+`ChronicleClientFixture.cs`, `MongoDBContextStorage.cs`,
+`ChronicleOrleansInProcessWebApplicationFactory.cs`, and
+`Documentation/contributing/integration-tests.md` (per-context storage isolation).
 
 ## Rules
 

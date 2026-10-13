@@ -5,14 +5,13 @@ No TrogonStack text is adapted in this skill. Nebulit material is credited in th
 
 | Item | Source | Licence | Treatment | Where in this skill |
 |---|---|---|---|---|
-| Component APIs, props and hooks | Cratis Components 4.6.0 and Arc, see *Verified product sources* | MIT | original | SKILL.md, references/ |
-| Screenplay and Stage facts in the screen mapping | Cratis/Screenplay v4.64.0 and Cratis/Stage v4.24.0 documentation and source | MIT | original | references/from-screenplay.md |
+| Component APIs, props and hooks | Cratis Components 4.26.4 and Arc, see *Verified product sources* | MIT | original | SKILL.md, references/ |
+| Screenplay and Stage facts in the screen mapping | Cratis/Screenplay v4.66.0 and Cratis/Stage v4.24.0 documentation and source | MIT | original | references/from-screenplay.md |
 
-## Adapted closely (Martin Dilger and Nebulit GmbH, with agreement)
+## Adapted closely (Martin Dilger and Nebulit GmbH)
 
 Source: https://github.com/Nebulit-GmbH/agentic-engineer at commit `07b0f30648d663cb588d7e2c7aa031af9dfc21f2`,
-by Martin Dilger and Nebulit GmbH (https://nebulit.de). The repository carries no licence file; this material
-is adapted with the agreement of Martin Dilger and Nebulit GmbH.
+by Martin Dilger and Nebulit GmbH (https://nebulit.de), used with the explicit consent of Martin Dilger and Nebulit GmbH.
 
 | Source file | Used in | How |
 |---|---|---|

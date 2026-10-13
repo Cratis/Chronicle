@@ -40,6 +40,20 @@ A partition is **quarantined** when it has used up its retry attempts. This is s
 
 When enough partitions of an observer fail, Chronicle quarantines the observer itself: automatic retries stop and it stops processing until someone acts. A quarantine ends when an operator clears it (`cratis chronicle observers clear-quarantine`, or the Workbench) or when the observer is subscribed again. Connecting an instance of the application's client subscribes its reactors and reducers again, so a redeploy or a restart ends their quarantine. The Kernel subscribes projections, webhooks and its own reactors again when it starts, ending their quarantine. Event store subscriptions remain quarantined across a Kernel restart until an operator clears them. While the Kernel keeps running, the same happens when a client registers a changed projection or webhook definition, when a webhook is edited, and when a namespace is added. Deactivating and reactivating the observer's grain in a running Kernel does not end the quarantine: the observer still shows as **Quarantined** afterwards rather than **Disconnected**. The Kernel also checks event store subscriptions every minute, but this automatic reconciliation does not end their quarantine. [Observer configuration](../hosting/configuration/observers.md) lists what subscribes each kind of observer again.
 
+## Fast forwarding an observer
+
+Fast forwarding moves an observer to the tail of its event sequence. Every event it has not yet handled is skipped without
+invoking it, and its failed partitions are discarded. Use it to get past a backlog, or events that can never be handled, when
+the read side does not need to be rebuilt.
+
+It is the opposite of a replay: nothing the observer already built is reset, so whatever the skipped events would have
+done is missing from it. An observer that is replaying cannot be fast forwarded until the replay completes, and events
+appended after the tail was read are handled as normal.
+
+- Workbench: select the observer and choose **Fast forward**.
+- CLI: `cratis chronicle observers fast-forward <observer-id>`.
+- Clients: `IReactors`, `IReducers` and `IProjections` in .NET expose `FastForward`, and the TypeScript, Kotlin, Elixir and Go clients expose the same operation on their observer and projection APIs.
+
 ## Removing an observer
 
 An observer outlives the code that declared it. Delete a read model and its projection, or remove a reactor, and nothing tells the event store — the observer simply stops being reported by any client, settles into `Disconnected` and stays there, keeping its definition, its state and handled counts in every namespace, its failed partitions and, for a projection, its projection definition.

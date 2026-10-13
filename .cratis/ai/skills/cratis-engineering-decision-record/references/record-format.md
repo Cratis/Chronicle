@@ -1,6 +1,14 @@
 <!-- cratis-ai-managed: skills/cratis-engineering-decision-record/references/record-format.md -->
 # Decision record format
 
+## Contents
+
+- Front matter
+- Closed value sets
+- Body sections
+- Corrections after acceptance
+- Index
+
 The shape below is the one Cratis repositories that keep a `decisions/` folder
 converge on. A repository that already defines a stricter local shape stays
 authoritative; add fields there rather than dropping the ones listed here.

@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Registrations;
@@ -172,6 +173,14 @@ public class Projections(
         });
         return Guid.TryParse(response.JobId, out var value) ? new JobId(value) : JobId.NotSet;
     }
+
+    /// <inheritdoc/>
+    public Task<FastForwardResult> FastForward<TProjection>()
+        where TProjection : IProjection => FastForward(_handlersByType[typeof(TProjection)].Id);
+
+    /// <inheritdoc/>
+    public Task<FastForwardResult> FastForward(ProjectionId projectionId) =>
+        ObserverFastForwarder.FastForward(_servicesAccessor.Services.Observers, eventStore.Name, eventStore.Namespace, projectionId);
 
     /// <inheritdoc/>
     public IEnumerable<(string EventStoreName, IEnumerable<EventTypeId> EventTypeIds)> GetExternalEventStoreSubscriptions()

@@ -1,9 +1,20 @@
 <!-- cratis-ai-managed: skills/cratis-arc-command/references/handler-shapes.md -->
 # Handler shapes and how Arc dispatches them
 
-Verified against `Cratis.Arc.Core` and `Cratis.Arc.Chronicle` `22.16.0` with
-`Cratis.Chronicle` `18.3.0`. Operation dispatch additions are verified against
-Arc **v22.48.1**, `CommandPipeline` and `CommandOperationExecution`.
+## Contents
+
+- The pipeline around `Handle`
+- Dispatch
+- What claims an event
+- The tuple rule
+- Cross-stream appends
+- Failure shapes
+
+Verified against `Cratis.Arc.Core` and `Cratis.Arc.Chronicle` **v22.75.0**
+(Chronicle dependency 19.39.1). Sources: `Source/DotNET/Arc.Core/Commands/CommandPipeline.cs`,
+`CommandOperationExecution.cs` and `Source/DotNET/Chronicle/Commands/CommandContextExtensions.cs`.
+Read [decisions and routing](decisions-and-routing.md) for guarded reads,
+stream templates, tags and post-commit completion.
 
 ## The pipeline around `Handle`
 
@@ -73,9 +84,7 @@ type registry knows it.
 | `EventForEventSourceId` | single wrapper handler | the wrapper's own id |
 | A collection containing at least one `EventForEventSourceId`, every other element being a registered event | wrapper-collection handler | each wrapper to its own id, each plain event to the command's |
 
-⚠️ **An unregistered event type is not an error.** No handler claims it, so it
-silently becomes the HTTP response body instead of being appended. A command
-that "runs fine" but appends nothing is almost always a missing `[EventType]`.
+See "Choose the return shape" in SKILL.md.
 
 An empty collection statically typed as `IEnumerable<EventForEventSourceId>` is
 still recognised and appends nothing, rather than being serialized as the
@@ -107,11 +116,8 @@ events in the same tuple are therefore appended to the id the handler just
 generated, and the client receives it as the response.
 
 ```csharp
-public (<ThingId>, <ThingRegistered>) Handle()
-{
-    var id = <ThingId>.New();
-    return (id, new(<Name>));
-}
+public (<ThingId>, <ThingRegistered>) Handle([GeneratedValue("thing")] <ThingId> id) =>
+    (id, new(<Name>));
 ```
 
 Returning two ids, or an id and another plain value, is the failure case.
@@ -130,6 +136,30 @@ public IEnumerable<object> Handle() =>
 
 `EventForEventSourceId` also carries optional `Subject`, `EventStreamType` and
 `EventStreamId` init members when the target stream is not the default.
+Explicit wrapper routing wins over command-context routing in every return shape.
+
+A command that always appends through a Chronicle event source definition (Arc 22.49.0
+and later, definitions from Chronicle 19.30.0) declares it with
+`[EventSource<TSource>(stream)]` from `Cratis.Arc.Chronicle.Commands`; the definition
+supplies the event source type and validates the optional stream name:
+
+```csharp
+[EventSource]
+[EventStream("transactions")]
+public class Account : IEventSource;
+
+[Command]
+[EventSource<Account>("transactions")]
+public record RecordTransaction(AccountId AccountId, decimal Amount)
+{
+    public <TransactionRecorded> Handle() => new(Amount);
+}
+```
+
+An event that sets legacy `EventSourceType`/`EventStreamType` is appended by those
+strings, not through the definition. A command may also implement
+`ICanProvideEventStreamId` to supply the stream id. Do not combine a definition with
+contradicting `[EventSourceType]`/`[EventStreamType]` attributes.
 
 Concurrency scope is resolved **per target stream** — one expected tail per
 event source id, not one shared across the streams a cross-stream command writes

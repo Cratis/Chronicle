@@ -43,7 +43,8 @@ public class with_exhaustive_syntax_support : for_LanguageService.given.a_langua
         new ContextExpressionSyntax("tenant", _location),
         new EnvironmentExpressionSyntax("NAME", _location),
         new StringsExpressionSyntax("name", _location),
-        new SourceItemExpressionSyntax("name", _location)
+        new SourceItemExpressionSyntax("name", _location),
+        new IdentityExpressionSyntax("name", _location)
     ];
 
     [Fact]

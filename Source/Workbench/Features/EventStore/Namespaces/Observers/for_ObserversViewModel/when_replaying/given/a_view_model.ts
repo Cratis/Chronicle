@@ -3,8 +3,8 @@
 
 import sinon, { SinonStubbedInstance } from 'sinon';
 import { ObserversViewModel } from '../../../ObserversViewModel';
-import { ClearObserverQuarantine, RemoveObserver, ReplayObserver as Replay } from 'Features/Observation';
-import { ObserverRemovalOutcome, ObserverRemovalResult } from 'Features/Concepts/Observation';
+import { ClearObserverQuarantine, FastForward, RemoveObserver, ReplayObserver as Replay } from 'Features/Observation';
+import { FastForwardResult, ObserverRemovalOutcome, ObserverRemovalResult } from 'Features/Concepts/Observation';
 import { Dialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 
@@ -19,15 +19,18 @@ export class a_view_model {
         this.removeObserver = new RemoveObserver();
         this.removeObserverSucceedsWith(ObserverRemovalOutcome.removed);
         this.dialogs = sinon.createStubInstance(Dialogs);
+        this.fastForward = new FastForward();
+        this.fastForward.execute = sinon.stub().resolves({ isSuccess: true, response: new FastForwardResult(), onException: sinon.stub() });
 
         this.params = { eventStore: 'eventStore', namespace: 'namespace' };
 
-        this.viewModel = new ObserversViewModel(this.replay, this.clearObserverQuarantine, this.removeObserver, this.dialogs);
+        this.viewModel = new ObserversViewModel(this.replay, this.clearObserverQuarantine, this.removeObserver, this.dialogs, this.fastForward);
     }
 
     replay: Replay;
     clearObserverQuarantine: ClearObserverQuarantine;
     removeObserver: RemoveObserver;
+    fastForward: FastForward;
     dialogs: SinonStubbedInstance<Dialogs>;
     params: EventStoreAndNamespaceParams;
     viewModel: ObserversViewModel;

@@ -84,6 +84,12 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             command: () => viewModel.replay(params.eventStore!, params.namespace!)
         },
         {
+            label: strings.eventStore.namespaces.observers.actions.fastForward,
+            icon: <faIcons.FaForward className='mr-2' />,
+            disabled: !viewModel.canFastForward,
+            command: () => viewModel.fastForward(params.eventStore!, params.namespace!)
+        },
+        {
             label: strings.eventStore.namespaces.observers.actions.clearQuarantine,
             icon: <faIcons.FaShield className='mr-2' />,
             disabled: !viewModel.canClearObserverQuarantine,
