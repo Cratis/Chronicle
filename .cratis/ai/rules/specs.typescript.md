@@ -79,7 +79,8 @@ export class an_events_command_response_value_handler {
 ```
 
 - Properties are public (not protected) — tests access them via `context.propertyName`.
-- Import `given` from the package root: `import { given } from '../../given';`.
+- `given` is a package-local helper file, not a published export. Import it with the relative path to that file, for example `import { given } from '../../given';`; create it if absent. Fundamentals v7.23.0 constructs parameterless contexts; Arc v22.75.0 passes the Mocha Suite and binds callback `this` to it.
+- Configure Vitest's setup file to call `chai.should()` and register `sinon-chai` and `chai-as-promised`. Load the reflection polyfill for metadata-dependent specifications.
 - Simple tests without shared setup don't need a reusable context.
 
 ## Simple Test Pattern (without context)

@@ -39,12 +39,14 @@ Your responsibility is to perform a structured **security review** of all change
 ### Authentication & Authorization
 
 - [ ] All HTTP endpoints are decorated with `[Authorize]` or explicitly marked `[AllowAnonymous]` with justification
+- [ ] Apply the source-pinned Arc v22.75.0 checks in `cratis-security-review/references/arc-boundaries.md`: host-wide forwarded-header opt-in only behind stripping ingress, principal-derived identity (no cookie reads), deployed discovery exposure, declaration precedence and guest-policy intent, plain-HTTP emission guards, narrow system actors, and embedded viewer opt-in overrides.
 - [ ] Tenant isolation enforced — no cross-tenant data accessible without explicit authorization
 - [ ] Claims are verified before acting on command data that depends on identity
 
 ### Sensitive Data Exposure
 
-- [ ] No passwords, secrets, API keys, tokens stored in event properties or read models
+- [ ] Credentials used for authentication (passwords, bearer/session tokens) are never stored; keep a hash or a reference
+- [ ] Operational secrets the system must retain (third-party API key, a company's bank account number) are stored only as `[Encrypted]` + `[NotAudited]` concepts, never in a read model returned to clients in plaintext
 - [ ] No PII (email, phone, national ID, etc.) returned to clients that did not provide it
 - [ ] Query results are scoped to the requesting tenant/user — never return all-tenant data in a paged list
 

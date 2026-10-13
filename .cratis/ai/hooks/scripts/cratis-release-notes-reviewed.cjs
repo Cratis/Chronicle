@@ -42,8 +42,9 @@ const INLINE_CODE = /(`+)[^\n]*?\1/g;
 const HTML_COMMENT = /<!--[\s\S]*?-->/g;
 const KEYWORD = /\b(close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?|references)(?:[ \t]*:[ \t]*|[ \t]+)((?:[\w.-]+\/[\w.-]+)?#(\d+))/gi;
 const KEYWORD_URL = /\b(close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?|references)(?:[ \t]*:[ \t]*|[ \t]+)(https?:\/\/(?:www\.)?github\.com\/([\w.-]+\/[\w.-]+)\/(?:issues|pull)\/(\d+))/gi;
-// The pattern release-action closes issues with.
-// It sees everything but fenced and inline code: HTML comments are not skipped.
+// The pattern release-action closes issues with. release-action removes HTML comments from the notes
+// before it publishes them and reads issues from the published text, so a `(#n)` only inside a comment
+// closes nothing (release-action v1.4.2).
 const CLOSES_ISSUE = /(?<![\w/-])\(#(\d+)\)/g;
 // What may follow the delivering `(#n)` and still count as the end of the bullet: more issue references
 // (`(part of #n)`, `(see #n)`, `(Cratis/Repo#n)` too), closing emphasis, a trailing `<br>` and sentence
@@ -347,9 +348,9 @@ function check({ body, repository, defaultBranch }) {
     // The same without fenced code, which does not belong to the bullet text around it.
     const uncommented = blank(blank(text, FENCED_CODE, " "), INLINE_CODE, "x");
     const prose = blank(uncommented, HTML_COMMENT, " ").split("\n");
-    // What release-action reads when it closes issues: it removes fenced and inline code, in that order,
-    // and nothing else, so a `(#n)` hidden in an HTML comment still closes its issue. Each match is
-    // mapped back to where it sits in the description.
+    // Where `(#n)` sits in the description. release-action removes HTML comments (and fenced and inline
+    // code) before it reads issues, so a commented `(#n)` closes nothing. It stays a violation here: a
+    // reference in a comment is a delivery the author thinks they made but that is silently dropped.
     const closes = closingReferences(text, prose);
 
     const violations = [];
@@ -535,7 +536,7 @@ function check({ body, repository, defaultBranch }) {
         }
         for (const match of closes.filter(candidate => candidate.line === index)) {
             if (match.commented) {
-                report("Issue reference position", index, `\`(#${match.number})\` sits inside an HTML comment: the release page does not show the comment, but release-action still closes #${match.number}. Delete it from the comment, or write \`(part of #${match.number})\` or \`see #${match.number}\` outside the comment if it must stay open; never put issue references in comments.`);
+                report("Issue reference position", index, `\`(#${match.number})\` sits inside an HTML comment: release-action removes comments before publishing, so #${match.number} would NOT be closed. If it is delivered, write \`(#${match.number})\` outside the comment; if it stays open, write \`(part of #${match.number})\` or \`see #${match.number}\` outside the comment; never put issue references in comments.`);
                 continue;
             }
             const end = bulletEnd[match.endLine];

@@ -1,30 +1,30 @@
 {
-  "SourceRevision": "3026375362ac151b44ca5139be06fc62e79cea96",
+  "SourceRevision": "b1fb30ec0633d1317a8daeca0240e6fa0ff18fef",
   "Files": [
     {
       "Source": "agents/backend-developer.md",
       "Destination": "agents/backend-developer.md",
-      "Hash": "600F89F0FF63F89E970577A97C5BBF32CFA15696618C3779ABFD8E8084111ECE"
+      "Hash": "8041E3670A31DFD64320E18BD936764D818650B42312995442DE7450421775DC"
     },
     {
       "Source": "agents/code-reviewer.md",
       "Destination": "agents/code-reviewer.md",
-      "Hash": "0A4ECDDA54BB395680463F4C9ADDC03D8D05C628578B791BF423278605034AE4"
+      "Hash": "0A34BE9ED7AA8DA840CE57F93C3F83C0A6CF4CBEABB648E504D2CC30A7B5DC2B"
     },
     {
       "Source": "agents/coordinator.md",
       "Destination": "agents/coordinator.md",
-      "Hash": "76C7E5A644B0AB5F6A7755A064D694296366B7AC1480F4BCF02219F8CB5A8944"
+      "Hash": "C2B5B5657083EBAE71BB16A9A04C716C055A5183C9BDF0A70E30DF6335661EBD"
     },
     {
       "Source": "agents/frontend-developer.md",
       "Destination": "agents/frontend-developer.md",
-      "Hash": "3E920D0927DE9AC72868015966096822FD9C0289032968357A75E2CA42942075"
+      "Hash": "0179621229DB84A528374CB6226C11C5A666D7E1CC4070F5D42168C794DB6669"
     },
     {
       "Source": "agents/orchestrator.md",
       "Destination": "agents/orchestrator.md",
-      "Hash": "5065D6129D3952527AE15F2289324F53D07C8718B0EB9C3DD0A2C4BA8E7B29B3"
+      "Hash": "C5A184DA2B1D40F1BD66A631FF01533F68FBCD6C67FF1A1922D3660EE9E7C908"
     },
     {
       "Source": "agents/performance-reviewer.md",
@@ -34,7 +34,7 @@
     {
       "Source": "agents/planner.md",
       "Destination": "agents/planner.md",
-      "Hash": "313DE5816CDA079B1910F40EDC31DD52EF56EC72269FBB3989CCA768A2D9B7F0"
+      "Hash": "CCE9EFB8177247E917F065A1DBD54CFB63BA0DCDE5C13289D370C18794DF53A9"
     },
     {
       "Source": "agents/repository-investigation-reviewer.md",
@@ -49,32 +49,272 @@
     {
       "Source": "agents/screenplay-modeler.md",
       "Destination": "agents/screenplay-modeler.md",
-      "Hash": "5DC278F29EB0B094399305FAEE39EFAB845D85BE2E22D8B3BCD1CF08DB37AE29"
+      "Hash": "075B1D9CBA39E690A8991331A77C87B677FDCEB9EA12A5FD262663BF1DF882BC"
     },
     {
       "Source": "agents/screenplay-renderer.md",
       "Destination": "agents/screenplay-renderer.md",
-      "Hash": "F70F5EB8287BDD336B66C7A346C71C2A56842314E70F21E100856532199B2A1E"
+      "Hash": "CC0E4937FA8A799A51F777AB169EF8655142149B3CA03939D2ADCD87FEE1F6E4"
     },
     {
       "Source": "agents/screenplay-reviewer.md",
       "Destination": "agents/screenplay-reviewer.md",
-      "Hash": "B65BA7588C6984D98AF7609999C69DBF58B2DBBE190114B3B7275E1EE77C6C39"
+      "Hash": "3DA1F186F64990A1CB395CEF7FB894ADC5B38BE2C82DA4C4ACAF33DB08F1A060"
     },
     {
       "Source": "agents/security-reviewer.md",
       "Destination": "agents/security-reviewer.md",
-      "Hash": "14D2E6FDDA553CA75992B726A59A9EAF8E5E7AC1F108507AA7930F15E1E390CD"
+      "Hash": "0E9F93BA9F36B5E2CD068C244F34FCB03D9B7E784FA1ED9A8DA1168B7322CFB0"
     },
     {
       "Source": "agents/slice-implementer.md",
       "Destination": "agents/slice-implementer.md",
-      "Hash": "DD282D24AF35A26C39DAC69A7C75E729FF30388D1DCAF638D39E15C61BA1ADD1"
+      "Hash": "1E832F8083218F5F88099FBDDDA0D8E2F42D0001A0574F98FBEC6468118F951B"
     },
     {
       "Source": "agents/spec-writer.md",
       "Destination": "agents/spec-writer.md",
-      "Hash": "6B9D5E157642D13550774E1693B0CE63F518CE039076B2752C9DC6ECB0EAED66"
+      "Hash": "8CE6F601692D1F3F5F95B6503919DF4C7BA2A65C00D7B60452C24EA5E62529FD"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/ai-distribution.instructions.md",
+      "Destination": "harnesses/copilot/instructions/ai-distribution.instructions.md",
+      "Hash": "5DBA76814760D9FFBE5A203FCA9B4B3085D043E2E2F1213FFE8C69D2CF61F73E"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/application-profile.instructions.md",
+      "Destination": "harnesses/copilot/instructions/application-profile.instructions.md",
+      "Hash": "964CE82D3461987478741F630E0BAB0898490E2EBBAA47A9D2F190813F9054A4"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/capability-is-not-authority.instructions.md",
+      "Destination": "harnesses/copilot/instructions/capability-is-not-authority.instructions.md",
+      "Hash": "76C5A2C9BC1E1CA522701CB66D498A7DA7A52D2BA310B3DC41AC5B2AC44FBC99"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/code-quality.csharp.instructions.md",
+      "Destination": "harnesses/copilot/instructions/code-quality.csharp.instructions.md",
+      "Hash": "8E592452298434AA87A45F562A49947438C430A8E693B476B49DA7D3640FC19F"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/code-quality.instructions.md",
+      "Destination": "harnesses/copilot/instructions/code-quality.instructions.md",
+      "Hash": "AE70EC89DCC42D906B2C560062C4379A4D28F8337637C617231A9A903A043208"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/code-quality.typescript.instructions.md",
+      "Destination": "harnesses/copilot/instructions/code-quality.typescript.instructions.md",
+      "Hash": "9227B9F2657DB666207C0CC1E126DC8639471437052ACFCE697A416E9DE11E14"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/components.instructions.md",
+      "Destination": "harnesses/copilot/instructions/components.instructions.md",
+      "Hash": "0957C2742951B1B3D23A7934743A227488F7028BF7C69867A864774D4216ADA4"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/concepts.instructions.md",
+      "Destination": "harnesses/copilot/instructions/concepts.instructions.md",
+      "Hash": "1C12428EC1744EF179BE0546D516DE8F8CADC7028D63F7F0099547409C2D81EB"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/cratis-folder-is-configuration.instructions.md",
+      "Destination": "harnesses/copilot/instructions/cratis-folder-is-configuration.instructions.md",
+      "Hash": "8C292F3ACF040C598FAE1113B2B719DE36904F83CC4A86C3225FE4E1A99D9EFB"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/csharp.instructions.md",
+      "Destination": "harnesses/copilot/instructions/csharp.instructions.md",
+      "Hash": "4805286ED090AE01B1D6CA54618CD5C70A9B169E0EDFEE7FBED44AB754A52B96"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/dialogs.instructions.md",
+      "Destination": "harnesses/copilot/instructions/dialogs.instructions.md",
+      "Hash": "BFFC8FCE8C0FA192AB39121B5C5935318B97B261EC07256C688D7BBCD6EDE9F4"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/documentation-structure-and-formatting.instructions.md",
+      "Destination": "harnesses/copilot/instructions/documentation-structure-and-formatting.instructions.md",
+      "Hash": "621012EFD21036596EEC3A6EEF7E718D33DAD9D9B502B7E17743C28CA8D65756"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/documentation.instructions.md",
+      "Destination": "harnesses/copilot/instructions/documentation.instructions.md",
+      "Hash": "D438F8409E2190D4C67410DCC9D905EECA3A40A7BA8BFC33A4B892436B3834F7"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/editing-cratis-docs.instructions.md",
+      "Destination": "harnesses/copilot/instructions/editing-cratis-docs.instructions.md",
+      "Hash": "498A38F28E818A12BFE14974734A9AD15E17250F98005E0B63330A78ECDA2D8B"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/efcore.instructions.md",
+      "Destination": "harnesses/copilot/instructions/efcore.instructions.md",
+      "Hash": "87E77E73C539E78240C571FB4DD555993F3C181B3A718A433AFB57A9F6247C31"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/efcore.specs.instructions.md",
+      "Destination": "harnesses/copilot/instructions/efcore.specs.instructions.md",
+      "Hash": "DE419F74ECEEB5D7039D6DC52D0E28A286D1D18213CF50840A58B3D6B51AD391"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/elixir.instructions.md",
+      "Destination": "harnesses/copilot/instructions/elixir.instructions.md",
+      "Hash": "DFB5B088EBEB726D4818F634EB52574169B3B2F9FBA53E7611AD49A22E6148B4"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/exit-codes-and-wrappers.instructions.md",
+      "Destination": "harnesses/copilot/instructions/exit-codes-and-wrappers.instructions.md",
+      "Hash": "032956A5F60C75CC9CA5F37EDF48020476C9BFAD7CCC44CE5F791A559A6EB300"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/framework.instructions.md",
+      "Destination": "harnesses/copilot/instructions/framework.instructions.md",
+      "Hash": "7A8A66B4989760F54A43624B7ECA742EEF85A452BB99702E80A92C5A4ABD074A"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/frontend-quality.instructions.md",
+      "Destination": "harnesses/copilot/instructions/frontend-quality.instructions.md",
+      "Hash": "18A824A619F0A7224BA25A5E0C7E8666942B29AA9D6608E0B83BDEE8189871A9"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/frontend-testing.instructions.md",
+      "Destination": "harnesses/copilot/instructions/frontend-testing.instructions.md",
+      "Hash": "695ABA91BE111A0B4EA13C0A54CA89003DACE4F8C02B21D19E992663513CC883"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/git-commits.instructions.md",
+      "Destination": "harnesses/copilot/instructions/git-commits.instructions.md",
+      "Hash": "B5022765AA2D283499F0C5F9A3C2BD6FDAB7654AC8521EF0F0D0F9279287F8F1"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/github-actions.instructions.md",
+      "Destination": "harnesses/copilot/instructions/github-actions.instructions.md",
+      "Hash": "DDBBECE966D84E292734F16F5093F4A9D4BC724737B800B9B2D9A95DFFDC9F18"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/glossary.instructions.md",
+      "Destination": "harnesses/copilot/instructions/glossary.instructions.md",
+      "Hash": "7FAABF7C0652E2BB45B5FEB4A99D2678BF6FB99167BD01E9B622F308F897060C"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/go-engineering.instructions.md",
+      "Destination": "harnesses/copilot/instructions/go-engineering.instructions.md",
+      "Hash": "C74215554238D559117AD49EA0AEA29F34AABF1287F618A6FCBFBDF6B9DE0F9B"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/go.instructions.md",
+      "Destination": "harnesses/copilot/instructions/go.instructions.md",
+      "Hash": "065F8BEC8A606DC1DFD7D59A7F7013E717FF5302978B9BF6F31464740BE81FA1"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/guards-and-fuses.instructions.md",
+      "Destination": "harnesses/copilot/instructions/guards-and-fuses.instructions.md",
+      "Hash": "9514989AD05779A435D78EFB8903FE385EE2B6030BE7D14DA33404E757F699CD"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/java.instructions.md",
+      "Destination": "harnesses/copilot/instructions/java.instructions.md",
+      "Hash": "35B4FA3E2539198A6FD3887C68431CD5D9C1592CFE53E031F43BADF89795057C"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/kotlin.instructions.md",
+      "Destination": "harnesses/copilot/instructions/kotlin.instructions.md",
+      "Hash": "8C661729C741BDA4D3807F3C3D24C17CB13A7E7EE352A72C873662614BB0C96B"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/local-work-artifacts.instructions.md",
+      "Destination": "harnesses/copilot/instructions/local-work-artifacts.instructions.md",
+      "Hash": "60F1D7C3FA59D2302293A8A13BF06DF14994B1D1CF7B733C770A2824074B9B23"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/new-repository-intake.instructions.md",
+      "Destination": "harnesses/copilot/instructions/new-repository-intake.instructions.md",
+      "Hash": "B54A90D4E109CD28C52DD31A564F77648EBF98DB92489FEE77AA469AD8420A9C"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/orleans.instructions.md",
+      "Destination": "harnesses/copilot/instructions/orleans.instructions.md",
+      "Hash": "D9731B0A0DDBAD1C5310E3BA6C6410B7A4150C1BD6D7553F1055A96B281F1BD6"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/profiles.instructions.md",
+      "Destination": "harnesses/copilot/instructions/profiles.instructions.md",
+      "Hash": "D9631F8694D2DEDE0AB4362AFBFE97F5945521E58B6EBED03AED08FAB07E9DAC"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/pull-requests.instructions.md",
+      "Destination": "harnesses/copilot/instructions/pull-requests.instructions.md",
+      "Hash": "7563257532B1F856C4AD4B0750410FBA0B4DFE0E8E518D4A5DB83EA40C4B7941"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/react.instructions.md",
+      "Destination": "harnesses/copilot/instructions/react.instructions.md",
+      "Hash": "1B8CE1FD4D3281B24D91642CADE3B3933BA832295EEAE50346E2C0AFF155E25B"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/reactors.instructions.md",
+      "Destination": "harnesses/copilot/instructions/reactors.instructions.md",
+      "Hash": "2AF41654F6EF61EA6AFFB7D8457537ED12F8E5D8AC21B72C9E10DDE3C787E142"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/rtk.instructions.md",
+      "Destination": "harnesses/copilot/instructions/rtk.instructions.md",
+      "Hash": "D44CEC3612C78D89B2AB2E7BCE2F4B35F68335007791C57FD8574400D33F7EF3"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/specs.csharp.instructions.md",
+      "Destination": "harnesses/copilot/instructions/specs.csharp.instructions.md",
+      "Hash": "B51C3CD4C01232542B0DA0BADB13463C71B9A1E7DB467B3448BFD4C5017D161A"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/specs.instructions.md",
+      "Destination": "harnesses/copilot/instructions/specs.instructions.md",
+      "Hash": "777BD9CC7FA74968F510F5F86F924D84537AB6E47927D11C4B4892A29F20BE44"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/specs.scenarios.csharp.instructions.md",
+      "Destination": "harnesses/copilot/instructions/specs.scenarios.csharp.instructions.md",
+      "Hash": "5481486580E25C4800AF56838EFEFE51848EFD990B9C3182C9E1CD80AAB1B837"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/specs.typescript.instructions.md",
+      "Destination": "harnesses/copilot/instructions/specs.typescript.instructions.md",
+      "Hash": "9FA3890A428C2582DEA3258D521970AFC554972557EBFE441FFFE4FF20E866AE"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/storybook.instructions.md",
+      "Destination": "harnesses/copilot/instructions/storybook.instructions.md",
+      "Hash": "ACF7F3260290C49E5F55CB0FB31EC91EA88D9F1B74625F0DC322B5A8E06CC40C"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/typescript.instructions.md",
+      "Destination": "harnesses/copilot/instructions/typescript.instructions.md",
+      "Hash": "627EB6642316A5F0017B95B38A6D371B97B5999D48CD89359FDF0256B26CCEAC"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/verification-discipline.instructions.md",
+      "Destination": "harnesses/copilot/instructions/verification-discipline.instructions.md",
+      "Hash": "75EF479ED085D79D6290DD6525A419E1BA17A93678AE20BABBACFC222537A95E"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/vertical-slices.instructions.md",
+      "Destination": "harnesses/copilot/instructions/vertical-slices.instructions.md",
+      "Hash": "2ED3D1F864B9E3431438AD037BFE1A7D74AA2530DAF1225DC332F87C93DA77D8"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/web-fetching.instructions.md",
+      "Destination": "harnesses/copilot/instructions/web-fetching.instructions.md",
+      "Hash": "01A2E7DA94BC056C13A280255D030FE851D27717E2881BEA10D708D84458163D"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/writing-correct-examples.instructions.md",
+      "Destination": "harnesses/copilot/instructions/writing-correct-examples.instructions.md",
+      "Hash": "DF4F5021835BDBE87A1A4C939BE4A24C21C0AC670BA19A70CFBDDD421A14F98A"
+    },
+    {
+      "Source": "harnesses/copilot/instructions/writing-cratis-docs.instructions.md",
+      "Destination": "harnesses/copilot/instructions/writing-cratis-docs.instructions.md",
+      "Hash": "A220FA3A6658C9FC36A5FFBAA138909B8A47A977695C2288252D935E7D568ED7"
     },
     {
       "Source": "harnesses/cursor/rules/cratis.mdc",
@@ -84,27 +324,27 @@
     {
       "Source": "harnesses/opencode/agents/backend-developer.md",
       "Destination": "harnesses/opencode/agents/backend-developer.md",
-      "Hash": "5BC5E71D937CB78153C20E3AB28C1D78435293411D1EAF1F00CC333B20F06F27"
+      "Hash": "B5D11563C05B77FE0C912DA94B763843ED2019FC4EB4CD7A045F4F2ACE485E5D"
     },
     {
       "Source": "harnesses/opencode/agents/code-reviewer.md",
       "Destination": "harnesses/opencode/agents/code-reviewer.md",
-      "Hash": "D41F06FDEDDF21721E74286BC621EA08DA63F1CAD6891C60200122B83371A167"
+      "Hash": "EE3EF9EDE17B618E81D5B86C93A859A0F444B045F8B3A5BDC549F919FD254C3D"
     },
     {
       "Source": "harnesses/opencode/agents/coordinator.md",
       "Destination": "harnesses/opencode/agents/coordinator.md",
-      "Hash": "2EBAF97F2D50E814877726FB1FB9976F4CA8A0F150CC1BAE210B9EBF245ACFA0"
+      "Hash": "5B3D616AACC481AD0325D0BC7F3E1D65BA332A18DA2A13CFF146F4D2FE361FEA"
     },
     {
       "Source": "harnesses/opencode/agents/frontend-developer.md",
       "Destination": "harnesses/opencode/agents/frontend-developer.md",
-      "Hash": "686C56609EB7CD7B9BE6478EE1CEBB0E0DD81E0602A9E1D1D9E644CA7B653734"
+      "Hash": "BC19F666241FF05DDD44618636D0D5E233E029B8B601E95FE2A98E5A8CBF7DC1"
     },
     {
       "Source": "harnesses/opencode/agents/orchestrator.md",
       "Destination": "harnesses/opencode/agents/orchestrator.md",
-      "Hash": "4CD77A1CC5E02CDA79DBB27CA849A7A817A9D19FB044B33C90CD4797C58477A5"
+      "Hash": "AF1AEC60CE6D103378C9B5DD343629D2316F6F33BD85694367BED5D317213C53"
     },
     {
       "Source": "harnesses/opencode/agents/performance-reviewer.md",
@@ -114,7 +354,7 @@
     {
       "Source": "harnesses/opencode/agents/planner.md",
       "Destination": "harnesses/opencode/agents/planner.md",
-      "Hash": "0E87E2F3A06A22AAD22F219F71E3C2DF71CE0F333328BD5A25826C1AD6872769"
+      "Hash": "F136F2930CAFD311D62D8175BB40E1D12F4C7A923DB30521317EA0B02ABC48BF"
     },
     {
       "Source": "harnesses/opencode/agents/repository-investigation-reviewer.md",
@@ -129,42 +369,42 @@
     {
       "Source": "harnesses/opencode/agents/screenplay-modeler.md",
       "Destination": "harnesses/opencode/agents/screenplay-modeler.md",
-      "Hash": "15FC7E72F73186587D2CEBAECB3C4D0FE9BF500CCB24A6E6979329EDBB3FAE20"
+      "Hash": "9C5C24DCC6E27ADCFF6AC5D8D1EDB053964C1524D77F61D4FA0B14BDBBF64225"
     },
     {
       "Source": "harnesses/opencode/agents/screenplay-renderer.md",
       "Destination": "harnesses/opencode/agents/screenplay-renderer.md",
-      "Hash": "B83C6F8C0BEFCE652D0B0C0B02BB1B4DC1F81AD9A9715761568E960BFBDD045B"
+      "Hash": "66DB7AB75C619FAB3B03E413CB18BA4078EEA2EE30EA212BDF370CE01E596819"
     },
     {
       "Source": "harnesses/opencode/agents/screenplay-reviewer.md",
       "Destination": "harnesses/opencode/agents/screenplay-reviewer.md",
-      "Hash": "D46B2CE5BDEEE253DC9320FC16B1F4C162C19F7DD7B69DB9243FA5BC193D5916"
+      "Hash": "A4D242629B52B4CEA4CD0F834E72AD2ECC5F42C5DC66AE54C580DD30D2D88BF7"
     },
     {
       "Source": "harnesses/opencode/agents/security-reviewer.md",
       "Destination": "harnesses/opencode/agents/security-reviewer.md",
-      "Hash": "F5133A8663E20626D6C953F1382A23FBD72C349076D4D76F427DAEEBFA3A6611"
+      "Hash": "043536D4F77A2638D3A5876E9261BA6E91709366E742789D64148DC56804C951"
     },
     {
       "Source": "harnesses/opencode/agents/slice-implementer.md",
       "Destination": "harnesses/opencode/agents/slice-implementer.md",
-      "Hash": "4AFCB3EF22E68364CE9C1C00AFE5D4FEEC5DA33B72ABEF8AF21C8C2CFF430A6F"
+      "Hash": "E65BA9DDB6AAAD0EEC6548D0DCB283638886AD9A06457E81814CEE2EDF32ABB1"
     },
     {
       "Source": "harnesses/opencode/agents/spec-writer.md",
       "Destination": "harnesses/opencode/agents/spec-writer.md",
-      "Hash": "9BB7CE0131BC87D69316C4CE4F67F5978388C7549FF06C0C32D2B58ADBBF3CD7"
+      "Hash": "BCA77DE16692CC4D8CCA2A7FC4DF9A5F369ED6311793A46721FE9ADCD7B53052"
     },
     {
       "Source": "harnesses/pi/extensions/cratis-hooks/index.ts",
       "Destination": "harnesses/pi/extensions/cratis-hooks/index.ts",
-      "Hash": "F796129A613E8C7D317DA6FA824575807439F5D78B099A68BA51A1C802F60A72"
+      "Hash": "B8E03A1A0D3D2A7FB6B23CB7E6B06011B9073536B778E387D7143C9DBAB8650E"
     },
     {
       "Source": "harnesses/pi/extensions/cratis-hooks/quality-gate.ts",
       "Destination": "harnesses/pi/extensions/cratis-hooks/quality-gate.ts",
-      "Hash": "79C4B784C56D07E56B577B549603D4F2681262A9A1F8EC8BBCA69D37E32AB76F"
+      "Hash": "97BA23437983AD7128F1D50776A7625C4E818DB64CAE2E89D98D4508C84FA907"
     },
     {
       "Source": "harnesses/pi/extensions/cratis-mcp/ConnectionFailure.ts",
@@ -189,17 +429,17 @@
     {
       "Source": "harnesses/pi/extensions/cratis-mcp/configuration.ts",
       "Destination": "harnesses/pi/extensions/cratis-mcp/configuration.ts",
-      "Hash": "20C8DC8F132B6A75B3E127C6D3770B11BBF23C5CE712A7BAE5329DFE213A9C79"
+      "Hash": "ADF83F46DBF320415E924E1295E6925DEBFEA07BE27329D952083F6E4896D54C"
     },
     {
       "Source": "harnesses/pi/extensions/cratis-mcp/index.ts",
       "Destination": "harnesses/pi/extensions/cratis-mcp/index.ts",
-      "Hash": "63F7F914F94CDBDE95552D305873C0884D6C0DFF3E85A09035D7EF8E39EA09BA"
+      "Hash": "C9031A72DB7BCDE2B4BECDD2E48E635F9AD2E669413751CCE915F76835D27B32"
     },
     {
       "Source": "harnesses/pi/extensions/cratis-mcp/process.ts",
       "Destination": "harnesses/pi/extensions/cratis-mcp/process.ts",
-      "Hash": "430A55E51F740D4D7F8D0CC75232BE4CBB56F83A47CCE327DB9271945199D648"
+      "Hash": "013BAE603048223F57BAC791FDE190ECC4E827A5B6FC832081AEFB34981B791B"
     },
     {
       "Source": "harnesses/pi/extensions/cratis-mcp/protocol.ts",
@@ -289,7 +529,7 @@
     {
       "Source": "harnesses/pi/extensions/shared/rules.ts",
       "Destination": "harnesses/pi/extensions/shared/rules.ts",
-      "Hash": "8DF8A0183AC30B6EF2B6A3D6481FD7A4CA971DEA19C384C8E6C25A66FA683D0B"
+      "Hash": "F2804E4AFC51F62ABDE153FE5EB1D7B119162FF7FEC36393580837EF510CB8D1"
     },
     {
       "Source": "harnesses/pi/extensions/shared/skillFrontmatter.ts",
@@ -319,7 +559,7 @@
     {
       "Source": "hooks/README.md",
       "Destination": "hooks/README.md",
-      "Hash": "5E6D4BA61DCADA1E76636E2CD18347C1837153698E90EBE09921B106F800C038"
+      "Hash": "BD58FFD002C69C1CE72F6877E59D8925769CCC0D611FBC8107687D323D1544E5"
     },
     {
       "Source": "hooks/agent-stop.md",
@@ -335,6 +575,11 @@
       "Source": "hooks/scripts/cratis-check-pr.mjs",
       "Destination": "hooks/scripts/cratis-check-pr.mjs",
       "Hash": "93BFDBCE9B7E26540B4561C354644490212D4D13590BED3853AB53774F3B1620"
+    },
+    {
+      "Source": "hooks/scripts/cratis-cleanup-worktrees.sh",
+      "Destination": "hooks/scripts/cratis-cleanup-worktrees.sh",
+      "Hash": "3B1E06B99AA548CCE12C0D09A88CB8BEBA93381D6E423FB85FA66EC547FA26E6"
     },
     {
       "Source": "hooks/scripts/cratis-guard-pr-body.sh",
@@ -354,7 +599,7 @@
     {
       "Source": "hooks/scripts/cratis-nuget-pins.txt",
       "Destination": "hooks/scripts/cratis-nuget-pins.txt",
-      "Hash": "5F8B107C050651F10FFF49F1EEA5DA8679BDC03CD8EB76460587FF414CDFFD1D"
+      "Hash": "AEA3FF913825879A3B623B1735423956480A7686672A1B116CC48CBDF8A45DCF"
     },
     {
       "Source": "hooks/scripts/cratis-pattern-scan.sh",
@@ -369,17 +614,17 @@
     {
       "Source": "hooks/scripts/cratis-quality-gate.sh",
       "Destination": "hooks/scripts/cratis-quality-gate.sh",
-      "Hash": "1869DEB708F793AEA3EC7F6E69EC703D32D4F8B4C3665B092FAE75100797D6A9"
+      "Hash": "F95688A7D449491BC1AC1E6FC3219282181806509EE18847E464216C373CC832"
     },
     {
       "Source": "hooks/scripts/cratis-release-notes-reviewed.cjs",
       "Destination": "hooks/scripts/cratis-release-notes-reviewed.cjs",
-      "Hash": "B7D2A232F17632B357893B9902A4C68AC7304AB10EDDA50112EB68D6D3E9067F"
+      "Hash": "CB266115EF93628E706A6F99288E81AAC375043B390FCDF43474E86EC38B13EC"
     },
     {
       "Source": "hooks/scripts/cratis-store-mutations.json",
       "Destination": "hooks/scripts/cratis-store-mutations.json",
-      "Hash": "D41A3AD22C21F859DCE9844641FA92103B8FB6934905682C52B7D22A768CB0E0"
+      "Hash": "C07AA36C1CDB9FA93C5D7295912D9B6D85282313632C1088A51E60ED6342EFCD"
     },
     {
       "Source": "hooks/scripts/hook-lib.sh",
@@ -389,7 +634,7 @@
     {
       "Source": "hooks/scripts/quality-gates.json",
       "Destination": "hooks/scripts/quality-gates.json",
-      "Hash": "230D92BBEEC2E4B58C3B44FFB1B5CAF3E0240E2677E4844503BC09E98B08F6C4"
+      "Hash": "955C20D0708BCCAC0FD4DCEB3B8A787B6BEF9C685CCE5A6082A4A10CBBE3BB5F"
     },
     {
       "Source": "hooks/scripts/type-references-allowlist.txt",
@@ -414,22 +659,22 @@
     {
       "Source": "hooks/settings.template.json",
       "Destination": "hooks/settings.template.json",
-      "Hash": "A0AD28641F04B76DD036E5CA5AAB87495BCFFD9FA50AFA1D215F8849B7C60DB1"
+      "Hash": "34710BD39A1DEA540B54FA39C35254F0E82C24B8D1D2F6B6D4976124E377E350"
     },
     {
       "Source": "mcp-servers.json",
       "Destination": "mcp-servers.json",
-      "Hash": "5C8CF5F46E16613F7F5072A311B9D39192167A3BB06EDB90C77ADD3E7F070BEC"
+      "Hash": "E901CA1E3F921ADDEB9358970AD787DBCD2826DF497AFC05736060B89EC88C45"
     },
     {
       "Source": "profile-catalog.json",
       "Destination": "profile-catalog.json",
-      "Hash": "00B28A4D0E40908320BB8AC29617D4B84142652B9443E58314B458CDEEB1A2A7"
+      "Hash": "AC6BBD23736A15C8E627454C4B3331AC9C3E7E46E10EFEB6FD60AB03CA21C63D"
     },
     {
       "Source": "prompts/add-business-rule.prompt.md",
       "Destination": "prompts/add-business-rule.prompt.md",
-      "Hash": "AB7DB051799958E4E7806F717376C826947806A4098FAD8C9E5513A001F64157"
+      "Hash": "2141567725EA9B7F3D1486D8CAF43F3757C1397230B2EBE918D8AE16F986AAB9"
     },
     {
       "Source": "prompts/add-concept.prompt.md",
@@ -449,7 +694,7 @@
     {
       "Source": "prompts/add-reactor.prompt.md",
       "Destination": "prompts/add-reactor.prompt.md",
-      "Hash": "4646F2CB74F96B8B93E01737BEC161E992D151A402629204931184954337F52F"
+      "Hash": "8697A0246EB4E7A255D9BDB3D3D00E55764C731CD078A90771ECF73D709B9CBC"
     },
     {
       "Source": "prompts/add-reducer.prompt.md",
@@ -479,7 +724,7 @@
     {
       "Source": "prompts/new-vertical-slice.prompt.md",
       "Destination": "prompts/new-vertical-slice.prompt.md",
-      "Hash": "2FCCB32ABA7FC10F5D4ED61F8DC22F0B2326A2D0B6724EC6210712A528E1ECB2"
+      "Hash": "0B3D826B8FF3BB080BC73072BFCD084D0F1FFCF490DFD0DFE83A94B23E5E2AA1"
     },
     {
       "Source": "prompts/review-pr.prompt.md",
@@ -499,7 +744,7 @@
     {
       "Source": "prompts/ship-changes.prompt.md",
       "Destination": "prompts/ship-changes.prompt.md",
-      "Hash": "CA3B7954D72C4A18722B377503754EAE23A749BEC0A3DD92D3ABFAAE4CB09249"
+      "Hash": "DF8585C2358AE34DED28D305D75416296416BF7FA809F73EDC45C625AEAB79F7"
     },
     {
       "Source": "prompts/verify-ai-setup.prompt.md",
@@ -514,17 +759,17 @@
     {
       "Source": "prompts/write-specs.prompt.md",
       "Destination": "prompts/write-specs.prompt.md",
-      "Hash": "DD92DE4F719E9064C993B748D790A889A77022E2F618F31E50EFF291E19F74D6"
+      "Hash": "7139ADD6345F0057D023C0A40F2BBBBD5A467B18A5587BE968E9B3B38296A84B"
     },
     {
       "Source": "rules/ai-distribution.md",
       "Destination": "rules/ai-distribution.md",
-      "Hash": "D9F0A57FB338EF83D203BA2EF07B3DF19809F8882B5DB4B7883A6B53735A58EF"
+      "Hash": "1695489D2F7659B7C23B82E20D35C507CFDB841457E05CF64756678AC10194E0"
     },
     {
       "Source": "rules/application-profile.md",
       "Destination": "rules/application-profile.md",
-      "Hash": "82D18EDD1C5E78EB09A0E9B4A7F66D1342C3F691895072C7FE81CB218C0B9E57"
+      "Hash": "A33B5C91178D8CF62C8728DA71776C84BEE211AAFA384172A19920915F5B902D"
     },
     {
       "Source": "rules/capability-is-not-authority.md",
@@ -549,22 +794,27 @@
     {
       "Source": "rules/components.md",
       "Destination": "rules/components.md",
-      "Hash": "8E030A5184232429D07DB1EF869FEA88E6662330C75F92FC04ED525057D13A83"
+      "Hash": "AE23666268C1CC201FD57B2980A8607EA4971EC57C134B255B55B5386B378862"
     },
     {
       "Source": "rules/concepts.md",
       "Destination": "rules/concepts.md",
-      "Hash": "065863D99E404CA0450921432C76D315274FBD018DA807071425BFE587F7A086"
+      "Hash": "44BA04C0BB8FFC44A15F43FD3830BD49DA9882FE52FA3A9BF3E724DA3CA70C8A"
+    },
+    {
+      "Source": "rules/cratis-folder-is-configuration.md",
+      "Destination": "rules/cratis-folder-is-configuration.md",
+      "Hash": "9C7BBD43478C93DC1BBA76D6E04942DBE24B9CCC38D6491B2D83682E5AEFC042"
     },
     {
       "Source": "rules/csharp.md",
       "Destination": "rules/csharp.md",
-      "Hash": "8E5E28ACCFE3403F01EE22576A95DA4E515FD19199709F997829C2BABB869F14"
+      "Hash": "24B252026F19674F196FD8D53406E4DD8C97E757B1BEC4F97AFA44D22917FBC1"
     },
     {
       "Source": "rules/dialogs.md",
       "Destination": "rules/dialogs.md",
-      "Hash": "1FA9DE69E003F0CBF0C12C8813CC1098407A58AFC51EF5BF2306C059C7454F4F"
+      "Hash": "0C06486496AA3A35AC6564C2D18936820364597DEC2AA8011FBF6F4461C4B6AE"
     },
     {
       "Source": "rules/documentation-structure-and-formatting.md",
@@ -584,12 +834,17 @@
     {
       "Source": "rules/efcore.md",
       "Destination": "rules/efcore.md",
-      "Hash": "3B95649293060B169021B4DFCBF8A956D752D6E7BA4919D8A552853DB8A70FB2"
+      "Hash": "9EB115D7CCD805E46071A4ACAB311363D13ED29ACF92D6C9A525A3BF29E9B0B5"
     },
     {
       "Source": "rules/efcore.specs.md",
       "Destination": "rules/efcore.specs.md",
       "Hash": "50342CFE2436BE3C6FDEEE75D36166033C3C21BEBF66A362E0E8AEA34758998C"
+    },
+    {
+      "Source": "rules/elixir.md",
+      "Destination": "rules/elixir.md",
+      "Hash": "4C1E21477563E180C2E2BB17696A41D57124F5D97CD7727E66B570B92716512B"
     },
     {
       "Source": "rules/exit-codes-and-wrappers.md",
@@ -599,7 +854,7 @@
     {
       "Source": "rules/framework.md",
       "Destination": "rules/framework.md",
-      "Hash": "B850ADA6A884C3ED64FB0EED13101BDA9847F5B3B6928229C38CC6DB441AA548"
+      "Hash": "135E4F06FAA91D8487B1E3A7DEA3FE1FF8A6698DDFC0CC9CAA895205CA9E3B84"
     },
     {
       "Source": "rules/frontend-quality.md",
@@ -614,7 +869,7 @@
     {
       "Source": "rules/general.md",
       "Destination": "rules/general.md",
-      "Hash": "16D2A52E04CCB7710A3EF761465904118007B09F90A28F46B09C902120105D90"
+      "Hash": "21FBB91A8310C4B2165ED99780AB78EAB1A222D513970B46B1012B1E49A51E63"
     },
     {
       "Source": "rules/git-commits.md",
@@ -629,7 +884,17 @@
     {
       "Source": "rules/glossary.md",
       "Destination": "rules/glossary.md",
-      "Hash": "BF01F60AD472F43743443F1524841985AF6D7AA935A8E25C25F8474D4F5E04F1"
+      "Hash": "AB69B4E3613E5F129CE8FCEE84BEFF440E0FC0A908426259A8852F089C7A357D"
+    },
+    {
+      "Source": "rules/go-engineering.md",
+      "Destination": "rules/go-engineering.md",
+      "Hash": "55309D15D075DA7CFD4BEE7C505211E1CB07376894228E1E8C572E6E56EEB5F4"
+    },
+    {
+      "Source": "rules/go.md",
+      "Destination": "rules/go.md",
+      "Hash": "F4467AE3697A173DA0D3E3FE8E5E4999EB103FDD1E48E50F4E948DE794A7C41D"
     },
     {
       "Source": "rules/guards-and-fuses.md",
@@ -639,17 +904,17 @@
     {
       "Source": "rules/java.md",
       "Destination": "rules/java.md",
-      "Hash": "FF4BF6A511B80078B7EC1A0AFCA13C078869C434CE3928827BA8884478103363"
+      "Hash": "E1A036BF334C92E2349640F47EB9FA36B23ED3E8CF24694E06655D9D24912DBB"
     },
     {
       "Source": "rules/kotlin.md",
       "Destination": "rules/kotlin.md",
-      "Hash": "B1F4E127AD4959B3AE8D76B5C72418D4B471BC2F9562198167DB4932AA5ED884"
+      "Hash": "B3BB8F174DCA3D04D3B96E46935A373B2161367B589690A0ADDB8F73B24580CE"
     },
     {
       "Source": "rules/local-work-artifacts.md",
       "Destination": "rules/local-work-artifacts.md",
-      "Hash": "D25ADA6381510D49BC0642FADDEF4039E81685480115C137085CA17B828DDDED"
+      "Hash": "FF6AE937BC0A313183AB50EEF512701795CD83BC7F6C80848ACAE771E2DF8951"
     },
     {
       "Source": "rules/new-repository-intake.md",
@@ -659,27 +924,27 @@
     {
       "Source": "rules/orleans.md",
       "Destination": "rules/orleans.md",
-      "Hash": "A4C96D7FE5FF98259FECF66CC0746DA8EF72CB6C413FF432D5922A57A618A988"
+      "Hash": "A335A24AF9C159ED191EDAE70C951711B7E913B7DF22290A0A2317BA91C18244"
     },
     {
       "Source": "rules/profiles.md",
       "Destination": "rules/profiles.md",
-      "Hash": "3766317B03E06F9280806FAFF8A69E06B728DF637935690779F7851CAF943CA5"
+      "Hash": "93DBF879930D37BEFC002830A9E4354E9BF906C381B636979EA401EB620FCC7E"
     },
     {
       "Source": "rules/pull-requests.md",
       "Destination": "rules/pull-requests.md",
-      "Hash": "CC89E9C71AA820499A9DDA8C2B54005A76D51B9E62FF2B7A954891A586CF90A0"
+      "Hash": "9D2D80404CFB9FA79B28CAEC40597BB83717443B46EE7BB6CCDC630998A97521"
     },
     {
       "Source": "rules/react.md",
       "Destination": "rules/react.md",
-      "Hash": "69C87024F6DDA0C3E676530C9BDA58B179FFEDD636789F29F191F5B176102DB1"
+      "Hash": "F94D964E5A66B9DD78B6644A7FC7FD2AE4AD3385A3A878B5CB9451B952AC6EA2"
     },
     {
       "Source": "rules/reactors.md",
       "Destination": "rules/reactors.md",
-      "Hash": "A669883BEC4CC3A594D3E5ABF8C51BD2CEB6B861D45E25C981DE79C85DEB7395"
+      "Hash": "9986F2EFD1F4CA69AA908C9015A9D487884819468300F49108900BA098AFBEED"
     },
     {
       "Source": "rules/rtk.md",
@@ -689,7 +954,7 @@
     {
       "Source": "rules/specs.csharp.md",
       "Destination": "rules/specs.csharp.md",
-      "Hash": "EDAFBF16C7285504BB1E5C4DA1B6E2B04173F7CF01A2AB09434F45BEEBD5034D"
+      "Hash": "217AEB374313BD76784A156CB916D7561273CBB1C2CC17FFE9E25A86FC9D309A"
     },
     {
       "Source": "rules/specs.md",
@@ -699,22 +964,22 @@
     {
       "Source": "rules/specs.scenarios.csharp.md",
       "Destination": "rules/specs.scenarios.csharp.md",
-      "Hash": "0B9390F9D0D5367253F9A08FB8AD476E616898A195EE3EFC58B486876E5F27AF"
+      "Hash": "424DCA2741A10702D4AD7E3D37A325325659F44E611D4A5ED9BAB632C1288986"
     },
     {
       "Source": "rules/specs.typescript.md",
       "Destination": "rules/specs.typescript.md",
-      "Hash": "4CFDB3FBDA1CED6B27B18233390B2AD94D7FAB50E6671A11A9A81E78CAB8AC15"
+      "Hash": "EDC0F667A231AABE12F82E97C79918E2E9C4496FF344A3208CF7B1E693E202D7"
     },
     {
       "Source": "rules/storybook.md",
       "Destination": "rules/storybook.md",
-      "Hash": "077779BE33EC29FD99F66D022F73174B5D6CF86283F3B481E3547015B5DBB7B7"
+      "Hash": "904AC3E81B2773CA7EE3CCBA2A9F2E0067F5A22B9A4D3A55FF622854786E1BC0"
     },
     {
       "Source": "rules/typescript.md",
       "Destination": "rules/typescript.md",
-      "Hash": "1B7DA7907D29EB04FA2442400290AB8933E9E2B99FB81EB3537C52280FB1729D"
+      "Hash": "2B17CE2BC89DFE8FC305E70D0B23F3FF291CB0E0EAE322A91CD5C08A651A21DE"
     },
     {
       "Source": "rules/verification-discipline.md",
@@ -724,7 +989,7 @@
     {
       "Source": "rules/vertical-slices.md",
       "Destination": "rules/vertical-slices.md",
-      "Hash": "E052EAE86BAC63DF3635CC0A744683416DDC0522E3FFB39AA7D8860F91B94837"
+      "Hash": "5097EA21503C47515F970AD987CC1B8EC1E1B998F1D3B66362650666DD761C72"
     },
     {
       "Source": "rules/web-fetching.md",
@@ -749,37 +1014,37 @@
     {
       "Source": "skills/cratis-application-react-specifications/SKILL.md",
       "Destination": "skills/cratis-application-react-specifications/SKILL.md",
-      "Hash": "7E6286A5B0B58C7724681C0A1DCA6517EFCA00A3608434B2D6B125C664D1D436"
+      "Hash": "862B953F847139C276391CC37B1219AF2A9B83CBAA0A888ADEE60C9AC04E810E"
     },
     {
       "Source": "skills/cratis-application-slice-conformance/LICENSE",
       "Destination": "skills/cratis-application-slice-conformance/LICENSE",
-      "Hash": "427BEC5CEF5FF791BFA96E40CAC5AD5D44F914973D59D7D4000CDF079F3B5E36"
+      "Hash": "B3398E012828CC5578DA915B74A17AC712CF5A2BCC4EB7C97DF32E8DFBE540B2"
     },
     {
       "Source": "skills/cratis-application-slice-conformance/SKILL.md",
       "Destination": "skills/cratis-application-slice-conformance/SKILL.md",
-      "Hash": "021844B982E40E4BD2B2D21D77268E77093B6787D7DE0360322FA05478A6373B"
+      "Hash": "B000C8A0DA190A2F1FD609AED54C2CC7698F62543906F03AF365002562A2CBA1"
     },
     {
       "Source": "skills/cratis-application-slice-conformance/references/build-prompts.md",
       "Destination": "skills/cratis-application-slice-conformance/references/build-prompts.md",
-      "Hash": "B059E2427CE49BC6A4BF06705B76B1E138ED9C48C14F9C049D687B48135E1FB5"
+      "Hash": "E698A4314D86010FAB248BAAE297FCC5A03C2E72BACE9A6CC64C18AEB00CEA50"
     },
     {
       "Source": "skills/cratis-application-slice-conformance/references/checklists.md",
       "Destination": "skills/cratis-application-slice-conformance/references/checklists.md",
-      "Hash": "2EC77E2D02FCD8ED2BA086E0D4A66BFACE0C64D9794AF9802F253D09EEA06870"
+      "Hash": "10CDB5E881D5362598FC64C93FB47B1FB1501C151CB52EF08670C05F6B0D3B88"
     },
     {
       "Source": "skills/cratis-application-slice-conformance/references/contract-and-precedence.md",
       "Destination": "skills/cratis-application-slice-conformance/references/contract-and-precedence.md",
-      "Hash": "A9E6BF0684BD8C6CC6B19662EEE8A51568FE115605B7AA66F73F5196223FFA28"
+      "Hash": "CA06DB9C63507C89F4EEB127DD49012B01FC296CAF78E183CD67641577D8B55B"
     },
     {
       "Source": "skills/cratis-application-slice-conformance/references/provenance.md",
       "Destination": "skills/cratis-application-slice-conformance/references/provenance.md",
-      "Hash": "8655882AA10139F0A2DF3308C8C14CD17EDD2798310340E21999BB69AC20A1F3"
+      "Hash": "1A8FC01EC43A007C3C0283CEC1C3E3587518E933268844877CA95F8691870E65"
     },
     {
       "Source": "skills/cratis-application-slice-conformance/references/worked-example.md",
@@ -789,17 +1054,22 @@
     {
       "Source": "skills/cratis-application-slice-specifications/LICENSE",
       "Destination": "skills/cratis-application-slice-specifications/LICENSE",
-      "Hash": "CD6D13086566BA0276D88166FD227A2CED021144864BA543EF457D6593AC3B31"
+      "Hash": "63C85A78511F7CD0B7CECF9C40D7F011B08E838513083328415136529D14D72D"
     },
     {
       "Source": "skills/cratis-application-slice-specifications/SKILL.md",
       "Destination": "skills/cratis-application-slice-specifications/SKILL.md",
-      "Hash": "07B8EB26051F5386ED481C7A95C9465D6083AC81F45ED229B883F6223B0620D2"
+      "Hash": "BD3E23375D7A071C786BC03CB7C41EE81AF7A9C8F022F65A703C4FCB158D1567"
     },
     {
       "Source": "skills/cratis-application-slice-specifications/references/provenance.md",
       "Destination": "skills/cratis-application-slice-specifications/references/provenance.md",
-      "Hash": "B13A4E1AB376D481450FBB8B5C28C8143C135D77954A8C4A2BD67E6C58F6A298"
+      "Hash": "3320A630D2172059768C323D7F21DFFD137D6968DE985E575B56E753ADC8459D"
+    },
+    {
+      "Source": "skills/cratis-application-slice-specifications/references/query-and-decision-scenarios.md",
+      "Destination": "skills/cratis-application-slice-specifications/references/query-and-decision-scenarios.md",
+      "Hash": "56F6EFA9873186AD7B828A1C554963D605F990A9FD0484D29617BA4A051A74C3"
     },
     {
       "Source": "skills/cratis-arc-authentication-authorization-and-identity/LICENSE",
@@ -809,37 +1079,42 @@
     {
       "Source": "skills/cratis-arc-authentication-authorization-and-identity/SKILL.md",
       "Destination": "skills/cratis-arc-authentication-authorization-and-identity/SKILL.md",
-      "Hash": "6CE084AD19D821E3AAED7FF02B0AD5A6554D96E1ED190CB45CE5E6D6083D30C6"
+      "Hash": "337AF0FCABA55A86B065A2B55B8345323E24908D7E8DDC78DE0D3EA33325C893"
     },
     {
       "Source": "skills/cratis-arc-authentication-authorization-and-identity/references/authentication.md",
       "Destination": "skills/cratis-arc-authentication-authorization-and-identity/references/authentication.md",
-      "Hash": "9DEF54D82BBE4C91861565513E512E862E50731EE7B0AB2F7004AE06AFDF51F6"
+      "Hash": "3C80C41C6B98359F6495EE605727AA64C3CD4AE25AFB65B045404AA89D704855"
     },
     {
       "Source": "skills/cratis-arc-authentication-authorization-and-identity/references/authorization.md",
       "Destination": "skills/cratis-arc-authentication-authorization-and-identity/references/authorization.md",
-      "Hash": "A9C51BA75977BC3A59C45EDA0CE0B64725ACF64900B93CA1E24ABE60C254F235"
+      "Hash": "EC484D29CDE7F182648A54DD50D124A875381E7543D165D8957222CAE31CCEFB"
+    },
+    {
+      "Source": "skills/cratis-arc-authentication-authorization-and-identity/references/authproxy.md",
+      "Destination": "skills/cratis-arc-authentication-authorization-and-identity/references/authproxy.md",
+      "Hash": "E77E4EFC929C998189FB1A867A30287736160395727AB30B3D29DCFBCCCE5562"
     },
     {
       "Source": "skills/cratis-arc-authentication-authorization-and-identity/references/frontend.md",
       "Destination": "skills/cratis-arc-authentication-authorization-and-identity/references/frontend.md",
-      "Hash": "26A5F652423F181DB096946907560D44EA02F2BAA9ADE83AC9A7EC6F07BF5888"
+      "Hash": "009D5A7BB814E8E8F9C2D7A8599C026B0E993AA0F2590B3A42D8B83CEA26BBFC"
     },
     {
       "Source": "skills/cratis-arc-authentication-authorization-and-identity/references/local-development.md",
       "Destination": "skills/cratis-arc-authentication-authorization-and-identity/references/local-development.md",
-      "Hash": "1E48DB3FEBD2FB3B4174E2DE562A5BF64E15EFE734BEFD41206C1B581992FA23"
+      "Hash": "4007BC99EAE4C2DA7ECEF908F1363E047C490CBC940F932A36C6C7CAA3DD9AB9"
     },
     {
       "Source": "skills/cratis-arc-authentication-authorization-and-identity/references/observable-emission-guards.md",
       "Destination": "skills/cratis-arc-authentication-authorization-and-identity/references/observable-emission-guards.md",
-      "Hash": "BDBCF57ADCC524FB989DB0AAFB9D71A1FDCB4655D633A390C609E0B2E0A59D8E"
+      "Hash": "9385016869AC89E5937301142C660CE951E9395A40C899BC35AFC0E1DEEBFBB9"
     },
     {
       "Source": "skills/cratis-arc-authentication-authorization-and-identity/references/tenancy.md",
       "Destination": "skills/cratis-arc-authentication-authorization-and-identity/references/tenancy.md",
-      "Hash": "6DB4060D2F94D89EE70EEBB15ACE63094514CE5C1D907E71ED5C3DE45D1A51CB"
+      "Hash": "C72D33E22B86E90C51C54C924EA721950A9F4B284087D0AA818F7E79C760F5DF"
     },
     {
       "Source": "skills/cratis-arc-command-execution/LICENSE",
@@ -849,12 +1124,17 @@
     {
       "Source": "skills/cratis-arc-command-execution/SKILL.md",
       "Destination": "skills/cratis-arc-command-execution/SKILL.md",
-      "Hash": "23D92E7792DEE2B72B3AD8AE82AEE6E44347D538390AFC059751404E06CF6736"
+      "Hash": "DE4B1DF6C5F279B5A0349A820625268B74A63752EF11DE1A6F0D89AEBA1624DA"
     },
     {
       "Source": "skills/cratis-arc-command-kotlin/SKILL.md",
       "Destination": "skills/cratis-arc-command-kotlin/SKILL.md",
-      "Hash": "AF9F1381D952F6F390EDDB51DA9084400ED7990221423DBBB428078D4DFBAED4"
+      "Hash": "CFDAF2881B4D5B4C1A091F49D676045FAEE474FDC35C350471BE5BC588DCC5D5"
+    },
+    {
+      "Source": "skills/cratis-arc-command-kotlin/references/read-model-naming.md",
+      "Destination": "skills/cratis-arc-command-kotlin/references/read-model-naming.md",
+      "Hash": "DCFAB29AD0FA3847888CD1D763CB3D6D4661696F4811A9165EA959A0F8882E55"
     },
     {
       "Source": "skills/cratis-arc-command-operation/LICENSE",
@@ -864,17 +1144,17 @@
     {
       "Source": "skills/cratis-arc-command-operation/SKILL.md",
       "Destination": "skills/cratis-arc-command-operation/SKILL.md",
-      "Hash": "F3B6FBC3145B4EEA3F22A81D6301940E076FB93C42E875C81B416B963B7D06F2"
+      "Hash": "BD73C95EAC04604C83C12F388609E17785658F9D0E706E1C443F0CF03C8BAF7E"
     },
     {
       "Source": "skills/cratis-arc-command-operation/references/execution-and-recovery.md",
       "Destination": "skills/cratis-arc-command-operation/references/execution-and-recovery.md",
-      "Hash": "5CBC15F83F77546DBE12F39CECA34023BF2EC83F0C2A4503E401E099E3B359F9"
+      "Hash": "440F51335F195A5D658084D7853091B38CE5617B6AB208D5B64BD291AD809263"
     },
     {
       "Source": "skills/cratis-arc-command-operation/references/testing.md",
       "Destination": "skills/cratis-arc-command-operation/references/testing.md",
-      "Hash": "F6280058B15BB47AC239FF10727749ADA62A0993C4EB3F22CC243BD0EC2BC528"
+      "Hash": "1731C0EA7F99F22B5A93B1EC49FA39C8A68C7FCCBC06874E5CFDAAAF366BDE84"
     },
     {
       "Source": "skills/cratis-arc-command-validation/LICENSE",
@@ -884,7 +1164,7 @@
     {
       "Source": "skills/cratis-arc-command-validation/SKILL.md",
       "Destination": "skills/cratis-arc-command-validation/SKILL.md",
-      "Hash": "F5CACCF1E83A0AA74D3DA505C3AEFA6C376B85DB4ECBB3BE420CA07FFDAEC4EE"
+      "Hash": "E8254467F4090ACD70AED09251A8B345CCC4F73611D68826139FE34030745A0E"
     },
     {
       "Source": "skills/cratis-arc-command/LICENSE",
@@ -894,27 +1174,37 @@
     {
       "Source": "skills/cratis-arc-command/SKILL.md",
       "Destination": "skills/cratis-arc-command/SKILL.md",
-      "Hash": "B29293E3A4CAAAA2B1C1CC551E42B1E67663276AD32455E9DF46D90C82592A42"
+      "Hash": "77BFAEE63C011BD76E500FA3B31E7D198F5C359D3F037125F1AD9C777574262C"
     },
     {
       "Source": "skills/cratis-arc-command/references/command-result.md",
       "Destination": "skills/cratis-arc-command/references/command-result.md",
-      "Hash": "2F62064B7970A8A2348ECD4FDA8BC7F38DFFFB0C151D43F097E6C2BF27C58A63"
+      "Hash": "2D84D0D0A69548289DF8FFD4D9FE99946FF4B4EC023AB7B5A20C923DEDA885E5"
+    },
+    {
+      "Source": "skills/cratis-arc-command/references/decisions-and-routing.md",
+      "Destination": "skills/cratis-arc-command/references/decisions-and-routing.md",
+      "Hash": "F2E7B2C073029B6D2CBA7C251FD0E663B2A40EDF5A6F286481E263C779A1690C"
+    },
+    {
+      "Source": "skills/cratis-arc-command/references/generated-values.md",
+      "Destination": "skills/cratis-arc-command/references/generated-values.md",
+      "Hash": "B93F4EFC548FE068ED4CAB386F2217EEDD813ED3BF6E2F5438A4C28C24FA73A0"
     },
     {
       "Source": "skills/cratis-arc-command/references/handler-shapes.md",
       "Destination": "skills/cratis-arc-command/references/handler-shapes.md",
-      "Hash": "EBB3741116168D762D943FBC8401C9E398148C0CC5DBC3618858F4A1667809DD"
+      "Hash": "A4A2D819BDED225392B5D8F34B1FFB9898787032028FA31EE0AE6994FE9538F0"
     },
     {
       "Source": "skills/cratis-arc-command/references/proxy-generation.md",
       "Destination": "skills/cratis-arc-command/references/proxy-generation.md",
-      "Hash": "834EF4AA17A835A1037AC633855005E192839B7CDD75D3F405C9BADCBC6D7B4D"
+      "Hash": "14B02B86C0B6BD1C2D5824599803D6CD81BB7C90E474737378820A3F8B75B0E7"
     },
     {
       "Source": "skills/cratis-arc-command/references/read-model-injection.md",
       "Destination": "skills/cratis-arc-command/references/read-model-injection.md",
-      "Hash": "5C8A9B1EC14288D1411F1A6D7DEE75618B295707CA54D83B48F5FDA6C5EFB21C"
+      "Hash": "AA42DBD93CB8B9C59402E642E4A9D56926B8BAAA0CA6EE2148D5B57DD038AD13"
     },
     {
       "Source": "skills/cratis-arc-ef-core-migration/LICENSE",
@@ -924,7 +1214,22 @@
     {
       "Source": "skills/cratis-arc-ef-core-migration/SKILL.md",
       "Destination": "skills/cratis-arc-ef-core-migration/SKILL.md",
-      "Hash": "EC9F1766027EE0818E6E21FCD7315E2B1136F0298A908DDDD3A78F689530CFFA"
+      "Hash": "C52E20745A09FBC0BF0D4F4962FFD1550634FA7DB668DF371B8E986751E24CBC"
+    },
+    {
+      "Source": "skills/cratis-arc-hosting/SKILL.md",
+      "Destination": "skills/cratis-arc-hosting/SKILL.md",
+      "Hash": "91777FF7C5C8B1ED6B4308B9D05072110D7FC0D824BDF8BDB4B168A656C6A029"
+    },
+    {
+      "Source": "skills/cratis-arc-hosting/references/integrations-and-publish.md",
+      "Destination": "skills/cratis-arc-hosting/references/integrations-and-publish.md",
+      "Hash": "D44A1476B2ADDB931A41AD39C18693305AE450383C6A51C738C2B762B7C0D85F"
+    },
+    {
+      "Source": "skills/cratis-arc-identity-and-tenancy-kotlin/SKILL.md",
+      "Destination": "skills/cratis-arc-identity-and-tenancy-kotlin/SKILL.md",
+      "Hash": "6A181164CE3661E2AF66131D5591761E06B9A0B93DBFFB0F00B8157AF93A7C04"
     },
     {
       "Source": "skills/cratis-arc-observable-query-http/LICENSE",
@@ -934,12 +1239,12 @@
     {
       "Source": "skills/cratis-arc-observable-query-http/SKILL.md",
       "Destination": "skills/cratis-arc-observable-query-http/SKILL.md",
-      "Hash": "23011E06162846F53E0EF30F8081F3B27F707CDB59C78880DD868567B3E6CF73"
+      "Hash": "1DA77215D0F47120CED8E7558B441060DE996FB32998722ABA95668838D7225F"
     },
     {
       "Source": "skills/cratis-arc-query-kotlin/SKILL.md",
       "Destination": "skills/cratis-arc-query-kotlin/SKILL.md",
-      "Hash": "6D5F552D1AAD81D6A66BD36AA60D57C664FAE11F5AAA62562A987BE9408A93AA"
+      "Hash": "A9A848369248366128D9BF546A318B6A903CE79AD8802F270AA8D6564A431CA6"
     },
     {
       "Source": "skills/cratis-arc-query-paging/LICENSE",
@@ -949,57 +1254,67 @@
     {
       "Source": "skills/cratis-arc-query-paging/SKILL.md",
       "Destination": "skills/cratis-arc-query-paging/SKILL.md",
-      "Hash": "6056053961E61F88F04338CE6F4078191C27BA9AEEF869BBC3090B6A7EBDD6C3"
+      "Hash": "9C08B9DB6B70077FB0A4EFD5791574F7628D400F60F469080FD362B1ED527F76"
     },
     {
       "Source": "skills/cratis-arc-react-page/LICENSE",
       "Destination": "skills/cratis-arc-react-page/LICENSE",
-      "Hash": "7CD7E098BCBC37568C241FD393670CFA8D0A48DF683AD7555151B48E1D34D376"
+      "Hash": "5159F495592143994A117B91821C7684CC587723CF7A9E2DD1DC5EF678892BDA"
     },
     {
       "Source": "skills/cratis-arc-react-page/SKILL.md",
       "Destination": "skills/cratis-arc-react-page/SKILL.md",
-      "Hash": "E2616F450578CCC9F99CBD54C344334A420E8B3353198084D3AA260155529F19"
+      "Hash": "6E913CD3126DE8BC3DD85E4E04358A892EFA36B3E83D6FC2FF09E5A409654BF7"
     },
     {
       "Source": "skills/cratis-arc-react-page/references/data-page.md",
       "Destination": "skills/cratis-arc-react-page/references/data-page.md",
-      "Hash": "3A385DB245579DB23927BA7F1D8938E21CE8EE5E3C02F4197771F891FEAC344B"
+      "Hash": "DE35D9409821AE100B7065892C6D1662AAEF0A48DA369370DDF733C52F0F6091"
     },
     {
       "Source": "skills/cratis-arc-react-page/references/data-tables.md",
       "Destination": "skills/cratis-arc-react-page/references/data-tables.md",
-      "Hash": "74B9AABA0164C22C34FAAB9DB9C552D75185E1B6C2443CA8A04121E6019C5996"
+      "Hash": "816C2813257BE3D710A6BEEB457C4BA09CC1F0A379E3914402826C370C5896F6"
     },
     {
       "Source": "skills/cratis-arc-react-page/references/dialogs.md",
       "Destination": "skills/cratis-arc-react-page/references/dialogs.md",
-      "Hash": "12AEA60D6060BFDF2980FC3290AF036B361403E82316AA6367118E663651DA22"
+      "Hash": "83F2826F3FED6195AEA267D1CB4D66A4CE06574999C2EACF1A23783FE80E88D7"
     },
     {
       "Source": "skills/cratis-arc-react-page/references/from-screenplay.md",
       "Destination": "skills/cratis-arc-react-page/references/from-screenplay.md",
-      "Hash": "984285287C6C9590CCA26FF47B05D71163C05991B189A7723E3CCD7B48158FFA"
+      "Hash": "9A2202414C1E16FE7BB18B36939597279F3EDE547394E43BD1E9F65A423581E4"
     },
     {
       "Source": "skills/cratis-arc-react-page/references/mvvm.md",
       "Destination": "skills/cratis-arc-react-page/references/mvvm.md",
-      "Hash": "2A93974EED8B9C6C5EA6B1659D38A3C2A5427991A768F042EC375F2E45CC561F"
+      "Hash": "87ECB65E08B54E452A1E5DF9010BF6615D7C4E1D3CEFD3DFC7E50B1E92197DD3"
     },
     {
       "Source": "skills/cratis-arc-react-page/references/provenance.md",
       "Destination": "skills/cratis-arc-react-page/references/provenance.md",
-      "Hash": "597D4483F3958A743638A54956FE1F144C86D44868931911D28AA1118C7AA05B"
+      "Hash": "D46E0DCB53755062B4689546888391788958E1A75235FAD7937A3EC6373ECBD5"
     },
     {
       "Source": "skills/cratis-arc-react-page/references/queries-and-commands.md",
       "Destination": "skills/cratis-arc-react-page/references/queries-and-commands.md",
-      "Hash": "05929DA977C0BAB1C28C13BF0674D9898829CC37075490A9690CC321AD52E9A6"
+      "Hash": "840F640C06AAE24313804F3481A4B5E31B844AADF121DBBCE4B3F192B861707E"
+    },
+    {
+      "Source": "skills/cratis-arc-spring-data-kotlin/SKILL.md",
+      "Destination": "skills/cratis-arc-spring-data-kotlin/SKILL.md",
+      "Hash": "A79DA7CE32EEB88702DDC38CF11F9F4BFC6FCCD640035114C083197EA7F572CC"
+    },
+    {
+      "Source": "skills/cratis-arc-testing-kotlin/SKILL.md",
+      "Destination": "skills/cratis-arc-testing-kotlin/SKILL.md",
+      "Hash": "055957D2D831BE5F1AF96ABC01BC1FEF293910DBC1C621901B0A36B72060B699"
     },
     {
       "Source": "skills/cratis-arc-validation-kotlin/SKILL.md",
       "Destination": "skills/cratis-arc-validation-kotlin/SKILL.md",
-      "Hash": "AC9B7D09EDEA1763A83D0506C71365638598238BE9B4C81BD2CA3391C0D292DB"
+      "Hash": "1EC1D08AF9B67F04B6B829757CA96CC9C56F2C7FC6F5CA20A5E96ABBB187FD24"
     },
     {
       "Source": "skills/cratis-chronicle-client-dotnet/LICENSE",
@@ -1009,7 +1324,37 @@
     {
       "Source": "skills/cratis-chronicle-client-dotnet/SKILL.md",
       "Destination": "skills/cratis-chronicle-client-dotnet/SKILL.md",
-      "Hash": "A157E637B5C8054BD3043F62934ECBBB44B8E9FDAF53F53FB9F1A0F89643BD44"
+      "Hash": "FEE2910066582AAA94A36B353F0B1D35C4AE9080C7B1CAA75C662A466DA2441F"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-dotnet/references/additional-surfaces.md",
+      "Destination": "skills/cratis-chronicle-client-dotnet/references/additional-surfaces.md",
+      "Hash": "9FD184921762A2CAE98B2A005A611697F63BEB52A99D165A42EE319DB4C8F99E"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-dotnet/references/client-construction.md",
+      "Destination": "skills/cratis-chronicle-client-dotnet/references/client-construction.md",
+      "Hash": "53BFC8EC591AC8CD88EFB0250D014A713FB6FD77567BDB1F8B19FB1AC549B2A2"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-dotnet/references/compatibility-check.md",
+      "Destination": "skills/cratis-chronicle-client-dotnet/references/compatibility-check.md",
+      "Hash": "D28E30A96C111E73AEBCB9BF4BB3151803BBDB6D31ED25E0A79BF0639DCC40CD"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-dotnet/references/discovery.md",
+      "Destination": "skills/cratis-chronicle-client-dotnet/references/discovery.md",
+      "Hash": "85487746AA576C9F4C82DA956A5B81FC8D7DA366E5169475804FF3DAF26A93A9"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-dotnet/references/hosting.md",
+      "Destination": "skills/cratis-chronicle-client-dotnet/references/hosting.md",
+      "Hash": "5CA615CA249E4F8A9273CB9FE8165ABA5A562BDAB672DE1921324DC5889595D8"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-dotnet/references/pinned-generation-delivery.md",
+      "Destination": "skills/cratis-chronicle-client-dotnet/references/pinned-generation-delivery.md",
+      "Hash": "E2C3E29DD958E573CF3614285062292F096898D942923109BF6A34EE47463BE1"
     },
     {
       "Source": "skills/cratis-chronicle-client-elixir/LICENSE",
@@ -1019,7 +1364,47 @@
     {
       "Source": "skills/cratis-chronicle-client-elixir/SKILL.md",
       "Destination": "skills/cratis-chronicle-client-elixir/SKILL.md",
-      "Hash": "BC8110356609E11F34BCE5C936B6CC22038CC7D37A1979547958C2457E40A9EB"
+      "Hash": "32223ED271667753FBD8E64ACB1AEBFACC5F8384A68A6B2DE357F1D72D48AA21"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-elixir/references/append-api.md",
+      "Destination": "skills/cratis-chronicle-client-elixir/references/append-api.md",
+      "Hash": "DAF634E3F0041168D9B9451A51B0683390130DBFA8202F9C54D59507A131E64F"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-elixir/references/compliance.md",
+      "Destination": "skills/cratis-chronicle-client-elixir/references/compliance.md",
+      "Hash": "F8D99C4F4CCA1D36A40FA893A183D062854736CB37F1C2011A2CD379CED4FBD8"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-elixir/references/connections.md",
+      "Destination": "skills/cratis-chronicle-client-elixir/references/connections.md",
+      "Hash": "FB5016FEB376D8DAEA2B59F6C3CCCA28B7D5B7C4E504AEC706D42EB33E003B5C"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-elixir/references/event-sources.md",
+      "Destination": "skills/cratis-chronicle-client-elixir/references/event-sources.md",
+      "Hash": "FF1B8250F491BE617E5A796B25C85BD9D5D496021DAD3624FA49882981E9C1F5"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-elixir/references/pitfalls.md",
+      "Destination": "skills/cratis-chronicle-client-elixir/references/pitfalls.md",
+      "Hash": "E02C921D524DAD0AA525F2B34FB3B0D8A340F6084B3DC59A97EDDF7C18C5DE39"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-elixir/references/projections.md",
+      "Destination": "skills/cratis-chronicle-client-elixir/references/projections.md",
+      "Hash": "F53DD0ABC53FEEAE022E383E0638CF6C4278EBE7A11763CFDDB8BE3391FA4D25"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-elixir/references/upgrading.md",
+      "Destination": "skills/cratis-chronicle-client-elixir/references/upgrading.md",
+      "Hash": "F95888AED3A4340B264A173865CC1C21872E92670E0C23259AB4F1750A2FB790"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-elixir/references/variants.md",
+      "Destination": "skills/cratis-chronicle-client-elixir/references/variants.md",
+      "Hash": "9707ACE0D9D09E66CFBE41F2DF0E48FC4AF1CE87CB94ED4CCAE8378E67102348"
     },
     {
       "Source": "skills/cratis-chronicle-client-kotlin/LICENSE",
@@ -1029,7 +1414,42 @@
     {
       "Source": "skills/cratis-chronicle-client-kotlin/SKILL.md",
       "Destination": "skills/cratis-chronicle-client-kotlin/SKILL.md",
-      "Hash": "0E6CA69DD0F4559F7B00434FCE1F9E12862F6F803348F68C10E14DCE41295FD4"
+      "Hash": "BE2DCA18F84375B9A387ACC74C0C4FE63A9920C6AD09388C03D0F49D3AF5AB08"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-kotlin/references/connection-lifecycle.md",
+      "Destination": "skills/cratis-chronicle-client-kotlin/references/connection-lifecycle.md",
+      "Hash": "356EF15BBACD2D51E7960531C465F780A4F1CD56034331183F89124EBA1726A9"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-kotlin/references/discovery-and-registration.md",
+      "Destination": "skills/cratis-chronicle-client-kotlin/references/discovery-and-registration.md",
+      "Hash": "A82030E8889FD6231AE23E9231439D959807D4D9001D6C3F5AE3F0D4E5487209"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-kotlin/references/event-sources.md",
+      "Destination": "skills/cratis-chronicle-client-kotlin/references/event-sources.md",
+      "Hash": "3AF216192A9ECF256D35779386D9821ED7B2A802400E867BD9672933E0937934"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-kotlin/references/java-api.md",
+      "Destination": "skills/cratis-chronicle-client-kotlin/references/java-api.md",
+      "Hash": "AE128017E764F835D513608B3725104F2B14FE5E812C9C2606720416B70BA8AC"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-kotlin/references/options.md",
+      "Destination": "skills/cratis-chronicle-client-kotlin/references/options.md",
+      "Hash": "4997E4C79ABF9173010AECE276F3BD2BFF06817000F2EEDBCA0728E2D9898905"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-kotlin/references/spring-boot.md",
+      "Destination": "skills/cratis-chronicle-client-kotlin/references/spring-boot.md",
+      "Hash": "7C6A4DFA622BCCCDBDFBC8A086F565195082261B5E7DEE9A6CB61E330BFC0A73"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-kotlin/references/variants.md",
+      "Destination": "skills/cratis-chronicle-client-kotlin/references/variants.md",
+      "Hash": "3FE9221EC8807FA75C36A8780326E3BA8B542DDCFA78971598FB57587C5497BF"
     },
     {
       "Source": "skills/cratis-chronicle-client-typescript/LICENSE",
@@ -1039,7 +1459,22 @@
     {
       "Source": "skills/cratis-chronicle-client-typescript/SKILL.md",
       "Destination": "skills/cratis-chronicle-client-typescript/SKILL.md",
-      "Hash": "C4C2431908F651E08AFE3387C2194F5EA1B089A09581FC83845E7EA79C7F032D"
+      "Hash": "C8248FDFE161FC47907D23A4EE54CAB325F494E91CC7E6E8422B44AC06D5B56A"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-typescript/references/read-models-and-projections.md",
+      "Destination": "skills/cratis-chronicle-client-typescript/references/read-models-and-projections.md",
+      "Hash": "C33A123509914ECA15C7AC575C75FF7F0DD90438C5E6450127B30521528F0CD0"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-typescript/references/testing.md",
+      "Destination": "skills/cratis-chronicle-client-typescript/references/testing.md",
+      "Hash": "EF187AA1ABD17659D1787FAC2AE2A71B05D51B023A6C6468C522F7C4C4E01B1F"
+    },
+    {
+      "Source": "skills/cratis-chronicle-client-typescript/references/variants.md",
+      "Destination": "skills/cratis-chronicle-client-typescript/references/variants.md",
+      "Hash": "AE325F87F9649B2856CA62EAC76AF7E574F86780E0B062588152BC061DC04F00"
     },
     {
       "Source": "skills/cratis-chronicle-compliance/LICENSE",
@@ -1049,7 +1484,17 @@
     {
       "Source": "skills/cratis-chronicle-compliance/SKILL.md",
       "Destination": "skills/cratis-chronicle-compliance/SKILL.md",
-      "Hash": "019DB0EB9E0E6BC3C05C320C2FE783FAA4DA5B3CCA789DA48751BA73F436BD75"
+      "Hash": "B50364F626DA68E73DE4B3FDC2379CA0A0039AE0A6794765D85386AD0C053E5D"
+    },
+    {
+      "Source": "skills/cratis-chronicle-decision-reads/SKILL.md",
+      "Destination": "skills/cratis-chronicle-decision-reads/SKILL.md",
+      "Hash": "A6D68A60346C35179C3B358EB9FEFFE89C99F1A1A56C3BEF9F24E0FD8CE1AC3A"
+    },
+    {
+      "Source": "skills/cratis-chronicle-decision-reads/references/admission-and-ownership.md",
+      "Destination": "skills/cratis-chronicle-decision-reads/references/admission-and-ownership.md",
+      "Hash": "59CB1C8024F57C78D94E01EC20433ECB2BFD4EDD129B075AD7D0538A98832ED1"
     },
     {
       "Source": "skills/cratis-chronicle-event-constraints/LICENSE",
@@ -1059,7 +1504,12 @@
     {
       "Source": "skills/cratis-chronicle-event-constraints/SKILL.md",
       "Destination": "skills/cratis-chronicle-event-constraints/SKILL.md",
-      "Hash": "E9C60B449DAB45B5315D7E4178C356B46416D8AD78AF5563E499210423D522E6"
+      "Hash": "8DB33093BC2B2138B75BEFECDD177E6A7EDC628C32C03576358E0F20BD8FE98C"
+    },
+    {
+      "Source": "skills/cratis-chronicle-event-constraints/references/closing-streams.md",
+      "Destination": "skills/cratis-chronicle-event-constraints/references/closing-streams.md",
+      "Hash": "C354AF0498755E9E755A0B70AD59D5EA47DE23A63B614C1BA54B5BD19243F3AD"
     },
     {
       "Source": "skills/cratis-chronicle-event-modeling/LICENSE",
@@ -1069,7 +1519,7 @@
     {
       "Source": "skills/cratis-chronicle-event-modeling/SKILL.md",
       "Destination": "skills/cratis-chronicle-event-modeling/SKILL.md",
-      "Hash": "73A46F3159B4A44F6D56917373E9E3AE4DCD45A87DD19C76855342C4FCA8F6B1"
+      "Hash": "9377EB482C29581CA2EB37092DB227B48A12F55E7914F99AA029C50A0301863E"
     },
     {
       "Source": "skills/cratis-chronicle-event-specifications/LICENSE",
@@ -1079,7 +1529,7 @@
     {
       "Source": "skills/cratis-chronicle-event-specifications/SKILL.md",
       "Destination": "skills/cratis-chronicle-event-specifications/SKILL.md",
-      "Hash": "D669B38C681B69C8CF511C09DB104C291D5D2163B718D770985F2EC1B4FD47DE"
+      "Hash": "AF843531A56DFDF962F428108760831114B89F8224F08B21E610C49A37C8BB3A"
     },
     {
       "Source": "skills/cratis-chronicle-event-type-migration/LICENSE",
@@ -1089,7 +1539,22 @@
     {
       "Source": "skills/cratis-chronicle-event-type-migration/SKILL.md",
       "Destination": "skills/cratis-chronicle-event-type-migration/SKILL.md",
-      "Hash": "F23AAE8A91094DC77E9B8421D2C5CBA06CEAA14CFA776CE9504F8987D2340DF6"
+      "Hash": "A1DF6057C0A74FD26B679ADDAD582C33F9C0376675588A15B12A4B62B9AC6091"
+    },
+    {
+      "Source": "skills/cratis-chronicle-event-type-migration/references/pinned-generations.md",
+      "Destination": "skills/cratis-chronicle-event-type-migration/references/pinned-generations.md",
+      "Hash": "75A09D8317B9942A3F589506D22F4A45116F7E1FC59B23543910618C0E603111"
+    },
+    {
+      "Source": "skills/cratis-chronicle-hosting/SKILL.md",
+      "Destination": "skills/cratis-chronicle-hosting/SKILL.md",
+      "Hash": "6C0E3CCB8FC557105BEDDCDFB50FE5880979CB3CCCA5C5030A32C8E1A26B3243"
+    },
+    {
+      "Source": "skills/cratis-chronicle-hosting/references/operations.md",
+      "Destination": "skills/cratis-chronicle-hosting/references/operations.md",
+      "Hash": "C041CB773FA70E54192013F66B7920884FE5A86F9B175715C2DCB0C602504787"
     },
     {
       "Source": "skills/cratis-chronicle-multi-tenancy/LICENSE",
@@ -1099,7 +1564,7 @@
     {
       "Source": "skills/cratis-chronicle-multi-tenancy/SKILL.md",
       "Destination": "skills/cratis-chronicle-multi-tenancy/SKILL.md",
-      "Hash": "E746D544EA9CD7DD5173B3252C765228E6774819E7136E805F46D6CC5232CC00"
+      "Hash": "9D88066AF28E00CDDDC32267D8C3711AAE89F2157D7C155BCF47398144A6F715"
     },
     {
       "Source": "skills/cratis-chronicle-projection/LICENSE",
@@ -1109,52 +1574,72 @@
     {
       "Source": "skills/cratis-chronicle-projection/SKILL.md",
       "Destination": "skills/cratis-chronicle-projection/SKILL.md",
-      "Hash": "663F64FAAB0CBBEE58C0F0FD51D718DBBB419586815ABD51F7F88B2935BB1A2F"
+      "Hash": "BA482B68507E3538503D203E74EC87017AD2348CE1A52CE07026B79D209191CE"
     },
     {
       "Source": "skills/cratis-chronicle-projection/references/fluent-builder.md",
       "Destination": "skills/cratis-chronicle-projection/references/fluent-builder.md",
-      "Hash": "B87BF48BE11C842E00C38B3345D5236A3289E830C950DC0B404A9D5D1C24D252"
+      "Hash": "2680685F58073C6EEC99BE28E1955623AF25714E2FE505E23419D95966A89096"
     },
     {
       "Source": "skills/cratis-chronicle-projection/references/model-bound-attributes.md",
       "Destination": "skills/cratis-chronicle-projection/references/model-bound-attributes.md",
-      "Hash": "BA0F00FA63C7533CAAD57DD146D4119025379ABC8ADA5FE27FF9CD71E8459136"
+      "Hash": "BFEBE63598B3303DFD4F7BA4C9E0E3007A747A9D67466D67662DE4F534000F83"
     },
     {
       "Source": "skills/cratis-chronicle-projection/references/variants.md",
       "Destination": "skills/cratis-chronicle-projection/references/variants.md",
-      "Hash": "08D7E85DEC3ED4B683F7E1A0FDF2ABB601B73B851D4D4FF4C62E8626425EAAF5"
+      "Hash": "B1369E686411B35583685DD026013FE2C3F867F6B3C8DCBE2DC31D3A9C7FCD56"
     },
     {
       "Source": "skills/cratis-chronicle-reactor/LICENSE",
       "Destination": "skills/cratis-chronicle-reactor/LICENSE",
-      "Hash": "F2B2EF3A600054DDE1196091AC465FAD070477F46BDC40E59F3E64DB99965A02"
+      "Hash": "B8BFEF04F9278EBE74D76131F0B3F2DBA37543D1C368E18990FAFF3691FCD25C"
     },
     {
       "Source": "skills/cratis-chronicle-reactor/SKILL.md",
       "Destination": "skills/cratis-chronicle-reactor/SKILL.md",
-      "Hash": "2C7DCCE909125E0686E9B6EBCB266A255B137FC4533A0DCA5F160BBE45CA8DAA"
+      "Hash": "244957AE5C366525FB6394382B069B731792568136AF176ACDA8744CC1CAC4FC"
+    },
+    {
+      "Source": "skills/cratis-chronicle-reactor/references/domain-failures.md",
+      "Destination": "skills/cratis-chronicle-reactor/references/domain-failures.md",
+      "Hash": "4D08C42AD503E51247C59FDD20D29D4977D2084CE02A85D4585CFA00F7020E7B"
     },
     {
       "Source": "skills/cratis-chronicle-reactor/references/provenance.md",
       "Destination": "skills/cratis-chronicle-reactor/references/provenance.md",
-      "Hash": "75954B3990E55DB57A42C3A16CA46333880795CA0D8E0C72F19FC7C8B9990171"
+      "Hash": "6A294FC6293E2E651ADF761A39B4C53ED46FFD4D276B6A35242960AF081AFF6D"
+    },
+    {
+      "Source": "skills/cratis-chronicle-reactor/references/slice-delivery-checklist.md",
+      "Destination": "skills/cratis-chronicle-reactor/references/slice-delivery-checklist.md",
+      "Hash": "078FB86D3C5D033A886CA0D9BF8B34075F8B51C9A792BDB61995B45C04FEE36C"
+    },
+    {
+      "Source": "skills/cratis-chronicle-reactor/references/specifications.md",
+      "Destination": "skills/cratis-chronicle-reactor/references/specifications.md",
+      "Hash": "CA1A61E3B939ECF720F7DEAE1201187A6FB8D271C617ED6E122275775CEA24A4"
     },
     {
       "Source": "skills/cratis-chronicle-read-model-specifications/LICENSE",
       "Destination": "skills/cratis-chronicle-read-model-specifications/LICENSE",
-      "Hash": "98C93D1D19DCB44BB47FA8D00922B23F9F6A4269EBF8B3B88449268532125AF9"
+      "Hash": "173A81FDA91D806487164F6E5306DE14B5072F012A299F9225946BCF6A4CCE34"
     },
     {
       "Source": "skills/cratis-chronicle-read-model-specifications/SKILL.md",
       "Destination": "skills/cratis-chronicle-read-model-specifications/SKILL.md",
-      "Hash": "991875EC12663C58433E253FBDA7D0D13B4EE5891ACCA36AA990CADB9778D191"
+      "Hash": "42631418C5B123B1C824F3C121CA301CC432E9691A66C4C7ED92126FCFF783CD"
     },
     {
       "Source": "skills/cratis-chronicle-read-model-specifications/references/provenance.md",
       "Destination": "skills/cratis-chronicle-read-model-specifications/references/provenance.md",
-      "Hash": "8A635AC26159A3771BA3C12A8F1C23FCA972F06D8F508C0A08E759A2022D1026"
+      "Hash": "D4CF44E68EE70119D8BEE60B105D97C8C47E97012E4669FA4E96D93BD308CB1D"
+    },
+    {
+      "Source": "skills/cratis-chronicle-read-model-specifications/references/view-lifecycle-checks.md",
+      "Destination": "skills/cratis-chronicle-read-model-specifications/references/view-lifecycle-checks.md",
+      "Hash": "DBAC1DFE768E54C35AE0D029DD5D87450E2769F3C66EAB883EF00C29E199C436"
     },
     {
       "Source": "skills/cratis-chronicle-read-model/LICENSE",
@@ -1164,12 +1649,12 @@
     {
       "Source": "skills/cratis-chronicle-read-model/SKILL.md",
       "Destination": "skills/cratis-chronicle-read-model/SKILL.md",
-      "Hash": "630B3FE717F16FAA0F8A3EB10DBBEB18815B8FBF5945B0467AD62887D2BE9D18"
+      "Hash": "9F4F06516F7590B2BFF548C85A3AE95C2D40655AB8D53864BCCCF726511BD3F2"
     },
     {
       "Source": "skills/cratis-chronicle-read-model/references/queries.md",
       "Destination": "skills/cratis-chronicle-read-model/references/queries.md",
-      "Hash": "66FA32E6C83BA3E3F8F80937C60DADE5DCFF66121D7532F42B5E5958118D2E9E"
+      "Hash": "4A9679BB19502871C58AAC6FE992A17984D9D3B1FAB6D86BFCE6546EC285A46B"
     },
     {
       "Source": "skills/cratis-chronicle-reducer/LICENSE",
@@ -1179,7 +1664,7 @@
     {
       "Source": "skills/cratis-chronicle-reducer/SKILL.md",
       "Destination": "skills/cratis-chronicle-reducer/SKILL.md",
-      "Hash": "67DF35BF0556AB8F9A2E5A231AC51C3D8817BEB872A441C68450CA6402F5851F"
+      "Hash": "069A9AFA450E173D1092291879D85A17247AEF0D45DB38380F6347DC52FE4321"
     },
     {
       "Source": "skills/cratis-chronicle-web-workbench/LICENSE",
@@ -1189,7 +1674,7 @@
     {
       "Source": "skills/cratis-chronicle-web-workbench/SKILL.md",
       "Destination": "skills/cratis-chronicle-web-workbench/SKILL.md",
-      "Hash": "6EDF639F58D09280D245373416F7AC71D33A3F6D752D099673F81E16BF530876"
+      "Hash": "FF8C5BAE12EFA3871F542E0202802079B54515449BF17D71EBC27D2795BD4678"
     },
     {
       "Source": "skills/cratis-components-accessibility/LICENSE",
@@ -1199,7 +1684,17 @@
     {
       "Source": "skills/cratis-components-accessibility/SKILL.md",
       "Destination": "skills/cratis-components-accessibility/SKILL.md",
-      "Hash": "6ED4D09987E3B336BE8147C84DA65B5C69E44B7047B0A851B1F90B49B2E298EA"
+      "Hash": "2EE1FD0B9E1B69CCCD3FD418B811AB5D358268C3FA8F810EE15D7924D18D481D"
+    },
+    {
+      "Source": "skills/cratis-components-common-controls/SKILL.md",
+      "Destination": "skills/cratis-components-common-controls/SKILL.md",
+      "Hash": "82542C36D279137941FEB487DA0C5C5B79625C16647266E4A8EBE8CE8291DD3F"
+    },
+    {
+      "Source": "skills/cratis-components-data-surfaces/SKILL.md",
+      "Destination": "skills/cratis-components-data-surfaces/SKILL.md",
+      "Hash": "963902727217E008A90A81FB2733F4D5CBCC975AE91185BD9B7399E7DF00CAAE"
     },
     {
       "Source": "skills/cratis-components-schema-editor/LICENSE",
@@ -1209,7 +1704,12 @@
     {
       "Source": "skills/cratis-components-schema-editor/SKILL.md",
       "Destination": "skills/cratis-components-schema-editor/SKILL.md",
-      "Hash": "C63B65FE6F7CA17B86B19986ABDAB72080B759153E47E6444AD68BDF23868A55"
+      "Hash": "91AD810DAF4D1B5BB7AF9967AF1A09172320300DE0BF077831B224AC714CB9D5"
+    },
+    {
+      "Source": "skills/cratis-components-schema-editor/references/tree-layout.md",
+      "Destination": "skills/cratis-components-schema-editor/references/tree-layout.md",
+      "Hash": "DC229BC91A497D684EA8E7C84B1DE2F11AA20C457DA72E2C2A8A4ACAD8866963"
     },
     {
       "Source": "skills/cratis-components-stepper-command-dialog/LICENSE",
@@ -1219,7 +1719,7 @@
     {
       "Source": "skills/cratis-components-stepper-command-dialog/SKILL.md",
       "Destination": "skills/cratis-components-stepper-command-dialog/SKILL.md",
-      "Hash": "60DAED37F5BECA2BE53F2CD344BEDAA6CA0F2EF76A53A1C8AE345455DE4A5201"
+      "Hash": "933CA7041C1A248C2474F37A8D55DF0119CC4944377DD2C064D29890766721E5"
     },
     {
       "Source": "skills/cratis-components-styling/LICENSE",
@@ -1229,7 +1729,7 @@
     {
       "Source": "skills/cratis-components-styling/SKILL.md",
       "Destination": "skills/cratis-components-styling/SKILL.md",
-      "Hash": "AD5855A3AA779588D68C3084243EA188127CADBA4E0B43692352927E17D06DFE"
+      "Hash": "97F49D1771E560E948A0D04B2BAE05EC4E34A04D108558813527BC6EAB23BC75"
     },
     {
       "Source": "skills/cratis-components-toolbar/LICENSE",
@@ -1239,7 +1739,7 @@
     {
       "Source": "skills/cratis-components-toolbar/SKILL.md",
       "Destination": "skills/cratis-components-toolbar/SKILL.md",
-      "Hash": "F4B69149524C340587C3D5025B163B4972D4E01958FE1B5BAE3DD7E185D63A29"
+      "Hash": "28E689E0EA06B188FFAE0E023B43D641F0E33F561A2F777A3DBA31528D372AAB"
     },
     {
       "Source": "skills/cratis-documentation-writing/LICENSE",
@@ -1264,12 +1764,12 @@
     {
       "Source": "skills/cratis-engineering-csharp-conventions/SKILL.md",
       "Destination": "skills/cratis-engineering-csharp-conventions/SKILL.md",
-      "Hash": "657F2BA1C439419FE2F4E230824D2AC96C5801CCE59BAD7C1D129B77D63DE2C0"
+      "Hash": "3067A56F71390983C68B7B814ECD74958D4113A2974687C717C9DBC7FE8E0521"
     },
     {
       "Source": "skills/cratis-engineering-csharp-conventions/references/code-style.md",
       "Destination": "skills/cratis-engineering-csharp-conventions/references/code-style.md",
-      "Hash": "531B27C84F5BBB1D562AB598F762D330C6BAE2F7D5D1B1B2FCF1781D2776229D"
+      "Hash": "A56F13CEDD1F6511E28A4FE538CC23EE04DCC410EE9FCC025F6E713330FD05BE"
     },
     {
       "Source": "skills/cratis-engineering-csharp-conventions/references/domain-philosophy.md",
@@ -1279,7 +1779,7 @@
     {
       "Source": "skills/cratis-engineering-csharp-conventions/references/exceptions-logging-and-di.md",
       "Destination": "skills/cratis-engineering-csharp-conventions/references/exceptions-logging-and-di.md",
-      "Hash": "2F690D78D5ED46DF09F094070BBFE22295E094F85EA6E006651D6E3223336F3F"
+      "Hash": "A92B29BC5D817DE271D9B2F14632EDE290347EBA0853ABECA358C0058B6E104C"
     },
     {
       "Source": "skills/cratis-engineering-decision-record/LICENSE",
@@ -1289,12 +1789,12 @@
     {
       "Source": "skills/cratis-engineering-decision-record/SKILL.md",
       "Destination": "skills/cratis-engineering-decision-record/SKILL.md",
-      "Hash": "FAF058B9A55FFDEE12AA83813F6218230BEAFE89CCC4E52F4FE6563160AEBDD1"
+      "Hash": "8D50BDD52454BD477C503B3BF16073B6DA4AE02B7768FE66ADE9ABF7188E6246"
     },
     {
       "Source": "skills/cratis-engineering-decision-record/references/record-format.md",
       "Destination": "skills/cratis-engineering-decision-record/references/record-format.md",
-      "Hash": "D3E87DD54FC6D62E5A37B7C41D3CBA089C420DFEE0AB8BAC63F22EDCC0CC0A79"
+      "Hash": "556A10BC5C0C99E65748933513F8CAC633912A99BA8272EF9F1E8378DFEF91E4"
     },
     {
       "Source": "skills/cratis-engineering-docs-authoring/LICENSE",
@@ -1304,7 +1804,7 @@
     {
       "Source": "skills/cratis-engineering-docs-authoring/SKILL.md",
       "Destination": "skills/cratis-engineering-docs-authoring/SKILL.md",
-      "Hash": "BCF09E3312A713D53317975CD39BA44E4B4A2FD8659C8C2953BA3907D8AB7B4E"
+      "Hash": "67C4EC3E1668B934C6DC17790A2A28D56DE43B5BE9F8C476AE06B7CF539D70FC"
     },
     {
       "Source": "skills/cratis-engineering-docs-authoring/references/site-format.md",
@@ -1324,17 +1824,22 @@
     {
       "Source": "skills/cratis-engineering-effect-boundaries/references/failure-archetypes.md",
       "Destination": "skills/cratis-engineering-effect-boundaries/references/failure-archetypes.md",
-      "Hash": "19CB92A58D1DF7A05F5DE1C38EAAB035C3101F4CC992FF17CF225B4F53E85CC9"
+      "Hash": "4350F0DF190DE581661F8C967DABE87EF0041757F42CF5B0547E8382D9EE3CE5"
     },
     {
       "Source": "skills/cratis-event-model-diagram/LICENSE",
       "Destination": "skills/cratis-event-model-diagram/LICENSE",
-      "Hash": "B423657ACB53B804F939C1CA2E6D3B6F51E40B18F4516CF2FDFC1E787CB65ED3"
+      "Hash": "F9AB7F296DEFFF98A674EBF01C7FE674A8EFE0B106D5C0554361BB2B93DDBDE0"
     },
     {
       "Source": "skills/cratis-event-model-diagram/SKILL.md",
       "Destination": "skills/cratis-event-model-diagram/SKILL.md",
-      "Hash": "A54E008FD8A7476B8239BCC30EFC503D5836365863AE805D0A96D32B85D43E82"
+      "Hash": "F01385138E111AEAC784058C2356A78CBC361123D9AA2EFC16C558B740D21BA6"
+    },
+    {
+      "Source": "skills/cratis-event-model-diagram/references/provenance.md",
+      "Destination": "skills/cratis-event-model-diagram/references/provenance.md",
+      "Hash": "6822C16C3E42956090EBA21AC4BB04F9DC7C3E58D1899FF65BA87620DC18A1F9"
     },
     {
       "Source": "skills/cratis-fundamentals-concept/LICENSE",
@@ -1344,7 +1849,17 @@
     {
       "Source": "skills/cratis-fundamentals-concept/SKILL.md",
       "Destination": "skills/cratis-fundamentals-concept/SKILL.md",
-      "Hash": "C5B2A3A6BFAB758271D44A3DF6B26FF61C702796535C13A29B836701428BD117"
+      "Hash": "060180569A695D6E0628FE89506FD68C61093F3669C72363704A10A8B424E745"
+    },
+    {
+      "Source": "skills/cratis-fundamentals-concept/references/typescript-concepts.md",
+      "Destination": "skills/cratis-fundamentals-concept/references/typescript-concepts.md",
+      "Hash": "305C6E0F5CD62EEC8E74189D5C54C94266A50F9A45AC0C112B9AD72A9102CD29"
+    },
+    {
+      "Source": "skills/cratis-fundamentals-telemetry/SKILL.md",
+      "Destination": "skills/cratis-fundamentals-telemetry/SKILL.md",
+      "Hash": "947649DF32471D489D8D6026D659561836CEF56304A58EAD0A3DD98D65FB956B"
     },
     {
       "Source": "skills/cratis-llm-friendly-documentation/LICENSE",
@@ -1357,6 +1872,16 @@
       "Hash": "B182F2DAE489E0B4E7410E094DCCD3BDCB0BF45A5FB52B416E8692E0E7B67D37"
     },
     {
+      "Source": "skills/cratis-orleans-jobs/SKILL.md",
+      "Destination": "skills/cratis-orleans-jobs/SKILL.md",
+      "Hash": "50247039828C4FB85005B82AA876C22AE4CB9BF29DDC874729EF899897CEECD3"
+    },
+    {
+      "Source": "skills/cratis-orleans-jobs/references/state-machines.md",
+      "Destination": "skills/cratis-orleans-jobs/references/state-machines.md",
+      "Hash": "851945B45FA722CF96DFDDF909D889031F677BA8FE8D46B9848CBF9D10FC0F9C"
+    },
+    {
       "Source": "skills/cratis-release-notes/LICENSE",
       "Destination": "skills/cratis-release-notes/LICENSE",
       "Hash": "BA7AC4CBE084A2098E5222F75CF4C8981A700D8DB8EDA1DB93905EB46F91D3D3"
@@ -1364,7 +1889,1072 @@
     {
       "Source": "skills/cratis-release-notes/SKILL.md",
       "Destination": "skills/cratis-release-notes/SKILL.md",
-      "Hash": "3C07E4671DCA604927D9E829983AFC40CA6D61E4B02363BC43326D23790AF50B"
+      "Hash": "91284F1F02BA2E34CB57DEE6F6C95B2841F95CCAAFC4545C02196E9C6E54F739"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/LICENSE",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/LICENSE",
+      "Hash": "3443669788F99038E8A0EEB91A58D3A30B16C20883A92E738AC8F5852EF8BED0"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/SKILL.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/SKILL.md",
+      "Hash": "2436BC7FE88B23D38EF41E08FDA581C606DEFEA1849E281F7C99E7060DD4E707"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/assets/pending-certificates.play",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/assets/pending-certificates.play",
+      "Hash": "9E52EDAE377878EDAAEED556121101B28EFAA9C226D3722BB8EA08548FEBD294"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/assets/retry-sweep.play",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/assets/retry-sweep.play",
+      "Hash": "24B2443F588206D7A679B5C4B6B682879910432E4DF77A2C9066B82F217A1333"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/references/audit-format.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/references/audit-format.md",
+      "Hash": "B090CE4E0E8A02F72A90DB5B531BCAE13A570E71190ED0123B977B96D386EA14"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/references/automation-patterns.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/references/automation-patterns.md",
+      "Hash": "85C77E32848C882DBB850435162E9C63D9F2C4AC80C9875C27323300FB7E909B"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/references/cases-to-specify.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/references/cases-to-specify.md",
+      "Hash": "8107D164BDA9A9A9986F9FD79FD172687F842D09B7F0FACEFDFC3084B2E0E91A"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/references/effects-and-idempotency.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/references/effects-and-idempotency.md",
+      "Hash": "EA9B54BC57D3BA82E90FACD8675EAA76BA2B87F62B6EBEC30CD1EE6550A02F6E"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/references/integration-contracts.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/references/integration-contracts.md",
+      "Hash": "D2A92882555FDCF5103203F277EAD334E243C0E922E234E667786EBF82501A62"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/references/provenance.md",
+      "Hash": "630F19826B108C92818D357E9B3978E9289C33B7F4E50D854DCB449FB56C7EB7"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/references/public-events-and-direction.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/references/public-events-and-direction.md",
+      "Hash": "C9BE32EA408B571992631F995F199D0E773ED742E5E7FB67DB69B91B394A32A1"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/references/realization-and-gap-fill.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/references/realization-and-gap-fill.md",
+      "Hash": "74579B8BA702D766334D01DA2242B463898039941F2236E4753C702A3CEAF49D"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/references/todo-list-example.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/references/todo-list-example.md",
+      "Hash": "7345EC4BBF1F5EEB6AF9A3052F0BD56F1360B07FCC826A171DCD777F7311F931"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/references/translate-example.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/references/translate-example.md",
+      "Hash": "035FC057B9B258F07D4AD8AF0068C5CB820668E5C7CBDAB3AF22F35EFF2CC905"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/references/translation-patterns.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/references/translation-patterns.md",
+      "Hash": "6DA3A9A17609973963F707DA237C4063A78A5C7D5527628741923ABFA3686B71"
+    },
+    {
+      "Source": "skills/cratis-screenplay-automations-and-translations/references/worked-integration.md",
+      "Destination": "skills/cratis-screenplay-automations-and-translations/references/worked-integration.md",
+      "Hash": "222F3D255499F71E52BB5CF0C6439638458829B62E886CB16761BB224715146E"
+    },
+    {
+      "Source": "skills/cratis-screenplay-captures-and-reactions/LICENSE",
+      "Destination": "skills/cratis-screenplay-captures-and-reactions/LICENSE",
+      "Hash": "A49FB7BF5DAE6CE45A7455F1D66C6BBC201F3EB2A6C8973B431CCB0D0C5B05C1"
+    },
+    {
+      "Source": "skills/cratis-screenplay-captures-and-reactions/SKILL.md",
+      "Destination": "skills/cratis-screenplay-captures-and-reactions/SKILL.md",
+      "Hash": "6E62C7CC997012F0648B45E8B8268D7A7C6C46654A6B7F3F305DE4161290FFAB"
+    },
+    {
+      "Source": "skills/cratis-screenplay-captures-and-reactions/references/capture-map-and-example.md",
+      "Destination": "skills/cratis-screenplay-captures-and-reactions/references/capture-map-and-example.md",
+      "Hash": "A76DCDE20F33AF8F701287E8E51B495D68673829914AD06E20B53B7DC43065B5"
+    },
+    {
+      "Source": "skills/cratis-screenplay-captures-and-reactions/references/complete-examples.md",
+      "Destination": "skills/cratis-screenplay-captures-and-reactions/references/complete-examples.md",
+      "Hash": "F740EB7C9B572B0207AD22589EE05794804DD0FF1F9CD48565627781E302EF7B"
+    },
+    {
+      "Source": "skills/cratis-screenplay-captures-and-reactions/references/invocation-identity.md",
+      "Destination": "skills/cratis-screenplay-captures-and-reactions/references/invocation-identity.md",
+      "Hash": "31981DE040AA65AC966ACAC7788961201FDED4DA4131723C686FF9F21CD934F3"
+    },
+    {
+      "Source": "skills/cratis-screenplay-captures-and-reactions/references/product-sources.md",
+      "Destination": "skills/cratis-screenplay-captures-and-reactions/references/product-sources.md",
+      "Hash": "9018EBAD3A6E0A36D422EB7C852501EC7E8453CC64A09C62FEC567A1D2922C2D"
+    },
+    {
+      "Source": "skills/cratis-screenplay-captures-and-reactions/references/refusals-and-redelivery.md",
+      "Destination": "skills/cratis-screenplay-captures-and-reactions/references/refusals-and-redelivery.md",
+      "Hash": "799E1BA49F65FB3529A129E4C9C77D1B0FF31EDBF7DA158D922E34F693215992"
+    },
+    {
+      "Source": "skills/cratis-screenplay-captures-and-reactions/references/specifying-triggers-and-clock.md",
+      "Destination": "skills/cratis-screenplay-captures-and-reactions/references/specifying-triggers-and-clock.md",
+      "Hash": "65364EA6365D6C5D0A4717B66D9580E0B33DBE7760D3E38069A2E488566DF47E"
+    },
+    {
+      "Source": "skills/cratis-screenplay-captures-and-reactions/references/trigger-reads-example.md",
+      "Destination": "skills/cratis-screenplay-captures-and-reactions/references/trigger-reads-example.md",
+      "Hash": "2DC8A190F29B2654EF5945836E6874F3A167A7224F0AFAFEC5475F18CD95ECD8"
+    },
+    {
+      "Source": "skills/cratis-screenplay-command-surface/LICENSE",
+      "Destination": "skills/cratis-screenplay-command-surface/LICENSE",
+      "Hash": "7419DC99400BEDA4DFDE19A4773C902D3765EAC6609EABC9FB5FC3870A53B8DB"
+    },
+    {
+      "Source": "skills/cratis-screenplay-command-surface/SKILL.md",
+      "Destination": "skills/cratis-screenplay-command-surface/SKILL.md",
+      "Hash": "40EC6654D39BF499C722DA7C2E5C852F91A48C309208209DED8F6E289BFE7C8F"
+    },
+    {
+      "Source": "skills/cratis-screenplay-command-surface/references/compliance.md",
+      "Destination": "skills/cratis-screenplay-command-surface/references/compliance.md",
+      "Hash": "67F37D5F564A6A9BCE1128063D7892A72003E5AB4B4C639B6BAC9DC2A6F2AEC5"
+    },
+    {
+      "Source": "skills/cratis-screenplay-command-surface/references/context.md",
+      "Destination": "skills/cratis-screenplay-command-surface/references/context.md",
+      "Hash": "03EF47D41AA7AC223D7963D64FEE2A75C0BBF1ACF8D14854E9273098650DC089"
+    },
+    {
+      "Source": "skills/cratis-screenplay-command-surface/references/enum-numbers.md",
+      "Destination": "skills/cratis-screenplay-command-surface/references/enum-numbers.md",
+      "Hash": "A435ABAC377311DF7817AA47C4FE5A611222304C78BA6D714CFB75AC971C0580"
+    },
+    {
+      "Source": "skills/cratis-screenplay-command-surface/references/generated-values-and-responses.md",
+      "Destination": "skills/cratis-screenplay-command-surface/references/generated-values-and-responses.md",
+      "Hash": "6ABE953608AF7438FC989CB2D13EEB8CA92F65619E419DF5711484E9D607E69A"
+    },
+    {
+      "Source": "skills/cratis-screenplay-command-surface/references/inline-events.md",
+      "Destination": "skills/cratis-screenplay-command-surface/references/inline-events.md",
+      "Hash": "627E105E9F30CF06E345D31BA1EFBF5A1F1A9D491FABE5205FA1D71DB68ACCBB"
+    },
+    {
+      "Source": "skills/cratis-screenplay-command-surface/references/operations.md",
+      "Destination": "skills/cratis-screenplay-command-surface/references/operations.md",
+      "Hash": "CC6CC4598436DA44FBA2FB0467DA2F3483B7BB0AFE16CFAF11F4FD084B4701D1"
+    },
+    {
+      "Source": "skills/cratis-screenplay-command-surface/references/policy-persona-seed.md",
+      "Destination": "skills/cratis-screenplay-command-surface/references/policy-persona-seed.md",
+      "Hash": "B95B93F99C6D36F89C5C93F421D6B5AF795C24C083F8D4D52C770EA2CAC2EFAD"
+    },
+    {
+      "Source": "skills/cratis-screenplay-command-surface/references/validate-rules.md",
+      "Destination": "skills/cratis-screenplay-command-surface/references/validate-rules.md",
+      "Hash": "A73CD4C19C501DE8F6AE856317DAE5EB70ABF142674D4BBC95F8A6190138C072"
+    },
+    {
+      "Source": "skills/cratis-screenplay-delivery-planning/LICENSE",
+      "Destination": "skills/cratis-screenplay-delivery-planning/LICENSE",
+      "Hash": "9040194B8C2055B54E3F81159D2612C62D931C410F9ADD91047E5264496E4299"
+    },
+    {
+      "Source": "skills/cratis-screenplay-delivery-planning/SKILL.md",
+      "Destination": "skills/cratis-screenplay-delivery-planning/SKILL.md",
+      "Hash": "853D59A19F06A79D1B9BB92B1897C3704105A67312DC0DA1C26F834AB17FE502"
+    },
+    {
+      "Source": "skills/cratis-screenplay-delivery-planning/references/parallel-delivery.md",
+      "Destination": "skills/cratis-screenplay-delivery-planning/references/parallel-delivery.md",
+      "Hash": "03416878215CF7261969B872DCAD610111D0ED9E65222A151F712C97CF6CB2BF"
+    },
+    {
+      "Source": "skills/cratis-screenplay-delivery-planning/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-delivery-planning/references/provenance.md",
+      "Hash": "496B2EA17B56ED583D3D3755D1EC7F514448E9B7E52C22BF9AD7D35925DB5DE4"
+    },
+    {
+      "Source": "skills/cratis-screenplay-delivery-planning/references/slice-counting.md",
+      "Destination": "skills/cratis-screenplay-delivery-planning/references/slice-counting.md",
+      "Hash": "C0D34AA815688474221D0BBACC9D9DC9F93D80B65647B5BD5AD6EE3292810EC9"
+    },
+    {
+      "Source": "skills/cratis-screenplay-delivery-planning/references/velocity-and-capacity.md",
+      "Destination": "skills/cratis-screenplay-delivery-planning/references/velocity-and-capacity.md",
+      "Hash": "6C3368541C2BF8F78F0ADD16B104AED233ED2B3023A9607AE1AE35F9F22C7BD2"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/LICENSE",
+      "Destination": "skills/cratis-screenplay-discovery/LICENSE",
+      "Hash": "9BE8A0D6C46B722CE5AD76F05CF14B4B6D990CBA6FC73478A7FBEFB7DD4CECF3"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/SKILL.md",
+      "Destination": "skills/cratis-screenplay-discovery/SKILL.md",
+      "Hash": "B55C9E3EE9CA28A86269D205D6F0DD6538BF3CDE4FE17876245437AE050A7C54"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/references/divergent-sweep.md",
+      "Destination": "skills/cratis-screenplay-discovery/references/divergent-sweep.md",
+      "Hash": "A592FE34274B47A9D150B7265CD39EC895A76FEFFFF14C6D8CE90F536FF8BDA2"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/references/domain-analysis-template.md",
+      "Destination": "skills/cratis-screenplay-discovery/references/domain-analysis-template.md",
+      "Hash": "671E2CE724FA3143B43B93EAD8ADF4CAEE3B339827AFAC48B6F8A6426144CB2E"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/references/event-naming.md",
+      "Destination": "skills/cratis-screenplay-discovery/references/event-naming.md",
+      "Hash": "C7892C24401493A84C5E16BB1593EDA0C4A13435D47D379FED50A38CC3E6409E"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/references/facilitation.md",
+      "Destination": "skills/cratis-screenplay-discovery/references/facilitation.md",
+      "Hash": "6B240A210E62FE146C66DCFE354756C00343A6F9110C69A447D855839F9F9E46"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/references/human-workshop.md",
+      "Destination": "skills/cratis-screenplay-discovery/references/human-workshop.md",
+      "Hash": "AD8FCB5EC8E084296179505F68D532D0C053F66F242CD661409F697E25B1A3BC"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/references/interview-questions.md",
+      "Destination": "skills/cratis-screenplay-discovery/references/interview-questions.md",
+      "Hash": "A60D964C128FE21F68B9405ED0630B5337A75DE3493E540B03E330A12E4C8F76"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/references/personas-and-causes.md",
+      "Destination": "skills/cratis-screenplay-discovery/references/personas-and-causes.md",
+      "Hash": "AFAAD50AEEBC88B1FE298678D7C603588C01C98259AC349EA67DF3AD238CDB31"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/references/plotting-and-handoff.md",
+      "Destination": "skills/cratis-screenplay-discovery/references/plotting-and-handoff.md",
+      "Hash": "D9E1821E73C1F4A7A07E8A1DD5544E416A041306A7B78B9359670564F69810A0"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-discovery/references/provenance.md",
+      "Hash": "00D2566A63A3E8EED88D32098D0D1038BD2E7850CF54DFAAAD7BCFB96B1D0F8F"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/references/storming-loop.md",
+      "Destination": "skills/cratis-screenplay-discovery/references/storming-loop.md",
+      "Hash": "46E82C95435EB2E274C49FCEEABD8838777FBA8D41472678CDA5D4D2B9BB2F4C"
+    },
+    {
+      "Source": "skills/cratis-screenplay-discovery/references/worked-session.md",
+      "Destination": "skills/cratis-screenplay-discovery/references/worked-session.md",
+      "Hash": "DE3EE080FA3EE2EEA90FE265B6748EBB6F4673F5A12C3DA020BB7B0DC955C4B3"
+    },
+    {
+      "Source": "skills/cratis-screenplay-event-modeling/LICENSE",
+      "Destination": "skills/cratis-screenplay-event-modeling/LICENSE",
+      "Hash": "22EB8C5D562150D525E0C4540821FCAB8348D8C4A327E9EB156AC2133694806D"
+    },
+    {
+      "Source": "skills/cratis-screenplay-event-modeling/SKILL.md",
+      "Destination": "skills/cratis-screenplay-event-modeling/SKILL.md",
+      "Hash": "5B488BE953A6465DEB2DF7DC6AC68A8188B9DE7835B3C8D137BD0283C6AC0E4B"
+    },
+    {
+      "Source": "skills/cratis-screenplay-event-modeling/references/file-layout.md",
+      "Destination": "skills/cratis-screenplay-event-modeling/references/file-layout.md",
+      "Hash": "1D01C5B6A03591FD6F631FE25694B25083F9FCCB9ABBD8E5D65D6BDC5AAB7F75"
+    },
+    {
+      "Source": "skills/cratis-screenplay-event-modeling/references/invoicing-example.md",
+      "Destination": "skills/cratis-screenplay-event-modeling/references/invoicing-example.md",
+      "Hash": "734B055C71CFFFA25B514FB6996CCBB5A052F8BF7D566B930A8128B7EBC9BC0E"
+    },
+    {
+      "Source": "skills/cratis-screenplay-event-modeling/references/naming-primitives.md",
+      "Destination": "skills/cratis-screenplay-event-modeling/references/naming-primitives.md",
+      "Hash": "80C4EA4A4942A26A5DCDFD9786446D779C322357A2271C3E75E29DEB2CEED645"
+    },
+    {
+      "Source": "skills/cratis-screenplay-event-modeling/references/nine-steps.md",
+      "Destination": "skills/cratis-screenplay-event-modeling/references/nine-steps.md",
+      "Hash": "78B7C7C572BFD22DD387D550FA8561944B08E56EA0DDB941EC271FCF627ACB6E"
+    },
+    {
+      "Source": "skills/cratis-screenplay-event-modeling/references/parsed-not-runnable.md",
+      "Destination": "skills/cratis-screenplay-event-modeling/references/parsed-not-runnable.md",
+      "Hash": "DD30EB98576F66691154EBD9CE3E89AFF10CB4090AFBC9BDCEA411C9EA36762B"
+    },
+    {
+      "Source": "skills/cratis-screenplay-event-modeling/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-event-modeling/references/provenance.md",
+      "Hash": "367E632D2E0C77073F1F79CB17A4A8F5D13257FCC6A6A780DF81FD151B5B70DF"
+    },
+    {
+      "Source": "skills/cratis-screenplay-event-modeling/references/slice-type-rules.md",
+      "Destination": "skills/cratis-screenplay-event-modeling/references/slice-type-rules.md",
+      "Hash": "EDA8F99A94947784F96A2C794BA4AC81824DA03DA230FD8ACC26C4A4CF8C273A"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/LICENSE",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/LICENSE",
+      "Hash": "C7811E05EC938264C597AB0BA4DA928D9EB973D81564C6C4E98EEF4543A9186D"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/SKILL.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/SKILL.md",
+      "Hash": "CF310E35ED2835933E00753C12D453BE754F5636B176572857A2019B6DD5CFC5"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/candidate-inventory.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/candidate-inventory.md",
+      "Hash": "2A09F671D1758030667F4B72158C548991B6D87C947955B1BEAE185D9A4130D2"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/chronicle-observations.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/chronicle-observations.md",
+      "Hash": "1C77A88E2C2DB13A44ECA538E9D238801C746DBD3AB705609A3AAAA0CF9598E0"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/evidence-table-template.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/evidence-table-template.md",
+      "Hash": "178341A5AE7CCD3F8E347A62B4BCE089979CF9CA96CBCD68B6D18F6F014ABF0C"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/expert-verification.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/expert-verification.md",
+      "Hash": "F2ED0A50DFAA3AA14CD7966AA097E0D081BF223D184F426F51E72549E0E31005"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/generate-notes.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/generate-notes.md",
+      "Hash": "4160CA875EE3B8CC283CFA3EFFC0F6E29148B77FE089F1AEA77BAE0199ED8E2C"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/intent-example.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/intent-example.md",
+      "Hash": "4987DBD043A9952F594A47193CB4043CB73BA0E08558885D4472E0110FBFD36D"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/interview-findings.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/interview-findings.md",
+      "Hash": "F437475E0EBE92D8C9DA3F06FD43FC8D79D84BF811B29FE75CC2BCEE6FC1CB32"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/loss-report-template.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/loss-report-template.md",
+      "Hash": "358B83DD0688592A8AF2C182329398DF7306276F7DC4620891231E3CCA184A9E"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/prologue-safety.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/prologue-safety.md",
+      "Hash": "73BB3E7E3E70DA67B2A46FE6DB133BEC5D44449836CE74FAD8AD1041BED41FB1"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/provenance.md",
+      "Hash": "D32268E532FB0E8DE2AD0483E1A102F45331A48F562C9D8EAF0D37C304FA53BB"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/rule-modeling.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/rule-modeling.md",
+      "Hash": "335C24AFF5011762E88917FC319862233B6A5FC1395CDE1E21971C36B7BAE14F"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/side-car-migration.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/side-car-migration.md",
+      "Hash": "CDE9ED0F8E26A1D776B07DC46F0EDA7556FCEA115FADDAB66E03A0C4988F33B6"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/signal-to-intent.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/signal-to-intent.md",
+      "Hash": "16BD1120488C5FBEF844AEDA8578FACE30062D87E26536E814B67515F7EB9FEA"
+    },
+    {
+      "Source": "skills/cratis-screenplay-legacy-extraction/references/ui-observation.md",
+      "Destination": "skills/cratis-screenplay-legacy-extraction/references/ui-observation.md",
+      "Hash": "0EDC7F11648982DE5012AC014F401760F09ED8F6FDBADD6FB11AB07FD35550D0"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-authoring/LICENSE",
+      "Destination": "skills/cratis-screenplay-model-authoring/LICENSE",
+      "Hash": "C95E0E4EC3CFE4FAD98E68F115253476FE9DDBA0D40C1239F80780D1F20FF1E9"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-authoring/SKILL.md",
+      "Destination": "skills/cratis-screenplay-model-authoring/SKILL.md",
+      "Hash": "7408EAB4B933D2AF66E2611124C9DF26443FAF0B41158083A6A78030A2A2AC09"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-authoring/references/language-reference.md",
+      "Destination": "skills/cratis-screenplay-model-authoring/references/language-reference.md",
+      "Hash": "F528F313B457E798F5F9E05CF771E9E140A6219EAFFD38058176FA9D0C5C73A8"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-authoring/references/mcp-loop.md",
+      "Destination": "skills/cratis-screenplay-model-authoring/references/mcp-loop.md",
+      "Hash": "B76041DC19CAE459582F75987295694A1E1AA8DB9C5B8161DE5FF04D3A3982BF"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-authoring/references/mcp-tools.md",
+      "Destination": "skills/cratis-screenplay-model-authoring/references/mcp-tools.md",
+      "Hash": "2289EE209542B8348CE1CE61B142AE952C7FFFF169C4B94DDBFF10CB02FE24AF"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-authoring/references/model-notes.md",
+      "Destination": "skills/cratis-screenplay-model-authoring/references/model-notes.md",
+      "Hash": "D5DC91F72249BCB19F1C96958CBC53512466C0B8C8AD66B7AB99A84AE12A0564"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-authoring/references/property-links.md",
+      "Destination": "skills/cratis-screenplay-model-authoring/references/property-links.md",
+      "Hash": "C66DE6D06CEAF7FD401CB26C5C868D9831E9D3D7AEB03177B0D120B05B871088"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-authoring/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-model-authoring/references/provenance.md",
+      "Hash": "3C2F8DDD8DC7B16222DE07FE7BDA26890AC4EF1ECAE2130E4A499D2C703B1AF9"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-authoring/references/screen-authoring-workflow.md",
+      "Destination": "skills/cratis-screenplay-model-authoring/references/screen-authoring-workflow.md",
+      "Hash": "A5A48AD19CCF914A81F774963060158C53F9F7292F092668D9A932C8D15543CB"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-review/LICENSE",
+      "Destination": "skills/cratis-screenplay-model-review/LICENSE",
+      "Hash": "2F767A833F4A72DF6442018002F2D9961F758FCC9E76950C32F06FBD4E582864"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-review/SKILL.md",
+      "Destination": "skills/cratis-screenplay-model-review/SKILL.md",
+      "Hash": "0F39B2F209EACC7DC7BE8B1DD024BE6B34698F03BA865D84833EB67D725654F5"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-review/references/anti-patterns.md",
+      "Destination": "skills/cratis-screenplay-model-review/references/anti-patterns.md",
+      "Hash": "D34943123BF44B5C3EC1D17B7369D4D20FCA7CC6D8AA24088AE6A5CF9D59E2F5"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-review/references/business-questions.md",
+      "Destination": "skills/cratis-screenplay-model-review/references/business-questions.md",
+      "Hash": "FC7EAA3EE81C7ACAFADF1A836299B912366E893314DE114D3E89548D3F8EC0CC"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-review/references/checklist.md",
+      "Destination": "skills/cratis-screenplay-model-review/references/checklist.md",
+      "Hash": "F2142A68EE70C93BA4EDC474A78F925AE8B61E76194A97EE1DA6AABB33F238F1"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-review/references/model-inventory-report.md",
+      "Destination": "skills/cratis-screenplay-model-review/references/model-inventory-report.md",
+      "Hash": "B562A532471D5E0E6316E2249EE86452752DACDDA9F14F47F20D9AC71AE93119"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-review/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-model-review/references/provenance.md",
+      "Hash": "93704C01D1B7EBF6F9F879CDB6DE05685F761754E7B13201019943A1A221BEBC"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-review/references/public-keys-and-routes.md",
+      "Destination": "skills/cratis-screenplay-model-review/references/public-keys-and-routes.md",
+      "Hash": "947F12F72DB8CF2626CA15801F5026DB6C2DB0E25E630FECBAA04B9798FE892C"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-review/references/report-template.md",
+      "Destination": "skills/cratis-screenplay-model-review/references/report-template.md",
+      "Hash": "EC8A14C2684A42848219F6B36E1072E910051F7E4625DF54CB3C61BE0C16D764"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-review/references/review-questions.md",
+      "Destination": "skills/cratis-screenplay-model-review/references/review-questions.md",
+      "Hash": "D51D8248533874210987A77D567541C53472763BFD157D09D1894A0B371F9912"
+    },
+    {
+      "Source": "skills/cratis-screenplay-model-review/references/worked-example.md",
+      "Destination": "skills/cratis-screenplay-model-review/references/worked-example.md",
+      "Hash": "28539F767E25C3880117027F48D04B0F7783EE15C5C3D755D1202978A7D5F229"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/LICENSE",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/LICENSE",
+      "Hash": "6738524BA227C2C64833D43D98C751FCD9564B8418A0BA2CE911B9DF9C5A7CD6"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/SKILL.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/SKILL.md",
+      "Hash": "96AF0C97AC70E030B977AC142F5163B678F812CDD60628B3014879FA3161BA0E"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/code-reading-and-tokens.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/code-reading-and-tokens.md",
+      "Hash": "705E2382D79C0800C7440D1E369979F9D5152780695976AF569D5A422CDE8E66"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/completeness-self-check.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/completeness-self-check.md",
+      "Hash": "518AE6BECA46ABF63B898DE89E4D32F4FCF0E937929050885288D49D87844FD0"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/core-rules-digest.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/core-rules-digest.md",
+      "Hash": "29D740B8136A2A0FBEBDF087B04757B20879CBABAE7CA9BA0EE675A5819C97CF"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/handoff-template.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/handoff-template.md",
+      "Hash": "0C090ADF8AC745F06AAFED183577BE4F26BE3539F9C3CBEF588EE5C5D9899278"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/identity-and-edits.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/identity-and-edits.md",
+      "Hash": "7BEACE8404602BD83DA65008A35D0CA461CFBE235726810E7E64562E3191EF68"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/intake.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/intake.md",
+      "Hash": "35A7033E63D9D53967F5B4E093A50A498F4007DBEF1EE133E78BCE7DF73BCDE2"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/opt-in.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/opt-in.md",
+      "Hash": "104D15BA765CD592A90D99615EAEE7B2FFAEC7F4E288567E82A4E91C24B3E298"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/per-turn-protocol.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/per-turn-protocol.md",
+      "Hash": "A874CD7675B80407D5B7191DD8AC31724AE80FD757C6E981A08221A7EDA221FD"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/phase-report-inventories.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/phase-report-inventories.md",
+      "Hash": "17242F699B8383DEEC67D630A07F2904726DD2A3E722B9042F8C1394FA85CA40"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/phases.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/phases.md",
+      "Hash": "74E26E5294BF488A7C74C1B7FC08DE09BE03C1B5C10BC9B1E2E0B06DCD1E7EB1"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/principles.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/principles.md",
+      "Hash": "50E50619983DE00AA8571E5E8AA043A8807B98A2CDBB0DDBE9A0B6C320BE750C"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/provenance.md",
+      "Hash": "8ABA89DFC41478AECC535B8A3F6CDD2571882639C7244144CF2562664E5626FD"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/reasoning-notes.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/reasoning-notes.md",
+      "Hash": "AA635C0DE0E35D4FFC4E87787BD3982111B29E4AA98FA1C0650F265776CF201A"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/safety.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/safety.md",
+      "Hash": "0A863054AAFD5CF75FDDFA7B852C81DAA0B1AF9DE590E05B0C5EEDFC7D6C4C61"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/stop-or-assume.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/stop-or-assume.md",
+      "Hash": "D3BB8E638A93B6DCD35CB55AFB0FE9609F9888127B6C2BBADE9CFC88EC913DDE"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/verdicts-and-modes.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/verdicts-and-modes.md",
+      "Hash": "8618D973B92A5774981BEDD996944C52212C028D0DE51B1DF5B51E889E67226E"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/vocabulary-map.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/vocabulary-map.md",
+      "Hash": "2A4771086E87FA1C93C9F0A78B5F25F25282ADFF1709ED22132A8E4406081C6A"
+    },
+    {
+      "Source": "skills/cratis-screenplay-modeling-lifecycle/references/worked-example.md",
+      "Destination": "skills/cratis-screenplay-modeling-lifecycle/references/worked-example.md",
+      "Hash": "0316813F5E33D7BB2E25DA8826122E82A12E95337268B4F3FFC7E8E073076146"
+    },
+    {
+      "Source": "skills/cratis-screenplay-projections/LICENSE",
+      "Destination": "skills/cratis-screenplay-projections/LICENSE",
+      "Hash": "FCBA2B3376FB06E3034CEC782727E4818545FC784F325A36AE7D1BAF63B89F8D"
+    },
+    {
+      "Source": "skills/cratis-screenplay-projections/SKILL.md",
+      "Destination": "skills/cratis-screenplay-projections/SKILL.md",
+      "Hash": "2A2AB27C1E86047C2ECAA03D91FA448F16AF7BEF02941B932074105AA3B913CD"
+    },
+    {
+      "Source": "skills/cratis-screenplay-projections/references/pdl-grammar.md",
+      "Destination": "skills/cratis-screenplay-projections/references/pdl-grammar.md",
+      "Hash": "CD9E8284727BEE2A8ABA2AA7505ABCCB90F6CF2D1D31BB563D86E0158EC10582"
+    },
+    {
+      "Source": "skills/cratis-screenplay-read-surface/LICENSE",
+      "Destination": "skills/cratis-screenplay-read-surface/LICENSE",
+      "Hash": "6B52A746C08DEE3D40C1A4F352CF93D5A456E280F254C2FDE73F187DEE00FD60"
+    },
+    {
+      "Source": "skills/cratis-screenplay-read-surface/SKILL.md",
+      "Destination": "skills/cratis-screenplay-read-surface/SKILL.md",
+      "Hash": "DC47D0BF875B920B5CFE7D97FEF5B5CC5DA9DE38E4F99DCD041AD521AA701570"
+    },
+    {
+      "Source": "skills/cratis-screenplay-read-surface/references/equality-filters.md",
+      "Destination": "skills/cratis-screenplay-read-surface/references/equality-filters.md",
+      "Hash": "3DC7AF256C571106B390CD4D1EFF574F678A9F785A771510A02724FBB19F945F"
+    },
+    {
+      "Source": "skills/cratis-screenplay-read-surface/references/guarded-actions.md",
+      "Destination": "skills/cratis-screenplay-read-surface/references/guarded-actions.md",
+      "Hash": "6672E52143612BF5D37FDBC0FFB4C9FDCE0910963F6F66F185E1D233F370C340"
+    },
+    {
+      "Source": "skills/cratis-screenplay-read-surface/references/named-keys.md",
+      "Destination": "skills/cratis-screenplay-read-surface/references/named-keys.md",
+      "Hash": "B8A95D5061625B988B8100B23B517F16B8FADE794B3EDF33CBDC086C54C8CAE5"
+    },
+    {
+      "Source": "skills/cratis-screenplay-read-surface/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-read-surface/references/provenance.md",
+      "Hash": "4F7F196ABDECA0E95B9800E805E012A78C8427AD473381BED646A263A8506B14"
+    },
+    {
+      "Source": "skills/cratis-screenplay-read-surface/references/screen-patterns.md",
+      "Destination": "skills/cratis-screenplay-read-surface/references/screen-patterns.md",
+      "Hash": "C35388CAFB340871BEF66879F8F14BF1D3405D78E3C8112DC0ECD676426DFE57"
+    },
+    {
+      "Source": "skills/cratis-screenplay-render-and-gap-fill/LICENSE",
+      "Destination": "skills/cratis-screenplay-render-and-gap-fill/LICENSE",
+      "Hash": "D2A6BC26B1FC8C0A95A2BA85643AED03412B622129E84431BDA55881E4F498AD"
+    },
+    {
+      "Source": "skills/cratis-screenplay-render-and-gap-fill/SKILL.md",
+      "Destination": "skills/cratis-screenplay-render-and-gap-fill/SKILL.md",
+      "Hash": "46B7055AFF954FE8C2CB4D209D2DD4D59D2C491F37588C913825DE362FE03DD6"
+    },
+    {
+      "Source": "skills/cratis-screenplay-render-and-gap-fill/references/delivery-protocol.md",
+      "Destination": "skills/cratis-screenplay-render-and-gap-fill/references/delivery-protocol.md",
+      "Hash": "8989E90F77B5A011240FFE362930ABF14986D679B98D45AFA04BE68BFBFE4444"
+    },
+    {
+      "Source": "skills/cratis-screenplay-render-and-gap-fill/references/drift-and-ledger.md",
+      "Destination": "skills/cratis-screenplay-render-and-gap-fill/references/drift-and-ledger.md",
+      "Hash": "A7BCF55BF656225B5A14345091C86F699440192B0B9AFCA9984297729EAB3882"
+    },
+    {
+      "Source": "skills/cratis-screenplay-render-and-gap-fill/references/gap-fill-handoff.md",
+      "Destination": "skills/cratis-screenplay-render-and-gap-fill/references/gap-fill-handoff.md",
+      "Hash": "0A81087CACA46D7527898D9D865F9D12B11B496B8183E0A52D3F101E4D5B65A1"
+    },
+    {
+      "Source": "skills/cratis-screenplay-render-and-gap-fill/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-render-and-gap-fill/references/provenance.md",
+      "Hash": "1DFEE7E5D9FB36FA9F1A8200A7EA8752BFB9F0880995DE1549879270B3E96E74"
+    },
+    {
+      "Source": "skills/cratis-screenplay-render-and-gap-fill/references/renderability-gate.md",
+      "Destination": "skills/cratis-screenplay-render-and-gap-fill/references/renderability-gate.md",
+      "Hash": "C07BCAA88BA0CF3C4B0E236764F3FCF631DB73BC25F19EBF01E16098C3311A20"
+    },
+    {
+      "Source": "skills/cratis-screenplay-render-and-gap-fill/references/worked-example.md",
+      "Destination": "skills/cratis-screenplay-render-and-gap-fill/references/worked-example.md",
+      "Hash": "41834196855005FBCB62828C347EED8B92F2C63C09C809E6416E06CFF80E4EB0"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/LICENSE",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/LICENSE",
+      "Hash": "D919494EE30A7063A74309B6028CD2AC06A994F0526609B55EDF4E29EFB2692D"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/SKILL.md",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/SKILL.md",
+      "Hash": "5C1C4428948BD6AA87A0D33E15E4784060CA85EF5FD8825C5C97F277CD4EAB64"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/references/berth-reservations.md",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/references/berth-reservations.md",
+      "Hash": "94EB0EC8DBD15EDB61F31CB4ABBC9647AA5E488A776241B6B64F783C1A5ECDCE"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/references/chronicle-verification.md",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/references/chronicle-verification.md",
+      "Hash": "EB2A7BDF9C5184B14FD6379461066A2489FED1E9C7A88681B89ECD3D35545249"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/references/coverage-matrix.md",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/references/coverage-matrix.md",
+      "Hash": "6888BF503F31DF13B0DCD3146D37DB734BFDF7D2AE0AAD9D4C6C88C9F1C50742"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/references/invoicing-dues-design.md",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/references/invoicing-dues-design.md",
+      "Hash": "B5AA72CA29335A4E5BE2F29A68B1499719E6D534994D558A807273E3351158E5"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/references/invoicing-dues-example.md",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/references/invoicing-dues-example.md",
+      "Hash": "9842436747C44061063CCEE0EDD7BA881BF50EEABB565717071FC06DDDA9B36F"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/references/provenance.md",
+      "Hash": "BCCB16AE205AA18F9E1D8B386BFF702DD58C29FBE98B8745FDE7AD7204420932"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/references/scenario-catalogue.md",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/references/scenario-catalogue.md",
+      "Hash": "A4A5206BE10F5F5F1652FDD62714D2132043D639DD653084B38B5AAB791070B1"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/references/scenario-examples.md",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/references/scenario-examples.md",
+      "Hash": "45BAF37F715728970159B8934148907E7313EC9DEE836D16A5E31EFE8C5C13B1"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/references/scenario-workshop.md",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/references/scenario-workshop.md",
+      "Hash": "1573CD748EC3F6E52459F3E81138F16BCC1019DF377FB1DB13FDEDCE82D06DD5"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/references/spec-forms-by-mode.md",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/references/spec-forms-by-mode.md",
+      "Hash": "FA89ADC3ECE4D31C77CE729B8B6687B4AA2FB07B48C61B59EDE17319AE56286B"
+    },
+    {
+      "Source": "skills/cratis-screenplay-scenario-coverage/references/view-and-story-specs.md",
+      "Destination": "skills/cratis-screenplay-scenario-coverage/references/view-and-story-specs.md",
+      "Hash": "35847F53E0C158B4805954C485CBB0EBA85D3AECEE321813F7339034A9AF430C"
+    },
+    {
+      "Source": "skills/cratis-screenplay-slice-design/LICENSE",
+      "Destination": "skills/cratis-screenplay-slice-design/LICENSE",
+      "Hash": "4D7C7572A312D2BBB87254D78CBF6082722153D3D28F0557C35DDC61B023D7B0"
+    },
+    {
+      "Source": "skills/cratis-screenplay-slice-design/SKILL.md",
+      "Destination": "skills/cratis-screenplay-slice-design/SKILL.md",
+      "Hash": "A4DFC9F6B67BDAAA1302CDD490A81755D1716E751A5F55448A3A4DA0BC93D368"
+    },
+    {
+      "Source": "skills/cratis-screenplay-slice-design/references/command-inventory.md",
+      "Destination": "skills/cratis-screenplay-slice-design/references/command-inventory.md",
+      "Hash": "E91667A183243527104C03BBBB5743AFA5E1DE71450F2F12AF1C38238E5F3C2A"
+    },
+    {
+      "Source": "skills/cratis-screenplay-slice-design/references/derived-condition-events.md",
+      "Destination": "skills/cratis-screenplay-slice-design/references/derived-condition-events.md",
+      "Hash": "8B80F89A4D7E21B4C822629DD7F8FB6CA616E8C188FF433CD00874963818C53C"
+    },
+    {
+      "Source": "skills/cratis-screenplay-slice-design/references/field-lineage.md",
+      "Destination": "skills/cratis-screenplay-slice-design/references/field-lineage.md",
+      "Hash": "CBE26813BB70D33D6278AF6B31BB0BEFBAC906A54304ABAFC8099A8B36169B17"
+    },
+    {
+      "Source": "skills/cratis-screenplay-slice-design/references/model-reasoning.md",
+      "Destination": "skills/cratis-screenplay-slice-design/references/model-reasoning.md",
+      "Hash": "22352E1AC58D2D0A8924A7CC2B5B8E2F490B19A7F4D43A1186F01FB166DEC640"
+    },
+    {
+      "Source": "skills/cratis-screenplay-slice-design/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-slice-design/references/provenance.md",
+      "Hash": "A2771EA423524B1FDDB9F3A1A313D3B8FBCFBBFB2FB012C7640D8B29B4FB0D35"
+    },
+    {
+      "Source": "skills/cratis-screenplay-slice-design/references/read-model-design.md",
+      "Destination": "skills/cratis-screenplay-slice-design/references/read-model-design.md",
+      "Hash": "72918B5B54AA089194DBE9999BD5FDF07901371766DAC3E9C1EEE1D8936DD441"
+    },
+    {
+      "Source": "skills/cratis-screenplay-slice-design/references/review-questions.md",
+      "Destination": "skills/cratis-screenplay-slice-design/references/review-questions.md",
+      "Hash": "EC84C0BDC5E657F35EC2897085D03617F116079C26B38EEE5B0FB9248EC688A5"
+    },
+    {
+      "Source": "skills/cratis-screenplay-slice-design/references/rule-layers.md",
+      "Destination": "skills/cratis-screenplay-slice-design/references/rule-layers.md",
+      "Hash": "465AB3BF638D24B0247DF5D0A459E707650622E761DEA1CF92A2BF5E7EB9A0EA"
+    },
+    {
+      "Source": "skills/cratis-screenplay-slice-design/references/slicing.md",
+      "Destination": "skills/cratis-screenplay-slice-design/references/slicing.md",
+      "Hash": "7D9C80F7B02CD56BDA334CD6EE41F3585AADAFE1BA554E444F95214908EBD213"
+    },
+    {
+      "Source": "skills/cratis-screenplay-slice-design/references/worked-example.md",
+      "Destination": "skills/cratis-screenplay-slice-design/references/worked-example.md",
+      "Hash": "70346087EC8C5401064F9EB6673145572C463EECAD6FD747E9457AB1566F512A"
+    },
+    {
+      "Source": "skills/cratis-screenplay-specifications/LICENSE",
+      "Destination": "skills/cratis-screenplay-specifications/LICENSE",
+      "Hash": "C63F0564E4F0D0E1AA3989C6C75AC557DECB492496AEAE9593796830DDBD85FF"
+    },
+    {
+      "Source": "skills/cratis-screenplay-specifications/SKILL.md",
+      "Destination": "skills/cratis-screenplay-specifications/SKILL.md",
+      "Hash": "C6AA4F9EF3539D1BC176464A7A70C8C04D4CD4710748CEF6395FA6E24A1356E0"
+    },
+    {
+      "Source": "skills/cratis-screenplay-specifications/references/actions-beyond-commands.md",
+      "Destination": "skills/cratis-screenplay-specifications/references/actions-beyond-commands.md",
+      "Hash": "78C5F5C94CE0E8BAEAB20D79E05604EC28BD6508D2D671B5C0FAF72C7EF570A4"
+    },
+    {
+      "Source": "skills/cratis-screenplay-specifications/references/concept-rules.md",
+      "Destination": "skills/cratis-screenplay-specifications/references/concept-rules.md",
+      "Hash": "ACB66FCC1D523E5CA1AB1CA84884F8F68A23548106E018F5E39C1A9A36F6EA43"
+    },
+    {
+      "Source": "skills/cratis-screenplay-specifications/references/examples-and-routes.md",
+      "Destination": "skills/cratis-screenplay-specifications/references/examples-and-routes.md",
+      "Hash": "DF2ACBA56302D85587A97680693ADA3A99A6385F7AF5ECDA30C4A850FD204F38"
+    },
+    {
+      "Source": "skills/cratis-screenplay-specifications/references/generated-fixtures.md",
+      "Destination": "skills/cratis-screenplay-specifications/references/generated-fixtures.md",
+      "Hash": "46E7DD18D29D4B207703A3E80A26D13FF8711E26F2209BF73924EFBDF3097427"
+    },
+    {
+      "Source": "skills/cratis-screenplay-specifications/references/persona-callers-and-cases.md",
+      "Destination": "skills/cratis-screenplay-specifications/references/persona-callers-and-cases.md",
+      "Hash": "4B2CBD2F8F45C7D45F26D444B2BC72A3C361D78AEB521477FCABBD7B5998CA6D"
+    },
+    {
+      "Source": "skills/cratis-screenplay-specifications/references/reactions-and-cascades.md",
+      "Destination": "skills/cratis-screenplay-specifications/references/reactions-and-cascades.md",
+      "Hash": "E6B279EA588A3AF237D859CE86F2442CC71121F361B413F4EAC9B95DED187713"
+    },
+    {
+      "Source": "skills/cratis-screenplay-specifications/references/source-notes.md",
+      "Destination": "skills/cratis-screenplay-specifications/references/source-notes.md",
+      "Hash": "1B4E7A30418AF895657DD1BF400FC6F30AD8D41F59C0229AF246F528E6896FCE"
+    },
+    {
+      "Source": "skills/cratis-screenplay-specifications/references/worked-example.md",
+      "Destination": "skills/cratis-screenplay-specifications/references/worked-example.md",
+      "Hash": "8B785D991F855FAAA7644365EF7D458769BCFB52AC6786FC9674CCC50EF23382"
+    },
+    {
+      "Source": "skills/cratis-screenplay-streams-and-consistency/LICENSE",
+      "Destination": "skills/cratis-screenplay-streams-and-consistency/LICENSE",
+      "Hash": "B071534D726659965E3DDD5926943A0A2D5AEA52847D043A789627C0F5A09094"
+    },
+    {
+      "Source": "skills/cratis-screenplay-streams-and-consistency/SKILL.md",
+      "Destination": "skills/cratis-screenplay-streams-and-consistency/SKILL.md",
+      "Hash": "E27D31CB8156EAAD1459177D5259DBD53A4B891E24823420E3E4B8C62B8BC2CD"
+    },
+    {
+      "Source": "skills/cratis-screenplay-streams-and-consistency/references/boundaries.md",
+      "Destination": "skills/cratis-screenplay-streams-and-consistency/references/boundaries.md",
+      "Hash": "7DCA38CF6563D1F82050E6466B476B1007BE6A553657A2E956AD85D49956CE66"
+    },
+    {
+      "Source": "skills/cratis-screenplay-streams-and-consistency/references/chronicle-boundaries.md",
+      "Destination": "skills/cratis-screenplay-streams-and-consistency/references/chronicle-boundaries.md",
+      "Hash": "4A6510A02275389A3B6F021070DFD06AD55D82A1E8504CE0AB721455A5DB72FD"
+    },
+    {
+      "Source": "skills/cratis-screenplay-streams-and-consistency/references/consistency-and-concurrency.md",
+      "Destination": "skills/cratis-screenplay-streams-and-consistency/references/consistency-and-concurrency.md",
+      "Hash": "9088FC5C846EAB96D03890C6CD1D7FED97D9F60C96AC75CC6EAA022D9A519BBB"
+    },
+    {
+      "Source": "skills/cratis-screenplay-streams-and-consistency/references/evolution-example.md",
+      "Destination": "skills/cratis-screenplay-streams-and-consistency/references/evolution-example.md",
+      "Hash": "CE85CE1DEF0FFAEE675F1480DCFF68D0A92962D6AE84CE0687CFC4A956D8A46F"
+    },
+    {
+      "Source": "skills/cratis-screenplay-streams-and-consistency/references/evolution.md",
+      "Destination": "skills/cratis-screenplay-streams-and-consistency/references/evolution.md",
+      "Hash": "06266F55C470A1A8859319F36F674BCE03C8AE6F8EC6F460685C91107CF3CFD6"
+    },
+    {
+      "Source": "skills/cratis-screenplay-streams-and-consistency/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-streams-and-consistency/references/provenance.md",
+      "Hash": "C651C3617E154A4A12BB7BAEE6F2685D362663FEFC945A6D0A15364BD5A5A9D1"
+    },
+    {
+      "Source": "skills/cratis-screenplay-streams-and-consistency/references/stream-patterns.md",
+      "Destination": "skills/cratis-screenplay-streams-and-consistency/references/stream-patterns.md",
+      "Hash": "389B39E44E99769A27C55D0F53DF9DD1BFA1A74FA7629C06725D2AFA69992200"
+    },
+    {
+      "Source": "skills/cratis-screenplay-streams-and-consistency/references/streams-example.md",
+      "Destination": "skills/cratis-screenplay-streams-and-consistency/references/streams-example.md",
+      "Hash": "A34ADDC5C3C391293A2E13DA580D52312950622675BFBF7584DBB2F5318E3953"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/LICENSE",
+      "Destination": "skills/cratis-screenplay-toolchain/LICENSE",
+      "Hash": "0F7FF606C1A63835450D550B251E5939B382D9A3E1D64636E022115B741755C6"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/SKILL.md",
+      "Destination": "skills/cratis-screenplay-toolchain/SKILL.md",
+      "Hash": "2852725BDD99EB571BC31735DA574685FF4880208C018D089DD18F77D10E7E02"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/automation-translate-example.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/automation-translate-example.md",
+      "Hash": "3BAB1C90A5BA11A78138DBF43F231C5D59DE5224E81DA126A585E2FA84FA1255"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/cheat-sheet-example.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/cheat-sheet-example.md",
+      "Hash": "66F8D67207E356A4B434D97E4FEF088CAB214FA005E8B62005253E952FE991BE"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/cheat-sheet.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/cheat-sheet.md",
+      "Hash": "2D1DC69E3E488BE85FE934E3820BC9A35434EBF67B7DC54AEFE71D2CB8EAC713"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/diagnostics.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/diagnostics.md",
+      "Hash": "EA909AFABCDFC11B85C3C0A212DDD80E1F2F1C7B110E314281604D289D09E38B"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/doc-contradictions.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/doc-contradictions.md",
+      "Hash": "C6DB259ADB99A29ADF5DCF1332300CA4933CFAF99F30C4970BC35EBF5180BAFC"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/executable-example.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/executable-example.md",
+      "Hash": "8B885A9F57D4AE4D6C44366919B9AA68590870A45443F2BD9DACC8C1E3519003"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/executable-subset.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/executable-subset.md",
+      "Hash": "C9C823FF44027497C6AF475364EC779ED03FA834C1728CA0DDD0AC32BAE4CBD7"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/generated-responses-example.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/generated-responses-example.md",
+      "Hash": "0D5C862C20A6353A76A67297C654AD4586C3B3618607D43D5BCA487CCB66057C"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/generation-strategies-example.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/generation-strategies-example.md",
+      "Hash": "E27059D4E5D9FCF737E328E2EC4CFB17D0F12D1B89D5C96A676EA12304DE7F13"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/pdl-example.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/pdl-example.md",
+      "Hash": "355081F03B234EDCFA974064449C5FEE6D3692E6011FECE87BCDD3E45AF9C804"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/preferred-syntax.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/preferred-syntax.md",
+      "Hash": "B526F9B08B47EA0D8BF535E5AD180BB8A0250BDA358869B47173D455376D335C"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/production-routes-and-filters.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/production-routes-and-filters.md",
+      "Hash": "F9A383F0E61FBF9436BD07CAA55E1F8F6A93D7137C688F3FCDCAD31DB49DEF26"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/provenance.md",
+      "Hash": "F97BDD48DB1A6558DBFF056A2470CA6E7C454915E599F4F4CC631BBBC26756F3"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/renderable-subset.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/renderable-subset.md",
+      "Hash": "54C2D20A447EE50DBA2D2399E75E62FF4A9D0FF7C7082318E714B81AA79D252A"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/screenplay-contract-exceptions.json",
+      "Destination": "skills/cratis-screenplay-toolchain/references/screenplay-contract-exceptions.json",
+      "Hash": "52C655EF9903F165781E6902CC84630F947C0B48ECA7A791EEB09F2E8477C8CE"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/screenplay-contract.json",
+      "Destination": "skills/cratis-screenplay-toolchain/references/screenplay-contract.json",
+      "Hash": "01AF614B6F4503AD402AB6A17149BE15C11D1B1BAE3D20B071DE012F1FE889E1"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/screenplay-contract.version",
+      "Destination": "skills/cratis-screenplay-toolchain/references/screenplay-contract.version",
+      "Hash": "0AF597D8C9B46AE6ED99E3DC5ECDDE3E48E78B5771B5145F7F90DE297EE39DB5"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/sources-and-streams.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/sources-and-streams.md",
+      "Hash": "C06B82BBBAE592F76B8C9C6FC192620647EB898C68EF2D30A704EE9B752C7986"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/traps.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/traps.md",
+      "Hash": "449EFFE648437F8320A621E08A492EC0C6D7867F3695725CAD0B495CA6968E7A"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/verdicts.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/verdicts.md",
+      "Hash": "F4B477C804014D2C62DC7A0467802CB052A176339817F73439A9ACE161A3C041"
+    },
+    {
+      "Source": "skills/cratis-screenplay-toolchain/references/versions.md",
+      "Destination": "skills/cratis-screenplay-toolchain/references/versions.md",
+      "Hash": "67CEE21D3DA0108CAD4CE2D6E33C85DCC4EF48F8C89C65832336E486884ADD4B"
+    },
+    {
+      "Source": "skills/cratis-screenplay-ui-composition/LICENSE",
+      "Destination": "skills/cratis-screenplay-ui-composition/LICENSE",
+      "Hash": "4D40644C7C58D500B60B7E344F5A9640B441E5E8838FEE62ACFF91EFB9C3711D"
+    },
+    {
+      "Source": "skills/cratis-screenplay-ui-composition/SKILL.md",
+      "Destination": "skills/cratis-screenplay-ui-composition/SKILL.md",
+      "Hash": "B2176ED6B0032A3488C37150FA55D51830C3DED117008AA484AF1F60603534B4"
+    },
+    {
+      "Source": "skills/cratis-screenplay-ui-composition/references/flow-review.md",
+      "Destination": "skills/cratis-screenplay-ui-composition/references/flow-review.md",
+      "Hash": "314DC2F6D884470AAFA75270CF7F0269FEE51EEA7604E8AC626053915107259C"
+    },
+    {
+      "Source": "skills/cratis-screenplay-ui-composition/references/guarded-interactions.md",
+      "Destination": "skills/cratis-screenplay-ui-composition/references/guarded-interactions.md",
+      "Hash": "342A55A9D0B422F46589113906A4C3644A0153D23D4CA04EE07E7D58D1B483E9"
+    },
+    {
+      "Source": "skills/cratis-screenplay-ui-composition/references/provenance.md",
+      "Destination": "skills/cratis-screenplay-ui-composition/references/provenance.md",
+      "Hash": "ED0A2BD3422F1A32F877A33D8000E894C491829D581D9C7CBA4769977E8A79DA"
+    },
+    {
+      "Source": "skills/cratis-screenplay-ui-composition/references/response-continuations.md",
+      "Destination": "skills/cratis-screenplay-ui-composition/references/response-continuations.md",
+      "Hash": "0C8620ABA8D4D53CD557ECE2222470D36DB43EEF7601D2468A42D95FA02F428A"
+    },
+    {
+      "Source": "skills/cratis-screenplay-ui-composition/references/screen-composition-contract.md",
+      "Destination": "skills/cratis-screenplay-ui-composition/references/screen-composition-contract.md",
+      "Hash": "8C57550CB87016D0F65DA3592963D29BC03A9C27C598A6AE7F15CA09BA3524BE"
+    },
+    {
+      "Source": "skills/cratis-screenplay-ui-composition/references/worked-flow.md",
+      "Destination": "skills/cratis-screenplay-ui-composition/references/worked-flow.md",
+      "Hash": "97D2362653EB4AA32BB053D8CCBA917B0A89A8329CA19ADA16716CB6DDA07FF2"
     },
     {
       "Source": "skills/cratis-specification-by-example/LICENSE",
@@ -1374,7 +2964,7 @@
     {
       "Source": "skills/cratis-specification-by-example/SKILL.md",
       "Destination": "skills/cratis-specification-by-example/SKILL.md",
-      "Hash": "4AFDEE5AB2F9CE8380134C21CD1C980D0EC843730A26679989AFB6B313F578E4"
+      "Hash": "D01BCF4517FDB8FDB8A5B500A6A1F6854D68C8162B6605BD2C346E78A88B7AAD"
     },
     {
       "Source": "skills/cratis-specifications-csharp/LICENSE",
@@ -1384,22 +2974,27 @@
     {
       "Source": "skills/cratis-specifications-csharp/SKILL.md",
       "Destination": "skills/cratis-specifications-csharp/SKILL.md",
-      "Hash": "0FB6835E11AADADA77C3FFFDD04A94A4FC5CCAB2DFE32C0D6783C208061F39F0"
+      "Hash": "D0DF53713E55F705C6632C7753C2F82F4837FA9376DFEC271603868819775668"
     },
     {
       "Source": "skills/cratis-specifications-csharp/references/application-scenarios.md",
       "Destination": "skills/cratis-specifications-csharp/references/application-scenarios.md",
-      "Hash": "350D27525523097373F9855212D5860156A935FF4BD56CB3F9DB3161FF779397"
+      "Hash": "8089CB8C8263E988AD826DBD537E0BABACFE9ED19979E6C501D3982DB5351E97"
     },
     {
       "Source": "skills/cratis-specifications-csharp/references/csharp-patterns.md",
       "Destination": "skills/cratis-specifications-csharp/references/csharp-patterns.md",
-      "Hash": "25808A8A154409153D42C8B8B5C397725888EDFF9A795244BD0707F310288BC8"
+      "Hash": "E111E25E995CB3764753F17A9BF7332699869CAF475E10D1D5789A0FE7A95C4F"
     },
     {
       "Source": "skills/cratis-specifications-csharp/references/integration-specs.md",
       "Destination": "skills/cratis-specifications-csharp/references/integration-specs.md",
-      "Hash": "C92B4F87338B05187FF021A592E0662F746983DB1D1D29E65750A0EA1A980261"
+      "Hash": "A90E4AC3AC4FE47FE64E2C378EF83B03B30C997EC6B8FC022F4B783FE68BB3DB"
+    },
+    {
+      "Source": "skills/cratis-specifications-csharp/references/shared-lifecycle.md",
+      "Destination": "skills/cratis-specifications-csharp/references/shared-lifecycle.md",
+      "Hash": "C79F08D1DBCDD2279C2EB69D05929AB61A035E546574EE9CE7CC679D12C4C107"
     },
     {
       "Source": "skills/cratis-specifications-typescript/LICENSE",
@@ -1409,12 +3004,12 @@
     {
       "Source": "skills/cratis-specifications-typescript/SKILL.md",
       "Destination": "skills/cratis-specifications-typescript/SKILL.md",
-      "Hash": "0CFF3CBA9FD0FA7B6CB347BCA99F912D375F1D7E34F61FA8C4B70EB6B59637E3"
+      "Hash": "A43EDB76B52889EBBEEB6182391ADFCC8BCCD8FAD8533B49D6EE4A7FF2E8975E"
     },
     {
       "Source": "skills/cratis-specifications-typescript/references/typescript-patterns.md",
       "Destination": "skills/cratis-specifications-typescript/references/typescript-patterns.md",
-      "Hash": "4FE2EB4BBB8AAA275CE8483611341B3D2F609BD36E5CC102A9F3F9BAB0D54329"
+      "Hash": "2CDFA1B3A6F09CFCA0CD45327360AB1BC46ED107EDA0A51DBDB602964061A171"
     },
     {
       "Source": "skills/cratis-technical-examples/LICENSE",
@@ -1434,12 +3029,12 @@
     {
       "Source": "skills/cratis-writing-voice-and-cadence/SKILL.md",
       "Destination": "skills/cratis-writing-voice-and-cadence/SKILL.md",
-      "Hash": "660C77FD36C5E048E8B59D0AB6A4073E6DCBDFD625251C5366589A4FFDB72F54"
+      "Hash": "516D8AE498A02BDBCDDFB673F0C42AF36662FC13F56393E317F75BC5A7D0E7A2"
     },
     {
       "Source": "skills/cratis-writing-voice-and-cadence/references/ai-tells.md",
       "Destination": "skills/cratis-writing-voice-and-cadence/references/ai-tells.md",
-      "Hash": "E5D1B2B3E22DB764B9F77706234F54F179C8DAE7BCE6EB8F4F6D0A19E0A6E290"
+      "Hash": "0B293AE91C2E4F7A6B0E37BAC7A39B6379AE4467C8A914A8881F2DCBD1CBEAD5"
     }
   ],
   "Integrations": [
@@ -1823,7 +3418,7 @@
     },
     {
       "Path": ".github/instructions",
-      "Target": "../.cratis/ai/rules",
+      "Target": "../.cratis/ai/harnesses/copilot/instructions",
       "IsDirectory": true,
       "PreserveExisting": false
     },
@@ -2098,7 +3693,95 @@
       "PreserveExisting": true
     }
   ],
-  "McpServers": [],
+  "McpServers": [
+    {
+      "Harness": "claude",
+      "Path": ".mcp.json",
+      "Collection": "mcpServers",
+      "Id": "screenplay",
+      "Installed": {
+        "type": "stdio",
+        "command": "cratis",
+        "args": [
+          "screenplay",
+          "mcp",
+          "--project-root-env",
+          "CLAUDE_PROJECT_DIR"
+        ]
+      },
+      "Preimage": null
+    },
+    {
+      "Harness": "codex",
+      "Path": ".codex/config.toml",
+      "Collection": "mcp_servers",
+      "Id": "screenplay",
+      "Installed": {
+        "command": "cratis",
+        "args": [
+          "screenplay",
+          "mcp",
+          "--project-root",
+          "."
+        ]
+      },
+      "Preimage": null
+    },
+    {
+      "Harness": "copilot",
+      "Path": ".vscode/mcp.json",
+      "Collection": "servers",
+      "Id": "screenplay",
+      "Installed": {
+        "type": "stdio",
+        "command": "cratis",
+        "args": [
+          "screenplay",
+          "mcp",
+          "--project-root",
+          "${workspaceFolder}"
+        ]
+      },
+      "Preimage": null
+    },
+    {
+      "Harness": "cursor",
+      "Path": ".cursor/mcp.json",
+      "Collection": "mcpServers",
+      "Id": "screenplay",
+      "Installed": {
+        "type": "stdio",
+        "command": "cratis",
+        "args": [
+          "screenplay",
+          "mcp",
+          "--project-root",
+          "${workspaceFolder}"
+        ]
+      },
+      "Preimage": null
+    },
+    {
+      "Harness": "opencode",
+      "Path": "opencode.json",
+      "Collection": "mcp",
+      "Id": "screenplay",
+      "Installed": {
+        "type": "local",
+        "command": [
+          "cratis",
+          "screenplay",
+          "mcp",
+          "--project-root",
+          "."
+        ],
+        "enabled": true
+      },
+      "Preimage": null
+    }
+  ],
   "UnsupportedMcpServers": [],
-  "McpExtensions": []
+  "McpExtensions": [
+    "pi/screenplay"
+  ]
 }

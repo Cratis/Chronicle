@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-command-execution
-description: Execute an existing Cratis Arc command from backend code through ICommandPipeline — the scopeless and scoped overloads, the typed Execute<TResult>, the pre-flight Validate, validation severity filtering, and how to read CommandResult. Use when a reactor, background job, scheduled task, or backend service must run a command without an HTTP request. Do not use to define a command.
+description: Execute an existing Cratis Arc command from backend code through ICommandPipeline — the scopeless and scoped overloads, the typed generic Execute, the pre-flight Validate, validation severity filtering, and how to read CommandResult. Use when a reactor, background job, scheduled task, or backend service must run a command without an HTTP request. Do not use to define a command.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-command-execution/SKILL.md -->
@@ -17,14 +17,16 @@ recovery; calling `Handle()` directly only returns their declarations.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Core` | `22.16.0` | `Cratis.Arc.Commands.ICommandPipeline`, `CommandResult`, `ValidationResultSeverity` |
-| `Cratis.Arc.Chronicle` | `22.16.0` | analyzer `ARCCHR0006` for reactor replay |
+| `Cratis.Arc.Core` | `22.75.0` | `Cratis.Arc.Commands.ICommandPipeline`, `CommandResult`, `ValidationResultSeverity` |
+| `Cratis.Arc.Chronicle` | `22.75.0` | analyzer `ARCCHR0006` for reactor replay |
 
-> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
+> Arc execution/severity and returned-reactor effects rechecked at v22.75.0.
+> Arc's Chronicle dependency is 19.39.1; older source-pinned transaction/operation
+> sections below remain explicitly version-qualified.
 
 Reverify before claiming support for another version. Operation execution,
 nesting restrictions, and backend recovery members below are verified at
-**Arc v22.48.1**; see `cratis-arc-command-operation` for sources and limits.
+**Arc v22.75.0**; see `cratis-arc-command-operation` for sources and limits.
 
 ## When this is the wrong tool
 
@@ -44,12 +46,17 @@ it records a failed compensator. Compose operation declarations instead.
 ## Inject and execute
 
 > **Reactors have a declarative alternative.** With the Arc Chronicle integration a
-> reactor handler can **return** the `[Command]` (or a collection of commands) and
-> Arc executes it; a denied or invalid result fails the partition instead of being
+> reactor handler can **return** the `[Command]` or a stable collection mixing
+> commands, registered events and `EventForEventSourceId`. At v22.75.0 events
+> append first; append rejection stops all commands, and the first failed command
+> stops the rest. Earlier effects stay committed, so retries need idempotency.
+> A denied or invalid result fails the partition instead of being
 > discarded, and `[ExecuteCommandsAsSystem]` on the reactor class supplies a
 > principal for those returned commands. That attribute does **not** cover manual
 > `Execute` calls — the form below needs its own execution context. See the
-> **cratis-chronicle-reactor** skill.
+> **cratis-chronicle-reactor** skill. `[ExecuteCommandsAsSystem]` no longer leaks
+> the system actor into the caller (fixed in 22.72.0). A reactor may also return
+> `CompleteStream` directly; it cannot mix completion with events in a collection.
 
 ```csharp
 public class <Name>Reactor(ICommandPipeline pipeline) : IReactor
@@ -139,8 +146,11 @@ Both `Execute` and `Validate` take an optional
 `ValidationResultSeverity? allowedSeverity` from `Cratis.Arc.Validation`. The
 levels are `Unknown = 0`, `Information = 1`, `Warning = 2`, `Error = 3`.
 
-- With no `allowedSeverity`, **only `Error` blocks**, and information and
-  warnings are filtered off the result entirely — they never reach the caller.
+- With no `allowedSeverity`, **only `Error` blocks** for an unannotated command,
+  and information/warnings are filtered off. An attributed command uses
+  `[BlockOnValidationSeverity(...)]` as its inclusive blocking floor; `Unknown`
+  also blocks. Caller thresholds can tighten, never loosen, that floor.
+  Source at Arc v22.75.0: `Arc.Core/Commands/CommandValidationResults.cs`.
 - With an `allowedSeverity`, anything **strictly greater** blocks. Passing
   `Warning` lets warnings through onto the result while errors still block.
 
@@ -216,7 +226,7 @@ mis-marking it to silence the warning.
 - Adding or changing a rule: the Arc command validation guidance.
 - Designing what a reactor should observe: the Chronicle reactor guidance.
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
   `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
   output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
   `cratis-screenplay-modeling-lifecycle`): change the model first with

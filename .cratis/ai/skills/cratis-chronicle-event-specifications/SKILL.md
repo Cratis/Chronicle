@@ -15,10 +15,11 @@ application's constraints discovered and active.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle.Testing` | `18.3.0` | `EventScenario`, its `Given`/`When` builders, the `IAppendResult` `Should*` assertions |
-| `Cratis.Chronicle` | `18.3.0` | `IEventSequence.Append`/`AppendMany`, `IAppendResult`, `ConstraintViolation` |
+| `Cratis.Chronicle.Testing` | `19.50.1` | `EventScenario`, its `Given`/`When` builders, the `IAppendResult` `Should*` assertions |
+| `Cratis.Chronicle` | `19.50.1` | `IEventSequence.Append`/`AppendMany`, `IAppendResult`, `ConstraintViolation` |
 
-> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
+Sources: `Source/Clients/Testing/EventSequences/`, `TestingEventStore.cs`,
+and `Source/Clients/DotNET/EventSequences/` at **v19.50.0**.
 
 ```bash
 dotnet add package Cratis.Chronicle.Testing
@@ -70,6 +71,16 @@ store, the `default` namespace, and **auto-discovers the constraints** declared
 in the loaded assemblies — which is what makes a constraint specification work
 without wiring. Pass an `ICanProvideConstraints` to the single-argument
 constructor when the specification needs a narrower set.
+
+At v19.50.0 it implements `IDisposable`: dispose in `Destroy()`.
+`new EventScenario(sequenceId, eventStore, @namespace)` selects identifiers;
+constructors also accept per-run `Defaults`. One scenario shares production
+in-memory storage across its sequences and uses the kernel append grain,
+serialization, migrations and compliance. Older-generation appends migrate;
+undiscovered schemas fail with `EventSchemaNotDiscovered`. Appends to one
+sequence serialize, so racing claims of the same unique value cannot both win.
+Seeding can specify source/stream routing through the `ForEventSource`,
+`For<TEvent>` and `ForEvents` overloads.
 
 ## Step 2 — Seed prior state through `Given`
 
@@ -148,12 +159,14 @@ scenario and the second passes vacuously.
 The constraint name parameter is a `ConstraintName`, which converts implicitly
 from `string`, so a literal compiles. Prefer a shared constant
 (`<Module>ConstraintNames.UniqueX`) so a rename moves both sides at once.
-**Assert the name, never the message.**
+**Assert the name by default.** Assert exact message text only when that wording
+is the specified behavior, and name that behavior in the fact.
 
 ## Step 5 — Write the specification
 
-Specification files live in the slice folder, wrapped in `#if DEBUG … #endif` so
-specification code ships only in Debug.
+Specification files live in the slice folder. Wrap them in `#if DEBUG … #endif`
+only when they compile into the application assembly, so specification code
+ships only in Debug. Dedicated spec projects need no wrapper.
 
 ```csharp
 #if DEBUG
@@ -194,8 +207,10 @@ assert the value can be claimed again.
 - **`ShouldHaveConstraintViolationFor` fails with an empty violation list on a
   batch append.** `When…Events` short-circuits, so the conflict may be on an
   event the append never reached.
-- **A concurrency specification is always green.** It is vacuous — the scenario
-  disables the check. Delete it or move it out-of-process.
+- **A concurrency specification is always green.** Without an explicit checked
+  scope, the default client strategy answers `ConcurrencyScope.None` and proves
+  nothing. The kernel validator is present; explicit-scope violations have not
+  been proven end to end here. Prove the application's strategy with integration.
 - **The specification passes alone and fails in the suite.** A hard-coded unique
   value collided with another specification's claim.
 
