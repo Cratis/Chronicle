@@ -12,7 +12,8 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 /// </summary>
 /// <param name="options">The <see cref="ConcurrencyOptions"/> containing the concurrency configuration.</param>
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/> to resolve the concurrency strategy.</param>
-public class ConcurrencyScopeStrategies(ConcurrencyOptions options, IServiceProvider serviceProvider) : IConcurrencyScopeStrategies
+/// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> for explicit append scope diagnostics.</param>
+public class ConcurrencyScopeStrategies(ConcurrencyOptions options, IServiceProvider serviceProvider, ILoggerFactory? loggerFactory = null) : IConcurrencyScopeStrategies
 {
     /// <inheritdoc/>
     public ConcurrencyOptions Options => options;
@@ -20,7 +21,11 @@ public class ConcurrencyScopeStrategies(ConcurrencyOptions options, IServiceProv
     /// <summary>
     /// Gets the logger for explicit append scope diagnostics.
     /// </summary>
-    internal ILogger<EventSequence> Logger => serviceProvider.GetService<ILogger<EventSequence>>() ?? NullLogger<EventSequence>.Instance;
+    /// <remarks>
+    /// The logger comes from the client's <see cref="ILoggerFactory"/>, never from the service provider: the client's
+    /// default service provider activates unregistered types and cannot create an interface such as <see cref="ILogger{T}"/>.
+    /// </remarks>
+    internal ILogger<EventSequence> Logger { get; } = loggerFactory?.CreateLogger<EventSequence>() ?? NullLogger<EventSequence>.Instance;
 
     /// <inheritdoc/>
     public IConcurrencyScopeStrategy GetFor(IEventSequence eventSequence) =>
