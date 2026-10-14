@@ -5,6 +5,10 @@ description: Short answers about making write-side rules hold with the Chronicle
 
 Use this page for a quick answer. Each answer links to the page that explains it.
 
+## Is Chronicle a DCB event store?
+
+No. Chronicle supports DCB-style decision models and append conditions within its event-source model. Each event has one event source ID and tags take no part in consistency, so you cannot tag one event with several entities or query by tags. See [Dynamic Consistency Boundary in Chronicle](./chronicle.md) and [DCB examples in Chronicle](./dcb-examples.mdx).
+
 ## Does reading a read model before I append make my rule safe?
 
 No. A read model shows state. It does not note where in the log it stopped, and it does not guard the append. Two requests can read the same state and both append. Use a [constraint](../constraints/index.md) for uniqueness and a [decision read](../read-models/decision-reads.mdx) for a rule over state. See [Choosing how a rule holds](./choosing.mdx).
@@ -31,7 +35,11 @@ Yes. Take one decision read per entity, and append one event per event source in
 
 ## Why does a fact about two entities need two events?
 
-An event has exactly one event source ID, and a decision read folds only the events of its own source. To let both entities' read models see the fact, write it once for each.
+An event has exactly one event source ID, and a decision read folds only the events of its own source. To let both entities' read models see the fact, write it once for each. This records one fact as two events, which DCB avoids with tags. It is acceptable when each event is a fact in its own entity's story, and the two events need their own types, so each read model counts only its own source's events. When it is not, prefer a form with one event: a constraint, or one event on one source with a decision read over the key you only read. See [DCB examples in Chronicle](./dcb-examples.mdx).
+
+## Where do event source definitions fit?
+
+A definition names the event source type, the streams and the concurrency dimensions an append is guarded by. A decision read can be scoped to one stream, and appending through the definition makes the event carry the same values as the guard. See [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx).
 
 ## Does an absent read model get guarded?
 

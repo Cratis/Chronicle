@@ -102,5 +102,9 @@
   href: CHR0053.mdx
 - name: CHR0054 - Reactor method has an unsupported return type
   href: CHR0054.mdx
+- name: CHR0055 - Typed event source filter names an undeclared stream
+  href: CHR0055.mdx
+- name: CHR0056 - Explicit routing contradicts a typed event source filter
+  href: CHR0056.mdx
 - name: CHR0057 - An artifact must target one read model
   href: CHR0057.mdx

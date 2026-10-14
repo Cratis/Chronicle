@@ -1,0 +1,35 @@
+---
+title: "CHR0055: Unknown event stream on typed event source filter"
+description: "CHR0055 reports a [FromEventSource<TSource>] filter that names a stream the event source definition does not declare."
+---
+
+## Rule description
+
+`[FromEventSource<TSource>("stream")]` makes a reactor or reducer handle only the events of one stream of an event source definition. The stream name must be one that `TSource` declares with `[EventStream]`. If it is not, the client throws `EventStreamDoesNotBelongToEventSource` when it registers the observer, so the application fails at start up.
+
+CHR0055 reports the same mistake when you compile. The names are compared exactly, including the casing.
+
+## Severity
+
+Error
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0055/violation" variants="csharp" />
+
+## How to fix
+
+Use the name of a declared stream, or declare the stream on the definition.
+
+<ChronicleClientTabs snippet="code-analysis/chr0055/fix" variants="csharp" />
+
+## Why this rule exists
+
+The stream name is a string in an attribute argument, so the compiler cannot check it. Without the rule a typo ships and surfaces as a crash at start up. The rule moves the failure to the line that has the typo.
+
+## Related topics
+
+- [Filter observers by event source and stream](../event-sources/filtering.mdx)
+- [Define an event source](../event-sources/defining.mdx)
+- [CHR0056](CHR0056.mdx): explicit routing contradicts a typed event source filter.
+- [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md): streams are one of the dimensions a decision's guard can narrow to.
