@@ -73,8 +73,9 @@ public static class MongoDBContainerStartExtensions
         {
             await container.StartAsync(timeout.Token);
         }
-        catch (OperationCanceledException ex) when (timeout.IsCancellationRequested)
+        catch (Exception ex) when (timeout.IsCancellationRequested && ex is OperationCanceledException or TimeoutException)
         {
+            // Testcontainers reports a wait cancelled by the token as a TimeoutException, a cancelled request as an OperationCanceledException.
             throw new MongoDBContainerStartTimedOut(startDeadline, await ReadLogTail(container), ex);
         }
         catch (Exception ex) when (ex.Message.Contains(KernelIncompatibilityMarker, StringComparison.OrdinalIgnoreCase))
