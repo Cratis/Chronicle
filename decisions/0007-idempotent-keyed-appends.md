@@ -78,8 +78,8 @@ Compliance runs on the append path. `MakeEventCompliant` (`EventSequence.cs:1063
 - `[PII]` values are encrypted under a per-subject key (`PIICompliancePropertyValueHandler.cs:48-57`).
 - `[Encrypted]` values are encrypted under subject, namespace or global keys in a separate identifier space that has no erasure path (`EncryptedValueKeyIdentifiers.cs:10-33`, `EncryptedSubjectValueHandler.cs:19-26`, `PIIManager.cs:91-100`).
 - Encryption is randomized. Every value gets a fresh AES-256-GCM data key and nonce (`Source/Kernel/Core/Compliance/Encryption.cs:45-67`, data key `:50`, nonce `:53`), and the data key is wrapped with RSA-OAEP under the public half of the key (`:33, 107-114`).
-- Keys are read without their revision. `TryGetFor` returns only the `EncryptionKey` (`IEncryptionKeyStorage.cs:82-89`), and the append path gets its key from `EnsureKeyFor` (`PIICompliancePropertyValueHandler.cs:56`).
-- Key reads are cached. `CacheEncryptionKeyStorage` remembers an absence for 5 seconds (`CacheEncryptionKeyStorage.cs:59, 171-174, 194`) and clears it only on the silo that changed the key (`:118-125`). Erasure state is never cached (`:94-95`).
+- Keys are read without their revision. `TryGetFor` returns only the `EncryptionKey` (`IEncryptionKeyStorage.cs:82-89`), `GetOrAddFor` returns only the key, and the append path gets its key from `EnsureKeyFor`, which also returns only the key (`PIICompliancePropertyValueHandler.cs:56`; `ManagedEncryptionKeyProvisioner.cs:30-49`).
+- Key reads are cached. `CacheEncryptionKeyStorage` remembers an absence for 5 seconds (`CacheEncryptionKeyStorage.cs:59, 171-174, 194`). An absence is cleared cluster-wide on erasure and on `AllowNewKeyFor` (`PIIManager.cs:57, 80`; `EncryptionKeyCacheGrainService.cs:29-37`). Provisioning clears it only on the provisioning silo (`CacheEncryptionKeyStorage.cs:128-155`), so another silo can remember an absence for up to 5 seconds after a new lifecycle's key exists. Erasure state is never cached (`:94-95`). `IEvictEncryptionKeyCache.EvictFromCache` evicts one identifier from the local cache, on the cache store and on the composite store (`CacheEncryptionKeyStorage.cs:90`, `CompositeEncryptionKeyStorage.cs:275-283`).
 - Crypto-shredding first records an erasure fence, then deletes the key material (`PIIManager.cs:50-51`). The fence holds `ErasedThrough`, the highest revision erased, and `ErasedKeyFingerprints`, the public fingerprints of the destroyed keys (`EncryptionKeyErasure.cs:27-33`; `EncryptionKey.cs:18-26`). Its floor is at least `Initial` even when no key was present (`EncryptionKeyErasure.cs:53-64`). After that, provisioning a key for the subject throws until a new lifecycle is explicitly allowed, and the new key is minted above the floor (`IEncryptionKeyStorage.cs:41, 53-56, 153-170`).
 - By default the keys are stored in the kernel's own database (`Storage.MongoDB/Encryption/EncryptionKeyStorage.cs:20`). The Azure Key Vault store deletes keys with `StartDeleteSecretAsync` and never purges them (`Storage.AzureKeyVault/AzureKeyVaultEncryptionKeyStorage.cs:323-334`).
 
@@ -111,6 +111,9 @@ Built-in reactor side-effect handlers key every returned event by delivery and p
 - The caller computes the key; the kernel never derives one. A key is scoped to one event store, namespace and event sequence, which is where the index lives.
 - Reactor keys have two derivations, so a handler-chosen key never collides with a built-in one. Both are a length-prefixed SHA-256 over: reactor, event store, namespace, observed sequence, partition, triggering sequence number, effect epoch, a kind and an effect. This is the same encoding as `PublicationIdentity` (`Source/Kernel/Core/Sinks/PublicationIdentity.cs:31-40`), so it does not inherit `DeliveryId`'s `#` ambiguity.
   - **Built-in handlers** use the kind `returned`, and the effect is the zero-based position of the event in the value the handler returned. This derivation is internal to the handlers.
+    - The handlers carry the key through the overload they can already use, `AppendMany(IEnumerable<EventForEventSourceId>, ..., concurrencyScopes)` (`IEventSequence.cs:267-271`). `EventsResultHandler` (`EventsResultHandler.cs:62-68`) converts each returned event to an `EventForEventSourceId` carrying the context's stream type, stream id, source type and subject, plus its derived key.
+    - `EventsWithConcurrencyScopesResultHandler` (`:29-31`) already holds `EventForEventSourceId` items. It sets the derived key on those without one and passes its scopes unchanged to the same overload.
+    - `EventResultHandler` (`EventResultHandler.cs:54-60`) calls `AppendOnce` with the derived key and the same context values.
   - **Handler-chosen keys** come from `ReactorDelivery.IdempotencyKeyFor(string effect)`, with the kind `named` and a non-empty effect name the handler chooses. A handler uses it for `AppendOnce` calls and for keys it sets on an `EventForEventSourceId` itself.
 - **Precedence.** A key the handler set on a returned `EventForEventSourceId` wins over the derived one, and the built-in handler sends it unchanged. If the connected kernel lacks the capability, such an event fails the partition with `IdempotentAppendsNotSupported`; the key is never dropped.
 - **Effect epoch.** `ReactorAttribute` (`Source/Clients/DotNET/Reactors/ReactorAttribute.cs:13-30`) gains an optional third parameter, `uint effectEpoch = 0`, exposed as `EffectEpoch`: `[Reactor("stable-id", effectEpoch: 1)]`.
@@ -142,7 +145,7 @@ Built-in reactor side-effect handlers key every returned event by delivery and p
     - existing calls such as `Append(id, @event, null)` and `AppendMany(id, events, default)` bind to the `EventStreamType?` parameter today (`IEventSequence.cs:215-225, 244-254`);
     - a second reference-typed third parameter would make those calls ambiguous;
     - a compilation spec covers those existing `null` and `default` call shapes.
-  - The batch form expands the key per event to `key.ForIndex(i)`.
+  - The batch form expands the key per event to `key.ForIndex(i)`. `ForIndex(i)` is the length-prefixed SHA-256 of (key, `batch`, i), in the encoding of `PublicationIdentity`, so it never collides with a caller key and is always 64 characters, whatever the length of the caller's key.
   - These are default interface members that throw `IdempotentAppendsNotSupported`, following the `AppendPrepared` pattern (`IEventSequence.cs:67-77`).
   - Client `AppendResult` and `AppendManyResult` gain `Outcome`/`Outcomes` and `IdempotencyConflicts`. Both `AlreadyAppended` outcomes count as `IsSuccess`.
   - If the connected kernel lacks the capability, a keyed append throws `IdempotentAppendsNotSupported` **before** sending, so a key is never silently ignored.
@@ -158,7 +161,7 @@ The check runs in the grain turn, before constraint, schema, compliance and conc
   3. **The unique index.** The store's unique index (MongoDB sparse unique, SQL filtered unique on the hash) or the InMemory lock lets exactly one write win. The loser's storage call reports `IdentitiesAlreadyDurable` with the winner's receipts.
   4. **A MongoDB transaction conflict.** Keyed singles take the batch path, which runs in a session transaction. In MongoDB, a unique-key collision with another *uncommitted* transaction raises `WriteConflict`, labelled `TransientTransactionError`, not `DuplicateKey`. A lookup made while the winner is still uncommitted also misses. Storage aborts and reports `TransactionConflicted` instead of rethrowing it as today (`EventSequenceStorage.cs:440-444`).
 
-  After `IdentitiesAlreadyDurable` or `TransactionConflicted`, the grain settles again and retries the events whose keys are still absent, **once**. A second `IdentitiesAlreadyDurable` or `TransactionConflicted` on that retry is not retried again. The append fails with `IdempotencyKeyUnsettled`, nothing is written, and the caller retries later; for a reactor, the partition fails and is recovered. Deterministic interleaving specs cover every point above on both the single and the batch path, and a MongoDB spec covers two concurrent keyed transactions.
+  After `IdentitiesAlreadyDurable` or `TransactionConflicted`, the grain settles again and retries the events whose keys are still absent, **once**. A second `IdentitiesAlreadyDurable` or `TransactionConflicted` on that retry is not retried again. After a second report the grain settles again without writing. Keys now durable get their section 4 outcome. Only if a key is still absent does the append fail with `IdempotencyKeyUnsettled`, with nothing written; the caller retries later, and for a reactor the partition fails and is recovered. This matters on MongoDB, where the usual sequence is a `WriteConflict` first and a duplicate key on the retry once the winner commits, and the receipt is then available. Deterministic interleaving specs cover every point above on both the single and the batch path, and a MongoDB spec covers two concurrent keyed transactions.
 - **Kernel crash between event and key.** This window does not exist: the key is part of the event document or row, and a batch is one transaction.
 - **Crash after the write but before the grain finished.** Keyed settlement does **no** side work on a hit. It returns the stored receipt and provisions no encryption key.
   - It does not reuse `ReconcileExistingPublication` (`EventSequence.Validation.cs:149-179`). That method rebuilds constraint updates from the retry's content, and without a durable ordering for claims and removals no retry can apply those safely.
@@ -201,14 +204,18 @@ The fingerprint then has two kinds of part:
   - The salt binds each part to its idempotency key. Two keyed events of the same subject with the same protected values store different parts, so a copy of the database shows no equality between events, before or after shredding. A retry carries the same key, so it recomputes the same part.
   - Each protected part is stored with a reference to its key and that key's revision. The reference is the key's public fingerprint (`EncryptionKey.cs:18-26`), the same value an erasure fence records (`EncryptionKeyErasure.cs:28`). It names key material without holding any.
   - `[PII]` values belong to the subject's PII key (identifier as in `EventSequence.cs:1065`). `[Encrypted]` values belong to their subject, namespace or global key (`EncryptedValueKeyIdentifiers.cs`).
-  - Each value handler reports where its key lives through a new `IJsonSchemaMetadataValueHandler` member. That member reads the key **with its revision** through a new `IEncryptionKeyStorage.TryGetLatestFor`, which returns the latest key and its revision together, and never provisions. Every key store implements it: MongoDB, SQL, both InMemory stores, Azure Key Vault, Vault, and the composite and cache decorators.
+  - Each value handler reports where its key lives through a new `IJsonSchemaMetadataValueHandler` member (the key identifier and protection kind), which a hit uses to read the stored revision. The latest key is read **with its revision** through a new `IEncryptionKeyStorage.TryGetLatestFor`, which returns the latest key and its revision together, and never provisions. `TryGetLatestFor` is still needed: no store exposes a revision today, and the same-read rule above is built on it. Every key store implements it: MongoDB, SQL, both InMemory stores, Azure Key Vault, Vault, and the composite and cache decorators.
+    - The cache stores the key and revision as one entry under its latest cache key, so a cached read returns a consistent pair.
+    - The composite store reads its stores in order and returns the first store's latest key with that store's revision, after its destroyed-key check and heal, which is the key its `TryGetFor` returns for the latest revision. When its stores disagree on the latest revision, the encryption and the fingerprint therefore still share the first store's key and revision. A later retry reads the stored revision with `TryGetFor`, and the stored key reference decides whether the part is verified or unverifiable.
   - Some boundaries cannot be fingerprinted: a handler that reports no key location, or a boundary under more than one protection (which `ValidateComparisonBoundary` also refuses, `JsonSchemaMetadataManager.cs:277-291`, and CHR0053 flags at compile time). A keyed append whose event type has such a boundary is refused with `IdempotencyFingerprintUnsupported` before anything is written.
 
 **Stored form.** The stored form starts with `v1:` and the plain part in hex. Next comes `;type=` with the event type id and generation, in the length-prefixed encoding of `PublicationIdentity`.
 
 - Recording the type is what lets the grain name the event type and tell a `Generation` conflict from a `Content` conflict after a redaction, which rewrites the row's own type (Context).
 - Then, for each protecting key, in the fixed order `pii`, `encrypted-subject`, `encrypted-namespace`, `encrypted-global`, it appends `;`, the kind, `:`, the key reference, `@`, the key revision, `=` and the HMAC in hex. Content without protected values stores no protected parts.
-- On a miss, the fingerprint is computed after `MakeEventCompliant`, under the key the values were just encrypted with and that key's revision. Nothing is provisioned for the fingerprint alone.
+- On a miss, the fingerprint is computed after `MakeEventCompliant`, under the key and revision that the same read supplied to the encryption. The fingerprint never makes a second key read, so no erasure or new lifecycle can land between encrypting a value and fingerprinting it. Nothing is provisioned for the fingerprint alone.
+  - The value handlers' `Apply` reports the key it used (reference and revision), taken from a revision-reporting form of `EnsureKeyFor`. That form reads with `TryGetLatestFor` and, only on an absence, provisions through a revision-reporting form of `GetOrAddFor`, which reports the revision it minted or found. The encrypted value and the fingerprint share that one key.
+  - If the values of one protection kind in the event were encrypted under different keys or revisions, because the key changed during the append, no single protected part can cover them. The append fails retryably with `IdempotencyKeyUnsettled` and nothing is written.
 - The version prefix lets a future canonicalization recompute under the stored version.
 
 **Comparison on a hit.** The grain compares in this order:
@@ -216,7 +223,7 @@ The fingerprint then has two kinds of part:
 1. The plain parts must be equal and the set of protection kinds must match. Otherwise the result is `IdempotencyKeyConflict`; the reason is `Generation` when the stored and requested event type ids are equal and the generations differ, and `Content` otherwise.
 2. For each stored protected part, the grain reads the key **at the part's stored revision** with `TryGetFor` (`IEncryptionKeyStorage.cs:89`). It never calls `EnsureKeyFor` or `GetOrAddFor`, so a hit never provisions a key.
    - **Present, with the stored reference as its fingerprint:** the grain recomputes the HMAC over the retry's values. Equal means the part is **verified**; different means `IdempotencyKeyConflict` with reason `Content`.
-   - **Absent:** the grain reads once more, past the cache. The negative cache can still remember an absence after another silo provisioned the key (Context), and the grain must not mistake that for a missing key. If the key is still absent, the grain reads the erasure fence with `GetErasureFor` (`IEncryptionKeyStorage.cs:131-132`).
+   - **Absent:** the grain evicts the identifier locally through `IEvictEncryptionKeyCache` and reads again. The negative cache can still remember an absence after another silo provisioned the key (Context), and the grain must not mistake that for a missing key. If the key is still absent, the grain reads the erasure fence with `GetErasureFor` (`IEncryptionKeyStorage.cs:131-132`).
      - The part is **erased** only if its stored reference is in `ErasedKeyFingerprints`, or its stored revision is at or below `ErasedThrough`. The revision test covers a key that was erased while it was already missing, because the fence's floor is at least `Initial` (`EncryptionKeyErasure.cs:56-57`).
      - An erasure recorded for the identifier is **not** enough on its own. After a new lifecycle (`AllowNewKeyFor`), a part written under the new key sits above the floor, and its key is not fenced.
    - **Otherwise** the part is **unverifiable**. That covers an absent key that the fence does not cover, for example a new lifecycle's key lost in a restore, and a present key with a different fingerprint.
@@ -248,9 +255,9 @@ The answer is the same whatever personal values the retry carries, so it confirm
 - Every keyed append or batch makes one indexed identity lookup before validation. Once the capability is present, that means every event a reactor returns.
 - A keyed append makes a second lookup before returning any validation failure, and after a durable-identity or transaction-conflict report (section 3).
 - On MongoDB, every keyed single append runs in a session transaction, because it takes the batch path.
-- On a miss with protected values: a `TryGetLatestFor` read, cached, plus one HKDF and one HMAC per protecting key. That puts the private key on the append path, which today needs only the public half to encrypt (`Encryption.cs:33, 107-114`).
-- On a hit with protected values: up to four cached key reads, one per protecting kind; for each absent key, a read past the cache and an uncached `GetErasureFor` (`CacheEncryptionKeyStorage.cs:94-95`).
-- A new member on the four value handlers, and `TryGetLatestFor` on every key store.
+- On a miss with protected values: no extra key read, because the encryption's own read supplies the key and revision (cached, as today), plus one HKDF and one HMAC per protecting key. That puts the private key on the append path, which today needs only the public half to encrypt (`Encryption.cs:33, 107-114`).
+- On a hit with protected values: up to four cached key reads, one per protecting kind; for each absent key, a local cache eviction, a second read and an uncached `GetErasureFor` (`CacheEncryptionKeyStorage.cs:94-95`).
+- A new member on the four value handlers, `Apply` reporting the key it used, revision-reporting forms of `EnsureKeyFor` and `GetOrAddFor`, and `TryGetLatestFor` on every key store.
 - Storage: about 250 bytes per keyed event for a reactor key, plus the extra length of a longer caller key (about 700 bytes for a 512-character key), plus about 160 bytes per protecting key. A sparse or filtered index entry comes on top.
 - A third outcome on the wire.
 - After shredding, the comparison covers only the plain part, so a retry whose personal values differ is not detected. This is by design.
@@ -278,7 +285,7 @@ The answer is the same whatever personal values the retry carries, so it confirm
 | Durable key, protecting key missing and not covered by an erasure | `IsSuccess = false`, `IdempotencyKeyUnverifiable` | no |
 | Same key twice in one request | `IsSuccess = false`, `IdempotencyKeyRepeatedInBatch` | no |
 | Event type with an unsupported protected boundary | `IsSuccess = false`, `IdempotencyFingerprintUnsupported` | no |
-| Another append with the same key still in progress after the one retry (section 3) | `IsSuccess = false`, `IdempotencyKeyUnsettled`, retryable | no |
+| A key still absent after the grain settled again (another append with the same key still in progress, section 3), or the protecting key changed during the append (section 4) | `IsSuccess = false`, `IdempotencyKeyUnsettled`, retryable | no |
 
 An `AlreadyAppended` or `AlreadyAppendedAfterErasure` outcome performs no concurrency check (`ConcurrencyCheckPerformed = false`) and no constraint validation. The event already holds its values, as `EventSequence.Validation.cs:143-148` reasons for publications. `ReactorSideEffectFailure.FromAppendResult` (`Source/Clients/DotNET/Reactors/SideEffects/ReactorSideEffectFailure.cs:74`) turns every refusal into a failed partition, and its messages (`:47-51`) carry the kernel's sentence verbatim.
 
@@ -286,10 +293,10 @@ An `AlreadyAppended` or `AlreadyAppendedAfterErasure` outcome performs no concur
 
 - Generation (ruling 4): `Idempotency key '{key}' already appended event type '{eventType}' generation {storedGeneration} at sequence number {sequenceNumber}; this append is generation {requestedGeneration}. Keyed appends are not migrated between generations. To repeat the recorded effect, append generation {storedGeneration}; for a new effect, use a new idempotency key. Nothing was written.`
 - Content: `Idempotency key '{key}' already appended event type '{eventType}' generation {storedGeneration} at sequence number {sequenceNumber} with a different event source, route or content. Nothing was written.`
-- Unverifiable: `Idempotency key '{key}' already appended event type '{eventType}' at sequence number {sequenceNumber}, but the key that protected its {pii|encrypted} values is not in key storage and no erasure covers it, so this retry cannot be compared. Nothing was written. Restore the key from a backup, or, for personal data that is meant to be gone, erase the subject; then recover the partition.` The grain says this only after it has read past the cache (section 4). Erasing records a fence even when no key is present (`EncryptionKeyErasure.cs:49-51`).
-- Unsettled: `Idempotency key '{key}' could not be settled because another append with the same key was still in progress. Nothing was written. Retry the append.`
+- Unverifiable: `Idempotency key '{key}' already appended event type '{eventType}' at sequence number {sequenceNumber}, but the key that protected its {pii|encrypted} values is not in key storage and no erasure covers it, so this retry cannot be compared. Nothing was written. Restore the key from a backup, or, for personal data that is meant to be gone, erase the subject; then recover the partition.` The grain says this only after it has evicted the identifier locally and read again (section 4). Erasing records a fence even when no key is present (`EncryptionKeyErasure.cs:49-51`).
+- Unsettled: `Idempotency key '{key}' could not be settled because another append with the same key was still in progress, or the key protecting its values changed during the append. Nothing was written. Retry the append.`
 
-**Reactor remedy sentence.** When a built-in handler receives a `Content` or `Generation` conflict, `ReactorSideEffectFailure` adds one sentence after the kernel's: `Reactor '{reactor}' produced different output for a delivery whose effects are already appended. To append the new output, raise the reactor's effect epoch with [Reactor(effectEpoch: {nextEpoch})] and recover the partition; to keep replays from running the handler again, mark it [OnceOnly].` Section 8 explains both remedies.
+**Reactor remedy sentence.** When a built-in handler receives a `Content` or `Generation` conflict, `ReactorSideEffectFailure` adds one sentence after the kernel's: `Reactor '{reactor}' produced different output for a delivery whose effects are already appended. To append the delivery's output again under a new key space, raise the reactor's effect epoch with [Reactor("{reactorId}"{, "{eventSequence}"}, effectEpoch: {nextEpoch})], keeping its id and event sequence unchanged, and recover the partition; to keep replays from running the handler again, mark it [OnceOnly].` `ReactorSideEffectFailure` writes the reactor's current id into the sentence, and its event sequence only when the attribute sets one, so that copying the attribute does not change the reactor's identity. Section 8 explains both remedies and what the epoch costs.
 
 No sentence contains a protected value. Built-in reactor keys are hashes, and caller keys and effect names must not hold personal data (section 1).
 
@@ -326,12 +333,13 @@ The key therefore survives a kernel restart for as long as the event exists, on 
   - The failed partition's messages carry the refusal sentence and the reactor remedy sentence of section 5. The reason names the key, the stored sequence number and, for a generation change, both generations.
   - A conflict is deterministic, so retries repeat it until someone changes the reactor. Treating a replay conflict as handled would drop any new effects refused in the same batch while reporting success. A specification covers a conflict alongside a new effect.
 - **Remedies for a permanent conflict.** Both are deliberate code changes, named in the failed partition's message:
-  - **Raise the reactor's effect epoch** (`[Reactor("stable-id", effectEpoch: n)]`, section 1). Every key the reactor derives changes, so when the partition is recovered it appends the new output.
-    - This starts a new key space. From then on, every replay of the reactor appends its returned events again, because no earlier key matches, unless the handler is also `[OnceOnly]`.
+  - **Raise the reactor's effect epoch** (`[Reactor("stable-id", effectEpoch: n)]`, keeping the reactor's id and event sequence as they are, section 1). Raising the epoch abandons every earlier key of the reactor. Recovery then appends the conflicting delivery's entire output, including effects already stored. Every later replayed delivery is appended again unless the handler is also `[OnceOnly]`. Any other failed partition of the reactor appends its stored effects again on recovery. Recover or clear other failed partitions before raising the epoch, and pair the epoch with `[OnceOnly]` when replay must not re-derive effects.
+    - The batch was refused whole, so if the replay produced a changed E0' beside an unchanged E1, recovery appends both E0' and E1, and E0 and E1 are already stored.
+    - The rest of the rewound range is affected immediately, not only future replays.
     - Keys a handler set on an `EventForEventSourceId` itself do not change with the epoch; the handler changes them.
   - **Mark the handler `[OnceOnly]`** (`OnceOnlyAttribute.cs:7-19`), so a replay does not run it and cannot conflict again. This decides that replays never derive the handler's effects again.
     - It does not clear a partition that has already failed. Recovering a failed partition is an ordinary delivery, not a replay (`Documentation/reactors/once-only.mdx:21-24`), so that delivery still conflicts.
-    - Raising the epoch is what clears a failed partition.
+    - Raising the epoch is what clears a failed partition, at the cost above.
 
 ### 9. Retention (resolved: life of the event)
 
@@ -376,7 +384,7 @@ Its severity is unchanged.
 - **Client-computed fingerprint.** Kotlin, TypeScript and Elixir would each have to reproduce canonical JSON exactly, and clients do not hold encryption keys. Not taken.
 - **One key per batch instead of per event.** A partially retried or reshaped batch could not be settled event by event. Not taken; the batch key is only a client convenience that expands per index.
 - **Making `DeliveryId` the key.** It is ambiguous on `#` and identifies a delivery, not an effect. Not taken.
-- **One reactor derivation for built-in and handler-chosen keys.** A handler's `IdempotencyKeyFor(0)` would collide with the first returned event. Not taken; section 1 separates them by kind.
+- **One reactor derivation for built-in and handler-chosen keys.** A handler's named effect could equal a returned index. Not taken; section 1 separates them by kind.
 - **Carrying batch keys as a new property on the existing grain method.** An old silo ignores the property and appends without deduplication. Not taken; section 2 uses new grain methods.
 - **Advertising `idempotent-appends` only when every silo supports it.** It needs cluster-wide version knowledge at connection time and still races a rolling upgrade. Not taken; new grain methods fail closed on each call.
 - **Refusing all keyed batches that contain an already-done event.** Simpler, but the issue requires that a partially retried batch is not appended again. Not taken.
@@ -403,15 +411,16 @@ Five pull requests, in order. Each lists the specs that prove it. Each new-behav
    - `and_a_non_identity_unique_index_is_violated` (SQL: not reported as an identity)
 2. **Kernel settlement and fingerprint (minor).** This PR adds:
    - `AppendFingerprint` with its plain and protected parts, and the stored form with event type, generation and key revisions;
-   - `IEncryptionKeyStorage.TryGetLatestFor` in every key store, and the read past `CacheEncryptionKeyStorage`;
-   - the key-location member on the four value handlers;
+   - `IEncryptionKeyStorage.TryGetLatestFor` in every key store, and the revision-reporting forms of `EnsureKeyFor` and `GetOrAddFor` that the encryption and the fingerprint share (the grain's cache eviction uses the existing `IEvictEncryptionKeyCache`, so no new cache API);
+   - the key-location member on the four value handlers, and `Apply` reporting the key it used;
    - the `IdempotencyKey` concept and `AppendOutcome`;
    - the grain classification, settling again, and the new grain methods;
    - the refusal sentences.
 
    Core.Specs and storage specs:
    - each key store's specs, `when_getting_the_latest_key_with_its_revision`
-   - `for_CacheEncryptionKeyStorage/when_reading_past_the_cache` (answers from the backing store while an absence is remembered)
+   - `for_CacheEncryptionKeyStorage/when_getting_the_latest_key_with_its_revision/and_the_key_is_cached` (the cached read returns the same key and revision)
+   - `for_CompositeEncryptionKeyStorage/when_getting_the_latest_key_with_its_revision/and_the_stores_disagree` (the first store's key and revision, the same key `TryGetFor` returns)
    - `for_AppendFingerprint`:
      - `when_properties_are_reordered` (equal)
      - `when_only_tags_differ` (equal)
@@ -423,11 +432,14 @@ Five pull requests, in order. Each lists the specs that prove it. Each new-behav
      - `when_two_keys_protect_the_same_values` (same subject and values, different protected parts)
      - `when_the_content_carries_metadata_without_a_handler` (fingerprinted as plain content, as append stores it)
      - `when_a_boundary_carries_two_protections` (unsupported)
+   - `for_AppendFingerprint/when_the_key_changes_during_the_append/`:
+     - `and_the_encrypting_key_was_erased_after_the_read` (the protected part is computed under the key that encrypted the value, not under a new lifecycle's key)
+     - `and_two_values_of_one_kind_get_different_keys` (`IdempotencyKeyUnsettled`, nothing written)
    - `for_AppendFingerprint/when_comparing_after_the_key_changed/`:
      - `and_the_subject_was_erased` (erased)
      - `and_the_key_was_erased_while_missing` (revision at or below the floor: erased)
      - `and_a_new_lifecycle_was_allowed` (part under the erased key: erased, not a conflict)
-     - `and_the_new_lifecycle_key_is_remembered_absent` (key A erased, part written under new-lifecycle key B, this silo's cache remembers B as absent: verified, not erased; a retry with different personal values conflicts)
+     - `and_the_new_lifecycle_key_is_remembered_absent` (key A erased, part written under new-lifecycle key B, this silo's cache remembers B as absent: the grain evicts through `IEvictEncryptionKeyCache` and reads again, so the part is verified, not erased; a retry with different personal values conflicts)
      - `and_the_new_lifecycle_key_is_lost` (unverifiable, not erased)
      - `and_the_key_was_deleted_without_an_erasure` (unverifiable)
      - `and_the_key_storage_is_unavailable` (throws)
@@ -447,7 +459,7 @@ Five pull requests, in order. Each lists the specs that prove it. Each new-behav
      - `and_another_activation_appended_it_first` (settles instead of returning the concurrency violation)
      - `and_a_sequence_slot_collides_with_the_winner_before_the_identity` (the post-renumber concurrency violation is settled, not returned)
      - `and_storage_reports_a_transaction_conflict` (settles a key that is now durable; otherwise retries once)
-     - `and_the_conflict_repeats_after_the_retry` (`IdempotencyKeyUnsettled`, nothing written)
+     - `and_the_conflict_repeats_after_the_retry` (settles again without writing: a key now durable gets its section 4 outcome; a key still absent fails with `IdempotencyKeyUnsettled`, nothing written)
      - `and_it_equals_a_publication_identity`
    - `for_EventSequence/when_appending_many_with_idempotency_keys/`:
      - `and_every_key_is_durable`
@@ -460,7 +472,7 @@ Five pull requests, in order. Each lists the specs that prove it. Each new-behav
      - `and_another_activation_wins_the_race`
      - `and_another_activation_wins_before_validation`
      - `and_a_sequence_slot_collides_with_the_winner_before_the_identity`
-     - `and_the_identities_are_durable_again_after_the_retry` (`IdempotencyKeyUnsettled`, nothing written)
+     - `and_the_identities_are_durable_again_after_the_retry` (settles again without writing: durable keys get their section 4 outcome; only a still-absent key fails with `IdempotencyKeyUnsettled`)
 3. **Wire (minor).** Add the Core artifact fields, the three-valued `AppendOutcome`, the conflict details and the five error codes. Build Core, then build Contracts again so the `.proto` files and `chronicle.desc` are regenerated from the new sources, and commit what generation produces. Add `KernelCapabilities.IdempotentAppends` and advertise it. Proven by:
    - the `wire-compatibility.yml` gates (stale check, every released minor still served);
    - validator specs for key length, and for an empty key read as no key;
@@ -468,6 +480,7 @@ Five pull requests, in order. Each lists the specs that prove it. Each new-behav
 4. **.NET client API (minor).** The concept, `AppendOnce`/`AppendManyOnce`, `EventForEventSourceId.IdempotencyKey`, outcomes and the capability guard. DotNET.Specs `for_EventSequence/when_appending_with_an_idempotency_key/`:
    - `and_the_kernel_lacks_the_capability` (throws, nothing sent)
    - `and_a_batch_key_is_given` (expanded per index)
+   - `and_a_batch_key_index_matches_a_single_key` (`AppendOnce("x:0")` and `AppendManyOnce("x")[0]` send different keys; every expanded key is 64 characters, also for a 512-character key)
    - `and_the_response_reports_already_appended`
    - `and_the_response_reports_already_appended_after_erasure` (`IsSuccess`)
    - `and_the_response_reports_a_generation_conflict` (details and sentence surfaced)
@@ -491,7 +504,12 @@ Five pull requests, in order. Each lists the specs that prove it. Each new-behav
    - `for_EventsResultHandler/when_handling/`:
      - `and_keys_are_supported` (indices 0..n-1)
      - `and_a_replayed_effect_conflicts_beside_a_new_one` (partition fails, nothing written)
-     - `and_a_replayed_effect_changed_generation` (failed partition messages contain the generation sentence and the remedy sentence)
+     - `and_a_replayed_effect_changed_generation` (failed partition messages contain the generation sentence and the remedy sentence, and the remedy contains the reactor's existing id)
+     - `and_the_returned_events_are_sent_as_keyed_events` (each is an `EventForEventSourceId` with the context's stream, source type, subject and derived key)
+   - `for_EventsWithConcurrencyScopesResultHandler/when_handling/and_concurrency_scopes_are_returned` (keys and scopes both sent)
+   - `for_ReactorSideEffectFailure/when_adding_the_remedy/`:
+     - `and_the_reactor_has_an_explicit_event_sequence` (the sentence names the id and the event sequence)
+     - `and_the_reactor_has_no_explicit_event_sequence` (the sentence names the id only)
    - `for_EventForEventSourceIdResultHandler/when_handling/`:
      - `and_keys_are_supported` (index 0)
      - `and_the_event_carries_its_own_key` (sent unchanged)
@@ -502,7 +520,7 @@ Five pull requests, in order. Each lists the specs that prove it. Each new-behav
      - `when_a_reactor_partition_fails_after_appending_its_events`: one event per effect after recovery
      - `when_the_kernel_restarts_between_attempts`: the key still settles
      - `when_the_subject_is_erased_between_attempts`: the retry settles as `AlreadyAppendedAfterErasure`, one event, no new key
-     - `when_the_effect_epoch_is_raised_after_a_replay_conflict`: the recovered partition appends the new output
+     - `when_the_effect_epoch_is_raised_after_a_replay_conflict`: the recovered partition appends the delivery's whole output again, including the unchanged effect, which the documentation states as the cost
 
    Documentation:
    - `reactors/delivery-identity.mdx`:
@@ -566,7 +584,7 @@ L0 resolved the six open questions on 2026-10-14, on behalf of woksin. The recor
 - Two keyed events of the same subject with equal personal values store different protected parts.
 - A part written under a new lifecycle's key is never reported as erased, even while a cache remembers that key as absent.
 - A protecting key that is missing without a covering erasure refuses the retry as unverifiable.
-- A replay conflict leaves a failed partition whose reason names the key, the sequence number and both remedies. Raising the effect epoch lets the recovered partition append the new output.
+- A replay conflict leaves a failed partition whose reason names the key, the sequence number and both remedies. Raising the effect epoch lets the recovered partition append its output again (spec: the unchanged effect is appended a second time, and the cost is documented).
 - A keyed call that reaches a silo without the new grain methods fails; it is never appended unkeyed.
 - A released-minor client against the new kernel, and a new client against an old kernel, both behave as they do today.
 
