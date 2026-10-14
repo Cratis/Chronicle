@@ -17,6 +17,12 @@ namespace Cratis.Chronicle.Observation;
 
 internal static partial class ObserverLogMessages
 {
+    [LoggerMessage(LogLevel.Warning, "Observer may have skipped {Count} event(s) of partition {Partition}, first at sequence number {EventSequenceNumber} ({Reason}); its position is {NextEventSequenceNumber}. This is a suspicion, not proof: investigate and consider replaying the partition")]
+    internal static partial void SuspectedSkippedEvents(this ILogger<Observer> logger, int count, Key partition, EventSequenceNumber eventSequenceNumber, SuspectedSkipReason reason, EventSequenceNumber nextEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "{Count} further suspected-skip warnings were not logged in the last {Seconds} seconds")]
+    internal static partial void SuspectedSkipWarningsSuppressed(this ILogger<Observer> logger, int count, int seconds);
+
     [LoggerMessage(LogLevel.Debug, "Retrying routing after a failed next-event lookup from {NextEventSequenceNumber}")]
     internal static partial void WatchdogRetryingEventLookup(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
 

@@ -18,6 +18,7 @@ public partial class Observer
         // or alert work, even when the shared projection definition exists elsewhere.
         await Unsubscribe();
         _isPreparingCatchup = false;
+        NotePreparationEnded();
         if (!_observerExists) return;
 
         // Desired inactivity is forward-only: reconciliation or cleanup failure never restores Active.

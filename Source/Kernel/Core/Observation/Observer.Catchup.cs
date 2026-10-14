@@ -28,6 +28,7 @@ public partial class Observer
         {
             logger.SkippingCatchUpBecauseObserverIsReplaying();
             _isPreparingCatchup = false;
+            NotePreparationEnded();
             return;
         }
 
@@ -136,11 +137,13 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.Remove(partition);
-        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+        EvaluateSuspectedSkips();
     }
 
     static EventSequenceNumber FurthestOf(EventSequenceNumber lastHandled, EventSequenceNumber lastScanned)
@@ -170,6 +173,11 @@ public partial class Observer
         {
             State = State with { NextEventSequenceNumber = lastScannedEventSequenceNumber.Next() };
         }
+
+        Skips.RoundConcluded(FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+        Skips.PreparationEnded();
+        EvaluateSuspectedSkips();
+        Skips.ClearJobReported();
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
@@ -243,12 +251,27 @@ public partial class Observer
             {
                 logger.NoCatchUpJobTookOwnership();
                 _isPreparingCatchup = false;
+                NotePreparationEnded();
                 return Task.CompletedTask;
             },
             concludedJobs: _concludedCatchUpJobs);
     }
 
     async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead = false)
+    {
+        // The completed job's partition stays owned until the decision about a successor is made.
+        var ownership = Skips.OwnershipTicket(partition);
+        try
+        {
+            await ProbeAndStartCatchupJob(partition, lastHandledEventSequenceNumber, fromStartWhenNothingRead);
+        }
+        finally
+        {
+            Skips.Release(partition, ownership);
+        }
+    }
+
+    async Task ProbeAndStartCatchupJob(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead)
     {
         if (State.RunningState == ObserverRunningState.Replaying)
         {
@@ -268,6 +291,7 @@ public partial class Observer
 
         // With no read position the partition has no known position beyond its start, so catch-up begins there.
         var fromSequenceNumber = lastHandledEventSequenceNumber.IsActualValue ? lastHandledEventSequenceNumber.Next() : EventSequenceNumber.First;
+        Skips.ProbedFrom(partition, fromSequenceNumber);
         var needCatchupResult = await NeedsCatchup(partition, fromSequenceNumber);
         await needCatchupResult.Match(
             needCatchup => needCatchup
@@ -291,6 +315,7 @@ public partial class Observer
         if (IsRetired || _removed) return;
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);
+        Skips.JobStarted(partition);
         await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes));
         await WriteStateAsync();
     }

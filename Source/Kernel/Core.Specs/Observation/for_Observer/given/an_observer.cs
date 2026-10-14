@@ -69,7 +69,7 @@ public class an_observer : Specification
     protected IEventCompliance _eventCompliance;
     protected IEventGenerationRelease _eventGenerationRelease;
     protected Observers _observersConfig;
-    protected NullLogger<Observer> _logger;
+    protected ILogger<Observer> _logger;
     protected ILoggerFactory _loggerFactory;
     protected IMeter<Observer>? _meter;
 
@@ -104,6 +104,12 @@ public class an_observer : Specification
     /// </summary>
     /// <returns>The <see cref="IMeter{T}"/> to register, or null for none.</returns>
     protected virtual IMeter<Observer>? CreateMeter() => null;
+
+    /// <summary>
+    /// Creates the logger the observer logs to. By default it is a logger that discards everything.
+    /// </summary>
+    /// <returns>The <see cref="ILogger{TCategoryName}"/> to register.</returns>
+    protected virtual ILogger<Observer> CreateLogger() => NullLogger<Observer>.Instance;
 
     async Task Establish()
     {
@@ -165,7 +171,7 @@ public class an_observer : Specification
 
         _observerServiceClient = Substitute.For<IObserverServiceClient>();
 
-        _logger = NullLogger<Observer>.Instance;
+        _logger = CreateLogger();
         _loggerFactory = Substitute.For<ILoggerFactory>();
         _loggerFactory.CreateLogger(Arg.Any<string>()).Returns(_logger);
 
