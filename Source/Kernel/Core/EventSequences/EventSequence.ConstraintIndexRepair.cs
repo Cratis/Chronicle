@@ -12,11 +12,11 @@ public partial class EventSequence
     {
         var now = ConstraintIndexTimeProvider.GetUtcNow();
         if (now < _nextConstraintRepairAttempt || (_lastAppendRepairEnded is { } ended && now - ended < TimeSpan.FromSeconds(5))) return;
-        using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(5), ConstraintIndexTimeProvider);
         try
         {
             _constraintIndexReplay ??= CreateConstraintIndexReplay();
-            var result = await _constraintIndexReplay.Continue(int.MaxValue, budget.Token);
+            var result = await _constraintIndexReplay.Continue(int.MaxValue, budget.Token).WaitAsync(budget.Token);
             foreach (var name in result.Abandoned) _abandonedConstraintIndexes.Add(name);
             foreach (var (name, failure) in result.Failed)
             {
@@ -48,7 +48,7 @@ public partial class EventSequence
             _constraintRepairFailures = 0;
             _nextConstraintRepairAttempt = default;
             UpdateConstraintIndexWatermark();
-            await WriteStateAsync();
+            await WriteStateAsync().WaitAsync(budget.Token);
             _metrics?.ConstraintIndexRepaired();
         }
         catch (Exception error)
