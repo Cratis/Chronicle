@@ -1,12 +1,12 @@
 ---
 id: 0008-repair-constraint-indexes-from-the-log
 title: Keep constraint indexes in step with the event log through a per-sequence watermark
-status: proposed
+status: accepted
 stage: none
 class: contract
 reversibility: costly
-proposed: 2026-10-14
-decider: woksin
+decided: 2026-10-14
+decider: L0 (woksin's delegation)
 applies-to:
   - Source/Kernel/Core/EventSequences/**
   - Source/Kernel/Core/Events/Constraints/**
@@ -26,7 +26,7 @@ applies-to:
 <!-- markdownlint-disable-next-line MD025 -->
 # Keep constraint indexes in step with the event log through a per-sequence watermark
 
-Proposed on 2026-10-14 for Cratis/Chronicle#4895; woksin is the intended decider, pending acceptance. This extends [Decision 0005](0005-settle-unique-constraint-claims-in-every-store.md). Decision 0007 (idempotent keyed appends) is proposed on branch `chronicle-4809-idempotent-appends` and is not on `main`. It defers its constraint gap to #4895. Statements below that mention 0007 apply only if 0007 lands.
+Accepted on 2026-10-14 by L0 on woksin's delegation for Cratis/Chronicle#4895, including the background catch-up (item 8) and closing constraints covered only from the upgrade on. This extends [Decision 0005](0005-settle-unique-constraint-claims-in-every-store.md). [Decision 0007](0007-idempotent-keyed-appends.md) (idempotent keyed appends, accepted the same day) defers its constraint gap to #4895; statements below that mention 0007 apply once it is implemented.
 
 ## Context
 
@@ -288,7 +288,7 @@ Historical closing events are therefore never applied. There is one residual: a 
 - **Queued appends.** Appends queued behind each other otherwise pay only their own turns, as today. None of them pays the repair or retry cost again:
   - a pending constraint's governed appends are refused without a store call;
   - its deferred updates are not attempted live.
-- **A smaller timeout.** An operator who lowers the response timeout below about 21 s loses this margin (open question).
+- **A smaller timeout.** An operator who lowers the response timeout below about 21 s loses this margin (#4906).
 
 **How long governed appends are refused.** A pending range of N constraint-relevant events whose fold needs S segments stays pending for about S times the time it takes to read N events, plus the time to write the differences, because every segment rereads the range.
 
@@ -328,7 +328,7 @@ Why 5: the backoff spans about 31 seconds across 5 attempts (1 + 2 + 4 + 8 + 16 
 - Counters for update failures, repairs, refused appends and poison events.
 - The lag (tail minus watermark) as a measurement.
 
-A first-class alert condition is not in this decision (open question). Alert targets are observer-shaped (`Core/Alerts/AlertTarget.cs:23-28`; `ObserverId` is wire field 3 in `Contracts/Alerts/AlertTarget.cs:32-33`), so it needs a contract change.
+A first-class alert condition is not in this decision (#4904). Alert targets are observer-shaped (`Core/Alerts/AlertTarget.cs:23-28`; `ObserverId` is wire field 3 in `Contracts/Alerts/AlertTarget.cs:32-33`), so it needs a contract change.
 
 The status quo already fails these appends when the store is down, because validation reads it. The refusal mainly adds safety for the case where writes fail while reads succeed, and for the time between recovery and repair.
 
@@ -342,7 +342,7 @@ The status quo already fails these appends when the store is down, because valid
 ### 6. Revision, redaction and changed definitions
 
 - **Revision.** `Revise` rewrites content in place and does not touch the index (`EventSequence.cs:416-450`).
-  - Below the watermark, nothing changes. This is today's behavior and out of scope here (open question).
+  - Below the watermark, nothing changes. This is today's behavior and out of scope here (#4905).
   - Within a folded range, the revised content is used, as a reindex would use it.
 - **Redaction.** Redaction replaces the event with `EventRedacted` (`ClosesStreamConstraintReindexer.cs:54`).
   - The fold treats a redacted unique event as no event, as the reindex does (`UniqueConstraintIndexUpdater.cs:46-49`).
@@ -543,7 +543,7 @@ An empty read-back after an unknown commit is not proof of absence, because a la
 - **Fail closed for good on an event that always fails.** One malformed event would refuse every append on a sequence with closures, with no way out short of a reindex. Not taken in favor of the poison rule (item 4).
 - **Existing stores: blocking fold from `First`, a forced reindex, or trusting the current index.** The first is an outage, and the second clears every scope (item 8). The third does not repair, so it breaks the requirement that existing stores repair themselves. Not taken in favor of the background catch-up.
 - **File the double-append fix separately as high priority.** Rejected (item 9).
-- **Expose retry, budget and cap numbers as configuration.** Configuration is public surface, which would make this a minor. They are kept as internal constants (open question).
+- **Expose retry, budget and cap numbers as configuration.** Configuration is public surface, which would make this a minor. They are kept as internal constants (#4906).
 
 ## Default if unanswered
 
@@ -721,11 +721,13 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
 - catching up closing constraints from history;
 - `IUniqueEventTypesConstraintsStorage`, which derives from the log and keeps no index.
 
-## Open questions
+## Resolutions
 
-- **Alert condition.** Should a sequence-level alert follow, given that alert targets are observer-shaped and the change touches the wire contract (item 4)?
-- **Revision below the watermark.** Should `Revise` move claims and closures, or should it make the affected constraints pending (item 6)?
-- **Constants.** Should the budgets, the poison threshold and the memory caps become configuration in the next minor? Should the budgets be derived from the configured response timeout rather than sized for the 30-second default (item 4)?
+L0 resolved the open questions on 2026-10-14, on behalf of woksin:
+
+- **Alert condition.** A sequence-level alert needs a wire change, because alert targets are observer-shaped. It is not part of this series; it is tracked in Cratis/Chronicle#4904.
+- **Revision below the watermark.** `Revise` moving claims and closures gets its own small design, tracked in Cratis/Chronicle#4905.
+- **Constants.** The defaults in this record stand. Making the budgets and caps configurable is low priority for a later minor, tracked in Cratis/Chronicle#4906.
 
 ## Verification
 
