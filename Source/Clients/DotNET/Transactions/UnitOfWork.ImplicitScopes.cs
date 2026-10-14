@@ -128,7 +128,7 @@ public partial class UnitOfWork
                 ThrowIfLabelIsNotSpecified(eventSourceId);
                 scope = MaterializeConcurrencyScope(scope);
                 EnsureEventSequenceCanBeUsed(eventSequenceId);
-                ValidateConcurrencyScope(eventSourceId, scope, _concurrencyScopes, resolution.Requirements);
+                ValidateConcurrencyScope(eventSequenceId, eventSourceId, scope, _concurrencyScopes, resolution.Requirements);
                 BindToEventSequence(eventSequenceId);
             }
             else
