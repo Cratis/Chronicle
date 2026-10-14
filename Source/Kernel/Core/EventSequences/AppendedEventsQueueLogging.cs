@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Microsoft.Extensions.Logging;
@@ -18,6 +19,12 @@ internal static partial class AppendedEventsQueueLogMessages
 
     [LoggerMessage(LogLevel.Error, "Failed notifying observers")]
     internal static partial void NotifyingObserversFailed(this ILogger<AppendedEventsQueue> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Dispatching {Count} event(s) {FirstEventSequenceNumber}-{LastEventSequenceNumber} of partition {Partition} to observer {ObserverKey} failed; they may not have been delivered")]
+    internal static partial void SuspectedUndeliveredEvents(this ILogger<AppendedEventsQueue> logger, int count, EventSequenceNumber firstEventSequenceNumber, EventSequenceNumber lastEventSequenceNumber, EventSourceId partition, ObserverKey observerKey);
+
+    [LoggerMessage(LogLevel.Warning, "{Count} further suspected-undelivered warnings were not logged in the last {Seconds} seconds")]
+    internal static partial void SuspectedUndeliveredWarningsSuppressed(this ILogger<AppendedEventsQueue> logger, int count, int seconds);
 
     [LoggerMessage(LogLevel.Error, "An error occurred while handling appended events in queue. Keep on processing.")]
     internal static partial void QueueHandlerFailed(this ILogger<AppendedEventsQueue> logger, Exception exception);

@@ -25,7 +25,7 @@ namespace Cratis.Chronicle.Transactions;
 /// <param name="activitySource">Optional <see cref="IActivitySource{T}"/> for tracing. Defaults to a source named <see cref="ClientActivity.SourceName"/> when not provided.</param>
 /// <param name="lifecyclePolicy">The policy for staging events once completion begins.</param>
 /// <param name="logger">Optional logger for late staging diagnostics.</param>
-public class UnitOfWork(
+public partial class UnitOfWork(
     CorrelationId correlationId,
     Action<IUnitOfWork> onCompleted,
     IEventStore eventStore,
@@ -141,6 +141,19 @@ public class UnitOfWork(
         {
             ThrowIfStagingAfterCompletion();
             var scope = concurrencyScope ?? ConcurrencyScope.NotSet;
+            var enrollment = new UnitOfWorkEnrollment(eventSequenceId, eventSourceId, scope, Array.AsReadOnly<object>([@event]));
+            var resolution = ResolveEnrollmentScopes(eventSequenceId, [enrollment]);
+            scope = resolution.Scopes[eventSourceId];
+            var stagedEvent = new EventForEventSourceId(eventSourceId, @event, causation)
+            {
+                EventStreamType = eventStreamType ?? EventStreamType.All,
+                EventStreamId = eventStreamId ?? EventStreamId.Default,
+                EventSourceType = eventSourceType ?? EventSourceType.Default,
+                Tags = tags ?? [],
+                NamedTags = NamedTagConverters.Merge([], namedTags),
+                Occurred = occurred,
+                Subject = subject
+            };
             if (_decisionScopes.Count != 0)
             {
                 ValidateLegacyEventSequenceIdsForOrderedBatch(eventSequenceId);
@@ -155,7 +168,7 @@ public class UnitOfWork(
                 ThrowIfLabelIsNotSpecified(eventSourceId);
                 scope = MaterializeConcurrencyScope(scope);
                 EnsureEventSequenceCanBeUsed(eventSequenceId);
-                ValidateConcurrencyScope(eventSourceId, scope, _concurrencyScopes);
+                ValidateConcurrencyScope(eventSourceId, scope, _concurrencyScopes, resolution.Requirements);
                 BindToEventSequence(eventSequenceId);
             }
             else
@@ -169,16 +182,7 @@ public class UnitOfWork(
                 _stagedEvents.Add(_currentLegacyEvents);
             }
 
-            _currentLegacyEvents.Add(new EventForEventSourceId(eventSourceId, @event, causation)
-            {
-                EventStreamType = eventStreamType ?? EventStreamType.All,
-                EventStreamId = eventStreamId ?? EventStreamId.Default,
-                EventSourceType = eventSourceType ?? EventSourceType.Default,
-                Tags = tags ?? [],
-                NamedTags = NamedTagConverters.Merge([], namedTags),
-                Occurred = occurred,
-                Subject = subject
-            });
+            _currentLegacyEvents.Add(stagedEvent);
             if (_hasOrderedBatch)
             {
                 EnrollStrictConcurrencyScope(eventSourceId, scope);
@@ -187,6 +191,7 @@ public class UnitOfWork(
             {
                 SetLegacyConcurrencyScope(eventSourceId, scope);
             }
+            CompleteEnrollment(resolution);
         }
     }
 
@@ -199,8 +204,20 @@ public class UnitOfWork(
         lock (_decisionLock)
         {
             ThrowIfStagingAfterCompletion();
-            var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
-            foreach (var (label, scope) in batch.ConcurrencyScopes)
+            var suppliedScopes = concurrencyScopes.Select(pair => new KeyValuePair<EventSourceId, ConcurrencyScope>(
+                pair.Key, MaterializeConcurrencyScope(pair.Value))).ToArray();
+            var batch = new EventsWithConcurrencyScopes(events, suppliedScopes.Select(pair =>
+                _requiredEnrollmentScopes.TryGetValue(pair.Key, out var required)
+                    ? new KeyValuePair<EventSourceId, ConcurrencyScope>(pair.Key, MergeRequiredScope(pair.Key, pair.Value, required))
+                    : pair));
+            var targets = batch.Events.GroupBy(_ => _.EventSourceId).ToDictionary(_ => _.Key, _ => Array.AsReadOnly(_.Select(e => e.Event).ToArray()));
+            var enrollments = targets.Keys.Union(batch.ConcurrencyScopes.Keys).Select(source => new UnitOfWorkEnrollment(
+                eventSequenceId,
+                source,
+                suppliedScopes.FirstOrDefault(_ => _.Key == source).Value ?? ConcurrencyScope.NotSet,
+                targets.TryGetValue(source, out var sourceEvents) ? sourceEvents : Array.AsReadOnly(Array.Empty<object>()))).ToArray();
+            var resolution = ResolveEnrollmentScopes(eventSequenceId, enrollments);
+            foreach (var (label, scope) in resolution.Scopes)
             {
                 if (scope != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(label))
                 {
@@ -212,20 +229,25 @@ public class UnitOfWork(
             ValidateExistingEventTargetsForOrderedBatch();
             var materializedConcurrencyScopes = MaterializeConcurrencyScopes(_concurrencyScopes);
             ValidateExistingConcurrencyScopesForOrderedBatch(materializedConcurrencyScopes);
-            ValidateConcurrencyScopes(batch.ConcurrencyScopes, materializedConcurrencyScopes);
+            foreach (var (label, scope) in resolution.Scopes)
+            {
+                ValidateConcurrencyScope(label, scope, materializedConcurrencyScopes, resolution.Requirements);
+            }
+            var stagedEvents = batch.Events.Select(_ => _ with
+            {
+                NamedTags = NamedTagConverters.Merge(_.NamedTags, [])
+            }).ToArray();
 
             BindToEventSequence(eventSequenceId);
             _concurrencyScopes = materializedConcurrencyScopes;
             _hasOrderedBatch = true;
             _currentLegacyEvents = null;
-            _stagedEvents.Add(new OrderedStagedEvents(batch.Events.Select(_ => _ with
-            {
-                NamedTags = NamedTagConverters.Merge(_.NamedTags, [])
-            }).ToArray()));
-            foreach (var (scopeLabel, concurrencyScope) in batch.ConcurrencyScopes)
+            _stagedEvents.Add(new OrderedStagedEvents(stagedEvents));
+            foreach (var (scopeLabel, concurrencyScope) in resolution.Scopes)
             {
                 EnrollStrictConcurrencyScope(scopeLabel, concurrencyScope);
             }
+            CompleteEnrollment(resolution);
         }
     }
 
@@ -234,6 +256,8 @@ public class UnitOfWork(
     {
         lock (_decisionLock)
         {
+            ThrowIfMutatedDuringEnrollment();
+            ThrowIfEnrollmentNotificationFailed();
             if (IsCompleted || _completing) throw new DecisionReadAfterCompletion();
             DecisionReadScopes.Validate(read, eventStore.Name, eventStore.Namespace, EventSequenceId.Log);
             ValidateLegacyEventSequenceIdsForOrderedBatch(EventSequenceId.Log);
@@ -276,6 +300,8 @@ public class UnitOfWork(
     {
         lock (_decisionLock)
         {
+            ThrowIfMutatedDuringEnrollment();
+            ThrowIfEnrollmentNotificationFailed();
             ThrowIfUnitOfWorkIsCompleted();
             if (_commitOwner is not null) throw new ProtectedUnitOfWorkRequiresOwner();
             return _commitOwner = new DecisionReadCommitOwner();
@@ -288,7 +314,11 @@ public class UnitOfWork(
     /// <exception cref="ProtectedUnitOfWorkRequiresOwner">A different owner attempted to complete the unit.</exception>
     public async Task CommitAsOwner(DecisionReadCommitOwner owner)
     {
-        if (!ReferenceEquals(owner, _commitOwner)) throw new ProtectedUnitOfWorkRequiresOwner();
+        lock (_decisionLock)
+        {
+            ThrowIfMutatedDuringEnrollment();
+            if (!ReferenceEquals(owner, _commitOwner)) throw new ProtectedUnitOfWorkRequiresOwner();
+        }
         await CommitCore(true);
     }
 
@@ -324,7 +354,14 @@ public class UnitOfWork(
     public Task RollbackAsOwner(DecisionReadCommitOwner owner) => RollbackCore(owner, true);
 
     /// <inheritdoc/>
-    public void OnCompleted(Action<IUnitOfWork> callback) => _onCompleted = callback;
+    public void OnCompleted(Action<IUnitOfWork> callback)
+    {
+        lock (_decisionLock)
+        {
+            ThrowIfMutatedDuringEnrollment();
+            _onCompleted = callback;
+        }
+    }
 
     /// <inheritdoc/>
     public bool TryGetLastCommittedEventSequenceNumber([NotNullWhen(true)] out EventSequenceNumber? eventSequenceNumber)
@@ -340,6 +377,7 @@ public class UnitOfWork(
     {
         lock (_decisionLock)
         {
+            ThrowIfMutatedDuringEnrollment();
             if (_completing || IsCompleted) return;
             if (_commitOwner is not null && _hasEnrolledDecisionReads) throw new ProtectedUnitOfWorkRequiresOwner();
 
@@ -388,6 +426,7 @@ public class UnitOfWork(
 
         lock (_decisionLock)
         {
+            ThrowIfMutatedDuringEnrollment();
             if (fromOwner && (_commitOwner is null || !ReferenceEquals(owner, _commitOwner))) throw new ProtectedUnitOfWorkRequiresOwner();
             ThrowIfUnitOfWorkIsCompleted();
             if (_completing)
@@ -413,7 +452,9 @@ public class UnitOfWork(
         bool protectedCommit;
         lock (_decisionLock)
         {
+            ThrowIfMutatedDuringEnrollment();
             ThrowIfUnitOfWorkIsCompleted();
+            ThrowIfEnrollmentNotificationFailed();
             if (_completing) throw new DecisionReadAfterCompletion();
             protectedCommit = _decisionScopes.Count != 0;
             if (protectedCommit && (!fromOwner || _commitOwner is null)) throw new ProtectedUnitOfWorkRequiresOwner();
@@ -475,11 +516,15 @@ public class UnitOfWork(
         _stagedEvents.Clear();
         _currentLegacyEvents = null;
         _concurrencyScopes.Clear();
+        _requiredEnrollmentScopes.Clear();
+        _enrollmentContributors.Clear();
         _appendManyResult = AppendManyResult.Success(CorrelationId.NotSet, []);
     }
 
     void ThrowIfStagingAfterCompletion()
     {
+        ThrowIfMutatedDuringEnrollment();
+        ThrowIfEnrollmentNotificationFailed();
         if (!_completing && !IsCompleted) return;
 
         if (lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict)
@@ -565,16 +610,6 @@ public class UnitOfWork(
         _eventSequenceId = eventSequenceId;
     }
 
-    void ValidateConcurrencyScopes(
-        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes,
-        IReadOnlyDictionary<EventSourceId, ConcurrencyScope> enrolledConcurrencyScopes)
-    {
-        foreach (var (scopeLabel, concurrencyScope) in concurrencyScopes)
-        {
-            ValidateConcurrencyScope(scopeLabel, concurrencyScope, enrolledConcurrencyScopes);
-        }
-    }
-
     void ValidateExistingConcurrencyScopesForOrderedBatch(IReadOnlyDictionary<EventSourceId, ConcurrencyScope> concurrencyScopes)
     {
         foreach (var (scopeLabel, concurrencyScope) in concurrencyScopes)
@@ -589,7 +624,8 @@ public class UnitOfWork(
     void ValidateConcurrencyScope(
         EventSourceId scopeLabel,
         ConcurrencyScope concurrencyScope,
-        IReadOnlyDictionary<EventSourceId, ConcurrencyScope> enrolledConcurrencyScopes)
+        Dictionary<EventSourceId, ConcurrencyScope> enrolledConcurrencyScopes,
+        IReadOnlyDictionary<EventSourceId, ConcurrencyScope>? requiredScopes = null)
     {
         if (concurrencyScope.EventSourceId is not null && concurrencyScope.EventSourceId != scopeLabel)
         {
@@ -598,6 +634,12 @@ public class UnitOfWork(
 
         if (concurrencyScope == ConcurrencyScope.NotSet || !enrolledConcurrencyScopes.TryGetValue(scopeLabel, out var enrolledScope))
         {
+            return;
+        }
+
+        if (requiredScopes?.ContainsKey(scopeLabel) == true)
+        {
+            MergeRequiredScope(scopeLabel, enrolledScope, concurrencyScope);
             return;
         }
 

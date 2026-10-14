@@ -8,7 +8,6 @@ using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Testing.Events;
-using Cratis.Execution;
 using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -52,18 +51,9 @@ public class ReactorScenario<TReactor> : IDisposable
     readonly List<Action<EventStoreForTesting>> _readModelSeeds = [];
     readonly HashSet<(Type ReadModelType, string Key)> _absentReadModels = [];
     readonly RecordingReactorSideEffectHandlers _recordingHandlers;
+    readonly ScenarioOccurrenceRecorder _occurrences;
     IServiceProvider? _serviceProvider;
     IEventStore? _eventStore;
-
-    /// <summary>
-    /// The sequence number the next seeded event is given, whether or not its route matches the reactor's filters.
-    /// </summary>
-    /// <remarks>
-    /// Every event the scenario seeds gets its own number, contiguously from the first, across every
-    /// <c language="csharp">Given</c> call. Without that, a reactor keyed on <see cref="ReactorDelivery"/> would see two distinct
-    /// events as the same delivery and skip the second - the scenario would report an idempotent reactor broken.
-    /// </remarks>
-    EventSequenceNumber _nextSequenceNumber = EventSequenceNumber.First;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReactorScenario{TReactor}"/> class.
@@ -110,6 +100,7 @@ public class ReactorScenario<TReactor> : IDisposable
             throw new InvalidExplicitArtifact(typeof(TReactor), "reactor", "A plain reactor scenario requires explicit registration in its per-run Defaults.");
         }
         _eventTypes = defaults.EventTypes;
+        _occurrences = new(_eventTypes, "testing", "default");
         _explicitServiceProvider = serviceProvider;
         _sideEffectHandlers = sideEffectHandlers;
         _explicitEventStore = eventStore;
@@ -226,6 +217,15 @@ public class ReactorScenario<TReactor> : IDisposable
         }
     }
 
+    /// <summary>
+    /// Delivers a recorded occurrence with its original context, without appending it or allocating a new sequence number.
+    /// </summary>
+    /// <param name="occurrence">The event and context to deliver.</param>
+    /// <returns>A task completing after the matching handler completes.</returns>
+    /// <exception cref="CannotActivateReactorForScenario">Thrown when the reactor's dependencies cannot be resolved.</exception>
+    /// <exception cref="ReadModelNotSeededForReactorScenario">Thrown when a read-model parameter was neither seeded nor declared absent.</exception>
+    public Task Redeliver(RecordedOccurrence occurrence) => Deliver([occurrence]);
+
     /// <inheritdoc/>
     public void Dispose()
     {
@@ -268,12 +268,32 @@ public class ReactorScenario<TReactor> : IDisposable
     /// <returns>A <see cref="Task"/> that completes when all matching events have been handled.</returns>
     /// <exception cref="CannotActivateReactorForScenario">Thrown when the reactor's dependencies cannot be resolved.</exception>
     /// <exception cref="ReadModelNotSeededForReactorScenario">Thrown when a read-model parameter was neither seeded nor declared absent.</exception>
-    internal async Task InvokeWith(
+    internal Task InvokeWith(
         EventSourceId eventSourceId,
         IEnumerable<object> events,
         EventSourceType eventSourceType,
         EventStreamType eventStreamType,
-        EventStreamId eventStreamId)
+        EventStreamId eventStreamId) =>
+        Deliver(_occurrences.Record(eventSourceId, events, eventSourceType, eventStreamType, eventStreamId));
+
+    /// <summary>
+    /// Allocates original contexts for history without invoking the reactor.
+    /// </summary>
+    /// <param name="eventSourceId">The event source identifier.</param>
+    /// <param name="events">The events to record in order.</param>
+    /// <param name="eventSourceType">The event source type.</param>
+    /// <param name="eventStreamType">The event stream type.</param>
+    /// <param name="eventStreamId">The event stream identifier.</param>
+    /// <returns>The recorded occurrences.</returns>
+    internal Task<IReadOnlyList<RecordedOccurrence>> RecordHistory(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        EventSourceType eventSourceType,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId) =>
+        Task.FromResult<IReadOnlyList<RecordedOccurrence>>(_occurrences.Record(eventSourceId, events, eventSourceType, eventStreamType, eventStreamId).ToArray());
+
+    async Task Deliver(IEnumerable<RecordedOccurrence> occurrences)
     {
         var serviceProvider = EnsureServiceProvider();
         var eventStore = EnsureEventStore(serviceProvider);
@@ -316,27 +336,15 @@ public class ReactorScenario<TReactor> : IDisposable
             RegisteredEventSequenceId = typeof(TReactor).GetEventSequenceId(_eventTypes, eventStore.Name, _sideEffectHandlers ?? _recordingHandlers)
         };
 
-        foreach (var @event in events)
+        foreach (var occurrence in occurrences)
         {
-            var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
-            var context = EventContext.From(
-                "testing",
-                "default",
-                eventType,
-                eventSourceType,
-                eventSourceId,
-                eventStreamType,
-                eventStreamId,
-                _nextSequenceNumber,
-                CorrelationId.New());
-
-            _nextSequenceNumber += 1;
+            var context = occurrence.Context;
             if (!filters.MatchesContext(context))
             {
                 continue;
             }
 
-            var result = await invoker.Invoke(@event, context);
+            var result = await invoker.Invoke(occurrence.Event, context);
 
             // A throwing reactor handler is a documented, load-bearing behavior in production - it pauses the
             // failing event-source partition so Chronicle can retry it. ReactorInvoker itself catches the

@@ -63,6 +63,18 @@ The first two givens are ignored; only the matching payment produces a side effe
 
 Every given event advances the sequence number, even if the filter skips it, matching the kernel's append-time numbering. Tag filters (`FilterEventsByTag`) are not applied: scenario givens do not carry tags. Use a kernel-backed integration specification to verify tag-based delivery.
 
+## Redeliver a recorded occurrence
+
+Use `History(...)` instead of `Events(...)` to record an event without invoking the reactor. For example, assign the result of `await scenario.Given.ForEventSource(id).History(@event)` to an occurrence, then call `await scenario.Redeliver(occurrence)` to deliver it. Call `Redeliver` again with the same occurrence to specify recovery or idempotency behavior.
+
+`History(object)` returns one `RecordedOccurrence`, containing the original event and its `EventContext`. `History(params object[])` returns an ordered `IReadOnlyList<RecordedOccurrence>`: multiple arguments, an event array, or no arguments select this overload. A single event selects the single-occurrence overload without ambiguity. Both overloads are also available on the non-generic scenario for fluent registrations.
+
+History allocates scenario-local sequence numbers, correlations, and occurrence times just like live givens. It does not append to an event store, run observers, build read models, or record produced side effects. `OnStream(...)` before `History(...)` records the source and stream route in the context. History and live givens share contiguous numbering; redelivery does not advance it.
+
+Redelivery reuses the exact recorded context, including sequence number, correlation, occurrence time, and routing. Two deliveries of that occurrence to the same reactor therefore receive equal `ReactorDelivery` values and the same delivery `Id`. Observer filters and read-model seeding or deliberate-absence rules apply as for `Events(...)`; a filtered-out occurrence invokes no handler. Handler exceptions propagate to the caller. Produced events, their destinations, and returned commands accumulate across deliveries in the existing recording lists. Fluent scenarios await the applicable callbacks with the original context; assert on their test doubles as usual.
+
+This seam tests how a reactor handles repeated delivery, not kernel retry scheduling or exactly-once external effects.
+
 ## Injecting dependencies
 
 Register the mocks and stubs the reactor depends on through the scenario's `Services` collection — the same `IServiceCollection` you use to configure an application. Logging is registered for you, so a reactor that injects `ILogger<T>` activates without any extra setup:

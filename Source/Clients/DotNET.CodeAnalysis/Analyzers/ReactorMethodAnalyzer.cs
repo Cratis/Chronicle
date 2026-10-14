@@ -27,11 +27,11 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
     static readonly DiagnosticDescriptor ReturnTypeRule = new(
         id: DiagnosticIds.ReactorMethodReturnTypeMustBeSupported,
         title: "Reactor method has an unsupported return type",
-        messageFormat: "Reactor method '{0}' has unsupported return type '{1}'. Return void, Task, an event type, EventForEventSourceId, EventsWithConcurrencyScopes, an array or IEnumerable<T> sequence of events, or a Task-wrapped side effect.",
+        messageFormat: "Reactor method '{0}' has unsupported return type '{1}'. Return void, Task, an event type, EventForEventSourceId, EventsWithConcurrencyScopes, a [ReactorSideEffect]-marked type, an array or IEnumerable<T> sequence of supported elements, or a Task-wrapped side effect.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "Chronicle discovers reactor methods returning void, Task, a registered event type, EventForEventSourceId, EventsWithConcurrencyScopes, or a one-dimensional array or IEnumerable<T> implementation of events, targeted events, or objects. Other synchronous return types may be claimed by a registered side-effect handler; the analyzer cannot verify those claims statically.");
+        description: "Chronicle discovers reactor methods returning void, Task, a registered event type, EventForEventSourceId, EventsWithConcurrencyScopes, or a one-dimensional array or IEnumerable<T> implementation of events, targeted events, or objects. Mark custom synchronous side-effect types with [ReactorSideEffect] so the analyzer accepts them and their sequences. The marker only informs the analyzer; a registered side-effect handler must still claim and process the declared return type.");
 
     static readonly DiagnosticDescriptor EventTypeRule = new(
         id: DiagnosticIds.ReactorEventParameterMustHaveAttribute,
@@ -198,7 +198,7 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
 
     static bool IsSupportedSyncSideEffectReturnType(ITypeSymbol returnType, Compilation compilation, ExplicitRegistrationEvidence evidence)
     {
-        if (evidence.IsEventType(returnType, compilation))
+        if (evidence.IsEventType(returnType, compilation) || WellKnownTypes.HasReactorSideEffectAttribute(returnType))
         {
             return true;
         }
@@ -234,5 +234,6 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
     static bool IsSupportedSequenceElement(ITypeSymbol element, INamedTypeSymbol? eventForEventSourceId, Compilation compilation, ExplicitRegistrationEvidence evidence) =>
         element.SpecialType == SpecialType.System_Object ||
         evidence.IsEventType(element, compilation) ||
+        WellKnownTypes.HasReactorSideEffectAttribute(element) ||
         (eventForEventSourceId != null && SymbolEqualityComparer.Default.Equals(element, eventForEventSourceId));
 }

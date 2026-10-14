@@ -41,10 +41,7 @@ public class and_explicit_clients_use_the_selected_kernel_transport(context setu
             using var client = OutOfProcess
                 ? new ChronicleClient(options, artifactsProvider: this)
                 : new ChronicleClient(new BorrowedConnection(EventStore.Connection), options, artifactsProvider: this);
-
-            // Kept short: PostgreSQL truncates database names to 63 bytes, which merges the store's and its namespace's databases
-            // for longer names (https://github.com/Cratis/Chronicle/issues/4849). This spec is about transport selection, not naming.
-            var store = await client.GetEventStore($"t{Guid.NewGuid():N}"[..9]);
+            var store = await client.GetEventStore($"transport-{Guid.NewGuid():N}");
             await store.DiscoverAll();
             await store.RegisterAll();
             store.Registration.IsSuccess.ShouldBeTrue();

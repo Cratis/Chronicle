@@ -23,4 +23,10 @@ public record WebhookDefinition(
     IEnumerable<EventType> EventTypes,
     WebhookTarget Target,
     bool IsReplayable = true,
-    bool IsActive = true);
+    bool IsActive = true)
+{
+    /// <summary>
+    /// Gets the policy for delivering event generations.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+}

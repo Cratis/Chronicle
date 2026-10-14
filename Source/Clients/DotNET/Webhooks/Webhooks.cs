@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Security;
 using Microsoft.Extensions.Logging;
 
@@ -53,6 +54,9 @@ public class Webhooks(IEventTypes eventTypes, IEventStore eventStore, ILogger<We
                 new Dictionary<string, string>(w.Headers)),
             new EventSequences.EventSequenceId(w.EventSequenceId),
             w.IsReplayable,
-            w.IsActive));
+            w.IsActive)
+        {
+            GenerationDelivery = (EventGenerationDelivery)w.GenerationDelivery
+        });
     }
 }

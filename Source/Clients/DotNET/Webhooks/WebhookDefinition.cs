@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Webhooks;
 
@@ -21,4 +22,10 @@ public record WebhookDefinition(
     WebhookTarget Target,
     EventSequenceId EventSequenceId,
     bool IsReplayable,
-    bool IsActive);
+    bool IsActive)
+{
+    /// <summary>
+    /// Gets the policy for delivering event generations.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+}
