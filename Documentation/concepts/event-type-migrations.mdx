@@ -146,6 +146,15 @@ update the registration. The HTTP payload envelope is unchanged, including `Gene
 only the selected content, delivered generation, and hash follow the pin. See
 [webhook generation delivery](../webhooks/index.mdx#pin-the-generation-your-endpoint-understands).
 
+Event-store subscriptions also opt in separately with
+`WithGenerationDelivery(EventGenerationDelivery.Pinned)`. The target application's declared event types
+supply exact pins for the source outbox observer. The kernel delivers those generations on live,
+catch-up, replay, and retry, then appends the delivered generation to the target inbox. Both stores
+must have that exact generation registered; a missing target generation fails forwarding without
+appending or acknowledging the failing event. Pins survive reconnects and identical registrations;
+only a deliberate registration update changes them. See
+[pinned subscription delivery](../subscriptions/explicit-subscriptions.mdx#pin-the-generation-your-application-understands).
+
 `GenerationalContent` remains on delivered events for compatibility in this major version. The global
 client option does not change immediate/passive or wildcard (`all`) projections, reads, webhooks,
 captures, or event-store subscriptions.

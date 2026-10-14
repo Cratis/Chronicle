@@ -4,6 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.EventStoreSubscriptions;
 
@@ -28,4 +29,9 @@ public class EventStoreSubscriptionDefinition
     /// </summary>
     [Json]
     public IEnumerable<EventType> EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the generation delivery policy.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
 }
