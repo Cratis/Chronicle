@@ -198,7 +198,8 @@ internal sealed class TestingEventStore : IDisposable
 
     sealed class NoConcurrencyScopeStrategies : IConcurrencyScopeStrategies
     {
-        public IConcurrencyScopeStrategy GetFor(IEventSequence eventSequence) => new NoConcurrencyScopeStrategy();
+        public IConcurrencyScopeStrategy GetFor(IEventSequence eventSequence) =>
+            ReadProtectionFrame.Current is not null ? new OptimisticConcurrencyStrategy(eventSequence) : new NoConcurrencyScopeStrategy();
     }
 
     sealed class NoConcurrencyScopeStrategy : IConcurrencyScopeStrategy

@@ -408,8 +408,11 @@ public class EventStoreForTesting : IEventStore, IDisposable
         _sequences.GetOrAdd(id, CreateEventSequence);
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default) =>
-        Task.FromResult(Enumerable.Empty<EventStoreNamespaceName>());
+    public Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
+    {
+        ReadProtectionGuard.Read(nameof(GetNamespaces));
+        return Task.FromResult(Enumerable.Empty<EventStoreNamespaceName>());
+    }
 
     /// <summary>
     /// Registers a pre-seeded read model instance so that production code calling

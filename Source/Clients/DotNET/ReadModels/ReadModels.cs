@@ -18,6 +18,7 @@ using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
+using Cratis.Chronicle.Transactions;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -165,6 +166,7 @@ public partial class ReadModels(
     /// <inheritdoc/>
     public async Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
+        ReadProtectionGuard.Read(nameof(GetInstanceById));
         var readModelType = typeof(TReadModel);
         var result = await GetInstanceById(readModelType, key, sessionId);
         var instance = (TReadModel)result;
@@ -182,6 +184,8 @@ public partial class ReadModels(
     /// <inheritdoc/>
     public async Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
+        ReadProtectionGuard.Read(nameof(GetInstanceById));
+
         // Validate that the read model is known by either projections or reducers
         if (!projections.HasFor(readModelType) && !reducers.HasFor(readModelType))
         {
@@ -240,6 +244,7 @@ public partial class ReadModels(
     /// <inheritdoc/>
     public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null)
     {
+        ReadProtectionGuard.Read(nameof(GetInstances));
         var readModelType = typeof(TReadModel);
 
         // Validate that the read model is known by projections or reducers
@@ -277,6 +282,8 @@ public partial class ReadModels(
     /// <inheritdoc/>
     public async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
     {
+        ReadProtectionGuard.Read(nameof(GetSnapshotsById));
+
         // Check for projection first
         if (projections.HasFor<TReadModel>())
         {
@@ -310,6 +317,7 @@ public partial class ReadModels(
     /// <inheritdoc/>
     public ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
     {
+        ReadProtectionGuard.Read(nameof(Observe));
         var readModelType = typeof(TReadModel);
         if (!projections.HasFor(readModelType) && !reducers.HasFor(readModelType))
         {
@@ -335,6 +343,7 @@ public partial class ReadModels(
     /// <inheritdoc/>
     public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
     {
+        ReadProtectionGuard.Read(nameof(Watch));
         if (reducers.HasFor<TReadModel>())
         {
             return reducerObservers.GetWatcher<TReadModel>().Observable
@@ -358,6 +367,7 @@ public partial class ReadModels(
     /// <inheritdoc/>
     public IReadModelWatcher<TReadModel> GetWatcherFor<TReadModel>()
     {
+        ReadProtectionGuard.Read(nameof(GetWatcherFor));
         if (!projections.HasFor<TReadModel>())
         {
             throw new UnknownReadModel(typeof(TReadModel));
