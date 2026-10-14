@@ -17,6 +17,8 @@ namespace Cratis.Chronicle.Seeding.for_EventSeeding.given;
 public class a_seeding_builder : Specification
 {
     protected EventSeeding _seeding;
+    protected IClientArtifactsProvider _artifacts;
+    protected IClientArtifactsActivator _activator;
     protected IEventSources _eventSources;
     protected Contracts.Seeding.IEventSeeding _seedingService;
     internal SeedEventsRequest _request;
@@ -39,7 +41,9 @@ public class a_seeding_builder : Specification
         var serializer = Substitute.For<IEventSerializer>();
         serializer.Serialize(Arg.Any<object>()).Returns(Task.FromResult(new JsonObject()));
         _eventSources = Substitute.For<IEventSources>();
-        _seeding = new EventSeeding("store", connection, eventTypes, serializer, Substitute.For<IClientArtifactsProvider>(), Substitute.For<IServiceProvider>(), Substitute.For<IClientArtifactsActivator>(), NullLogger<EventSeeding>.Instance, _eventSources);
+        _artifacts = Substitute.For<IClientArtifactsProvider>();
+        _activator = Substitute.For<IClientArtifactsActivator>();
+        _seeding = new EventSeeding("store", connection, eventTypes, serializer, _artifacts, Substitute.For<IServiceProvider>(), _activator, NullLogger<EventSeeding>.Instance, _eventSources);
     }
 
     [Tag("static-tag")]
