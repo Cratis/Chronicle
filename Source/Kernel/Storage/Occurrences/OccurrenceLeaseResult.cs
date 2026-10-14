@@ -1,0 +1,25 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Storage.Occurrences;
+
+/// <summary>
+/// The outcome of a fenced transition.
+/// </summary>
+public enum OccurrenceLeaseResult
+{
+    /// <summary>
+    /// Updated.
+    /// </summary>
+    Updated = 0,
+
+    /// <summary>
+    /// AlreadyCompleted.
+    /// </summary>
+    AlreadyCompleted = 1,
+
+    /// <summary>
+    /// OccurrenceLeaseLost.
+    /// </summary>
+    OccurrenceLeaseLost = 2
+}

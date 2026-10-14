@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Data.Common;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cratis.Chronicle.Storage.Sql;
@@ -34,11 +35,25 @@ public sealed class SqlitePragmaConnectionInterceptor : DbConnectionInterceptor
     /// </summary>
     const string Pragmas = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=30000;";
 
+    /// <summary>
+    /// The pragmas applied on a read-only open. EF migration existence probes clone the connection in read-only mode;
+    /// they cannot change the database header, so only the per-connection timeout is applied.
+    /// </summary>
+    const string ReadOnlyPragmas = "PRAGMA busy_timeout=30000;";
+
     /// <inheritdoc/>
     public override void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = Pragmas;
+        if (IsReadOnly(connection))
+        {
+            command.CommandText = ReadOnlyPragmas;
+        }
+        else
+        {
+            command.CommandText = Pragmas;
+        }
+
         command.ExecuteNonQuery();
     }
 
@@ -46,7 +61,18 @@ public sealed class SqlitePragmaConnectionInterceptor : DbConnectionInterceptor
     public override async Task ConnectionOpenedAsync(DbConnection connection, ConnectionEndEventData eventData, CancellationToken cancellationToken = default)
     {
         await using var command = connection.CreateCommand();
-        command.CommandText = Pragmas;
+        if (IsReadOnly(connection))
+        {
+            command.CommandText = ReadOnlyPragmas;
+        }
+        else
+        {
+            command.CommandText = Pragmas;
+        }
+
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    static bool IsReadOnly(DbConnection connection) =>
+        new SqliteConnectionStringBuilder(connection.ConnectionString).Mode == SqliteOpenMode.ReadOnly;
 }

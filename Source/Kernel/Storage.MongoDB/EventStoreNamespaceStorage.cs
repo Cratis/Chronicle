@@ -32,6 +32,7 @@ using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
@@ -41,7 +42,9 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </summary>
 public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 {
+    readonly Occurrences.OccurrencesStorage _occurrences;
     readonly EventStoreName _eventStore;
+
     readonly EventStoreNamespaceName _namespace;
     readonly IEventStoreNamespaceDatabase _eventStoreNamespaceDatabase;
     readonly IEventConverter _converter;
@@ -81,6 +84,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         IOptions<ChronicleOptions> options,
         ILoggerFactory loggerFactory)
     {
+        _occurrences = new(eventStoreNamespaceDatabase.GetCollection<BsonDocument>("occurrences").Database);
         _eventStore = eventStore;
         _namespace = @namespace;
         _eventStoreNamespaceDatabase = eventStoreNamespaceDatabase;
@@ -116,6 +120,12 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             Identities,
             expandoObjectConverter);
     }
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
 
     /// <inheritdoc/>
     public IChangesetStorage Changesets { get; }
