@@ -205,7 +205,6 @@ public partial class UnitOfWork(
                 EnrollStrictConcurrencyScope(scopeLabel, concurrencyScope);
             }
             CompleteEnrollment(resolution);
-            RecordScopeOrigins(resolution, origin);
         }
     }
 
@@ -419,7 +418,6 @@ public partial class UnitOfWork(
         EventForEventSourceId[] events;
         IEventSequence? eventSequence;
         bool protectedCommit;
-        ScopeProvenance? provenance;
         ReadProtectionCommit? readProtectionCommit;
         lock (_decisionLock)
         {
@@ -437,7 +435,6 @@ public partial class UnitOfWork(
             events = eventSequence is null ? [] : GetEventsToCommit();
             scopes = !protectedCommit ? _concurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value) :
                 _concurrencyScopes.Concat(_decisionScopes).ToDictionary(_ => _.Key, _ => _.Value);
-            provenance = _implicitScopes.Count != 0 && events.Length != 0 ? CaptureScopeProvenance() : null;
             readProtectionCommit = IsEnforcingReadProtection
                 ? new(GetReadProtectionTarget(), Array.AsReadOnly(_readProtectionContributions.ToArray()), CaptureAppendConditions)
                 : null;
@@ -458,13 +455,9 @@ public partial class UnitOfWork(
                 {
                     if (readProtectionCommit is not null)
                     {
-                        result = eventSequence is IEventSequenceWithScopeProvenance supported
+                        result = eventSequence is IEventSequenceWithReadProtection supported
                             ? await supported.AppendMany(events, [], scopes, readProtectionCommit)
                             : throw new EventSequenceReadProtectionNotSupported(eventSequence.GetType());
-                    }
-                    else if (provenance is not null)
-                    {
-                        result = await AppendWithScopeProvenance(eventSequence, events, scopes, provenance);
                     }
                     else
                     {
@@ -511,8 +504,6 @@ public partial class UnitOfWork(
         _stagedEvents.Clear();
         _currentLegacyEvents = null;
         _concurrencyScopes.Clear();
-        _scopeOrigins.Clear();
-        _implicitScopes.Clear();
         _requiredEnrollmentScopes.Clear();
         _enrollmentContributors.Clear();
         _appendManyResult = AppendManyResult.Success(CorrelationId.NotSet, []);

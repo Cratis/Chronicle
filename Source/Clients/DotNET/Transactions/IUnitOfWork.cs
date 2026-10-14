@@ -140,7 +140,7 @@ public interface IUnitOfWork : IDisposable
     /// <param name="event">The event.</param>
     /// <param name="causation">The causation.</param>
     /// <param name="options">The enrollment options.</param>
-    /// <exception cref="ConcurrencyScopeOriginNotValidForEvents">The origin is reserved for reads or implicit scopes.</exception>
+    /// <exception cref="ConcurrencyScopeOriginNotValidForEvents">The origin is reserved for reads.</exception>
     void AddEventWithOptions(EventSequenceId eventSequenceId, EventSourceId eventSourceId, object @event, Causation causation, EventEnrollmentOptions options)
     {
         ConcurrencyScopeOriginNotValidForEvents.ThrowIfNotValid(options.Origin);
@@ -162,22 +162,12 @@ public interface IUnitOfWork : IDisposable
     /// <param name="events">The ordered events.</param>
     /// <param name="concurrencyScopes">The supplied scopes.</param>
     /// <param name="origin">The scope contribution.</param>
-    /// <exception cref="ConcurrencyScopeOriginNotValidForEvents">The origin is reserved for reads or implicit scopes.</exception>
+    /// <exception cref="ConcurrencyScopeOriginNotValidForEvents">The origin is reserved for reads.</exception>
     void AddEvents(EventSequenceId eventSequenceId, IEnumerable<EventForEventSourceId> events, IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes, ConcurrencyScopeOrigin origin)
     {
         ConcurrencyScopeOriginNotValidForEvents.ThrowIfNotValid(origin);
         AddEvents(eventSequenceId, events, concurrencyScopes);
     }
-
-    /// <summary>
-    /// Enrolls a source-wide implicit guard without binding the unit to an event sequence.
-    /// </summary>
-    /// <param name="eventSequenceId">The sequence whose boundary was captured.</param>
-    /// <param name="label">The guarded source.</param>
-    /// <param name="boundary">A concrete global boundary or the position before the first event.</param>
-    /// <exception cref="UnitOfWorkImplicitScopesNotSupported">This implementation cannot enroll implicit guards.</exception>
-    void AddImplicitScope(EventSequenceId eventSequenceId, EventSourceId label, EventSequenceNumber boundary) =>
-        throw new UnitOfWorkImplicitScopesNotSupported(GetType());
 
     /// <summary>
     /// Attaches a contributor for the lifetime of an enrollment scope, such as one command invocation.

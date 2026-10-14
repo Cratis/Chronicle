@@ -32,7 +32,7 @@ public partial class UnitOfWork
             ThrowIfEnrollmentNotificationFailed();
             if (_readProtectionFrameLease is not null) return _readProtectionFrameLease();
             ThrowIfUnitOfWorkIsCompleted();
-            if (_completing || _stagedEvents.Count != 0 || _concurrencyScopes.Count != 0 || _hasEnrolledDecisionReads || _implicitScopes.Count != 0)
+            if (_completing || _stagedEvents.Count != 0 || _concurrencyScopes.Count != 0 || _hasEnrolledDecisionReads)
             {
                 throw new ReadProtectionMustBeginBeforeEnrollment();
             }

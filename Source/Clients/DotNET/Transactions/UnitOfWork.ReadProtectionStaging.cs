@@ -32,7 +32,6 @@ public partial class UnitOfWork
         _readProtectionContributions.AddRange(pending);
         foreach (var (label, scope) in resolution.Scopes) EnrollStrictConcurrencyScope(label, scope);
         CompleteEnrollment(resolution);
-        RecordScopeOrigins(resolution, origin);
     }
 
     List<ReadProtectionContribution> CaptureStagedContributions(EventSequenceId sequence, IReadOnlyDictionary<EventSourceId, ConcurrencyScope> scopes, ConcurrencyScopeOrigin origin, bool validateOnly)

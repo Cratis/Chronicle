@@ -17,7 +17,7 @@ public class ConcurrencyScopeOriginNotValidForEvents(ConcurrencyScopeOrigin orig
     /// <exception cref="ConcurrencyScopeOriginNotValidForEvents">The supplied origin is reserved.</exception>
     internal static void ThrowIfNotValid(ConcurrencyScopeOrigin origin)
     {
-        if (origin is ConcurrencyScopeOrigin.DecisionRead or ConcurrencyScopeOrigin.Implicit)
+        if (origin is not ConcurrencyScopeOrigin.Explicit and not ConcurrencyScopeOrigin.Aggregate and not ConcurrencyScopeOrigin.Routing)
         {
             throw new ConcurrencyScopeOriginNotValidForEvents(origin);
         }

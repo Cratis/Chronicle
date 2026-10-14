@@ -26,10 +26,5 @@ public enum ConcurrencyScopeOrigin
     /// <summary>
     /// Scope enrolled through a decision read.
     /// </summary>
-    DecisionRead = 3,
-
-    /// <summary>
-    /// Source-wide guard enrolled through an implicit scope.
-    /// </summary>
-    Implicit = 4
+    DecisionRead = 3
 }

@@ -7,12 +7,12 @@ using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.Transactions.for_UnitOfWork.given;
 
-public class a_unit_recording_provenance : a_unit_of_work
+public class a_unit_recording_read_protection : a_unit_of_work
 {
-    protected bool _provenanceCalled;
+    protected bool _readProtectionCalled;
     void Establish()
     {
-        _eventSequence = Substitute.For<IEventSequence, IEventSequenceWithScopeProvenance>();
+        _eventSequence = Substitute.For<IEventSequence, IEventSequenceWithReadProtection>();
         _eventStore.GetEventSequence(EventSequenceId.Log).Returns(_eventSequence);
         _unitOfWork = new(_correlationId, OnUnitOfWorkCompleted, _eventStore);
         _eventSequence.AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>(), Arg.Any<CorrelationId?>(), Arg.Any<IEnumerable<string>>(), Arg.Any<IDictionary<EventSourceId, ConcurrencyScope>>()).Returns(call =>
@@ -21,9 +21,9 @@ public class a_unit_recording_provenance : a_unit_of_work
             _concurrencyScopesAppended = call.Arg<IDictionary<EventSourceId, ConcurrencyScope>>();
             return _appendResult;
         });
-        ((IEventSequenceWithScopeProvenance)_eventSequence).AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>(), Arg.Any<IEnumerable<NamedTag>>(), Arg.Any<IDictionary<EventSourceId, ConcurrencyScope>>(), Arg.Any<ScopeProvenance>()).Returns(_ =>
+        ((IEventSequenceWithReadProtection)_eventSequence).AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>(), Arg.Any<IEnumerable<NamedTag>>(), Arg.Any<IDictionary<EventSourceId, ConcurrencyScope>>(), Arg.Any<ReadProtectionCommit>()).Returns(_ =>
         {
-            _provenanceCalled = true;
+            _readProtectionCalled = true;
             return _appendResult;
         });
     }

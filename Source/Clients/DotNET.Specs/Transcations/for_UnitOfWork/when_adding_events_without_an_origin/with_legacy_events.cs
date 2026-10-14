@@ -8,7 +8,7 @@ using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.Transactions.for_UnitOfWork.when_adding_events_without_an_origin;
 
-public class with_legacy_events : given.a_unit_recording_provenance
+public class with_legacy_events : given.a_unit_recording_read_protection
 {
     readonly ConcurrencyScope _scope = new(7, EventStreamType: "items");
     readonly object _event = new();
@@ -16,5 +16,5 @@ public class with_legacy_events : given.a_unit_recording_provenance
     Task Because() => _unitOfWork.Commit();
     [Fact] void should_keep_the_scope_dictionary_identical() => _concurrencyScopesAppended.ShouldContainOnly(new KeyValuePair<EventSourceId, ConcurrencyScope>("source", _scope));
     [Fact] void should_keep_the_event() => _eventsAppended.Single().Event.ShouldBeSame(_event);
-    [Fact] void should_not_call_the_provenance_interface() => _provenanceCalled.ShouldBeFalse();
+    [Fact] void should_not_call_the_read_protection_interface() => _readProtectionCalled.ShouldBeFalse();
 }

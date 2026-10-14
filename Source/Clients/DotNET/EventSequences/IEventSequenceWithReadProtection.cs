@@ -7,24 +7,10 @@ using Cratis.Chronicle.EventSequences.Concurrency;
 namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
-/// The client-side append path that applies implicit guards after routing resolution.
+/// The trusted append path for an immutable read-protected unit commit.
 /// </summary>
-internal interface IEventSequenceWithScopeProvenance
+internal interface IEventSequenceWithReadProtection
 {
-    /// <summary>
-    /// Appends a batch with the captured provenance.
-    /// </summary>
-    /// <param name="events">The events.</param>
-    /// <param name="namedTags">Call-level structured tags.</param>
-    /// <param name="scopes">Existing concurrency scopes.</param>
-    /// <param name="provenance">Scope contributions for this commit.</param>
-    /// <returns>The append result.</returns>
-    Task<AppendManyResult> AppendMany(
-        IEnumerable<EventForEventSourceId> events,
-        IEnumerable<NamedTag> namedTags,
-        IDictionary<EventSourceId, ConcurrencyScope> scopes,
-        ScopeProvenance provenance);
-
     /// <summary>
     /// Appends only through the unit's internal Enforce authority.
     /// </summary>
