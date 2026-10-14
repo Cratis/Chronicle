@@ -16,7 +16,7 @@ public class and_a_background_retry_carries_warning_drift_under_fail : given.an_
     void Establish()
     {
         SetField("_identityDriftPolicy", ArtifactIdentityDriftPolicy.Fail);
-        SetAutoProperty(nameof(EventStore.Registration), new RegistrationOutcome(true, ImmutableList<ArtifactRegistration>.Empty) { IdentityDrift = [ExpectedDrift] });
+        SetField("_registration", new RegistrationOutcome(true, ImmutableList<ArtifactRegistration>.Empty) { IdentityDrift = [ExpectedDrift] });
     }
 
     async Task Because()
