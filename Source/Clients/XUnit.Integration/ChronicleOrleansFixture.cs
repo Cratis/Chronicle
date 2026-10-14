@@ -94,6 +94,10 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         var sharedEventStore = Services.GetRequiredService<IEventStore>();
         connection.Lifecycle.OnConnected += sharedEventStore.RegisterAll;
 
+        // Stop KeepAlive delivery before the first wipe: activation collection does not reach these grains, and
+        // their background queues must settle before either storage or projection pipelines can be reset.
+        await KernelCore::Cratis.Chronicle.DevelopmentTools.KeepAliveGrainReset.Reset(GrainFactory);
+
         // 2. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
         //    service whose cache persists across test classes. Without this, a test that registers
         //    ProjectionX can leave a stale pipeline in the cache that is then reused — with the
@@ -271,6 +275,8 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <returns>A task that completes when grain deactivation has stabilized.</returns>
     protected async Task DeactivateAllGrains()
     {
+        // Do not swallow a failed KeepAlive reset. Continuing to the final storage wipe would leak old live delivery.
+        await KernelCore::Cratis.Chronicle.DevelopmentTools.KeepAliveGrainReset.Reset(GrainFactory);
         try
         {
             var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);

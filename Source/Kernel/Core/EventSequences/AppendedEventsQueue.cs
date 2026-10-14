@@ -54,11 +54,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
     readonly Lock _subscriptionsLock = new();
     readonly List<AppendedEventsQueueObserverSubscription> _subscriptions = [];
+    readonly List<Task> _catchupTriggers = [];
     readonly SuspectedSkipWarningLimiter _suspectedUndeliveredLimiter = new();
     int _pendingItems;
     Task _queueTask = Task.CompletedTask;
     bool _isDisposed;
     bool _isDraining;
+    volatile bool _isResetting;
     IMeterScope<AppendedEventsQueue>? _metrics;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
 
@@ -185,6 +187,26 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <inheritdoc/>
+    public async Task ResetForDevelopment()
+    {
+        _isResetting = true;
+        _isDraining = true;
+        Task[] catchupTriggers;
+        lock (_subscriptionsLock)
+        {
+            _subscriptions.Clear();
+            catchupTriggers = [.. _catchupTriggers];
+        }
+
+        _channel.Writer.TryComplete();
+
+        // The worker owns the channel reader. It discards the backlog, but must settle any delivery already in flight
+        // before storage can be wiped. A reset failure propagates; a deadline must not turn an unfinished reset green.
+        await _queueTask;
+        await Task.WhenAll(catchupTriggers);
+    }
+
+    /// <inheritdoc/>
     public Task SpillToCatchup()
     {
         SpillSubscribersToCatchup();
@@ -196,6 +218,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         lock (_subscriptionsLock)
         {
+            if (_isResetting)
+            {
+                return Task.CompletedTask;
+            }
+
             // Replace any existing subscription for this observer instead of appending a
             // duplicate. Re-subscription is legitimate (the Observing state may be entered
             // multiple times during the observer's lifetime as it cycles through Routing for
@@ -213,6 +240,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         lock (_subscriptionsLock)
         {
+            if (_isResetting)
+            {
+                return Task.CompletedTask;
+            }
+
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
             _subscriptions.Add(new(observerKey, [], filters, AllEventTypes: true));
         }
@@ -410,8 +442,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
                 try
                 {
-                    await Dispatch(coalesced);
-                    _metrics?.EventsHandled(coalesced.Count);
+                    if (!_isResetting)
+                    {
+                        await Dispatch(coalesced);
+                        _metrics?.EventsHandled(coalesced.Count);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -506,7 +541,16 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _logger.SpillingToCatchup(observerKeys.Length);
         foreach (var observerKey in observerKeys)
         {
-            _ = TriggerCatchup(observerKey);
+            lock (_subscriptionsLock)
+            {
+                if (_isResetting)
+                {
+                    return;
+                }
+
+                _catchupTriggers.RemoveAll(task => task.IsCompleted);
+                _catchupTriggers.Add(TriggerCatchup(observerKey));
+            }
         }
     }
 
@@ -525,7 +569,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var observer = _grainFactory.GetGrain<IObserver>(observerKey);
         for (var attempt = 1; attempt <= MaxCatchupTriggerAttempts; attempt++)
         {
-            if (_isDisposed)
+            if (_isDisposed || _isResetting)
             {
                 _logger.SpillCatchupTriggerAbandonedOnDispose(observerKey);
                 return;
