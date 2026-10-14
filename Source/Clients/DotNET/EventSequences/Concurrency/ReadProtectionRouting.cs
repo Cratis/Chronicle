@@ -54,6 +54,7 @@ internal static class ReadProtectionRouting
                     scope = dimensions is null
                         ? await strategy.GetScope(group.Key, @event.EventStreamType, @event.EventStreamId, @event.EventSourceType)
                         : await strategy.GetScope(dimensions.Value, group.Key, @event.EventStreamType, @event.EventStreamId, @event.EventSourceType);
+                    scope = scope with { IssuedByStrategy = true };
                     cache.Add(key, scope);
                 }
                 var declared = dimensions is not null && dimensions != ConcurrencyDimensions.None;

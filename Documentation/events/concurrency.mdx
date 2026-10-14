@@ -39,6 +39,22 @@ For more complex scenarios, use the `ConcurrencyScopeBuilder` to fluently constr
 
 <ChronicleClientTabs snippet="events/concurrency/builder" />
 
+## Incomplete explicit scopes
+
+Caller-supplied scopes fail closed when they have narrowing but no expected position. A scope built with an unavailable tail, using either `ConcurrencyScopeBuilder` or `new ConcurrencyScope`, becomes a "no matching event may exist" expectation. This includes `with` copies and every append variant, including named tags and labelled batches.
+
+| Supplied scope | Default behavior |
+|---|---|
+| Incomplete, with a source, stream, source type or nonempty event-type filter | Expect no matching event |
+| Empty builder, empty event-type list or wildcard dimensions only | No check, with a client warning |
+| `ConcurrencyScope.None` | No check |
+| `ConcurrencyScope.NotSet` | Resolve through the configured strategy |
+| Strategy-issued scope, including a `with` copy | Keep the strategy's first-append policy |
+
+An empty event-type list means any type; it does not mean "the whole log must be empty". Use `ExpectingNoMatchingEvent()` explicitly when that is the expectation you intend.
+
+`ConcurrencyOptions.SkipIncompleteExplicitScopes = true` restores legacy skipping of incomplete explicit scopes. It is separate from `CheckFirstAppendIntoAScope`, which controls strategy-issued scopes. These correctness changes apply even when read protection is off.
+
 ## Scoping by Event Metadata Tags
 
 ### EventSourceType and EventStreamType
@@ -93,6 +109,8 @@ This strategy gets the current tail sequence number and uses it as the expected 
 
 ## The First Append Into a Scope Is Not Checked by Default
 
+This section describes **strategy-issued** scopes. Caller-supplied scopes follow [Incomplete explicit scopes](#incomplete-explicit-scopes).
+
 A concurrency check needs something to compare against, and the optimistic strategy gets one by reading the tail *through the scope's own narrowing*. When nothing matching that narrowing has been appended yet there is no tail to read, so the strategy reports `EventSequenceNumber.Unavailable` — the same value that means "no expected sequence number was supplied at all". The kernel cannot act on that, so it skips the check, notes it in a debug-level log line, and lets the append through — the skip is the designed default, so it is not logged as a warning.
 
 ```mermaid
@@ -133,7 +151,7 @@ That is the point — it is the race the check exists to catch — but adopt it 
 :::
 
 :::note[The default is scheduled to change]
-`CheckFirstAppendIntoAScope` defaults to `false` so that upgrading within this major version changes nothing. **It is planned to become `true` in the next major version**, where the first append into a scope will be checked unless you opt out. Turning it on now — one behavior at a time — is how you get there without a surprise at the major boundary. To keep the unchecked behavior past that point, ask for no check explicitly with `ConcurrencyScope.None`.
+`CheckFirstAppendIntoAScope` defaults to `false` so the strategy's first-append policy is unchanged within this major version. The separate explicit-scope correctness changes have their own compatibility switches. **It is planned to become `true` in the next major version**, where the first append into a scope will be checked unless you opt out. Turning it on now — one behavior at a time — is how you get there without a surprise at the major boundary. To keep the unchecked behavior past that point, ask for no check explicitly with `ConcurrencyScope.None`.
 :::
 
 ### Expressing "This Must Not Exist Yet"
@@ -193,7 +211,7 @@ A skipped concurrency check and a passing one produce the same successful append
 
 - the append asked for no check (`ConcurrencyScope.None`), or carried no scope at all;
 - the append was a first append into a scope and the check is not turned on — the default;
-- the append declared a scope that narrows but names no expectation, built by hand without resolving one. That is always skipped, because `EventSequenceNumber.Unavailable` is the same value `ConcurrencyScope.None` carries and cannot be read as an expectation.
+- an incomplete explicit scope has no narrowing, or `SkipIncompleteExplicitScopes` restores legacy skipping. A narrowed explicit scope otherwise expects no matching event.
 
 Assert on it in a test when a command's correctness depends on the check running. It is also how you confirm an opt-in actually took effect.
 
@@ -210,6 +228,14 @@ A scope declares "I expect no matching event" in a **field of its own** on the w
 A skew therefore degrades to the same skip you get with the check off, and says so in the log — it never produces a check that reports success without running. Both directions are pinned by specs under `for_ConcurrencyScopeConverters/when_a_client_and_kernel_version_disagree`.
 
 One caveat on the diagnostic itself: `IAppendResult.ConcurrencyCheckPerformed` is sent by the kernel, so a **current client against an older kernel always reads `false`** — the older kernel does not send the field. That is correct for a skipped first append and conservative for every other append (it under-reports a check that did run). It never over-reports.
+
+## Revisions and redactions are outside append conditions
+
+Append conditions detect matching **appended** events after a boundary. Revisions and redactions rewrite existing history without advancing that append boundary. They are not detected by concurrency scopes, decision reads, read protection or constraints.
+
+For example, a decision reads through position 100 and sees a credit of 100 at position 80. An administrator revises that credit to 0. A withdrawal appended at 101 can still pass its condition: the revision did not append a matching event above 100. A fresh fold can see the revised value, but a decision that already read it has no mutation guard.
+
+Coordinate history mutations operationally: pause affected command producers, drain in-flight decisions, perform the revision or redaction, then resume with fresh reads. Quiesce affected commands during projection-definition deployments too. Retrying a stale decision or adding more scopes does not close this gap. An atomic mutation-epoch check is not part of the current contract.
 
 ## Best Practices
 

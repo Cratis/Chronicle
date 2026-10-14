@@ -81,6 +81,12 @@ flowchart LR
 
 The kernel evaluates constraints first and then every scope, and writes nothing if either fails. Read models update afterwards, so a read after the append can still show old state for a moment.
 
+## History mutation is outside the guarantee
+
+Append conditions, including guards derived from decision reads, compare appended events against a position. A revision or redaction of an earlier event does not advance that boundary, so a decision made before the mutation can still commit. Constraints do not supply a history-mutation guard either.
+
+Pause affected command producers and drain in-flight decisions before revising or redacting history, then resume with fresh reads. See the [contract and operational guidance](../events/concurrency.mdx#revisions-and-redactions-are-outside-append-conditions). An atomic mutation-epoch check is not available today.
+
 ## What Chronicle adds
 
 - **Constraints.** The kernel enforces unique values, one event of a type per event source, and closed streams, for every writer, without a read. See [Constraints](../constraints/index.md).

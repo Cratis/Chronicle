@@ -55,6 +55,7 @@ internal static class DefinitionConcurrencyScopeResolver
                 scope = dimensions is null
                     ? await strategy.GetScope(eventSourceId, @event.EventStreamType, @event.EventStreamId, @event.EventSourceType)
                     : await strategy.GetScope(dimensions.Value, eventSourceId, @event.EventStreamType, @event.EventStreamId, @event.EventSourceType);
+                scope = scope with { IssuedByStrategy = true };
                 cache[key] = scope;
             }
 

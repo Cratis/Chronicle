@@ -21,6 +21,8 @@ using Cratis.Chronicle.Transactions;
 using Cratis.Monads;
 using Cratis.Traces;
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using ProtoBuf.Grpc;
 using ContractCompleteStreamError = Cratis.Chronicle.Contracts.Sequences.CompleteStreamError;
 
@@ -74,6 +76,7 @@ public class EventSequence(
 
     readonly IChronicleServicesAccessor _servicesAccessor = (connection as IChronicleServicesAccessor)!;
     readonly IActivitySource<EventSequence> _activitySource = activitySource ?? DefaultActivitySource;
+    readonly ILogger<EventSequence> _logger = (concurrencyScopeStrategies as ConcurrencyScopeStrategies)?.Logger ?? NullLogger<EventSequence>.Instance;
 
     IObservable<IEnumerable<AppendedEventWithResult>>? _appendOperations;
     event Action<IEnumerable<AppendedEventWithResult>>? _appendedEventsRaised;
@@ -89,6 +92,8 @@ public class EventSequence(
 
     /// <inheritdoc/>
     public ITransactionalEventSequence Transactional => new TransactionalEventSequence(this, unitOfWorkManager);
+
+    ConcurrencyOptions ConcurrencyOptions => concurrencyScopeStrategies.Options ?? new();
 
     /// <inheritdoc/>
     public async Task<PreparedEvent> Prepare(object @event)
@@ -755,6 +760,7 @@ public class EventSequence(
         ResolvedEventRouting? routing = default,
         PreparedEvent? preparedEvent = default)
     {
+        ExplicitConcurrencyScope.ValidateRoute(concurrencyScope, routing, ConcurrencyOptions);
         var resolvedEventStreamType = ResolveEventStreamType(eventStreamType);
         var resolvedEventStreamId = ResolveEventStreamId(eventStreamId);
         var resolvedEventSourceType = ResolveEventSourceType(eventSourceType);
@@ -771,6 +777,7 @@ public class EventSequence(
             concurrencyScope = await GetScopeFor(routing, eventSourceId, resolvedEventStreamType, resolvedEventStreamId, resolvedEventSourceType);
         }
 
+        concurrencyScope = NormalizeConcurrencyScope(concurrencyScope);
         preparedEvent ??= await Prepare(@event);
         subject ??= preparedEvent.Subject;
 
@@ -875,6 +882,7 @@ public class EventSequence(
         Subject? subject = default,
         ResolvedEventRouting? routing = default)
     {
+        ExplicitConcurrencyScope.ValidateRoute(concurrencyScope, routing, ConcurrencyOptions);
         using var span = _activitySource.AppendMany(eventStoreName.Value, @namespace.Value, eventSequenceId.Value);
 
         var resolvedEventStreamType = ResolveEventStreamType(eventStreamType);
@@ -887,6 +895,8 @@ public class EventSequence(
         {
             concurrencyScope = await GetScopeFor(routing, eventSourceId, resolvedEventStreamType, resolvedEventStreamId, resolvedEventSourceType);
         }
+
+        concurrencyScope = NormalizeConcurrencyScope(concurrencyScope);
 
         // Merge static tags from every event type in the batch with dynamic tags. AppendManyRequest carries one
         // shared Tags field for the whole batch rather than a per-event one, so per-event-type static tags are
@@ -1073,6 +1083,16 @@ public class EventSequence(
         IEnumerable<NamedTag> namedTags,
         ReadProtectionCommit? readProtectionCommit = null)
     {
+        concurrencyScopes = concurrencyScopes?.ToDictionary(_ => _.Key, _ => NormalizeConcurrencyScope(_.Value));
+        if (readProtectionCommit is not null)
+        {
+            readProtectionCommit = readProtectionCommit with
+            {
+                Contributions = readProtectionCommit.Contributions.Select(_ => _.Kind is ReadProtectionContributionKind.Explicit or ReadProtectionContributionKind.Aggregate
+                    ? new ReadProtectionContribution(_.Label, _.Kind, NormalizeConcurrencyScope(_.Scope), _.Target, _.Description, _.Intent)
+                    : _).ToImmutableArray()
+            };
+        }
         var callNamedTags = namedTags.ToArray();
         var routings = new List<ResolvedEventRouting?>();
         var eventsList = events.Select(@event =>
@@ -1137,7 +1157,7 @@ public class EventSequence(
                 .Select(_ => new Contracts.Sequences.EventSourceConcurrencyScope
                 {
                     EventSourceId = _.Key,
-                    Scope = _.Value.ToSequencesContract()
+                    Scope = NormalizeConcurrencyScope(_.Value).ToSequencesContract()
                 })
                 .ToList()
         };
@@ -1263,10 +1283,13 @@ public class EventSequence(
         EventSourceType eventSourceType)
     {
         var strategy = concurrencyScopeStrategies.GetFor(this);
-        return routing is null
+        var scope = routing is null
             ? await strategy.GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType)
             : await strategy.GetScope(routing.Dimensions, eventSourceId, eventStreamType, eventStreamId, eventSourceType);
+        return scope with { IssuedByStrategy = true };
     }
+
+    ConcurrencyScope NormalizeConcurrencyScope(ConcurrencyScope scope) => ExplicitConcurrencyScope.Normalize(scope, ConcurrencyOptions, _logger);
 
     AppendResult ResolveViolationMessages(AppendResult result) => result with { ConstraintViolations = ResolveViolationMessages(result.ConstraintViolations) };
     AppendManyResult ResolveViolationMessages(AppendManyResult result) => result with { ConstraintViolations = ResolveViolationMessages(result.ConstraintViolations) };

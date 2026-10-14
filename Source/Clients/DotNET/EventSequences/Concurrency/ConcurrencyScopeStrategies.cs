@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.EventSequences.Concurrency;
 
@@ -12,6 +14,14 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/> to resolve the concurrency strategy.</param>
 public class ConcurrencyScopeStrategies(ConcurrencyOptions options, IServiceProvider serviceProvider) : IConcurrencyScopeStrategies
 {
+    /// <inheritdoc/>
+    public ConcurrencyOptions Options => options;
+
+    /// <summary>
+    /// Gets the logger for explicit append scope diagnostics.
+    /// </summary>
+    internal ILogger<EventSequence> Logger => serviceProvider.GetService<ILogger<EventSequence>>() ?? NullLogger<EventSequence>.Instance;
+
     /// <inheritdoc/>
     public IConcurrencyScopeStrategy GetFor(IEventSequence eventSequence) =>
         (CreateStrategy(eventSequence) as IConcurrencyScopeStrategy)!;
