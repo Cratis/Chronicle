@@ -32,7 +32,8 @@ public static class WebhookDefinitionConverters
                 et => "$eventSourceId"),
             Target = definition.Target.ToMongoDB(),
             IsReplayable = definition.IsReplayable,
-            IsActive = definition.IsActive
+            IsActive = definition.IsActive,
+            GenerationDelivery = definition.GenerationDelivery
         };
 
     /// <summary>
@@ -47,7 +48,10 @@ public static class WebhookDefinitionConverters
             definition.EventSequenceId,
             definition.EventTypes.Select(kvp => EventType.Parse(kvp.Key)),
             definition.Target.ToKernel(),
-            definition.IsReplayable);
+            definition.IsReplayable)
+        {
+            GenerationDelivery = definition.GenerationDelivery
+        };
 
     static Concepts.Observation.Webhooks.WebhookTarget ToKernel(this WebhookTarget target)
     {

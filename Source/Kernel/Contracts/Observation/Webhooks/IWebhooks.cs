@@ -164,6 +164,12 @@ public class AddWebhookRequest
     /// </summary>
     [ProtoMember(15)]
     public bool IsActive { get; set; }
+
+    /// <summary>
+    /// Gets or sets the GenerationDelivery.
+    /// </summary>
+    [ProtoMember(16)]
+    public global::Cratis.Chronicle.Contracts.Observation.EventGenerationDelivery GenerationDelivery { get; set; }
 }
 
 /// <summary>
@@ -282,6 +288,12 @@ public class WebhookDetailsResponse
     /// </summary>
     [ProtoMember(8)]
     public bool IsActive { get; set; }
+
+    /// <summary>
+    /// Gets or sets the GenerationDelivery.
+    /// </summary>
+    [ProtoMember(10)]
+    public global::Cratis.Chronicle.Contracts.Observation.EventGenerationDelivery GenerationDelivery { get; set; }
 }
 
 /// <summary>

@@ -58,4 +58,10 @@ public class WebhookDefinition
     /// </summary>
     [ProtoMember(8)]
     public bool IsInactive { get; set; }
+
+    /// <summary>
+    /// Gets or sets the generation delivery policy.
+    /// </summary>
+    [ProtoMember(9)]
+    public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
 }

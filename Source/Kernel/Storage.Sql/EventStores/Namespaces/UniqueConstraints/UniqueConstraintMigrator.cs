@@ -9,8 +9,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 
-#pragma warning disable CA2100 // Table and column names are internal constants, not user input.
-
 /// <summary>
 /// Represents an implementation of <see cref="IUniqueConstraintMigrator"/>.
 /// </summary>
@@ -22,13 +20,37 @@ public class UniqueConstraintMigrator(
     ITableMigrator<UniqueConstraintValuesDbContext> valuesTableMigrator,
     ILogger<UniqueConstraintMigrator> logger) : IUniqueConstraintMigrator
 {
-    static readonly ConcurrentDictionary<string, bool> _columnMigrations = new();
+    static readonly ConcurrentDictionary<string, bool> _indexMigrations = new();
+    static readonly ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
 
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, UniqueConstraintDbContext context)
     {
-        await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
-        await EnsureValueColumnIsUnbounded(tableName, context);
+        var cacheKey = $"{context.Database.GetConnectionString()}:{tableName}:value-unique";
+        if (_indexMigrations.ContainsKey(cacheKey))
+        {
+            return;
+        }
+
+        var migrationLock = _migrationLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+        await migrationLock.WaitAsync();
+        try
+        {
+            if (_indexMigrations.ContainsKey(cacheKey))
+            {
+                return;
+            }
+
+            await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
+            await UniqueConstraintValueIndexMigration.EnsureValueIndexIsUnique(tableName, context, logger);
+
+            // A duplicate fallback stays cached until the next process start (or an explicit reset).
+            _indexMigrations.TryAdd(cacheKey, true);
+        }
+        finally
+        {
+            migrationLock.Release();
+        }
     }
 
     /// <inheritdoc/>
@@ -40,50 +62,9 @@ public class UniqueConstraintMigrator(
     {
         tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
         valuesTableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
-        foreach (var key in _columnMigrations.Keys.Where(k => k.StartsWith(connectionStringPrefix, StringComparison.OrdinalIgnoreCase)))
+        foreach (var key in _indexMigrations.Keys.Where(k => k.StartsWith(connectionStringPrefix, StringComparison.OrdinalIgnoreCase)))
         {
-            _columnMigrations.TryRemove(key, out _);
-        }
-    }
-
-    static async Task<bool> ValueColumnNeedsWidening(UniqueConstraintDbContext context, string tableName)
-    {
-        var connection = context.Database.GetDbConnection();
-        await connection.OpenAsync();
-
-        try
-        {
-            await using var command = connection.CreateCommand();
-
-            if (context.Database.IsNpgsql())
-            {
-                command.CommandText =
-                    "SELECT character_maximum_length FROM information_schema.columns " +
-                    "WHERE table_schema = 'public' AND table_name = '" + tableName + "' AND column_name = 'Value'";
-            }
-            else if (context.Database.IsSqlServer())
-            {
-                command.CommandText =
-                    "SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS " +
-                    "WHERE TABLE_NAME = '" + tableName + "' AND COLUMN_NAME = 'Value'";
-            }
-            else
-            {
-                return false;
-            }
-
-            var result = await command.ExecuteScalarAsync();
-            if (result is null || result is DBNull)
-            {
-                return false;
-            }
-
-            var maxLength = Convert.ToInt32(result);
-            return maxLength > 0 && maxLength <= 200;
-        }
-        finally
-        {
-            await connection.CloseAsync();
+            _indexMigrations.TryRemove(key, out _);
         }
     }
 
@@ -106,72 +87,19 @@ public class UniqueConstraintMigrator(
     async Task CreateTable(UniqueConstraintDbContext context, string tableName)
     {
         logger.CreatingUniqueConstraintTable(tableName);
-
         var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
-
         migrationBuilder.CreateTable(
             name: tableName,
             columns: table => new
             {
                 EventSourceId = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
-                Value = table.StringColumn(migrationBuilder),
+                Value = context.Database.IsSqlServer()
+                    ? table.StringColumn(migrationBuilder, maxLength: 200, nullable: false)
+                    : table.StringColumn(migrationBuilder, nullable: false),
                 SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false)
             },
             constraints: table => table.PrimaryKey("PK_" + tableName, x => x.EventSourceId));
-
-        // SQL Server does not allow indexes on NVARCHAR(MAX) / VARCHAR(MAX) columns.
-        // Omit the index for SQL Server; the WHERE Value = ? query remains correct without it.
-        if (!context.Database.IsSqlServer())
-        {
-            migrationBuilder.CreateIndex(
-                name: "IX_" + tableName + "_Value",
-                table: tableName,
-                column: "Value");
-        }
-
+        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_Value", table: tableName, column: "Value", unique: true);
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
-    }
-
-    async Task EnsureValueColumnIsUnbounded(string tableName, UniqueConstraintDbContext context)
-    {
-        var connectionString = context.Database.GetConnectionString() ?? string.Empty;
-        var cacheKey = connectionString + ":" + tableName + ":value-unbounded";
-
-        if (_columnMigrations.ContainsKey(cacheKey))
-        {
-            return;
-        }
-
-        if (!await ValueColumnNeedsWidening(context, tableName))
-        {
-            _columnMigrations.TryAdd(cacheKey, true);
-            return;
-        }
-
-        logger.WideningValueColumn(tableName);
-
-        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
-
-        if (context.Database.IsNpgsql())
-        {
-            migrationBuilder.Sql("ALTER TABLE \"" + tableName + "\" ALTER COLUMN \"Value\" TYPE TEXT");
-        }
-        else if (context.Database.IsSqlServer())
-        {
-            // SQL Server cannot ALTER a column to NVARCHAR(MAX) while an index references it,
-            // and cannot create indexes on MAX-type columns at all. Drop the index first, widen
-            // the column, and leave it un-indexed (the constraint check query is still correct).
-            migrationBuilder.Sql(
-                "IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_" + tableName + "_Value' AND object_id = OBJECT_ID('" + tableName + "')) " +
-                "DROP INDEX [IX_" + tableName + "_Value] ON [" + tableName + "]");
-            migrationBuilder.Sql("ALTER TABLE [" + tableName + "] ALTER COLUMN [Value] NVARCHAR(MAX)");
-        }
-
-        if (migrationBuilder.Operations.Count > 0)
-        {
-            await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
-        }
-
-        _columnMigrations.TryAdd(cacheKey, true);
     }
 }

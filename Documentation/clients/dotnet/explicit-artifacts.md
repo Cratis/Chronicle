@@ -5,6 +5,12 @@ description: Configure marker-free .NET artifacts, their identities, and their s
 
 Use `ChronicleOptions.ExplicitArtifacts` when your contract types cannot reference Chronicle or you want to nominate artifacts at the composition root. Existing attributes and interfaces keep working. Plain reactors and classic instance reducers still require nomination. A concrete, non-generic model with the exact public static self-reduction shape is the exception: it is discovered structurally. See [self-reducing read models](/chronicle/reducers/self-reducing-read-models/).
 
+For read models, start with model-bound attributes, then fluent mappings when the definition needs
+structure, then reducer code when transitions read better; a self-reducing model is the default for new
+reducers. Use `IReducerFor<T>` for fold-time DI or separation, and nominate a plain reducer only when
+its assembly cannot reference Chronicle. [Choose how to build a read model](../../projections/choosing-a-read-model-style.mdx)
+compares the forms; this page covers their explicit registration.
+
 ## Declare artifacts before creating stores
 
 The generic and `Type` forms declare the same artifacts:

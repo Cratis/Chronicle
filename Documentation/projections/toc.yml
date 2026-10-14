@@ -1,6 +1,6 @@
 - name: Overview
   href: index.md
-- name: Choose a read-model style
+- name: Choose how to build a read model
   href: choosing-a-read-model-style.mdx
 - name: Architecture
   href: architecture.mdx
