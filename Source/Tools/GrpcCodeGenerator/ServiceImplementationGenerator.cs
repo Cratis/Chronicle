@@ -60,7 +60,17 @@ public class ServiceImplementationGenerator(int skipNamespaceSegments, string co
             hasQueries |= !TypeHelper.IsVoidTask(keyedQuery.ReturnType);
         }
 
-        members.AddRange(context.Mappings.Select(mapping => ImplementationMethods.ForMapping(mapping, context)));
+        // Emitting a mapping can discover another read model through one of its members. Drain
+        // snapshots until every discovered type is emitted, including recursive shapes only once.
+        var emitted = new HashSet<Type>();
+        while (context.Mappings.Where(mapping => !emitted.Contains(mapping.DomainType)).ToList() is { Count: > 0 } pending)
+        {
+            foreach (var mapping in pending)
+            {
+                emitted.Add(mapping.DomainType);
+                members.Add(ImplementationMethods.ForMapping(mapping, context));
+            }
+        }
 
         var typeName = $"global::{implementationNamespace}.{serviceDefinition.ServiceName}";
         var contractTypeName = $"global::{contractsNamespace}.I{serviceDefinition.ServiceName}";
