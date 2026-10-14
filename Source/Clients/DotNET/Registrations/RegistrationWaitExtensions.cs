@@ -24,7 +24,9 @@ public static class RegistrationWaitExtensions
     /// <para>
     /// Registration is a handler on the connection lifecycle, so from outside "has not run yet" and "never ran" look
     /// identical - this is what tells them apart. It waits for registration to have <em>run</em>, not to have
-    /// succeeded: the returned outcome still has to be asked whether every artifact registered.
+    /// succeeded: the returned outcome still has to be asked whether every artifact registered. If registration
+    /// is running again, or a disconnect has scheduled re-registration on reconnect, it waits for that run rather
+    /// than returning the previous outcome.
     /// </para>
     /// <para>
     /// For newly registered active projections, a successful outcome means the kernel has registered their artifacts
@@ -54,7 +56,7 @@ public static class RegistrationWaitExtensions
         while (true)
         {
             var outcome = eventStore.Registration;
-            if (outcome.HasRun)
+            if (outcome.HasRun && !outcome.IsRegistering)
             {
                 return outcome;
             }

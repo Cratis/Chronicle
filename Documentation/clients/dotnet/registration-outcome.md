@@ -44,12 +44,15 @@ foreach (var failed in outcome.Failures)
 | Member | What it answers |
 | --- | --- |
 | `HasRun` | Whether `RegisterAll` has finished at least once, successfully or not |
+| `IsRegistering` | A registration run is in flight, or a disconnect is waiting for re-registration on reconnect |
 | `Artifacts` | Every declared projection artifact, with `IsRegistered` and the `Failure` that stopped it |
 | `Failure` | What stopped `RegisterAll` itself, or `null` when it finished |
 | `IsSuccess` | Registration ran, finished, and every declared artifact registered |
 | `Failures` | Only the artifacts that did not register |
 
 `RegistrationOutcome.NotRun` is the value before registration has finished.
+
+After a kernel restart, the client re-registers its artifacts when it reconnects. `IsRegistering` becomes `true` on disconnect when automatic registration is enabled, and stays true until re-registration finishes. Manual `RegisterAll` calls and background-retry attempts also set it while running. Between background attempts, the published failure has `IsRegistering` set to false. The other members retain the previous run's outcome, so `IsSuccess` can still be true while `IsRegistering` is true; check both before treating registration as ready.
 
 There are two kinds of failure here and they are not the same. An artifact in `Failures` could not be built, so it was isolated and skipped and registration carried on without it — the rest of the read side is up. A `Failure` on the outcome itself ended the run, so registration stopped wherever it got to. A run that ends this way still reports itself rather than staying at `NotRun`, so waiting on it returns instead of timing out.
 
@@ -68,7 +71,7 @@ if (!outcome.IsSuccess)
 }
 ```
 
-It waits for registration to have *run*, not to have succeeded — ask the returned outcome about that. A run that failed returns here too, carrying its `Failure`; the timeout is for a registration that never finished, not for one that finished badly. If it has not finished within the timeout, the wait throws `TaskCanceledException`.
+It waits for registration to have *run*, not to have succeeded — ask the returned outcome about that. During re-registration, it waits for the new outcome instead of returning the previous run's result. A run that failed returns here too, carrying its `Failure`; the timeout is for a registration that never finished, not for one that finished badly. If it has not finished within the timeout, the wait throws `TaskCanceledException`.
 
 ## Discovery happens before registration
 
@@ -86,7 +89,7 @@ A complete discovery result only says which types exist. It does **not** mean th
 
 Reactors and reducers are deliberately not reported. Their registration only opens a duplex stream and returns before the kernel has answered, so the client has nothing to report about them that would be a fact. To know a reactor or reducer is live, wait on its observer state instead — `WaitTillSubscribed` or `WaitTillActive` — which the kernel answers.
 
-The outcome is read-only. Whether a failed artifact should abort start-up, fail a spec, or be tolerated is yours to decide. The ASP.NET Core [readiness health check](./health-checks.md) requires both a live connection and `Registration.IsSuccess`; it reports a failure status for incomplete or failed registration.
+The outcome is read-only. Whether a failed artifact should abort start-up, fail a spec, or be tolerated is yours to decide. The ASP.NET Core [readiness health check](./health-checks.md) requires a live connection, `Registration.IsSuccess`, and `IsRegistering` to be false; it reports a failure status for in-progress, incomplete, or failed registration.
 
 :::caution
 Do not use `IConnectionLifecycle.IsConnected` as a stand-in. It is set to `true` *before* the connected handlers run — registration is one of them — and only rolled back afterwards if one of them failed. Polling it races: it reads `true` while registration is still in flight, and while a registration about to be reported as failed is still running. It answers "connected", which is necessary and not sufficient.
