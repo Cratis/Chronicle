@@ -23,6 +23,21 @@ public class EventSequenceState
     public ulong SequenceNumber { get; set; }
 
     /// <summary>
+    /// Gets or sets the exclusive position of settled constraint updates, or null before coverage was recorded.
+    /// </summary>
+    public ulong? ConstraintIndexWatermark { get; set; }
+
+    /// <summary>
+    /// Gets or sets the exclusive boundary of pending unique-constraint catch-up.
+    /// </summary>
+    public ulong? ConstraintIndexCatchUpBelow { get; set; }
+
+    /// <summary>
+    /// Gets or sets the JSON array of constraint names whose catch-up writes require append refusal.
+    /// </summary>
+    public string? ConstraintIndexCatchUpRefusing { get; set; }
+
+    /// <summary>
     /// Gets or sets the tail sequence numbers per event type.
     /// </summary>
     [Json]

@@ -28,7 +28,12 @@ public static class EventSequenceStateConverter
         {
             EventSequenceId = eventSequenceId.Value,
             SequenceNumber = state.SequenceNumber.Value,
-            TailSequenceNumberPerEventType = tailSequenceNumbers
+            TailSequenceNumberPerEventType = tailSequenceNumbers,
+            ConstraintIndexWatermark = state.ConstraintIndexWatermark?.Value,
+            ConstraintIndexCatchUpBelow = state.ConstraintIndexCatchUpBelow?.Value,
+            ConstraintIndexCatchUpRefusing = state.ConstraintIndexCatchUpRefusing?.Any() == true
+                ? JsonSerializer.Serialize(state.ConstraintIndexCatchUpRefusing.Select(_ => _.Value).ToArray())
+                : null
         };
     }
 
@@ -51,7 +56,12 @@ public static class EventSequenceStateConverter
         return new Chronicle.Storage.EventSequences.EventSequenceState
         {
             SequenceNumber = new EventSequenceNumber(entry.SequenceNumber),
-            TailSequenceNumberPerEventType = tailSequenceNumbers
+            TailSequenceNumberPerEventType = tailSequenceNumbers,
+            ConstraintIndexWatermark = entry.ConstraintIndexWatermark is { } watermark ? new EventSequenceNumber(watermark) : null,
+            ConstraintIndexCatchUpBelow = entry.ConstraintIndexCatchUpBelow is { } boundary ? new EventSequenceNumber(boundary) : null,
+            ConstraintIndexCatchUpRefusing = entry.ConstraintIndexCatchUpRefusing is { } refusing
+                ? JsonSerializer.Deserialize<string[]>(refusing)?.Select(_ => new Concepts.Events.Constraints.ConstraintName(_)).ToArray()
+                : null
         };
     }
 

@@ -37,6 +37,9 @@ public partial class EventSequenceStorage(
     readonly Dictionary<EventSequenceNumber, StoredEventMetadata> _metadata = [];
     readonly Dictionary<EventSequenceNumber, uint> _appendedGenerations = [];
     readonly object _lock = new();
+    EventSequenceNumber? _constraintIndexWatermark;
+    EventSequenceNumber? _constraintIndexCatchUpBelow;
+    Concepts.Events.Constraints.ConstraintName[]? _constraintIndexCatchUpRefusing;
 
     /// <summary>
     /// Gets the events stored in this storage instance.
@@ -92,13 +95,27 @@ public partial class EventSequenceStorage(
             {
                 SequenceNumber = _events.Count == 0
                     ? 0UL
-                    : _events.Max(_ => _.Context.SequenceNumber.Value) + 1
+                    : _events.Max(_ => _.Context.SequenceNumber.Value) + 1,
+                ConstraintIndexWatermark = _constraintIndexWatermark,
+                ConstraintIndexCatchUpBelow = _constraintIndexCatchUpBelow,
+                ConstraintIndexCatchUpRefusing = _constraintIndexCatchUpRefusing?.ToArray()
             });
         }
     }
 
     /// <inheritdoc/>
-    public Task SaveState(EventSequenceState state) => Task.CompletedTask;
+    public Task SaveState(EventSequenceState state)
+    {
+        lock (_lock)
+        {
+            _constraintIndexWatermark = state.ConstraintIndexWatermark;
+            _constraintIndexCatchUpBelow = state.ConstraintIndexCatchUpBelow;
+            var refusing = state.ConstraintIndexCatchUpRefusing?.ToArray();
+            _constraintIndexCatchUpRefusing = refusing?.Length > 0 ? refusing : null;
+        }
+
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public Task<EventCount> GetCount(

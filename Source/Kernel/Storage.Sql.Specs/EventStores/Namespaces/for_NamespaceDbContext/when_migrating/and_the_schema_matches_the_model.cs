@@ -3,9 +3,9 @@
 
 using Microsoft.EntityFrameworkCore;
 
-namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.for_NamespaceDbContext;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.for_NamespaceDbContext.when_migrating;
 
-public class when_migrating : given.a_migrated_namespace_database
+public class and_the_schema_matches_the_model : given.a_migrated_namespace_database
 {
     IEnumerable<string> _missing;
 

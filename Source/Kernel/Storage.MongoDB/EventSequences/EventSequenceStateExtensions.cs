@@ -18,7 +18,10 @@ public static class EventSequenceStateExtensions
     public static EventSequenceState ToMongoDB(this Chronicle.Storage.EventSequences.EventSequenceState state)
         => new(
             state.SequenceNumber,
-            state.TailSequenceNumberPerEventType?.ToDictionary(_ => _.Key.Value, _ => _.Value) ?? []);
+            state.TailSequenceNumberPerEventType?.ToDictionary(_ => _.Key.Value, _ => _.Value) ?? [],
+            state.ConstraintIndexWatermark,
+            state.ConstraintIndexCatchUpBelow,
+            state.ConstraintIndexCatchUpRefusing?.Any() == true ? state.ConstraintIndexCatchUpRefusing.Select(_ => _.Value).ToArray() : null);
 
     /// <summary>
     /// Convert to <see cref="Chronicle.Storage.EventSequences.EventSequenceState"/>.
@@ -29,6 +32,11 @@ public static class EventSequenceStateExtensions
         new()
         {
             SequenceNumber = state.SequenceNumber,
-            TailSequenceNumberPerEventType = state.TailSequenceNumberPerEventType?.ToDictionary(_ => (EventTypeId)_.Key, _ => _.Value) ?? []
+            TailSequenceNumberPerEventType = state.TailSequenceNumberPerEventType?.ToDictionary(_ => (EventTypeId)_.Key, _ => _.Value) ?? [],
+            ConstraintIndexWatermark = state.ConstraintIndexWatermark,
+            ConstraintIndexCatchUpBelow = state.ConstraintIndexCatchUpBelow,
+            ConstraintIndexCatchUpRefusing = state.ConstraintIndexCatchUpRefusing?.Any() == true
+                ? state.ConstraintIndexCatchUpRefusing.Select(_ => new Concepts.Events.Constraints.ConstraintName(_)).ToArray()
+                : null
         };
 }

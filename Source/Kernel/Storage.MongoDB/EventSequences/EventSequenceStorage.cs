@@ -79,7 +79,10 @@ public partial class EventSequenceStorage(
         var stateForStorage = state.ToMongoDB();
         var update = Builders<EventSequenceState>.Update
             .Set(_ => _.SequenceNumber, stateForStorage.SequenceNumber)
-            .Set(_ => _.TailSequenceNumberPerEventType, stateForStorage.TailSequenceNumberPerEventType);
+            .Set(_ => _.TailSequenceNumberPerEventType, stateForStorage.TailSequenceNumberPerEventType)
+            .Set(_ => _.ConstraintIndexWatermark, stateForStorage.ConstraintIndexWatermark)
+            .Set(_ => _.ConstraintIndexCatchUpBelow, stateForStorage.ConstraintIndexCatchUpBelow)
+            .Set(_ => _.ConstraintIndexCatchUpRefusing, stateForStorage.ConstraintIndexCatchUpRefusing);
 
         await collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
     }

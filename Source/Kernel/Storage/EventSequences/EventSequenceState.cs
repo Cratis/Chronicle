@@ -16,6 +16,21 @@ public class EventSequenceState
     public EventSequenceNumber SequenceNumber { get; set; } = EventSequenceNumber.First;
 
     /// <summary>
+    /// Gets or sets the exclusive position through which constraint index updates have been settled, or null before coverage was recorded.
+    /// </summary>
+    public EventSequenceNumber? ConstraintIndexWatermark { get; set; }
+
+    /// <summary>
+    /// Gets or sets the exclusive boundary of pending unique-constraint history catch-up.
+    /// </summary>
+    public EventSequenceNumber? ConstraintIndexCatchUpBelow { get; set; }
+
+    /// <summary>
+    /// Gets or sets the constraints whose catch-up writes currently require append refusal, or null when none do.
+    /// </summary>
+    public IEnumerable<Concepts.Events.Constraints.ConstraintName>? ConstraintIndexCatchUpRefusing { get; set; }
+
+    /// <summary>
     /// Gets or sets the last event sequence number for the last event that was appended.
     /// </summary>
     public IDictionary<EventTypeId, EventSequenceNumber> TailSequenceNumberPerEventType { get; set; } = new Dictionary<EventTypeId, EventSequenceNumber>();
