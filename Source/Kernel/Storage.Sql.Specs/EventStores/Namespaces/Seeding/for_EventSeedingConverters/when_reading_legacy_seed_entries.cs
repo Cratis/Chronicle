@@ -19,6 +19,8 @@ public class when_reading_legacy_seed_entries : Specification
         entry.Remove(nameof(SeededEventEntry.EventSourceType));
         entry.Remove(nameof(SeededEventEntry.EventStreamType));
         entry.Remove(nameof(SeededEventEntry.EventStreamId));
+        entry.Remove(nameof(SeededEventEntry.Origin));
+        entry.Remove(nameof(SeededEventEntry.Owner));
         _entity = new EventSeedsEntity
         {
             ByEventTypeJson = new JsonObject { ["type"] = new JsonArray(entry.DeepClone()) }.ToJsonString(),
@@ -28,6 +30,8 @@ public class when_reading_legacy_seed_entries : Specification
 
     void Because() => _result = EventSeedingConverters.ToEventSeeds(_entity, JsonSerializerOptions.Default);
 
+    [Fact] void should_default_origin_to_unknown() => _result.ByEventType.Values.Single().Single().Origin.ShouldEqual(SeedOrigin.Unknown);
+    [Fact] void should_default_owner_to_empty() => _result.ByEventSource.Values.Single().Single().Owner.ShouldEqual(string.Empty);
     [Fact] void should_default_source_type() => _result.ByEventType.Values.Single().Single().EventSourceType.ShouldEqual(EventSourceType.Default);
     [Fact] void should_default_stream_type() => _result.ByEventType.Values.Single().Single().EventStreamType.ShouldEqual(EventStreamType.All);
     [Fact] void should_default_stream_id() => _result.ByEventSource.Values.Single().Single().EventStreamId.Value.ShouldEqual(EventStreamId.Default);

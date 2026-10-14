@@ -150,6 +150,18 @@ public class SeedEventsRequest
     /// </summary>
     [ProtoMember(4)]
     public IEnumerable<global::Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries> NamespacedEntries { get; set; } = new List<global::Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries>();
+
+    /// <summary>
+    /// Gets or sets the GlobalSetIsAuthoritative.
+    /// </summary>
+    [ProtoMember(5)]
+    public bool GlobalSetIsAuthoritative { get; set; }
+
+    /// <summary>
+    /// Gets or sets the GlobalSetOwner.
+    /// </summary>
+    [ProtoMember(6)]
+    public string GlobalSetOwner { get; set; } = string.Empty;
 }
 
 /// <summary>

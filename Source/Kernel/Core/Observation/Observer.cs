@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.DevelopmentTools;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
@@ -57,7 +58,7 @@ public partial class Observer(
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
     ILoggerFactory loggerFactory,
-    IEventGenerationRelease? eventGenerationRelease = null) : StateMachine<ObserverState>, IObserver, IRemindable, IDisposable
+    IEventGenerationRelease? eventGenerationRelease = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
 
@@ -193,6 +194,23 @@ public partial class Observer(
 
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public async Task ResetForDevelopment()
+    {
+        if (_removed)
+        {
+            return;
+        }
+
+        await Unsubscribe();
+
+        // DeactivateOnIdle only schedules deactivation. Seal first so late callbacks and OnDeactivateAsync cannot
+        // re-persist the old cursor after the resetter wipes storage. This uses the same seal as observer removal,
+        // without deleting any persisted definition here.
+        _removed = true;
+        DeactivateOnIdle();
+    }
 
 #pragma warning disable CA1721 // Property names should not match get methods
     /// <inheritdoc/>

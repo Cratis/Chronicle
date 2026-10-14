@@ -46,6 +46,7 @@ internal sealed class KernelStateResetter(
     public async Task Reset()
     {
 #if DEVELOPMENT
+        await KeepAliveGrainReset.Reset(grainFactory);
         var managementGrain = grainFactory.GetGrain<IManagementGrain>(0);
         await managementGrain.ForceActivationCollection(TimeSpan.Zero);
 

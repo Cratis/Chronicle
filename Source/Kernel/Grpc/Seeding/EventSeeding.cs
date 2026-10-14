@@ -27,7 +27,7 @@ internal sealed class EventSeeding(
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SeedEvents(global::Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
-            new global::Cratis.Chronicle.Seeding.SeedEvents((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.GlobalByEventType, request.GlobalByEventSource, request.NamespacedEntries));
+            new global::Cratis.Chronicle.Seeding.SeedEvents((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.GlobalByEventType, request.GlobalByEventSource, request.NamespacedEntries, request.GlobalSetIsAuthoritative, request.GlobalSetOwner));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Seeding.EventSeedingSupportResponse>> GetSeedingSupport(global::ProtoBuf.Grpc.CallContext callContext = default) =>

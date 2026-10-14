@@ -310,6 +310,7 @@ public partial class EventStore : IEventStore
             artifactActivator,
             loggerFactory.CreateLogger<EventSeeding>(),
             EventSources);
+        ((EventSeeding)Seeding).UseGlobalSetOwner(options?.Value.ProgramIdentifier ?? "[N/A]");
 
         Patterns = new Patterns.Patterns(this);
 
