@@ -36,6 +36,11 @@ public class ChronicleHealthCheck(IChronicleClient client, IOptions<ChronicleAsp
             }
 
             var registration = store.Registration;
+            if (registration.IsRegistering)
+            {
+                return new HealthCheckResult(context.Registration.FailureStatus, $"Registration is in progress for event store '{eventStore}'.");
+            }
+
             if (!registration.HasRun && !client.Options.AutoDiscoverAndRegister)
             {
                 return HealthCheckResult.Healthy($"Connected to the Chronicle kernel for event store '{eventStore}'; automatic registration is off.");
