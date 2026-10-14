@@ -720,7 +720,14 @@ public partial class EventStore : IEventStore
         ReadModelReactors.Start();
 
         // Seed events only after all observers are registered
-        await Seeding.Register();
+        if (Seeding is EventSeeding nativeSeeding)
+        {
+            await nativeSeeding.RegisterDiscovered();
+        }
+        else
+        {
+            await Seeding.Register();
+        }
     }
 
     async Task RegisterExternalEventStoreSubscriptionsAsync()
