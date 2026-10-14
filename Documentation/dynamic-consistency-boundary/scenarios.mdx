@@ -62,7 +62,7 @@ A course has a capacity, and a student may take at most five courses. Neither nu
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/course-subscription" variants="csharp" />
 
-Chronicle stores one event source ID per event, so one fact about two entities is written as two events, one per source. `AppendMany` writes them atomically: either both are appended or neither is. Both decision reads guard the same append. If another student takes the last seat, or the student subscribes elsewhere, after you read, the append is rejected and neither event is written.
+Chronicle stores one event source ID per event, so one fact about two entities is written as two events, one per source. Where DCB tags one event with both entities, Chronicle records the fact once for each. [DCB examples in Chronicle](./dcb-examples.mdx#course-subscription) says when that is acceptable and how to type the two events. `AppendMany` writes them atomically: either both are appended or neither is. Both decision reads guard the same append. If another student takes the last seat, or the student subscribes elsewhere, after you read, the append is rejected and neither event is written.
 
 `GetDecisionConflicts` tells you which read changed, so you can report "the course is now full" and not only "try again".
 
@@ -120,3 +120,5 @@ The method returns `true` when the guard rejected the second append. Run it agai
 - [Questions and answers](./faq.md)
 - [Decision reads](../read-models/decision-reads.mdx)
 - [Dynamic Consistency Boundary in Chronicle](./chronicle.md)
+- [DCB examples in Chronicle](./dcb-examples.mdx)
+- [Event sources and streams](../event-sources/index.mdx): decide per stream.

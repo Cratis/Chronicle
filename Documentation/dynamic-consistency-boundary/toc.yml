@@ -2,6 +2,8 @@
   href: index.md
 - name: Chronicle
   href: chronicle.md
+- name: DCB examples
+  href: dcb-examples.mdx
 - name: Choosing how a rule holds
   href: choosing.mdx
 - name: Scenarios

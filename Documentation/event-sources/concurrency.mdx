@@ -1,0 +1,100 @@
+---
+title: Concurrency per event source and stream
+description: How the concurrency dimensions of an event source and its streams decide what an append conflicts with, how to build an explicit scope, and the batch rule.
+---
+
+Use this page to decide which appends should conflict. The general model of concurrency scopes is in [Concurrency](../events/concurrency.mdx). This page covers what a definition adds to it.
+
+## What an append is guarded by
+
+When you append without passing a `ConcurrencyScope`, the client reads the tail of the event sequence and sends it as the position you expect. The kernel rejects the append if an event that matches the scope was appended after that position. What "matches" means is the part a definition changes:
+
+| The append goes through | The scope narrows to the append's |
+|---|---|
+| No definition | event source id, event source type, event stream type and event stream id |
+| A definition whose dimensions are `None` | the same four values, as without a definition |
+| A definition with dimensions | only the dimensions it declares |
+
+The client reads the tail with exactly the narrowing it sends, so the position and the check ask the same question. A dimension that is not declared is left out, not set to a default.
+
+## Which dimensions apply
+
+Chronicle picks the dimensions with `ConcurrencyFor`:
+
+1. If the stream declares any dimensions, those are used. The event source's dimensions are ignored.
+2. Otherwise the event source's dimensions are used.
+3. An append without a stream uses the event source's.
+
+A stream cannot opt out. `None` on a stream means "not declared", so it inherits. To make a stream narrower or wider than its event source, declare the dimensions on the stream.
+
+<ChronicleClientTabs snippet="event-sources/concurrency/declare" variants="csharp" />
+
+With that definition, the scopes are:
+
+| Append | Dimensions used | Scope narrows to |
+|---|---|---|
+| `Onboarding` stream | the event source's: `EventSourceId` | Every event of this account, in any stream |
+| `Transactions` stream, month `2026-04` | the stream's: `EventSourceId`, `EventStreamType`, `EventStreamId` | Events of this account in `Transactions` with stream id `2026-04` |
+| No stream | the event source's: `EventSourceId` | Every event of this account |
+
+No scope names event types, so any event type in the narrowed range counts. That makes a definition-derived guard coarse: it protects a whole event source or a whole stream, as an aggregate does. It is the right guard when the stream is the consistency boundary. When a rule needs a narrower, event-type-filtered append condition, use a [decision read](../read-models/decision-reads.mdx) or an explicit scope with `WithEventType`. The check is asymmetric: a `Transactions` deposit does not look at `Onboarding` events, but an `Onboarding` append sees every event of the account, including deposits.
+
+## What conflicts
+
+Two writers read the tail, then both append. The second append is rejected when the first one's event is inside the second one's scope.
+
+| First writer appends to | Second writer appends to | Conflict? |
+|---|---|---|
+| Account A, `Transactions`, `2026-04` | Account A, `Transactions`, `2026-04` | Yes |
+| Account A, `Transactions`, `2026-04` | Account A, `Transactions`, `2026-05` | No |
+| Account A, `Transactions`, `2026-04` | Account B, `Transactions`, `2026-04` | No |
+| Account A, `Transactions`, `2026-04` | Account A, `Onboarding` | Yes. The onboarding scope covers the whole account |
+| Account A, `Onboarding` | Account A, `Transactions`, `2026-04` | No. The transactions scope does not cover onboarding |
+
+A conflict is a normal result, not an exception. The append returns with `HasConcurrencyViolations` set and nothing is written. Read the new state, decide again and append again.
+
+<ChronicleClientTabs snippet="event-sources/concurrency/handle-violation" variants="csharp" />
+
+## The first append into a scope
+
+A narrowed scope needs an event to compare with. When no event matches the narrowing yet, such as the first deposit of a new month, the client has no position to send and the kernel skips the check. By default two writers can both make the first append into a new stream and both succeed.
+
+Turn on `ConcurrencyOptions.CheckFirstAppendIntoAScope`, or build the scope with `ExpectingNoMatchingEvent()` for one append, to check it. See [The first append into a scope is not checked by default](../events/concurrency.mdx#the-first-append-into-a-scope-is-not-checked-by-default). The result's `ConcurrencyCheckPerformed` tells you whether a check ran.
+
+## Build an explicit scope
+
+An append that passes its own `ConcurrencyScope` skips the dimension logic. This is how you guard a decision you made from earlier reads: capture the tail first, read the facts, decide, then append with that position.
+
+<ChronicleClientTabs snippet="event-sources/concurrency/explicit-scope" variants="csharp" />
+
+`ForEventSource<TSource>(stream, streamId)` copies the event source type, and the stream type and stream id when you give them, from the definition. It does not read the dimension flags. It does not set the event source id or the sequence number either: you add `WithEventSourceId` and `WithSequenceNumber`. Name the stream in `ForEventSource` the same way you name it in the append, or the builder throws `EventStreamDoesNotBelongToEventSource`.
+
+A [decision read](../read-models/decision-reads.mdx) does the capture-then-read sequence for you. See [Dynamic Consistency Boundary](./dcb.mdx).
+
+## A batch that needs two guards for one event source id
+
+An `AppendMany` carries one concurrency scope per event source id. If you append events through definitions and pass no scope for an id, Chronicle resolves the guard of every event with that id and compares them by what they check: event source id, event source type, event stream type, event stream id and event types. The expected sequence number is not compared, because it is a point-in-time value.
+
+- Events whose guards check the same thing share one scope.
+- An event whose guard checks nothing, for example because it is the first append into its scope, never hides a later event that does have a guard.
+- Events that need different guards cannot be sent together. Chronicle throws `IncompatibleConcurrencyScopesForEventSource` before anything is written, and the exception lists the guards in `Scopes`.
+
+<ChronicleClientTabs snippet="event-sources/concurrency/incompatible-batch" variants="csharp" />
+
+This batch throws once both months already hold events, because each month needs its own guard. If neither stream has events and the first-append check is off, neither event has a guard to compare and the batch is sent unguarded.
+
+Chronicle never widens a guard to cover the difference. Choose one:
+
+- Pass one explicit scope for the event source id that suits every event. An explicit scope always wins.
+- Append the events in separate batches.
+
+<ChronicleClientTabs snippet="event-sources/concurrency/batch-fix" variants="csharp" />
+
+Batches that do not use definitions behave as before.
+
+## Next steps
+
+- [Scenarios](./scenarios.mdx): the dimensions in worked examples.
+- [How it works](./how-it-works.mdx#how-a-scope-is-produced): the code path from definition to scope.
+- [Dynamic Consistency Boundary](./dcb.mdx): scopes as append conditions. See also [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md).
+- [Decision reads](../read-models/decision-reads.mdx)
