@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Diagnostics;
 
 #pragma warning disable RCS1075 // Telemetry failures are deliberately swallowed: reporting a suspicion must never affect the observer
 
@@ -104,7 +105,7 @@ public partial class Observer
                 Skips.HeldBack(partition, sequenceNumbers, reason);
             }
         }
-        catch (Exception)
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
         {
             // Observation only: a failure here must never change what the observer does with the events.
         }
@@ -123,7 +124,7 @@ public partial class Observer
                 Skips.DiscardedBelowNext(partition, discarded, next);
             }
         }
-        catch (Exception)
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
         {
             // Observation only: a failure here must never change what the observer does with the events.
         }
@@ -164,7 +165,7 @@ public partial class Observer
         {
             _metrics?.EventsSuspectedSkipped(count);
         }
-        catch (Exception)
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
         {
             // Observation only.
         }
@@ -183,7 +184,7 @@ public partial class Observer
 
             logger.SuspectedSkippedEvents(count, partition, first, reason, State.NextEventSequenceNumber);
         }
-        catch (Exception)
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
         {
             // Observation only.
         }

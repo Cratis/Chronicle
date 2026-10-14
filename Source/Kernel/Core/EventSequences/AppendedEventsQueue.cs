@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
@@ -558,7 +559,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         {
             await observer.Handle(partition, events);
         }
-        catch (Exception)
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
         {
             ReportSuspectedUndeliveredEvents(partition, events, observerKey);
             throw;
@@ -580,7 +581,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         {
             _metrics?.EventsSuspectedUndelivered(events.Length, observerKey.ObserverId);
         }
-        catch (Exception)
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
         {
             // Observation only.
         }
@@ -599,7 +600,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
             _logger.SuspectedUndeliveredEvents(events.Length, events[0].Context.SequenceNumber, events[^1].Context.SequenceNumber, partition, observerKey);
         }
-        catch (Exception)
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
         {
             // Observation only.
         }

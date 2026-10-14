@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Diagnostics;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -314,7 +315,7 @@ internal sealed class EventSkipDetector(Func<Key, bool> isOwnedByObserver, Actio
         {
             action();
         }
-        catch (Exception)
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
         {
             // The detector only ever suspects, so a failure of its own disables it rather than the observer.
             _faulted = true;
