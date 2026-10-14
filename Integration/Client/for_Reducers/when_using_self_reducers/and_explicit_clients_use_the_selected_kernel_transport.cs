@@ -42,8 +42,9 @@ public class and_explicit_clients_use_the_selected_kernel_transport(context setu
                 ? new ChronicleClient(options, artifactsProvider: this)
                 : new ChronicleClient(new BorrowedConnection(EventStore.Connection), options, artifactsProvider: this);
 
-            // Keep the unique store name short enough for PostgreSQL's database identifier limit.
-            var store = await client.GetEventStore($"tr{Guid.NewGuid():N}"[..12]);
+            // Kept short: PostgreSQL truncates database names to 63 bytes, which merges the store's and its namespace's databases
+            // for longer names (https://github.com/Cratis/Chronicle/issues/4849). This spec is about transport selection, not naming.
+            var store = await client.GetEventStore($"t{Guid.NewGuid():N}"[..9]);
             await store.DiscoverAll();
             await store.RegisterAll();
             store.Registration.IsSuccess.ShouldBeTrue();

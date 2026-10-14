@@ -2,10 +2,6 @@
 
 The `NotRewindable()` method marks a projection as forward-only, meaning it cannot be replayed or rewound. This is useful for projections that maintain state that should not be recreated from scratch or for performance-critical scenarios where replay is not needed.
 
-:::note[Client coverage]
-Marking a projection as not-rewindable is currently supported in C# and TypeScript only. Kotlin and Java have no fluent API for it, and Elixir's declarative and model-bound projections always register as rewindable with no way to opt out yet.
-:::
-
 ## Defining a non-rewindable projection
 
 Use `NotRewindable()` to mark a projection as forward-only:

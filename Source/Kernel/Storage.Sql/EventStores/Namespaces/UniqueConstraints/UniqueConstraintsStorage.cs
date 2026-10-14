@@ -194,7 +194,45 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
             });
         }
 
-        await scope.DbContext.SaveChangesAsync();
+        try
+        {
+            await scope.DbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException error) when (IsUniqueViolation(error))
+        {
+            scope.DbContext.ChangeTracker.Clear();
+            var owner = await scope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(_ => _.Value == value.Value);
+            if (owner is not null && owner.EventSourceId != eventSourceIdValue)
+            {
+                throw new DuplicateUniqueConstraintValue(name, eventSourceId);
+            }
+
+            // A concurrent insert of this source won the primary-key race. Retry as an update,
+            // even if it claimed a different value; the unique value index still settles the move.
+            var winner = await scope.DbContext.Entries.FirstOrDefaultAsync(_ => _.EventSourceId == eventSourceIdValue);
+            if (winner is null)
+            {
+                throw;
+            }
+
+            winner.Value = value.Value;
+            winner.SequenceNumber = sequenceNumber.Value;
+            try
+            {
+                await scope.DbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateException retryError) when (IsUniqueViolation(retryError))
+            {
+                scope.DbContext.ChangeTracker.Clear();
+                var retryOwner = await scope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(_ => _.Value == value.Value);
+                if (retryOwner is not null && retryOwner.EventSourceId != eventSourceIdValue)
+                {
+                    throw new DuplicateUniqueConstraintValue(name, eventSourceId);
+                }
+
+                throw;
+            }
+        }
     }
 
     async Task RemovePerEventSource(EventSourceId eventSourceId, ConstraintName name, string scopeKey)

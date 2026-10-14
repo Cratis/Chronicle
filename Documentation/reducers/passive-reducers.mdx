@@ -67,4 +67,8 @@ The following declarations illustrate alternative activity settings; choose the 
 
 Changing `isActive` updates observer activity, not the model's read strategy. Adding or removing `[Passive]` changes sink selection and by-id reconstruction semantics. Treat that as a read-model configuration change; do not assume toggling `isActive` has the same effect.
 
+## Passive reads are not guards
+
+A passive read is fresh when you read it, but it does not note a position in the log and does not guard the append that follows. Another writer can append between your read and your write. To make a rule hold, use a [constraint](../constraints/index.md) or a [decision read](../read-models/decision-reads.mdx). Decision reads refuse reducers, so the state they read must be a flat projection. See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx).
+
 Neither passive nor inactive reducers enable reducer decision reads, stream-id subscription filtering or exactly-once delivery. See [self-reducer limits](self-reducing-read-models#reads-filters-and-preserved-limits) for the shared boundaries.

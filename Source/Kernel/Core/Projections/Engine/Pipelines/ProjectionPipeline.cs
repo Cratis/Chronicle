@@ -112,6 +112,9 @@ public class ProjectionPipeline(
     public Task<IEnumerable<FailedPartition>> EndBulk() => sink.EndBulk();
 
     /// <inheritdoc/>
+    public Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken) => sink.EndBulk(cancellationToken);
+
+    /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
         // A purely event-source-keyed projection resolves every event's key to its own event source id, so striping

@@ -15,6 +15,30 @@ If no event types are configured, the webhook forwards the event types the clien
 A non-2xx response, such as `400` or `500`, fails the webhook batch. Transient failures (`5xx`, `408`, `429`, timeouts and connection errors) are first retried by Chronicle's HTTP client up to three times with exponential backoff, and a circuit breaker can fail calls fast while an endpoint keeps failing. When the batch still fails, Chronicle marks the partition as failed and retries it according to the [observer retry settings](../hosting/configuration/observers.md); after the configured attempts are exhausted, it quarantines the partition (a `maxRetryAttempts` of `0` retries indefinitely). Make your receiving endpoint idempotent: a retried or replayed batch can arrive more than once.
 :::
 
+## Pin the generation your endpoint understands
+
+To keep an endpoint on the event shape it knows, opt in per webhook with the .NET
+builder's `WithGenerationDelivery(EventGenerationDelivery.Pinned)` method. The enum is
+in `Cratis.Chronicle.Observation`. This is independent of the client's global reactor,
+reducer, and projection option. Core registrations can set `GenerationDelivery` to `Pinned`
+on `AddWebhook` or on each definition sent to `AddWebhooks`.
+
+The kernel persists each subscribed event type's identifier and generation with the delivery
+policy. Live delivery, catch-up, replay, and partition retries select and release that generation.
+Registering another generation does not move these pins; deliberately re-register the webhook
+with different event types to change them. Registration rejects unregistered generations and
+multiple generations of one event type before recording changes.
+
+The HTTP payload envelope is unchanged: it still carries the partition and appended events,
+including `GenerationalContent`. In pinned mode, an event's content, delivered generation,
+and hash correspond to its pin; `AppendedGeneration` still records the original append generation.
+Missing stored materializations are migrated for delivery only, with no stored hash. A release
+failure sends no HTTP request and fails the batch without acknowledging it.
+
+The default remains `Compatibility`. Upgrade every kernel silo before opting in. See
+[event type migrations](../concepts/event-type-migrations.mdx#opt-in-to-pinned-observer-delivery)
+for revision and protected-value behavior.
+
 ## Query registered webhooks
 
 <ChronicleClientTabs snippet="webhooks/index/query" />

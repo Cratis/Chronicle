@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints;
@@ -12,30 +11,29 @@ namespace Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 /// Represents an in-memory implementation of <see cref="IUniqueConstraintsStorage"/>.
 /// </summary>
 /// <remarks>
-/// Per-event-source mode replaces the source's previous claim. Per-value mode retains each value separately,
-/// with one owner per constraint and scope, until a removal event releases it.
+/// Each value has one owner per constraint and scope. Per-event-source mode replaces the source's previous claim
+/// only after the new value is available. Per-value mode retains each value until a removal event releases it.
 /// </remarks>
 public class UniqueConstraintsStorage : IUniqueConstraintsStorage
 {
-    readonly ConcurrentDictionary<(string EventSourceId, string ConstraintName, string ScopeKey), (string Value, EventSequenceNumber SequenceNumber)> _index = [];
-    readonly ConcurrentDictionary<(string ConstraintName, string ScopeKey, string Value), (string EventSourceId, EventSequenceNumber SequenceNumber)> _values = [];
+    readonly object _lock = new();
+    readonly Dictionary<(string EventSourceId, string ConstraintName, string ScopeKey), (string Value, EventSequenceNumber SequenceNumber)> _index = [];
+    readonly Dictionary<(string ConstraintName, string ScopeKey, string Value), (string EventSourceId, EventSequenceNumber SequenceNumber)> _values = [];
 
     /// <inheritdoc/>
     public Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "")
     {
-        if (definition.Mode != UniqueConstraintMode.PerValue)
+        lock (_lock)
         {
-            foreach (var entry in _index.Where(_ => _.Key.ConstraintName == definition.Name.Value && _.Key.ScopeKey == scopeKey))
+            foreach (var key in _index.Keys.Where(_ => _.ConstraintName == definition.Name.Value && _.ScopeKey == scopeKey).ToArray())
             {
-                _index.TryRemove(entry);
+                _index.Remove(key);
             }
 
-            return Task.CompletedTask;
-        }
-
-        foreach (var entry in _values.Where(_ => _.Key.ConstraintName == definition.Name.Value && _.Key.ScopeKey == scopeKey))
-        {
-            _values.TryRemove(entry);
+            foreach (var key in _values.Keys.Where(_ => _.ConstraintName == definition.Name.Value && _.ScopeKey == scopeKey).ToArray())
+            {
+                _values.Remove(key);
+            }
         }
 
         return Task.CompletedTask;
@@ -44,24 +42,12 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
     /// <inheritdoc/>
     public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
     {
-        if (definition.Mode == UniqueConstraintMode.PerValue)
+        lock (_lock)
         {
             return Task.FromResult(_values.TryGetValue((definition.Name.Value, scopeKey, value.Value), out var entry)
                 ? (entry.EventSourceId == eventSourceId.Value, entry.SequenceNumber)
                 : (true, EventSequenceNumber.Unavailable));
         }
-
-        foreach (var (key, entry) in _index)
-        {
-            if (key.ConstraintName != definition.Name.Value || key.ScopeKey != scopeKey || entry.Value != value.Value)
-            {
-                continue;
-            }
-
-            return Task.FromResult((key.EventSourceId == eventSourceId.Value, entry.SequenceNumber));
-        }
-
-        return Task.FromResult((true, EventSequenceNumber.Unavailable));
     }
 
     /// <summary>
@@ -76,17 +62,31 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
     /// <exception cref="DuplicateUniqueConstraintValue">Another event source owns the value.</exception>
     public Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "")
     {
-        if (definition.Mode != UniqueConstraintMode.PerValue)
+        lock (_lock)
         {
-            _index[(eventSourceId.Value, definition.Name.Value, scopeKey)] = (value.Value, sequenceNumber);
-            return Task.CompletedTask;
-        }
+            var key = (definition.Name.Value, scopeKey, value.Value);
+            if (_values.TryGetValue(key, out var owner))
+            {
+                if (owner.EventSourceId != eventSourceId.Value)
+                {
+                    throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
+                }
 
-        var key = (definition.Name.Value, scopeKey, value.Value);
-        var entry = _values.GetOrAdd(key, (eventSourceId.Value, sequenceNumber));
-        if (entry.EventSourceId != eventSourceId.Value)
-        {
-            throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
+                return Task.CompletedTask;
+            }
+
+            if (definition.Mode != UniqueConstraintMode.PerValue)
+            {
+                var sourceKey = (eventSourceId.Value, definition.Name.Value, scopeKey);
+                if (_index.TryGetValue(sourceKey, out var previous))
+                {
+                    _values.Remove((definition.Name.Value, scopeKey, previous.Value));
+                }
+
+                _index[sourceKey] = (value.Value, sequenceNumber);
+            }
+
+            _values[key] = (eventSourceId.Value, sequenceNumber);
         }
 
         return Task.CompletedTask;
@@ -101,15 +101,22 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
     /// <returns>Awaitable task.</returns>
     public Task Remove(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "")
     {
-        if (definition.Mode != UniqueConstraintMode.PerValue)
+        lock (_lock)
         {
-            _index.TryRemove((eventSourceId.Value, definition.Name.Value, scopeKey), out _);
-            return Task.CompletedTask;
-        }
-
-        foreach (var entry in _values.Where(_ => _.Key.ConstraintName == definition.Name.Value && _.Key.ScopeKey == scopeKey && _.Value.EventSourceId == eventSourceId.Value))
-        {
-            _values.TryRemove(entry);
+            if (definition.Mode != UniqueConstraintMode.PerValue)
+            {
+                if (_index.Remove((eventSourceId.Value, definition.Name.Value, scopeKey), out var previous))
+                {
+                    _values.Remove((definition.Name.Value, scopeKey, previous.Value));
+                }
+            }
+            else
+            {
+                foreach (var key in _values.Where(_ => _.Key.ConstraintName == definition.Name.Value && _.Key.ScopeKey == scopeKey && _.Value.EventSourceId == eventSourceId.Value).Select(_ => _.Key).ToArray())
+                {
+                    _values.Remove(key);
+                }
+            }
         }
 
         return Task.CompletedTask;
@@ -125,10 +132,13 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
     /// <returns>Awaitable task.</returns>
     public Task RemoveValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
     {
-        var key = (definition.Name.Value, scopeKey, value.Value);
-        if (_values.TryGetValue(key, out var entry) && entry.EventSourceId == eventSourceId.Value)
+        lock (_lock)
         {
-            _values.TryRemove(new KeyValuePair<(string, string, string), (string, EventSequenceNumber)>(key, entry));
+            var key = (definition.Name.Value, scopeKey, value.Value);
+            if (definition.Mode == UniqueConstraintMode.PerValue && _values.TryGetValue(key, out var entry) && entry.EventSourceId == eventSourceId.Value)
+            {
+                _values.Remove(key);
+            }
         }
 
         return Task.CompletedTask;
