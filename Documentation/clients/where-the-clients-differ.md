@@ -100,8 +100,8 @@ Sources: [.NET delivery identity](https://github.com/Cratis/Chronicle/blob/main/
 
 | Client | Default target and duplicate handling | Seeder callback failure |
 | --- | --- | --- |
-| .NET | `For`/`ForEventSource` entries are stored globally per event store and applied once to every existing namespace and to each namespace created later. Each client sends discovered globals once per event store name per connection lifetime. `ForNamespace(...)` targets only the named namespace. The kernel tracks entry occurrences by source, event type, content, tags, and routing. | A callback exception propagates. Activation failures are logged and skipped separately. |
-| TypeScript | `for`/`forEventSource` entries use the kernel's global seeding path and entry tracking. | Logged as a warning and discovery continues; entries added before the failure are not removed. |
+| .NET | `For`/`ForEventSource` entries are stored globally per event store and applied once to every existing namespace and to each namespace created later. Each client declares discovered globals authoritatively per program identifier, once per event store name per connection lifetime, including empty sets. Explicitly queued globals remain append-only. `ForNamespace(...)` targets only the named namespace. The kernel tracks entry occurrences by source, event type, content, tags, and routing. | Activation and callback failures are logged. If any seeder fails, no discovered global declaration is sent, preserving the previous declaration. Namespace-scoped and manually queued entries still register; the next registration retries discovery. |
+| TypeScript | `for`/`forEventSource` entries use the kernel's append-only global seeding path and entry tracking. Authoritative declarations are tracked in [#4871](https://github.com/Cratis/Chronicle/issues/4871). | Logged as a warning and discovery continues; entries added before the failure are not removed. |
 | Kotlin and Java | Entries target the selected namespace, defaulting to the client's namespace. Uses kernel entry tracking, but does not send seed tags. | A callback exception propagates. |
 | Elixir | Global entries and entries without an explicit `for_namespace` target the builder's namespace. Appends directly and skips a source that already contains any events, rather than using kernel entry tracking. | Discovery logs and skips the failing seeder, discarding that seeder's partial entries. |
 
@@ -109,9 +109,14 @@ Adding another seed to an existing source can therefore add data through the ker
 
 In .NET, opening a store for a new namespace creates it. The kernel then applies stored global seeds asynchronously,
 usually before the application's first write, but there is no ordering guarantee. Do not rely on that timing;
-put development or sample data in `ForNamespace(...)`. Removing a global seed from code does not remove the stored entry:
-no removal API exists yet, and resetting the event store is the only way to clear it today.
-A reset deletes store data.
+put development or sample data in `ForNamespace(...)`. With an upgraded .NET client and kernel, removing a discovered
+global seed replaces the program's stored declaration, so namespaces created afterwards no longer receive it.
+Existing namespaces keep all events already appended. Set distinct, stable `ChronicleOptions.ProgramIdentifier` values
+when several programs share a store. The first authoritative declaration clears legacy unowned entries, but retains
+other programs' declarations and explicit additions. Identical seeds shared across declarations or explicit additions
+use the largest occurrence count in a single program's group, not the sum. Clearing one declaration leaves seeds
+still offered by another group available to future namespaces. Older clients and older kernels keep append-only behavior.
+See [clear stale development seeds](../event-seeding/seeding-with-csharp.mdx#clear-stale-development-seeds).
 
 Sources: [.NET seeding](https://github.com/Cratis/Chronicle/blob/main/Source/Clients/DotNET/Seeding/EventSeeding.cs), [kernel seeding](https://github.com/Cratis/Chronicle/blob/main/Source/Kernel/Core/Seeding/EventSeeding.cs), [JVM seeding](https://github.com/Cratis/Chronicle.Kotlin/blob/main/Source/src/main/kotlin/io/cratis/chronicle/seeding/EventSeedingService.kt), [TypeScript seeding](https://github.com/Cratis/Chronicle.TypeScript/blob/main/Source/seeding/EventSeeding.ts), [Elixir seeding](https://github.com/Cratis/Chronicle.Elixir/blob/main/Source/chronicle/lib/chronicle/seeding.ex).
 

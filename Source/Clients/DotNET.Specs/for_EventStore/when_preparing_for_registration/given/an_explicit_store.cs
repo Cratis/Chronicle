@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.EventTypes;
+using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.Events;
@@ -55,6 +56,7 @@ public class an_explicit_store : Specification
         _services = Substitute.For<IServices>();
         ((IChronicleServicesAccessor)_connection).Services.Returns(_services);
         _services.EventStores.EnsureEventStore(Arg.Any<EnsureEventStoreRequest>()).Returns(CommandResult.Success(Guid.NewGuid()));
+        _services.Seeding.SeedEvents(Arg.Any<SeedEventsRequest>()).Returns(CommandResult.Success(Guid.NewGuid()));
         _services.EventTypes.RegisterEventTypes(Arg.Any<RegisterEventTypesRequest>()).Returns(call =>
         {
             _payload = call.Arg<RegisterEventTypesRequest>();
