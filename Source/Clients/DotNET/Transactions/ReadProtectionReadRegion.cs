@@ -12,6 +12,7 @@ internal sealed class ReadProtectionReadRegion : IDisposable
     readonly ReadProtectionReadRegion? _previous;
     readonly ReadProtectionFrame? _frame;
     readonly ReadAllowance _allowance;
+    readonly bool _suspends;
     bool _active = true;
 
     /// <summary>
@@ -25,6 +26,15 @@ internal sealed class ReadProtectionReadRegion : IDisposable
         _allowance = allowance;
         Reason = reason;
         _previous = _current.Value;
+        _current.Value = this;
+    }
+
+    ReadProtectionReadRegion()
+    {
+        _frame = ReadProtectionFrame.Current;
+        _previous = _current.Value;
+        _suspends = true;
+        Reason = "Reducer callback";
         _current.Value = this;
     }
 
@@ -50,12 +60,18 @@ internal sealed class ReadProtectionReadRegion : IDisposable
         if (ReferenceEquals(_current.Value, this)) _current.Value = _previous;
     }
 
+    /// <summary>Suspends inherited read allowances without removing the enforcement frame.</summary>
+    /// <returns>The flow-local suspension to dispose after the callback.</returns>
+    internal static IDisposable Suspend() => new ReadProtectionReadRegion();
+
     static bool Has(ReadAllowance allowance)
     {
         var frame = ReadProtectionFrame.Current;
         for (var region = _current.Value; region is not null; region = region._previous)
         {
-            if (Volatile.Read(ref region._active) && ReferenceEquals(region._frame, frame) && region._allowance == allowance) return true;
+            if (!Volatile.Read(ref region._active) || !ReferenceEquals(region._frame, frame)) continue;
+            if (region._suspends) return false;
+            if (region._allowance == allowance) return true;
         }
         return false;
     }
