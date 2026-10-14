@@ -73,7 +73,7 @@ public class EventSeeding(
             new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
             new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
 
-        return Task.FromResult(state.State);
+        return Task.FromResult(_key.IsGlobal ? GlobalSeedSet.Effective(state.State) : state.State);
     }
 
     static SeededEventEntry ToSeededEntry(SeedingEntry entry) => new(entry.EventSourceId, entry.EventTypeId, entry.Content, entry.Tags?.Select(t => t.Value) ?? [])
@@ -105,11 +105,22 @@ public class EventSeeding(
 
     async Task<SeedingResult> SeedGlobally(List<SeedingEntry> entriesList, bool authoritative, string owner)
     {
-        var newEntries = GetEntriesStillToSeed(entriesList);
-        if (newEntries.Count == 0 && !authoritative)
+        var offered = entriesList.Select(entry => ToSeededEntry(entry) with
+        {
+            Origin = authoritative ? SeedOrigin.Declared : SeedOrigin.Added,
+            Owner = owner
+        });
+        var updated = authoritative
+            ? GlobalSeedSet.Replace(state.State, offered, owner)
+            : GlobalSeedSet.Add(state.State, offered, owner);
+        if (ReferenceEquals(updated, state.State))
         {
             return SeedingResult.Complete;
         }
+
+        var growingEntries = GlobalSeedSet.GrowingEntries(state.State, updated)
+            .Select(entry => new SeedingEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, entry.Tags?.Select(tag => new Tag(tag)), entry.EventSourceType, entry.EventStreamType, entry.EventStreamId))
+            .ToList();
 
         // Dispatch to every namespace grain BEFORE committing the global tracking. Each namespace
         // grain applies its own idempotency guard, so re-dispatching after a transient failure is
@@ -117,7 +128,7 @@ public class EventSeeding(
         // that throws mid-loop would never be retried - on retry IsAlreadySeeded would report the
         // entries as seeded, the dispatch would be skipped, and the remaining namespaces would
         // never receive the events.
-        var everyNamespaceSeeded = await DispatchGlobally(newEntries.ConvertAll(_ => _.Entry));
+        var everyNamespaceSeeded = await DispatchGlobally(growingEntries);
 
         // A namespace that declined part of what it was given is the same situation as one that threw:
         // the entries are still waiting. Committing the tracking here would mean they are never
@@ -131,24 +142,7 @@ public class EventSeeding(
 
         // Only now, after every namespace has seeded everything, commit the global tracking so a retry
         // re-dispatches when a namespace dispatch throws or declines.
-        if (authoritative)
-        {
-            state.State = GlobalSeedSet.Replace(
-                state.State,
-                entriesList.Select(entry => ToSeededEntry(entry) with
-                {
-                    Origin = SeedOrigin.Declared,
-                    Owner = owner
-                }),
-                owner);
-        }
-        else
-        {
-            foreach (var (_, seededEntry) in newEntries)
-            {
-                TrackSeededEvent(seededEntry with { Origin = SeedOrigin.Added, Owner = owner });
-            }
-        }
+        state.State = updated;
 
         await state.WriteStateAsync();
 
@@ -350,31 +344,4 @@ public class EventSeeding(
     /// <param name="Seeded">The <see cref="SeededEventEntry"/> to record once the event has been appended.</param>
     /// <param name="ToAppend">The <see cref="EventToAppend"/> to append to the event sequence.</param>
     record SeedableEvent(SeededEventEntry Seeded, EventToAppend ToAppend);
-
-    /// <summary>
-    /// Compares two seeded entries on what identifies them: the event source, the event type, the content
-    /// and the set of tags. The record's own equality cannot be used - it compares the tag sequence by
-    /// reference, so two entries with equal tags never match.
-    /// </summary>
-    sealed class SeededEventEntryIdentity : IEqualityComparer<SeededEventEntry>
-    {
-        internal static readonly SeededEventEntryIdentity Comparer = new();
-
-        public bool Equals(SeededEventEntry? x, SeededEventEntry? y) =>
-            ReferenceEquals(x, y) ||
-            (x is not null &&
-             y is not null &&
-             x.EventSourceId == y.EventSourceId &&
-             x.EventTypeId == y.EventTypeId &&
-             SeedRouting.SourceType(x.EventSourceType?.Value) == SeedRouting.SourceType(y.EventSourceType?.Value) &&
-             SeedRouting.StreamType(x.EventStreamType?.Value) == SeedRouting.StreamType(y.EventStreamType?.Value) &&
-             SeedRouting.StreamId(x.EventStreamId?.Value) == SeedRouting.StreamId(y.EventStreamId?.Value) &&
-             string.Equals(x.Content, y.Content, StringComparison.Ordinal) &&
-             TagsOf(x).SetEquals(TagsOf(y)));
-
-        public int GetHashCode(SeededEventEntry obj) =>
-            HashCode.Combine(obj.EventSourceId, obj.EventTypeId, obj.Content, TagsOf(obj).Count, SeedRouting.SourceType(obj.EventSourceType?.Value), SeedRouting.StreamType(obj.EventStreamType?.Value), SeedRouting.StreamId(obj.EventStreamId?.Value));
-
-        static HashSet<string> TagsOf(SeededEventEntry entry) => new(entry.Tags ?? [], StringComparer.Ordinal);
-    }
 }
