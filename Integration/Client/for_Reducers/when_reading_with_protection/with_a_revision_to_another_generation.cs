@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using context = Cratis.Chronicle.Integration.for_Reducers.when_reading_with_protection.with_a_revision_to_another_generation.context;
 using stock = Cratis.Chronicle.Integration.for_UnitOfWork.when_enforcing_read_protection.given;
@@ -31,19 +33,18 @@ public class with_a_revision_to_another_generation(context context) : Given<cont
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             try
             {
-                while (true)
-                {
-                    var events = await EventStore.EventLog.GetFromSequenceNumber(sequenceNumber, Source).WaitAsync(timeout.Token);
-                    var storedEvent = events.FirstOrDefault(_ => _.Context.SequenceNumber == sequenceNumber);
+                var systemLog = EventStore.GetEventSequence(EventSequenceId.System);
+                var revisionSequenceNumber = await systemLog.GetTailSequenceNumber().WaitAsync(timeout.Token);
+                var reactor = await EventStore.Reactors.WaitForHandlerById(
+                    "$system.Cratis.Chronicle.EventSequences.EventSequencesReactor",
+                    TimeSpan.FromSeconds(30)).WaitAsync(timeout.Token);
 
-                    // Migrated generation 2 content can already exist before the revision is applied.
-                    if (storedEvent?.Context.EventType.Generation.Value == 2 && storedEvent.Content is stock.StockSetV2 { Quantity: 0 }) return;
-                    await Task.Delay(50, timeout.Token);
-                }
+                // Handling EventRevised completes only after the revised content is stored.
+                await reactor.WaitTillReachesEventSequenceNumber(revisionSequenceNumber, TimeSpan.FromSeconds(30)).WaitAsync(timeout.Token);
             }
             catch (OperationCanceledException error) when (timeout.IsCancellationRequested)
             {
-                throw new TimeoutException($"Revision of event {sequenceNumber} was not visible with generation 2 and quantity 0 within 30 seconds.", error);
+                throw new TimeoutException($"Revision of event {sequenceNumber} was not applied by the event sequences reactor within 30 seconds.", error);
             }
         }
     }
