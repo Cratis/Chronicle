@@ -28,9 +28,10 @@ public static class MongoDBContainerStartExtensions
     public const string GlibcRseqCompatibilityValue = "glibc.pthread.rseq=1";
 
     /// <summary>
-    /// The default deadline for a MongoDB spec container to become ready.
+    /// The default deadline for a MongoDB spec container to become ready. It also covers starting the resource reaper and pulling the image
+    /// on a cold runner, and stays far below the test session limit.
     /// </summary>
-    public static readonly TimeSpan DefaultStartDeadline = TimeSpan.FromMinutes(2);
+    public static readonly TimeSpan DefaultStartDeadline = TimeSpan.FromMinutes(5);
 
     const string KernelIncompatibilityMarker = "known incompatibility with this version of MongoDB";
     const int LogTailCharacters = 4000;
