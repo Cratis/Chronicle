@@ -295,12 +295,18 @@ public class ChronicleClient : IChronicleClient, IDisposable
     {
         foreach (var eventStore in CreatedEventStores())
         {
-            // Drop the RegisterAll handler the EventStore constructor wired up so the shared
-            // connection's OnConnected event no longer fans out into this evicted instance.
-            // Without this, the next reconnect would still run RegisterAll for every event
-            // store created in the lifetime of the client, including those the caller no
-            // longer cares about.
-            eventStore.Connection.Lifecycle.OnConnected -= eventStore.RegisterAll;
+            // Drop the lifecycle handlers the EventStore constructor wired up so the shared
+            // connection no longer fans out into this evicted instance. Without this, the next
+            // reconnect would still run RegisterAll for every event store created in the lifetime
+            // of the client, including those the caller no longer cares about.
+            if (eventStore is EventStore store)
+            {
+                store.DetachAutomaticRegistration();
+            }
+            else
+            {
+                eventStore.Connection.Lifecycle.OnConnected -= eventStore.RegisterAll;
+            }
         }
         _eventStores.Clear();
     }
