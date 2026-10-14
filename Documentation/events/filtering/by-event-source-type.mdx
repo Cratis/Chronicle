@@ -21,3 +21,7 @@ If you append the same event with `eventSourceType: "supplier"`, this reducer do
 ## Combine with other filters
 
 You can combine `[EventSourceType]` with `[FilterEventsByTag]` or `[EventStreamType]`. When you do, Chronicle requires all configured filter categories to match.
+
+## Filter by a declared event source
+
+To get the event source type from an [event source definition](../../event-sources/defining.mdx) instead of a string, use `[FromEventSource<TSource>("Stream")]`. See [Filter observers by event source and stream](../../event-sources/filtering.mdx). The event source type is one of the values a concurrency scope can narrow to, which makes it part of a [Dynamic Consistency Boundary](../../dynamic-consistency-boundary/chronicle.md) guard. A filter on an observer is not.

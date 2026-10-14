@@ -1,0 +1,46 @@
+---
+title: Filter observers by event source and stream
+description: Make a reactor or reducer handle only the events of one stream of an event source definition, and what CHR0055 and CHR0056 check at build time.
+---
+
+Use `[FromEventSource<TSource>("Stream")]` on a reactor or a reducer when it should handle only the events appended to one stream of a definition. The filter replaces the pair of strings in `[EventSourceType]` and `[EventStreamType]`.
+
+## Filter a reactor
+
+<ChronicleClientTabs snippet="event-sources/filtering/reactor" variants="csharp" />
+
+The reactor receives `MoneyDeposited` only when it was appended to the `Transactions` stream of the `Account` event source. A deposit appended through another definition, or to the `Onboarding` stream, is skipped.
+
+## Filter a reducer
+
+<ChronicleClientTabs snippet="event-sources/filtering/reducer" variants="csharp" />
+
+## How the match works
+
+The attribute resolves to two values when the observer is registered: the definition's name as the event source type, and the stream name as the event stream type. An event passes when its stored event source type and event stream type equal them. Chronicle compares the stored values, not the definition type, so an event appended with the same strings without a definition also matches.
+
+If the definition or the stream cannot be resolved when the observer registers, the client throws `UnknownEventSource` or `EventStreamDoesNotBelongToEventSource`.
+
+You can combine the typed filter with `[FilterEventsByTag]`. All configured categories must match. Filters apply to reactors and reducers. A projection ignores them, which [CHR0041](../code-analysis/CHR0041.mdx) reports.
+
+## Build-time checks
+
+The code analyzer checks typed filters while you compile:
+
+| Rule | Severity | Reports |
+|---|---|---|
+| [CHR0055](../code-analysis/CHR0055.mdx) | Error | The stream is not declared by the definition |
+| [CHR0056](../code-analysis/CHR0056.mdx) | Error | `[EventSourceType]` or `[EventStreamType]` on the same type contradicts the typed filter |
+
+An explicit attribute that repeats the same value as the typed filter is allowed, but it adds nothing.
+
+## Filtering by string
+
+`[EventSourceType]` and `[EventStreamType]` still work without a definition. See [Filter by event source type](../events/filtering/by-event-source-type.mdx) and [Filter by event stream type](../events/filtering/by-event-stream-type.mdx). To move from the strings to the typed form, read [Migrate from string routing](./migrating.mdx).
+
+## Next steps
+
+- [Scenarios](./scenarios.mdx#a-process-stream): a reactor that follows one process stream.
+- [Dynamic Consistency Boundary](./dcb.mdx): the decision happens on the write side, and observers react afterwards.
+- [Reactors](../reactors/index.mdx)
+- [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md): what consistency covers and what observers do not.

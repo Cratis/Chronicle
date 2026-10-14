@@ -1,0 +1,77 @@
+---
+title: Define an event source
+description: Declare an event source and its event streams as a C# type, choose their names and concurrency dimensions, and check what Chronicle registered.
+---
+
+Use this page to declare an event source definition. To write events through it, read [Append through a definition](./appending.mdx).
+
+## Declare the definition
+
+A definition is a class that implements `IEventSource`. Put `[EventSource]` on it, add one `[EventStream]` for each stream, and leave the body empty.
+
+<ChronicleClientTabs snippet="event-sources/defining/definition" variants="csharp" />
+
+| Attribute | Property | Meaning |
+|---|---|---|
+| `[EventSource]` | name (constructor) | The event source type written on every event appended through the definition |
+| | `Description` | Shown in the Workbench |
+| | `Concurrency` | The default [concurrency dimensions](./concurrency.mdx) for every stream |
+| `[EventStream]` | name (constructor) | The event stream type written on events appended to the stream |
+| | `Description` | Shown in the Workbench |
+| | `Concurrency` | The dimensions for this stream. When none, the event source's dimensions apply |
+
+Chronicle never creates an instance of the class. It reads the attributes and registers the result.
+
+## Choose the names
+
+The two names are what end up on stored events and what observers match on, so choose them as you would an event type name and keep them stable.
+
+<ChronicleClientTabs snippet="event-sources/defining/naming" variants="csharp" />
+
+- An explicit name in `[EventSource("Loan")]` wins.
+- Without one, the name is the type name with a trailing `EventSource` removed. A type that is itself called `EventSource` keeps its name.
+- The attribute is optional. Without it the definition has no description and declares no concurrency dimensions.
+- Names are compared exactly. `Account` and `account` are different event source types.
+
+Two definitions with the same name make discovery throw `DuplicateEventSourceName`. A definition that declares the same stream twice throws `DuplicateEventStreamName`.
+
+## Choose the concurrency dimensions
+
+`ConcurrencyDimensions` is a flags enum. It says which values of an append take part in its concurrency check.
+
+| Flag | The guard covers events with the same |
+|---|---|
+| `EventSourceId` | event source id |
+| `EventSourceType` | event source type |
+| `EventStreamType` | event stream type |
+| `EventStreamId` | event stream id |
+| `None` | Nothing is declared. The append keeps the guard it would have had without a definition |
+
+A stream that declares dimensions uses them. A stream that declares none inherits the event source's. [Concurrency](./concurrency.mdx) shows what each combination conflicts with.
+
+## Choose the stream ids
+
+A stream declares a type only. The stream id is a value you pass on each append, and Chronicle does not impose a format or a template for it. Keep the convention in one place so every writer produces the same string:
+
+<ChronicleClientTabs snippet="event-sources/defining/stream-id-convention" variants="csharp" />
+
+Streams that are not instances of anything, such as an `Onboarding` stream that exists once per account, can use the default stream id by leaving it out.
+
+## Where Chronicle finds definitions
+
+The client discovers every non-abstract, non-generic class that implements `IEventSource` in the application's assemblies, together with its other artifacts. With [explicit artifact registration](../clients/dotnet/explicit-artifacts.md) you nominate definitions in the composition root instead. Registration with the kernel happens when the event store connects. [How it works](./how-it-works.mdx#discovery-and-registration) has the sequence.
+
+## Check what is registered
+
+Read the definition back from the client:
+
+<ChronicleClientTabs snippet="event-sources/defining/inspect" variants="csharp" />
+
+`IEventStore.EventSources` is available after the event store has discovered its artifacts. The Workbench lists the registered definitions of an event store on its **Event Sources** page: name, description, owner, default concurrency and streams, with a detail pane for each stream's own dimensions. See [Workbench](../workbench/index.mdx).
+
+## Next steps
+
+- [Append through a definition](./appending.mdx)
+- [Concurrency](./concurrency.mdx)
+- [Migrate from string routing](./migrating.mdx)
+- [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md): where a definition fits a decision model and an append condition.

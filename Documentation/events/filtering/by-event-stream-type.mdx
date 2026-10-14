@@ -21,3 +21,7 @@ If the same event is appended with another stream type, such as `eventStreamType
 ## When to choose stream type filtering
 
 Use stream type filtering when the same event source can produce distinct processing flows and you want a reducer or reactor to observe only one of those flows.
+
+## Filter by a declared stream
+
+To resolve the stream type from an [event source definition](../../event-sources/defining.mdx), use `[FromEventSource<TSource>("Stream")]`, which also sets the event source type. See [Filter observers by event source and stream](../../event-sources/filtering.mdx). The stream type is a dimension a concurrency scope can narrow to, which is how a decision can be guarded per stream. See [Event sources and the Dynamic Consistency Boundary](../../event-sources/dcb.mdx). A filter on an observer takes no part in that.
