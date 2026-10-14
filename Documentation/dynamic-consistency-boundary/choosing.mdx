@@ -21,7 +21,7 @@ The [Dynamic Consistency Boundary](./index.md) pattern makes an append condition
 
 - **Chronicle expresses the condition.** A concurrency scope holds a position and a filter. A decision read builds the scope for you and notes the position before it folds the state.
 - **Chronicle adds constraints and checks.** Constraints enforce uniqueness for every writer without a read, and a decision read refuses shapes it cannot guard exactly.
-- **Chronicle does not do everything DCB can.** Tags take no part in consistency, and an event has one event source ID, so a fact about two entities is two events in one `AppendMany`.
+- **Chronicle does not do everything DCB can.** Tags take no part in consistency, and an event has one event source ID, so a fact about two entities is two events in one `AppendMany`. [DCB examples in Chronicle](./dcb-examples.mdx) shows the Chronicle answer to each canonical DCB example.
 
 ## Decide by the shape of the rule
 
@@ -33,7 +33,7 @@ The [Dynamic Consistency Boundary](./index.md) pattern makes an append condition
 | Stock or count on one key (copies left, loans per member) | Decision read of a projection with `[Increment]` and `[Decrement]` | An explicit scope on the event types you counted | A materialized counter read with no guard | None, but see the cost of a hot key below |
 | A rule across two keys (course capacity and a student's course limit) | One decision read per key, one event per event source, one `AppendMany` | Put every fact the rule needs on one event source, then use one read | Two separate appends, or a guard on only one side | None |
 | An editing conflict (two people change the same record) | Explicit scope built from the revision the user saw | A decision read when the conflict only matters inside one request | Last writer wins by accident | A constraint |
-| One stream inside an event source | A decision read scoped to the stream type and stream ID | An explicit scope with stream type and stream ID | A read over the whole source when only one stream matters: you get conflicts from other streams | None |
+| One stream inside an event source | A decision read scoped to the stream type and stream ID. Declare the stream with an [event source definition](../event-sources/index.mdx) so the read and the append share its names, see [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx) | An explicit scope with stream type and stream ID | A read over the whole source when only one stream matters: you get conflicts from other streams | None |
 | Rich behaviour (many rules over one lifecycle) | A decision read of a richer flat projection. In Arc, an aggregate root | Several decision reads, one per concern | Rules spread over validators and plain read-model checks | An aggregate where one counter rule would do |
 | A rare violation is acceptable | Append normally, then repair: a [reactor](../reactors/index.mdx) appends a correcting event | A constraint for whatever part is cheap to enforce | Presenting a plain read as a guarantee | A decision read |
 | A UX hint (disable a button, show "seats left") | A plain read of a materialized read model | None | Treating the hint as enforcement | A decision read: it costs several calls and a full fold |
@@ -184,5 +184,7 @@ For the retry inside the kernel after a duplicate sequence number: the kernel re
 
 - [Scenarios](./scenarios.mdx): each rule shape as working code.
 - [Decision reads](../read-models/decision-reads.mdx): the API, admission rules and limits.
+- [DCB examples in Chronicle](./dcb-examples.mdx): the canonical DCB examples, the Chronicle way.
 - [Concurrency](../events/concurrency.mdx): scopes, the builder and the first-append check.
+- [Event sources and streams](../event-sources/index.mdx): declare the dimensions an append is guarded by.
 - [Questions and answers](./faq.md).

@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Registrations;
+using Cratis.Chronicle.Seeding;
 
 namespace Cratis.Chronicle;
 
@@ -17,6 +18,13 @@ public partial class EventStore
     StorePreparationGate Preparation => LazyInitializer.EnsureInitialized(ref _preparation, () => new(PublishLocalPreparationFailure));
 
     /// <summary>
+    /// Shares discovered global seed registration with the client's other namespace stores.
+    /// </summary>
+    /// <param name="registration">The per-client connection registry.</param>
+    internal void UseGlobalSeedRegistration(GlobalSeedRegistration registration) =>
+        ((EventSeeding)Seeding).UseGlobalSeedRegistration(registration);
+
+    /// <summary>
     /// Rejects registration callback reentry before joining an unfinished task.
     /// </summary>
     internal void ThrowIfArtifactPreparationReentered() => _preparation?.ThrowIfReentered();
@@ -24,10 +32,24 @@ public partial class EventStore
     /// <summary>
     /// Detaches a failed store's constructor-installed callback before cache eviction.
     /// </summary>
-    internal void DetachAutomaticRegistration() => Connection.Lifecycle.OnConnected -= RegisterAll;
+    internal void DetachAutomaticRegistration()
+    {
+        Connection.Lifecycle.OnConnected -= RegisterAll;
+        Connection.Lifecycle.OnDisconnected -= MarkRegistrationAfterDisconnect;
+    }
 
-    void PublishLocalPreparationFailure(Exception failure) =>
-        Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, failure) { IdentityDrift = Registration.IdentityDrift };
+    void PublishLocalPreparationFailure(Exception failure)
+    {
+        lock (RegistrationSync)
+        {
+            _publishedDisconnectEpoch = _disconnectEpoch;
+            Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, failure)
+            {
+                IdentityDrift = Registration.IdentityDrift,
+                IsRegistering = _registrationTask is not null
+            };
+        }
+    }
 
     Task ValidateManualPreparation() => EventTypes is EventTypes native ? native.ValidatePreparation() : Task.CompletedTask;
 

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -17,6 +18,14 @@ public interface IAppendedEventsQueues : IGrainWithStringKey
     /// <param name="appendedEvents">Collection of <see cref="AppendedEvent"/> to enqueue.</param>
     /// <returns>Awaitable task.</returns>
     Task Enqueue(IEnumerable<AppendedEvent> appendedEvents);
+
+    /// <summary>
+    /// Clears every queue and the routing index before a development or integration storage wipe.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>Development reset only; the activation must be deactivated afterwards, not reused for production delivery.</remarks>
+    [AlwaysInterleave]
+    Task ResetForDevelopment();
 
     /// <summary>
     /// Subscribe an observer to the queue.

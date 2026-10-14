@@ -14,26 +14,28 @@ public class a_seeding_grain : Specification
     protected const string TheNamespace = "TestNamespace";
 
     protected IGrainFactory _grainFactory;
-    protected SeedingGrain _globalGrain;
+    protected IGlobalEventSeeding _globalGrain;
     protected SeedingGrain _namespaceGrain;
 
     void Establish()
     {
         _grainFactory = Substitute.For<IGrainFactory>();
-        _globalGrain = Substitute.For<SeedingGrain>();
+        _globalGrain = Substitute.For<IGlobalEventSeeding>();
         _namespaceGrain = Substitute.For<SeedingGrain>();
 
-        _globalGrain.SeedWithResult(Arg.Any<IEnumerable<SeededEntry>>()).Returns(Task.FromResult(SeedingResult.Complete));
+        _globalGrain.SeedGlobalWithResult(Arg.Any<IEnumerable<SeededEntry>>(), Arg.Any<bool>(), Arg.Any<string>()).Returns(Task.FromResult(SeedingResult.Complete));
         _namespaceGrain.SeedWithResult(Arg.Any<IEnumerable<SeededEntry>>()).Returns(Task.FromResult(SeedingResult.Complete));
 
-        _grainFactory.GetGrain<SeedingGrain>(EventSeedingKey.ForGlobal(TheEventStore).ToString()).Returns(_globalGrain);
+        _grainFactory.GetGrain<IGlobalEventSeeding>(EventSeedingKey.ForGlobal(TheEventStore).ToString()).Returns(_globalGrain);
         _grainFactory.GetGrain<SeedingGrain>(EventSeedingKey.ForNamespace(TheEventStore, TheNamespace).ToString()).Returns(_namespaceGrain);
     }
 
     /// <summary>
     /// Gets the entries that reached the global grain, in the order they were handed over.
     /// </summary>
-    protected IEnumerable<SeededEntry> EntriesSeededGlobally => EntriesHandedTo(_globalGrain);
+    protected IEnumerable<SeededEntry> EntriesSeededGlobally => _globalGrain.ReceivedCalls()
+        .Where(call => call.GetMethodInfo().Name == nameof(IGlobalEventSeeding.SeedGlobalWithResult))
+        .SelectMany(call => (IEnumerable<SeededEntry>)call.GetArguments()[0]!);
 
     /// <summary>
     /// Gets the entries that reached the namespace grain, in the order they were handed over.

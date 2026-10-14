@@ -19,6 +19,20 @@ namespace Cratis.Chronicle.Storage.Seeding;
 public record SeededEventEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, string Content, IEnumerable<string>? Tags)
 {
     /// <summary>
+    /// Gets or inits the origin of the global seed entry.
+    /// </summary>
+    public SeedOrigin Origin { get; init; }
+
+    /// <summary>
+    /// Gets or inits the program that supplied the global seed entry.
+    /// </summary>
+    public string Owner
+    {
+        get => field ?? string.Empty;
+        init => field = value ?? string.Empty;
+    } = string.Empty;
+
+    /// <summary>
     /// Gets or inits the event source type.
     /// </summary>
     public EventSourceType EventSourceType

@@ -1,0 +1,22 @@
+- name: Overview
+  href: index.mdx
+- name: Define an event source
+  href: defining.mdx
+- name: Append through a definition
+  href: appending.mdx
+- name: Concurrency
+  href: concurrency.mdx
+- name: Close a stream
+  href: closing.mdx
+- name: Filter observers
+  href: filtering.mdx
+- name: Migrate from string routing
+  href: migrating.mdx
+- name: Scenarios
+  href: scenarios.mdx
+- name: How it works
+  href: how-it-works.mdx
+- name: Dynamic Consistency Boundary
+  href: dcb.mdx
+- name: Questions and pitfalls
+  href: faq.mdx

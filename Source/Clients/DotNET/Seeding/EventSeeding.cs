@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
@@ -48,6 +49,13 @@ public class EventSeeding(
     readonly ILogger<EventSeeding> _logger = logger;
     readonly List<SeedingEntry> _entries = [];
     readonly IEventSources? _eventSources;
+    GlobalSeedRegistration? _globalSeedRegistration;
+    List<SeedingEntry> _discoveredGlobals = [];
+    bool _hasDiscovered;
+    bool _discoveryFailed;
+    bool _retryDiscovery;
+    bool _discoveredSetRegistered;
+    string _globalSetOwner = Assembly.GetEntryAssembly()?.GetName().Name ?? "[N/A]";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSeeding"/> class with typed routing support.
@@ -144,52 +152,150 @@ public class EventSeeding(
     /// <inheritdoc/>
     public async Task Discover()
     {
+        var pendingCount = _entries.Count;
+        _hasDiscovered = false;
+        _discoveryFailed = false;
+        _retryDiscovery = false;
+        _discoveredSetRegistered = false;
+        _discoveredGlobals = [];
+        var failedSeeders = new List<Type>();
         foreach (var seederType in _clientArtifactsProvider.EventSeeders)
         {
-            var activatedSeederResult = _artifactActivator.Activate<ICanSeedEvents>(_serviceProvider, seederType);
-            if (activatedSeederResult.TryGetException(out var exception))
+            if (!await DiscoverSeeder(seederType))
             {
-                _logger.FailedToActivateSeeder(seederType, exception);
-                continue;
+                failedSeeders.Add(seederType);
             }
+        }
 
-            await using var activatedSeeder = activatedSeederResult.AsT0;
-            activatedSeeder.Instance.Seed(this);
+        var discoveredEntries = _entries.Skip(pendingCount).ToList();
+        _discoveredGlobals = discoveredEntries.Where(_ => _.IsGlobal).ToList();
+        _entries.RemoveRange(pendingCount, _entries.Count - pendingCount);
+        _entries.AddRange(discoveredEntries.Where(_ => !_.IsGlobal));
+        _hasDiscovered = failedSeeders.Count == 0;
+        _discoveryFailed = !_hasDiscovered;
+        if (_discoveryFailed)
+        {
+            _logger.GlobalSeedDeclarationSkipped(string.Join(", ", failedSeeders.Select(_ => _.FullName ?? _.Name)));
         }
     }
 
     /// <inheritdoc/>
     /// <exception cref="EventSeedingRoutingNotSupported">Thrown before sending entries when routing support is not confirmed by the kernel.</exception>
-    public async Task Register()
+    public Task Register() => RegisterDiscovered();
+
+    /// <summary>
+    /// Shares automatic global seeding with the other stores created by this client.
+    /// </summary>
+    /// <param name="registration">The per-client connection registry.</param>
+    internal void UseGlobalSeedRegistration(GlobalSeedRegistration registration) => _globalSeedRegistration = registration;
+
+    /// <summary>
+    /// Uses the configured program identifier for ownership of global seeds.
+    /// </summary>
+    /// <param name="programIdentifier">The configured identifier, or the default placeholder.</param>
+    internal void UseGlobalSetOwner(string programIdentifier) =>
+        _globalSetOwner = programIdentifier == "[N/A]"
+            ? Assembly.GetEntryAssembly()?.GetName().Name ?? "[N/A]"
+            : programIdentifier;
+
+    /// <summary>
+    /// Registers discovered seeds, retaining globals so a reconnect can offer them again.
+    /// </summary>
+    /// <returns>The registration task.</returns>
+    internal async Task RegisterDiscovered()
     {
-        if (_entries.Count == 0)
+        if (_retryDiscovery)
+        {
+            await Discover();
+        }
+
+        if (!_hasDiscovered)
+        {
+            await RegisterPreparedEntries(false);
+        }
+        else if (_globalSeedRegistration is null)
+        {
+            await RegisterPreparedEntries(!_discoveredSetRegistered);
+            _discoveredSetRegistered = true;
+        }
+        else
+        {
+            await _globalSeedRegistration.Run(_eventStoreName, async includeGlobals =>
+            {
+                await RegisterPreparedEntries(includeGlobals);
+                return includeGlobals;
+            });
+        }
+
+        _entries.Clear();
+        _retryDiscovery = _discoveryFailed;
+    }
+
+    /// <summary>
+    /// Creates a new empty seeding buffer with the same event-store dependencies.
+    /// </summary>
+    /// <returns>A new <see cref="IEventSeeding"/> instance.</returns>
+    internal IEventSeeding CreateEmpty()
+    {
+        var seeding = new EventSeeding(
+            _eventStoreName,
+            _connection,
+            _eventTypes,
+            _eventSerializer,
+            _clientArtifactsProvider,
+            _serviceProvider,
+            _artifactActivator,
+            _logger,
+            _eventSources);
+        seeding.UseGlobalSetOwner(_globalSetOwner);
+        return seeding;
+    }
+
+    async Task<bool> DiscoverSeeder(Type seederType)
+    {
+        try
+        {
+            var activatedSeederResult = _artifactActivator.Activate<ICanSeedEvents>(_serviceProvider, seederType);
+            if (activatedSeederResult.TryGetException(out var exception))
+            {
+                _logger.FailedToActivateSeeder(seederType, exception);
+                return false;
+            }
+
+            await using var activatedSeeder = activatedSeederResult.AsT0;
+            activatedSeeder.Instance.Seed(this);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            _logger.FailedToRunSeeder(seederType, exception);
+            return false;
+        }
+    }
+
+    async Task RegisterPreparedEntries(bool includeGlobals)
+    {
+        var pending = _entries.ToList();
+        await ConfirmRoutingSupport(includeGlobals ? [.. pending, .. _discoveredGlobals] : pending);
+        if (includeGlobals)
+        {
+            await RegisterEntries(_discoveredGlobals, true);
+        }
+        await RegisterEntries(pending);
+    }
+
+    async Task RegisterEntries(List<SeedingEntry> entries, bool authoritative = false)
+    {
+        if (entries.Count == 0 && !authoritative)
         {
             return;
         }
 
         var servicesAccessor = (IChronicleServicesAccessor)_connection;
-        if (_entries.Exists(entry =>
-            (!string.IsNullOrEmpty(entry.EventSourceType?.Value) && entry.EventSourceType != EventSourceType.Default) ||
-            (!string.IsNullOrEmpty(entry.EventStreamType?.Value) && entry.EventStreamType != EventStreamType.All) ||
-            (!string.IsNullOrEmpty(entry.EventStreamId?.Value) && entry.EventStreamId.Value != EventStreamId.Default)))
-        {
-            try
-            {
-                var support = await servicesAccessor.Services.Seeding.GetSeedingSupport().EnsureSuccess();
-                if (!support.RoutingSupported)
-                {
-                    throw new EventSeedingRoutingNotSupported();
-                }
-            }
-            catch (RpcException exception) when (exception.StatusCode == StatusCode.Unimplemented)
-            {
-                throw new EventSeedingRoutingNotSupported();
-            }
-        }
 
         // Organize entries into global and namespaced groups
-        var globalEntries = _entries.Where(e => e.IsGlobal).ToList();
-        var namespacedEntries = _entries.Where(e => !e.IsGlobal).GroupBy(e => e.TargetNamespace);
+        var globalEntries = entries.Where(e => e.IsGlobal).ToList();
+        var namespacedEntries = entries.Where(e => !e.IsGlobal).GroupBy(e => e.TargetNamespace);
 
         var globalByEventTypeEntries = new List<Contracts.Seeding.EventTypeSeedEntries>();
         var globalByEventSourceEntries = new List<Contracts.Seeding.EventSourceSeedEntries>();
@@ -301,26 +407,36 @@ public class EventSeeding(
             EventStore = _eventStoreName,
             GlobalByEventType = globalByEventTypeEntries,
             GlobalByEventSource = globalByEventSourceEntries,
-            NamespacedEntries = namespaced
+            NamespacedEntries = namespaced,
+            GlobalSetIsAuthoritative = authoritative,
+            GlobalSetOwner = _globalSetOwner
         }).EnsureSuccess();
-
-        _entries.Clear();
     }
 
-    /// <summary>
-    /// Creates a new empty seeding buffer with the same event-store dependencies.
-    /// </summary>
-    /// <returns>A new <see cref="IEventSeeding"/> instance.</returns>
-    internal IEventSeeding CreateEmpty() => new EventSeeding(
-        _eventStoreName,
-        _connection,
-        _eventTypes,
-        _eventSerializer,
-        _clientArtifactsProvider,
-        _serviceProvider,
-        _artifactActivator,
-        _logger,
-        _eventSources);
+    async Task ConfirmRoutingSupport(List<SeedingEntry> entries)
+    {
+        if (!entries.Exists(entry =>
+            (!string.IsNullOrEmpty(entry.EventSourceType?.Value) && entry.EventSourceType != EventSourceType.Default) ||
+            (!string.IsNullOrEmpty(entry.EventStreamType?.Value) && entry.EventStreamType != EventStreamType.All) ||
+            (!string.IsNullOrEmpty(entry.EventStreamId?.Value) && entry.EventStreamId.Value != EventStreamId.Default)))
+        {
+            return;
+        }
+
+        var servicesAccessor = (IChronicleServicesAccessor)_connection;
+        try
+        {
+            var support = await servicesAccessor.Services.Seeding.GetSeedingSupport().EnsureSuccess();
+            if (!support.RoutingSupported)
+            {
+                throw new EventSeedingRoutingNotSupported();
+            }
+        }
+        catch (RpcException exception) when (exception.StatusCode == StatusCode.Unimplemented)
+        {
+            throw new EventSeedingRoutingNotSupported();
+        }
+    }
 
     void AddRoutedEntries(IEnumerable<EventForEventSourceId> events, bool isGlobal, EventStoreNamespaceName targetNamespace, EventTypeId? explicitEventTypeId = default)
     {

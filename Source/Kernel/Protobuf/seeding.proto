@@ -70,6 +70,8 @@ message SeedEventsRequest {
    repeated EventTypeSeedEntries GlobalByEventType = 2;
    repeated EventSourceSeedEntries GlobalByEventSource = 3;
    repeated NamespacedSeedEntries NamespacedEntries = 4;
+   bool GlobalSetIsAuthoritative = 5;
+   string GlobalSetOwner = 6;
 }
 message SeedingEntry {
    string EventSourceId = 1;

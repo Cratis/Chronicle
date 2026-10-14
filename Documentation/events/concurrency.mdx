@@ -9,6 +9,8 @@ Concurrency control in Chronicle ensures that multiple operations don't interfer
 The default scope is built when you append: the client reads the tail then and uses it as the expected position. That covers only the moment between that read and the write. It does not cover the time you spent reading state and deciding. To guard a decision, capture the position before you read the facts, or use a [decision read](../read-models/decision-reads.mdx), which does it for you. A read model you read through `IReadModels` captures nothing. See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx).
 :::
 
+A concurrency scope is how Chronicle expresses the append condition of a [Dynamic Consistency Boundary](../dynamic-consistency-boundary/chronicle.md). To derive the scope from a declared event source and its streams instead of building it by hand, see [Concurrency per event source and stream](../event-sources/concurrency.mdx).
+
 ## Understanding ConcurrencyScope
 
 A `ConcurrencyScope` defines the boundaries and constraints for concurrent operations when appending events. It uses formalized, well-known event metadata tags that are indexed by Chronicle to scope concurrency control to specific aspects of your events, providing fine-grained control over when concurrency violations should be detected. These tags are separate from any user-controlled event tags you may add for categorization. See [Event Metadata Tags](../concepts/event-metadata-tags.md) for details.
