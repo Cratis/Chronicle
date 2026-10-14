@@ -24,6 +24,18 @@ internal static partial class EventSequenceMetrics
 
     [Counter<int>("chronicle-event-sequences-constraint-violations", "Number of constraint violations")]
     internal static partial void ConstraintViolation(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName);
+
+    [Counter<int>("chronicle-event-sequences-constraint-index-update-failures", "Number of failed constraint index attempts")]
+    internal static partial void ConstraintIndexUpdateFailed(this IMeterScope<EventSequence> scope);
+
+    [Counter<int>("chronicle-event-sequences-constraint-index-repairs", "Number of completed constraint index repairs")]
+    internal static partial void ConstraintIndexRepaired(this IMeterScope<EventSequence> scope);
+
+    [Counter<int>("chronicle-event-sequences-constraint-index-refusals", "Number of appends refused for pending constraint indexes")]
+    internal static partial void ConstraintIndexRefused(this IMeterScope<EventSequence> scope);
+
+    [Gauge<ulong>("chronicle-event-sequences-constraint-index-lag", "Events not yet covered by confirmed constraint updates")]
+    internal static partial void ConstraintIndexLag(this IMeterScope<EventSequence> scope, ulong lag);
 }
 
 internal static class EventSequenceMetricsScopes

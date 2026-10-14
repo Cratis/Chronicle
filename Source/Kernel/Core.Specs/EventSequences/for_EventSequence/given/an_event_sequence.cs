@@ -179,6 +179,18 @@ public class an_event_sequence : Specification
         _constraintsGrain.GetVersion().Returns(_ => ConstraintDefinitionComparison.ComputeVersion(_registeredConstraints));
         _jobsManager = Substitute.For<IJobsManager>();
 
+        ConfigureSilo();
+        _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequence).FullName!);
+        _stateStorage.State = new EventSequenceState();
+
+        _eventSequence = await CreateEventSequence();
+    }
+
+    /// <summary>
+    /// Registers the existing collaborators in a fresh test silo for activation lifecycle specifications.
+    /// </summary>
+    protected void ConfigureSilo()
+    {
         _silo.AddService(_storage);
         _silo.AddService(_constraintValidationFactory);
         _silo.AddService(_eventTypeMigrations);
@@ -203,11 +215,6 @@ public class an_event_sequence : Specification
         _silo.AddProbe(_ => _appendedEventsQueues);
         _silo.AddProbe(_ => _constraintsGrain);
         _silo.AddProbe(_ => _jobsManager);
-
-        _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequence).FullName!);
-        _stateStorage.State = new EventSequenceState();
-
-        _eventSequence = await CreateEventSequence();
     }
 
     /// <summary>

@@ -30,6 +30,11 @@ public record AppendError(string Value) : ConceptAs<string>(Value)
     public static readonly AppendError EventPublicationConflict = nameof(EventPublicationConflict);
 
     /// <summary>
+    /// Nothing was stored because a governing constraint index needs repair. Retry unchanged after a delay.
+    /// </summary>
+    public static readonly AppendError ConstraintIndexUnavailable = nameof(ConstraintIndexUnavailable);
+
+    /// <summary>
     /// Implicitly convert from string to <see cref="AppendError"/>.
     /// </summary>
     /// <param name="id">String to convert from.</param>

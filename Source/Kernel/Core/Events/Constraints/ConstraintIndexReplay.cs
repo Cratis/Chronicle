@@ -64,6 +64,11 @@ public partial class ConstraintIndexReplay(
     internal int MaxKeysHeld => _maxKeysHeld;
 
     /// <summary>
+    /// Gets whether this turn could not read the shared range at all.
+    /// </summary>
+    internal bool RangeReadFailed { get; private set; }
+
+    /// <summary>
     /// Continues the fold or its two-phase writes without writing unfinished staged state.
     /// </summary>
     /// <param name="eventLimit">The maximum relevant events processed in this turn, across segment passes.</param>
@@ -71,6 +76,7 @@ public partial class ConstraintIndexReplay(
     /// <returns>The accumulated progress and this turn's failed constraints.</returns>
     public async Task<ConstraintIndexReplayResult> Continue(int eventLimit = 1000, CancellationToken cancellationToken = default)
     {
+        RangeReadFailed = false;
         _failed.Clear();
         _abandoned.Clear();
         _operationConstraint = null;
@@ -137,6 +143,7 @@ public partial class ConstraintIndexReplay(
         }
         catch (Exception error)
         {
+            RangeReadFailed = _operationConstraint is null;
             foreach (var constraint in _operationConstraint is { } name ? [name] : _scopes.Select(scope => scope.Definition.Name).Distinct()) Fail(constraint, _operationPosition, error);
         }
 

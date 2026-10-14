@@ -141,6 +141,7 @@ public partial class EventSequence(
 
         await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
+        InitializeConstraintIndexes();
 
         if (_eventSequenceId == EventSequenceId.Log)
         {
@@ -352,6 +353,7 @@ public partial class EventSequence(
         {
             await RefreshConstraintsIfChanged();
             events = events as IList<EventToAppend> ?? events.ToList();
+            await PrepareConstraintIndexes(events.Select(@event => @event.EventType.Id));
 
             // Validate sequentially with a shared set of batch claims so that two events in the same batch
             // cannot both claim the same unique constraint value — the persisted index is only updated after
@@ -925,8 +927,7 @@ public partial class EventSequence(
     }
 
     /// <summary>
-    /// Runs the steps that follow a durable append: snapshotting the sequence state, handing the events to the
-    /// appended-events queues for live delivery, and persisting the constraint indexes the events feed.
+    /// Hands durable events to live delivery, updates their constraint indexes, then snapshots the resulting watermark.
     /// </summary>
     /// <param name="appendedEvents">The <see cref="AppendedEvent">events</see> that are already durable in the log.</param>
     /// <param name="constraintUpdates">The <see cref="ConstraintValidationContext"/> of each appended event, paired with the <see cref="EventSequenceNumber"/> it got.</param>
@@ -948,15 +949,6 @@ public partial class EventSequence(
     {
         try
         {
-            await PersistStateAfterAppends(appendedEvents.Count);
-        }
-        catch (Exception ex)
-        {
-            logger.FailedPersistingStateAfterAppends(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
-        }
-
-        try
-        {
             await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
         }
         catch (Exception ex)
@@ -965,16 +957,14 @@ public partial class EventSequence(
             await SpillAppendedEventsQueuesToCatchup();
         }
 
-        foreach (var (context, sequenceNumber) in constraintUpdates)
+        await UpdateConstraintIndexes(constraintUpdates);
+        try
         {
-            try
-            {
-                await context.Update(sequenceNumber);
-            }
-            catch (Exception ex)
-            {
-                logger.FailedUpdatingConstraintIndex(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, ex);
-            }
+            await PersistStateAfterAppends(appendedEvents.Count);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedPersistingStateAfterAppends(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
         }
     }
 
@@ -1084,6 +1074,12 @@ public partial class EventSequence(
             _closedStreamsChanged = false;
         }
 
+        if (IsGovernedByPendingIndex(eventType.Id))
+        {
+            _metrics?.ConstraintIndexRefused();
+            return AppendResult.Failed(correlationId, [AppendError.ConstraintIndexUnavailable]);
+        }
+
         var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
         var constraintValidationResult = await constraintContext.Validate();
         if (constraintValidationResult.IsValid)
@@ -1156,6 +1152,7 @@ public partial class EventSequence(
             eventSourceId,
             State.SequenceNumber);
         _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
+        if (nextAvailableSequenceNumber > State.SequenceNumber) MarkConstraintIndexGap(State.SequenceNumber);
         State.SequenceNumber = nextAvailableSequenceNumber;
         return Task.CompletedTask;
     }

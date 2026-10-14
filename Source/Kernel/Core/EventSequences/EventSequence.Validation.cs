@@ -56,6 +56,7 @@ public partial class EventSequence
             }
 
             await RefreshConstraintsIfChanged();
+            await PrepareConstraintIndexes([eventType.Id]);
             var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventSource, eventSourceType, eventStreamType, correlationId);
             if (resolvedEventSourceType.TryGetError(out var eventSourceError))
             {
@@ -158,6 +159,7 @@ public partial class EventSequence
         var appendedEvent = await EventSequenceStorage.GetEventAt(receipt.SequenceNumber);
         if (State.SequenceNumber <= receipt.SequenceNumber)
         {
+            MarkConstraintIndexGap(State.SequenceNumber);
             State.SequenceNumber = receipt.SequenceNumber.Next();
         }
 

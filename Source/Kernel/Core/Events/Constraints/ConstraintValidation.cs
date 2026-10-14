@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -12,6 +13,9 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="validators">Collection of <see cref="IConstraintValidator"/> to use.</param>
 public class ConstraintValidation(IEnumerable<IConstraintValidator> validators) : IConstraintValidation
 {
+    /// <inheritdoc/>
+    public IEnumerable<IConstraintDefinition> IndexedDefinitions => validators.Where(validator => validator is IHaveUpdateConstraintIndex).Select(validator => validator.Definition);
+
     /// <inheritdoc/>
     public ConstraintValidationContext Establish(
         EventSourceId eventSourceId,

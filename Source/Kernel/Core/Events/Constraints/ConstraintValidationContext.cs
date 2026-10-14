@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// </summary>
 public record ConstraintValidationContext
 {
-    readonly IEnumerable<IUpdateConstraintIndex> _updaters;
+    readonly (IConstraintValidator Validator, IUpdateConstraintIndex Updater)[] _indexUpdates;
     readonly IEnumerable<IObserveConstraintBatchEvents> _batchObservers;
 
     /// <summary>
@@ -43,7 +43,8 @@ public record ConstraintValidationContext
         EventStreamType = eventStreamType;
         EventStreamId = eventStreamId;
         BatchClaims = batchClaims;
-        _updaters = validators.OfType<IHaveUpdateConstraintIndex>().Select(v => v.GetUpdateFor(this)).ToArray();
+        _indexUpdates = validators.Where(validator => validator is IHaveUpdateConstraintIndex)
+            .Select(validator => (validator, ((IHaveUpdateConstraintIndex)validator).GetUpdateFor(this))).ToArray();
         Validators = validators.Where(_ => _.CanValidate(this)).ToArray();
 
         _batchObservers = batchClaims is not null ? validators.OfType<IObserveConstraintBatchEvents>().ToArray() : [];
@@ -85,6 +86,11 @@ public record ConstraintValidationContext
     public IEnumerable<IConstraintValidator> Validators { get; }
 
     /// <summary>
+    /// Gets the independently addressable index updates and their owning validators.
+    /// </summary>
+    public IEnumerable<(IConstraintValidator Validator, IUpdateConstraintIndex Updater)> IndexUpdates => _indexUpdates;
+
+    /// <summary>
     /// Gets the <see cref="ConstraintBatchClaims"/> shared by all events in a batch append, or <see langword="null"/> when validating a single event.
     /// </summary>
     public ConstraintBatchClaims? BatchClaims { get; }
@@ -124,7 +130,7 @@ public record ConstraintValidationContext
     /// </remarks>
     public async Task Update(EventSequenceNumber eventSequenceNumber)
     {
-        await Task.WhenAll(_updaters.Select(v => v.Update(eventSequenceNumber)));
+        await Task.WhenAll(_indexUpdates.Select(update => update.Updater.Update(eventSequenceNumber)));
     }
 
     /// <summary>
@@ -134,9 +140,9 @@ public record ConstraintValidationContext
     /// <param name="cancellationToken">The enclosing turn's cancellation deadline.</param>
     /// <returns>One outcome per updater, including failures and abandoned attempts.</returns>
     public async Task<IEnumerable<ConstraintIndexUpdateResult>> Update(EventSequenceNumber eventSequenceNumber, CancellationToken cancellationToken) =>
-        await Task.WhenAll(_updaters.Select(async updater =>
+        await Task.WhenAll(_indexUpdates.Select(async update =>
         {
-            var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(token => updater.Update(eventSequenceNumber, token), cancellationToken);
-            return new ConstraintIndexUpdateResult(updater, outcome, error);
+            var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(token => update.Updater.Update(eventSequenceNumber, token), cancellationToken);
+            return new ConstraintIndexUpdateResult(update.Updater, outcome, error);
         }));
 }
