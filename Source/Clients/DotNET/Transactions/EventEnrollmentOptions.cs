@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.EventSources;
 
 namespace Cratis.Chronicle.Transactions;
 
@@ -27,4 +28,10 @@ public record EventEnrollmentOptions(
     IEnumerable<string>? Tags = default,
     IEnumerable<NamedTag>? NamedTags = default,
     DateTimeOffset? Occurred = default,
-    Subject? Subject = default);
+    Subject? Subject = default)
+{
+    /// <summary>
+    /// Gets or inits dimensions resolved at commit instead of a precomputed routing scope.
+    /// </summary>
+    public ConcurrencyDimensions? DeclaredConcurrency { get; init; }
+}

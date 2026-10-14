@@ -420,6 +420,7 @@ public partial class UnitOfWork(
         IEventSequence? eventSequence;
         bool protectedCommit;
         ScopeProvenance? provenance;
+        ReadProtectionCommit? readProtectionCommit;
         lock (_decisionLock)
         {
             ThrowIfMutatedDuringEnrollment();
@@ -437,6 +438,15 @@ public partial class UnitOfWork(
             scopes = !protectedCommit ? _concurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value) :
                 _concurrencyScopes.Concat(_decisionScopes).ToDictionary(_ => _.Key, _ => _.Value);
             provenance = _implicitScopes.Count != 0 && events.Length != 0 ? CaptureScopeProvenance() : null;
+            readProtectionCommit = IsEnforcingReadProtection
+                ? new(GetReadProtectionTarget(), Array.AsReadOnly(_readProtectionContributions.ToArray()), CaptureAppendConditions)
+                : null;
+            if (readProtectionCommit is not null && events.Length == 0)
+            {
+                var plan = ReadProtectionMerge.Apply(readProtectionCommit.Target, readProtectionCommit.Contributions, scopes, false);
+                CaptureAppendConditions(plan.Conditions);
+                if (plan.Scopes.Count == 0) eventSequence = null;
+            }
         }
 
         try
@@ -446,7 +456,13 @@ public partial class UnitOfWork(
                 AppendManyResult result;
                 try
                 {
-                    if (provenance is not null)
+                    if (readProtectionCommit is not null)
+                    {
+                        result = eventSequence is IEventSequenceWithScopeProvenance supported
+                            ? await supported.AppendMany(events, [], scopes, readProtectionCommit)
+                            : throw new EventSequenceReadProtectionNotSupported(eventSequence.GetType());
+                    }
+                    else if (provenance is not null)
                     {
                         result = await AppendWithScopeProvenance(eventSequence, events, scopes, provenance);
                     }

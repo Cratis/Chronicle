@@ -6,6 +6,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.EventSources;
 
 namespace Cratis.Chronicle.Transactions;
 
@@ -23,7 +24,7 @@ public partial class UnitOfWork
     public void AddEventWithOptions(EventSequenceId eventSequenceId, EventSourceId eventSourceId, object @event, Causation causation, EventEnrollmentOptions options)
     {
         ConcurrencyScopeOriginNotValidForEvents.ThrowIfNotValid(options.Origin);
-        AddEventWithNamedTagsCore(eventSequenceId, eventSourceId, @event, options.NamedTags ?? [], causation, options.EventStreamType, options.EventStreamId, options.EventSourceType, options.ConcurrencyScope, options.Tags, options.Occurred, options.Subject, options.Origin);
+        AddEventWithNamedTagsCore(eventSequenceId, eventSourceId, @event, options.NamedTags ?? [], causation, options.EventStreamType, options.EventStreamId, options.EventSourceType, options.ConcurrencyScope, options.Tags, options.Occurred, options.Subject, options.Origin, options.DeclaredConcurrency);
     }
 
     /// <inheritdoc/>
@@ -77,7 +78,8 @@ public partial class UnitOfWork
         IEnumerable<string>? tags,
         DateTimeOffset? occurred,
         Subject? subject,
-        ConcurrencyScopeOrigin origin)
+        ConcurrencyScopeOrigin origin,
+        ConcurrencyDimensions? declaredConcurrency = null)
     {
         lock (_decisionLock)
         {
@@ -92,7 +94,8 @@ public partial class UnitOfWork
                     Tags = tags ?? [],
                     NamedTags = NamedTagConverters.Merge([], namedTags),
                     Occurred = occurred,
-                    Subject = subject
+                    Subject = subject,
+                    DeclaredConcurrency = declaredConcurrency
                 };
                 AddEnforcedEvents(eventSequenceId, [enforcedEvent], [new(eventSourceId, concurrencyScope ?? ConcurrencyScope.NotSet)], origin);
                 return;

@@ -111,6 +111,7 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
+        ReadProtectionGuard.Append(nameof(AppendPrepared));
         ThrowIfNotOwner(preparedEvent);
         return AppendCore(eventSourceId, preparedEvent.Event, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject, preparedEvent: preparedEvent);
     }
@@ -128,6 +129,7 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
+        ReadProtectionGuard.Append(nameof(AppendPreparedThroughEventSource));
         ThrowIfNotOwner(preparedEvent);
         var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
         return AppendCore(
@@ -149,6 +151,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<ContentVerificationResult> VerifyContent(EventSequenceNumber sequenceNumber, PreparedEvent preparedEvent, EventSourceId? eventSourceId = default)
     {
+        ReadProtectionGuard.Read(nameof(VerifyContent));
         ThrowIfNotOwner(preparedEvent);
         var result = await _servicesAccessor.Services.Sequences.VerifyContent(new()
         {
@@ -181,7 +184,7 @@ public class EventSequence(
         ConcurrencyScope? concurrencyScope = default,
         DateTimeOffset? occurred = default,
         Subject? subject = default) =>
-        AppendCore(eventSourceId, @event, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
+        AppendAdmitted(eventSourceId, @event, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
 
     /// <inheritdoc/>
     public async Task<AppendResult> AppendThroughEventSource(
@@ -196,6 +199,7 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
+        ReadProtectionGuard.Append(nameof(AppendThroughEventSource));
         var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
         return await AppendCore(
             eventSourceId,
@@ -225,6 +229,7 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
+        ReadProtectionGuard.Append(nameof(AppendManyThroughEventSource));
         var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
         return await AppendManyCore(
             eventSourceId,
@@ -254,7 +259,7 @@ public class EventSequence(
         ConcurrencyScope? concurrencyScope = default,
         DateTimeOffset? occurred = default,
         Subject? subject = default) =>
-        AppendCore(eventSourceId, @event, namedTags, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
+        AppendAdmitted(eventSourceId, @event, namedTags, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject, nameof(AppendWithNamedTags));
 
     /// <inheritdoc/>
     public Task<AppendManyResult> AppendMany(
@@ -267,8 +272,11 @@ public class EventSequence(
         IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default,
         DateTimeOffset? occurred = default,
-        Subject? subject = default) =>
-        AppendManyCore(eventSourceId, events, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
+        Subject? subject = default)
+    {
+        ReadProtectionGuard.Append(nameof(AppendMany));
+        return AppendManyCore(eventSourceId, events, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
+    }
 
     /// <inheritdoc/>
     public Task<AppendManyResult> AppendManyWithNamedTags(
@@ -282,16 +290,22 @@ public class EventSequence(
         IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default,
         DateTimeOffset? occurred = default,
-        Subject? subject = default) =>
-        AppendManyCore(eventSourceId, events, namedTags, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
+        Subject? subject = default)
+    {
+        ReadProtectionGuard.Append(nameof(AppendManyWithNamedTags));
+        return AppendManyCore(eventSourceId, events, namedTags, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
+    }
 
     /// <inheritdoc/>
     public Task<AppendManyResult> AppendMany(
         IEnumerable<EventForEventSourceId> events,
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
-        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default) =>
-        AppendManyCore(events, [], correlationId, tags, concurrencyScopes);
+        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
+    {
+        ReadProtectionGuard.Append(nameof(AppendMany));
+        return AppendManyCore(events, [], correlationId, tags, concurrencyScopes);
+    }
 
     /// <inheritdoc/>
     public Task<AppendManyResult> AppendManyWithNamedTags(
@@ -299,22 +313,29 @@ public class EventSequence(
         IEnumerable<NamedTag> namedTags,
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
-        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default) =>
-        AppendManyCore(events, namedTags, correlationId, tags, concurrencyScopes);
+        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
+    {
+        ReadProtectionGuard.Append(nameof(AppendManyWithNamedTags));
+        return AppendManyCore(events, namedTags, correlationId, tags, concurrencyScopes);
+    }
 
     /// <inheritdoc/>
-    public async Task<bool> HasEventsFor(EventSourceId eventSourceId) =>
-        (await _servicesAccessor.Services.Sequences.HasEventsForEventSourceId(new()
+    public async Task<bool> HasEventsFor(EventSourceId eventSourceId)
+    {
+        ReadProtectionGuard.Read(nameof(HasEventsFor));
+        return (await _servicesAccessor.Services.Sequences.HasEventsForEventSourceId(new()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             EventSourceId = eventSourceId
         }).EnsureSuccess()).HasEvents;
+    }
 
     /// <inheritdoc/>
     public async Task<EventMetadata?> GetMetadataAt(EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default)
     {
+        ReadProtectionGuard.Read(nameof(GetMetadataAt));
         var metadata = await GetMetadataAt([sequenceNumber], cancellationToken);
         return metadata.GetValueOrDefault(sequenceNumber);
     }
@@ -322,6 +343,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<IImmutableDictionary<EventSequenceNumber, EventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
     {
+        ReadProtectionGuard.Read(nameof(GetMetadataAt));
         cancellationToken.ThrowIfCancellationRequested();
         var locators = sequenceNumbers.Take(EventMetadata.MaxLocators + 1).ToArray();
         if (locators.Length > EventMetadata.MaxLocators)
@@ -378,6 +400,7 @@ public class EventSequence(
         EventSourceId? eventSourceId = default,
         IEnumerable<EventType>? filterEventTypes = default)
     {
+        ReadProtectionGuard.Read(nameof(GetFromSequenceNumber));
         var result = await _servicesAccessor.Services.Sequences.FromSequenceNumber(new()
         {
             EventStore = eventStoreName,
@@ -399,6 +422,7 @@ public class EventSequence(
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default)
     {
+        ReadProtectionGuard.Read(nameof(GetForEventSourceIdAndEventTypes));
         var result = await _servicesAccessor.Services.Sequences.ForEventSourceIdAndEventTypes(new()
         {
             EventStore = eventStoreName,
@@ -417,6 +441,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<EventSequenceNumber> GetNextSequenceNumber()
     {
+        ReadProtectionGuard.Read(nameof(GetNextSequenceNumber));
         var tail = await GetTailSequenceNumber();
         return tail.IsUnavailable ? EventSequenceNumber.First : tail.Value + 1;
     }
@@ -427,8 +452,10 @@ public class EventSequence(
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        IEnumerable<EventType>? filterEventTypes = default) =>
-        (await _servicesAccessor.Services.Sequences.TailSequenceNumber(new()
+        IEnumerable<EventType>? filterEventTypes = default)
+    {
+        ReadProtectionGuard.Read(nameof(GetTailSequenceNumber));
+        return (await _servicesAccessor.Services.Sequences.TailSequenceNumber(new()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
@@ -439,10 +466,12 @@ public class EventSequence(
             EventStreamId = eventStreamId?.Value,
             EventTypeIds = JoinEventTypeIds(filterEventTypes)
         }).EnsureSuccess()).SequenceNumber;
+    }
 
     /// <inheritdoc/>
     public async Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type)
     {
+        ReadProtectionGuard.Read(nameof(GetTailSequenceNumberForObserver));
         var observerEventTypes = ReactorInvoker.GetEventTypesFor(eventTypes, type, sideEffectHandlers);
         return await GetTailSequenceNumber(filterEventTypes: observerEventTypes);
     }
@@ -510,6 +539,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId)
     {
+        ReadProtectionGuard.CompleteStream(new(eventStoreName, @namespace, eventSequenceId));
         var response = await _servicesAccessor.Services.Sequences.CompleteStream(new()
         {
             EventStore = eventStoreName,
@@ -534,6 +564,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default)
     {
+        ReadProtectionGuard.CompleteStream(new(eventStoreName, @namespace, eventSequenceId));
         var response = await WithClosedStreamScopeSupport(() => _servicesAccessor.Services.Sequences.CompleteStreamScope(new()
         {
             EventStore = eventStoreName,
@@ -561,6 +592,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<bool> IsStreamCompleted(ClosedStreamScope scope)
     {
+        ReadProtectionGuard.Read(nameof(IsStreamCompleted));
         var response = await WithClosedStreamScopeSupport(() => _servicesAccessor.Services.Sequences.IsStreamScopeCompleted(new()
         {
             EventStore = eventStoreName,
@@ -576,14 +608,18 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
-        IsStreamCompleted(ClosedStreamScope.ForStream(
+    public Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId)
+    {
+        ReadProtectionGuard.Read(nameof(IsStreamCompleted));
+        return IsStreamCompleted(ClosedStreamScope.ForStream(
             eventStreamType.Value.Length == 0 ? EventStreamType.All : eventStreamType,
             eventStreamId.Value.Length == 0 ? EventStreamId.Default : eventStreamId));
+    }
 
     /// <inheritdoc/>
     public async Task<IImmutableList<ClosedStream>> GetClosedStreams(ClosedStreamScope? within = default)
     {
+        ReadProtectionGuard.Read(nameof(GetClosedStreams));
         var response = await WithClosedStreamScopeSupport(() => _servicesAccessor.Services.Sequences.ClosedStreams(new()
         {
             EventStore = eventStoreName,
@@ -613,6 +649,22 @@ public class EventSequence(
         IEnumerable<NamedTag> namedTags,
         IDictionary<EventSourceId, ConcurrencyScope> scopes,
         ScopeProvenance provenance) => AppendManyCore(events, namedTags, concurrencyScopes: scopes, provenance: provenance);
+
+    /// <inheritdoc/>
+    Task<AppendManyResult> IEventSequenceWithScopeProvenance.AppendMany(
+        IEnumerable<EventForEventSourceId> events,
+        IEnumerable<NamedTag> namedTags,
+        IDictionary<EventSourceId, ConcurrencyScope> scopes,
+        ReadProtectionCommit commit)
+    {
+        if (commit.Target != new ReadProtectionTarget(eventStoreName, @namespace, eventSequenceId)) throw new ReadDependencyTargetMismatch("trusted commit");
+        ReadProtectionMerge.ValidateTargetsAndLabels(commit.Target, commit.Contributions);
+        foreach (var contribution in commit.Contributions.Where(_ => _.Scope.EventSourceId is not null && _.Scope.EventSourceId != _.Label))
+        {
+            throw new ConcurrencyScopeEventSourceIdDoesNotMatchLabel(contribution.Label, contribution.Scope.EventSourceId!);
+        }
+        return AppendManyCore(events, namedTags, concurrencyScopes: scopes, readProtectionCommit: commit);
+    }
 
     /// <summary>Checks whether this is the event log for the exact decision-read target.</summary>
     /// <param name="store">The expected event store.</param>
@@ -675,6 +727,24 @@ public class EventSequence(
         {
             throw new PreparedEventBelongsToAnotherSequence();
         }
+    }
+
+    Task<AppendResult> AppendAdmitted(
+        EventSourceId eventSourceId,
+        object @event,
+        IEnumerable<NamedTag> namedTags,
+        EventStreamType? eventStreamType,
+        EventStreamId? eventStreamId,
+        EventSourceType? eventSourceType,
+        CorrelationId? correlationId,
+        IEnumerable<string>? tags,
+        ConcurrencyScope? concurrencyScope,
+        DateTimeOffset? occurred,
+        Subject? subject,
+        string operation = nameof(Append))
+    {
+        ReadProtectionGuard.Append(operation);
+        return AppendCore(eventSourceId, @event, namedTags, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
     }
 
     async Task<AppendResult> AppendCore(
@@ -940,11 +1010,12 @@ public class EventSequence(
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default,
-        ScopeProvenance? provenance = null)
+        ScopeProvenance? provenance = null,
+        ReadProtectionCommit? readProtectionCommit = null)
     {
         using var span = _activitySource.AppendMany(eventStoreName.Value, @namespace.Value, eventSequenceId.Value);
 
-        return await AppendManyForEventSources(events, correlationId, tags, concurrencyScopes, namedTags, provenance);
+        return await AppendManyForEventSources(events, correlationId, tags, concurrencyScopes, namedTags, provenance, readProtectionCommit);
     }
 
     AppendResult ToAppendResult(CorrelationId correlationId, EventSequenceNumber sequenceNumber, AppendManyResult batchResult, EventType eventType)
@@ -1008,7 +1079,8 @@ public class EventSequence(
         IEnumerable<string>? tags,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes,
         IEnumerable<NamedTag> namedTags,
-        ScopeProvenance? provenance = null)
+        ScopeProvenance? provenance = null,
+        ReadProtectionCommit? readProtectionCommit = null)
     {
         var callNamedTags = namedTags.ToArray();
         var routings = new List<ResolvedEventRouting?>();
@@ -1058,7 +1130,7 @@ public class EventSequence(
         }
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
-        var resolvedConcurrencyScopes = await ResolveConcurrencyScopes(eventsList, routings, concurrencyScopes, provenance);
+        var resolvedConcurrencyScopes = await ResolveConcurrencyScopes(eventsList, routings, concurrencyScopes, provenance, readProtectionCommit);
         var identity = identityProvider.GetCurrent();
 
         var request = new Contracts.Sequences.AppendManyForEventSourcesRequest
@@ -1163,11 +1235,18 @@ public class EventSequence(
         IEnumerable<EventForEventSourceId> events,
         List<ResolvedEventRouting?> routings,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes,
-        ScopeProvenance? provenance = null)
+        ScopeProvenance? provenance = null,
+        ReadProtectionCommit? readProtectionCommit = null)
     {
         var resolvedConcurrencyScopes = concurrencyScopes?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value) ?? [];
         var strategy = concurrencyScopeStrategies.GetFor(this);
         var routingByEvent = events.Select((@event, index) => (Event: @event, Routing: routings[index])).ToList();
+        if (readProtectionCommit is not null)
+        {
+            var plan = await ReadProtectionRouting.Resolve(readProtectionCommit, routingByEvent, resolvedConcurrencyScopes, strategy);
+            readProtectionCommit.Resolved(plan.Conditions);
+            return plan.Scopes.ToDictionary(_ => _.Key, _ => _.Value);
+        }
 
         foreach (var eventsForEventSource in routingByEvent.GroupBy(_ => _.Event.EventSourceId))
         {

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Transactions;
 public partial class UnitOfWork
 {
     readonly List<ReadProtectionContribution> _readProtectionContributions = [];
-    readonly IReadOnlyList<AppendCondition> _appendConditions = [];
+    IReadOnlyList<AppendCondition> _appendConditions = [];
 
     /// <summary>
     /// The pipeline owns disposal; the unit retains only access to non-owning leases.
@@ -93,6 +93,14 @@ public partial class UnitOfWork
         if (exact.Count <= 1) return;
         if (read is not null) throw new ConflictingExplicitScopes(contribution.Label, exact[0].Description, exact[1].Description);
         throw new ConflictingContributionsOnLabel(contribution.Label, exact[0].Description, exact[1].Description);
+    }
+
+    void CaptureAppendConditions(IReadOnlyList<AppendCondition> conditions)
+    {
+        lock (_decisionLock)
+        {
+            _appendConditions = conditions;
+        }
     }
 
     ReadProtectionTarget GetReadProtectionTarget() => new(eventStore.Name, eventStore.Namespace, _eventSequenceId ?? EventSequenceId.Log);

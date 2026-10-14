@@ -24,4 +24,19 @@ internal interface IEventSequenceWithScopeProvenance
         IEnumerable<NamedTag> namedTags,
         IDictionary<EventSourceId, ConcurrencyScope> scopes,
         ScopeProvenance provenance);
+
+    /// <summary>
+    /// Appends only through the unit's internal Enforce authority.
+    /// </summary>
+    /// <param name="events">The captured events.</param>
+    /// <param name="namedTags">Call-level structured tags.</param>
+    /// <param name="scopes">Legacy resolution for labels without reads.</param>
+    /// <param name="commit">The immutable acquisitions and target.</param>
+    /// <returns>The append result.</returns>
+    /// <exception cref="EventSequenceReadProtectionNotSupported">The implementation has no trusted path.</exception>
+    Task<AppendManyResult> AppendMany(
+        IEnumerable<EventForEventSourceId> events,
+        IEnumerable<NamedTag> namedTags,
+        IDictionary<EventSourceId, ConcurrencyScope> scopes,
+        ReadProtectionCommit commit) => throw new EventSequenceReadProtectionNotSupported(GetType());
 }
