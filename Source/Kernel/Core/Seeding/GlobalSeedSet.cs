@@ -147,17 +147,44 @@ internal static class GlobalSeedSet
         string owner)
         where TKey : notnull
     {
-        var retained = current.ToDictionary(
+        var declarations = declared.ToDictionary(_ => _.Key, _ => _.ToArray());
+        var updated = current.ToDictionary(
             _ => _.Key,
-            _ => (IEnumerable<SeededEventEntry>)_.Value.Where(entry =>
-                entry.Origin != SeedOrigin.Unknown &&
-                !(entry.Origin == SeedOrigin.Declared && entry.Owner == owner)).ToArray());
-        foreach (var group in declared)
+            _ => (IEnumerable<SeededEventEntry>)ReplaceEntries(_.Value, declarations.GetValueOrDefault(_.Key, []), owner));
+        foreach (var declaration in declarations)
         {
-            retained.TryGetValue(group.Key, out var previous);
-            retained[group.Key] = [.. previous ?? [], .. group];
+            updated.TryAdd(declaration.Key, declaration.Value);
         }
 
-        return retained.Where(_ => _.Value.Any()).ToDictionary(_ => _.Key, _ => _.Value);
+        return updated.Where(_ => _.Value.Any()).ToDictionary(_ => _.Key, _ => _.Value);
+    }
+
+    static SeededEventEntry[] ReplaceEntries(IEnumerable<SeededEventEntry> current, SeededEventEntry[] declared, string owner)
+    {
+        var updated = new List<SeededEventEntry>();
+        var replaced = false;
+        foreach (var entry in current)
+        {
+            if (entry.Origin == SeedOrigin.Declared && entry.Owner == owner)
+            {
+                if (!replaced)
+                {
+                    updated.AddRange(declared);
+                }
+
+                replaced = true;
+            }
+            else if (entry.Origin != SeedOrigin.Unknown)
+            {
+                updated.Add(entry);
+            }
+        }
+
+        if (!replaced)
+        {
+            updated.AddRange(declared);
+        }
+
+        return [.. updated];
     }
 }
