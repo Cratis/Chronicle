@@ -34,9 +34,8 @@ public static class SubscribeEndpoint
 
         // Transactional.Append stages the event in the unit of work. A plain eventLog.Append
         // would be written immediately and would not be guarded by the decision reads.
-        var subscribed = new StudentSubscribedToCourse(studentId, courseId);
-        await eventLog.Transactional.Append(courseId, subscribed);
-        await eventLog.Transactional.Append(studentId, subscribed);
+        await eventLog.Transactional.Append(courseId, new CourseSeatTaken(studentId));
+        await eventLog.Transactional.Append(studentId, new StudentJoinedCourse(courseId));
 
         // The middleware commits after the response is written, which is too late to report a
         // conflict. Commit here, while the response can still change.

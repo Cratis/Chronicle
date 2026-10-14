@@ -20,11 +20,11 @@ Use this page when you know a canonical example from [dcb.events](https://dcb.ev
 
 **DCB.** One `StudentSubscribedToCourse` event tagged with the student and the course. One decision model, five small projections composed, one append condition.
 
-**Chronicle.** A rule that spans two entities needs a decision read per entity, because a decision read folds one event source. Take one read for the course and one for the student, then append one event to each event source in a single `AppendMany` with both reads in `guardedBy`. The append is atomic. If another student takes the last seat, or the student joins another course after you read, the append is rejected and neither event is written.
+**Chronicle.** A rule that spans two entities needs a decision read per entity, because a decision read folds one event source. Take one read for the course and one for the student, then append one event of its own type to each event source in a single `AppendMany` with both reads in `guardedBy`. The append is atomic. If another student takes the last seat, or the student joins another course after you read, the append is rejected and neither event is written.
 
 The code is the [A rule across two keys](./scenarios.mdx#a-rule-across-two-keys) scenario.
 
-**What this costs.** The fact is recorded twice. That is acceptable here because each copy is a fact in its own entity's story. Use two event types, for example `CourseSeatTaken` on the course and `StudentJoinedCourse` on the student, so a projection that counts one of them does not count both. The scenario shows the minimal form with one type for both. If you cannot accept two events for one fact, no Chronicle form removes the second one: the fact must be visible to two keys, and each key sees only its own event source.
+**What this costs.** The fact is recorded twice. That is acceptable here because each copy is a fact in its own entity's story. Use two event types, as the scenario does: `CourseSeatTaken` and `CourseSeatReleased` on the course, `StudentJoinedCourse` and `StudentLeftCourse` on the student. Each read model counts only the types of its own source. Appending one type to both sources would also create rows keyed by the wrong ids, such as seat rows keyed by student ids. If you cannot accept two events for one fact, no Chronicle form removes the second one: the fact must be visible to two keys, and each key sees only its own event source.
 
 **Keeping it small.** Each read folds only the events its rule needs: seats and capacity for the course, the student's subscription count for the student. Do not build one wide model of both. That is DCB's own advice, and in Chronicle a wide model also fails the read's admission checks.
 
@@ -76,7 +76,7 @@ Three details matter:
 
 **DCB.** Build one decision model per product in the cart when the order is placed, each tagged with its product, and compose them into one condition.
 
-**Chronicle.** Take one decision read per product in the cart, and append one event on the order's own event source with all the reads in `guardedBy`. The product keys are only read, never appended to. If any product's price changed after you read it, the append is rejected and the order is not written.
+**Chronicle.** This is a reduced variant of DCB's rule: the model keeps the current price and the one before it, and accepts the displayed price when it is the current one or the previous one within the grace period. DCB accepts any price within the grace window, even after several changes. Take one decision read per product in the cart, and append one event on the order's own event source with all the reads in `guardedBy`. The product keys are only read, never appended to. If any product's price changed after you read it, the append is rejected and the order is not written.
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/dcb-examples/product-price" variants="csharp" />
 

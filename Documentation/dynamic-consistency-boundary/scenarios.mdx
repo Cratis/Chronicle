@@ -62,7 +62,7 @@ A course has a capacity, and a student may take at most five courses. Neither nu
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/course-subscription" variants="csharp" />
 
-Chronicle stores one event source ID per event, so one fact about two entities is written as two events, one per source. Where DCB tags one event with both entities, Chronicle records the fact once for each. [DCB examples in Chronicle](./dcb-examples.mdx#course-subscription) says when that is acceptable and how to type the two events. `AppendMany` writes them atomically: either both are appended or neither is. Both decision reads guard the same append. If another student takes the last seat, or the student subscribes elsewhere, after you read, the append is rejected and neither event is written.
+Chronicle stores one event source ID per event, so one fact about two entities is written as two events, one per source. Where DCB tags one event with both entities, Chronicle records the fact once for each. [DCB examples in Chronicle](./dcb-examples.mdx#course-subscription) says when that is acceptable. The two events have their own types, `CourseSeatTaken` and `StudentJoinedCourse`, so each read model folds only its own. `AppendMany` writes them atomically: either both are appended or neither is. Both decision reads guard the same append. If another student takes the last seat, or the student subscribes elsewhere, after you read, the append is rejected and neither event is written.
 
 `GetDecisionConflicts` tells you which read changed, so you can report "the course is now full" and not only "try again".
 
@@ -88,7 +88,7 @@ Two people open the same project and both rename it. The second save should not 
 
 Order matters. Capture the revision first, then load the data for the form, and return the revision with the form. Load the data from the event log, a passive read model or a decision read, so it includes every event up to the captured revision. Do not load it from a materialized read model: it updates asynchronously and may lag behind the captured tail. The revision would then claim the user saw events the form never showed, and the scope would accept a save made over a change the user did not see. Send the revision back with the change. The scope rejects the append when a `ProjectRenamed` event for that project was appended after that revision. Narrowing to `ProjectRenamed` means another person editing a different field does not cause a conflict. List every event type that should invalidate the user's view, and no others.
 
-If the project has no events yet, the tail is not a usable position. Create it with a constraint or `ExpectingNoMatchingEvent()` instead.
+If the project has no events yet, the tail is `Unavailable`, which an explicit scope skips. The example turns it into `EventSequenceNumber.BeforeFirst`, which means "no `ProjectRenamed` event yet". `ExpectingNoMatchingEvent()` or a constraint also work.
 
 ## A rare violation you can repair
 

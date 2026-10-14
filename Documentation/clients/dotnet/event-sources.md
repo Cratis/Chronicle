@@ -3,7 +3,7 @@ title: Event sources in the .NET client
 description: The .NET client types for event source definitions, with links to the guides in the event sources section.
 ---
 
-Event source definitions are a .NET client feature. The guides, the scenarios and the explanation of how they work are in [Event sources and streams](../../event-sources/index.mdx). This page lists the client types and where each is explained. An event source is optional: the existing append APIs remain valid and append events without a definition.
+This page covers the .NET client's API for event source definitions. The guides, the scenarios and the explanation of how they work are in [Event sources and streams](../../event-sources/index.mdx). This page lists the client types and where each is explained. An event source is optional: the existing append APIs remain valid and append events without a definition.
 
 ## Types
 

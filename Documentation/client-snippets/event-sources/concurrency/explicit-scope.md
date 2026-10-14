@@ -15,6 +15,12 @@ public class DecideThenDeposit(IEventLog eventLog)
 
         var amount = decide();
 
+        // An empty stream has no tail (Unavailable). Explicit scopes skip that value, so expect "no event yet".
+        if (tail.IsUnavailable)
+        {
+            tail = EventSequenceNumber.BeforeFirst;
+        }
+
         // ForEventSource names the source type, the stream type and the stream id from the definition.
         // The builder does not set the event source id or the position: you do.
         var scope = new ConcurrencyScopeBuilder()

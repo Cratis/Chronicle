@@ -41,7 +41,7 @@ Skip it when every event of an entity can share one history and one guard. The p
 
 ## Client support
 
-Definitions are part of the .NET client. The kernel contract that registers them is language neutral, and the Workbench lists what is registered. The Kotlin and Elixir clients in this repository have no definition API. The TypeScript and Python clients are not part of this repository and this section does not describe them. [Where the clients differ](../clients/where-the-clients-differ.md) covers the append and concurrency differences that exist today.
+Event source definitions are supported by the .NET, [Kotlin](https://github.com/Cratis/Chronicle.Kotlin), [TypeScript](https://github.com/Cratis/Chronicle.TypeScript) and [Elixir](https://github.com/Cratis/Chronicle.Elixir) clients. The [Python client](https://github.com/Cratis/Chronicle.Python) has no definition API. The Kotlin, TypeScript, Elixir and Python packages under `Source/Clients` in this repository only hold generated kernel contracts. The examples in this section are .NET; the other clients express the same concepts in their own API, so see their repositories for the syntax. The kernel contract that registers definitions is language neutral, and the Workbench lists what is registered. [Where the clients differ](../clients/where-the-clients-differ.md) covers the append and concurrency differences that exist today.
 
 ## In this section
 

@@ -25,7 +25,6 @@ Skip it when:
 - The rule is a unique value or a create-once rule. A [constraint](../constraints/index.md) enforces it for every writer, with or without a definition.
 - The streams would be created from data you do not control. A definition declares streams ahead of time. Stream ids can vary freely, but stream types are a closed list.
 - You need the unit of work's `Transactional` appends to use the declared names. They take the routing values directly.
-- You are not on the .NET client. See [Client support](./index.mdx#client-support).
 
 ## What happens when I rename an event source or a stream?
 

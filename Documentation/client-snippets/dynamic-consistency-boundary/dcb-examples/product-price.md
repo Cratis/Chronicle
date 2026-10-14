@@ -17,6 +17,7 @@ public record OrderedItem(string ProductId, decimal DisplayedPrice, int Quantity
 public record ProductsOrdered(IReadOnlyList<OrderedItem> Items);
 
 // The decision model for one product: its current price, the one before and when it changed.
+// A reduced variant: a price older than the previous one is never accepted, even inside the grace period.
 [FromEvent<ProductDefined>]
 public record ProductPrice(
     string Id,

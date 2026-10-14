@@ -9,7 +9,7 @@ Use this page if you decide on state you read and want to know what a definition
 
 A definition does not make Chronicle a DCB event store. A DCB store reads by event type and tag across one global sequence, and an event can carry several tags. In Chronicle, the stream metadata of an event plays the role of the tags: the event source id, the event source type, the event stream type and the event stream id. Each has exactly one value per event, and a concurrency scope can narrow to any of them. Custom [tags](../events/appending-with-tags.mdx) are a different thing and take no part in consistency.
 
-An event source definition is the typed, declared way to choose which of those dimensions guard an append. `ConcurrencyDimensions` on the event source and on each stream says which of the four values an append is guarded by, and Chronicle builds the append condition from them: the position of the log plus that narrowing. Appending through the definition also guarantees that the event carries the values the guard was built from.
+An event source definition is the typed, declared way to choose which of those dimensions guard an append. `ConcurrencyDimensions` on the event source and on each stream says which of the four values an append is guarded by, and Chronicle builds the append condition from them: the position of the log plus that narrowing. When Chronicle derives the scope from the definition, appending through the definition also guarantees that the event carries the values the guard was built from. An explicit scope you build yourself carries no such guarantee: you align it with what you read and write.
 
 ### How coarse the guard is
 

@@ -67,7 +67,9 @@ An append that passes its own `ConcurrencyScope` skips the dimension logic. This
 
 <ChronicleClientTabs snippet="event-sources/concurrency/explicit-scope" variants="csharp" />
 
-`ForEventSource<TSource>(stream, streamId)` copies the event source type, and the stream type and stream id when you give them, from the definition. It does not read the dimension flags. It does not set the event source id or the sequence number either: you add `WithEventSourceId` and `WithSequenceNumber`. Name the stream in `ForEventSource` the same way you name it in the append, or the builder throws `EventStreamDoesNotBelongToEventSource`.
+`ForEventSource<TSource>(stream, streamId)` copies the event source type, and the stream type and stream id when you give them, from the definition. It does not read the dimension flags. It does not set the event source id or the sequence number either: you add `WithEventSourceId` and `WithSequenceNumber`. The builder only checks that the stream you name is declared by the definition, and throws `EventStreamDoesNotBelongToEventSource` if it is not. It never sees the append. If you name one stream in `ForEventSource` and append to another, the scope is accepted and guards the wrong stream. You must align an explicit guard with what you read and what you write.
+
+The tail from `GetTailSequenceNumber` is `Unavailable` when the stream has no events. An explicit scope is used as given, so `OptimisticConcurrencyStrategy` does not convert that value for you, and the kernel skips the check: two competing decisions would both append. Convert it to `EventSequenceNumber.BeforeFirst`, as the example does, so the scope means "no matching event yet".
 
 A [decision read](../read-models/decision-reads.mdx) does the capture-then-read sequence for you. See [Dynamic Consistency Boundary](./dcb.mdx).
 

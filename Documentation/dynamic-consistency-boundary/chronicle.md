@@ -53,7 +53,7 @@ Chronicle does not implement the DCB specification's API. It offers equivalent m
 
 | DCB example | What DCB does | The Chronicle answer | Records a fact twice? |
 |---|---|---|---|
-| Course subscription | One event tagged with the student and the course, one decision model over both | Two decision reads and two events in one `AppendMany`, one per event source. Give the two events their own types so projections do not double count | Yes, and each copy is a fact in its own entity's story |
+| Course subscription | One event tagged with the student and the course, one decision model over both | Two decision reads and two events in one `AppendMany`, one per event source. Give the two events their own types so each read model counts only its own source's events | Yes, and each copy is a fact in its own entity's story |
 | Unique username | Tag every claiming event with the username and query it | A `[Unique]` constraint on the property. The kernel enforces it for every writer | No |
 | Invoice number | Query all invoices, next number is the last plus one | One numbering event source, a decision read of its last number, one event on that source | No |
 | Opt-in token | Tag the sign-up events with the email and the token | Both events on the sign-up's own event source, checked against the sign-up the caller names | No |
@@ -62,7 +62,7 @@ Chronicle does not implement the DCB specification's API. It offers equivalent m
 
 ### When one fact becomes two events
 
-Two events for one fact is acceptable when each event is a fact in its own entity's history. A student subscribing to a course is an event in the course's story ("a student took a seat") and in the student's ("the student joined a course"). Giving them separate event types, such as `CourseSeatTaken` and `StudentJoinedCourse`, makes that explicit and avoids a projection that counts the same event type twice.
+Two events for one fact is acceptable when each event is a fact in its own entity's history. A student subscribing to a course is an event in the course's story ("a student took a seat") and in the student's ("the student joined a course"). Giving them separate event types, such as `CourseSeatTaken` and `StudentJoinedCourse`, makes that explicit. It also keeps each read model to its own events: one type appended to both sources would create rows keyed by the wrong ids.
 
 It is the wrong answer when the two copies are the same fact with the same meaning and nothing in either story needs it. Then look for a form with one event: a constraint, or one event on one source with a decision read over the other. The invoice number and the dynamic product price examples take that route. A decision read over a key you only read costs a fold but records nothing.
 

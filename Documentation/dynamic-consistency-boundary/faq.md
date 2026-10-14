@@ -35,7 +35,7 @@ Yes. Take one decision read per entity, and append one event per event source in
 
 ## Why does a fact about two entities need two events?
 
-An event has exactly one event source ID, and a decision read folds only the events of its own source. To let both entities' read models see the fact, write it once for each. This records one fact as two events, which DCB avoids with tags. It is acceptable when each event is a fact in its own entity's story, and it is better to give the two events their own types. When it is not, prefer a form with one event: a constraint, or one event on one source with a decision read over the key you only read. See [DCB examples in Chronicle](./dcb-examples.mdx).
+An event has exactly one event source ID, and a decision read folds only the events of its own source. To let both entities' read models see the fact, write it once for each. This records one fact as two events, which DCB avoids with tags. It is acceptable when each event is a fact in its own entity's story, and the two events need their own types, so each read model counts only its own source's events. When it is not, prefer a form with one event: a constraint, or one event on one source with a decision read over the key you only read. See [DCB examples in Chronicle](./dcb-examples.mdx).
 
 ## Where do event source definitions fit?
 
