@@ -52,6 +52,8 @@ public class EventSeeding(
     GlobalSeedRegistration? _globalSeedRegistration;
     List<SeedingEntry> _discoveredGlobals = [];
     bool _hasDiscovered;
+    bool _discoveryFailed;
+    bool _retryDiscovery;
     bool _discoveredSetRegistered;
     string _globalSetOwner = Assembly.GetEntryAssembly()?.GetName().Name ?? "[N/A]";
 
@@ -152,26 +154,29 @@ public class EventSeeding(
     {
         var pendingCount = _entries.Count;
         _hasDiscovered = false;
+        _discoveryFailed = false;
+        _retryDiscovery = false;
         _discoveredSetRegistered = false;
         _discoveredGlobals = [];
+        var failedSeeders = new List<Type>();
         foreach (var seederType in _clientArtifactsProvider.EventSeeders)
         {
-            var activatedSeederResult = _artifactActivator.Activate<ICanSeedEvents>(_serviceProvider, seederType);
-            if (activatedSeederResult.TryGetException(out var exception))
+            if (!await DiscoverSeeder(seederType))
             {
-                _logger.FailedToActivateSeeder(seederType, exception);
-                continue;
+                failedSeeders.Add(seederType);
             }
-
-            await using var activatedSeeder = activatedSeederResult.AsT0;
-            activatedSeeder.Instance.Seed(this);
         }
 
         var discoveredEntries = _entries.Skip(pendingCount).ToList();
         _discoveredGlobals = discoveredEntries.Where(_ => _.IsGlobal).ToList();
         _entries.RemoveRange(pendingCount, _entries.Count - pendingCount);
         _entries.AddRange(discoveredEntries.Where(_ => !_.IsGlobal));
-        _hasDiscovered = true;
+        _hasDiscovered = failedSeeders.Count == 0;
+        _discoveryFailed = !_hasDiscovered;
+        if (_discoveryFailed)
+        {
+            _logger.GlobalSeedDeclarationSkipped(string.Join(", ", failedSeeders.Select(_ => _.FullName ?? _.Name)));
+        }
     }
 
     /// <inheritdoc/>
@@ -199,6 +204,11 @@ public class EventSeeding(
     /// <returns>The registration task.</returns>
     internal async Task RegisterDiscovered()
     {
+        if (_retryDiscovery)
+        {
+            await Discover();
+        }
+
         if (!_hasDiscovered)
         {
             await RegisterPreparedEntries(false);
@@ -218,6 +228,7 @@ public class EventSeeding(
         }
 
         _entries.Clear();
+        _retryDiscovery = _discoveryFailed;
     }
 
     /// <summary>
@@ -238,6 +249,28 @@ public class EventSeeding(
             _eventSources);
         seeding.UseGlobalSetOwner(_globalSetOwner);
         return seeding;
+    }
+
+    async Task<bool> DiscoverSeeder(Type seederType)
+    {
+        try
+        {
+            var activatedSeederResult = _artifactActivator.Activate<ICanSeedEvents>(_serviceProvider, seederType);
+            if (activatedSeederResult.TryGetException(out var exception))
+            {
+                _logger.FailedToActivateSeeder(seederType, exception);
+                return false;
+            }
+
+            await using var activatedSeeder = activatedSeederResult.AsT0;
+            activatedSeeder.Instance.Seed(this);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            _logger.FailedToRunSeeder(seederType, exception);
+            return false;
+        }
     }
 
     async Task RegisterPreparedEntries(bool includeGlobals)
