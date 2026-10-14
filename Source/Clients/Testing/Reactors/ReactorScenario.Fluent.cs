@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
-using Cratis.Execution;
 
 namespace Cratis.Chronicle.Testing.Reactors;
 
@@ -19,12 +18,19 @@ namespace Cratis.Chronicle.Testing.Reactors;
 public class ReactorScenario(ReactorId id, Defaults defaults)
 {
     readonly Lazy<IReactorDefinition> _definition = new(() => CreateDefinition(id, defaults));
-    EventSequenceNumber _nextSequenceNumber = EventSequenceNumber.First;
+    readonly ScenarioOccurrenceRecorder _occurrences = new(defaults.EventTypes, defaults.EventStore.Name, defaults.EventStore.Namespace);
 
     /// <summary>
     /// Gets the builder for providing event history to this reactor.
     /// </summary>
     public ReactorScenarioGivenBuilder Given => new(this);
+
+    /// <summary>
+    /// Delivers a recorded occurrence to the applicable fluent callbacks using its original context.
+    /// </summary>
+    /// <param name="occurrence">The recorded event and context.</param>
+    /// <returns>A task completing after all applicable callbacks complete.</returns>
+    public Task Redeliver(RecordedOccurrence occurrence) => Deliver([occurrence]);
 
     /// <summary>
     /// Invokes applicable callbacks for the supplied events.
@@ -35,31 +41,30 @@ public class ReactorScenario(ReactorId id, Defaults defaults)
     /// <param name="eventStreamType">The event stream type for the input events.</param>
     /// <param name="eventStreamId">The event stream identifier for the input events.</param>
     /// <returns>A task completing after all callbacks complete.</returns>
-    internal async Task InvokeWith(
+    internal Task InvokeWith(
         EventSourceId eventSourceId,
         IEnumerable<object> events,
         EventSourceType eventSourceType,
         EventStreamType eventStreamType,
-        EventStreamId eventStreamId)
-    {
-        var definition = _definition.Value;
-        foreach (var @event in events)
-        {
-            var eventType = defaults.EventTypes.GetEventTypeFor(@event.GetType());
-            var context = EventContext.From(
-                defaults.EventStore.Name,
-                defaults.EventStore.Namespace,
-                eventType,
-                eventSourceType,
-                eventSourceId,
-                eventStreamType,
-                eventStreamId,
-                _nextSequenceNumber,
-                CorrelationId.New());
-            _nextSequenceNumber += 1;
-            await definition.Handle(@event, context);
-        }
-    }
+        EventStreamId eventStreamId) =>
+        Deliver(_occurrences.Record(eventSourceId, events, eventSourceType, eventStreamType, eventStreamId));
+
+    /// <summary>
+    /// Allocates original contexts for history without invoking callbacks.
+    /// </summary>
+    /// <param name="eventSourceId">The event source identifier.</param>
+    /// <param name="events">The events to record in order.</param>
+    /// <param name="eventSourceType">The event source type.</param>
+    /// <param name="eventStreamType">The event stream type.</param>
+    /// <param name="eventStreamId">The event stream identifier.</param>
+    /// <returns>The recorded occurrences.</returns>
+    internal Task<IReadOnlyList<RecordedOccurrence>> RecordHistory(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        EventSourceType eventSourceType,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId) =>
+        Task.FromResult<IReadOnlyList<RecordedOccurrence>>(_occurrences.Record(eventSourceId, events, eventSourceType, eventStreamType, eventStreamId).ToArray());
 
     static IReactorDefinition CreateDefinition(ReactorId id, Defaults defaults)
     {
@@ -72,5 +77,14 @@ public class ReactorScenario(ReactorId id, Defaults defaults)
         var builder = new ReactorBuilder(defaults.EventTypes);
         registration.Define(builder);
         return builder.Build(id);
+    }
+
+    async Task Deliver(IEnumerable<RecordedOccurrence> occurrences)
+    {
+        var definition = _definition.Value;
+        foreach (var occurrence in occurrences)
+        {
+            await definition.Handle(occurrence.Event, occurrence.Context);
+        }
     }
 }
