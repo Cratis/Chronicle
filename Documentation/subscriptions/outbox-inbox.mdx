@@ -18,6 +18,8 @@ When event store **A** subscribes to event store **B**, Chronicle automatically 
 
 You never write to an inbox directly. Chronicle forwards events from the source outbox to the target inbox as they are appended.
 
+Forwarding now preserves the source event's append tags as well as its event-source and stream-route metadata. Tag-filtered observers on the inbox can select these events. Events forwarded by earlier releases that dropped tags remain untagged; upgrading does not backfill them.
+
 ## Lifecycle
 
 Subscriptions are **kernel-managed** and **persistent**. Once registered, a subscription:

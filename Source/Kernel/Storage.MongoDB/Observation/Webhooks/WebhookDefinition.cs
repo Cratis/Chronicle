@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
@@ -45,4 +46,9 @@ public class WebhookDefinition
     /// Gets or sets a value indicating whether the webhook is active.
     /// </summary>
     public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the generation delivery policy.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
 }
