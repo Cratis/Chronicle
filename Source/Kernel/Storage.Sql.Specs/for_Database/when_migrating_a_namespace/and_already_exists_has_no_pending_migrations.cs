@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +29,11 @@ public class and_already_exists_has_no_pending_migrations(PostgreSqlFixture fixt
     {
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
         builder.UseDatabaseFromConnectionString(_connection);
-        builder.AddInterceptors(_failure);
+
+        // Build the options the way Database.BuildOptions does, so this context shares the kernel's EF configuration.
+        builder
+            .AddConceptAsSupport()
+            .AddInterceptors(_failure);
         await using var context = new NamespaceDbContext(builder.Options);
 
         // Inject a duplicate-object error while migrating an already complete, real PostgreSQL schema.

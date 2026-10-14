@@ -16,7 +16,7 @@ public abstract class an_occurrence_storage(ReplicaSetMongoDBFixture fixture) : 
     protected IScheduleStorage _schedules;
     protected Occurrence _occurrence;
     IMongoClient _client;
-    IMongoDatabase _database;
+    protected IMongoDatabase _database;
     string _databaseName;
 
     protected IOccurrencesStorage Recreate() => new OccurrencesStorage(_database);
