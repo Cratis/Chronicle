@@ -29,23 +29,26 @@ public interface IClosedStreamsConstraintStorage
     /// Upsert a closure by owner and normalized scope.
     /// </summary>
     /// <param name="closure">The closure to persist.</param>
+    /// <param name="cancellationToken">Cancellation of the write.</param>
     /// <returns>Awaitable task.</returns>
-    Task Close(ClosedStream closure);
+    Task Close(ClosedStream closure, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Remove only the exact scope belonging to an owner.
     /// </summary>
     /// <param name="owner">The owning constraint or manual owner.</param>
     /// <param name="scope">The exact scope.</param>
+    /// <param name="cancellationToken">Cancellation of the write.</param>
     /// <returns>True if a closure was removed.</returns>
-    Task<bool> Reopen(ClosedStreamOwner owner, ClosedStreamScope scope);
+    Task<bool> Reopen(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get closures belonging to an owner.
     /// </summary>
     /// <param name="owner">The owner.</param>
+    /// <param name="cancellationToken">Cancellation of the read.</param>
     /// <returns>The owner's closures.</returns>
-    Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner);
+    Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Remove every closure belonging to an owner.

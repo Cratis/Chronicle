@@ -26,6 +26,36 @@ internal sealed class ClosesStreamConstraintReindexer(IClosedStreamsConstraintSt
     readonly List<Rebuild> _rebuilds = [];
 
     /// <summary>
+    /// Resolves the original type of a redacted closing transition.
+    /// </summary>
+    /// <param name="event">The redaction marker.</param>
+    /// <returns>The original event type.</returns>
+    /// <exception cref="RedactedClosingEventTypeUnavailable">The marker lacks its original type.</exception>
+    internal static EventTypeId OriginalType(AppendedEvent @event)
+    {
+        var values = (IDictionary<string, object?>)@event.Content;
+        values.TryGetValue("originalEventType", out var value);
+        var originalType = value?.ToString();
+        if (string.IsNullOrEmpty(originalType)) throw new RedactedClosingEventTypeUnavailable(@event.Context.SequenceNumber);
+
+        return new EventTypeId(originalType);
+    }
+
+    /// <summary>
+    /// Resolves the original occurrence time carried by a redaction marker.
+    /// </summary>
+    /// <param name="event">The redaction marker.</param>
+    /// <returns>The recorded occurrence time, when available.</returns>
+    internal static DateTimeOffset? OriginalOccurred(AppendedEvent @event)
+    {
+        var values = (IDictionary<string, object?>)@event.Content;
+        if (!values.TryGetValue("occurred", out var value)) return null;
+        if (value is DateTimeOffset occurred) return occurred;
+
+        return DateTimeOffset.TryParse(value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var parsed) ? parsed : null;
+    }
+
+    /// <summary>
     /// Snapshot every requested owner's current closure facts without changing them.
     /// </summary>
     /// <param name="definitions">The requested declarations.</param>
@@ -111,25 +141,6 @@ internal sealed class ClosesStreamConstraintReindexer(IClosedStreamsConstraintSt
         {
             rebuild.Pending[closure.Scope.Normalized()] = closure;
         }
-    }
-
-    static EventTypeId OriginalType(AppendedEvent @event)
-    {
-        var values = (IDictionary<string, object?>)@event.Content;
-        values.TryGetValue("originalEventType", out var value);
-        var originalType = value?.ToString();
-        if (string.IsNullOrEmpty(originalType)) throw new RedactedClosingEventTypeUnavailable(@event.Context.SequenceNumber);
-
-        return new EventTypeId(originalType);
-    }
-
-    static DateTimeOffset? OriginalOccurred(AppendedEvent @event)
-    {
-        var values = (IDictionary<string, object?>)@event.Content;
-        if (!values.TryGetValue("occurred", out var value)) return null;
-        if (value is DateTimeOffset occurred) return occurred;
-
-        return DateTimeOffset.TryParse(value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var parsed) ? parsed : null;
     }
 
     sealed class Rebuild(ClosesStreamConstraintDefinition definition, ClosedStream[] snapshot)

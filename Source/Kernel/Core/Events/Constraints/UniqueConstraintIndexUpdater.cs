@@ -19,7 +19,10 @@ public class UniqueConstraintIndexUpdater(
     IUniqueConstraintsStorage storage) : IUpdateConstraintIndex
 {
     /// <inheritdoc/>
-    public async Task Update(EventSequenceNumber eventSequenceNumber)
+    public Task Update(EventSequenceNumber eventSequenceNumber) => Update(eventSequenceNumber, CancellationToken.None);
+
+    /// <inheritdoc/>
+    public async Task Update(EventSequenceNumber eventSequenceNumber, CancellationToken cancellationToken)
     {
         var scopeKey = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
 
@@ -33,12 +36,12 @@ public class UniqueConstraintIndexUpdater(
                 var properties = removal.GetPropertiesAndValues(context).ToList();
                 if (properties.Count > 0)
                 {
-                    await storage.RemoveValue(context.EventSourceId, definition, properties.GetValue(definition.IgnoreCasing), scopeKey);
+                    await storage.RemoveValue(context.EventSourceId, definition, properties.GetValue(definition.IgnoreCasing), scopeKey, cancellationToken);
                 }
             }
             else
             {
-                await storage.Remove(context.EventSourceId, definition, scopeKey);
+                await storage.Remove(context.EventSourceId, definition, scopeKey, cancellationToken);
             }
         }
         else
@@ -61,14 +64,14 @@ public class UniqueConstraintIndexUpdater(
             {
                 if (definition.Mode == UniqueConstraintMode.PerEventSource)
                 {
-                    await storage.Remove(context.EventSourceId, definition, scopeKey);
+                    await storage.Remove(context.EventSourceId, definition, scopeKey, cancellationToken);
                 }
 
                 return;
             }
 
             var value = propertiesWithValues.GetValue(definition.IgnoreCasing);
-            await storage.Save(context.EventSourceId, definition, eventSequenceNumber, value, scopeKey);
+            await storage.Save(context.EventSourceId, definition, eventSequenceNumber, value, scopeKey, cancellationToken);
         }
     }
 }

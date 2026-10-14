@@ -2,10 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -85,9 +83,7 @@ public class ReindexConstraintsStep(
         // Skip re-indexing so every erased subject does not collide on the hash of an empty value; the
         // claim simply stays released. Removal and unsupported events fall through to Update, which
         // releases or ignores the claim as appropriate.
-        if (definition.SupportsEventType(@event.Context.EventType.Id) &&
-            !definition.RemovedWith.Contains(@event.Context.EventType.Id) &&
-            definition.GetPropertiesAndValues(context).Any(_ => string.IsNullOrEmpty(_.Value)))
+        if (StoredConstraintEventContent.IsErased(definition, context))
         {
             return;
         }
@@ -153,7 +149,7 @@ public class ReindexConstraintsStep(
 
             var seenConstraintEntries = changedDefinitions.ToDictionary(_ => _.Name, _ => new HashSet<(EventSourceId EventSourceId, string ScopeKey)>());
             var validators = changedDefinitions.ToDictionary(_ => _.Name, _ => new UniqueConstraintValidator(_, uniqueConstraintsStorage));
-            var schemaCache = new Dictionary<EventType, EventTypeSchema>();
+            var storedContent = new StoredConstraintEventContent(jobStepKey.Scope, jobStepKey.Namespace, eventTypesStorage, complianceManager, expandoObjectConverter);
 
             // GetFromSequenceNumber supplies an ascending sequence-number cursor in every provider. Consume
             // its batches and events sequentially so releases precede subsequent claims, including on retry.
@@ -164,16 +160,10 @@ public class ReindexConstraintsStep(
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (!schemaCache.TryGetValue(@event.Context.EventType, out var eventSchema))
-                    {
-                        eventSchema = await eventTypesStorage.GetFor(@event.Context.EventType.Id, @event.Context.EventType.Generation);
-                        schemaCache[@event.Context.EventType] = eventSchema;
-                    }
-
                     // Constraint hashes must be derived from the original plaintext, so release (decrypt) any
                     // PII before establishing the validation context. The append-time index write already uses
                     // plaintext; reindexing must match it or a rebuilt PII index would diverge from new appends.
-                    var content = await ReleaseContent(jobStepKey.Scope, jobStepKey.Namespace, @event, eventSchema);
+                    var content = await storedContent.Release(@event, cancellationToken);
                     closingReindexer.Include(@event, content);
 
                     foreach (var definition in changedDefinitions)
@@ -198,26 +188,5 @@ public class ReindexConstraintsStep(
         {
             return ex;
         }
-    }
-
-    /// <summary>
-    /// Releases (decrypts) the stored event content so that constraint hashes are computed over plaintext.
-    /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> the event belongs to.</param>
-    /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> the event belongs to.</param>
-    /// <param name="event">The <see cref="AppendedEvent"/> whose content should be released.</param>
-    /// <param name="eventSchema">The <see cref="EventTypeSchema"/> describing the event content.</param>
-    /// <returns>The released (decrypted) content, or the original content when the event carries no compliance metadata.</returns>
-    async Task<ExpandoObject> ReleaseContent(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, AppendedEvent @event, EventTypeSchema eventSchema)
-    {
-        if (!eventSchema.Schema.HasSchemaMetadata())
-        {
-            return @event.Content;
-        }
-
-        var identifier = @event.Context.Subject.IsSet ? @event.Context.Subject.Value : @event.Context.EventSourceId.Value;
-        var json = expandoObjectConverter.ToJsonObject(@event.Content, eventSchema.Schema);
-        var released = await complianceManager.Release(eventStore, eventStoreNamespace, eventSchema.Schema, identifier, json);
-        return expandoObjectConverter.ToExpandoObject(released, eventSchema.Schema);
     }
 }

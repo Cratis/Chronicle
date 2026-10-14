@@ -3,9 +3,9 @@
 
 using Cratis.Chronicle.Concepts.Events;
 
-namespace Cratis.Chronicle.Events.Constraints.for_ConstraintValidationContext;
+namespace Cratis.Chronicle.Events.Constraints.for_ConstraintValidationContext.when_updating;
 
-public class when_updating : given.a_constraint_validation_context_with_two_validators_that_are_index_updaters
+public class and_the_legacy_path_is_used : given.a_constraint_validation_context_with_two_validators_that_are_index_updaters
 {
     static readonly EventSequenceNumber _sequenceNumber = 42;
 

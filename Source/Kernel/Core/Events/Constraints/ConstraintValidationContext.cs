@@ -126,4 +126,17 @@ public record ConstraintValidationContext
     {
         await Task.WhenAll(_updaters.Select(v => v.Update(eventSequenceNumber)));
     }
+
+    /// <summary>
+    /// Attempts every updater independently and reports every result within its cancellation deadline.
+    /// </summary>
+    /// <param name="eventSequenceNumber">The event's position.</param>
+    /// <param name="cancellationToken">The enclosing turn's cancellation deadline.</param>
+    /// <returns>One outcome per updater, including failures and abandoned attempts.</returns>
+    public async Task<IEnumerable<ConstraintIndexUpdateResult>> Update(EventSequenceNumber eventSequenceNumber, CancellationToken cancellationToken) =>
+        await Task.WhenAll(_updaters.Select(async updater =>
+        {
+            var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(token => updater.Update(eventSequenceNumber, token), cancellationToken);
+            return new ConstraintIndexUpdateResult(updater, outcome, error);
+        }));
 }
