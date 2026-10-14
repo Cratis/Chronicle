@@ -88,12 +88,25 @@ The .NET client declares the complete discovered global set for each program. A 
 program's previous declaration, including when the new set is empty. Removing an entry from `ICanSeedEvents`
 stops it reaching namespaces created afterwards; events already appended to existing namespaces are never retracted.
 Explicitly queued globals (`eventStore.Seeding.For(...)` or an independent `CreateEventSeeding()` buffer)
-remain append-only and are not removed by a later declaration.
+remain append-only and are not removed by a later declaration, even if an identical seed was already declared.
+
+If two programs declare the same seed, a namespace receives it once, not once per program.
+For repeated identical seeds, Chronicle uses the largest occurrence count in any program's declaration or
+explicit additions, not the sum across programs. Seed identity includes the event source, event type,
+content, tags, and routing. Clearing one program's declaration does not remove a seed another program
+still declares or has added explicitly. Existing namespaces receive only missing occurrences; no events
+are retracted.
+
+If any discovered seeder cannot activate or its callback fails, the client logs the failing seeder types
+and sends no discovered global declaration during that registration. The previous declaration stays in
+place; the partial discovered set is not stored as explicit additions either. Namespace-scoped entries
+and manually queued entries still register. The next registration retries discovery, and a complete
+successful discovery declares the global set as usual.
 
 Ownership uses `ChronicleOptions.ProgramIdentifier`, falling back to the entry assembly name when the option
 is still `"[N/A]"`. Set a distinct, stable `ProgramIdentifier` for each program when several programs share a
-store, so one program does not replace another's declaration. The first authoritative declaration also clears
-legacy stored global entries whose owner was not recorded. Other programs' owned declarations and explicit
+store, so one program does not replace another's declaration. The first authoritative registration after
+upgrading also clears legacy stored global seeds whose owner was not recorded. Other programs' owned declarations and explicit
 additions remain stored.
 
 This requires an upgraded client and kernel. Old clients keep append-only behavior. A new client still works
