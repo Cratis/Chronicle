@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
@@ -31,6 +32,18 @@ internal sealed class EventStoreSubscriptions(
     /// <inheritdoc/>
     public async Task Add(AddEventStoreSubscriptions request, CallContext context = default)
     {
+        // Validate every pinned registration before reserving or appending any definition in this request.
+        foreach (var subscription in request.Subscriptions.Where(_ => _.GenerationDelivery == Contracts.Observation.EventGenerationDelivery.Pinned))
+        {
+            var pins = subscription.EventTypes.Select(et => new EventType(et.Id, et.Generation)).ToArray();
+            EventStoreSubscriptionGenerationValidation.ValidatePins(pins);
+            foreach (var pin in pins.Distinct())
+            {
+                await EventStoreSubscriptionGenerationValidation.GetExactSchema(storage.GetEventStore(subscription.SourceEventStore).EventTypes, pin);
+                await EventStoreSubscriptionGenerationValidation.GetExactSchema(storage.GetEventStore(request.TargetEventStore).EventTypes, pin);
+            }
+        }
+
         var eventSequence = grainFactory.GetSystemEventSequence(request.TargetEventStore);
         var subscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(request.TargetEventStore);
 
@@ -39,7 +52,10 @@ internal sealed class EventStoreSubscriptions(
             var definition = new ConceptsEventStoreSubscriptionDefinition(
                 new EventStoreSubscriptionId(subscription.Identifier),
                 new EventStoreName(subscription.SourceEventStore),
-                subscription.EventTypes.Select(et => new EventType(et.Id, et.Generation)));
+                subscription.EventTypes.Select(et => new EventType(et.Id, et.Generation)).ToArray())
+            {
+                GenerationDelivery = (EventGenerationDelivery)subscription.GenerationDelivery
+            };
 
             var existingSubscriptions = await subscriptionsManager.GetSubscriptionDefinitions();
             var existing = existingSubscriptions.FirstOrDefault(s => s.Identifier == definition.Identifier);
@@ -52,7 +68,10 @@ internal sealed class EventStoreSubscriptions(
                 await subscriptionsManager.Add(definition);
                 await eventSequence.Append(subscription.Identifier, new EventStoreSubscriptionAdded(
                     definition.SourceEventStore,
-                    definition.EventTypes));
+                    definition.EventTypes)
+                {
+                    GenerationDelivery = definition.GenerationDelivery
+                });
             }
 
             // Existing matching definitions still need to be reactivated after reconnects and server restarts.
@@ -67,7 +86,7 @@ internal sealed class EventStoreSubscriptions(
                     new EventStoreSubscriptionId(subscription.Identifier),
                     TimeSpan.FromSeconds(options.Value.Observers.SubscriptionReadyTimeout));
             }
-            catch (TimeoutException)
+            catch (TimeoutException) when (definition.GenerationDelivery == EventGenerationDelivery.Compatibility)
             {
                 // Log but don't fail - the subscription may still activate asynchronously.
                 // This prevents blocking the client indefinitely if there are issues.
@@ -96,13 +115,14 @@ internal sealed class EventStoreSubscriptions(
         {
             Identifier = definition.Identifier.Value,
             SourceEventStore = definition.SourceEventStore.Value,
-            EventTypes = definition.EventTypes.Select(et => new Contracts.Events.EventType { Id = et.Id, Generation = et.Generation }).ToList()
+            EventTypes = definition.EventTypes.Select(et => new Contracts.Events.EventType { Id = et.Id, Generation = et.Generation }).ToList(),
+            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)definition.GenerationDelivery
         });
     }
 
     static bool HasSameDefinition(ConceptsEventStoreSubscriptionDefinition existing, ConceptsEventStoreSubscriptionDefinition incoming)
     {
-        if (existing.SourceEventStore != incoming.SourceEventStore)
+        if (existing.SourceEventStore != incoming.SourceEventStore || existing.GenerationDelivery != incoming.GenerationDelivery)
         {
             return false;
         }

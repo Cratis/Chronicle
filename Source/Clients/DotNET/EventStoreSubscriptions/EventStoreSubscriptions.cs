@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
+using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.Logging;
 using ContractEventStoreSubscriptionDefinition = Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
 using ContractEventType = Cratis.Chronicle.Contracts.Events.EventType;
@@ -38,7 +39,10 @@ public class EventStoreSubscriptions(IEventTypes eventTypes, IEventStore eventSt
                 {
                     Identifier = definition.Id.Value,
                     SourceEventStore = definition.SourceEventStore,
-                    EventTypes = definition.EventTypes.Select(et => new ContractEventType { Id = et.Value, Generation = 1 }).ToList()
+                    EventTypes = definition.GenerationDelivery == EventGenerationDelivery.Pinned
+                        ? definition.EventTypePins.Select(et => new ContractEventType { Id = et.Id.Value, Generation = et.Generation.Value }).ToList()
+                        : definition.EventTypes.Select(et => new ContractEventType { Id = et.Value, Generation = 1 }).ToList(),
+                    GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)definition.GenerationDelivery
                 }
             ]
         };
@@ -69,6 +73,10 @@ public class EventStoreSubscriptions(IEventTypes eventTypes, IEventStore eventSt
         return subscriptions.Select(s => new EventStoreSubscriptionDefinition(
             new EventStoreSubscriptionId(s.Identifier),
             s.SourceEventStore,
-            s.EventTypes.Select(et => new Events.EventTypeId(et.Id))));
+            s.EventTypes.Select(et => new Events.EventTypeId(et.Id)))
+        {
+            GenerationDelivery = (EventGenerationDelivery)s.GenerationDelivery,
+            EventTypePins = s.EventTypes.Select(et => new Events.EventType(et.Id, et.Generation)).ToArray()
+        });
     }
 }

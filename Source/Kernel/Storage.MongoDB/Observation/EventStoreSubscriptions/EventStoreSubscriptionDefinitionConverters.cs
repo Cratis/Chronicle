@@ -18,7 +18,8 @@ public static class EventStoreSubscriptionDefinitionConverters
         {
             Id = definition.Identifier,
             SourceEventStore = definition.SourceEventStore,
-            EventTypes = [.. definition.EventTypes]
+            EventTypes = [.. definition.EventTypes],
+            GenerationDelivery = definition.GenerationDelivery
         };
 
     /// <summary>
@@ -30,5 +31,8 @@ public static class EventStoreSubscriptionDefinitionConverters
         new(
             definition.Id,
             definition.SourceEventStore,
-            definition.EventTypes);
+            definition.EventTypes)
+        {
+            GenerationDelivery = definition.GenerationDelivery
+        };
 }

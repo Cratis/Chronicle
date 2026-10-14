@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 
@@ -14,4 +15,10 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 [EventType, AllEventStores]
 public record EventStoreSubscriptionAdded(
     EventStoreName SourceEventStore,
-    IEnumerable<EventType> EventTypes);
+    IEnumerable<EventType> EventTypes)
+{
+    /// <summary>
+    /// Gets the generation delivery policy for this registration.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+}

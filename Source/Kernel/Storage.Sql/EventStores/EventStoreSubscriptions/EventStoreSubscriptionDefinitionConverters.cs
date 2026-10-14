@@ -21,7 +21,8 @@ public static class EventStoreSubscriptionDefinitionConverters
         {
             Id = definition.Identifier.Value,
             SourceEventStore = definition.SourceEventStore.Value,
-            EventTypes = definition.EventTypes.ToArray()
+            EventTypes = definition.EventTypes.ToArray(),
+            GenerationDelivery = definition.GenerationDelivery
         };
 
     /// <summary>
@@ -34,5 +35,8 @@ public static class EventStoreSubscriptionDefinitionConverters
         new(
             new EventStoreSubscriptionId(definition.Id),
             new Concepts.EventStoreName(definition.SourceEventStore),
-            definition.EventTypes);
+            definition.EventTypes)
+        {
+            GenerationDelivery = definition.GenerationDelivery
+        };
 }

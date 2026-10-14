@@ -28,4 +28,10 @@ public class EventStoreSubscriptionDefinition
     /// </summary>
     [ProtoMember(3, IsRequired = true)]
     public IList<EventType> EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the generation delivery policy. Old registrations use Compatibility.
+    /// </summary>
+    [ProtoMember(4)]
+    public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
 }

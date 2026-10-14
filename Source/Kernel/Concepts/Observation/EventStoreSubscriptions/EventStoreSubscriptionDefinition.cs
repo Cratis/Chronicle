@@ -14,4 +14,10 @@ namespace Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 public record EventStoreSubscriptionDefinition(
     EventStoreSubscriptionId Identifier,
     EventStoreName SourceEventStore,
-    IEnumerable<EventType> EventTypes);
+    IEnumerable<EventType> EventTypes)
+{
+    /// <summary>
+    /// Gets the policy for delivering event generations.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+}

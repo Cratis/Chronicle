@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -28,4 +29,9 @@ public class EventStoreSubscriptionDefinition
     /// Gets or sets the event types to subscribe to.
     /// </summary>
     public IList<EventType> EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the generation delivery policy.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
 }

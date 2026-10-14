@@ -11,8 +11,10 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging;
 using Orleans.TestKit;
@@ -43,6 +45,8 @@ public class and_the_target_event_store_erased_the_subject : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _silo.AddService(Substitute.For<IStorage>());
+        _silo.AddService(Substitute.For<IEventGenerationRelease>());
         _silo.AddService(new JsonSerializerOptions());
         _silo.AddService(Substitute.For<ILogger<EventStoreSubscriptionObserverSubscriber>>());
 

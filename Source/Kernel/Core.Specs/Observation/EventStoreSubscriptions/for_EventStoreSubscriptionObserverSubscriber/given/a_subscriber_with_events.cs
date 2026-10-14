@@ -11,8 +11,10 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging;
 using Orleans.TestKit;
@@ -21,6 +23,9 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSub
 
 public class a_subscriber_with_events : Specification
 {
+    protected IEncryptionKeyStorage _encryptionKeyStorage = null!;
+    protected IStorage _storage = null!;
+    protected IEventGenerationRelease _generationRelease = null!;
     protected EventStoreSubscriptionObserverSubscriber _subscriber = null!;
     protected IEventSequence _inboxSequence = null!;
     protected AppendedEvent[] _events = null!;
@@ -29,11 +34,15 @@ public class a_subscriber_with_events : Specification
     async Task Establish()
     {
         var silo = new TestKitSilo();
+        _storage = Substitute.For<IStorage>();
+        _generationRelease = CreateGenerationRelease();
+        silo.AddService(_storage);
+        silo.AddService(_generationRelease);
         silo.AddService(new JsonSerializerOptions());
         silo.AddService(Substitute.For<ILogger<EventStoreSubscriptionObserverSubscriber>>());
-        var encryptionKeyStorage = Substitute.For<IEncryptionKeyStorage>();
-        encryptionKeyStorage.HasFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(true);
-        silo.AddService(encryptionKeyStorage);
+        _encryptionKeyStorage = Substitute.For<IEncryptionKeyStorage>();
+        _encryptionKeyStorage.HasFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(true);
+        silo.AddService(_encryptionKeyStorage);
 
         _inboxSequence = Substitute.For<IEventSequence>();
         _inboxSequence.Append(
@@ -53,7 +62,7 @@ public class a_subscriber_with_events : Specification
         silo.AddProbe(_ => _inboxSequence);
 
         var subscriberKey = new ObserverSubscriberKey(
-            new ObserverId("subscription"),
+            new ObserverId("subscription->Lobby"),
             new EventStoreName("Admin"),
             EventStoreNamespaceName.Default,
             EventSequenceId.Outbox,
@@ -62,6 +71,8 @@ public class a_subscriber_with_events : Specification
         _subscriber = await silo.CreateGrainAsync<EventStoreSubscriptionObserverSubscriber>(subscriberKey.ToString());
         _events = [CreateEvent(42UL, "event-type-1"), CreateEvent(43UL, "event-type-2"), CreateEvent(44UL, "event-type-3")];
     }
+
+    protected virtual IEventGenerationRelease CreateGenerationRelease() => Substitute.For<IEventGenerationRelease>();
 
     protected Task<ObserverSubscriberResult> Forward() =>
         _subscriber.OnNext(new Key("partition", ArrayIndexers.NoIndexers), _events, new ObserverSubscriberContext("Lobby"));
