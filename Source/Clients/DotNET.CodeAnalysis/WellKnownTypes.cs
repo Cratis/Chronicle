@@ -42,6 +42,11 @@ public static class WellKnownTypes
     public const string ReactorAttributeName = "Cratis.Chronicle.Reactors.ReactorAttribute";
 
     /// <summary>
+    /// The full name of the reactor side-effect return type attribute.
+    /// </summary>
+    public const string ReactorSideEffectAttributeName = "Cratis.Chronicle.Reactors.SideEffects.ReactorSideEffectAttribute";
+
+    /// <summary>
     /// The full name of the Reducer attribute.
     /// </summary>
     public const string ReducerAttributeName = "Cratis.Chronicle.Reducers.ReducerAttribute";
@@ -279,6 +284,24 @@ public static class WellKnownTypes
     /// <returns>True if the symbol carries the attribute, false otherwise.</returns>
     public static bool HasAttribute(ISymbol symbol, string attributeFullName) =>
         symbol.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() == attributeFullName);
+
+    /// <summary>
+    /// Check whether a type, any base type, or an implemented interface is marked as a reactor side effect.
+    /// </summary>
+    /// <param name="typeSymbol">The type symbol to check.</param>
+    /// <returns>True if the type carries or inherits the marker, false otherwise.</returns>
+    public static bool HasReactorSideEffectAttribute(ITypeSymbol typeSymbol)
+    {
+        for (var current = typeSymbol; current is not null; current = current.BaseType)
+        {
+            if (HasAttribute(current, ReactorSideEffectAttributeName))
+            {
+                return true;
+            }
+        }
+
+        return typeSymbol.AllInterfaces.Any(type => HasAttribute(type, ReactorSideEffectAttributeName));
+    }
 
     /// <summary>
     /// Find the <c language="csharp">EventTypeMigration&lt;TUpgrade, TPrevious&gt;</c> base type of a type, if any.

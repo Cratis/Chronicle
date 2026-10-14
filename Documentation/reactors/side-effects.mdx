@@ -113,7 +113,9 @@ Extend the pipeline by registering a custom `IReactorSideEffectHandler`:
 
 Chronicle registers its built-in handlers and reactor metadata providers when you call `AddCratisChronicle`, including in standalone hosts. Register custom handlers under `IReactorSideEffectHandler` or their concrete type in the host's service collection. Handlers discovered from other loaded libraries only participate when registered; merely loading an assembly does not activate its integration.
 
-To return your custom side effect synchronously, implement `CanHandleReturnType(Type)` on the handler to claim its declared type. Existing handlers default to `false` and can still handle asynchronous `Task<T>` results. A handler can also claim a declared `IEnumerable<T>` return type; it must process the collection at invocation time. Returning a type that no handler claims synchronously is rejected during registration.
+To return your custom side effect synchronously, implement `CanHandleReturnType(Type)` on the handler to claim its declared type. Mark the return type with `[ReactorSideEffect]` from `Cratis.Chronicle.Reactors.SideEffects` so analyzer [CHR0054](../code-analysis/CHR0054.mdx) accepts it. The marker may be applied to classes, structs, or interfaces; types deriving from a marked base class or implementing a marked interface are also accepted. It only informs the analyzer: it does not register a handler or make the type supported at runtime.
+
+Existing handlers default to `false` and can still handle asynchronous `Task<T>` results without a marker. A handler can also claim a declared `IEnumerable<T>` return type; it must process the collection at invocation time. Arrays and `IEnumerable<T>` implementations of marked types are accepted by the analyzer, but the handler must claim the declared collection type, not only its elements. Returning a type that no handler claims synchronously is rejected during registration.
 
 ## Supported Return Types
 
