@@ -17,7 +17,9 @@ public class a_read_only_probe : Specification
 
     void Establish()
     {
-        _path = Path.GetFullPath(Path.Combine(".ai-work", "4911", $"sqlite-probe-{Guid.NewGuid():N}.db"));
+        var directory = Path.Combine(Path.GetTempPath(), "chronicle-specs", "sqlite-probes");
+        Directory.CreateDirectory(directory);
+        _path = Path.Combine(directory, $"{Guid.NewGuid():N}.db");
         using (var connection = new SqliteConnection($"Data Source={_path};Pooling=False"))
         {
             connection.Open();

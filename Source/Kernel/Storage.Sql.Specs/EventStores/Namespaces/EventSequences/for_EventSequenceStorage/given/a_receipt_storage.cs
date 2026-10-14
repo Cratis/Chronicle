@@ -27,7 +27,7 @@ public class a_receipt_storage : a_publication_storage
         var connectionString = _connectionString;
         if (Environment.GetEnvironmentVariable("CHRONICLE_SQL_SPECS_PROVIDER") is null)
         {
-            _directory = Path.GetFullPath(Path.Combine(".ai-work", "4911", $"sql-receipts-{Guid.NewGuid():N}"));
+            _directory = Path.Combine(Path.GetTempPath(), "chronicle-specs", $"sql-receipts-{Guid.NewGuid():N}");
             Directory.CreateDirectory(_directory);
             connectionString = $"Data Source={Path.Combine(_directory, "cluster.db")}";
         }
