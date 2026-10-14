@@ -47,5 +47,9 @@ internal static class SqlServerDatabaseCreation
         var file = "chronicle_" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(database)));
         command.Parameters.AddWithValue("file", file);
         await command.ExecuteNonQueryAsync();
+
+        // A failed open before creation leaves the pool in its blocking period, so the next open of the new
+        // database would fail as if it did not exist. EF Core's own creator clears the pools for the same reason.
+        SqlConnection.ClearAllPools();
     }
 }
