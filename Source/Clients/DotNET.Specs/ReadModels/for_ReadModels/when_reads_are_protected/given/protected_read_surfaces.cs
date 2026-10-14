@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Transactions;
 using Microsoft.Extensions.Logging;
 
@@ -18,7 +17,7 @@ public class protected_read_surfaces : for_ReadModels.given.all_dependencies
         using var region = allowance is null ? null : unit.AllowReads(allowance.Value, "read surface spec");
         var modelType = typeof(object);
         var queryProjections = new Projections.Projections(_eventStore, _eventTypes, Substitute.For<IClientArtifactsProvider>(), _namingPolicy, Substitute.For<IClientArtifactsActivator>(), _jsonSerializerOptions, Substitute.For<ILogger<Projections.Projections>>());
-        _services.Projections.Preview(Arg.Any<Contracts.Projections.PreviewProjectionRequest>()).Returns(_ => throw new UnknownReadModel(modelType));
+        _services.Projections.Preview(Arg.Any<Contracts.Projections.PreviewProjectionRequest>()).Returns<Task<Contracts.Primitives.OneOf<Contracts.Projections.ProjectionPreview, Contracts.Projections.ProjectionDeclarationParsingErrors>>>(_ => throw new UnknownReadModel(modelType));
         var operations = new Dictionary<string, Func<Task>>
         {
             ["projection query"] = async () => await queryProjections.Query("projection declaration"),
