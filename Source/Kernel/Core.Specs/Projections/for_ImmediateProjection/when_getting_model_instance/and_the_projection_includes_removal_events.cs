@@ -1,11 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.for_ImmediateProjection.when_getting_model_instance;
 
@@ -23,9 +20,8 @@ public class and_the_projection_includes_removal_events : given.an_immediate_pro
             AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(_removed, 9));
         _eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId: ReadModelKey, eventTypes: Arg.Any<IEnumerable<EventType>>())
             .Returns(cursor);
-        _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>()).Returns(new ExpandoObject());
-        _projection.ProcessForSingleReadModel(EventStoreNamespaceName.Default, Arg.Any<ExpandoObject>(), Arg.Any<IEnumerable<AppendedEvent>>())
-            .Returns(Task.FromResult(new ExpandoObject()));
+        _projection.FoldForSingleReadModel(EventStoreNamespaceName.Default, Arg.Any<SingleReadModelProjectionState>(), Arg.Any<IEnumerable<AppendedEvent>>())
+            .Returns(Task.FromResult(SingleReadModelProjectionState.Empty));
     }
 
     async Task Because() => _result = await _grain.GetModelInstance();
