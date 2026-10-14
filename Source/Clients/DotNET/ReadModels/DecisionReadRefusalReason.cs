@@ -69,5 +69,10 @@ public enum DecisionReadRefusalReason
     /// <summary>
     /// A stream-keyed projection requires an explicit stream identifier rather than the default wildcard.
     /// </summary>
-    StreamKeyRequiresExplicitStreamId = 18
+    StreamKeyRequiresExplicitStreamId = 18,
+
+    /// <summary>
+    /// The immediate fold cannot honor the projection's pinned generation delivery.
+    /// </summary>
+    GenerationDeliveryNotSupported = 19
 }

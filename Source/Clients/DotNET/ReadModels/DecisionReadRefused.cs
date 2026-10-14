@@ -55,6 +55,8 @@ public class DecisionReadRefused(DecisionReadRefusalReason reason, Type readMode
             "A stream-scoped decision read cannot select all stream types. Supply a specific event stream type, or use a source-wide read for an event-source-keyed projection.",
         DecisionReadRefusalReason.StreamKeyRequiresExplicitStreamId =>
             "A stream-keyed projection cannot use the default stream id because it does not narrow the fold to one instance key. Supply an explicit event stream id.",
+        DecisionReadRefusalReason.GenerationDeliveryNotSupported =>
+            "The session fold uses Compatibility delivery and cannot honor a Pinned projection. Use Compatibility delivery for this projection.",
         _ => string.Empty
     };
 }

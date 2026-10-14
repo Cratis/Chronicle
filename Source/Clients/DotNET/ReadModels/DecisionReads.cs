@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Transactions;
 using Grpc.Core;
 using ProtoBuf.Grpc;
 using ProjectionDefinition = Cratis.Chronicle.Contracts.Projections.ProjectionDefinition;
@@ -57,23 +58,30 @@ public sealed class DecisionReads : IDecisionReads
         where T : class => _streamAdmissions.GetOrAdd(typeof(T), static (type, self) => self.Assess(type, true), this).Admission;
 
     /// <inheritdoc/>
-    public async Task<DecisionRead<T>> Get<T>(ReadModelKey key, CancellationToken cancellationToken = default)
+    public Task<DecisionRead<T>> Get<T>(ReadModelKey key, CancellationToken cancellationToken = default)
+        where T : class => GetFor<T>(ReadProtectionGuard.AmbientUnit(_eventStore.UnitOfWorkManager, typeof(T).Name), key, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<DecisionRead<T>> GetFor<T>(IUnitOfWork unitOfWork, ReadModelKey key, CancellationToken cancellationToken = default)
         where T : class
     {
-        if (!_eventStore.UnitOfWorkManager.HasCurrent) throw new DecisionReadRequiresUnitOfWork();
-        var unitOfWork = _eventStore.UnitOfWorkManager.Current;
-        var read = await GetDetached<T>(key, cancellationToken);
+        ReadProtectionGuard.ProtectedRead(unitOfWork, typeof(T).Name);
+        var read = await ReadDetached<T>(key, null, cancellationToken, unitOfWork.IsEnforcingReadProtection);
         unitOfWork.AddDecisionRead(read);
         return read;
     }
 
     /// <inheritdoc/>
-    public async Task<DecisionRead<T>> Get<T>(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventSourceType? eventSourceType = default, CancellationToken cancellationToken = default)
+    public Task<DecisionRead<T>> Get<T>(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventSourceType? eventSourceType = default, CancellationToken cancellationToken = default)
+        where T : class => GetFor<T>(ReadProtectionGuard.AmbientUnit(_eventStore.UnitOfWorkManager, typeof(T).Name), eventSourceId, eventStreamType, eventStreamId, eventSourceType, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<DecisionRead<T>> GetFor<T>(IUnitOfWork unitOfWork, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventSourceType? eventSourceType = default, CancellationToken cancellationToken = default)
         where T : class
     {
-        if (!_eventStore.UnitOfWorkManager.HasCurrent) throw new DecisionReadRequiresUnitOfWork();
-        var unitOfWork = _eventStore.UnitOfWorkManager.Current;
-        var read = await GetDetached<T>(eventSourceId, eventStreamType, eventStreamId, eventSourceType, cancellationToken);
+        ReadProtectionGuard.ProtectedRead(unitOfWork, typeof(T).Name);
+        var scope = new DecisionReadStreamScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
+        var read = await ReadDetached<T>(GetStreamKey<T>(scope), scope, cancellationToken, unitOfWork.IsEnforcingReadProtection);
         unitOfWork.AddDecisionRead(read);
         return read;
     }
@@ -82,6 +90,7 @@ public sealed class DecisionReads : IDecisionReads
     public Task<DecisionRead<T>> GetDetached<T>(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventSourceType? eventSourceType = default, CancellationToken cancellationToken = default)
         where T : class
     {
+        ReadProtectionGuard.Detached(nameof(GetDetached));
         var scope = new DecisionReadStreamScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
         var key = GetStreamKey<T>(scope);
         return ReadDetached<T>(key, scope, cancellationToken);
@@ -89,7 +98,19 @@ public sealed class DecisionReads : IDecisionReads
 
     /// <inheritdoc/>
     public Task<DecisionRead<T>> GetDetached<T>(ReadModelKey key, CancellationToken cancellationToken = default)
-        where T : class => ReadDetached<T>(key, null, cancellationToken);
+        where T : class
+    {
+        ReadProtectionGuard.Detached(nameof(GetDetached));
+        return ReadDetached<T>(key, null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public DecisionReadDescription Describe<T>()
+        where T : class
+    {
+        var (admission, definition, types, _) = _admissions.GetOrAdd(typeof(T), static (type, self) => self.Assess(type), this);
+        return new(admission, Array.AsReadOnly(types), definition?.GenerationDelivery == Contracts.Observation.EventGenerationDelivery.Pinned);
+    }
 
     /// <summary>Registers an in-process testing reader for the target store.</summary>
     /// <param name="eventStore">The in-process store.</param>
@@ -124,15 +145,16 @@ public sealed class DecisionReads : IDecisionReads
     /// <param name="key">The model key.</param>
     /// <param name="streamScope">The optional event stream scope.</param>
     /// <param name="cancellationToken">Optional cancellation.</param>
+    /// <param name="enforcing">Whether the receiving unit enforces read protection.</param>
     /// <returns>The protected read.</returns>
     /// <exception cref="DecisionReadRefused">The fold cannot be protected.</exception>
     /// <exception cref="InvalidOperationException">The retry state is unreachable.</exception>
-    internal async Task<DecisionRead<T>> ReadDetached<T>(ReadModelKey key, DecisionReadStreamScope? streamScope, CancellationToken cancellationToken)
+    internal async Task<DecisionRead<T>> ReadDetached<T>(ReadModelKey key, DecisionReadStreamScope? streamScope, CancellationToken cancellationToken, bool enforcing = false)
         where T : class
     {
         var type = typeof(T);
         var streamScoped = streamScope is not null;
-        var (definition, types) = GetAdmittedShape<T>(key, streamScoped);
+        var (definition, types) = GetAdmittedShape<T>(key, streamScoped, enforcing);
         cancellationToken.ThrowIfCancellationRequested();
         var agreement = _agreements.GetOrAdd(
             (type, streamScoped),
@@ -228,9 +250,10 @@ public sealed class DecisionReads : IDecisionReads
     /// <typeparam name="T">The read model type.</typeparam>
     /// <param name="key">The raw source key.</param>
     /// <param name="streamScoped">Whether the read is scoped to an event stream.</param>
+    /// <param name="enforcing">Whether the receiving unit enforces read protection.</param>
     /// <returns>The admitted definition and its types.</returns>
     /// <exception cref="DecisionReadRefused">The shape or key is not safe to guard.</exception>
-    internal (ProjectionDefinition Definition, EventType[] Types) GetAdmittedShape<T>(ReadModelKey key, bool streamScoped = false)
+    internal (ProjectionDefinition Definition, EventType[] Types) GetAdmittedShape<T>(ReadModelKey key, bool streamScoped = false, bool enforcing = false)
         where T : class
     {
         var type = typeof(T);
@@ -239,6 +262,10 @@ public sealed class DecisionReads : IDecisionReads
         if (!admission.IsAdmitted)
         {
             throw new DecisionReadRefused(admission.Reason!.Value, type);
+        }
+        if ((enforcing || ReadProtectionFrame.Current is not null) && definition!.GenerationDelivery == Contracts.Observation.EventGenerationDelivery.Pinned)
+        {
+            throw new DecisionReadRefused(DecisionReadRefusalReason.GenerationDeliveryNotSupported, type);
         }
         if (key is null || string.IsNullOrWhiteSpace(key.Value) || key.Value == "*" ||
             key.Value.Contains('#') || key.Value != key.Value.Trim() ||
@@ -372,6 +399,7 @@ public sealed class DecisionReads : IDecisionReads
             matches[0].ObserverType != ReadModelObserverType.Projection || projections.Length != 1 ||
             projections[0].ReadModel != client.ReadModel ||
             projections[0].EventSequenceId != client.EventSequenceId ||
+            projections[0].GenerationDelivery != client.GenerationDelivery ||
             projections[0].SubscribesToAllEvents != client.SubscribesToAllEvents ||
             projections[0].Join.Count != client.Join.Count || projections[0].RemovedWithJoin.Count != client.RemovedWithJoin.Count ||
             projections[0].Children.Count != client.Children.Count || projections[0].Nested.Count != client.Nested.Count ||

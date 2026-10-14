@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Transactions;
 
@@ -61,6 +62,20 @@ internal static class ReadProtectionGuard
     {
         var frame = ReadProtectionFrame.Current;
         if (frame is not null && !ReferenceEquals(unit, frame.UnitOfWork) && !(allowAdvisory && ReadProtectionReadRegion.IsAdvisory)) throw new ReadProtectionUnitMismatch();
+    }
+
+    /// <summary>
+    /// Resolves ambient acquisition without losing the invocation after early completion.
+    /// </summary>
+    /// <param name="manager">The ambient unit manager.</param>
+    /// <param name="description">The protected model.</param>
+    /// <returns>The ambient receiving unit.</returns>
+    /// <exception cref="DecisionReadRequiresUnitOfWork">No ambient unit exists.</exception>
+    internal static IUnitOfWork AmbientUnit(IUnitOfWorkManager manager, string description)
+    {
+        if (ReadProtectionFrame.Current is { UnitCompleted: true } frame) ProtectedRead(frame.UnitOfWork, description);
+        if (!manager.HasCurrent) throw new DecisionReadRequiresUnitOfWork();
+        return manager.Current;
     }
 
     /// <summary>
