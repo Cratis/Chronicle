@@ -20,5 +20,6 @@ public class without_a_shared_registration : given.a_seeding_builder_with_discov
     }
 
     [Fact] void should_send_discovered_globals() => _requests.SelectMany(_ => _.GlobalByEventSource).Select(_ => _.EventSourceId).ShouldContainOnly(["discovered"]);
-    [Fact] void should_clear_the_registered_entries() => _requests.Count.ShouldEqual(1);
+    [Fact] void should_send_discovered_globals_authoritatively() => _requests.Single(_ => _.GlobalByEventSource.Any()).GlobalSetIsAuthoritative.ShouldBeTrue();
+    [Fact] void should_clear_the_registered_entries() => _requests.Count.ShouldEqual(2);
 }

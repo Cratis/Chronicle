@@ -18,7 +18,7 @@ public class and_the_grain_reports_incomplete_seeding : given.a_seeding_grain
     void Establish()
     {
         _request = AGlobalRequestFor(AnEntry("timesheet-1", "submitted", /*lang=json,strict*/ "{\"month\":5}"));
-        _globalGrain.SeedWithResult(Arg.Any<IEnumerable<SeededEntry>>()).Returns(Task.FromResult(SeedingResult.Incomplete));
+        _globalGrain.SeedGlobalWithResult(Arg.Any<IEnumerable<SeededEntry>>(), false, string.Empty).Returns(Task.FromResult(SeedingResult.Incomplete));
     }
 
     async Task Because() => _error = await Catch.Exception(() => _request.Handle(_grainFactory));
@@ -30,5 +30,5 @@ public class and_the_grain_reports_incomplete_seeding : given.a_seeding_grain
     /// The grain logs the rejection and leaves the batch unseeded for a corrected run.
     /// </summary>
     [Fact] void should_not_fail_the_external_operation() => _error.ShouldBeNull();
-    [Fact] void should_offer_the_entries_once() => _globalGrain.Received(1).SeedWithResult(Arg.Any<IEnumerable<SeededEntry>>());
+    [Fact] void should_offer_the_entries_once() => _globalGrain.Received(1).SeedGlobalWithResult(Arg.Any<IEnumerable<SeededEntry>>(), false, string.Empty);
 }

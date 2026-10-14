@@ -20,10 +20,14 @@ public class when_reading_a_legacy_document : Specification
         _document.Remove(map.GetMemberMap(nameof(SeededEventEntry.EventSourceType)).ElementName);
         _document.Remove(map.GetMemberMap(nameof(SeededEventEntry.EventStreamType)).ElementName);
         _document.Remove(map.GetMemberMap(nameof(SeededEventEntry.EventStreamId)).ElementName);
+        _document.Remove(map.GetMemberMap(nameof(SeededEventEntry.Origin)).ElementName);
+        _document.Remove(map.GetMemberMap(nameof(SeededEventEntry.Owner)).ElementName);
     }
 
     void Because() => _result = BsonSerializer.Deserialize<SeededEventEntry>(_document);
 
+    [Fact] void should_default_origin_to_unknown() => _result.Origin.ShouldEqual(SeedOrigin.Unknown);
+    [Fact] void should_default_owner_to_empty() => _result.Owner.ShouldEqual(string.Empty);
     [Fact] void should_default_source_type() => _result.EventSourceType.ShouldEqual(EventSourceType.Default);
     [Fact] void should_default_stream_type() => _result.EventStreamType.ShouldEqual(EventStreamType.All);
     [Fact] void should_default_stream_id() => _result.EventStreamId.Value.ShouldEqual(EventStreamId.Default);
