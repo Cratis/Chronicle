@@ -87,6 +87,14 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
     }
 
     /// <inheritdoc/>
+    public async Task<ClosedStream?> GetFor(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default)
+    {
+        await using var context = await database.Namespace(eventStore, @namespace);
+        var row = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).FirstOrDefaultAsync(ExactScope(scope.Normalized()), cancellationToken);
+        return row is null ? null : ToClosure(row);
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner, CancellationToken cancellationToken = default)
     {
         await using var context = await database.Namespace(eventStore, @namespace);

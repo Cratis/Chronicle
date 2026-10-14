@@ -44,6 +44,13 @@ public class ClosedStreamsConstraintStorage : IClosedStreamsConstraintStorage
     }
 
     /// <inheritdoc/>
+    public Task<ClosedStream?> GetFor(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_closedStreams.TryGetValue((owner, scope.Normalized()), out var closure) ? closure : null);
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

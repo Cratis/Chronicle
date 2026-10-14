@@ -27,6 +27,7 @@ public class a_replay : Specification
     protected IUniqueConstraintsStorage _unique;
     protected Storage.InMemory.Events.Constraints.UniqueConstraintsStorage _claims;
     protected Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage _closed;
+    protected IClosedStreamsConstraintStorage _closureStorage;
     protected UniqueConstraintDefinition _definition;
     protected ClosesStreamConstraintDefinition _closing;
     protected ConstraintIndexReplay _replay;
@@ -40,6 +41,7 @@ public class a_replay : Specification
     {
         _claims = new();
         _closed = new();
+        _closureStorage = _closed;
         _definition = new("unique", [new("Claimed", ["email"])], ["Removed"]);
         _closing = new("closing", ["Closed"], ClosedStreamDimensions.EventSourceId, ["Reopened"]);
         _sequence = Substitute.For<IEventSequenceStorage>();
@@ -48,6 +50,10 @@ public class a_replay : Specification
         _unique = Substitute.For<IUniqueConstraintsStorage>();
         _unique.GetFor(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(call => _claims.GetFor(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<string>(2)));
+        _unique.IsAllowed(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(call => _claims.IsAllowed(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<UniqueConstraintValue>(2), call.ArgAt<string>(3)));
+        _unique.GetForStream(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(call => _claims.GetForStream(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<string>(2), call.ArgAt<CancellationToken>(3)));
         _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
@@ -79,7 +85,7 @@ public class a_replay : Specification
         _replay = new(
             _sequence,
             _unique,
-            _closed,
+            _closureStorage,
             _content,
             Substitute.For<ILogger<ConstraintIndexReplay>>(),
             noConstraints ? [] : [new(_definition, EventSequenceNumber.First), new(_closing, closingStart ?? EventSequenceNumber.First)],

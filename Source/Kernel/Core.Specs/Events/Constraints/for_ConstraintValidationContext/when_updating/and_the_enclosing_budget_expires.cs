@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintValidationContext.when_updating;
 
-public class and_the_attempt_times_out : given.a_constraint_validation_context_with_two_validators_that_are_index_updaters
+public class and_the_enclosing_budget_expires : given.a_constraint_validation_context_with_two_validators_that_are_index_updaters
 {
     IEnumerable<ConstraintIndexUpdateResult> _results;
     CancellationTokenSource _deadline;
@@ -29,5 +29,5 @@ public class and_the_attempt_times_out : given.a_constraint_validation_context_w
         _deadline.Dispose();
     }
 
-    [Fact] void should_report_the_abandoned_attempt_as_failed() => _results.Single(result => result.Updater == _firstValidatorIndexUpdater).Outcome.ShouldEqual(ConstraintIndexUpdateOutcome.Failed);
+    [Fact] void should_report_the_unconfirmed_attempt_as_not_attempted() => _results.Single(result => result.Updater == _firstValidatorIndexUpdater).Outcome.ShouldEqual(ConstraintIndexUpdateOutcome.NotAttempted);
 }

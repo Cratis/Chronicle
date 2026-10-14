@@ -41,8 +41,9 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
     }
 
     /// <inheritdoc/>
-    public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
+    public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_lock)
         {
             return Task.FromResult(_values.TryGetValue((definition.Name.Value, scopeKey, value.Value), out var entry)
@@ -61,6 +62,14 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
                 .Select(entry => new UniqueConstraintValue(entry.Key.Value)).ToArray().AsEnumerable());
         }
     }
+
+    /// <inheritdoc/>
+    public IAsyncEnumerable<UniqueConstraintValue> GetForStream(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default) =>
+        new UniqueConstraintValues(
+            _lock,
+            () => _values.Where(entry => entry.Key.ConstraintName == definition.Name.Value && entry.Key.ScopeKey == scopeKey && entry.Value.EventSourceId == eventSourceId.Value)
+                .Select(entry => new UniqueConstraintValue(entry.Key.Value)).GetEnumerator(),
+            cancellationToken);
 
     /// <summary>
     /// Saves a claim using the definition's retention mode.

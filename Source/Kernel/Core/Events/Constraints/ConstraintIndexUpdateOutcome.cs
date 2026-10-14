@@ -26,5 +26,15 @@ public enum ConstraintIndexUpdateOutcome
     /// <summary>
     /// The attempt failed or was abandoned before confirmation.
     /// </summary>
-    Failed = 3
+    Failed = 3,
+
+    /// <summary>
+    /// The enclosing turn budget ended without confirming this attempt.
+    /// </summary>
+    NotAttempted = 4,
+
+    /// <summary>
+    /// The one-second storage deadline ended without confirmation.
+    /// </summary>
+    Abandoned = 5
 }

@@ -26,6 +26,14 @@ internal static class ConstraintIndexUpdateAttempt
             await update(deadline.Token).WaitAsync(deadline.Token);
             return (ConstraintIndexUpdateOutcome.Applied, null);
         }
+        catch (OperationCanceledException error) when (cancellationToken.IsCancellationRequested)
+        {
+            return (ConstraintIndexUpdateOutcome.NotAttempted, error);
+        }
+        catch (OperationCanceledException error) when (deadline.IsCancellationRequested)
+        {
+            return (ConstraintIndexUpdateOutcome.Abandoned, error);
+        }
         catch (DuplicateUniqueConstraintValue error)
         {
             return (ConstraintIndexUpdateOutcome.Settled, error);

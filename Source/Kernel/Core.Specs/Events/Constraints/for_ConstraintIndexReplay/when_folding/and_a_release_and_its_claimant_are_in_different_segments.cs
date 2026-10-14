@@ -7,6 +7,8 @@ public class and_a_release_and_its_claimant_are_in_different_segments : given.a_
 {
     async Task Establish()
     {
+        // SHA-256("unique\\0\\0a\\0") is even and SHA-256("unique\\0\\0f\\0") is odd:
+        // at two segments the claimant is folded before the releasing source.
         await _claims.Save("f", _definition, 0, Hash("v"));
         Event(1, "a", "Claimed", "v");
         Event(2, "f", "Claimed", "w");

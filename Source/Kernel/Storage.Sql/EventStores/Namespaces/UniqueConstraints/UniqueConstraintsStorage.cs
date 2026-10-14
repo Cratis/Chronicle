@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
@@ -56,12 +57,32 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
     }
 
     /// <inheritdoc/>
-    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
+    public async IAsyncEnumerable<UniqueConstraintValue> GetForStream(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (definition.Mode == UniqueConstraintMode.PerValue)
+        {
+            await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
+            await foreach (var value in scope.DbContext.Entries.AsNoTracking().Where(row => row.EventSourceId == eventSourceId.Value).Select(row => row.Value).AsAsyncEnumerable().WithCancellation(cancellationToken))
+            {
+                yield return new UniqueConstraintValue(value);
+            }
+            yield break;
+        }
+
+        await using var sourceScope = await database.UniqueConstraintTable(eventStore, @namespace, GetTableName(definition.Name, scopeKey));
+        await foreach (var value in sourceScope.DbContext.Entries.AsNoTracking().Where(row => row.EventSourceId == eventSourceId.Value).Select(row => row.Value).AsAsyncEnumerable().WithCancellation(cancellationToken))
+        {
+            yield return new UniqueConstraintValue(value);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default)
     {
         if (definition.Mode == UniqueConstraintMode.PerValue)
         {
             await using var valuesScope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
-            var existingValue = await valuesScope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(_ => _.Value == value.Value);
+            var existingValue = await valuesScope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(_ => _.Value == value.Value, cancellationToken);
             return existingValue is null
                 ? (true, EventSequenceNumber.Unavailable)
                 : (existingValue.EventSourceId == eventSourceId.Value, (EventSequenceNumber)(ulong)existingValue.SequenceNumber);
@@ -77,7 +98,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         var query = scope.DbContext.Entries.Where(u => u.Value == constraintValue);
 
         var eventSourceIdValue = eventSourceId.Value;
-        var existing = await query.FirstOrDefaultAsync();
+        var existing = await query.FirstOrDefaultAsync(cancellationToken);
 
         if (existing is not null)
         {

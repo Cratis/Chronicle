@@ -5,73 +5,23 @@ namespace Cratis.Chronicle.Events.Constraints;
 
 public partial class ConstraintIndexReplay
 {
-    async Task CollectDifferences(CancellationToken cancellationToken)
-    {
-        while (_unique.Count > 0)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var (key, state) = _unique.First();
-            var current = (await unique.GetFor(key.Source, state.Definition, key.Scope, cancellationToken)).ToArray();
-            _unique.Remove(key);
-            var retained = key.Retained;
-            var matches = state.Value is null ? current.Length == 0 : current.Length == 1 && current[0] == state.Value;
-            if (retained is not null) matches = current.Contains(retained) == (state.Value is not null);
-            if (!matches)
-            {
-                Func<CancellationToken, Task>? release = null;
-                if (retained is not null && current.Contains(retained))
-                {
-                    release = token => unique.RemoveValue(key.Source, state.Definition, retained, key.Scope, token);
-                }
-                else if (retained is null && current.Length > 0)
-                {
-                    release = token => unique.Remove(key.Source, state.Definition, key.Scope, token);
-                }
-                Func<CancellationToken, Task>? claim = state.Value is { } value
-                    ? token => unique.Save(key.Source, state.Definition, state.Position, value, key.Scope, token)
-                    : null;
-                _differences.Add(new(key.Name, state.Position, release, claim, key.Scope, state.Value, retained is null ? current : current.Where(value => value == retained).ToArray()));
-            }
-            TrackKeys();
-        }
-        while (_closed.Count > 0)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var (key, state) = _closed.First();
-            var current = (await closed.GetForOwner(key.Name.Value, cancellationToken)).SingleOrDefault(row => row.Scope.Normalized() == key.Scope);
-            _closed.Remove(key);
-            if (current != state.Closure)
-            {
-                Func<CancellationToken, Task> claim = state.Closure is { } closure
-                    ? token => closed.Close(closure, token)
-                    : token => closed.Reopen(key.Name.Value, key.Scope, token);
-                _differences.Add(new(key.Name, state.Position, null, claim, string.Empty, null, []));
-            }
-            TrackKeys();
-        }
-    }
-
     async Task ReleaseDifferences(CancellationToken cancellationToken)
     {
-        foreach (var difference in _differences.Where(difference => !difference.Released))
+        foreach (var difference in _differences.Where(difference => !difference.Released && CanWrite(difference)))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (_failed.Contains(difference.Name)) continue;
-            if (difference.Release is null)
-            {
-                difference.Released = true;
-                continue;
-            }
-            difference.Released = await Write(difference, difference.Release, cancellationToken);
+            difference.Released = difference.Release is null || await Write(difference, difference.Release, cancellationToken);
         }
     }
 
     async Task ClaimDifferences(CancellationToken cancellationToken)
     {
-        foreach (var difference in _differences.Where(difference => !difference.Claimed).OrderBy(difference => difference.Position))
+        var decidingOrder = _differences.Where(difference => !difference.Claimed).OrderBy(difference => difference.Position).ToArray();
+
+        // Eligibility must be evaluated after sorting, as each attempt can stop subsequent writes for its constraint.
+        foreach (var difference in decidingOrder.Where(CanWrite))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (_failed.Contains(difference.Name)) continue;
             if (difference.Claim is null)
             {
                 difference.Claimed = true;
@@ -83,12 +33,12 @@ public partial class ConstraintIndexReplay
                 continue;
             }
             var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(difference.Claim, cancellationToken);
-            if (outcome == ConstraintIndexUpdateOutcome.Settled && !_retryPass &&
-                (_segment < _segments || _differences.Exists(holder => !ReferenceEquals(holder, difference) && holder.Name == difference.Name && holder.ScopeKey == difference.ScopeKey && difference.Value is not null && (holder.PreviousValues.Contains(difference.Value) || holder.Value == difference.Value))))
+            if (MustRetry(difference, outcome))
             {
                 if (_segment < _segments)
                 {
-                    // A remaining segment may release this value. Do not settle its claim prematurely.
+                    // A remaining segment may release this value. The fixed range retains its final claim
+                    // for a bounded retry re-fold; completed keys produce no further write.
                     _needsRetryPass = true;
                     difference.Claimed = true;
                 }
@@ -98,22 +48,31 @@ public partial class ConstraintIndexReplay
                 }
                 continue;
             }
-            difference.Claimed = Record(difference, outcome, error);
+            difference.Claimed = Record(difference, outcome, error, cancellationToken);
         }
-        foreach (var difference in _differences.Where(difference => difference.Retry && !difference.Claimed && !_failed.Contains(difference.Name)))
+        foreach (var difference in _differences.Where(difference => difference.Retry && !difference.Claimed && CanWrite(difference)))
         {
             cancellationToken.ThrowIfCancellationRequested();
             difference.Claimed = await Write(difference, difference.Claim!, cancellationToken);
         }
     }
 
+    bool CanWrite(ConstraintIndexReplayDifference difference) => !_failed.Contains(difference.Name) && !_abandoned.Contains(difference.Name);
+
+    bool MustRetry(ConstraintIndexReplayDifference difference, ConstraintIndexUpdateOutcome outcome) =>
+        outcome == ConstraintIndexUpdateOutcome.Settled && !_retryPass && (_segment < _segments || _differences.Exists(holder => ChangesHolder(holder, difference)));
+
+    bool ChangesHolder(ConstraintIndexReplayDifference holder, ConstraintIndexReplayDifference claimant) =>
+        !ReferenceEquals(holder, claimant) && holder.Name == claimant.Name && holder.ScopeKey == claimant.ScopeKey && claimant.Value is not null &&
+        (holder.PreviousValues.Contains(claimant.Value) || holder.Value == claimant.Value);
+
     async Task<bool> Write(ConstraintIndexReplayDifference difference, Func<CancellationToken, Task> write, CancellationToken cancellationToken)
     {
         var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(write, cancellationToken);
-        return Record(difference, outcome, error);
+        return Record(difference, outcome, error, cancellationToken);
     }
 
-    bool Record(ConstraintIndexReplayDifference difference, ConstraintIndexUpdateOutcome outcome, Exception? error)
+    bool Record(ConstraintIndexReplayDifference difference, ConstraintIndexUpdateOutcome outcome, Exception? error, CancellationToken cancellationToken)
     {
         switch (outcome)
         {
@@ -127,9 +86,16 @@ public partial class ConstraintIndexReplay
                 _settledWithError++;
                 logger.UnresolvedReplayEvent(difference.Name, difference.Position, error!);
                 return true;
+            case ConstraintIndexUpdateOutcome.NotAttempted:
+                cancellationToken.ThrowIfCancellationRequested();
+                return false;
+            case ConstraintIndexUpdateOutcome.Abandoned:
+                _abandoned.Add(difference.Name);
+                _error ??= error;
+                _failingPosition ??= difference.Position;
+                return false;
             default:
-                _failed.Add(difference.Name);
-                logger.FailedReplayWrite(difference.Name, difference.Position, error!);
+                Fail(difference.Name, difference.Position, error!);
                 return false;
         }
     }

@@ -21,15 +21,19 @@ public partial class ConstraintIndexReplay
             _ => []
         }).Distinct().Select(id => new EventType(id, EventTypeGeneration.First)).ToArray();
         if (types.Length == 0) return (true, 0);
+        _operationConstraint = null;
+        _operationPosition = null;
         using var cursor = await events.GetFromSequenceNumber(_position!, eventTypes: types, cancellationToken: cancellationToken);
         var count = 0;
-        while (await cursor.MoveNext().WaitAsync(cancellationToken))
+        while (await MoveNext(cursor, cancellationToken))
         {
             foreach (var @event in cursor.Current)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (@event.Context.SequenceNumber >= endPoint) return (true, count);
                 if (count >= limit) return (false, count);
+                _operationConstraint = null;
+                _operationPosition = @event.Context.SequenceNumber;
                 var plaintext = await content.Release(@event, cancellationToken);
                 foreach (var scope in _scopes.Where(scope => @event.Context.SequenceNumber >= scope.From))
                 {
@@ -39,8 +43,7 @@ public partial class ConstraintIndexReplay
                     }
                     catch (Exception error) when (error is InvalidClosingStreamScope or RedactedClosingEventTypeUnavailable)
                     {
-                        _settledWithError++;
-                        logger.UnresolvedReplayEvent(scope.Definition.Name, @event.Context.SequenceNumber, error);
+                        SettleError(scope.Definition, @event, error);
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                     {
@@ -48,8 +51,7 @@ public partial class ConstraintIndexReplay
                     }
                     catch (Exception error)
                     {
-                        _failed.Add(scope.Definition.Name);
-                        logger.FailedReplayWrite(scope.Definition.Name, @event.Context.SequenceNumber, error);
+                        Fail(scope.Definition.Name, @event.Context.SequenceNumber, error);
                         return (false, count);
                     }
                     if (!Fits())
@@ -111,8 +113,7 @@ public partial class ConstraintIndexReplay
             }
             else if (definition.Mode == UniqueConstraintMode.PerValue)
             {
-                var stored = await unique.GetFor(context.EventSourceId, definition, scope, cancellationToken);
-                foreach (var value in stored)
+                await foreach (var value in unique.GetForStream(context.EventSourceId, definition, scope, cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     SetUnique(definition, context.EventSourceId, scope, value, null, position);

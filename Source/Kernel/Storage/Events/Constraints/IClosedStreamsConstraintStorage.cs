@@ -43,6 +43,15 @@ public interface IClosedStreamsConstraintStorage
     Task<bool> Reopen(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Reads an owner's closure at one normalized scope without loading its other closures.
+    /// </summary>
+    /// <param name="owner">The owner.</param>
+    /// <param name="scope">The exact scope.</param>
+    /// <param name="cancellationToken">Cancellation of the read.</param>
+    /// <returns>The closure, or null if absent.</returns>
+    Task<ClosedStream?> GetFor(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get closures belonging to an owner.
     /// </summary>
     /// <param name="owner">The owner.</param>

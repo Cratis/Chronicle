@@ -64,12 +64,26 @@ public interface IUniqueConstraintsStorage
     Task<IEnumerable<UniqueConstraintValue>> GetFor(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Checks whether another source holds a value.
+    /// Streams a source's values without materializing its complete retained set.
     /// </summary>
-    /// <param name="eventSourceId">The source asking to claim.</param>
-    /// <param name="definition">The constraint definition.</param>
-    /// <param name="value">The hashed value.</param>
+    /// <param name="eventSourceId">The owner.</param>
+    /// <param name="definition">The constraint.</param>
     /// <param name="scopeKey">The resolved scope.</param>
-    /// <returns>Whether the claim is allowed and the holder's sequence number, or Unavailable when absent.</returns>
-    Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "");
+    /// <param name="cancellationToken">Cancellation of the read.</param>
+    /// <returns>The source's values as they are read.</returns>
+    IAsyncEnumerable<UniqueConstraintValue> GetForStream(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Check if a constraint value exists.
+    /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to check for.</param>
+    /// <param name="definition"><see cref="UniqueConstraintDefinition"/> to check for.</param>
+    /// <param name="value"><see cref="UniqueConstraintValue"/>to check.</param>
+    /// <param name="scopeKey">Optional scope key for scoped constraints.</param>
+    /// <param name="cancellationToken">Cancellation of the read.</param>
+    /// <returns>
+    /// Tuple containing a boolean saying whether or not its allowed to perform and the <see cref="EventSequenceNumber"/> for the item it violates.
+    /// Returns <see cref="EventSequenceNumber.Unavailable"/> if it doesn't exist.
+    /// </returns>
+    Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default);
 }

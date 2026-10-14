@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -52,24 +53,44 @@ public class UniqueConstraintsStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
+    public async IAsyncEnumerable<UniqueConstraintValue> GetForStream(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (definition.Mode == UniqueConstraintMode.PerValue)
+        {
+            using var cursor = await GetValuesCollectionFor(definition.Name, scopeKey).FindAsync(row => row.EventSourceId == eventSourceId, new FindOptions<UniqueConstraintValueIndex> { BatchSize = 100 }, cancellationToken);
+            while (await cursor.MoveNextAsync(cancellationToken))
+            {
+                foreach (var row in cursor.Current) yield return row.Value;
+            }
+            yield break;
+        }
+
+        using var sources = await GetCollectionFor(definition.Name, scopeKey).FindAsync(row => row.EventSourceId == eventSourceId, new FindOptions<UniqueConstraintIndex> { BatchSize = 100 }, cancellationToken);
+        while (await sources.MoveNextAsync(cancellationToken))
+        {
+            foreach (var row in sources.Current) yield return row.Value;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default)
     {
         if (definition.Mode == UniqueConstraintMode.PerValue)
         {
             var values = GetValuesCollectionFor(definition.Name, scopeKey);
-            await EnsureOwnerIndex(values);
-            using var found = await values.FindAsync(_ => _.Value == value);
-            var entry = await found.FirstOrDefaultAsync();
+            await EnsureOwnerIndex(values, cancellationToken);
+            using var found = await values.FindAsync(_ => _.Value == value, cancellationToken: cancellationToken);
+            var entry = await found.FirstOrDefaultAsync(cancellationToken);
             return entry is null ? (true, EventSequenceNumber.Unavailable) : (entry.EventSourceId == eventSourceId, entry.SequenceNumber);
         }
 
         var collection = GetCollectionFor(definition.Name, scopeKey);
-        await EnsureIndex(collection).ConfigureAwait(false);
+        await EnsureIndex(collection, cancellationToken).ConfigureAwait(false);
 
         // Note: Case-insensitive comparison is now handled by hashing the value with case normalization
         // before it reaches the storage layer, so we can use a simple equality check here.
-        using var result = await collection.FindAsync(_ => _.Value == value);
-        var existing = await result.FirstOrDefaultAsync();
+        using var result = await collection.FindAsync(_ => _.Value == value, cancellationToken: cancellationToken);
+        var existing = await result.FirstOrDefaultAsync(cancellationToken);
         if (existing is not null)
         {
             if (existing.EventSourceId == eventSourceId) return (true, existing.SequenceNumber);
