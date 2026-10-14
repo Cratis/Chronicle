@@ -113,7 +113,7 @@ This crosses every provider and changes what an append reports after its commit.
 
 ## Decision
 
-Each event sequence keeps a durable **constraint watermark**. The kernel retries a failed index update within a bounded budget. When updates cannot be confirmed, it **folds** the stored events from the watermark to the tail, in log order, into a staged final outcome per index key. It then writes only the keys whose staged outcome differs from the index. Intermediate states are never written.
+Each event sequence keeps a durable **constraint watermark**. The kernel retries a failed index update within a bounded budget. When updates cannot be confirmed, it **folds** the stored events from the watermark to the tail, in log order, into a staged final outcome per index key. It then writes only the keys whose staged outcome differs from the index: every release first, then the claims. Intermediate states are never written.
 
 While a constraint's range is not fully repaired, appends that constraint validates are refused. They are never admitted on a partial state. An append whose events are durable is never reported as failed. Existing stores catch up their unique-constraint history in the background without moving any key backwards. Closing constraints are covered from the upgrade onward, which is today's guarantee.
 
@@ -196,33 +196,42 @@ While a constraint's range is not fully repaired, appends that constraint valida
 - **Per-value mode.** When the fold first touches a source in per-value mode, it stages the values the store holds for that source. A full release (`Remove`) then releases all of them, and `RemoveValue` releases one.
 - **Settled with error.** An event whose effect cannot be resolved (`InvalidClosingStreamScope`, `RedactedClosingEventTypeUnavailable`) is settled with error for that constraint, and the fold continues.
 
-**The write.** When the fold has reached its end point, the grain reads the current entry of every staged key and writes only the keys whose staged outcome differs.
+**The write.** When a segment's fold reaches its end point, the grain reads the current entry of every staged key in the segment. It keeps the keys whose staged outcome differs, which are the segment's **differences**, and drops the rest of the segment's staged map. Writing starts only after the differences of every segment are collected.
 
 - **Reads.** A new kernel read `IUniqueConstraintsStorage.GetFor(eventSourceId, definition, scopeKey)` returns the values a source holds, in every provider. Closures are read through the existing `GetForOwner`.
-- **Order.** Writes are issued in ascending order of each key's deciding event, so a value is released before a later claimant takes it.
-- **Outcomes.** Write outcomes are classified as in item 2. A settled `DuplicateUniqueConstraintValue` is counted, and the key keeps its current holder.
+- **Two phases.** Every store refuses a claim while another source holds the value. MongoDB does so in `ReplaceOneAsync` (`Storage.MongoDB/Events/Constraints/UniqueConstraintsStorage.cs:153-161`), InMemory before it releases the source's previous claim (`Storage.InMemory/Events/Constraints/UniqueConstraintsStorage.cs:68-73`), and SQL on the unique index (`Storage.Sql/.../UniqueConstraints/UniqueConstraintsStorage.cs:201-208`). A value must therefore be free before its new holder claims it, whatever order the log decided the two keys in. Writes run in two phases:
+  1. **Releases.** First, every key whose current entry holds a value that the staged map no longer gives that key is released, across all segments, before any claim is written. That is `Remove` in per-event-source mode and `RemoveValue` in per-value mode.
+  2. **Claims.** Then claims are written in ascending order of each key's deciding event. Closures are written in this phase too. No other key can refuse a closure.
+- **A refused claim.** A claim refused with `DuplicateUniqueConstraintValue` counts as settled only when its holder is not a key the fold changes, that is, not among the differences. Otherwise it is retried once all releases are written, when the holder has given the value up. A refusal on that retry is settled.
+- **What a settled refusal leaves.** The holder keeps the value. The refused source has no entry for it:
+  - in per-value mode, the claim simply was not added;
+  - in per-event-source mode, the release phase already removed the source's old value, which the log had released. This differs from the live path, where a refused `Save` leaves the old entry in place (0005).
+
+  The refusal is counted.
+- **Outcomes.** Write outcomes are classified as in item 2.
+- **Budget.** If a turn's budget runs out during the write phase, the written keys stand and the rest are written in the next turn. The constraint stays pending until all of them are written. In steady state that is safe, because the pending constraint's governed appends are refused meanwhile (item 4). The catch-up has its own rule (item 8).
 
 This is how `ClosesStreamConstraintReindexer` already stages scopes (`:51-114`).
 
-**Why no key moves backwards.** A written key moves directly from its current entry to its state as of the fold's end point. That state is the key's current truth when nothing for the key after the end point is missing from the fold:
+**Why no key moves backwards.** A written key moves from its current entry to its state as of the fold's end point. A key that changes value passes through "released" on the way, which is not an older state. The state at the end point is the key's current truth when nothing for the key after the end point is missing from the fold:
 
-- **Steady-state repair** (item 4) folds to the current tail, inside a non-reentrant turn, and defers the pending constraint's live updates to the fold (item 2). Every event for a folded key up to the tail is therefore in the fold.
+- **Steady-state repair** (item 4) fixes its end point at the tail when the fold starts. It defers the pending constraint's live updates to the fold (item 2), so no event for a folded key after the end point has been applied. When the writes are done, the constraint is pending from the end point, and the next fold, usually a short one, starts there.
 - **The catch-up** (item 8) folds to its boundary and skips every key that any event at or after the boundary touches.
 
-**Memory.** The staged map holds at most 100,000 keys per sequence, about 25 MB at roughly 250 bytes per key.
+**Memory.** The staged map and the collected differences together hold at most 100,000 keys per sequence, about 25 MB at roughly 250 bytes per key.
 
-- **Segments.** When a fold would exceed the cap, it splits keys into segments by key hash, doubling the segment count each time. It keeps only the current segment and makes one pass over the range per segment, rereading the range each time.
-- **Writes per segment.** A pass writes its segment before the next pass starts. Keys of a written segment are repaired. In steady state, their deferred live updates are applied live again from then on.
+- **Segments.** When a fold would exceed the cap, it splits keys into segments by key hash, doubling the segment count each time. It keeps the staged map of the current segment only, and makes one pass over the range per segment, rereading the range each time. Each pass adds its segment's differences to the collected set.
+- **Many differences.** If the collected differences reach half the cap before every segment is folded, the fold writes them in the two phases before it folds the remaining segments. A claim refused by a holder that a remaining segment may change is kept and retried once the remaining segments' releases are written. A refusal then is settled. This needs more than 50,000 differing keys in one sequence.
 - **Re-folding.** Re-folding a range gives the same outcome, and the second write finds no difference.
 
-**When a steady-state repair runs.** It folds the pending constraints from their first pending event to the tail:
+**When a steady-state repair runs.** It folds the pending constraints from their first pending event to its end point, the tail when it starts:
 
 - on activation, for every index-keeping constraint from the persisted watermark;
 - after any failed update;
 - after a sequence-number gap;
 - after a reindex handoff (item 7).
 
-It always runs before the validation of an append that a pending constraint validates.
+Before the validation of an append that a pending constraint governs, it runs at most once per 5 seconds per sequence, whatever the outcome (item 4).
 
 **Scheduling.**
 
@@ -230,10 +239,12 @@ It always runs before the validation of an append that a pending constraint vali
 - It also runs from a non-interleaving grain timer:
   - `Interleave = false`, unlike the pattern-capture timer at `EventSequence.cs:154`;
   - `KeepAlive = true` only while a constraint is pending or a catch-up is running, so the activation stays alive exactly while it has repair work;
+  - a period of 1 second, measured from the end of the previous timer turn, so at most one timer turn is ever queued;
   - every timer turn is bounded (item 4).
 - Appends therefore wait for it, while reads keep interleaving.
+- Between append-turn runs, only the timer advances the fold.
 - `OnActivateAsync` does not fold. It reads the persisted state, marks constraints pending and registers the timer. A failing store must not fail activation and, with it, every read.
-- The fold's progress (read position and staged map) stays in memory across turns, and each turn continues it to the current tail.
+- The fold's progress (read position, staged map and collected differences) stays in memory across turns, and each turn continues it toward its end point.
 
 **Coverage start for closing constraints.** A closing constraint is never folded below the point the grain started covering it:
 
@@ -241,7 +252,7 @@ It always runs before the validation of an append that a pending constraint vali
 - the watermark at the upgrade (item 8);
 - the tail when a refresh first applies a newly registered definition.
 
-Historical closing events are therefore never applied. There is one residual: a closing definition registered while the grain is inactive, followed by an activation with a lagging watermark. The fold then applies the definition to the lagging range's events that were appended before registration. That range is at most the lag.
+Historical closing events are therefore never applied. There is one residual: a closing definition registered while the grain is inactive, followed by an activation with a lagging watermark. The fold then applies the definition to the lagging range's events that were appended before registration. That range is at most the lag. The coverage start is kept in memory only, so this residual can recur on any such activation. A closure it writes is permanent, because a scope closed by an event cannot be reopened by hand (Consequences).
 
 **Residuals cleared only by a reindex** (item 10):
 
@@ -267,19 +278,28 @@ Historical closing events are therefore never applied. There is one residual: a 
 | --- | --- |
 | One storage attempt | 1 s, cancelled through the token (item 2) |
 | Post-commit constraint work in one append turn | 2 s in total, including retries (item 2) |
-| Steady-state repair before validation in one append turn | 5 s, attempted at most once per backoff interval |
+| Steady-state repair before validation in one append turn | 5 s, run at most once per 5 s per sequence, measured from the end of the previous run, whatever its outcome, and only when the backoff (below) allows |
 | Read-back after a storage exception (item 9) | 2 s |
-| One timer turn, repair or catch-up | 2 s, and at most 1,000 constraint-relevant events for a catch-up |
+| One timer turn, repair or catch-up | 2 s, and at most 1,000 constraint-relevant events for a catch-up. A catch-up write turn may run past that to finish the one write group it started, which is at most 2 writes, so it ends within 4 s (item 8) |
 
-- **Arithmetic.** An append can queue behind at most one timer turn (2 s). It can then pay its repair (5 s), its post-commit work (2 s) and a read-back (2 s), for 11 s in total. That leaves 19 s of the 30-second default response timeout (`Clustering.cs:86`) for validation reads, compliance and the commit itself.
-- **Queued appends.** Appends queued behind each other pay their own turns, as today. None of them pays the repair or retry cost again within a backoff interval:
+- **Rate of append-turn repairs.** An append turn runs the repair before validation at most once per 5 seconds per sequence, whether that run finishes, runs out of budget or fails. Between those runs, governed appends are refused at once without any store work, and only the timer advances the fold.
+- **Arithmetic.** Ahead of any append there is at most one append-turn repair (5 s), because of that rate, and at most one timer turn (4 s), because the timer's period starts when its previous turn ends. The append then pays its own post-commit work (2 s) and a read-back (2 s). That is 13 s in total, which leaves 17 s of the 30-second default response timeout (`Clustering.cs:86`) for validation reads, compliance and the commit itself.
+- **Queued appends.** Appends queued behind each other otherwise pay only their own turns, as today. None of them pays the repair or retry cost again:
   - a pending constraint's governed appends are refused without a store call;
   - its deferred updates are not attempted live.
-- **A smaller timeout.** An operator who lowers the response timeout below about 15 s loses this margin (open question).
+- **A smaller timeout.** An operator who lowers the response timeout below about 17 s loses this margin (open question).
+
+**How long governed appends are refused.** A pending range of N constraint-relevant events whose fold needs S segments stays pending for about S times the time it takes to read N events, plus the time to write the differences, because every segment rereads the range.
+
+- **Without traffic,** timer turns fold 2 seconds out of every 3, which stretches that time by about half.
+- **With governed traffic,** an append turn adds up to 5 seconds of folding every 5 seconds.
+- **Example.** A range that fits in one segment and reads in 20 seconds keeps governed appends refused for about 30 seconds. With four segments, that becomes about two minutes.
+
+A crash after a long outage can leave a range this large (item 12).
 
 **When a repair does not finish.**
 
-- **Budget.** If a turn's budget expires before the fold reaches the tail, nothing is written for the unfinished fold. The turn refuses the governed appends, and the timer continues the fold.
+- **Budget.** If a turn's budget expires before the fold reaches its end point, nothing is written for the unfinished fold. The turn refuses the governed appends, and the timer continues the fold. If the budget expires during the write phase, the written keys stand, the rest are written in the next turn, and the constraint stays pending until all are written (item 3).
 - **Backoff.** After an attempt fails with a storage error, attempts back off from 1 second, doubling to 60 seconds. Between attempts, governed appends are refused at once.
 - **Without traffic.** The timer keeps retrying, so the sequence heals with no append needed.
 
@@ -289,7 +309,9 @@ Historical closing events are therefore never applied. There is one residual: a 
 - the provider does not classify the exception as transient (connection, timeout, cancellation, write concern, deadlock);
 - other storage calls in those attempts succeeded, namely the fold's read of the range or writes for other keys.
 
-When that happens, the grain:
+**Events that cannot be read.** A deterministic fault while the fold reads an event, such as a missing schema or a deserialization error, fails the range read itself, so "the fold's read of the range succeeded" can never hold for it. Such a fault is therefore tied to its sequence number. It counts as a failure of that event for every folded constraint, and it is classified per event by the rule above, with the reads of the events before it as the other storage calls that succeeded. When the event is settled with error, the cursor resumes after it.
+
+When an event is settled with error under this rule, the grain:
 
 - logs an error naming the sequence, the event, the constraint and the exception. That log entry is the operator's record;
 - counts the event;
@@ -341,6 +363,7 @@ The job tells the grain before it removes protection, and again on every termina
 - **Before clearing.** Before its first `ClearValues`, and before the closing reindexer's commit, `ReindexConstraintsStep` calls `IEventSequence.ConstraintIndexRebuildStarting(constraintNames)`. The grain:
   - marks the named constraints as rebuilding, so neither a fold nor the catch-up writes them while the job runs. Their live updates continue, as today;
   - for named unique constraints, persists a catch-up boundary at the next sequence number unless a lower one is already set. If the job is lost, a later activation catches the cleared scopes up (item 8) instead of trusting a watermark that leads the index.
+- **On resume.** The rebuilding mark is kept in memory only. A job step resumed after a restart can already be past its clears while a new activation's fold or catch-up writes the same constraint. The step therefore calls `ConstraintIndexRebuildStarting` again when it resumes, before it does any further write.
 - **On every terminal outcome** (success, failure, cancellation), the step calls `IEventSequence.ConstraintIndexRebuilt(constraintNames, processedThrough)`. `processedThrough` is the last sequence number it processed, or `First - 1` if it processed none. Failure paths include `ReindexConstraintsStep.cs:181-200`. The step retries the call before it completes.
   - **If the job processed events,** the grain makes the named constraints pending from `processedThrough + 1` and repairs in that turn (items 3 and 4). The job's unique writes are in log order, so every key the job reached reflects the log through `processedThrough`. A scope the job had not reached was not cleared. The fold restores the rest, including claims and closures a live append wrote and the job then overwrote. That is the race in `ConstraintIndexes.cs:111-113` and `ClosesStreamConstraintReindexer.cs:21-22`.
   - **If the job processed nothing,** it cleared nothing, and the grain folds nothing.
@@ -363,24 +386,44 @@ The job tells the grain before it removes protection, and again on every termina
 
 **Process.**
 
-- **Fold.** The catch-up folds `[First, boundary)` for the unique constraints that apply, except those a reindex job is rebuilding (item 7). It folds in timer turns of at most 2 seconds and 1,000 constraint-relevant events (item 4), using the segmented fold from item 3.
-- **Excluded keys.** The grain keeps the set of keys that any event at or after the boundary touches. A full per-value release touches every value of its source. The set is filled from the log, whether or not the event's update succeeded:
-  - when an event is appended;
-  - on activation, by reading `[boundary, tail]` for keys only.
-- **Writes.** When a segment's fold reaches the boundary, the grain writes that segment's differences, over as many turns as needed, in deciding order. It skips every excluded key and checks the set at each write; the set only grows.
-- **Raising the boundary.** The excluded set holds at most 100,000 key hashes (32 bytes each). When it reaches the cap, the grain raises the boundary to the next sequence number, persists it and empties the set. The fold then continues to the new boundary. This is safe because keys touched before the new boundary are folded to it, and keys touched after it are excluded again.
+- **Fold.** The catch-up folds `[First, boundary)` for the unique constraints that apply, except those a reindex job is rebuilding (item 7). It folds in timer turns of at most 2 seconds and 1,000 constraint-relevant events (item 4), using the segmented fold from item 3, and collects every segment's differences before it writes.
+- **Excluded keys.** The grain keeps the set of keys that any event at or after the boundary touches. The set is filled from the log, whether or not the event's update succeeded.
+  - **Per-value full releases.** A full release in per-value mode (`Remove`) carries no values, because the updater releases the source without naming them (`UniqueConstraintIndexUpdater.cs:41`). It therefore excludes the source as a whole: the constraint, the scope key and the event source, with every value under it. The catch-up never writes a key of an excluded source.
+  - **When an event is appended,** its keys are added to the set.
+  - **After activation,** the set is rebuilt by reading `[boundary, tail]` for keys only. That read runs in timer turns, never in `OnActivateAsync`, and no catch-up write happens before it completes.
+- **When writes happen.** The catch-up writes only when three things hold:
+  - every segment's differences are collected;
+  - the excluded set is complete;
+  - the constraint is not pending in steady state, so every excluded key's live updates have been applied.
+
+  It skips every excluded key, and checks the set at each write. Between raises (below), the set only grows. A claim refused by an excluded holder is settled, because the holder's state is the live one.
+- **Write groups.** Appends are admitted during the catch-up, so a value must never be free between turns while the log gives it to another source. A value's release and the claim that takes it therefore form one **write group**, written in the same turn, release first.
+  - **Order of groups.** Groups are written in an order where a source's own release comes before its new claim. In per-event-source mode, a `Save` that replaces the source's old value would otherwise free that value early.
+  - **Groups of one.** A release that no claim takes, or a claim of a value nobody holds, forms a group of one.
+  - **No group is split.** A turn starts groups only within its first 2 seconds and finishes the group it started. A group holds at most 2 writes, so a write turn ends within 4 seconds (item 4).
+- **Writing under refusal.** Three cases cannot be written as pairs in one turn:
+  - a group of more than 2 writes, such as a value with two holders from past damage;
+  - sources that swap values with each other, which no order of groups can serve;
+  - the many-differences case of item 3.
+
+  These are written in the two phases of item 3, and the constraint's governed appends are refused with `ConstraintIndexUnavailable` from the first write until the last write and the last retried claim.
+- **Raising the boundary.** The excluded set holds at most 100,000 hashes of keys or sources (32 bytes each). When it reaches the cap, the grain raises the boundary to the next sequence number, persists it and empties the set.
+  - **Writes are suspended** until the fold reaches the new boundary for every segment whose differences are not yet written. The current segment's fold continues to the new boundary. Segments already collected but not written are folded again to it, because their differences were taken at the old boundary and keys touched in `[old, new)` are no longer excluded.
+  - **Keys already written** need no refold, because every later event for them was applied live.
+  - **Why it is safe.** Once writes resume, keys touched before the new boundary are folded to it, and keys touched after it are excluded again.
 - **Steady state continues.** Events at or after the boundary follow items 2 to 4 throughout, including refusal while a unique constraint is pending.
-- **Restart.** A restart rereads the boundary and starts the fold again from `First`. Keys already written show no difference, so a restart costs reads only.
+- **Restart.** A restart rereads the boundary, rebuilds the excluded set and starts the fold again from `First`. Keys already written show no difference, so a restart costs reads only.
 - **Concurrency.** At most 4 sequences per silo catch up at a time, through a silo-wide limit. A timer turn that cannot take a slot skips.
-- **Memory.** Per sequence, the staged map and the excluded set stay within about 30 MB. Per silo, catch-ups stay within about 120 MB.
-- **Completion.** When every segment is written, the boundary is cleared and persisted.
+- **Memory.** Per sequence, the staged map with the collected differences and the excluded set stay within about 30 MB. Per silo, catch-ups stay within about 120 MB.
+- **Completion.** When every difference is written, the boundary is cleared and persisted.
 
 **What is exposed during the catch-up.**
 
 - Appends are admitted and validated against the index as it stands.
 - For a key that no event at or after the boundary touches, that is its pre-upgrade entry until the catch-up writes it. The entry can be missing or stale, which is today's exposure.
 - The catch-up only ever moves such a key from its pre-upgrade entry to its final state in the log. It never writes a key that a later event touches, so no key regresses, and nothing the live path wrote is overwritten.
-- When a turn's budget expires before the boundary, the read position and the staged map stay in memory, and nothing is written for the unfinished segment. Stopping at any point therefore exposes nothing beyond what was exposed before the catch-up started.
+- An admitted append never finds a value free between its release and the claim that takes it. Both are written in one turn, or the constraint's governed appends are refused while they are written.
+- When a turn's budget expires before the boundary, the read position, the staged map and the collected differences stay in memory, and nothing is written until every segment is collected. Stopping at any point therefore exposes nothing beyond what was exposed before the catch-up started.
 
 **Deviation from the ruled direction.** The ruling says replays happen "before taking new appends". This applies only to this catch-up, for two reasons:
 
@@ -391,7 +434,7 @@ The job tells the grain before it removes protection, and again on every termina
 
   The precedent of upgrade-wide reindexes (`Patches/15.38.5/RebuildConstraintIndexes.cs:58`, `Patches/16.4.1/RebuildConstraintIndexesForDecryptedValues.cs:64`) accepted that window. This catch-up never clears, and it only adds missing repairs.
 
-**Cost.** The catch-up reads the constraint-relevant history once per segment. It writes only differences, so a mostly correct index costs few writes.
+**Cost.** The catch-up reads the constraint-relevant history once per segment, and again for the unwritten segments when the boundary is raised. It writes only differences, so a mostly correct index costs few writes.
 
 **What it does not fix.**
 
@@ -468,20 +511,22 @@ An empty read-back after an unknown commit is not proof of absence, because a la
 
 | Situation | Events folded (constraint-relevant types only) | Governed appends |
 | --- | --- | --- |
-| Update failed in a running activation | from the failed event to the tail, normally that one append | wait, then refused if the repair does not finish |
+| Update failed in a running activation | from the failed event to the tail, normally that one append | one append turn per 5 s waits up to 5 s for the repair; the others are refused at once until the fold and its writes finish |
 | Activation after a clean deactivation | none; state written at `EventSequence.cs:169` | - |
-| Activation after a crash | from the persisted watermark: the appends since the last state write (at most 1,000 by default) plus any range that was pending when the state was written, which can be much larger after a long outage | wait, then refused until the fold finishes |
-| Reindex handoff | from the job's last processed event to the tail | wait, then refused until the fold finishes |
-| First activation after the upgrade | unique-constraint history, once per segment, in the background | proceed (item 8) |
+| Activation after a crash | from the persisted watermark: the appends since the last state write (at most 1,000 by default) plus any range that was pending when the state was written, which can be much larger after a long outage | as above, refused for about segments × range read time plus the writes |
+| Reindex handoff | from the job's last processed event to the tail | as above |
+| First activation after the upgrade | unique-constraint history, once per segment (again for unwritten segments when the boundary is raised), in the background | proceed (item 8), except while a group is written under refusal |
 
+- **Expected refusal.** For a large pending range, governed appends are refused for about the number of segments times the time to read the range once, plus the time to write the differences, stretched by about half when no governed appends arrive. Every segment rereads the range (item 4). A range that fits one segment and reads in 20 seconds means about 30 seconds of refusal.
 - **Reads** are already batched by the cursor.
-- **Writes** are one per differing key, in deciding order. A fold over a range that the live path mostly applied writes little.
+- **Writes** are one per differing key. All releases come first, then the claims in deciding order; in the catch-up, each release is written with the claim that takes its value. A fold over a range that the live path mostly applied writes little.
 - **No bulk write API.** A bulk write would have to reproduce 0005's per-claim settlement in every provider.
 
 ## Options considered
 
 - **Write claims atomically with the event.** This is possible only on MongoDB. SQL claims live in a separate DbContext, and InMemory has no shared transaction. Not taken, as the issue concluded.
 - **Replay events one by one into the live index** (this record's first draft). A replay that stops partway leaves keys at older states while appends are admitted. A source that moved from v to w is put back on v, so w is unprotected and v is wrongly refused. Not taken in favor of the staged fold (item 3).
+- **Write the staged keys in the order of their deciding events** (this record's second draft). A claim decided before the release it depends on is refused while the old holder still holds the value. For example, X moves v to c at 5, Y claims v at 6 and X moves c to a at 9: Y's claim goes first and is refused, then X's move frees v, which is left unprotected. The same happens when a release and its claimant fall in different segments. Not taken in favor of two phases (item 3).
 - **Persist the staged map.** It would survive restarts, but it needs a new store in every provider. A restart of the catch-up only costs reads. Not taken.
 - **Track keys written live only in memory.** The set is lost on restart, and the catch-up would then overwrite live writes. Not taken; the excluded set is rebuilt from the log (item 8).
 - **Catch closing constraints up from `First`.** It would close scopes for historical events of constraints registered after them, and closures by event cannot be reopened by hand. Not taken (item 8).
@@ -525,7 +570,7 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
      - Core.Specs `for_EventSequencesStorageProvider/when_reading_state/and_a_watermark_is_persisted`.
 2. **The staged fold (patch, no change on the append path).**
    - Changes:
-     - add `ConstraintIndexReplay` with the staged fold, the segmented memory cap, and writes of differences in deciding order;
+     - add `ConstraintIndexReplay` with the staged fold, the segmented memory cap, the collected differences, and two-phase writes: every release first, across all segments, then the claims in deciding order;
      - add `IUniqueConstraintsStorage.GetFor` in every provider;
      - thread a `CancellationToken` through `IUpdateConstraintIndex.Update` and the constraint storage calls;
      - per-updater outcomes;
@@ -533,8 +578,12 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
    - Core.Specs `Events/Constraints/for_ConstraintIndexReplay/when_folding/`:
      - one spec per missed operation: `and_a_claim_was_missed`, `and_a_removal_was_missed`, `and_a_move_was_missed`, `and_a_close_was_missed`, `and_a_reopen_was_missed`;
      - **`and_a_source_moved_later_in_the_range`** (only the final value is written; the earlier value is never written);
-     - **`and_the_budget_expires_before_the_tail`** (nothing is written, and the index keeps every newer entry);
+     - **`and_the_budget_expires_before_the_end_point`** (nothing is written, and the index keeps every newer entry);
      - `and_a_value_moves_between_sources` (released before it is claimed, so the store settles nothing);
+     - **`and_the_releasing_source_moved_again_later_in_the_range`** (X moves v to c, Y claims v, X moves c to a: X's release is written before Y's claim, so Y holds v and X holds a);
+     - **`and_a_release_and_its_claimant_are_in_different_segments`** (every segment's release is written before any claim, and the claimant holds the value);
+     - `and_a_claim_is_refused_by_a_holder_the_fold_changes` (it is retried once all releases are written, and succeeds);
+     - `and_the_differences_exceed_half_the_cap` (they are written before the remaining segments are folded; a refused claim is retried after the remaining releases);
      - `and_a_per_value_source_is_released_in_full` (staged stored values are released);
      - `and_the_range_overlaps_applied_updates` (no write at all);
      - `and_the_keys_exceed_the_cap` (segmented passes write the same result as one pass);
@@ -545,7 +594,7 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
      - `and_the_event_has_an_older_generation` (it is read and folded);
      - `and_no_constraint_is_folded` (no read at all);
      - `and_a_closing_event_precedes_the_coverage_start` (not applied);
-     - outcome classification: `and_the_store_reports_a_duplicate_claim` (settled), `and_a_closing_scope_cannot_be_resolved` (settled with error), `and_the_store_throws` (nothing further written for that constraint).
+     - outcome classification: `and_the_store_reports_a_duplicate_claim` (settled, because the holder is not a key the fold changes; the refused source has no entry), `and_a_closing_scope_cannot_be_resolved` (settled with error), `and_the_store_throws` (nothing further written for that constraint).
    - Also:
      - Core.Specs `for_ConstraintValidationContext/when_updating/and_one_updater_fails` (all outcomes reported) and `and_the_attempt_times_out` (Failed);
      - Storage specs `for_UniqueConstraintsStorage/when_getting_for_a_source/` in every provider, for both modes;
@@ -559,15 +608,20 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
      - **`and_the_store_hangs_for_a_batch_of_1000_events`** (the append returns within the 2-second post-commit budget, and the rest is deferred);
      - **`and_the_same_event_fails_deterministically`** (after 5 attempts it is settled with error, logged and counted, and governed appends are admitted again);
      - `and_the_failure_is_transient` (it stays pending past 5 attempts);
+     - `and_an_event_in_the_range_cannot_be_read` (the read fault is classified for that event for every folded constraint; after 5 attempts it is settled with error, and the cursor resumes after it);
      - `and_an_attempt_is_abandoned_and_lands_late` (the next timer turn rewrites the key).
    - The next append, `when_appending_while_a_constraint_is_pending/`:
      - `and_the_repair_succeeds` (folded before validation, so a duplicate of the missed claim is refused);
      - **`and_the_repair_stops_at_the_budget`** (the governed append is refused, nothing is written, and no key moved backwards);
+     - `and_the_budget_expires_during_the_writes` (the written keys stand, the rest are written in the next turn, and the constraint stays pending until then);
+     - **`and_many_governed_appends_are_queued_behind_an_unfinished_fold`** (only the first append turn runs the repair; the other governed appends are refused without store work, and a queued non-governed append returns within the budget);
+     - `and_appends_arrived_after_the_fold_started` (the fold writes the state at its fixed end point, then folds on from there);
      - `and_a_removal_for_the_pending_constraint_is_appended` (admitted; its update joins the fold);
      - `and_the_event_is_governed_by_another_constraint` (admitted and validated against that constraint's current index);
      - `and_another_constraint_was_applied_live` (the fold does not write it);
      - `and_closures_are_in_use_and_a_closing_update_failed` (every append is refused);
-     - `and_the_backoff_has_not_elapsed` (refused without a store call).
+     - `and_the_backoff_has_not_elapsed` (refused without a store call);
+     - `and_the_last_append_turn_repair_ended_less_than_5_seconds_ago` (refused without a store call, whatever that repair's outcome).
    - Activation, `when_activating/`:
      - `and_the_watermark_is_behind_the_tail` (only that range is folded, before the first governed append; a read is served meanwhile);
      - `and_the_watermark_is_at_the_tail`;
@@ -575,8 +629,12 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
        - `and_the_sequence_has_events` (watermark at the next number, boundary set, appends proceed);
        - **`and_a_closing_constraint_has_historical_closing_events`** (no closure is written for any event before the upgrade);
        - **`and_a_source_moved_after_the_boundary`** (the catch-up does not write that key, and an append validates against the live value);
+       - **`and_a_per_value_source_is_fully_released_after_the_boundary`** (the whole source is excluded, and none of its released values is written back);
+       - **`and_a_value_moved_between_sources_before_the_boundary`** (the release and the claim are written in one turn, so an append between turns never finds the value free);
+       - `and_two_sources_swapped_values_before_the_boundary` (written under refusal; governed appends are refused until the last write);
+       - `and_the_excluded_set_is_still_being_rebuilt` (no catch-up write happens until it completes);
        - `and_the_catch_up_was_interrupted` (the fold restarts, and keys already written are not written again);
-       - `and_the_excluded_set_reaches_the_cap` (the boundary is raised and persisted);
+       - `and_the_excluded_set_reaches_the_cap` (the boundary is raised and persisted, and no unwritten difference is written before its segment is folded to the new boundary);
        - `and_the_sequence_is_empty`.
    - Without traffic: **`when_the_store_recovers/and_no_append_arrives`** (the timer, kept alive, repairs and persists the watermark).
    - Sequence-number gaps: `when_storage_renumbers_past_another_activations_event` (the gap is folded).
@@ -622,6 +680,7 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
      - `for_ReindexConstraintsStep/when_performing/and_it_completes` (notifies before the first clear and reports the last processed number);
      - **`for_ReindexConstraintsStep/when_performing/and_it_fails_after_clearing`** (it still reports the last processed number);
      - `for_ReindexConstraintsStep/when_performing/and_it_is_cancelled`;
+     - `for_ReindexConstraintsStep/when_resuming/and_it_had_already_cleared` (it calls `ConstraintIndexRebuildStarting` again before any further write);
      - `for_EventSequence/when_a_constraint_index_is_rebuilt/and_events_were_appended_during_the_rebuild` (the newer claim is restored);
      - `.../and_the_rebuild_failed_after_clearing` (the cleared scope is restored from the log);
      - `.../and_the_rebuild_processed_nothing` (nothing is folded);
@@ -656,7 +715,7 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
 - catching up closing constraints from history;
 - `IUniqueEventTypesConstraintsStorage`, which derives from the log and keeps no index.
 
-### Open questions
+## Open questions
 
 - **Alert condition.** Should a sequence-level alert follow, given that alert targets are observer-shaped and the change touches the wire contract (item 4)?
 - **Revision below the watermark.** Should `Revise` move claims and closures, or should it make the affected constraints pending (item 6)?
@@ -672,8 +731,9 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
   - a missed close refuses the next event;
   - a missed reopen admits it.
 - **No regression.** No fold, steady-state or catch-up, ever writes a state older than the key's current entry, including when it stops at a budget.
+- **Releases before claims.** A value that moved between sources ends with its final holder after any fold, including when the releasing source moved again later in the range and when the release and the claim fall in different segments. A claim is settled as refused only when its holder is not a key the fold changes.
 - **Refusal.** While a constraint is pending, the appends it validates are refused with `ConstraintIndexUnavailable` and nothing is written. Other appends are admitted.
-- **Budgets.** An append against a hanging constraint store returns within the stated budgets.
+- **Budgets.** An append against a hanging constraint store returns within the stated budgets. With many governed appends queued behind an unfinished fold, only one append turn per 5 seconds runs the repair, and a queued non-governed append still returns within the budgets.
 - **Poison events.** An event that fails deterministically is settled with error after 5 attempts, logged and counted.
 - **Durable appends.** A batch storage acknowledged incompletely, or whose commit threw after it was durable, is reported as a success with one copy of each event. An unknown commit with an empty read-back is reported as `AppendOutcomeUnknown`, never as failure.
 - **Publication retries.** A retry below the watermark writes no claim.
@@ -681,7 +741,9 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
 - **Existing stores.**
   - A store with no watermark catches up its unique constraints in the background, restarts after an interruption, and persists its watermark.
   - It writes no closure for history.
-  - It never overwrites a key that an event after the boundary touched.
+  - It never overwrites a key that an event after the boundary touched, and it writes back no value of a per-value source fully released after the boundary.
+  - An append admitted during the catch-up never finds a value free between its release and the claim that takes it.
+  - After the boundary is raised, no difference taken at the old boundary is written.
 - **Unrepairable index.** While the index cannot be repaired:
   - an error and the metrics are emitted;
   - the sequence heals when the store returns, with no append needed.
@@ -695,6 +757,9 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
   - phantom claims and duplicate holders from past damage remain until an operator reindex (PR 6), and the fold keeps the current holder rather than the first claimant in log order;
   - closing closures lost before the upgrade stay lost until repaired by hand or by a reindex that names the constraint.
 - **New refusals.** A constraint store that rejects writes now refuses governed appends instead of silently accepting them. On a sequence with closures in use, that means every append, for at most the poison threshold if a single event is at fault.
+- **How long refusals last.** Once the store works again, a large pending range keeps governed appends refused for about the number of segments times the time to read the range once, plus the writes, and about half again without governed traffic (item 4). A range that fits one segment and reads in 20 seconds means about 30 seconds of refusal. After a long outage followed by a crash, the range and with it the refusal can be much longer.
+- **Refusal during the catch-up.** Value swaps, values with two holders from past damage, and more than 50,000 differing keys are written under refusal, so the constraint's governed appends are refused while they are written (item 8).
+- **Closing coverage start in memory.** A closing definition registered while the grain is inactive can still be applied to a lagging range's earlier events on activation after a crash (item 3). A closure written that way is permanent, because a scope closed by an event cannot be reopened by hand (`EventSequence.cs:561-564`). Persisting the coverage start with the definition would close this, and is not done here.
 - **Residuals.** Writes from duplicate activations and late abandoned attempts can still leave a stale entry that only a reindex clears.
 - **Wire, schema and kernel types.**
   - Two new well-known append errors, each with a client contract.
@@ -705,10 +770,14 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
 
 ## Release note
 
-### Fixed
+Paste this into the pull request description. PR release notes use `##` headings, so they are kept in a fence here to leave the record's own outline intact.
+
+```markdown
+## Fixed
 
 - Unique constraints and closing streams no longer drift out of step with the event log when a constraint update fails or the kernel stops right after an append, and a stored append is no longer reported as failed. Existing event stores repair their unique constraints in the background after the upgrade; closing-stream closures lost before the upgrade are not rebuilt. (#4895)
 
-### Changed
+## Changed
 
 - An append can now be refused with `ConstraintIndexUnavailable` while a constraint index it depends on cannot be written. Nothing is stored, and the same append can be retried later. An append can also return `AppendOutcomeUnknown` when the store cannot confirm whether it was stored; check for the events before appending them again. (#4895)
+```
