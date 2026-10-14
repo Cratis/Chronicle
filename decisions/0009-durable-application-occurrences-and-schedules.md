@@ -174,6 +174,18 @@ Chronicle records **occurrences**, scoped to an event store and a namespace, in 
 
 ### 3. Effect receipts and the atomic append
 
+> **2026-10-14 — amendment, accepted by L0 with L20.** A unit of work with
+> protected reads and no events records its `NoEvents` receipt through
+> `AppendManyWithEffectReceipt`, with zero events and the decision's concurrency
+> scopes. This is a validate-only append: the `IEventSequence` grain checks the
+> scopes, and a violation writes no receipt. Storage supports the zero-event
+> receipt batch inside the same batch transaction. `RecordEffectReceipt` carries
+> no scopes and is only for `Refused`, or for `NoEvents` without protected reads.
+> A pipeline refusal (constraint, concurrency or validation) writes no kernel
+> receipt; Arc records `Refused` explicitly. This qualifies the receipt-only and
+> unit-of-work paths below so that a no-event decision cannot bypass its protected
+> reads.
+
 - **Effect key.** A non-empty name the handler chooses. Arc derives one per invoked command; Stage derives one per `produces` position.
 - **Receipt identity.** `effect:` followed by the length-prefixed SHA-256 of (occurrence id, effect key).
 - **Receipt contents:**
@@ -241,7 +253,8 @@ The ranges come from Screenplay `SemanticModelValidator.Automation.cs:189-195` a
   - Registering again never moves it; only `RestartAt` does (section 7). A `StartsAt` in the past is an explicit backfill under the catch-up policy.
 - **The cursor.** One per (namespace, token), or one per token under application scope. It holds:
   - the last materialized due instant, in epoch seconds;
-  - `AppliedRevision`;
+  - `RegisteredRevision`, the newest revision registration has announced to this cursor;
+  - `AppliedRevision`, the revision whose directive this cursor has applied;
   - a write `Version`. Every cursor write is a compare-and-set on `Version`.
 
   There is no separate ownership epoch. The version compare-and-set is what serializes turns.
@@ -259,7 +272,7 @@ The ranges come from Screenplay `SemanticModelValidator.Automation.cs:189-195` a
 
   The result is either all of it or none of it:
   - a turn that loses the compare-and-set writes nothing;
-  - a duplicate or stale activation can never insert occurrences or move the cursor. The cursor also stores the revision it was last advanced under. Accepting a new revision stamps that revision on every namespace's cursor, and bumps its `Version`, before registration returns. A turn computed under an older revision therefore loses its compare-and-set and writes nothing;
+  - a duplicate or stale activation can never insert occurrences or move the cursor. Accepting a new revision sets `RegisteredRevision` on every existing cursor and bumps its `Version` before registration returns; it never touches `AppliedRevision`. A turn computed under an older revision therefore loses its compare-and-set and writes nothing. A turn whose loaded definition differs from the cursor's `RegisteredRevision` reloads the definition and starts again;
   - a crash leaves the turn wholly applied or wholly absent;
   - because the identity does not depend on the revision, an instant due under two revisions fires once.
 - **Catch-up** repeats turns from a timer until the cursor reaches now. Every missed instant is materialized in order, and catch-up resumes after any restart. Delivery then follows section 2.
@@ -283,7 +296,7 @@ The ranges come from Screenplay `SemanticModelValidator.Automation.cs:189-195` a
   - The client supplies a stable **trigger token**. Stage derives it from the reaction's semantic identity and the trigger's position.
   - The kernel stores a fingerprint over (rule, catch-up policy, `StartsAt`, scope). The **revision** rises whenever that fingerprint changes.
   - Each occurrence keeps the revision that materialized it.
-- **A changed definition must name a directive.** Without one, registration is refused with `ScheduleMigrationRequired`. The directive is stored with the revision, and each cursor applies it once, inside a turn's transaction, when `AppliedRevision` is below the revision. A crash mid-migration therefore resumes per namespace. The directives:
+- **A changed definition must name a directive.** Without one, registration is refused with `ScheduleMigrationRequired`. The directive is stored with the revision, and each cursor applies it once, inside a turn's transaction, when `AppliedRevision` is below `RegisteredRevision`, and then sets `AppliedRevision` to it. A cursor created after the registration starts with both revisions at the current one and applies no directive. A crash mid-migration therefore resumes per namespace. The directives:
   - **`Continue`** keeps the cursor, applies the new rule after it, and keeps pending occurrences. It is refused across a scope change (`ScheduleScopeChangeRequiresRestart`), because application and namespace cursors live in different storage.
   - **`RestartAt(instant)`** sets `EffectiveFrom` to the instant, and sets each cursor to `max(instant, NamespaceState.Created)`.
     - It cannot fire again an instant that was already materialized. Identities depend only on token and instant, so such an instant deduplicates against the stored occurrence, whether that occurrence is completed or not.
