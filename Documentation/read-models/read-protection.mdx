@@ -115,9 +115,10 @@ Inside a frame, these raw reads need a read allowance:
 - `IReducers`: `GetInstanceById`, `GetInstances`
 - Materialized read models: `GetInstances`, `ObserveInstances`
 - Event sequences: `HasEventsFor`, `GetMetadataAt`, `GetFromSequenceNumber`, `GetForEventSourceIdAndEventTypes`, `GetNextSequenceNumber`, `GetTailSequenceNumber`, `GetTailSequenceNumberForObserver`, `IsStreamCompleted`, `GetClosedStreams`, `VerifyContent`
+- `IProjections.Query` (an ad-hoc projection over the event log)
 - `IEventStore.GetNamespaces`
 
-Every public immediate append on an event sequence is refused regardless of allowances, and so is `CompleteStream` outside `RunAfterCommit`. Treat a Chronicle read that is not in this list as unguarded.
+Every public immediate append on an event sequence is refused regardless of allowances, and so are `Revise`, both `Redact` overloads and `CompleteStream` outside `RunAfterCommit`. Treat a Chronicle read that is not in this list as unguarded.
 
 ## Refusals at a glance
 
@@ -125,7 +126,7 @@ Every public immediate append on an event sequence is refused regardless of allo
 |---|---|
 | `DetachedReadWhileReadsAreProtected` | `GetDetached` under a frame without an `Advisory` allowance |
 | `ReadRefusedWhileReadsAreProtected` | A guarded raw read without an allowance |
-| `ImmediateAppendWhileReadsAreProtected` | An immediate append, or `CompleteStream` outside `RunAfterCommit` |
+| `ImmediateAppendWhileReadsAreProtected` | An immediate append, `Revise` or `Redact`, or `CompleteStream` outside `RunAfterCommit` |
 | `ReadAfterProtectedCommit` | A protected read after the unit completed |
 | `ReadOfSourceWithStagedEvents` | A read of a source after events that match it were staged |
 | `ReadProtectionUnitMismatch` | Enrollment, staging or completion on a unit other than the frame's |
@@ -140,7 +141,7 @@ Each message names the fix. Chronicle refuses rather than guard something it can
 
 ## Limits
 
-- **History mutation.** Revising or redacting an event does not advance the tail, so a read that was folded before the change is not invalidated. Chronicle issue [#4900](https://github.com/Cratis/Chronicle/issues/4900) tracks a kernel check.
+- **History mutation.** Revising or redacting an event does not advance the tail, so a read that was folded before the change is not invalidated. Inside a frame, `Revise` and `Redact` are refused; run them as separate administrative operations. Chronicle issue [#4900](https://github.com/Cratis/Chronicle/issues/4900) tracks a kernel check.
 - **Reducers.** A reducer is admitted only if it has no filters and no constructor dependencies other than `ILogger<T>`. See [Decision reads](decision-reads.mdx#reducers).
 - **Pinned delivery.** A projection with Pinned generation delivery is refused with `GenerationDeliveryNotSupported`.
 - **Source-less reads.** A contributed read must name an event source. Reads over many sources are refused.

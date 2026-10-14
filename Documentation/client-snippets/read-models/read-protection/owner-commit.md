@@ -11,8 +11,9 @@ using Cratis.Chronicle.Transactions;
 public record ProtectedSeatReserved(int Seats);
 
 [Passive]
-[FromEvent<ProtectedSeatReserved>]
-public record ProtectedSeatReservations(string Id, int Seats);
+public record ProtectedSeatReservations(
+    string Id,
+    [AddFrom<ProtectedSeatReserved>(nameof(ProtectedSeatReserved.Seats))] int Seats);
 
 public static class ProtectedReservation
 {
