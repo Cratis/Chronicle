@@ -75,6 +75,10 @@ internal sealed class DecisionReadsForTesting(EventStoreForTesting eventStore, D
     async Task<DecisionRead<T>> ReadDetached<T>(ReadModelKey key, DecisionReadStreamScope? streamScope, CancellationToken cancellationToken, bool enforcing = false)
         where T : class
     {
+        if (eventStore.Reducers.HasFor<T>())
+        {
+            return await admission.ReadDetached<T>(key, streamScope, cancellationToken, enforcing);
+        }
         var (definition, types) = admission.GetAdmittedShape<T>(key, streamScope is not null, enforcing);
         cancellationToken.ThrowIfCancellationRequested();
         var log = eventStore.EventLog;

@@ -74,5 +74,17 @@ public enum DecisionReadRefusalReason
     /// <summary>
     /// The immediate fold cannot honor the projection's pinned generation delivery.
     /// </summary>
-    GenerationDeliveryNotSupported = 19
+    GenerationDeliveryNotSupported = 19,
+
+    /// <summary>The reducer accepts non-infrastructure constructor dependencies.</summary>
+    ReducerDependencies = 20,
+
+    /// <summary>The reducer filters its events and no exact kernel filter pushdown is available.</summary>
+    ReducerFilters = 21,
+
+    /// <summary>The handler generation is unavailable or a revision uses another generation.</summary>
+    ReducerGeneration = 22,
+
+    /// <summary>Not every fetched handled-type event was dispatched successfully.</summary>
+    ReducerDispatchIncomplete = 23
 }

@@ -51,7 +51,9 @@ public sealed class DecisionReads : IDecisionReads
     /// <inheritdoc/>
     public DecisionReadAdmission Admit<T>()
         where T : class =>
-        _admissions.GetOrAdd(typeof(T), static (type, self) => self.Assess(type), this).Admission;
+        IsReducer(typeof(T))
+            ? Reducers.ReducerDecisionReadAdmission.Assess(_eventStore, typeof(T)).Admission
+            : _admissions.GetOrAdd(typeof(T), static (type, self) => self.Assess(type), this).Admission;
 
     /// <inheritdoc/>
     public DecisionReadAdmission AdmitForStream<T>()
@@ -108,6 +110,11 @@ public sealed class DecisionReads : IDecisionReads
     public DecisionReadDescription Describe<T>()
         where T : class
     {
+        if (IsReducer(typeof(T)))
+        {
+            var reducer = Reducers.ReducerDecisionReadAdmission.Assess(_eventStore, typeof(T));
+            return new(reducer.Admission, Array.AsReadOnly(reducer.Types), false);
+        }
         var (admission, definition, types, _) = _admissions.GetOrAdd(typeof(T), static (type, self) => self.Assess(type), this);
         return new(admission, Array.AsReadOnly(types), definition?.GenerationDelivery == Contracts.Observation.EventGenerationDelivery.Pinned);
     }
@@ -154,6 +161,13 @@ public sealed class DecisionReads : IDecisionReads
     {
         var type = typeof(T);
         var streamScoped = streamScope is not null;
+        if (_eventStore.Reducers.HasFor(type))
+        {
+            var reducer = Reducers.ReducerDecisionReadAdmission.Assess(_eventStore, type, streamScoped);
+            if (!reducer.Admission.IsAdmitted) throw new DecisionReadRefused(reducer.Admission.Reason!.Value, type);
+            if (_eventStore.Reducers is not Reducers.Reducers native) throw new DecisionReadRefused(DecisionReadRefusalReason.Reducer, type);
+            return await native.ReadDecision<T>(key, cancellationToken);
+        }
         var (definition, types) = GetAdmittedShape<T>(key, streamScoped, enforcing);
         cancellationToken.ThrowIfCancellationRequested();
         var agreement = _agreements.GetOrAdd(
@@ -312,6 +326,8 @@ public sealed class DecisionReads : IDecisionReads
         definition.RemovedWith.Values.Any(_ => _.Key == "$eventContext(eventStreamId)") ||
         definition.All.Key == "$eventContext(eventStreamId)";
 
+    bool IsReducer(Type model) => _eventStore.Reducers.HasFor(model);
+
     async Task Dehydrate(Guid session, Type type, ReadModelKey key, DecisionReadStreamScope? streamScope, CancellationToken cancellationToken)
     {
         try
@@ -343,7 +359,11 @@ public sealed class DecisionReads : IDecisionReads
     {
         static (DecisionReadAdmission, ProjectionDefinition?, EventType[], bool) Refuse(DecisionReadRefusalReason reason) =>
             (new(false, reason), null, [], false);
-        if (_eventStore.Reducers.HasFor(type)) return Refuse(DecisionReadRefusalReason.Reducer);
+        if (_eventStore.Reducers.HasFor(type))
+        {
+            var reducer = Reducers.ReducerDecisionReadAdmission.Assess(_eventStore, type, streamScoped);
+            return (reducer.Admission, null, reducer.Types, false);
+        }
         var matches = _projections.Definitions.Where(_ => _.ReadModel == type.GetReadModelIdentifier()).ToArray();
         if (matches.Length != 1) return Refuse(DecisionReadRefusalReason.AmbiguousProjection);
         var definition = matches[0];

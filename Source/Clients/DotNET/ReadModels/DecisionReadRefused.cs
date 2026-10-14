@@ -57,6 +57,14 @@ public class DecisionReadRefused(DecisionReadRefusalReason reason, Type readMode
             "A stream-keyed projection cannot use the default stream id because it does not narrow the fold to one instance key. Supply an explicit event stream id.",
         DecisionReadRefusalReason.GenerationDeliveryNotSupported =>
             "The session fold uses Compatibility delivery and cannot honor a Pinned projection. Use Compatibility delivery for this projection.",
+        DecisionReadRefusalReason.ReducerDependencies =>
+            "The reducer has constructor dependencies. Only ILogger<T> infrastructure dependencies are allowed.",
+        DecisionReadRefusalReason.ReducerFilters =>
+            "reducer filters its events",
+        DecisionReadRefusalReason.ReducerGeneration =>
+            "The handler's declared event generation is unavailable or the event was revised to another generation.",
+        DecisionReadRefusalReason.ReducerDispatchIncomplete =>
+            "The reducer did not dispatch every fetched event of its handled types.",
         _ => string.Empty
     };
 }
