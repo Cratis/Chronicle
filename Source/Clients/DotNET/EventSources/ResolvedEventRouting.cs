@@ -34,19 +34,6 @@ internal record ResolvedEventRouting(EventSourceDefinition Definition, EventStre
     public ConcurrencyDimensions Dimensions => Definition.ConcurrencyFor(Stream);
 
     /// <summary>
-    /// Resolves the effective metadata used by append and staged-read overlap checks.
-    /// </summary>
-    /// <param name="event">The enrolled event.</param>
-    /// <param name="routing">Its definition-backed routing, if any.</param>
-    /// <returns>The event with effective routing dimensions.</returns>
-    internal static EventForEventSourceId ResolveMetadata(EventForEventSourceId @event, ResolvedEventRouting? routing) => @event with
-    {
-        EventSourceType = routing?.SourceType ?? (string.IsNullOrEmpty(@event.EventSourceType?.Value) ? EventSourceType.Default : @event.EventSourceType),
-        EventStreamType = routing?.StreamType ?? (string.IsNullOrEmpty(@event.EventStreamType?.Value) ? EventStreamType.All : @event.EventStreamType),
-        EventStreamId = string.IsNullOrEmpty(@event.EventStreamId?.Value) ? (EventStreamId)EventStreamId.Default : @event.EventStreamId
-    };
-
-    /// <summary>
     /// Resolve the routing of an append through an event source.
     /// </summary>
     /// <param name="eventSources">The <see cref="IEventSources"/>; null when the event store has none.</param>
@@ -93,4 +80,17 @@ internal record ResolvedEventRouting(EventSourceDefinition Definition, EventStre
         var eventStream = definition.FindStream(streamName) ?? throw new EventStreamDoesNotBelongToEventSource(definition.Name, streamName);
         return new(definition, eventStream);
     }
+
+    /// <summary>
+    /// Resolves the effective metadata used by append and staged-read overlap checks.
+    /// </summary>
+    /// <param name="event">The enrolled event.</param>
+    /// <param name="routing">Its definition-backed routing, if any.</param>
+    /// <returns>The event with effective routing dimensions.</returns>
+    internal static EventForEventSourceId ResolveMetadata(EventForEventSourceId @event, ResolvedEventRouting? routing) => @event with
+    {
+        EventSourceType = routing?.SourceType ?? (string.IsNullOrEmpty(@event.EventSourceType?.Value) ? EventSourceType.Default : @event.EventSourceType),
+        EventStreamType = routing?.StreamType ?? (string.IsNullOrEmpty(@event.EventStreamType?.Value) ? EventStreamType.All : @event.EventStreamType),
+        EventStreamId = string.IsNullOrEmpty(@event.EventStreamId?.Value) ? (EventStreamId)EventStreamId.Default : @event.EventStreamId
+    };
 }
