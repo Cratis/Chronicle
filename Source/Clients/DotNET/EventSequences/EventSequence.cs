@@ -64,7 +64,7 @@ public class EventSequence(
     JsonSerializerOptions jsonSerializerOptions,
     IActivitySource<EventSequence>? activitySource = null,
     IReactorSideEffectHandlers? sideEffectHandlers = null,
-    IEventSources? eventSources = null) : IEventSequence
+    IEventSources? eventSources = null) : IEventSequence, IEventSequenceWithScopeProvenance
 {
     /// <summary>
     /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client event sequence traces.
@@ -607,6 +607,13 @@ public class EventSequence(
             row.ClosedAt)).ToImmutableList();
     }
 
+    /// <inheritdoc/>
+    Task<AppendManyResult> IEventSequenceWithScopeProvenance.AppendMany(
+        IEnumerable<EventForEventSourceId> events,
+        IEnumerable<NamedTag> namedTags,
+        IDictionary<EventSourceId, ConcurrencyScope> scopes,
+        ScopeProvenance provenance) => AppendManyCore(events, namedTags, concurrencyScopes: scopes, provenance: provenance);
+
     /// <summary>Checks whether this is the event log for the exact decision-read target.</summary>
     /// <param name="store">The expected event store.</param>
     /// <param name="targetNamespace">The expected namespace.</param>
@@ -932,11 +939,12 @@ public class EventSequence(
         IEnumerable<NamedTag> namedTags,
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
-        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
+        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default,
+        ScopeProvenance? provenance = null)
     {
         using var span = _activitySource.AppendMany(eventStoreName.Value, @namespace.Value, eventSequenceId.Value);
 
-        return await AppendManyForEventSources(events, correlationId, tags, concurrencyScopes, namedTags);
+        return await AppendManyForEventSources(events, correlationId, tags, concurrencyScopes, namedTags, provenance);
     }
 
     AppendResult ToAppendResult(CorrelationId correlationId, EventSequenceNumber sequenceNumber, AppendManyResult batchResult, EventType eventType)
@@ -999,7 +1007,8 @@ public class EventSequence(
         CorrelationId? correlationId,
         IEnumerable<string>? tags,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes,
-        IEnumerable<NamedTag> namedTags)
+        IEnumerable<NamedTag> namedTags,
+        ScopeProvenance? provenance = null)
     {
         var callNamedTags = namedTags.ToArray();
         var routings = new List<ResolvedEventRouting?>();
@@ -1049,7 +1058,7 @@ public class EventSequence(
         }
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
-        var resolvedConcurrencyScopes = await ResolveConcurrencyScopes(eventsList, routings, concurrencyScopes);
+        var resolvedConcurrencyScopes = await ResolveConcurrencyScopes(eventsList, routings, concurrencyScopes, provenance);
         var identity = identityProvider.GetCurrent();
 
         var request = new Contracts.Sequences.AppendManyForEventSourcesRequest
@@ -1153,7 +1162,8 @@ public class EventSequence(
     async Task<Dictionary<EventSourceId, ConcurrencyScope>> ResolveConcurrencyScopes(
         IEnumerable<EventForEventSourceId> events,
         List<ResolvedEventRouting?> routings,
-        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes)
+        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes,
+        ScopeProvenance? provenance = null)
     {
         var resolvedConcurrencyScopes = concurrencyScopes?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value) ?? [];
         var strategy = concurrencyScopeStrategies.GetFor(this);
@@ -1173,7 +1183,7 @@ public class EventSequence(
                 strategy);
         }
 
-        return resolvedConcurrencyScopes;
+        return provenance is null ? resolvedConcurrencyScopes : ImplicitScopeMerge.Apply(resolvedConcurrencyScopes, provenance);
     }
 
     async Task<ConcurrencyScope> GetScopeFor(

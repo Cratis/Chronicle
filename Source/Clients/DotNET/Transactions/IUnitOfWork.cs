@@ -98,6 +98,53 @@ public interface IUnitOfWork : IDisposable
         throw new UnitOfWorkBatchEnrollmentNotSupported(GetType());
 
     /// <summary>
+    /// Enrolls an event with its scope origin. Alternate implementations retain their existing enrollment behavior.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="event">The event.</param>
+    /// <param name="causation">The causation.</param>
+    /// <param name="options">The enrollment options.</param>
+    /// <exception cref="ConcurrencyScopeOriginNotValidForEvents">The origin is reserved for reads or implicit scopes.</exception>
+    void AddEventWithOptions(EventSequenceId eventSequenceId, EventSourceId eventSourceId, object @event, Causation causation, EventEnrollmentOptions options)
+    {
+        ConcurrencyScopeOriginNotValidForEvents.ThrowIfNotValid(options.Origin);
+        var namedTags = options.NamedTags?.ToArray() ?? [];
+        if (namedTags.Length != 0)
+        {
+            AddEventWithNamedTags(eventSequenceId, eventSourceId, @event, namedTags, causation, options.EventStreamType, options.EventStreamId, options.EventSourceType, options.ConcurrencyScope, options.Tags, options.Occurred, options.Subject);
+        }
+        else
+        {
+            AddEvent(eventSequenceId, eventSourceId, @event, causation, options.EventStreamType, options.EventStreamId, options.EventSourceType, options.ConcurrencyScope, options.Tags, options.Occurred, options.Subject);
+        }
+    }
+
+    /// <summary>
+    /// Enrolls an ordered batch with the origin of its supplied scopes.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="events">The ordered events.</param>
+    /// <param name="concurrencyScopes">The supplied scopes.</param>
+    /// <param name="origin">The scope contribution.</param>
+    /// <exception cref="ConcurrencyScopeOriginNotValidForEvents">The origin is reserved for reads or implicit scopes.</exception>
+    void AddEvents(EventSequenceId eventSequenceId, IEnumerable<EventForEventSourceId> events, IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes, ConcurrencyScopeOrigin origin)
+    {
+        ConcurrencyScopeOriginNotValidForEvents.ThrowIfNotValid(origin);
+        AddEvents(eventSequenceId, events, concurrencyScopes);
+    }
+
+    /// <summary>
+    /// Enrolls a source-wide implicit guard without binding the unit to an event sequence.
+    /// </summary>
+    /// <param name="eventSequenceId">The sequence whose boundary was captured.</param>
+    /// <param name="label">The guarded source.</param>
+    /// <param name="boundary">A concrete global boundary or the position before the first event.</param>
+    /// <exception cref="UnitOfWorkImplicitScopesNotSupported">This implementation cannot enroll implicit guards.</exception>
+    void AddImplicitScope(EventSequenceId eventSequenceId, EventSourceId label, EventSequenceNumber boundary) =>
+        throw new UnitOfWorkImplicitScopesNotSupported(GetType());
+
+    /// <summary>
     /// Attaches a contributor for the lifetime of an enrollment scope, such as one command invocation.
     /// </summary>
     /// <param name="contributor">The contributor to consult before enrollment.</param>

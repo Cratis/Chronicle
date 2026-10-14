@@ -135,72 +135,24 @@ public partial class UnitOfWork(
         ConcurrencyScope? concurrencyScope = default,
         IEnumerable<string>? tags = default,
         DateTimeOffset? occurred = default,
-        Subject? subject = default)
-    {
-        lock (_decisionLock)
-        {
-            ThrowIfStagingAfterCompletion();
-            var scope = concurrencyScope ?? ConcurrencyScope.NotSet;
-            var enrollment = new UnitOfWorkEnrollment(eventSequenceId, eventSourceId, scope, Array.AsReadOnly<object>([@event]));
-            var resolution = ResolveEnrollmentScopes(eventSequenceId, [enrollment]);
-            scope = resolution.Scopes[eventSourceId];
-            var stagedEvent = new EventForEventSourceId(eventSourceId, @event, causation)
-            {
-                EventStreamType = eventStreamType ?? EventStreamType.All,
-                EventStreamId = eventStreamId ?? EventStreamId.Default,
-                EventSourceType = eventSourceType ?? EventSourceType.Default,
-                Tags = tags ?? [],
-                NamedTags = NamedTagConverters.Merge([], namedTags),
-                Occurred = occurred,
-                Subject = subject
-            };
-            if (_decisionScopes.Count != 0)
-            {
-                ValidateLegacyEventSequenceIdsForOrderedBatch(eventSequenceId);
-                EnsureEventSequenceCanBeUsed(eventSequenceId);
-            }
-            if (scope != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(eventSourceId))
-            {
-                throw new DecisionReadConflictsWithConcurrencyScope(eventSourceId);
-            }
-            if (_hasOrderedBatch)
-            {
-                ThrowIfLabelIsNotSpecified(eventSourceId);
-                scope = MaterializeConcurrencyScope(scope);
-                EnsureEventSequenceCanBeUsed(eventSequenceId);
-                ValidateConcurrencyScope(eventSourceId, scope, _concurrencyScopes, resolution.Requirements);
-                BindToEventSequence(eventSequenceId);
-            }
-            else
-            {
-                BindLegacyEventSequence(eventSequenceId);
-            }
-
-            if (_currentLegacyEvents is null)
-            {
-                _currentLegacyEvents = new LegacyStagedEvents();
-                _stagedEvents.Add(_currentLegacyEvents);
-            }
-
-            _currentLegacyEvents.Add(stagedEvent);
-            if (_hasOrderedBatch)
-            {
-                EnrollStrictConcurrencyScope(eventSourceId, scope);
-            }
-            else
-            {
-                SetLegacyConcurrencyScope(eventSourceId, scope);
-            }
-            CompleteEnrollment(resolution);
-        }
-    }
+        Subject? subject = default) =>
+        AddEventWithNamedTagsCore(eventSequenceId, eventSourceId, @event, namedTags, causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject, ConcurrencyScopeOrigin.Explicit);
 
     /// <inheritdoc/>
     public void AddEvents(
         EventSequenceId eventSequenceId,
         IEnumerable<EventForEventSourceId> events,
-        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes) =>
+        AddEvents(eventSequenceId, events, concurrencyScopes, ConcurrencyScopeOrigin.Explicit);
+
+    /// <inheritdoc/>
+    public void AddEvents(
+        EventSequenceId eventSequenceId,
+        IEnumerable<EventForEventSourceId> events,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes,
+        ConcurrencyScopeOrigin origin)
     {
+        ConcurrencyScopeOriginNotValidForEvents.ThrowIfNotValid(origin);
         lock (_decisionLock)
         {
             ThrowIfStagingAfterCompletion();
@@ -248,6 +200,7 @@ public partial class UnitOfWork(
                 EnrollStrictConcurrencyScope(scopeLabel, concurrencyScope);
             }
             CompleteEnrollment(resolution);
+            RecordScopeOrigins(resolution, origin);
         }
     }
 
@@ -450,6 +403,7 @@ public partial class UnitOfWork(
         EventForEventSourceId[] events;
         IEventSequence? eventSequence;
         bool protectedCommit;
+        ScopeProvenance? provenance;
         lock (_decisionLock)
         {
             ThrowIfMutatedDuringEnrollment();
@@ -466,6 +420,7 @@ public partial class UnitOfWork(
             events = eventSequence is null ? [] : GetEventsToCommit();
             scopes = !protectedCommit ? _concurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value) :
                 _concurrencyScopes.Concat(_decisionScopes).ToDictionary(_ => _.Key, _ => _.Value);
+            provenance = _implicitScopes.Count != 0 && events.Length != 0 ? CaptureScopeProvenance() : null;
         }
 
         try
@@ -475,9 +430,16 @@ public partial class UnitOfWork(
                 AppendManyResult result;
                 try
                 {
-                    result = events.Any(_ => _.NamedTags.Any())
-                        ? await eventSequence.AppendManyWithNamedTags(events, [], concurrencyScopes: scopes)
-                        : await eventSequence.AppendMany(events, concurrencyScopes: scopes);
+                    if (provenance is not null)
+                    {
+                        result = await AppendWithScopeProvenance(eventSequence, events, scopes, provenance);
+                    }
+                    else
+                    {
+                        result = events.Any(_ => _.NamedTags.Any())
+                            ? await eventSequence.AppendManyWithNamedTags(events, [], concurrencyScopes: scopes)
+                            : await eventSequence.AppendMany(events, concurrencyScopes: scopes);
+                    }
                 }
                 catch (CommandFailed exception) when (
                     protectedCommit && events.Length == 0 &&
@@ -516,6 +478,8 @@ public partial class UnitOfWork(
         _stagedEvents.Clear();
         _currentLegacyEvents = null;
         _concurrencyScopes.Clear();
+        _scopeOrigins.Clear();
+        _implicitScopes.Clear();
         _requiredEnrollmentScopes.Clear();
         _enrollmentContributors.Clear();
         _appendManyResult = AppendManyResult.Success(CorrelationId.NotSet, []);
