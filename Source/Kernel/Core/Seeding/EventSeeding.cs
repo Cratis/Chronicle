@@ -28,7 +28,7 @@ public class EventSeeding(
     [PersistentState(nameof(EventSeeds), WellKnownGrainStorageProviders.EventSeeding)]
     IPersistentState<EventSeeds> state,
     IGrainFactory grainFactory,
-    ILogger<EventSeeding> logger) : Grain, IResultAwareEventSeeding
+    ILogger<EventSeeding> logger) : Grain, IGlobalEventSeeding
 {
     /// <summary>
     /// The maximum number of events to append in a single batch during seeding.
@@ -60,25 +60,11 @@ public class EventSeeding(
     public Task Seed(IEnumerable<SeedingEntry> entries) => SeedWithResult(entries);
 
     /// <inheritdoc/>
-    public async Task<SeedingResult> SeedWithResult(IEnumerable<SeedingEntry> entries)
-    {
-        logger.SeedingEvents(_key.EventStore.Value, _key.Namespace.Value);
+    public Task<SeedingResult> SeedWithResult(IEnumerable<SeedingEntry> entries) => SeedWithResult(entries, false, string.Empty);
 
-        var entriesList = entries.ToList();
-        if (entriesList.Count == 0)
-        {
-            return SeedingResult.Complete;
-        }
-
-        state.State ??= new EventSeeds(
-                new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
-                new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
-
-        // For global grains, store the entries and apply to all existing namespaces
-        return _key.IsGlobal
-            ? await SeedGlobally(entriesList)
-            : await SeedNamespace(entriesList);
-    }
+    /// <inheritdoc/>
+    public Task<SeedingResult> SeedGlobalWithResult(IEnumerable<SeedingEntry> entries, bool authoritative, string owner) =>
+        SeedWithResult(entries, authoritative, owner);
 
     /// <inheritdoc/>
     public Task<EventSeeds> GetSeededEvents()
@@ -90,10 +76,37 @@ public class EventSeeding(
         return Task.FromResult(state.State);
     }
 
-    async Task<SeedingResult> SeedGlobally(List<SeedingEntry> entriesList)
+    static SeededEventEntry ToSeededEntry(SeedingEntry entry) => new(entry.EventSourceId, entry.EventTypeId, entry.Content, entry.Tags?.Select(t => t.Value) ?? [])
+    {
+        EventSourceType = SeedRouting.SourceType(entry.EventSourceType?.Value),
+        EventStreamType = SeedRouting.StreamType(entry.EventStreamType?.Value),
+        EventStreamId = SeedRouting.StreamId(entry.EventStreamId?.Value)
+    };
+
+    async Task<SeedingResult> SeedWithResult(IEnumerable<SeedingEntry> entries, bool authoritative, string owner)
+    {
+        logger.SeedingEvents(_key.EventStore.Value, _key.Namespace.Value);
+
+        var entriesList = entries.ToList();
+        if (entriesList.Count == 0 && !(_key.IsGlobal && authoritative))
+        {
+            return SeedingResult.Complete;
+        }
+
+        state.State ??= new EventSeeds(
+                new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
+                new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
+
+        // For global grains, store the entries and apply to all existing namespaces
+        return _key.IsGlobal
+            ? await SeedGlobally(entriesList, authoritative, owner)
+            : await SeedNamespace(entriesList);
+    }
+
+    async Task<SeedingResult> SeedGlobally(List<SeedingEntry> entriesList, bool authoritative, string owner)
     {
         var newEntries = GetEntriesStillToSeed(entriesList);
-        if (newEntries.Count == 0)
+        if (newEntries.Count == 0 && !authoritative)
         {
             return SeedingResult.Complete;
         }
@@ -104,18 +117,7 @@ public class EventSeeding(
         // that throws mid-loop would never be retried - on retry IsAlreadySeeded would report the
         // entries as seeded, the dispatch would be skipped, and the remaining namespaces would
         // never receive the events.
-        var entriesToSeed = newEntries.ConvertAll(_ => _.Entry);
-        var namespacesGrain = grainFactory.GetGrain<INamespaces>(_key.EventStore.Value);
-        var namespaces = await namespacesGrain.GetAll();
-        var everyNamespaceSeeded = true;
-        foreach (var ns in namespaces)
-        {
-            logger.ApplyingSeedsToNamespace(ns.Value);
-            var namespaceKey = EventSeedingKey.ForNamespace(_key.EventStore, ns);
-            var nsGrain = grainFactory.GetGrain<IResultAwareEventSeeding>(namespaceKey.ToString());
-            var result = await nsGrain.SeedWithResult(entriesToSeed);
-            everyNamespaceSeeded &= result.AllEntriesSeeded;
-        }
+        var everyNamespaceSeeded = await DispatchGlobally(newEntries.ConvertAll(_ => _.Entry));
 
         // A namespace that declined part of what it was given is the same situation as one that threw:
         // the entries are still waiting. Committing the tracking here would mean they are never
@@ -129,14 +131,50 @@ public class EventSeeding(
 
         // Only now, after every namespace has seeded everything, commit the global tracking so a retry
         // re-dispatches when a namespace dispatch throws or declines.
-        foreach (var (_, seededEntry) in newEntries)
+        if (authoritative)
         {
-            TrackSeededEvent(seededEntry);
+            state.State = GlobalSeedSet.Replace(
+                state.State,
+                entriesList.Select(entry => ToSeededEntry(entry) with
+                {
+                    Origin = SeedOrigin.Declared,
+                    Owner = owner
+                }),
+                owner);
+        }
+        else
+        {
+            foreach (var (_, seededEntry) in newEntries)
+            {
+                TrackSeededEvent(seededEntry with { Origin = SeedOrigin.Added, Owner = owner });
+            }
         }
 
         await state.WriteStateAsync();
 
         return SeedingResult.Complete;
+    }
+
+    async Task<bool> DispatchGlobally(List<SeedingEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return true;
+        }
+
+        var namespacesGrain = grainFactory.GetGrain<INamespaces>(_key.EventStore.Value);
+        var namespaces = await namespacesGrain.GetAll();
+        var everyNamespaceSeeded = true;
+        foreach (var ns in namespaces)
+        {
+            logger.ApplyingSeedsToNamespace(ns.Value);
+            var namespaceKey = EventSeedingKey.ForNamespace(_key.EventStore, ns);
+            var nsGrain = grainFactory.GetGrain<IResultAwareEventSeeding>(namespaceKey.ToString());
+            var result = await nsGrain.SeedWithResult(entries);
+            everyNamespaceSeeded &= result.AllEntriesSeeded;
+        }
+
+        return everyNamespaceSeeded;
     }
 
     async Task<SeedingResult> SeedNamespace(List<SeedingEntry> entriesList)
@@ -250,13 +288,7 @@ public class EventSeeding(
 
         foreach (var entry in entriesList)
         {
-            var tags = entry.Tags?.Select(t => t.Value) ?? [];
-            var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, tags)
-            {
-                EventSourceType = SeedRouting.SourceType(entry.EventSourceType?.Value),
-                EventStreamType = SeedRouting.StreamType(entry.EventStreamType?.Value),
-                EventStreamId = SeedRouting.StreamId(entry.EventStreamId?.Value)
-            };
+            var seededEntry = ToSeededEntry(entry);
 
             if (!stillAccountedFor.TryGetValue(seededEntry, out var remaining))
             {
