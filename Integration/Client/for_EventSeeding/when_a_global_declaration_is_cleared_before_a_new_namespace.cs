@@ -17,13 +17,12 @@ public class when_a_global_declaration_is_cleared_before_a_new_namespace(context
 {
     public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
     {
-        static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
-        readonly FutureNamespaceSeedObserver _observer = new();
+        readonly ClearedDeclarationSeedObserver _observer = new();
         public IReadOnlyList<AppendedEvent> ExistingEvents;
         public IReadOnlyList<AppendedEvent> FutureEvents;
 
         public override IEnumerable<Type> EventTypes => [typeof(OfficeOpened)];
-        public override IEnumerable<Type> Reactors => [typeof(FutureNamespaceSeedObserver)];
+        public override IEnumerable<Type> Reactors => [typeof(ClearedDeclarationSeedObserver)];
 
         protected override void ConfigureServices(IServiceCollection services) => services.AddSingleton(_observer);
 
@@ -34,18 +33,24 @@ public class when_a_global_declaration_is_cleared_before_a_new_namespace(context
             {
                 EventSourceId = "removed-office",
                 EventTypeId = EventStore.EventTypes.GetEventTypeFor(typeof(OfficeOpened)).Id.Value,
-                Content = JsonSerializer.Serialize(new OfficeOpened("Removed"), _jsonOptions),
-                Tags = []
+                Content = JsonSerializer.Serialize(new OfficeOpened("Removed"), ChronicleClient.Options.JsonSerializerOptions),
+                Tags = [],
+                EventSourceType = EventSourceType.Default.Value,
+                EventStreamType = EventStreamType.All.Value,
+                EventStreamId = EventStreamId.Default
             };
             await services.Seeding.SeedEvents(new SeedEventsRequest
             {
                 EventStore = EventStore.Name,
-                GlobalByEventType = [],
+                GlobalByEventType = [new EventTypeSeedEntries { EventTypeId = entry.EventTypeId, Entries = [entry] }],
                 GlobalByEventSource = [new EventSourceSeedEntries { EventSourceId = entry.EventSourceId, Entries = [entry] }],
                 NamespacedEntries = [],
                 GlobalSetIsAuthoritative = true,
                 GlobalSetOwner = "seed-program"
             }).EnsureSuccess();
+
+            // Observe the declared seed before clearing it, including if namespace creation applies it asynchronously.
+            await _observer.RemovedSeedObserved.Task.WaitAsync(TimeSpan.FromSeconds(20));
             (await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First)).Count.ShouldEqual(1);
 
             await services.Seeding.SeedEvents(new SeedEventsRequest
@@ -66,7 +71,7 @@ public class when_a_global_declaration_is_cleared_before_a_new_namespace(context
             await EventStore.Seeding.Register();
             var future = await Services.GetRequiredService<IChronicleClient>().GetEventStore(EventStore.Name, "future");
             await future.WaitForRegistration();
-            await _observer.SeedObserved.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await _observer.RetainedSeedObserved.Task.WaitAsync(TimeSpan.FromSeconds(20));
             FutureEvents = await future.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
             ExistingEvents = await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
         }
