@@ -1,12 +1,12 @@
 ---
 id: 0007-idempotent-keyed-appends
 title: Make keyed appends idempotent in the event sequence, and key reactor side effects by delivery
-status: proposed
+status: accepted
 stage: none
 class: contract
 reversibility: costly
-proposed: 2026-10-14
-decider: woksin
+decided: 2026-10-14
+decider: L0 (woksin's delegation)
 applies-to:
   - Source/Kernel/Core/Sequences/**
   - Source/Kernel/Core/EventSequences/**
@@ -42,7 +42,7 @@ applies-to:
 <!-- markdownlint-disable-next-line MD025 -->
 # Make keyed appends idempotent in the event sequence, and key reactor side effects by delivery
 
-Proposed on 2026-10-14 for Cratis/Chronicle#4809; woksin is the intended decider, pending acceptance. L0 resolved the open questions on woksin's behalf on 2026-10-14 (see Resolutions). The record stays Proposed until L0 accepts it.
+Accepted on 2026-10-14 by L0 on woksin's delegation for Cratis/Chronicle#4809, with the rulings recorded under Resolutions.
 
 ## Context
 
@@ -553,7 +553,7 @@ Out of scope:
 
 ### Resolutions
 
-L0 resolved the six open questions on 2026-10-14, on behalf of woksin. The record stays Proposed until L0 accepts it.
+L0 resolved the six open questions on 2026-10-14, on behalf of woksin. L0 accepted the record on the same day.
 
 1. **Key retention:** for the life of the event (section 9, option A). Any expiry would reopen duplicates.
 2. **Replay conflicts:** fail the partition and fail closed, with the refusal sentence as the failed partition's reason (sections 5 and 8). The deliberate remedies are a reactor effect epoch or `[OnceOnly]`, both named in the failed partition's message (section 8).
