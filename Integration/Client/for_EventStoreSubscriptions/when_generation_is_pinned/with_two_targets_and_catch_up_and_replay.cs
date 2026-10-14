@@ -5,6 +5,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventStoreSubscriptions;
+using Cratis.Chronicle.Integration.for_EventSequence.when_appending_with_camel_case_migration.given;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
@@ -23,6 +24,9 @@ public class with_two_targets_and_catch_up_and_replay(context context) : Given<c
         const string Legacy = "pinned-subscription-legacy";
         const string CatchUpTarget = "pinned-subscription-catch-up";
         readonly SubscriptionDeliveryTracker _tracker = new();
+#pragma warning disable CA2213 // The specification lifecycle invokes Destroy(), which disposes this client.
+        ChronicleClient _legacyClient;
+#pragma warning restore CA2213
         public (string Name, EventContext Context) CurrentDelivery;
         public (string Name, EventContext Context) LegacyDelivery;
         public (string Name, EventContext Context) CatchUpDelivery;
@@ -37,12 +41,29 @@ public class with_two_targets_and_catch_up_and_replay(context context) : Given<c
         {
             var source = await ChronicleClient.GetEventStore(Source);
             var current = await ChronicleClient.GetEventStore(Current);
-            var legacy = await ChronicleClient.GetEventStore(Legacy);
+
+            // The legacy target only knows generation 1. A typed reactor cannot declare an earlier generation's CLR type
+            // as its handler, so it observes through a client that pins generation 1 for its own observers.
+            _legacyClient = new ChronicleClient(
+                new BorrowedConnection(EventStore.Connection),
+                new ChronicleOptions
+                {
+                    EventGenerationDelivery = EventGenerationDelivery.Pinned,
+                    DefaultSinkTypeId = Services.GetRequiredService<IChronicleClient>().Options.DefaultSinkTypeId
+                },
+                artifactsProvider: this,
+                serviceProvider: Services);
+            var legacy = await _legacyClient.GetEventStore(Legacy);
             await source.RegisterAll();
             await current.RegisterAll();
             await legacy.RegisterAll();
             var currentReactor = await current.Reactors.Register<CurrentInboxReactor>();
-            var legacyReactor = await legacy.Reactors.Register<LegacyInboxReactor>();
+            var legacyReactor = await legacy.Reactors.Register(
+                "legacy-inbox-reactor",
+                reactor => reactor
+                    .OnEventSequence($"{EventSequenceId.InboxPrefix}{Source}")
+                    .WithEventType(legacy.EventTypes.GetEventTypeFor(typeof(SubscriptionPersonRegisteredV1))),
+                (@event, _) => _tracker.Delivered(@event.Content.Single().Value!.GetValue<string>(), @event.Context));
             await currentReactor.WaitTillActive();
             await legacyReactor.WaitTillActive();
             await current.Subscriptions.Subscribe("current", Source, builder => builder.WithEventType<SubscriptionPersonRegistered>().WithGenerationDelivery(EventGenerationDelivery.Pinned));
@@ -67,6 +88,12 @@ public class with_two_targets_and_catch_up_and_replay(context context) : Given<c
             });
             ReplayDelivery = await _tracker.Next(Current);
             await source.Jobs.WaitTillJobCompletesOrIsDeleted(new JobId(Guid.Parse(replay.JobId)), TimeSpan.FromSeconds(30));
+        }
+
+        void Destroy()
+        {
+            _legacyClient?.EvictEventStores();
+            _legacyClient?.Dispose();
         }
     }
 
