@@ -58,7 +58,8 @@ If seed data should only run in development, use conditional compilation or runt
 
 Chronicle does not distinguish between development and production seed data. Decide when to seed based on build configuration or runtime settings,
 and scope development or sample data with `ForNamespace(EventStoreNamespaceName.Default)` rather than the global builder.
-A build flag prevents sending seeds in that build; it does not remove global seeds already stored by the server.
+A build flag prevents declaring those seeds in that build. With an upgraded .NET client and kernel,
+startup replaces the program's stored declaration, even when its global set is empty.
 
 ## Organize seeders by feature
 
@@ -81,9 +82,31 @@ To target a specific namespace, use `ForNamespace` to get a scoped builder:
 The scoped builder supports the same `For<TEvent>` and `ForEventSource` methods as the global builder. Each namespace receives only its own scoped events in addition to any global events.
 `ForNamespace(EventStoreNamespaceName.Default)` never sends those entries to another namespace.
 
-Removing an entry from your seeder does not remove a global seed stored on the server. There is no API to retract
-stored global seeds yet; resetting the event store is the only way to clear them today. A reset deletes the store's
-data, so do not treat it as a routine production cleanup.
+## Authoritative global seed sets
+
+The .NET client declares the complete discovered global set for each program. A declaration replaces that
+program's previous declaration, including when the new set is empty. Removing an entry from `ICanSeedEvents`
+stops it reaching namespaces created afterwards; events already appended to existing namespaces are never retracted.
+Explicitly queued globals (`eventStore.Seeding.For(...)` or an independent `CreateEventSeeding()` buffer)
+remain append-only and are not removed by a later declaration.
+
+Ownership uses `ChronicleOptions.ProgramIdentifier`, falling back to the entry assembly name when the option
+is still `"[N/A]"`. Set a distinct, stable `ProgramIdentifier` for each program when several programs share a
+store, so one program does not replace another's declaration. The first authoritative declaration also clears
+legacy stored global entries whose owner was not recorded. Other programs' owned declarations and explicit
+additions remain stored.
+
+This requires an upgraded client and kernel. Old clients keep append-only behavior. A new client still works
+against an older kernel, but that kernel ignores declarations and retains its stored globals.
+
+### Clear stale development seeds
+
+1. Upgrade both the .NET client and the kernel.
+2. Remove the development seeder, or scope its entries with `ForNamespace(EventStoreNamespaceName.Default)`.
+3. Start the application once so it declares its remaining global set, even if empty.
+
+New namespaces no longer receive the removed declarations or legacy global entries. Existing namespaces keep
+all events already appended. This does not remove explicitly queued globals.
 
 ## Register corrected seed definitions without reconnecting
 
@@ -116,6 +139,6 @@ failure from its `Register()` call still propagates normally.
 
 - Keep seed data minimal and deterministic.
 - Use clear event source IDs to make debugging easier.
-- Group seeders by scenario, but remember that dropping a stored global seed from code does not retract it.
+- Group seeders by scenario; dropping a discovered global seed stops future application, not events already appended.
 - Use build flags or runtime settings to prevent seeding in production.
 - Use `ForNamespace` when seed data is tenant-specific or environment-specific to avoid polluting other namespaces.
