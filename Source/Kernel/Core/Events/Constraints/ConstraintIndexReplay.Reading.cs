@@ -45,7 +45,7 @@ public partial class ConstraintIndexReplay
                     {
                         SettleError(scope.Definition, @event, error);
                     }
-                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    catch (Exception) when (cancellationToken.IsCancellationRequested)
                     {
                         throw;
                     }
@@ -151,7 +151,7 @@ public partial class ConstraintIndexReplay
         if (definition.Name.Value.Length == 0) throw new InvalidClosingStreamScope(definition.Name);
         if (redacted && definition.EventStreamIdFrom is not null)
         {
-            var snapshot = (await closed.GetForOwner(definition.Name.Value, cancellationToken)).Where(row => row.SequenceNumber == @event.Context.SequenceNumber).ToArray();
+            var snapshot = (await closed.GetForEvent(definition.Name.Value, @event.Context.SequenceNumber, cancellationToken)).ToArray();
             if (snapshot.Length == 0) throw new InvalidClosingStreamScope(definition.Name);
             foreach (var row in snapshot)
             {

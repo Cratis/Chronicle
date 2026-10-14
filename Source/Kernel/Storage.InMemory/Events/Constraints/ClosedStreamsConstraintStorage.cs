@@ -51,6 +51,13 @@ public class ClosedStreamsConstraintStorage : IClosedStreamsConstraintStorage
     }
 
     /// <inheritdoc/>
+    public Task<IEnumerable<ClosedStream>> GetForEvent(ClosedStreamOwner owner, EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_closedStreams.Values.Where(row => row.Owner == owner && row.SequenceNumber == sequenceNumber).ToArray().AsEnumerable());
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

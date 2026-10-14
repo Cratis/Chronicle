@@ -36,13 +36,11 @@ public partial class ConstraintIndexReplay(
     readonly Dictionary<UniqueKey, UniqueState> _unique = [];
     readonly Dictionary<ClosingKey, ClosingState> _closed = [];
     readonly List<ConstraintIndexReplayDifference> _differences = [];
-    readonly HashSet<ConstraintName> _failed = [];
+    readonly Dictionary<ConstraintName, ConstraintIndexReplayFailure> _failed = [];
     readonly HashSet<ConstraintName> _abandoned = [];
     readonly Dictionary<ConstraintName, EventSequenceNumber> _lastSettledError = [];
     ConstraintName? _operationConstraint;
     EventSequenceNumber? _operationPosition;
-    EventSequenceNumber? _failingPosition;
-    Exception? _error;
     EventSequenceNumber? _position;
     int _segments = 1;
     int _segment;
@@ -75,8 +73,6 @@ public partial class ConstraintIndexReplay(
     {
         _failed.Clear();
         _abandoned.Clear();
-        _error = null;
-        _failingPosition = null;
         _operationConstraint = null;
         _operationPosition = null;
         if (_scopes.Length == 0) _phase = Phase.Complete;
@@ -135,7 +131,7 @@ public partial class ConstraintIndexReplay(
                 }
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (Exception) when (cancellationToken.IsCancellationRequested)
         {
             // Keep staged state and already-confirmed writes for the next turn, never report completion.
         }
@@ -144,19 +140,14 @@ public partial class ConstraintIndexReplay(
             foreach (var constraint in _operationConstraint is { } name ? [name] : _scopes.Select(scope => scope.Definition.Name).Distinct()) Fail(constraint, _operationPosition, error);
         }
 
-        return new(_phase == Phase.Complete, _applied, _settled, _settledWithError, _failed.ToArray(), _failingPosition, _error, _abandoned.ToArray());
+        return new(_phase == Phase.Complete, _applied, _settled, _settledWithError, new Dictionary<ConstraintName, ConstraintIndexReplayFailure>(_failed), _abandoned.ToArray());
     }
 
     bool Interrupted() => _failed.Count > 0 || _abandoned.Count > 0;
 
     void Fail(ConstraintName name, EventSequenceNumber? position, Exception error)
     {
-        _failed.Add(name);
-        if (_error is null)
-        {
-            _failingPosition = position;
-            _error = error;
-        }
+        _failed.TryAdd(name, new(position, error));
         logger.FailedReplayRead(name, position, error);
     }
 

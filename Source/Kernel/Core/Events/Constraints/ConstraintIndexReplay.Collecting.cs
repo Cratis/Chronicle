@@ -60,7 +60,6 @@ public partial class ConstraintIndexReplay
             if (current?.SequenceNumber != state.Closure?.SequenceNumber)
             {
                 var final = state.Closure;
-                if (final is not null && current?.SequenceNumber == final.SequenceNumber) final = final with { ClosedAt = current.ClosedAt };
                 Func<CancellationToken, Task> claim = final is { } closure
                     ? token => closed.Close(closure, token)
                     : token => closed.Reopen(key.Name.Value, key.Scope, token);

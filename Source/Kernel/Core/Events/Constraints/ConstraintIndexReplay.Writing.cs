@@ -57,7 +57,7 @@ public partial class ConstraintIndexReplay
         }
     }
 
-    bool CanWrite(ConstraintIndexReplayDifference difference) => !_failed.Contains(difference.Name) && !_abandoned.Contains(difference.Name);
+    bool CanWrite(ConstraintIndexReplayDifference difference) => !_failed.ContainsKey(difference.Name) && !_abandoned.Contains(difference.Name);
 
     bool MustRetry(ConstraintIndexReplayDifference difference, ConstraintIndexUpdateOutcome outcome) =>
         outcome == ConstraintIndexUpdateOutcome.Settled && !_retryPass && (_segment < _segments || _differences.Exists(holder => ChangesHolder(holder, difference)));
@@ -91,11 +91,11 @@ public partial class ConstraintIndexReplay
                 return false;
             case ConstraintIndexUpdateOutcome.Abandoned:
                 _abandoned.Add(difference.Name);
-                _error ??= error;
-                _failingPosition ??= difference.Position;
+                logger.AbandonedReplayWrite(difference.Name, difference.Position, error!);
                 return false;
             default:
-                Fail(difference.Name, difference.Position, error!);
+                _failed.TryAdd(difference.Name, new(difference.Position, error!));
+                logger.FailedReplayWrite(difference.Name, difference.Position, error!);
                 return false;
         }
     }

@@ -64,12 +64,16 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
     }
 
     /// <inheritdoc/>
-    public IAsyncEnumerable<UniqueConstraintValue> GetForStream(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default) =>
-        new UniqueConstraintValues(
-            _lock,
-            () => _values.Where(entry => entry.Key.ConstraintName == definition.Name.Value && entry.Key.ScopeKey == scopeKey && entry.Value.EventSourceId == eventSourceId.Value)
-                .Select(entry => new UniqueConstraintValue(entry.Key.Value)).GetEnumerator(),
-            cancellationToken);
+    public IAsyncEnumerable<UniqueConstraintValue> GetForStream(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
+        {
+            var values = _values.Where(entry => entry.Key.ConstraintName == definition.Name.Value && entry.Key.ScopeKey == scopeKey && entry.Value.EventSourceId == eventSourceId.Value)
+                .Select(entry => new UniqueConstraintValue(entry.Key.Value)).ToArray();
+            return new UniqueConstraintValues(values, cancellationToken);
+        }
+    }
 
     /// <summary>
     /// Saves a claim using the definition's retention mode.

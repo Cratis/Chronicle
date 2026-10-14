@@ -24,6 +24,6 @@ public class and_the_cursor_read_fails : given.a_replay
 
     [Fact] void should_report_in_the_result_instead_of_throwing() => _error.ShouldBeNull();
     [Fact] void should_return_a_pending_result() => _result.IsCompleted.ShouldBeFalse();
-    [Fact] void should_fail_all_folded_scopes() => _result.Failed.Select(name => name.Value).ShouldContainOnly("unique", "closing");
-    [Fact] void should_not_invent_a_poison_event_position() => _result.FailingPosition.ShouldBeNull();
+    [Fact] void should_fail_all_folded_scopes() => _result.Failed.Keys.Select(name => name.Value).ShouldContainOnly("unique", "closing");
+    [Fact] void should_not_invent_a_poison_event_position() => _result.Failed.Values.ShouldEachConformTo(failure => failure.Position == null);
 }

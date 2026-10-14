@@ -6,17 +6,16 @@ using Cratis.Chronicle.Concepts.Events.Constraints;
 namespace Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 
 /// <summary>
-/// Reads values under the index lock one move at a time, without holding a monitor across an await.
+/// Streams a snapshot of held values without observing concurrent index mutations.
 /// </summary>
-/// <param name="sync">The index lock.</param>
-/// <param name="values">The deferred source query.</param>
+/// <param name="values">The values copied under the index lock.</param>
 /// <param name="readToken">The read deadline.</param>
-internal sealed class UniqueConstraintValues(object sync, Func<IEnumerator<UniqueConstraintValue>> values, CancellationToken readToken) : IAsyncEnumerable<UniqueConstraintValue>
+internal sealed class UniqueConstraintValues(UniqueConstraintValue[] values, CancellationToken readToken) : IAsyncEnumerable<UniqueConstraintValue>
 {
     /// <inheritdoc/>
-    public IAsyncEnumerator<UniqueConstraintValue> GetAsyncEnumerator(CancellationToken cancellationToken = default) => new Cursor(sync, values(), readToken, cancellationToken);
+    public IAsyncEnumerator<UniqueConstraintValue> GetAsyncEnumerator(CancellationToken cancellationToken = default) => new Cursor(((IEnumerable<UniqueConstraintValue>)values).GetEnumerator(), readToken, cancellationToken);
 
-    sealed class Cursor(object sync, IEnumerator<UniqueConstraintValue> values, CancellationToken readToken, CancellationToken consumerToken) : IAsyncEnumerator<UniqueConstraintValue>
+    sealed class Cursor(IEnumerator<UniqueConstraintValue> values, CancellationToken readToken, CancellationToken consumerToken) : IAsyncEnumerator<UniqueConstraintValue>
     {
         /// <inheritdoc/>
         public UniqueConstraintValue Current => values.Current;
@@ -26,19 +25,13 @@ internal sealed class UniqueConstraintValues(object sync, Func<IEnumerator<Uniqu
         {
             readToken.ThrowIfCancellationRequested();
             consumerToken.ThrowIfCancellationRequested();
-            lock (sync)
-            {
-                return ValueTask.FromResult(values.MoveNext());
-            }
+            return ValueTask.FromResult(values.MoveNext());
         }
 
         /// <inheritdoc/>
         public ValueTask DisposeAsync()
         {
-            lock (sync)
-            {
-                values.Dispose();
-            }
+            values.Dispose();
             return ValueTask.CompletedTask;
         }
     }

@@ -78,6 +78,14 @@ public class ClosedStreamsConstraintStorage(IEventStoreNamespaceDatabase eventSt
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<ClosedStream>> GetForEvent(ClosedStreamOwner owner, EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default)
+    {
+        using var cursor = await _collection.FindAsync(ForOwner(owner) & Builders<ClosedStreamDocument>.Filter.Eq(row => row.SequenceNumber, sequenceNumber.Value), cancellationToken: cancellationToken);
+
+        return (await cursor.ToListAsync(cancellationToken)).Select(ToClosure).ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner, CancellationToken cancellationToken = default)
     {
         using var cursor = await _collection.FindAsync(ForOwner(owner), cancellationToken: cancellationToken);

@@ -24,7 +24,7 @@ public enum ConstraintIndexUpdateOutcome
     SettledWithError = 2,
 
     /// <summary>
-    /// The attempt failed or was abandoned before confirmation.
+    /// The attempt failed.
     /// </summary>
     Failed = 3,
 

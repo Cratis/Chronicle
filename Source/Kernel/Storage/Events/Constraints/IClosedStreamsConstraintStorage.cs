@@ -52,6 +52,15 @@ public interface IClosedStreamsConstraintStorage
     Task<ClosedStream?> GetFor(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Reads an owner's closures decided by one event without loading its other closures.
+    /// </summary>
+    /// <param name="owner">The owner.</param>
+    /// <param name="sequenceNumber">The deciding event's sequence number.</param>
+    /// <param name="cancellationToken">Cancellation of the read.</param>
+    /// <returns>The closures decided by the event.</returns>
+    Task<IEnumerable<ClosedStream>> GetForEvent(ClosedStreamOwner owner, EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get closures belonging to an owner.
     /// </summary>
     /// <param name="owner">The owner.</param>

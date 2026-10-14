@@ -20,4 +20,7 @@ internal static partial class ConstraintIndexReplayLogging
 
     [LoggerMessage(LogLevel.Error, "Constraint {Constraint} could not repair event {Position}; the constraint remains pending")]
     internal static partial void FailedReplayWrite(this ILogger<ConstraintIndexReplay> logger, ConstraintName constraint, EventSequenceNumber position, Exception error);
+
+    [LoggerMessage(LogLevel.Error, "Constraint {Constraint} abandoned an unconfirmed repair of event {Position}; the constraint remains pending")]
+    internal static partial void AbandonedReplayWrite(this ILogger<ConstraintIndexReplay> logger, ConstraintName constraint, EventSequenceNumber position, Exception error);
 }

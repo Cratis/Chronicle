@@ -21,7 +21,7 @@ public class and_the_schema_read_fails : given.a_replay
     async Task Because() => _error = await Catch.Exception(async () => _result = await _replay.Continue());
 
     [Fact] void should_report_in_the_result_instead_of_throwing() => _error.ShouldBeNull();
-    [Fact] void should_report_the_failed_scopes() => _result.Failed.Select(name => name.Value).ShouldContainOnly("unique", "closing");
-    [Fact] void should_identify_the_failing_event() => _result.FailingPosition!.Value.ShouldEqual(7UL);
-    [Fact] void should_preserve_the_error_type() => _result.Error.ShouldBeOfExactType<IOException>();
+    [Fact] void should_report_the_failed_scopes() => _result.Failed.Keys.Select(name => name.Value).ShouldContainOnly("unique", "closing");
+    [Fact] void should_identify_the_failing_event() => _result.Failed.Values.ShouldEachConformTo(failure => failure.Position == (EventSequenceNumber)7);
+    [Fact] void should_preserve_the_error_type() => _result.Failed.Values.ShouldEachConformTo(failure => failure.Error.GetType() == typeof(IOException));
 }

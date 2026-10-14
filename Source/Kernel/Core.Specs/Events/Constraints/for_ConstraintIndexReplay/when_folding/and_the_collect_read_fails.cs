@@ -22,6 +22,6 @@ public class and_the_collect_read_fails : given.a_replay
 
     [Fact] void should_report_in_the_result_instead_of_throwing() => _error.ShouldBeNull();
     [Fact] void should_return_a_pending_result() => _result.IsCompleted.ShouldBeFalse();
-    [Fact] void should_fail_only_the_affected_constraint() => _result.Failed.Select(name => name.Value).ShouldContainOnly("unique");
-    [Fact] void should_identify_the_deciding_event() => _result.FailingPosition!.Value.ShouldEqual(5UL);
+    [Fact] void should_fail_only_the_affected_constraint() => _result.Failed.Keys.Select(name => name.Value).ShouldContainOnly("unique");
+    [Fact] void should_identify_the_deciding_event() => _result.Failed[_definition.Name].Position!.Value.ShouldEqual(5UL);
 }
