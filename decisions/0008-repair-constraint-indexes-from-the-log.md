@@ -109,7 +109,7 @@ Unique-constraint claims and closed-stream closures are written after the event 
 - **Response timeout.** A grain call times out after 30 seconds by default (`Core/Configuration/Clustering.cs:86`).
 - **Packaging.** Kernel projects are not packaged, except `Contracts` (`Source/Kernel/Directory.Build.props:9-10`). Wire contracts are generated from Core Arc artifacts (`Core/Core.csproj:47-53`), for example `ReplayObserver` (`Core/Observation/ReplayObserver.cs:18-32`).
 
-This crosses every provider and changes what an append reports after its commit. It adds two refusals and two persisted fields, so it needs a durable decision.
+This crosses every provider and changes what an append reports after its commit. It adds two refusals and three persisted fields, so it needs a durable decision.
 
 ## Decision
 
@@ -125,6 +125,7 @@ While a constraint's range is not fully repaired, appends that constraint valida
 
   It is the ruled "highest sequence number whose updates all succeeded", plus one. It is stored the same way as `EventSequenceState.SequenceNumber` (`EventSequenceState.cs:13-16`), so an empty sequence is `First` and needs no sentinel. `null` means it was never recorded (item 8).
 - **Catch-up boundary.** `EventSequenceState.ConstraintIndexCatchUpBelow` (`EventSequenceNumber?`) is set while a background catch-up of the unique-constraint history below it is pending (items 7 and 8). Otherwise it is `null`.
+- **Catch-up refusal marker.** `EventSequenceState.ConstraintIndexCatchUpRefusing` (a list of constraint names, `null` when empty) names the constraints whose catch-up write is in progress (item 8). It is set before the first write of a catch-up write turn and cleared when the writes it covers are done. While it holds a name, that constraint's governed appends are refused with `ConstraintIndexUnavailable`, and the refusal survives a restart.
 - **Pending constraints.** In memory, the grain keeps for each index-keeping constraint the first event whose update for that constraint is not yet applied. A constraint with such an event is **pending**.
   - The in-memory watermark is the lowest pending event, or the next sequence number when nothing is pending.
   - It advances only contiguously.
@@ -134,7 +135,7 @@ While a constraint's range is not fully repaired, appends that constraint valida
   - a keyed `AlreadyAppended` hit, if 0007 lands.
 
   Events another activation wrote are therefore always folded, never skipped.
-- **Persistence.** The watermark and the boundary are persisted inside the state snapshot. The snapshot is also written after every completed repair, and when a catch-up starts or ends. In `CompleteDurableAppend` the order becomes:
+- **Persistence.** The watermark, the boundary and the refusal marker are persisted inside the state snapshot. The snapshot is also written after every completed repair, when a catch-up starts or ends, and when the marker is set or cleared (item 8). In `CompleteDurableAppend` the order becomes:
   1. enqueue;
   2. constraint updates;
   3. snapshot.
@@ -148,9 +149,9 @@ While a constraint's range is not fully repaired, appends that constraint valida
 
   The last two are residuals that only a reindex clears (item 10).
 - **Providers.**
-  - **MongoDB.** `constraintIndexWatermark` and `constraintIndexCatchUpBelow` fields on the existing state document. `SaveState` adds them to its `$set`, and `GetState` maps a missing field to `null`.
-  - **SQL.** Nullable `ConstraintIndexWatermark` and `ConstraintIndexCatchUpBelow` columns on `EventSequences`, added by a namespace migration `NS-EventSequences-v<release>`. The columns are `decimal(20,0)`, or `TEXT` on SQLite, following `ClosedStreams/Migrations/v19_38_0.cs:33-40`. The add-column precedent is `Observers/Migrations/v19_15_0.cs:17-20`.
-  - **InMemory.** The values are kept in `EventSequenceStorage` under its lock, and `SaveState` stops being a no-op for them. Their lifetime is that of the cached constraint storages.
+  - **MongoDB.** `constraintIndexWatermark`, `constraintIndexCatchUpBelow` and `constraintIndexCatchUpRefusing` (an array of constraint names) fields on the existing state document. `SaveState` adds them to its `$set`, and `GetState` maps a missing field to `null`.
+  - **SQL.** Nullable `ConstraintIndexWatermark`, `ConstraintIndexCatchUpBelow` and `ConstraintIndexCatchUpRefusing` columns on `EventSequences`, added by a namespace migration `NS-EventSequences-v<release>`. The first two are `decimal(20,0)`, or `TEXT` on SQLite, following `ClosedStreams/Migrations/v19_38_0.cs:33-40`. The third is a text column holding the constraint names as a JSON array. The add-column precedent is `Observers/Migrations/v19_15_0.cs:17-20`.
+  - **InMemory.** The three values are kept in `EventSequenceStorage` under its lock, and `SaveState` stops being a no-op for them. Their lifetime is that of the cached constraint storages.
 - **Why grain state and not constraint storage.**
   - The watermark covers two stores (claims and closures). Claims are spread over per-constraint collections and tables, and on SQL they sit in their own DbContext. No single constraint store could hold the watermark atomically with what it covers, and writing it afterwards is sufficient.
   - The state document or row already exists in every provider and is already read on activation (`EventSequencesStorageProvider.cs:40`).
@@ -167,7 +168,7 @@ While a constraint's range is not fully repaired, appends that constraint valida
 | Failed | any other exception, or an attempt that ran past its timeout | yes | pending |
 
 - **Per attempt.** Each storage attempt is cancelled after 1 second. An attempt that ignores cancellation is abandoned at that point and counts as Failed.
-- **Retry.** The first failure of a constraint within a turn is retried up to twice, after 100 ms and 400 ms pauses, while the turn's budget allows. Retrying an updater is idempotent. Later events for that constraint in the same turn are not attempted.
+- **Retry.** The first failure of a constraint within a turn is retried up to twice, after 100 ms and 400 ms pauses, while the turn's budget allows. Retrying an updater is idempotent. Catch-up group writes (item 8) are the exception: they are attempted once. Later events for that constraint in the same turn are not attempted.
 - **Turn budget.** All post-commit constraint work in one turn is capped at 2 seconds. When the cap is reached, the remaining updates are not attempted, and their constraints become pending from the first update not attempted.
 - **After the last attempt:**
   - the append is still reported as successful;
@@ -280,14 +281,14 @@ Historical closing events are therefore never applied. There is one residual: a 
 | Post-commit constraint work in one append turn | 2 s in total, including retries (item 2) |
 | Steady-state repair before validation in one append turn | 5 s, run at most once per 5 s per sequence, measured from the end of the previous run, whatever its outcome, and only when the backoff (below) allows |
 | Read-back after a storage exception (item 9) | 2 s |
-| One timer turn, repair or catch-up | 2 s, and at most 1,000 constraint-relevant events for a catch-up. A catch-up write turn may run past that to finish the one write group it started, which is at most 2 writes, so it ends within 4 s (item 8) |
+| One timer turn, repair or catch-up | 2 s, and at most 1,000 constraint-relevant events for a catch-up. A catch-up write turn may run past that to finish the one write group it started, which is at most 2 writes, each attempted once without the item 2 retries, so it ends within 4 s (item 8) |
 
 - **Rate of append-turn repairs.** An append turn runs the repair before validation at most once per 5 seconds per sequence, whether that run finishes, runs out of budget or fails. Between those runs, governed appends are refused at once without any store work, and only the timer advances the fold.
-- **Arithmetic.** Ahead of any append there is at most one append-turn repair (5 s), because of that rate, and at most one timer turn (4 s), because the timer's period starts when its previous turn ends. The append then pays its own post-commit work (2 s) and a read-back (2 s). That is 13 s in total, which leaves 17 s of the 30-second default response timeout (`Clustering.cs:86`) for validation reads, compliance and the commit itself.
+- **Arithmetic.** Ahead of any append there is at most one timer turn (4 s), because the timer's period starts when its previous turn ends, and one append turn that ran the repair (5 s repair, 2 s post-commit, 2 s read-back). The append then pays its own 2 s and 2 s. That is 17 s, which leaves 13 s of the 30-second default response timeout (`Clustering.cs:86`) for the validation reads, compliance and commits of those two appends.
 - **Queued appends.** Appends queued behind each other otherwise pay only their own turns, as today. None of them pays the repair or retry cost again:
   - a pending constraint's governed appends are refused without a store call;
   - its deferred updates are not attempted live.
-- **A smaller timeout.** An operator who lowers the response timeout below about 17 s loses this margin (open question).
+- **A smaller timeout.** An operator who lowers the response timeout below about 21 s loses this margin (open question).
 
 **How long governed appends are refused.** A pending range of N constraint-relevant events whose fold needs S segments stays pending for about S times the time it takes to read N events, plus the time to write the differences, because every segment rereads the range.
 
@@ -362,7 +363,7 @@ The job tells the grain before it removes protection, and again on every termina
 
 - **Before clearing.** Before its first `ClearValues`, and before the closing reindexer's commit, `ReindexConstraintsStep` calls `IEventSequence.ConstraintIndexRebuildStarting(constraintNames)`. The grain:
   - marks the named constraints as rebuilding, so neither a fold nor the catch-up writes them while the job runs. Their live updates continue, as today;
-  - for named unique constraints, persists a catch-up boundary at the next sequence number unless a lower one is already set. If the job is lost, a later activation catches the cleared scopes up (item 8) instead of trusting a watermark that leads the index.
+  - for named unique constraints, persists a catch-up boundary (never a refusal marker) at the next sequence number unless a lower one is already set. If the job is lost, a later activation catches the cleared scopes up (item 8) instead of trusting a watermark that leads the index.
 - **On resume.** The rebuilding mark is kept in memory only. A job step resumed after a restart can already be past its clears while a new activation's fold or catch-up writes the same constraint. The step therefore calls `ConstraintIndexRebuildStarting` again when it resumes, before it does any further write.
 - **On every terminal outcome** (success, failure, cancellation), the step calls `IEventSequence.ConstraintIndexRebuilt(constraintNames, processedThrough)`. `processedThrough` is the last sequence number it processed, or `First - 1` if it processed none. Failure paths include `ReindexConstraintsStep.cs:181-200`. The step retries the call before it completes.
   - **If the job processed events,** the grain makes the named constraints pending from `processedThrough + 1` and repairs in that turn (items 3 and 4). The job's unique writes are in log order, so every key the job reached reflects the log through `processedThrough`. A scope the job had not reached was not cleared. The fold restores the rest, including claims and closures a live append wrote and the job then overwrote. That is the race in `ConstraintIndexes.cs:111-113` and `ClosesStreamConstraintReindexer.cs:21-22`.
@@ -401,19 +402,22 @@ The job tells the grain before it removes protection, and again on every termina
   - **Order of groups.** Groups are written in an order where a source's own release comes before its new claim. In per-event-source mode, a `Save` that replaces the source's old value would otherwise free that value early.
   - **Groups of one.** A release that no claim takes, or a claim of a value nobody holds, forms a group of one.
   - **No group is split.** A turn starts groups only within its first 2 seconds and finishes the group it started. A group holds at most 2 writes, so a write turn ends within 4 seconds (item 4).
+  - **A failed group.** If a write in a started group fails, or is abandoned, after its release was written, the constraint's governed appends are refused with `ConstraintIndexUnavailable` until that group's claim is written. Catch-up group writes are attempted once, without the item 2 retries, so a write turn ends within 4 s; a failed write is retried in a later turn under refusal.
+  - **The marker.** Appends are serialized, so none sees a turn's writes half done. The turns can end, or the silo can stop, between a group's release and its claim. A write turn therefore sets `ConstraintIndexCatchUpRefusing` for the constraints it writes, persisted before its first write. It clears the marker once every group the turn started has its claim written. A failed group leaves the marker set, and so do the three cases below, until their last write.
+  - **On activation,** every constraint named by the marker is refused for its governed appends until the catch-up's writes for it complete. The activation reads the marker with the rest of the state, so a restart during a write under refusal cannot admit appends while a released value is still free. The catch-up then refolds from `First` and writes the missing claims. A marker with no catch-up boundary is stale and is cleared.
 - **Writing under refusal.** Three cases cannot be written as pairs in one turn:
   - a group of more than 2 writes, such as a value with two holders from past damage;
   - sources that swap values with each other, which no order of groups can serve;
   - the many-differences case of item 3.
 
-  These are written in the two phases of item 3, and the constraint's governed appends are refused with `ConstraintIndexUnavailable` from the first write until the last write and the last retried claim.
+  These are written in the two phases of item 3, and the constraint's governed appends are refused with `ConstraintIndexUnavailable` from the first write until the last write and the last retried claim, and the marker names the constraint for that whole span.
 - **Raising the boundary.** The excluded set holds at most 100,000 hashes of keys or sources (32 bytes each). When it reaches the cap, the grain raises the boundary to the next sequence number, persists it and empties the set.
   - **Writes are suspended** until the fold reaches the new boundary for every segment whose differences are not yet written. The current segment's fold continues to the new boundary. Segments already collected but not written are folded again to it, because their differences were taken at the old boundary and keys touched in `[old, new)` are no longer excluded.
   - **Keys already written** need no refold, because every later event for them was applied live.
   - **Why it is safe.** Once writes resume, keys touched before the new boundary are folded to it, and keys touched after it are excluded again.
 - **Steady state continues.** Events at or after the boundary follow items 2 to 4 throughout, including refusal while a unique constraint is pending.
 - **Restart.** A restart rereads the boundary, rebuilds the excluded set and starts the fold again from `First`. Keys already written show no difference, so a restart costs reads only.
-- **Concurrency.** At most 4 sequences per silo catch up at a time, through a silo-wide limit. A timer turn that cannot take a slot skips.
+- **Concurrency.** At most 4 sequences per silo catch up at a time, through a silo-wide limit. A timer turn that cannot take a slot skips. A sequence holds its slot from the start of a write under refusal until its last write; only folding turns compete for a slot.
 - **Memory.** Per sequence, the staged map with the collected differences and the excluded set stay within about 30 MB. Per silo, catch-ups stay within about 120 MB.
 - **Completion.** When every difference is written, the boundary is cleared and persisted.
 
@@ -422,8 +426,8 @@ The job tells the grain before it removes protection, and again on every termina
 - Appends are admitted and validated against the index as it stands.
 - For a key that no event at or after the boundary touches, that is its pre-upgrade entry until the catch-up writes it. The entry can be missing or stale, which is today's exposure.
 - The catch-up only ever moves such a key from its pre-upgrade entry to its final state in the log. It never writes a key that a later event touches, so no key regresses, and nothing the live path wrote is overwritten.
-- An admitted append never finds a value free between its release and the claim that takes it. Both are written in one turn, or the constraint's governed appends are refused while they are written.
-- When a turn's budget expires before the boundary, the read position, the staged map and the collected differences stay in memory, and nothing is written until every segment is collected. Stopping at any point therefore exposes nothing beyond what was exposed before the catch-up started.
+- An admitted append never finds a value free between its release and the claim that takes it. Both are written in one turn. If a write fails, is abandoned or is cut off by a restart after the release, the constraint's governed appends are refused, from the persisted marker, until the claim is written.
+- When a turn's budget expires before the boundary, the read position, the staged map and the collected differences stay in memory, and nothing is written until every segment is collected. Stopping before a write turn's first write therefore exposes nothing beyond what was exposed before the catch-up started. Stopping after it leaves the marker set, so the governed appends stay refused until the catch-up's writes complete.
 
 **Deviation from the ruled direction.** The ruling says replays happen "before taking new appends". This applies only to this catch-up, for two reasons:
 
@@ -489,7 +493,7 @@ An empty read-back after an unknown commit is not proof of absence, because a la
 
 - **In the patch (no contract).** The procedure has three steps:
   1. stop the kernel on every silo;
-  2. clear the watermark and the catch-up boundary (unset the fields in MongoDB, set the columns to `NULL` in SQL);
+  2. clear the watermark, the catch-up boundary and the catch-up refusal marker (unset the fields in MongoDB, set the columns to `NULL` in SQL);
   3. start the kernel.
 
   Stopping first matters, because an active grain would write its in-memory state over the cleared value (item 1). The sequence then catches up its unique constraints as in item 8. This does not rebuild closures, does not remove phantom claims, and does not clear the residuals of items 1 to 3.
@@ -501,7 +505,7 @@ An empty read-back after an unknown commit is not proof of absence, because a la
 ### 11. Release
 
 - **PRs 1-5 ship as a patch.**
-  - The watermark, the boundary, the `IUpdateConstraintIndex` signature, `IUniqueConstraintsStorage.GetFor` and the two grain methods all live in kernel projects, which are not packaged (`Directory.Build.props:9-10`).
+  - The watermark, the boundary, the refusal marker (kernel-internal storage that no client reads), the `IUpdateConstraintIndex` signature, `IUniqueConstraintsStorage.GetFor` and the two grain methods all live in kernel projects, which are not packaged (`Directory.Build.props:9-10`).
   - No Core artifact is added, so no wire contract changes (`Core.csproj:47-53`).
   - The two new well-known errors travel in the existing string `Errors` field. The .NET client already models append errors as strings (`Clients/DotNET/EventSequences/AppendError.cs:10`).
   - SQL namespace migrations have shipped in patches before (`Projections/Migrations/v19_37_8.cs`), as did 0005's schema change.
@@ -556,15 +560,15 @@ Publication retries keep applying stale mutations. A failed reindex keeps leavin
 
 Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 in the next minor. Each new-behavior spec is red before its change.
 
-1. **Persist the watermark and the boundary in every provider (patch).**
+1. **Persist the watermark, the boundary and the refusal marker in every provider (patch).**
    - Changes:
-     - add `EventSequenceState.ConstraintIndexWatermark` and `ConstraintIndexCatchUpBelow`;
+     - add `EventSequenceState.ConstraintIndexWatermark`, `ConstraintIndexCatchUpBelow` and `ConstraintIndexCatchUpRefusing`;
      - MongoDB fields;
      - SQL columns and migration;
      - real InMemory persistence;
      - `EventSequencesStorageProvider` carries the values through unchanged.
    - Specs:
-     - Storage.InMemory.Specs, Storage.MongoDB.Specs and Storage.Sql.Specs (SQLite and PostgreSQL fixtures), under `for_EventSequenceStorage/`: `when_saving_state/and_a_constraint_index_watermark_is_set` and `and_a_catch_up_boundary_is_set` (both round-trip), and `when_getting_state/and_the_state_predates_the_watermark` (`null`, not `First`);
+     - Storage.InMemory.Specs, Storage.MongoDB.Specs and Storage.Sql.Specs (SQLite and PostgreSQL fixtures), under `for_EventSequenceStorage/`: `when_saving_state/and_a_constraint_index_watermark_is_set` and `and_a_catch_up_boundary_is_set` and `and_a_catch_up_refusal_is_set` (all round-trip), and `when_getting_state/and_the_state_predates_the_watermark` (`null`, not `First`);
      - Storage.MongoDB.Specs `when_getting_state/and_the_document_carries_an_unknown_field` (the registered conventions ignore it, which is what an older kernel meets after a downgrade);
      - Storage.Sql.Specs `for_NamespaceDbContext/when_migrating/and_the_event_sequences_table_has_rows` (the columns are added as nullable, and rows keep `NULL`);
      - Core.Specs `for_EventSequencesStorageProvider/when_reading_state/and_a_watermark_is_persisted`.
@@ -632,6 +636,8 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
        - **`and_a_per_value_source_is_fully_released_after_the_boundary`** (the whole source is excluded, and none of its released values is written back);
        - **`and_a_value_moved_between_sources_before_the_boundary`** (the release and the claim are written in one turn, so an append between turns never finds the value free);
        - `and_two_sources_swapped_values_before_the_boundary` (written under refusal; governed appends are refused until the last write);
+       - **`and_a_group_claim_fails_after_its_release`** (governed appends are refused until the claim is written);
+       - **`and_the_silo_restarted_during_a_write_under_refusal`** (governed appends are still refused after activation, until the catch-up's writes complete);
        - `and_the_excluded_set_is_still_being_rebuilt` (no catch-up write happens until it completes);
        - `and_the_catch_up_was_interrupted` (the fold restarts, and keys already written are not written again);
        - `and_the_excluded_set_reaches_the_cap` (the boundary is raised and persisted, and no unwritten difference is written before its segment is folded to the new boundary);
@@ -742,7 +748,7 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
   - A store with no watermark catches up its unique constraints in the background, restarts after an interruption, and persists its watermark.
   - It writes no closure for history.
   - It never overwrites a key that an event after the boundary touched, and it writes back no value of a per-value source fully released after the boundary.
-  - An append admitted during the catch-up never finds a value free between its release and the claim that takes it.
+  - An append admitted during the catch-up never finds a value free between its release and the claim that takes it. If a group's write fails or the silo restarts after the release, the constraint's governed appends are refused until the claim is written.
   - After the boundary is raised, no difference taken at the old boundary is written.
 - **Unrepairable index.** While the index cannot be repaired:
   - an error and the metrics are emitted;
@@ -758,12 +764,12 @@ Six pull requests, in order. PRs 1-5 ship together in the next patch, and PR 6 i
   - closing closures lost before the upgrade stay lost until repaired by hand or by a reindex that names the constraint.
 - **New refusals.** A constraint store that rejects writes now refuses governed appends instead of silently accepting them. On a sequence with closures in use, that means every append, for at most the poison threshold if a single event is at fault.
 - **How long refusals last.** Once the store works again, a large pending range keeps governed appends refused for about the number of segments times the time to read the range once, plus the writes, and about half again without governed traffic (item 4). A range that fits one segment and reads in 20 seconds means about 30 seconds of refusal. After a long outage followed by a crash, the range and with it the refusal can be much longer.
-- **Refusal during the catch-up.** Value swaps, values with two holders from past damage, and more than 50,000 differing keys are written under refusal, so the constraint's governed appends are refused while they are written (item 8).
+- **Refusal during the catch-up.** Value swaps, values with two holders from past damage, and more than 50,000 differing keys are written under refusal, so the constraint's governed appends are refused while they are written (item 8). A failed write in a catch-up group, or a restart in the middle of one, keeps them refused until the claim is written, and after a restart until the catch-up's writes complete.
 - **Closing coverage start in memory.** A closing definition registered while the grain is inactive can still be applied to a lagging range's earlier events on activation after a crash (item 3). A closure written that way is permanent, because a scope closed by an event cannot be reopened by hand (`EventSequence.cs:561-564`). Persisting the coverage start with the definition would close this, and is not done here.
 - **Residuals.** Writes from duplicate activations and late abandoned attempts can still leave a stale entry that only a reindex clears.
 - **Wire, schema and kernel types.**
   - Two new well-known append errors, each with a client contract.
-  - Two nullable SQL columns and two MongoDB fields. Downgrades read past them, which the PR 1 specs prove.
+  - Three nullable SQL columns and three MongoDB fields. Downgrades read past them, which the PR 1 specs prove.
   - `InvalidAppendAcknowledgment` is removed from the kernel. `IUpdateConstraintIndex.Update` takes a cancellation token, and `IUniqueConstraintsStorage` gains `GetFor`.
 - **`DuplicateUniqueConstraintValue`** stays diagnostic and counts as settled for the watermark.
 - **Reindex.** A reindex no longer loses live claims or closures to the race, and a failed reindex no longer leaves cleared scopes behind. Its scope-clear window remains while it runs.
