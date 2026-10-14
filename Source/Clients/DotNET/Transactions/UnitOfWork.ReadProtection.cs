@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Transactions;
@@ -128,12 +129,21 @@ public partial class UnitOfWork
     {
         ValidateReadProtectionTarget(contribution);
         if (contribution.Scope.EventSourceId is null) throw new SourceLessReadNotSupported(contribution.Description);
-        if (_stagedEvents.SelectMany(_ => _.GetEvents()).Any(@event => ReadProtectionPredicate.Matches(contribution.Scope, @event, eventStore.EventTypes.GetEventTypeFor(@event.Event.GetType()))))
+        if (_stagedEvents.SelectMany(_ => _.GetEvents()).Any(@event => OverlapsStagedEvent(contribution.Scope, @event)))
         {
             throw new ReadOfSourceWithStagedEvents(contribution.Label, contribution.Description);
         }
         ValidateDistinctReadProtectionContribution(contribution, _readProtectionContributions);
         _readProtectionContributions.Add(contribution);
+    }
+
+    bool OverlapsStagedEvent(ConcurrencyScope scope, EventForEventSourceId @event)
+    {
+        var routing = @event.EventSource is null
+            ? null
+            : ResolvedEventRouting.Resolve(eventStore.EventSources, @event.EventSource, @event.EventStream, @event.EventSourceType, @event.EventStreamType);
+        var effectiveEvent = ResolvedEventRouting.ResolveMetadata(@event, routing);
+        return ReadProtectionPredicate.Matches(scope, effectiveEvent, eventStore.EventTypes.GetEventTypeFor(@event.Event.GetType()));
     }
 
     void ValidateReadProtectionTarget(ReadProtectionContribution contribution)

@@ -484,6 +484,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task Revise(EventSequenceNumber sequenceNumber, object @event)
     {
+        ReadProtectionGuard.Append(nameof(Revise), "event revision");
         var eventClrType = @event.GetType();
         ThrowIfUnknownEventType(eventTypes, eventClrType);
 
@@ -508,6 +509,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason)
     {
+        ReadProtectionGuard.Append(nameof(Redact), "event redaction");
         var causation = causationManager.GetCurrentChain();
         var identity = identityProvider.GetCurrent();
         await _servicesAccessor.Services.Sequences.Redact(new()
@@ -525,6 +527,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task Redact(EventSourceId eventSourceId, RedactionReason reason, params Type[] clrEventTypes)
     {
+        ReadProtectionGuard.Append(nameof(Redact), "event redaction");
         var eventTypeIds = clrEventTypes.Select(t => eventTypes.GetEventTypeFor(t).Id.Value).ToList();
         var causation = causationManager.GetCurrentChain();
         var identity = identityProvider.GetCurrent();
@@ -1101,12 +1104,7 @@ public class EventSequence(
                 ? null
                 : ResolvedEventRouting.Resolve(eventSources, @event.EventSource, @event.EventStream, @event.EventSourceType, @event.EventStreamType);
             routings.Add(routing);
-            return @event with
-            {
-                EventSourceType = routing?.SourceType ?? ResolveEventSourceType(@event.EventSourceType),
-                EventStreamType = routing?.StreamType ?? ResolveEventStreamType(@event.EventStreamType),
-                EventStreamId = ResolveEventStreamId(@event.EventStreamId)
-            };
+            return ResolvedEventRouting.ResolveMetadata(@event, routing);
         }).ToList();
         var eventsToAppend = new List<Contracts.Sequences.EventForEventSourceId>(eventsList.Count);
         var effectiveNamedTags = eventsList.Select(_ => NamedTagConverters.Merge(_.NamedTags, callNamedTags)).ToArray();

@@ -21,6 +21,7 @@ public class a_trusted_commit : for_EventSequence.given.all_dependencies
     protected EventType _changed;
     protected Contracts.Sequences.AppendManyForEventSourcesRequest _request;
     protected Exception _error;
+    protected bool _onCompletedCalled;
 
     void Establish()
     {
@@ -43,7 +44,7 @@ public class a_trusted_commit : for_EventSequence.given.all_dependencies
         store.Namespace.Returns((EventStoreNamespaceName)"tenant");
         store.EventTypes.Returns(_eventTypes);
         store.GetEventSequence(EventSequenceId.Log).Returns(_sequence);
-        _unit = new(CorrelationId.New(), _ => { }, store);
+        _unit = new(CorrelationId.New(), _ => _onCompletedCalled = true, store);
         _owner = _unit.ClaimDecisionReadCommitOwnership();
     }
 

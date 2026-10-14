@@ -12,5 +12,6 @@ public class without_an_allowance : given.protected_read_surfaces
     [Fact] void should_refuse_every_read_surface() => _errors.Values.ShouldEachConformTo(error => error is ReadRefusedWhileReadsAreProtected);
     [Fact] void should_refuse_before_transport() => _services.ReadModels.ReceivedCalls().ShouldBeEmpty();
     [Fact] void should_refuse_before_materialized_transport() => _services.MaterializedReadModels.ReceivedCalls().ShouldBeEmpty();
-    [Fact] void should_cover_all_read_families() => _errors.Count.ShouldEqual(9);
+    [Fact] void should_refuse_before_projection_transport() => _services.Projections.ReceivedCalls().ShouldBeEmpty();
+    [Fact] void should_cover_all_read_families() => _errors.Count.ShouldEqual(10);
 }

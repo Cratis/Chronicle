@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.EventSources;
 
@@ -31,6 +32,19 @@ internal record ResolvedEventRouting(EventSourceDefinition Definition, EventStre
     /// Gets the <see cref="ConcurrencyDimensions"/> that apply to the append.
     /// </summary>
     public ConcurrencyDimensions Dimensions => Definition.ConcurrencyFor(Stream);
+
+    /// <summary>
+    /// Resolves the effective metadata used by append and staged-read overlap checks.
+    /// </summary>
+    /// <param name="event">The enrolled event.</param>
+    /// <param name="routing">Its definition-backed routing, if any.</param>
+    /// <returns>The event with effective routing dimensions.</returns>
+    internal static EventForEventSourceId ResolveMetadata(EventForEventSourceId @event, ResolvedEventRouting? routing) => @event with
+    {
+        EventSourceType = routing?.SourceType ?? (string.IsNullOrEmpty(@event.EventSourceType?.Value) ? EventSourceType.Default : @event.EventSourceType),
+        EventStreamType = routing?.StreamType ?? (string.IsNullOrEmpty(@event.EventStreamType?.Value) ? EventStreamType.All : @event.EventStreamType),
+        EventStreamId = string.IsNullOrEmpty(@event.EventStreamId?.Value) ? (EventStreamId)EventStreamId.Default : @event.EventStreamId
+    };
 
     /// <summary>
     /// Resolve the routing of an append through an event source.

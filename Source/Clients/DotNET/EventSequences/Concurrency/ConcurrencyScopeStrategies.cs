@@ -13,8 +13,18 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 /// <param name="options">The <see cref="ConcurrencyOptions"/> containing the concurrency configuration.</param>
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/> to resolve the concurrency strategy.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> for explicit append scope diagnostics.</param>
-public class ConcurrencyScopeStrategies(ConcurrencyOptions options, IServiceProvider serviceProvider, ILoggerFactory? loggerFactory = null) : IConcurrencyScopeStrategies
+public class ConcurrencyScopeStrategies(ConcurrencyOptions options, IServiceProvider serviceProvider, ILoggerFactory? loggerFactory) : IConcurrencyScopeStrategies
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConcurrencyScopeStrategies"/> class without append diagnostics.
+    /// </summary>
+    /// <param name="options">The concurrency configuration.</param>
+    /// <param name="serviceProvider">The provider used to resolve strategies.</param>
+    public ConcurrencyScopeStrategies(ConcurrencyOptions options, IServiceProvider serviceProvider)
+        : this(options, serviceProvider, null)
+    {
+    }
+
     /// <inheritdoc/>
     public ConcurrencyOptions Options => options;
 

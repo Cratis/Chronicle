@@ -438,16 +438,16 @@ public partial class UnitOfWork(
             readProtectionCommit = IsEnforcingReadProtection
                 ? new(GetReadProtectionTarget(), Array.AsReadOnly(_readProtectionContributions.ToArray()), CaptureAppendConditions)
                 : null;
+        }
+
+        try
+        {
             if (readProtectionCommit is not null && events.Length == 0)
             {
                 var plan = ReadProtectionMerge.Apply(readProtectionCommit.Target, readProtectionCommit.Contributions, scopes, false);
                 CaptureAppendConditions(plan.Conditions);
                 if (plan.Scopes.Count == 0) eventSequence = null;
             }
-        }
-
-        try
-        {
             if (eventSequence is not null)
             {
                 AppendManyResult result;
