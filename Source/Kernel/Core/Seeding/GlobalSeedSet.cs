@@ -45,7 +45,7 @@ internal static class GlobalSeedSet
     }
 
     /// <summary>
-    /// Uses the maximum identity count across provenance groups, rather than their sum.
+    /// Uses the maximum identity count across provenance groups, retaining stored entry order.
     /// </summary>
     /// <param name="stored">The set containing all provenance groups.</param>
     /// <returns>The effective seed multiset for a namespace.</returns>
@@ -54,8 +54,8 @@ internal static class GlobalSeedSet
         EffectiveGrouping(stored.ByEventSource));
 
     /// <summary>
-    /// Offers full new counts only for identities whose effective count grew, so namespace count-based
-    /// idempotency appends missing occurrences and safely retries partial dispatches.
+    /// Offers the full effective sequence for each event source whose count grew, so namespace count-based
+    /// idempotency appends missing occurrences in order and safely retries partial dispatches.
     /// </summary>
     /// <param name="before">The stored set before registration.</param>
     /// <param name="after">The proposed stored set after registration.</param>
@@ -63,9 +63,9 @@ internal static class GlobalSeedSet
     internal static IEnumerable<SeededEventEntry> GrowingEntries(EventSeeds before, EventSeeds after)
     {
         var previous = Effective(before);
-        return Effective(after).ByEventSource.Values.SelectMany(_ => _)
-            .GroupBy(_ => _, SeededEventEntryIdentity.Comparer)
-            .Where(group => group.Count() > Count(previous, group.Key))
+        return Effective(after).ByEventSource.Values
+            .Where(entries => entries.GroupBy(entry => entry, SeededEventEntryIdentity.Comparer)
+                .Any(group => group.Count() > Count(previous, group.Key)))
             .SelectMany(_ => _);
     }
 
@@ -81,9 +81,28 @@ internal static class GlobalSeedSet
     static Dictionary<TKey, IEnumerable<SeededEventEntry>> EffectiveGrouping<TKey>(IDictionary<TKey, IEnumerable<SeededEventEntry>> stored)
         where TKey : notnull => stored.ToDictionary(
             _ => _.Key,
-            _ => (IEnumerable<SeededEventEntry>)_.Value.GroupBy(entry => entry, SeededEventEntryIdentity.Comparer)
-                .SelectMany(identity => identity.GroupBy(entry => (entry.Origin, entry.Owner)).MaxBy(group => group.Count())!)
-                .ToArray());
+            _ => (IEnumerable<SeededEventEntry>)EffectiveEntries(_.Value));
+
+    static SeededEventEntry[] EffectiveEntries(IEnumerable<SeededEventEntry> stored)
+    {
+        var entries = stored.ToArray();
+        var remaining = entries.GroupBy(entry => entry, SeededEventEntryIdentity.Comparer)
+            .ToDictionary(
+                identity => identity.Key,
+                identity => identity.GroupBy(entry => (entry.Origin, entry.Owner)).Max(group => group.Count()),
+                SeededEventEntryIdentity.Comparer);
+        var effective = new List<SeededEventEntry>();
+        foreach (var entry in entries)
+        {
+            if (remaining[entry] > 0)
+            {
+                effective.Add(entry);
+                remaining[entry]--;
+            }
+        }
+
+        return [.. effective];
+    }
 
     static Dictionary<TKey, IEnumerable<SeededEventEntry>> AddGrouping<TKey>(
         IDictionary<TKey, IEnumerable<SeededEventEntry>> current,
@@ -96,13 +115,30 @@ internal static class GlobalSeedSet
         {
             var previous = updated.GetValueOrDefault(group.Key, []);
             var owned = previous.Where(entry => entry.Origin == SeedOrigin.Added && entry.Owner == owner)
-                .ToLookup(entry => entry, SeededEventEntryIdentity.Comparer);
-            var additions = group.GroupBy(entry => entry, SeededEventEntryIdentity.Comparer)
-                .SelectMany(identity => identity.Skip(owned[identity.Key].Count()));
-            updated[group.Key] = [.. previous, .. additions];
+                .GroupBy(entry => entry, SeededEventEntryIdentity.Comparer)
+                .ToDictionary(identity => identity.Key, identity => identity.Count(), SeededEventEntryIdentity.Comparer);
+            updated[group.Key] = [.. previous, .. MissingAdditions(group, owned)];
         }
 
         return updated;
+    }
+
+    static IEnumerable<SeededEventEntry> MissingAdditions(
+        IEnumerable<SeededEventEntry> offered,
+        Dictionary<SeededEventEntry, int> owned)
+    {
+        foreach (var entry in offered)
+        {
+            var remaining = owned.GetValueOrDefault(entry);
+            if (remaining > 0)
+            {
+                owned[entry] = remaining - 1;
+            }
+            else
+            {
+                yield return entry;
+            }
+        }
     }
 
     static Dictionary<TKey, IEnumerable<SeededEventEntry>> ReplaceGrouping<TKey>(

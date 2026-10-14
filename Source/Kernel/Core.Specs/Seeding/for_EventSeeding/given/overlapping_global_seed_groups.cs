@@ -16,6 +16,7 @@ public class overlapping_global_seed_groups : a_global_event_seeding_grain
 {
     protected EventSeeds _stored;
     protected IEventSequence _existingEvents;
+    protected IEventSequence _futureEvents;
     protected int _futureCount;
 
     void Establish()
@@ -31,18 +32,26 @@ public class overlapping_global_seed_groups : a_global_event_seeding_grain
 
     protected async Task ApplyToFutureNamespace()
     {
-        var futureEvents = CreateNamespace("future");
+        _futureEvents = CreateNamespace("future");
         var global = Substitute.For<IResultAwareEventSeeding>();
         global.GetSeededEvents().Returns(_ => _grain.GetSeededEvents());
         _grainFactory.GetGrain<IResultAwareEventSeeding>(EventSeedingKey.ForGlobal("TestEventStore").ToString()).Returns(global);
         var reactor = new NamespacesReactor(_grainFactory, Substitute.For<IPatternCapture>(), NullLogger<NamespacesReactor>.Instance);
         await reactor.Added(new NamespaceAdded("TestEventStore", "future"), null!);
-        _futureCount = AppendedCount(futureEvents);
+        _futureCount = AppendedCount(_futureEvents);
     }
 
     protected static int AppendedCount(IEventSequence events) => events.ReceivedCalls()
         .Where(call => call.GetMethodInfo().Name == nameof(IEventSequence.AppendMany))
         .Sum(call => ((IEnumerable<EventToAppend>)call.GetArguments()[0]!).Count());
+
+    protected static SeedingEntry StatusChanged(string status) =>
+        new("work-item", "StatusChanged", $"{{\"status\":\"{status}\"}}", null);
+
+    protected static IEnumerable<string> AppendedStatuses(IEventSequence events) => events.ReceivedCalls()
+        .Where(call => call.GetMethodInfo().Name == nameof(IEventSequence.AppendMany))
+        .SelectMany(call => (IEnumerable<EventToAppend>)call.GetArguments()[0]!)
+        .Select(entry => entry.Content["status"]!.GetValue<string>());
 
     IEventSequence CreateNamespace(string name)
     {
