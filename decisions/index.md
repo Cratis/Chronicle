@@ -8,3 +8,4 @@
 | [0004-ordered-lanes-observer-delivery](0004-ordered-lanes-observer-delivery.md) | Deliver observers through ordered lanes over a declared sequencing key | Proposed | None | — | woksin (to accept) |
 | [0005-settle-unique-constraint-claims-in-every-store](0005-settle-unique-constraint-claims-in-every-store.md) | Settle unique-constraint claims in the store, in every provider | Accepted | None | 2026-10-13 | woksin |
 | [0006-length-safe-sql-database-names](0006-length-safe-sql-database-names.md) | Keep derived SQL database names within the provider's length limit and bind them once | Accepted | None | 2026-10-13 | woksin |
+| [0008-repair-constraint-indexes-from-the-log](0008-repair-constraint-indexes-from-the-log.md) | Keep constraint indexes in step with the event log through a per-sequence watermark | Proposed | None | — | woksin (to accept) |
