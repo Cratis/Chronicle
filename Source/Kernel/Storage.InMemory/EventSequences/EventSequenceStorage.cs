@@ -24,11 +24,13 @@ namespace Cratis.Chronicle.Storage.InMemory.EventSequences;
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage serves.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> this storage serves.</param>
 /// <param name="identityStorage">The <see cref="IIdentityStorage"/> for resolving the identity chain that caused an append.</param>
+/// <param name="effectReceipts">The namespace-wide receipt state, when owned by a namespace storage.</param>
 public partial class EventSequenceStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
-    IIdentityStorage identityStorage) : IEventSequenceStorage, IEventPublicationStorage
+    IIdentityStorage identityStorage,
+    Occurrences.EffectReceiptState? effectReceipts) : IEventSequenceStorage, IEventPublicationStorage
 {
     static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
 
@@ -37,6 +39,18 @@ public partial class EventSequenceStorage(
     readonly Dictionary<EventSequenceNumber, StoredEventMetadata> _metadata = [];
     readonly Dictionary<EventSequenceNumber, uint> _appendedGenerations = [];
     readonly object _lock = new();
+
+    /// <summary>
+    /// Initializes storage with its original constructor contract and a private receipt scope.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="eventSequenceId">The destination sequence.</param>
+    /// <param name="identityStorage">The identity resolver.</param>
+    public EventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IIdentityStorage identityStorage)
+        : this(eventStore, @namespace, eventSequenceId, identityStorage, null)
+    {
+    }
 
     /// <summary>
     /// Gets the events stored in this storage instance.

@@ -46,11 +46,20 @@ public sealed class EventStoreNamespaceStorage(
     IJobsStorage jobsStorage,
     ISinks sinks) : IEventStoreNamespaceStorage
 {
+    readonly Occurrences.OccurrencesStorage _occurrences = new();
+    readonly Occurrences.EffectReceiptState _effectReceipts = new();
     readonly IJobsStorage _jobsStorage = jobsStorage;
+
     readonly ConcurrentDictionary<EventSequenceId, EventSequenceStorage> _eventSequences = new();
     readonly ConcurrentDictionary<EventSequenceId, IUniqueConstraintsStorage> _uniqueConstraints = new();
     readonly ConcurrentDictionary<EventSequenceId, IUniqueEventTypesConstraintsStorage> _uniqueEventTypesConstraints = new();
     readonly ConcurrentDictionary<EventSequenceId, IClosedStreamsConstraintStorage> _closedStreamsConstraints = new();
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
 
     /// <inheritdoc/>
     public IChangesetStorage Changesets { get; } = new ChangesetStorage();
@@ -142,7 +151,7 @@ public sealed class EventStoreNamespaceStorage(
     /// </remarks>
     public async Task<bool> HasData()
     {
-        if (!_eventSequences.IsEmpty)
+        if (!_eventSequences.IsEmpty || _occurrences.HasData)
         {
             return true;
         }
@@ -157,7 +166,7 @@ public sealed class EventStoreNamespaceStorage(
             return existing;
         }
 
-        var created = new EventSequenceStorage(eventStore, @namespace, eventSequenceId, Identities);
+        var created = new EventSequenceStorage(eventStore, @namespace, eventSequenceId, Identities, _effectReceipts);
         return _eventSequences.GetOrAdd(eventSequenceId, created);
     }
 }

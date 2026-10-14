@@ -92,6 +92,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        EventStores.Occurrences.OccurrenceModel.Configure(modelBuilder);
 
         modelBuilder
             .Entity<ClosedStreamEntry>(entity =>

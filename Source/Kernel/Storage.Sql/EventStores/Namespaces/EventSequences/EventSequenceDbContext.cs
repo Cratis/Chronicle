@@ -67,6 +67,7 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);
 
 #pragma warning disable RCS1201 // Separate EF entity configurations cannot be combined into a fluent chain.
         modelBuilder.Entity<NamedTagEntry>(entity =>
