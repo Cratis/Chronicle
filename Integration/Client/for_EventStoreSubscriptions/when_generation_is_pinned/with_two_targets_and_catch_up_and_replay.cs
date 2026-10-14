@@ -63,7 +63,7 @@ public class with_two_targets_and_catch_up_and_replay(context context) : Given<c
                 reactor => reactor
                     .OnEventSequence($"{EventSequenceId.InboxPrefix}{Source}")
                     .WithEventType(legacy.EventTypes.GetEventTypeFor(typeof(SubscriptionPersonRegisteredV1))),
-                (@event, _) => _tracker.Delivered(@event.Content.Single().Value!.GetValue<string>(), @event.Context));
+                (@event, _) => _tracker.Delivered(@event.Content.Single(_ => string.Equals(_.Key, nameof(SubscriptionPersonRegisteredV1.Name), StringComparison.OrdinalIgnoreCase)).Value!.GetValue<string>(), @event.Context));
             await currentReactor.WaitTillActive();
             await legacyReactor.WaitTillActive();
             await current.Subscriptions.Subscribe("current", Source, builder => builder.WithEventType<SubscriptionPersonRegistered>().WithGenerationDelivery(EventGenerationDelivery.Pinned));
@@ -101,6 +101,7 @@ public class with_two_targets_and_catch_up_and_replay(context context) : Given<c
     [Fact] void should_store_the_pinned_delivery_policy() => Context.Definition.GenerationDelivery.ShouldEqual(EventGenerationDelivery.Pinned);
     [Fact] void should_append_generation_two_in_the_current_targets_inbox() => Context.CurrentDelivery.Context.AppendedGeneration!.Value.ShouldEqual(2u);
     [Fact] void should_append_generation_one_in_the_legacy_targets_inbox() => Context.LegacyDelivery.Context.AppendedGeneration!.Value.ShouldEqual(1u);
+    [Fact] void should_deliver_generation_one_to_the_legacy_target() => Context.LegacyDelivery.Context.EventType.Generation.Value.ShouldEqual(1u);
     [Fact] void should_release_and_reprotect_personal_data_for_the_current_target() => Context.CurrentDelivery.Name.ShouldEqual("Ada Lovelace");
     [Fact] void should_release_and_reprotect_personal_data_for_the_legacy_target() => Context.LegacyDelivery.Name.ShouldEqual("Ada Lovelace");
     [Fact] void should_preserve_the_same_pin_on_catch_up() => Context.CatchUpDelivery.Context.AppendedGeneration.ShouldEqual(Context.CurrentDelivery.Context.AppendedGeneration);
