@@ -43,7 +43,11 @@ public partial class EventStore
         lock (RegistrationSync)
         {
             _publishedDisconnectEpoch = _disconnectEpoch;
-            Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, failure) { IdentityDrift = Registration.IdentityDrift };
+            Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, failure)
+            {
+                IdentityDrift = Registration.IdentityDrift,
+                IsRegistering = _registrationTask is not null
+            };
         }
     }
 

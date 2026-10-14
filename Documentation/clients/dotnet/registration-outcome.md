@@ -52,7 +52,7 @@ foreach (var failed in outcome.Failures)
 
 `RegistrationOutcome.NotRun` is the value before registration has finished.
 
-After a kernel restart, the client re-registers its artifacts when it reconnects. `IsRegistering` becomes `true` on disconnect when automatic registration is enabled, and stays true until re-registration finishes. A manual `RegisterAll` call also sets it while running. The other members retain the previous run's outcome, so `IsSuccess` can still be true while `IsRegistering` is true; check both before treating registration as ready.
+After a kernel restart, the client re-registers its artifacts when it reconnects. `IsRegistering` becomes `true` on disconnect when automatic registration is enabled, and stays true until re-registration finishes. Manual `RegisterAll` calls and background-retry attempts also set it while running. Between background attempts, the published failure has `IsRegistering` set to false. The other members retain the previous run's outcome, so `IsSuccess` can still be true while `IsRegistering` is true; check both before treating registration as ready.
 
 There are two kinds of failure here and they are not the same. An artifact in `Failures` could not be built, so it was isolated and skipped and registration carried on without it — the rest of the read side is up. A `Failure` on the outcome itself ended the run, so registration stopped wherever it got to. A run that ends this way still reports itself rather than staying at `NotRun`, so waiting on it returns instead of timing out.
 

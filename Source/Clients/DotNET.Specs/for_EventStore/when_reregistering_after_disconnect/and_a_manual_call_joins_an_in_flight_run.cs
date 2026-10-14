@@ -6,7 +6,7 @@ using Cratis.Chronicle.Contracts.EventStores;
 
 namespace Cratis.Chronicle.for_EventStore.when_reregistering_after_disconnect;
 
-public class and_reconnect_joins_an_in_flight_run : given.a_registered_store
+public class and_a_manual_call_joins_an_in_flight_run : given.a_registered_store
 {
     TaskCompletionSource _started;
     TaskCompletionSource<CommandResult> _firstReply;
@@ -19,6 +19,8 @@ public class and_reconnect_joins_an_in_flight_run : given.a_registered_store
 
     void Establish()
     {
+        // This spec drives a manual join after the connection flag changes, without automatic callback scheduling.
+        _connection.Lifecycle.OnConnected -= _store.RegisterAll;
         _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _firstReply = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _secondReply = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -42,9 +44,6 @@ public class and_reconnect_joins_an_in_flight_run : given.a_registered_store
         await _started.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await _connection.Lifecycle.Disconnected();
 
-        // Invoke the reconnect callback directly after Connected sets the flag, so its Task.Run scheduling
-        // cannot postpone it until after the flight has finished. Disconnect marking remains attached.
-        _connection.Lifecycle.OnConnected -= _store.RegisterAll;
         var reconnect = _connection.Lifecycle.Connected();
         _joined = _store.RegisterAll();
         _firstReply.SetResult(CommandResult.Success(Guid.NewGuid()));

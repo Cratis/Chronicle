@@ -79,7 +79,8 @@ the host failing to start at all. After a kernel restart, readiness drops while 
 disconnected and stays down while it re-registers after reconnecting. `Registration.IsRegistering`
 marks that interval even though the outcome retains the previous run's success or failure. A manual
 `RegisterAll` also makes readiness fail while it is running, including when automatic registration
-is off. `WaitForRegistration` waits for the new run's outcome rather than returning the previous one.
+is off. Background-retry attempts set `IsRegistering` too; between attempts, readiness still fails
+because the last registration outcome is a failure. `WaitForRegistration` waits for the new run's outcome rather than returning the previous one.
 
 ## Related
 

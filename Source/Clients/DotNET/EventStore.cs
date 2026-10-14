@@ -76,6 +76,8 @@ public partial class EventStore : IEventStore
     int _backgroundRegistrationRetryActive;
     Task? _backgroundRegistrationRetryTask;
     StorePreparationGate? _preparation;
+    volatile RegistrationOutcome _registration = RegistrationOutcome.NotRun;
+    long _identityDriftEpoch;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStore"/> class.
@@ -391,7 +393,11 @@ public partial class EventStore : IEventStore
     public IIdentityManager Identities { get; }
 
     /// <inheritdoc/>
-    public RegistrationOutcome Registration { get; private set; } = RegistrationOutcome.NotRun;
+    public RegistrationOutcome Registration
+    {
+        get => _registration;
+        private set => _registration = value;
+    }
 
     /// <inheritdoc/>
     public DiscoveryReport Discovery { get; private set; } = DiscoveryReport.NotRun;
@@ -473,11 +479,11 @@ public partial class EventStore : IEventStore
     async Task RegisterAllCore()
     {
         _logger.RegisterAllArtifacts();
-        var isBackgroundRetry = _backgroundRegistrationRetryContext?.Value == true;
-        var drift = isBackgroundRetry ? Registration.IdentityDrift : ImmutableList<ArtifactIdentityDrift>.Empty;
         while (true)
         {
             var epoch = DisconnectEpoch;
+            var isBackgroundRetry = _backgroundRegistrationRetryContext?.Value == true && epoch == _identityDriftEpoch;
+            var drift = isBackgroundRetry ? Registration.IdentityDrift : ImmutableList<ArtifactIdentityDrift>.Empty;
             var effectsStarted = false;
             Exception? runFailure = null;
 
@@ -508,9 +514,11 @@ public partial class EventStore : IEventStore
                     if (!isBackgroundRetry)
                     {
                         drift = await DetectIdentityDrift();
+                        _identityDriftEpoch = epoch;
                     }
 
-                    // Background retries reuse the findings of the run that started them, so the policy still applies.
+                    // Background retries reuse findings only on the same connection epoch. A restarted kernel
+                    // needs a fresh snapshot, including when a reconnect joined an unfinished background attempt.
                     ThrowIfIdentityDriftMustFail(drift);
                     effectsStarted = true;
                     await RegisterAllArtifactsWithRetries(registerEventTypes, registerReadModels);
