@@ -41,7 +41,9 @@ public class and_explicit_clients_use_the_selected_kernel_transport(context setu
             using var client = OutOfProcess
                 ? new ChronicleClient(options, artifactsProvider: this)
                 : new ChronicleClient(new BorrowedConnection(EventStore.Connection), options, artifactsProvider: this);
-            var store = await client.GetEventStore($"transport-{Guid.NewGuid():N}");
+
+            // Keep the unique store name short enough for PostgreSQL's database identifier limit.
+            var store = await client.GetEventStore($"tr{Guid.NewGuid():N}"[..12]);
             await store.DiscoverAll();
             await store.RegisterAll();
             store.Registration.IsSuccess.ShouldBeTrue();
