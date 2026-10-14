@@ -1,0 +1,35 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Storage.Occurrences;
+
+/// <summary>
+/// The durable delivery state.
+/// </summary>
+public enum OccurrenceState
+{
+    /// <summary>
+    /// Pending.
+    /// </summary>
+    Pending = 0,
+
+    /// <summary>
+    /// Leased.
+    /// </summary>
+    Leased = 1,
+
+    /// <summary>
+    /// Completed.
+    /// </summary>
+    Completed = 2,
+
+    /// <summary>
+    /// Quarantined.
+    /// </summary>
+    Quarantined = 3,
+
+    /// <summary>
+    /// Skipped.
+    /// </summary>
+    Skipped = 4
+}

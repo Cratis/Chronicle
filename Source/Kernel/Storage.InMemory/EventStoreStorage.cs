@@ -49,6 +49,7 @@ public sealed class EventStoreStorage(
     Cratis.Orleans.Storage.IJobsStorage jobsStorage) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
+    readonly Occurrences.OccurrencesStorage _occurrences = new();
 
     /// <summary>
     /// Initializes a store with an event-types storage factory for in-process composition.
@@ -66,6 +67,12 @@ public sealed class EventStoreStorage(
     {
         EventTypes = eventTypesFactory(eventStore);
     }
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
 
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore;
