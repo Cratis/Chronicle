@@ -235,7 +235,7 @@ Append conditions detect matching **appended** events after a boundary. Revision
 
 For example, a decision reads through position 100 and sees a credit of 100 at position 80. An administrator revises that credit to 0. A withdrawal appended at 101 can still pass its condition: the revision did not append a matching event above 100. A fresh fold can see the revised value, but a decision that already read it has no mutation guard.
 
-Coordinate history mutations operationally: pause affected command producers, drain in-flight decisions, perform the revision or redaction, then resume with fresh reads. Quiesce affected commands during projection-definition deployments too. Retrying a stale decision or adding more scopes does not close this gap. An atomic mutation-epoch check is not part of the current contract.
+[Read protection](../read-models/read-protection.mdx#limits) has the same limit. Coordinate history mutations operationally: pause affected command producers, drain in-flight decisions, perform the revision or redaction, then resume with fresh reads. Quiesce affected commands during projection-definition deployments too. Retrying a stale decision or adding more scopes does not close this gap. An atomic mutation-epoch check is not part of the current contract.
 
 ## Best Practices
 

@@ -70,7 +70,7 @@ flowchart TD
 | Default optimistic append | Not a read | Reads the tail at append time | Only the window between that read and the write | Nothing that depends on state |
 | Plain read of a materialized read model (projection, reducer or self-reducing model) | No. It can lag the log | No | No | Display, hints |
 | Plain read of a passive projection | Yes, at read time | No | No | Display, checks you will repair |
-| Plain read of a passive reducer (classic or self-reducing) | Yes, at read time | No | No. Decision reads refuse reducers | Display, checks you will repair |
+| Plain read of a passive reducer (classic or self-reducing) | Yes, at read time | No | No. A plain read guards nothing, but a qualifying reducer can be read as a [decision read](../read-models/decision-reads.mdx#reducers) | Display, checks you will repair |
 | Reading the sink's database directly | No. Same lag as a materialized read | No | No | Reports. It couples you to the sink's schema, so avoid it in command logic |
 
 Freshness depends on whether a read model is materialized or passive, not on whether a projection, a reducer or a self-reducing model builds it. Every read model is materialized unless it is passive: `[Passive]` on the read model, or `.Passive()` on a declarative projection. **Materialized** read models are stored and updated after the append returns. **Passive** ones are not stored. Chronicle folds them from the events when you read them. Passive reads are fresher, but neither kind records where in the log the read stopped, so neither can guard the append that follows.
@@ -128,7 +128,7 @@ One run, on a loaded machine, so read the ratios and not the milliseconds.
 |---|---|---|
 | The rule is uniqueness or create-once | A constraint is checked inside the append, costs no extra reads and covers every writer | [Constraint](../constraints/index.md) |
 | The read feeds a screen or a hint | You pay for a fresh fold and a guard you do not use | A plain read |
-| The state is a reducer, a self-reducing read model, or has joins, children, derivatives or a key that is not the event source ID | Chronicle refuses these shapes. A guard it cannot compute exactly would be wrong | A flat projection keyed by event source. See [admitted projections](../read-models/decision-reads.mdx#admitted-projections) |
+| The state has joins, children, derivatives or a key that is not the event source ID, or is a reducer with filters or constructor dependencies | Chronicle refuses these shapes. A guard it cannot compute exactly would be wrong | A flat projection keyed by event source, or a reducer without filters or dependencies. See [admitted projections](../read-models/decision-reads.mdx#admitted-projections) and [reducers](../read-models/decision-reads.mdx#reducers) |
 | The key has a long history and many writers | Each read folds the whole history and conflicts rise with the write rate | Shorter keys, or accept an advisory read and repair |
 | The data lives outside the Chronicle event log | Nothing in the log can invalidate it | Record the fact as an event |
 
@@ -137,7 +137,7 @@ One run, on a loaded machine, so read the ratios and not the milliseconds.
 Chronicle does not guard a decision unless you ask. An `Append` with no scope gets only the default optimistic check, which covers the moment between reading the tail and writing. A decision read protects only the append you pass it to. In Arc, a command opts in with `[ProtectedDecision]`.
 
 - **Existing code keeps its behavior.** The Arc change that introduced protected decisions states that unmarked commands keep their current behavior. Turning protection on everywhere would change what many existing commands do.
-- **Protection fails closed.** A protected path refuses what it cannot guard exactly: reducers, joins, validators with dependencies, and commits of the unit of work by anyone but its owner, such as an aggregate's own `Commit()`. Code that works today and guards nothing would start to fail.
+- **Protection fails closed.** A protected path refuses what it cannot guard exactly: reducers with filters or dependencies, joins, validators with dependencies, and commits of the unit of work by anyone but its owner, such as an aggregate's own `Commit()`. Code that works today and guards nothing would start to fail.
 - **It has a price.** The cost above is acceptable per rule. It is not free for every read.
 - **Other systems choose differently.** The [DCB specification](https://dcb.events/specification/) makes the append condition optional per append. [Axon Framework 5](https://docs.axoniq.io/axon-framework-reference/5.3/events/event-store-internals/) attaches the consistency marker automatically for a sourced entity. [KurrentDB](https://docs.kurrent.io/clients/node/v1.3/appending-events) defaults to no check.
 
@@ -184,6 +184,7 @@ For the retry inside the kernel after a duplicate sequence number: the kernel re
 
 - [Scenarios](./scenarios.mdx): each rule shape as working code.
 - [Decision reads](../read-models/decision-reads.mdx): the API, admission rules and limits.
+- [Read protection](../read-models/read-protection.mdx): make a host refuse unguarded reads and immediate appends.
 - [DCB examples in Chronicle](./dcb-examples.mdx): the canonical DCB examples, the Chronicle way.
 - [Concurrency](../events/concurrency.mdx): scopes, the builder and the first-append check.
 - [Event sources and streams](../event-sources/index.mdx): declare the dimensions an append is guarded by.

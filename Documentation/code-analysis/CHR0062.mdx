@@ -13,11 +13,13 @@ A nonempty `Concurrency` declaration on an event source definition or one of its
 
 Info
 
+A repository that raises all analyzer diagnostics to warning and treats warnings as errors (for example `dotnet_analyzer_diagnostic.severity = warning` in `.editorconfig` with `TreatWarningsAsErrors`) sees this rule as an error. Fix it or suppress it with a justification.
+
 ## How to fix
 
 Include `EventSourceId` when the condition should apply per source. The code fix adds that dimension without dropping the existing ones. This changes the predicate; accept it only when per-source concurrency is intended.
 
-A deliberate cross-source condition can remain as declared. Use a decision read to protect a state-dependent decision; a concurrency declaration alone does not do that.
+A deliberate cross-source condition, or a deliberate stream-id boundary, can remain as declared. Suppress the diagnostic at that declaration and state the reason in the justification, for example `#pragma warning disable CHR0062 // Whole-ledger close applies across accounts`. Use a decision read to protect a state-dependent decision; a concurrency declaration alone does not do that.
 
 ## Related topics
 

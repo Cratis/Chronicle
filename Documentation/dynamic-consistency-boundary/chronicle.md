@@ -92,7 +92,7 @@ Pause affected command producers and drain in-flight decisions before revising o
 - **Constraints.** The kernel enforces unique values, one event of a type per event source, and closed streams, for every writer, without a read. See [Constraints](../constraints/index.md).
 - **Event source definitions.** A typed declaration of an event source and its streams, with the concurrency dimensions each stream is guarded by. See [Event sources and streams](../event-sources/index.mdx).
 - **Closed streams.** A stream can be ended so no later append can invalidate a decision about it. See [Closing streams](../closing-streams/index.mdx).
-- **Admission checks.** A decision read refuses a model it cannot guard exactly, such as a reducer, a join or a child collection, with a typed reason. It also checks that its fold reached the events it expected and retries up to three attempts.
+- **Admission checks.** A decision read refuses a model it cannot guard exactly, such as a join, a child collection or a reducer with filters or constructor dependencies, with a typed reason. It also checks that its fold reached the events it expected and retries up to three attempts.
 - **Owner-only commit.** A unit of work that enrolled a decision read can be committed or rolled back only by its owner, so application code cannot commit it half-guarded.
 - **Visible skipped checks.** `ConcurrencyCheckPerformed` on the append result says whether a scope was compared. A skipped check does not look like a passing one.
 - **Conflicts mapped to your model.** `GetDecisionConflicts` tells you which read model and key changed, without exposing positions.
@@ -127,5 +127,6 @@ The course subscription rule needs two decision reads and two events. [Scenarios
 - [Questions and answers](./faq.md)
 - [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx)
 - [Decision reads](../read-models/decision-reads.mdx)
+- [Read protection](../read-models/read-protection.mdx)
 - [Concurrency](../events/concurrency.mdx)
 - [Appending with tags](../events/appending-with-tags.mdx)
