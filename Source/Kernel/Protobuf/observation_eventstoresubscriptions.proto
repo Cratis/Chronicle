@@ -6,10 +6,15 @@ message AddEventStoreSubscriptions {
    string TargetEventStore = 1;
    repeated EventStoreSubscriptionDefinition Subscriptions = 2;
 }
+enum EventGenerationDelivery {
+   Compatibility = 0;
+   Pinned = 1;
+}
 message EventStoreSubscriptionDefinition {
    string Identifier = 1;
    string SourceEventStore = 2;
    repeated EventType EventTypes = 3;
+   EventGenerationDelivery GenerationDelivery = 4;
 }
 message EventType {
    string Id = 1;
