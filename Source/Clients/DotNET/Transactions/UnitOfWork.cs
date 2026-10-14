@@ -168,7 +168,7 @@ public partial class UnitOfWork(
                 ThrowIfLabelIsNotSpecified(eventSourceId);
                 scope = MaterializeConcurrencyScope(scope);
                 EnsureEventSequenceCanBeUsed(eventSequenceId);
-                ValidateConcurrencyScope(eventSourceId, scope, _concurrencyScopes, resolution.Requirements);
+                ValidateConcurrencyScope(eventSequenceId, eventSourceId, scope, _concurrencyScopes, resolution.Requirements);
                 BindToEventSequence(eventSequenceId);
             }
             else
@@ -208,7 +208,7 @@ public partial class UnitOfWork(
                 pair.Key, MaterializeConcurrencyScope(pair.Value))).ToArray();
             var batch = new EventsWithConcurrencyScopes(events, suppliedScopes.Select(pair =>
                 _requiredEnrollmentScopes.TryGetValue(pair.Key, out var required)
-                    ? new KeyValuePair<EventSourceId, ConcurrencyScope>(pair.Key, MergeRequiredScope(pair.Key, pair.Value, required))
+                    ? new KeyValuePair<EventSourceId, ConcurrencyScope>(pair.Key, MergeRequiredScope(eventSequenceId, pair.Key, pair.Value, required))
                     : pair));
             var targets = batch.Events.GroupBy(_ => _.EventSourceId).ToDictionary(_ => _.Key, _ => Array.AsReadOnly(_.Select(e => e.Event).ToArray()));
             var enrollments = targets.Keys.Union(batch.ConcurrencyScopes.Keys).Select(source => new UnitOfWorkEnrollment(
@@ -231,7 +231,7 @@ public partial class UnitOfWork(
             ValidateExistingConcurrencyScopesForOrderedBatch(materializedConcurrencyScopes);
             foreach (var (label, scope) in resolution.Scopes)
             {
-                ValidateConcurrencyScope(label, scope, materializedConcurrencyScopes, resolution.Requirements);
+                ValidateConcurrencyScope(eventSequenceId, label, scope, materializedConcurrencyScopes, resolution.Requirements);
             }
             var stagedEvents = batch.Events.Select(_ => _ with
             {
@@ -622,6 +622,7 @@ public partial class UnitOfWork(
     }
 
     void ValidateConcurrencyScope(
+        EventSequenceId eventSequenceId,
         EventSourceId scopeLabel,
         ConcurrencyScope concurrencyScope,
         Dictionary<EventSourceId, ConcurrencyScope> enrolledConcurrencyScopes,
@@ -639,7 +640,7 @@ public partial class UnitOfWork(
 
         if (requiredScopes?.ContainsKey(scopeLabel) == true)
         {
-            MergeRequiredScope(scopeLabel, enrolledScope, concurrencyScope);
+            MergeRequiredScope(eventSequenceId, scopeLabel, enrolledScope, concurrencyScope);
             return;
         }
 

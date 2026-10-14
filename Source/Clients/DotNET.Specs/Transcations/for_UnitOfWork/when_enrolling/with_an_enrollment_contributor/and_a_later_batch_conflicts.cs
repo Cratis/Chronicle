@@ -19,5 +19,13 @@ public class and_a_later_batch_conflicts : given.a_contributed_unit
     void Because() => _error = Catch.Exception(() => _unitOfWork.AddEvents(EventSequenceId.Log, [new(_source, new object())], [new(_source, ConcurrencyScope.None)]));
 
     [Fact] void should_keep_the_recorded_guard_after_disposal() => _error.ShouldBeOfExactType<ConflictingEnrollmentScope>();
+    [Fact] void should_identify_the_event_source() => ((ConflictingEnrollmentScope)_error).EventSourceId.ShouldEqual(_source);
+    [Fact] void should_identify_the_attempted_sequence() => ((ConflictingEnrollmentScope)_error).EventSequenceId.ShouldEqual(EventSequenceId.Log);
+    [Fact] void should_carry_the_effective_scope() => ((ConflictingEnrollmentScope)_error).Effective.ShouldEqual(ConcurrencyScope.None);
+    [Fact] void should_carry_the_recorded_requirement() => ((ConflictingEnrollmentScope)_error).Required.ShouldEqual(_required);
+    [Fact] void should_describe_only_the_differing_dimensions() => _error.Message.ShouldEqual("Enrollment conflicts with its required scope or event sequence. Differing dimensions: sequence number, event source id.");
+    [Fact] void should_redact_the_event_source() => _error.Message.ShouldNotContain(_source.Value);
+    [Fact] void should_redact_the_required_scope() => _error.Message.ShouldNotContain(_required.ToString());
+    [Fact] void should_redact_the_effective_scope() => _error.Message.ShouldNotContain(ConcurrencyScope.None.ToString());
     [Fact] void should_preserve_only_the_previous_event() => _unitOfWork.GetEvents().ShouldContainOnly(_event);
 }
