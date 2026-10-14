@@ -52,4 +52,20 @@ public class ReactorSourceGivenBuilder(ReactorScenario scenario, EventSourceId e
     /// <param name="events">The events to provide.</param>
     /// <returns>A task completing after all callbacks complete.</returns>
     public Task Events(params object[] events) => scenario.InvokeWith(eventSourceId, events, _eventSourceType, _eventStreamType, _eventStreamId);
+
+    /// <summary>
+    /// Records one event with its scenario-local context without delivering it or appending it to an event store.
+    /// </summary>
+    /// <param name="event">The event to record.</param>
+    /// <returns>The recorded occurrence for later redelivery.</returns>
+    public async Task<RecordedOccurrence> History(object @event) =>
+        (await History([@event]))[0];
+
+    /// <summary>
+    /// Records events in order without delivering them or appending them to an event store.
+    /// </summary>
+    /// <param name="events">The events to record.</param>
+    /// <returns>The occurrences with their original contexts for later redelivery.</returns>
+    public Task<IReadOnlyList<RecordedOccurrence>> History(params object[] events) =>
+        scenario.RecordHistory(eventSourceId, events, _eventSourceType, _eventStreamType, _eventStreamId);
 }
