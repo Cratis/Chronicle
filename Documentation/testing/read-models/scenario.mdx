@@ -3,9 +3,17 @@ uid: Chronicle.Testing.ReadModels.Scenario
 ---
 # ReadModelScenario
 
-A read model scenario lets you check projection or reducer output without a running Chronicle server or database. The examples below use client tabs when a workflow is available; the .NET-only options and behavior are identified in the prose.
+A read model scenario lets you check projection or reducer output without a running Chronicle server
+or database. Use the client tabs for each workflow's API shape.
 
-In .NET, `ReadModelScenario<TReadModel>` auto-detects how the read model is backed — by a reducer, a fluent projection, or a model-bound projection — and routes events through the appropriate engine.
+For application code, start with model-bound attributes, then fluent mappings when the definition
+needs structure, then reducer code when transitions read better; a self-reducing model is the default
+for new reducers. [Choose how to build a read model](../../projections/choosing-a-read-model-style.mdx)
+compares the same event history across those forms.
+
+In .NET, `ReadModelScenario<TReadModel>` detects model-bound and fluent projections, self-reducing
+models, classic `IReducerFor<T>` classes, and nominated plain instance reducers. It routes events
+through the selected engine; there is no direct PDL-authoring overload.
 
 In a .NET [Cratis Specification](/testing-with-cratis/), the event history is the **given**, `Because()` feeds that history through the scenario, and the read model properties are the **then**.
 
@@ -26,7 +34,7 @@ dotnet add package Cratis.Chronicle.Testing
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/basic" />
 
-Pass events to the read-model logic, then assert on the result. In .NET, the scenario takes `Given.ForEventSource(id).Events(...)` and exposes `Instance`; in TypeScript, `given.forEventSource(id).events(...)` and an awaited `instance`. Kotlin folds events through `scenario.fold(...)`. The Java example has no scenario: it calls the reducer directly and asserts on what it returns.
+Pass events to the read-model logic, then assert on the result. In .NET, the scenario takes `Given.ForEventSource(id).Events(...)` and exposes `Instance`; in TypeScript, `given.forEventSource(id).events(...)` and an awaited `instance`. Kotlin folds events through `scenario.fold(...)`. The Java example calls the reducer directly and asserts on what it returns.
 
 ## Seed routed events
 
@@ -92,7 +100,9 @@ In .NET, pass an initial state to the constructor when the read model starts fro
 
 ## Injecting dependencies
 
-In .NET, pass an `IServiceProvider` to the constructor to supply mocks and stubs that the reducer or projection depends on:
+In .NET, pass an `IServiceProvider` to the constructor to supply mocks and stubs for an instance
+reducer's fold or a fluent projection's definition construction. Static self-reduction methods do not
+accept service arguments:
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/injecting-dependencies" />
 

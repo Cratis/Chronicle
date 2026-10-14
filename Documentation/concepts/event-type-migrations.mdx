@@ -139,9 +139,16 @@ PDL, which is owned by Screenplay, does not have generation-qualified event refe
 with the CLR event type for the generation you want when a clause must pin an explicit generation.
 Compatibility definitions keep the existing bare-name and identifier-only dispatch behavior.
 
-`GenerationalContent` remains on delivered events for compatibility in this major version. This option
-does not change immediate/passive or wildcard (`all`) projections, reads, webhooks, captures, or
-event-store subscriptions.
+Webhooks opt in separately, per registration, with the .NET builder's
+`WithGenerationDelivery(EventGenerationDelivery.Pinned)` or Core's `GenerationDelivery` property.
+Their subscribed event types supply exact generation pins, which remain fixed until you deliberately
+update the registration. The HTTP payload envelope is unchanged, including `GenerationalContent`;
+only the selected content, delivered generation, and hash follow the pin. See
+[webhook generation delivery](../webhooks/index.mdx#pin-the-generation-your-endpoint-understands).
+
+`GenerationalContent` remains on delivered events for compatibility in this major version. The global
+client option does not change immediate/passive or wildcard (`all`) projections, reads, webhooks,
+captures, or event-store subscriptions.
 
 ## Protected values
 

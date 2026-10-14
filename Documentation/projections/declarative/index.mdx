@@ -17,7 +17,9 @@ Auto-mapping is enabled by default at the top level, so matching properties are 
 
 ## Discovery
 
-Projection types are discovered by implementing `IProjectionFor<TReadModel>`. Event types used in projection definitions must be marked with `[EventType]`.
+Projection types are discovered by implementing `IProjectionFor<TReadModel>`. The events must be
+registered in the owning client's event-type registry, normally through `[EventType]`; .NET also
+supports [explicit event nominations](../../clients/dotnet/explicit-artifacts.md).
 
 In .NET, a projection class must target only one read model. Implementing two closed `IProjectionFor<TReadModel>` interfaces, including through inheritance, throws `TypeImplementsMultipleProjectionInterfaces` during default artifact discovery. Split the class into one projection per read model. [CHR0057](../../code-analysis/CHR0057) reports this before runtime.
 
@@ -35,23 +37,19 @@ In .NET, a projection class must target only one read model. Implementing two cl
 
 ## When to Use
 
-Use declarative projections when:
+Start with model-bound attributes; use fluent mappings when keys, joins, hierarchy, or keeping the
+model attribute-free makes a separate definition clearer. Use reducer code when the logic reads better
+as state transitions, with a self-reducing model as the default for new reducers. Follow
+[Choose how to build a read model](../choosing-a-read-model-style.mdx) for scenarios and limits.
 
-- You need control over mapping logic and transformations
-- You need relationships or hierarchical read models
-- You want to share a projection definition across multiple read models
-
-Use model-bound projections when:
-
-- The mapping is straightforward and attribute-based
-- You want to keep projection metadata close to the read model
-- You prefer concise, declarative attributes over fluent definitions
+`Define` emits a kernel-executed definition. Dependencies can help build it, but the builder lambdas
+are not arbitrary per-event handlers with dependency injection.
 
 ## Projection recipes
 
 | Recipe | Description |
 | ------ | ----------- |
-| [Simple projection](simple-projection) | Basic projection using AutoMap() |
+| [Simple projection](simple-projection) | Declare events and use the default AutoMap behavior |
 | [AutoMap](auto-map) | Automatic property mapping at different levels |
 | [Passive](passive) | In-memory projections for on-demand lookups |
 | [Set properties](set-properties) | Explicit property mapping and transformations |
@@ -83,7 +81,7 @@ Once you've defined a declarative projection, you can retrieve and observe the r
 ### Auto-mapping vs explicit mapping
 
 - **Auto-mapping**: Automatically maps properties with matching names between events and read models
-  - Use `.AutoMap()` in fluent projections (`IProjectionFor<T>`)
+  - Enabled by default in fluent projections; call `.AutoMap()` only to re-enable it in a scope that disabled it
   - Use `[FromEvent<TEvent>]` in model-bound projections for the same functionality
 - **Explicit mapping**: Gives you full control over property transformations and mappings
   - Use `.Set()`, `.Add()`, etc. in fluent projections

@@ -86,7 +86,7 @@ A complete discovery result only says which types exist. It does **not** mean th
 
 Reactors and reducers are deliberately not reported. Their registration only opens a duplex stream and returns before the kernel has answered, so the client has nothing to report about them that would be a fact. To know a reactor or reducer is live, wait on its observer state instead — `WaitTillSubscribed` or `WaitTillActive` — which the kernel answers.
 
-The outcome is read-only and decides nothing. Whether a failed artifact should abort start-up, fail a spec, or be tolerated is yours to decide.
+The outcome is read-only. Whether a failed artifact should abort start-up, fail a spec, or be tolerated is yours to decide. The ASP.NET Core [readiness health check](./health-checks.md) requires both a live connection and `Registration.IsSuccess`; it reports a failure status for incomplete or failed registration.
 
 :::caution
 Do not use `IConnectionLifecycle.IsConnected` as a stand-in. It is set to `true` *before* the connected handlers run — registration is one of them — and only rolled back afterwards if one of them failed. Polling it races: it reads `true` while registration is still in flight, and while a registration about to be reported as failed is still running. It answers "connected", which is necessary and not sufficient.
