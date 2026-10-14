@@ -30,7 +30,7 @@ public partial class OccurrencesStorage : IOccurrencesStorage, IScheduleStorage
     {
         lock (_lock)
         {
-            var occurrences = _occurrences.Values.Where(occurrence => occurrence.Trigger == trigger).ToArray();
+            var occurrences = _occurrences.Values.Where(occurrence => occurrence.Trigger == trigger && occurrence.State is OccurrenceState.Pending or OccurrenceState.Leased).ToArray();
             var candidates = OccurrenceClaimSelection.Select(occurrences, now, max, maxInFlight)
                 .Select(occurrence => occurrence with { State = OccurrenceState.Leased, Epoch = occurrence.Epoch + 1, Attempts = occurrence.Attempts + 1, Owner = worker, LeaseExpiry = now.Add(duration), NextAttempt = null }).ToArray();
             foreach (var occurrence in candidates)

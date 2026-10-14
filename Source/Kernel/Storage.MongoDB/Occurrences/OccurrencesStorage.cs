@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Chronicle.Storage.Occurrences;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -13,12 +14,14 @@ namespace Cratis.Chronicle.Storage.MongoDB.Occurrences;
 /// <param name="database">The scoped database.</param>
 public partial class OccurrencesStorage(IMongoDatabase database) : IOccurrencesStorage, IScheduleStorage
 {
+    readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
     readonly IMongoCollection<BsonDocument> _occurrences = database.GetCollection<BsonDocument>("occurrences");
     readonly IMongoCollection<BsonDocument> _fences = database.GetCollection<BsonDocument>("occurrence-claim-fences");
 
     /// <inheritdoc/>
     public async Task<OccurrenceRecordResult> Record(Occurrence occurrence)
     {
+        await EnsureIndexes();
         try
         {
             await _occurrences.InsertOneAsync(OccurrenceDocuments.From(occurrence));
@@ -53,6 +56,7 @@ public partial class OccurrencesStorage(IMongoDatabase database) : IOccurrencesS
     /// <inheritdoc/>
     public async Task<IEnumerable<Occurrence>> Claim(TriggerId trigger, string worker, DateTimeOffset now, TimeSpan duration, int max, int maxInFlight)
     {
+        await EnsureIndexes();
         await EnsureFence(trigger);
         using var session = await database.Client.StartSessionAsync();
         try
@@ -61,7 +65,9 @@ public partial class OccurrencesStorage(IMongoDatabase database) : IOccurrencesS
 
             // Avoid snapshot write skew when two workers claim different pending rows.
             await _fences.UpdateOneAsync(session, Id(trigger.Value), Builders<BsonDocument>.Update.Inc("version", 1L));
-            var documents = await _occurrences.Find(session, new BsonDocument("trigger", trigger.Value)).ToListAsync();
+            var filter = Builders<BsonDocument>.Filter.Eq("trigger", trigger.Value) &
+                Builders<BsonDocument>.Filter.In("state", [(int)OccurrenceState.Pending, (int)OccurrenceState.Leased]);
+            var documents = await _occurrences.Find(session, filter).ToListAsync();
             var occurrences = documents.Select(OccurrenceDocuments.ToOccurrence).ToArray();
             var candidates = OccurrenceClaimSelection.Select(occurrences, now, max, maxInFlight);
             var claimed = new List<Occurrence>();
@@ -136,6 +142,11 @@ public partial class OccurrencesStorage(IMongoDatabase database) : IOccurrencesS
         var result = await _occurrences.UpdateOneAsync(filter, update);
         return result.MatchedCount == 1 ? OccurrenceLeaseResult.Updated : OccurrenceLeaseResult.OccurrenceLeaseLost;
     }
+
+    Task EnsureIndexes() => _occurrences.EnsureIndexesOnceAsync(
+        _ensuredIndexes,
+        new(Builders<BsonDocument>.IndexKeys.Ascending("trigger").Ascending("state"), new CreateIndexOptions { Name = "trigger-state" }),
+        new(Builders<BsonDocument>.IndexKeys.Ascending("schedule").Ascending("state"), new CreateIndexOptions { Name = "schedule-state" }));
 
     async Task EnsureFence(TriggerId trigger)
     {

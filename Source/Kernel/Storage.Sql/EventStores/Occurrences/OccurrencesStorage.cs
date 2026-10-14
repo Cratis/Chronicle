@@ -69,7 +69,8 @@ public partial class OccurrencesStorage<TContext>(Func<Task<DbContextScope<TCont
 
             // The shared write serializes claims for different occurrence rows as well as the same row.
             await context.Set<OccurrenceClaimFence>().Where(row => row.Id == hash).ExecuteUpdateAsync(set => set.SetProperty(row => row.Version, row => row.Version + 1));
-            var rows = await context.Set<OccurrenceEntry>().AsNoTracking().Where(row => row.Trigger == hash).ToListAsync();
+            var rows = await context.Set<OccurrenceEntry>().AsNoTracking()
+                .Where(row => row.Trigger == hash && (row.State == OccurrenceState.Pending || row.State == OccurrenceState.Leased)).ToListAsync();
             var byId = rows.ToDictionary(row => row.Id, StringComparer.Ordinal);
             var candidates = OccurrenceClaimSelection.Select(rows.Select(row => row.ToOccurrence()).ToArray(), now, max, maxInFlight)
                 .Select(occurrence => byId[StorageIdentity.Hash(occurrence.Id.Value)]).ToArray();

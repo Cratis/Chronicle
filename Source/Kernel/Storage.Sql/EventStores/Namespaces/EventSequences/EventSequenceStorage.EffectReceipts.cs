@@ -14,6 +14,7 @@ public partial class EventSequenceStorage : IEffectReceiptStorage
     /// <inheritdoc/>
     public async Task<EffectReceipt?> GetEffectReceipt(string id)
     {
+        await using var namespaceScope = await database.Namespace(eventStore, @namespace);
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
         var hash = StorageIdentity.Hash(id);
         var entry = await scope.DbContext.Set<EffectReceiptEntry>().AsNoTracking().SingleOrDefaultAsync(row => row.Id == hash);
@@ -32,6 +33,7 @@ public partial class EventSequenceStorage : IEffectReceiptStorage
         EffectReceiptValidation.Validate(batch, receipt, eventSequenceId);
         try
         {
+            await using var namespaceScope = await database.Namespace(eventStore, @namespace);
             await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
             foreach (var item in batch)
             {

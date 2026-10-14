@@ -53,6 +53,7 @@ public partial class OccurrencesStorage
             return false;
         }
 
+        await EnsureIndexes();
         using var session = await database.Client.StartSessionAsync();
         try
         {

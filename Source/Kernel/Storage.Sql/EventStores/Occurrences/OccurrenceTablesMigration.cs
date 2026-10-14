@@ -18,7 +18,7 @@ internal static class OccurrenceTablesMigration
     public static void Up(MigrationBuilder builder)
     {
         builder.CreateTable(
-            "Occurrences",
+            WellKnownTableNames.Occurrences,
             table => new
             {
                 Id = table.StringColumn(builder, maxLength: 64, nullable: false),
@@ -34,9 +34,9 @@ internal static class OccurrenceTablesMigration
                 LastError = table.StringColumn(builder, nullable: true)
             },
             constraints: table => table.PrimaryKey("PK_Occurrences", row => row.Id));
-        builder.CreateIndex("IX_Occurrences_Trigger_State", "Occurrences", ["Trigger", "State"]);
+        builder.CreateIndex("IX_Occurrences_Trigger_State", WellKnownTableNames.Occurrences, ["Trigger", "State"]);
         builder.CreateTable(
-            "OccurrenceClaimFences",
+            WellKnownTableNames.OccurrenceClaimFences,
             table => new
             {
                 Id = table.StringColumn(builder, maxLength: 64, nullable: false),
@@ -44,7 +44,7 @@ internal static class OccurrenceTablesMigration
             },
             constraints: table => table.PrimaryKey("PK_OccurrenceClaimFences", row => row.Id));
         builder.CreateTable(
-            "ScheduleDefinitions",
+            WellKnownTableNames.ScheduleDefinitions,
             table => new
             {
                 Id = table.StringColumn(builder, maxLength: 64, nullable: false),
@@ -53,7 +53,7 @@ internal static class OccurrenceTablesMigration
             },
             constraints: table => table.PrimaryKey("PK_ScheduleDefinitions", row => row.Id));
         builder.CreateTable(
-            "ScheduleCursors",
+            WellKnownTableNames.ScheduleCursors,
             table => new
             {
                 Id = table.StringColumn(builder, maxLength: 64, nullable: false),
@@ -65,7 +65,7 @@ internal static class OccurrenceTablesMigration
             },
             constraints: table => table.PrimaryKey("PK_ScheduleCursors", row => row.Id));
         builder.CreateTable(
-            "SkippedRanges",
+            WellKnownTableNames.SkippedRanges,
             table => new
             {
                 Id = table.StringColumn(builder, maxLength: 64, nullable: false),
@@ -73,9 +73,17 @@ internal static class OccurrenceTablesMigration
                 Data = table.StringColumn(builder, nullable: false)
             },
             constraints: table => table.PrimaryKey("PK_SkippedRanges", row => row.Id));
-        builder.CreateIndex("IX_SkippedRanges_Token", "SkippedRanges", "Token");
+        builder.CreateIndex("IX_SkippedRanges_Token", WellKnownTableNames.SkippedRanges, "Token");
+    }
+
+    /// <summary>
+    /// Creates effect receipts only in namespace storage.
+    /// </summary>
+    /// <param name="builder">The migration builder.</param>
+    public static void UpReceipts(MigrationBuilder builder)
+    {
         builder.CreateTable(
-            "EffectReceipts",
+            WellKnownTableNames.EffectReceipts,
             table => new
             {
                 Id = table.StringColumn(builder, maxLength: 64, nullable: false),
@@ -90,7 +98,7 @@ internal static class OccurrenceTablesMigration
     /// <param name="builder">The migration builder.</param>
     public static void Down(MigrationBuilder builder)
     {
-        foreach (var table in new[] { "EffectReceipts", "SkippedRanges", "ScheduleCursors", "ScheduleDefinitions", "OccurrenceClaimFences", "Occurrences" })
+        foreach (var table in new[] { WellKnownTableNames.SkippedRanges, WellKnownTableNames.ScheduleCursors, WellKnownTableNames.ScheduleDefinitions, WellKnownTableNames.OccurrenceClaimFences, WellKnownTableNames.Occurrences })
         {
             builder.DropTable(table);
         }

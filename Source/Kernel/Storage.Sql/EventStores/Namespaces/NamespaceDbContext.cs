@@ -93,6 +93,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     {
         base.OnModelCreating(modelBuilder);
         EventStores.Occurrences.OccurrenceModel.Configure(modelBuilder);
+        EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);
 
         modelBuilder
             .Entity<ClosedStreamEntry>(entity =>

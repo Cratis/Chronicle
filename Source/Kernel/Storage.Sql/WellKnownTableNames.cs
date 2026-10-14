@@ -267,4 +267,34 @@ public static class WellKnownTableNames
     /// The table that holds closed event streams per event sequence.
     /// </summary>
     public const string ClosedStreams = "ClosedStreams";
+
+    /// <summary>
+    /// The table that holds durable application and schedule occurrences.
+    /// </summary>
+    public const string Occurrences = "Occurrences";
+
+    /// <summary>
+    /// The table that serializes occurrence claims per trigger.
+    /// </summary>
+    public const string OccurrenceClaimFences = "OccurrenceClaimFences";
+
+    /// <summary>
+    /// The table that holds registered schedule definitions.
+    /// </summary>
+    public const string ScheduleDefinitions = "ScheduleDefinitions";
+
+    /// <summary>
+    /// The table that holds versioned schedule cursors.
+    /// </summary>
+    public const string ScheduleCursors = "ScheduleCursors";
+
+    /// <summary>
+    /// The table that holds recorded skipped schedule ranges.
+    /// </summary>
+    public const string SkippedRanges = "SkippedRanges";
+
+    /// <summary>
+    /// The namespace table that holds atomic effect receipts.
+    /// </summary>
+    public const string EffectReceipts = "EffectReceipts";
 }

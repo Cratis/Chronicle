@@ -16,12 +16,11 @@ public static class OccurrenceModel
     /// <param name="builder">The model builder.</param>
     public static void Configure(ModelBuilder builder)
     {
-        Configure<OccurrenceEntry>(builder, "Occurrences");
-        Configure<OccurrenceClaimFence>(builder, "OccurrenceClaimFences");
-        Configure<ScheduleDefinitionEntry>(builder, "ScheduleDefinitions");
-        Configure<ScheduleCursorEntry>(builder, "ScheduleCursors");
-        Configure<SkippedRangeEntry>(builder, "SkippedRanges");
-        ConfigureReceipts(builder);
+        Configure<OccurrenceEntry>(builder, WellKnownTableNames.Occurrences);
+        Configure<OccurrenceClaimFence>(builder, WellKnownTableNames.OccurrenceClaimFences);
+        Configure<ScheduleDefinitionEntry>(builder, WellKnownTableNames.ScheduleDefinitions);
+        Configure<ScheduleCursorEntry>(builder, WellKnownTableNames.ScheduleCursors);
+        Configure<SkippedRangeEntry>(builder, WellKnownTableNames.SkippedRanges);
         builder.Entity<OccurrenceEntry>().Property(row => row.Trigger).HasMaxLength(64);
         builder.Entity<OccurrenceEntry>().Property(row => row.Schedule).HasMaxLength(64);
         builder.Entity<OccurrenceEntry>().HasIndex(row => new { row.Trigger, row.State });
@@ -33,7 +32,7 @@ public static class OccurrenceModel
     /// Maps receipts alongside an event sequence's events.
     /// </summary>
     /// <param name="builder">The model builder.</param>
-    public static void ConfigureReceipts(ModelBuilder builder) => Configure<EffectReceiptEntry>(builder, "EffectReceipts");
+    public static void ConfigureReceipts(ModelBuilder builder) => Configure<EffectReceiptEntry>(builder, WellKnownTableNames.EffectReceipts);
 
     static void Configure<T>(ModelBuilder builder, string table)
         where T : class =>
