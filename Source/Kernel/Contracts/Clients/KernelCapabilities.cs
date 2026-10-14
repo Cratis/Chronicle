@@ -17,4 +17,9 @@ public static class KernelCapabilities
     /// The kernel accepts event-driven closing and reopening constraint definitions.
     /// </summary>
     public const string ClosesStreamConstraints = "closes-stream-constraints";
+
+    /// <summary>
+    /// The kernel atomically records occurrence effects and their opaque responses with event batches.
+    /// </summary>
+    public const string EffectReceipts = "effect-receipts";
 }

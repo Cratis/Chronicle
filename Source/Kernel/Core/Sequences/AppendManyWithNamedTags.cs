@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Causation">Optional causation.</param>
 /// <param name="CausedBy">Optional identity.</param>
 /// <param name="ConcurrencyScope">Optional concurrency scope.</param>
+/// <param name="EffectReceipt">Optional occurrence effect to commit atomically with this batch.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendManyWithNamedTags(
@@ -37,7 +38,8 @@ public record AppendManyWithNamedTags(
     DateTimeOffset? Occurred = default,
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
-    ConcurrencyScope? ConcurrencyScope = default)
+    ConcurrencyScope? ConcurrencyScope = default,
+    Occurrences.EffectReceipt? EffectReceipt = default)
 {
     /// <summary>
     /// Handles the batch through the existing append pipeline.
@@ -61,7 +63,8 @@ public record AppendManyWithNamedTags(
             Occurred,
             Causation,
             CausedBy,
-            ConcurrencyScope)
+            ConcurrencyScope,
+            EffectReceipt)
             .HandleWithNamedTags(grainFactory, causation, principalAccessor, namedTags);
     }
 }
