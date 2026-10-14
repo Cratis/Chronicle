@@ -44,6 +44,41 @@ public interface IUnitOfWork : IDisposable
     bool HasEnrolledDecisionReads => false;
 
     /// <summary>
+    /// Gets whether this unit permanently uses enforced read protection and a strict lifecycle.
+    /// </summary>
+    bool IsEnforcingReadProtection => false;
+
+    /// <summary>
+    /// Begins invocation read protection before any event or read dependency is enrolled.
+    /// Only the first caller receives the owning lifetime; subsequent leases cannot end enforcement.
+    /// </summary>
+    /// <returns>The invocation frame, disposed by the owning command pipeline in a finally block.</returns>
+    /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot enforce read protection.</exception>
+    ReadProtectionFrame EnforceReadProtection() => throw new UnitOfWorkReadProtectionNotSupported(GetType());
+
+    /// <summary>
+    /// Allows explicit reads without permitting immediate appends or removing existing dependencies.
+    /// </summary>
+    /// <param name="allowance">Advisory reads or reads contributed before exposure.</param>
+    /// <param name="reason">The explicit reason for the region.</param>
+    /// <returns>The flow-local read region.</returns>
+    /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot support allowances.</exception>
+    IDisposable AllowReads(ReadAllowance allowance, string reason) => throw new UnitOfWorkReadProtectionNotSupported(GetType());
+
+    /// <summary>
+    /// Atomically validates target, staged overlap and distinct contributions before enrolling a read.
+    /// </summary>
+    /// <param name="contribution">The stream or aggregate dependency.</param>
+    /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot enroll contributions.</exception>
+    void EnrolContributedRead(ContributedRead contribution) => throw new UnitOfWorkReadProtectionNotSupported(GetType());
+
+    /// <summary>
+    /// Gets the append conditions captured by the trusted commit.
+    /// </summary>
+    /// <returns>The immutable append-condition descriptions.</returns>
+    IReadOnlyList<AppendCondition> GetAppendConditions() => [];
+
+    /// <summary>
     /// Add an event that has occurred to the <see cref="IUnitOfWork"/>.
     /// </summary>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> for the event.</param>

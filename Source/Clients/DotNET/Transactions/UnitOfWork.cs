@@ -156,6 +156,11 @@ public partial class UnitOfWork(
         lock (_decisionLock)
         {
             ThrowIfStagingAfterCompletion();
+            if (IsEnforcingReadProtection)
+            {
+                AddEnforcedEvents(eventSequenceId, events, concurrencyScopes, origin);
+                return;
+            }
             var suppliedScopes = concurrencyScopes.Select(pair => new KeyValuePair<EventSourceId, ConcurrencyScope>(
                 pair.Key, MaterializeConcurrencyScope(pair.Value))).ToArray();
             var batch = new EventsWithConcurrencyScopes(events, suppliedScopes.Select(pair =>
@@ -211,6 +216,12 @@ public partial class UnitOfWork(
         {
             ThrowIfMutatedDuringEnrollment();
             ThrowIfEnrollmentNotificationFailed();
+            ReadProtectionGuard.ProtectedRead(this, read.ReadModelType.Name);
+            if (IsEnforcingReadProtection)
+            {
+                AddEnforcedDecisionRead(read);
+                return;
+            }
             if (IsCompleted || _completing) throw new DecisionReadAfterCompletion();
             DecisionReadScopes.Validate(read, eventStore.Name, eventStore.Namespace, EventSequenceId.Log);
             ValidateLegacyEventSequenceIdsForOrderedBatch(EventSequenceId.Log);
@@ -251,6 +262,7 @@ public partial class UnitOfWork(
     /// <exception cref="ProtectedUnitOfWorkRequiresOwner">An owner has already claimed this unit.</exception>
     public DecisionReadCommitOwner ClaimDecisionReadCommitOwnership()
     {
+        ReadProtectionGuard.RequireUnit(this);
         lock (_decisionLock)
         {
             ThrowIfMutatedDuringEnrollment();
@@ -328,9 +340,11 @@ public partial class UnitOfWork(
     /// <exception cref="ProtectedUnitOfWorkRequiresOwner">A claimed, open unit with enrolled decision reads must be completed by its owner.</exception>
     public void Dispose()
     {
+        ReadProtectionGuard.RequireUnit(this);
         lock (_decisionLock)
         {
             ThrowIfMutatedDuringEnrollment();
+            if (IsEnforcingReadProtection && !IsCompleted) throw new ProtectedUnitOfWorkRequiresOwner();
             if (_completing || IsCompleted) return;
             if (_commitOwner is not null && _hasEnrolledDecisionReads) throw new ProtectedUnitOfWorkRequiresOwner();
 
@@ -375,6 +389,7 @@ public partial class UnitOfWork(
 
     Task RollbackCore(DecisionReadCommitOwner? owner, bool fromOwner)
     {
+        ReadProtectionGuard.RequireUnit(this);
         using var span = _activitySource.Rollback(correlationId.ToString());
 
         lock (_decisionLock)
@@ -384,10 +399,10 @@ public partial class UnitOfWork(
             ThrowIfUnitOfWorkIsCompleted();
             if (_completing)
             {
-                if (lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict) throw new UnitOfWorkIsCompleting(correlationId);
+                if (IsEnforcingReadProtection || lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict) throw new UnitOfWorkIsCompleting(correlationId);
                 if (fromOwner || (_commitOwner is not null && _hasEnrolledDecisionReads)) throw new UnitOfWorkIsCompleting(correlationId);
             }
-            if (_commitOwner is not null && _hasEnrolledDecisionReads && !fromOwner) throw new ProtectedUnitOfWorkRequiresOwner();
+            if ((IsEnforcingReadProtection || (_commitOwner is not null && _hasEnrolledDecisionReads)) && !fromOwner) throw new ProtectedUnitOfWorkRequiresOwner();
             CompleteRollback();
         }
 
@@ -397,6 +412,7 @@ public partial class UnitOfWork(
 
     async Task CommitCore(bool fromOwner)
     {
+        ReadProtectionGuard.RequireUnit(this);
         using var span = _activitySource.Commit(correlationId.ToString());
 
         Dictionary<EventSourceId, ConcurrencyScope> scopes;
@@ -410,7 +426,7 @@ public partial class UnitOfWork(
             ThrowIfUnitOfWorkIsCompleted();
             ThrowIfEnrollmentNotificationFailed();
             if (_completing) throw new DecisionReadAfterCompletion();
-            protectedCommit = _decisionScopes.Count != 0;
+            protectedCommit = IsEnforcingReadProtection || _decisionScopes.Count != 0;
             if (protectedCommit && (!fromOwner || _commitOwner is null)) throw new ProtectedUnitOfWorkRequiresOwner();
             _completing = true;
 
@@ -453,6 +469,7 @@ public partial class UnitOfWork(
                 }
                 _appendManyResult = result;
             }
+            if (IsEnforcingReadProtection && _appendManyResult.IsSuccess) _readProtectionFrameLease!().CommittedSuccessfully();
         }
         catch (Exception exception) when (protectedCommit)
         {
@@ -487,11 +504,12 @@ public partial class UnitOfWork(
 
     void ThrowIfStagingAfterCompletion()
     {
+        ReadProtectionGuard.RequireUnit(this);
         ThrowIfMutatedDuringEnrollment();
         ThrowIfEnrollmentNotificationFailed();
         if (!_completing && !IsCompleted) return;
 
-        if (lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict)
+        if (IsEnforcingReadProtection || lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict)
         {
             throw new UnitOfWorkIsCompleted(correlationId);
         }

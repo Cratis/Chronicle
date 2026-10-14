@@ -81,7 +81,7 @@ public partial class UnitOfWork
                     if (_concurrencyScopes.TryGetValue(source, out var existing)) MergeRequiredScope(source, existing, required);
                     requirements[source] = required;
                 }
-                if (effective != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(source))
+                if (!IsEnforcingReadProtection && effective != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(source))
                 {
                     throw new DecisionReadConflictsWithConcurrencyScope(source);
                 }

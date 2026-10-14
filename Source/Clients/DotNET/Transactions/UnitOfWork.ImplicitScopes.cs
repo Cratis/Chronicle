@@ -82,6 +82,21 @@ public partial class UnitOfWork
         lock (_decisionLock)
         {
             ThrowIfStagingAfterCompletion();
+            if (IsEnforcingReadProtection)
+            {
+                var enforcedEvent = new EventForEventSourceId(eventSourceId, @event, causation)
+                {
+                    EventStreamType = eventStreamType ?? EventStreamType.All,
+                    EventStreamId = eventStreamId ?? EventStreamId.Default,
+                    EventSourceType = eventSourceType ?? EventSourceType.Default,
+                    Tags = tags ?? [],
+                    NamedTags = NamedTagConverters.Merge([], namedTags),
+                    Occurred = occurred,
+                    Subject = subject
+                };
+                AddEnforcedEvents(eventSequenceId, [enforcedEvent], [new(eventSourceId, concurrencyScope ?? ConcurrencyScope.NotSet)], origin);
+                return;
+            }
             var scope = concurrencyScope ?? ConcurrencyScope.NotSet;
             var enrollment = new UnitOfWorkEnrollment(eventSequenceId, eventSourceId, scope, Array.AsReadOnly<object>([@event]));
             var resolution = ResolveEnrollmentScopes(eventSequenceId, [enrollment]);
