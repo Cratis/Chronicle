@@ -25,11 +25,26 @@ A capture definition describes:
 - **Append rules**: which event to append and when to append it
 - **Scopes**: root, nested objects, and child collections
 
-Chronicle supports three authoring approaches. Only the first is language-neutral — the other two are .NET client features, documented alongside the rest of the .NET client:
+Chronicle supports four authoring approaches. The first is language-neutral — the others are client features, documented alongside the rest of each client:
 
 - **Capture Declaration Language (CDL)** for text-based definitions
 - **Declarative API** (.NET) for fluent definitions in code
 - **Model-bound API** (.NET) for attribute-based definitions
+- **Capture DSL** (Elixir) for definitions in code that compile to CDL
+
+## Define and manage a capture in your client
+
+In Elixir, a module with `use Chronicle.Captures.Capture` declares the source, the identity key, and the append rules; the DSL compiles to CDL at build time.
+
+<ChronicleClientTabs snippet="captures/index/define" />
+
+The mapping, `nested`, and `children` constructs of the language are available in the DSL too, and are subject to the engine limits described above.
+
+<ChronicleClientTabs snippet="captures/index/dsl-features" />
+
+Registering, starting, stopping, listing, validating, and deleting captures, and reading recently captured events, are operations on the client:
+
+<ChronicleClientTabs snippet="captures/index/manage" />
 
 ## Topics
 
