@@ -1,0 +1,20 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Occurrences;
+
+/// <summary>
+/// Describes which writer recorded the immutable receipt.
+/// </summary>
+public enum EffectReceiptStatus
+{
+    /// <summary>
+    /// This call durably recorded the effect.
+    /// </summary>
+    Recorded = 0,
+
+    /// <summary>
+    /// An earlier call durably recorded the effect.
+    /// </summary>
+    AlreadyRecorded = 1
+}

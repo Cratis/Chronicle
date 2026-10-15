@@ -40,6 +40,9 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     readonly Occurrences.OccurrencesStorage<EventStoreDbContext> _occurrences = new(() => database.EventStore(eventStore));
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(() => database.EventStore(eventStore));
+
+    /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
 
     /// <inheritdoc/>

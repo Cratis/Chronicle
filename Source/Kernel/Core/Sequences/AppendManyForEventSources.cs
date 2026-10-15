@@ -23,6 +23,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
 /// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
 /// <param name="ConcurrencyScopes">Optional concurrency scopes to validate the append against, one per event source. An event source with no entry gets no check.</param>
+/// <param name="EffectReceipt">Optional occurrence effect to commit atomically with this batch.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendManyForEventSources(
@@ -34,7 +35,8 @@ public record AppendManyForEventSources(
     IEnumerable<string>? Tags = default,
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
-    IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default)
+    IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default,
+    Occurrences.EffectReceipt? EffectReceipt = default)
 {
     /// <summary>
     /// Handles the command by appending every event in one transaction.
@@ -103,6 +105,8 @@ public record AppendManyForEventSources(
             });
         }
 
-        return eventSequence.AppendMany(events, correlationId, causationChain, identity, scopes.AsT0);
+        return EffectReceipt is null
+            ? eventSequence.AppendMany(events, correlationId, causationChain, identity, scopes.AsT0)
+            : eventSequence.AppendManyWithEffectReceipt(events, correlationId, causationChain, identity, scopes.AsT0, EffectReceipt);
     }
 }

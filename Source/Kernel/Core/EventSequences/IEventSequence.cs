@@ -117,6 +117,27 @@ public interface IEventSequence : IGrainWithStringKey
     Task<AppendResult> AppendPublication(string publicationId, string intentFingerprint, EventToAppend @event, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
+    /// Looks up an occurrence effect before validation and commits its events and receipt atomically.
+    /// </summary>
+    /// <param name="events">The events; empty for a protected validate-only decision.</param>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The identity that caused the append.</param>
+    /// <param name="concurrencyScopes">The protected decision scopes.</param>
+    /// <param name="effectReceipt">The occurrence effect and optional response.</param>
+    /// <returns>The append result or the winning receipt.</returns>
+    Task<AppendManyResult> AppendManyWithEffectReceipt(IEnumerable<EventToAppend> events, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScopes concurrencyScopes, Occurrences.EffectReceipt effectReceipt);
+
+    /// <summary>
+    /// Records an unprotected NoEvents or Refused outcome, first writer wins.
+    /// </summary>
+    /// <param name="effectReceipt">The occurrence effect and optional response.</param>
+    /// <param name="outcome">The NoEvents or Refused outcome.</param>
+    /// <param name="reasons">The refusal reasons.</param>
+    /// <returns>The winning receipt and whether this call recorded it.</returns>
+    Task<Occurrences.RecordEffectReceiptResult> RecordEffectReceipt(Occurrences.EffectReceipt effectReceipt, Storage.Occurrences.EffectOutcome outcome, IReadOnlyList<string> reasons);
+
+    /// <summary>
     /// Appends an event to the event sequence.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> of the event source.</param>

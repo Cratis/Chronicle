@@ -22,6 +22,23 @@ public partial class EventSequenceStorage : IEffectReceiptStorage
     }
 
     /// <inheritdoc/>
+    public Task<IEnumerable<EffectReceipt>> GetEffectReceipts(OccurrenceId occurrenceId) => GetEffectReceiptsForOccurrences([occurrenceId]);
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<EffectReceipt>> GetEffectReceiptsForOccurrences(IEnumerable<OccurrenceId> occurrenceIds)
+    {
+        lock (_effectReceiptState.Sync)
+        {
+            var receipts = occurrenceIds.Distinct()
+                .SelectMany(id => _effectReceiptState.ReceiptsByOccurrence.GetValueOrDefault(id) ?? [])
+                .Select(id => _effectReceiptState.Receipts[id])
+                .Select(receipt => receipt with { Reasons = receipt.Reasons.ToArray() }).ToArray();
+
+            return Task.FromResult<IEnumerable<EffectReceipt>>(receipts);
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<EffectReceiptWriteResult> AppendManyWithEffectReceipt(IEnumerable<EventToAppendToStorage> events, EffectReceipt receipt)
     {
         if (await GetEffectReceipt(receipt.Id) is not null)
@@ -66,6 +83,12 @@ public partial class EventSequenceStorage : IEffectReceiptStorage
                 }
 
                 _effectReceiptState.Receipts.Add(receipt.Id, receipt with { Reasons = receipt.Reasons.ToArray() });
+                if (!_effectReceiptState.ReceiptsByOccurrence.TryGetValue(receipt.Lease.OccurrenceId, out var receiptIds))
+                {
+                    receiptIds = [];
+                    _effectReceiptState.ReceiptsByOccurrence.Add(receipt.Lease.OccurrenceId, receiptIds);
+                }
+                receiptIds.Add(receipt.Id);
                 return EffectReceiptWriteResult.Written;
             }
         }

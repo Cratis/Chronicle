@@ -69,6 +69,9 @@ public class EventStoreStorage(
     readonly Occurrences.OccurrencesStorage _occurrences = new(eventStoreDatabase.GetCollection<BsonDocument>("occurrences").Database);
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(eventStoreDatabase.GetCollection<BsonDocument>("trigger-definitions").Database);
+
+    /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
 
     /// <inheritdoc/>

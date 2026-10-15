@@ -14,6 +14,11 @@ public class EffectReceiptEntry
     public string Id { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the indexed hash of the occurrence identity.
+    /// </summary>
+    public string OccurrenceId { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets Data.
     /// </summary>
     public string Data { get; set; } = string.Empty;

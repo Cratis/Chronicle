@@ -32,7 +32,12 @@ public static class OccurrenceModel
     /// Maps receipts alongside an event sequence's events.
     /// </summary>
     /// <param name="builder">The model builder.</param>
-    public static void ConfigureReceipts(ModelBuilder builder) => Configure<EffectReceiptEntry>(builder, WellKnownTableNames.EffectReceipts);
+    public static void ConfigureReceipts(ModelBuilder builder)
+    {
+        Configure<EffectReceiptEntry>(builder, WellKnownTableNames.EffectReceipts);
+        builder.Entity<EffectReceiptEntry>().Property(row => row.OccurrenceId).HasMaxLength(64);
+        builder.Entity<EffectReceiptEntry>().HasIndex(row => row.OccurrenceId);
+    }
 
     static void Configure<T>(ModelBuilder builder, string table)
         where T : class =>
