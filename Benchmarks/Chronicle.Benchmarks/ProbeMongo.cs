@@ -8,7 +8,7 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Benchmarks;
 
-internal sealed class ProbeMongo(IContainer container, string store, long profilerBytes)
+internal sealed partial class ProbeMongo(IContainer container, string store, long profilerBytes)
 {
     const string Comment = "probe-4748-instrumentation";
     readonly MongoClient _client = new($"mongodb://localhost:{Environment.GetEnvironmentVariable("BENCH_MONGO_PORT") ?? "27018"}/?directConnection=true&serverSelectionTimeoutMS=5000");
@@ -81,7 +81,7 @@ internal sealed class ProbeMongo(IContainer container, string store, long profil
         const serverCommittedDelta=serverEnd.totalCommitted-serverStart.totalCommitted, serverAbortedDelta=serverEnd.totalAborted-serverStart.totalAborted;
         const knownIds={{{{{JsonSerializer.Serialize(Probe.SystemObserverIds.Prepend(_probeId).ToArray())}}}}};
         const probeId={{{{{JsonSerializer.Serialize(_probeId)}}}}};
-        const rows=[],boundary=[],samples=[],systemOwnerSamples=[],observed=new Set(),owners=new Map();
+        const rows=[],boundary=[],samples=[],systemOwnerSamples=[],observed=new Set(),owners=new Map(),pullWrites=[];
         let profileEntries=0,transactionIdentityMissing=0;
         function ownerOf(r,ids,probe) {
           function find(v) {
@@ -90,6 +90,8 @@ internal sealed class ProbeMongo(IContainer container, string store, long profil
             return Object.values(v).flatMap(find);
           }
           const c=r.command||{};
+          if(c.comment==='probe-4748-pull' || r.originatingCommand?.comment==='probe-4748-pull')
+            return {owner:'probe',observerId:probe,command:Object.keys(c)[0]||'',isTx:c.autocommit===false || r.autocommit===false || c.startTransaction===true};
           const selectors=[r.query,c.filter,c.q,c.query,c.pipeline,c.document?c.document._id:null,
             ...(c.updates||[]).map(u=>u.q),...(c.deletes||[]).map(u=>u.q),...(c.documents||[]).map(d=>d._id)];
           if(/\.(jobs|job-steps)$/.test(r.ns)) selectors.push(c.u);
@@ -130,6 +132,12 @@ internal sealed class ProbeMongo(IContainer container, string store, long profil
             for(const field of Object.keys(fields)) { row[field]=Number(g[field]); if(!Number.isFinite(row[field]) || row[field]<0) throw new Error('Invalid metric '+field); }
             rows.push(row);
           }
+          // The query $comment is inert to matching/upsert shape and identifies one whole coordinator wire write.
+          // Group on the server, inside the SAME profiler boundaries as the inherited totals.
+          pullWrites.push(...p.aggregate([
+            {$match:{...filter,'command.q.$comment':{$regex:'^probe4748wire-'},op:'update'}},
+            {$group:{_id:{$getField:{field:{$literal:'$comment'},input:'$command.q'}},statements:{$sum:1}}}
+          ],{comment:'probe-4748-instrumentation'}).toArray().map(g=>({id:g._id,statements:Number(g.statements)})));
           systemOwnerSamples.push(...p.find({...filter,'command.q._id':'$system.patterns',op:'update'},
             {ns:1,op:1,ts:1,'command.q':1}).limit(2).toArray());
           if(samples.length<20) samples.push(...p.find(filter,{ns:1,op:1,ts:1,'command.q':1,'command.filter':1,'command.u.details':1,'command.u.request.observerKey':1,'command.lsid':1,'command.txnNumber':1,'command.autocommit':1}).limit(Math.min(8,20-samples.length)).toArray());
@@ -145,11 +153,17 @@ internal sealed class ProbeMongo(IContainer container, string store, long profil
           transactionSet:[...observed],transactionsObserved:observed.size,terminalCommandsProfiled:transactions.length,terminalCostProfiled:false,
           transactionIdentityMissing,serverStart,serverEnd,serverCommittedDelta,serverAbortedDelta,
           transactionCounterMethod:'explicit run-bounded serverStatus().transactions delta; task-owned single-tenant Mongo; terminal cost NOT PROFILED',
-          commands:rows.reduce((n,r)=>n+r.commands,0)+transactions.length}));
+          commands:rows.reduce((n,r)=>n+r.commands,0)+transactions.length,
+          pullCommandAccounting:{method:'boundary-aligned profiler update statements grouped by inert per-wire query $comment; cross-checked with dedicated-client CommandStartedEvent',
+            writes:pullWrites.length,writeStatements:pullWrites.reduce((n,r)=>n+r.statements,0),writeIds:pullWrites,
+            adjustedCommands:rows.reduce((n,r)=>n+r.commands,0)+transactions.length-pullWrites.reduce((n,r)=>n+r.statements,0)+pullWrites.length}}));
         """);
+
+    internal IMongoDatabase PullDatabase => _client.GetDatabase($"{store}+es+Default");
 
     internal Task<BsonDocument[]> Observers() => Read($"{store}+es", "observers");
     internal Task<BsonDocument[]> State() => Read($"{store}+es+Default", "observers");
+    internal Task<BsonDocument[]> HandledCounts() => Read($"{store}+es+Default", "observer-handled-counts");
     internal Task<BsonDocument[]> Jobs() => Read($"{store}+es+Default", "jobs");
     internal Task<BsonDocument[]> JobSteps() => Read($"{store}+es+Default", "job-steps");
     internal Task<BsonDocument[]> FailedJobSteps() => Read($"{store}+es+Default", "failed-job-steps");
@@ -180,8 +194,10 @@ internal sealed class ProbeMongo(IContainer container, string store, long profil
 
     internal async Task<BsonDocument[]> CompletedCatchupJobs(string observerId, ulong tail)
     {
-        _jobWrites ??= JobWrites(); // One compact tail-time read, never a repeated whole-profiler poll.
+        if (_timingPump?.IsFaulted == true) await _timingPump;
+        _jobWrites ??= _timingCursor is null ? JobWrites() : Task.FromResult(TimingJobWrites()); // Same proof without enabling profiling.
         var writes = await _jobWrites;
+        if (_timingCursor is not null) _jobWrites = null; // The change stream may still be catching up.
         JobWriteSamples = writes.Select(d => d.ToJson()).ToArray();
         var matching = writes.Where(r => r["op"] == "update" && r["command"]["u"].AsBsonDocument.GetValue("details", "") == observerId);
         var completed = new List<BsonDocument>();

@@ -10,7 +10,7 @@ using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Benchmarks;
 
-internal static class Probe
+internal static partial class Probe
 {
     static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     internal static readonly string[] SystemObserverIds =
@@ -25,6 +25,7 @@ internal static class Probe
     internal static async Task<int> Run(string[] args)
     {
         if (args.Length == 1 && args[0] == "self-test") return SelfTest();
+        if (args.Length == 1 && args[0] == "pull-self-test") return await ProbePullSelfTest.Run();
         if (args.Length != 1) throw new ArgumentException("Supply exactly one scenario per phase.");
         if (args[0].Split(':').Contains("noop")) throw new ArgumentException("Noop rows were removed; use measured handler busy time and CPU headroom.");
         var output = Environment.GetEnvironmentVariable("PROBE_OUT") ?? throw new InvalidOperationException("PROBE_OUT is required.");
@@ -77,14 +78,26 @@ internal static class Probe
                 try
                 {
                     run.PersistedObserverState = (await mongo.State().WaitAsync(TimeSpan.FromSeconds(5))).Select(d => d.ToJson()).ToArray();
+                    run.TodayHandledCountSample = (await mongo.HandledCounts().WaitAsync(TimeSpan.FromSeconds(5))).FirstOrDefault(d =>
+                        d["_id"]["observerId"].AsString == (run.IsPull ? "$system.patterns" : run.ProbeObserverId))?.ToJson();
                     run.PersistedJobs = (await mongo.Jobs().WaitAsync(TimeSpan.FromSeconds(5))).Select(d => d.ToJson()).ToArray();
                     if (run.Scenario.StartsWith("catchup") && run.DurableMs.HasValue &&
                         run.PersistedJobs.Select(BsonDocument.Parse).Any(j => j.GetValue("details", "") == run.ProbeObserverId))
                         throw new InvalidOperationException("Non-deleted probe job remains after claimed catch-up completion.");
                     run.EndObservers = (await mongo.Observers().WaitAsync(TimeSpan.FromSeconds(5))).Select(d => d.ToJson()).ToArray();
-                    CheckObservers(run.EndObservers.Select(BsonDocument.Parse).ToArray(), run.Scenario.StartsWith("appendonly") ? 0 : 1, run.Scenario.Contains("projection"));
+                    CheckObservers(run.EndObservers.Select(BsonDocument.Parse).ToArray(), run.Scenario.StartsWith("appendonly") || run.IsPull ? 0 : 1, run.Scenario.Contains("projection"));
                     run.Mongo = await mongo.EndProfile().WaitAsync(TimeSpan.FromSeconds(60));
                     ValidateProfile(run.Mongo.Value);
+                    if (run.IsPull)
+                    {
+                        if (!run.Mongo.Value.GetProperty("rows").EnumerateArray().Any(r => r.GetProperty("owner").GetString() == "probe" && r.GetProperty("commands").GetInt64() > 0))
+                            throw new InvalidOperationException("Pull profile has no probe-owned operations.");
+                        var wire = run.PullWireCommands!.Value;
+                        var correlated = run.Mongo.Value.GetProperty("pullCommandAccounting");
+                        if (correlated.GetProperty("writes").GetInt64() != wire.GetProperty("writes").GetInt64() ||
+                            correlated.GetProperty("writeStatements").GetInt64() != wire.GetProperty("documentsWritten").GetInt64())
+                            throw new InvalidOperationException("Pull write commands/statements could not be reconciled inside profiler boundaries (split/retry/boundary loss); INVALID, not underestimated.");
+                    }
                 }
                 catch (Exception error)
                 {
@@ -92,7 +105,17 @@ internal static class Probe
                     run.Reason = $"{run.Reason}\nFinal attribution/observer check: {error}";
                 }
             }
-            if (run.Expected == 0 || !run.ObserverListPassed || !run.Mongo.HasValue)
+            if (!run.ProfileEnabled && mongo is not null)
+            {
+                try
+                {
+                    run.EndObservers = (await mongo.Observers().WaitAsync(TimeSpan.FromSeconds(5))).Select(d => d.ToJson()).ToArray();
+                    CheckObservers(run.EndObservers.Select(BsonDocument.Parse).ToArray(), run.Scenario.StartsWith("appendonly") || run.IsPull ? 0 : 1, run.Scenario.Contains("projection"));
+                    await mongo.StopTimingEvidence().WaitAsync(TimeSpan.FromSeconds(5));
+                }
+                catch (Exception error) { run.Status = "INVALID"; run.Reason += $"\nTiming-only final check: {error}"; }
+            }
+            if (run.Expected == 0 || !run.ObserverListPassed || (run.ProfileEnabled && !run.Mongo.HasValue))
             {
                 run.Status = "INVALID";
                 run.Reason = $"{run.Reason}\nNon-vacuity: expected={run.Expected}, observerList={run.ObserverListPassed}, profile={run.Mongo.HasValue}.";
@@ -133,14 +156,14 @@ internal static class Probe
             run.Snapshot();
             if (run.RegisteredMs.HasValue && run.Accounting is { } accounting && run.Expected > 0 &&
                 (accounting.Duplicates != 0 || accounting.FirstDeliveryOrderViolations != 0 ||
-                 accounting.Unexpected.Length != 0 || accounting.Missing.Length != 0))
+                 accounting.Unexpected.Length != 0 || accounting.Missing.Length != 0 || accounting.PayloadMismatches != 0))
             {
-                run.Status = "DEFECT";
-                run.Reason += $"\nDelivery defect: missing={accounting.Missing.Length}, duplicates={accounting.Duplicates}, order={accounting.FirstDeliveryOrderViolations}, unexpected={accounting.Unexpected.Length}.";
+                run.Status = run.IsPull ? "INVALID" : "DEFECT";
+                run.Reason += $"\nDelivery defect (planted={run.DeliberateDrop}): missing={accounting.Missing.Length}, duplicates={accounting.Duplicates}, order={accounting.FirstDeliveryOrderViolations}, unexpected={accounting.Unexpected.Length}, payload={accounting.PayloadMismatches}.";
             }
             Save(output, run);
         }
-        return run.Status switch { "COMPLETE" => 0, "DEFECT" => 1, _ => 2 };
+        return run.Status switch { "COMPLETE" or "COMPLETE_TIMING_ONLY" => 0, "DEFECT" => 1, _ => 2 };
     }
 
     static void Save(string output, ProbeRun result)
@@ -152,6 +175,7 @@ internal static class Probe
 
     static async Task Measure(ChronicleBenchmarkFixture fixture, ProbeMongo mongo, ProbeRun run, CancellationToken cancellation)
     {
+        if (run.IsPull) { await MeasurePull(fixture, mongo, run, cancellation); return; }
         var parts = run.Scenario.Split(':');
         var catchup = parts[0] == "catchup";
         var appendOnly = parts[0] == "appendonly";
@@ -188,7 +212,9 @@ internal static class Probe
         run.BeforeObservers = before.Select(d => d.ToJson()).ToArray();
         run.InitialObserverState = (await mongo.State().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
         CheckObservers(before, catchup || appendOnly ? 0 : 1, projection);
-        run.ProfileStart = await mongo.StartProfile(run.ProbeObserverId).WaitAsync(cancellation);
+        if (run.ProfileEnabled) run.ProfileStart = await mongo.StartProfile(run.ProbeObserverId).WaitAsync(cancellation);
+        else if (catchup) await mongo.StartTimingEvidence(cancellation);
+        var cpuBefore = await mongo.CpuSnapshot().WaitAsync(cancellation);
         ProbeDelivery.Current = run.Delivery;
         run.Started = Stopwatch.GetTimestamp();
         run.CpuStart = Process.GetCurrentProcess().TotalProcessorTime;
@@ -274,8 +300,8 @@ internal static class Probe
                         var completed = await mongo.CompletedCatchupJobs(run.ProbeObserverId, tail).WaitAsync(cancellation);
                         run.CompletedJobEvidence = completed.Select(d => d.ToJson()).ToArray();
                         run.JobWriteSamples = mongo.JobWriteSamples;
-                        if (completed.Length != 1) throw new InvalidOperationException("Tail reached but full handled-all/tail job evidence plus deletion is not proven for exactly one job.");
-                        finishedJobs = true;
+                        if (completed.Length != 1 && run.ProfileEnabled) throw new InvalidOperationException("Tail reached but full handled-all/tail job evidence plus deletion is not proven for exactly one job.");
+                        finishedJobs = completed.Length == 1;
                     }
                     var terminal = catchup ? jobs.FirstOrDefault(j => j.GetValue("status", 0).ToInt32() >= 6) : null;
                     if (terminal is not null)
@@ -297,7 +323,7 @@ internal static class Probe
                 if ((appendOnly || (run.DurableMs.HasValue && (!projection || run.EffectMs.HasValue))) && run.SystemDurableMs.HasValue)
                 {
                     await Task.Delay(2000, cancellation);
-                    run.Status = "COMPLETE";
+                    run.Status = run.ProfileEnabled ? "COMPLETE" : "COMPLETE_TIMING_ONLY";
                     return;
                 }
                 await Task.Delay(100, cancellation);
@@ -305,6 +331,7 @@ internal static class Probe
         }
         finally
         {
+            run.ContainerCpu = JsonSerializer.SerializeToElement(new { start = cpuBefore, end = await mongo.CpuSnapshot().WaitAsync(TimeSpan.FromSeconds(5)) });
             if (catchup && !run.DurableMs.HasValue && run.ConnectedObserverState.Length == 0)
             {
                 // Measure owns the connected client: snapshot before its using declaration disposes it,
@@ -332,6 +359,11 @@ internal static class Probe
     {
         var keys = Enumerable.Range(0, keyCount).Select(_ => EventSourceId.New()).ToArray();
         var payloads = Enumerable.Range(0, n).Select(i => new BenchmarkEvent(keys[i % keyCount].Value, i, DateTimeOffset.UtcNow)).ToArray();
+        var ratePart = run.Scenario.Split(':').SingleOrDefault(p => p.StartsWith("rate=", StringComparison.Ordinal));
+        var rate = ratePart is null ? 0 : int.Parse(ratePart[5..]);
+        var paceStart = Stopwatch.GetTimestamp();
+        var sparse = run.Scenario.Split(':').Contains("sparse9");
+        if (batch && (sparse || rate > 0)) throw new ArgumentException("Batch cannot be paced or sparse.");
         if (batch)
         {
             run.Submitted = n;
@@ -345,8 +377,24 @@ internal static class Probe
         {
             await Parallel.ForEachAsync(Enumerable.Range(0, n), new ParallelOptions { MaxDegreeOfParallelism = concurrency, CancellationToken = cancellation }, async (i, token) =>
             {
+                if (rate > 0)
+                {
+                    var wait = i * 1000.0 / rate - Stopwatch.GetElapsedTime(paceStart).TotalMilliseconds;
+                    if (wait > 0) await Task.Delay(TimeSpan.FromMilliseconds(wait), token);
+                }
                 Interlocked.Increment(ref run.SubmittedCount);
                 var key = keys[i % keyCount];
+                if (sparse)
+                {
+                    for (var j = 0; j < 9; j++)
+                    {
+                        var unrelated = await log.Append(key, new BenchmarkInstanceRecorded(key.Value, i * 9 + j, payloads[i].Timestamp),
+                            concurrencyScope: ConcurrencyScope.None).WaitAsync(token);
+                        if (!unrelated.IsSuccess || !unrelated.SequenceNumber.IsActualValue) throw new InvalidOperationException("Unrelated append failed.");
+                        Interlocked.Increment(ref run.UnrelatedCount);
+                        run.Wake?.Invoke();
+                    }
+                }
                 var result = await log.Append(key, payloads[i], concurrencyScope: ConcurrencyScope.None).WaitAsync(token);
                 if (!result.IsSuccess || !result.SequenceNumber.IsActualValue) throw new InvalidOperationException(JsonSerializer.Serialize(result));
                 AddExpected(run, key, result.SequenceNumber.Value, payloads[i]);
@@ -359,6 +407,7 @@ internal static class Probe
     {
         if (!run.Appended.TryAdd(new(key.Value, sequence), new(payload.Value, payload.Timestamp)))
             throw new InvalidOperationException($"Duplicate append result {key}@{sequence}.");
+        run.Wake?.Invoke();
     }
 
     static async Task Warm(ChronicleClientHelper helper, ProbeMongo mongo, string? observerId, CancellationToken cancellation)

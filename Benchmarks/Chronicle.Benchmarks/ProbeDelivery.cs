@@ -10,7 +10,7 @@ internal sealed record ProbePosition(string Key, ulong SequenceNumber);
 internal sealed class ProbeDelivery
 {
     readonly object _gate = new();
-    readonly Dictionary<ProbePosition, (long First, int Count)> _delivered = [];
+    readonly Dictionary<ProbePosition, (long First, int Count, ProbePayload? Payload)> _delivered = [];
     long _busyTicks;
 
     internal static ProbeDelivery Current { get; set; } = new();
@@ -21,7 +21,7 @@ internal sealed class ProbeDelivery
 
     internal double BusyMs => Interlocked.Read(ref _busyTicks) * 1000.0 / Stopwatch.Frequency;
 
-    internal void Record(ProbePosition position, int payloadIndex)
+    internal void Record(ProbePosition position, int payloadIndex, ProbePayload? payload = null)
     {
         var start = Stopwatch.GetTimestamp();
         if (!Drop || payloadIndex != DropIndex)
@@ -30,11 +30,11 @@ internal sealed class ProbeDelivery
             {
                 if (_delivered.TryGetValue(position, out var prior))
                 {
-                    _delivered[position] = (prior.First, prior.Count + 1);
+                    _delivered[position] = (prior.First, prior.Count + 1, prior.Payload);
                 }
                 else
                 {
-                    _delivered[position] = (Stopwatch.GetTimestamp(), 1);
+                    _delivered[position] = (Stopwatch.GetTimestamp(), 1, payload);
                 }
             }
         }
@@ -58,7 +58,7 @@ internal sealed class ProbeDelivery
         }
     }
 
-    internal ProbeAccounting Snapshot(IReadOnlyCollection<ProbePosition> expected, long started)
+    internal ProbeAccounting Snapshot(IReadOnlyCollection<ProbePosition> expected, long started, IReadOnlyDictionary<ProbePosition, ProbePayload>? payloads = null)
     {
         lock (_gate)
         {
@@ -80,7 +80,10 @@ internal sealed class ProbeDelivery
                 ? (matching.Max(p => p.Value.First) - started) * 1000.0 / Stopwatch.Frequency
                 : null;
             return new(membership.Count, matching.Length, _delivered.Sum(p => p.Value.Count - 1), violations,
-                missing, _delivered.Keys.Where(p => !membership.Contains(p)).ToArray(), effectMs);
+                missing, _delivered.Keys.Where(p => !membership.Contains(p)).ToArray(), effectMs,
+                payloads is null ? 0 : matching.Count(p => p.Value.Payload is null ||
+                    p.Value.Payload.Value != payloads[p.Key].Value ||
+                    p.Value.Payload.Timestamp.ToUnixTimeMilliseconds() != payloads[p.Key].Timestamp.ToUnixTimeMilliseconds()));
         }
     }
 }
@@ -92,4 +95,5 @@ internal sealed record ProbeAccounting(
     int FirstDeliveryOrderViolations,
     ProbePosition[] Missing,
     ProbePosition[] Unexpected,
-    double? EffectMs);
+    double? EffectMs,
+    int PayloadMismatches);

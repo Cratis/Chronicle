@@ -20,7 +20,7 @@ public class ProbeReactor : IReactor
     /// <returns>A completed task.</returns>
     public Task Observe(BenchmarkEvent evt, EventContext context)
     {
-        ProbeDelivery.Current.Record(new(context.EventSourceId.Value, context.SequenceNumber.Value), evt.Value);
+        ProbeDelivery.Current.Record(new(context.EventSourceId.Value, context.SequenceNumber.Value), evt.Value, new(evt.Value, evt.Timestamp));
         return Task.CompletedTask;
     }
 }

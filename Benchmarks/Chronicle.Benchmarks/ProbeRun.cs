@@ -17,6 +17,8 @@ internal sealed class ProbeRun(string scenario, string store)
     internal long Started;
     internal int SubmittedCount;
     internal TimeSpan CpuStart;
+    internal Action? Wake;
+    internal int UnrelatedCount;
 
     public string Baseline => "d5d0eea66de49e36e197910a826ae8cffc6eebbc";
     public string Scenario => scenario;
@@ -48,7 +50,25 @@ internal sealed class ProbeRun(string scenario, string store)
     public double? EffectFromRegisteredMs => EffectMs - RegisteredMs;
     public double? EventsPerSecondFromRegistered => EffectFromRegisteredMs > 0 ? Expected * 1000.0 / EffectFromRegisteredMs : null;
     public double? HandlerBusyFraction => WallMs > 0 ? HandlerBusyMs / WallMs : null;
-    public bool DeliberateDrop => scenario.Split(':').Contains("drop");
+    public bool IsPull => scenario.Split(':')[1] == "pull";
+    public bool ProfileEnabled => Environment.GetEnvironmentVariable("PROBE_PROFILE") != "off";
+    public string ProfileMode => ProfileEnabled ? "on" : "off: job replace/delete change stream, no profiler";
+    public ProbePullOptions? PullOptions { get; set; }
+    public string? PullEventSample { get; set; }
+    public string? PullProgressDocument { get; set; }
+    public string[] PullCounts { get; set; } = [];
+    public JsonElement? PullWireCommands { get; set; }
+    public string? TodayHandledCountSample { get; set; }
+    public long PullReads { get; set; }
+    public long PullFlushes { get; set; }
+    public long PullCountDocuments { get; set; }
+    public long PullGapHolds { get; set; }
+    public double PullMaxGapHoldMs { get; set; }
+    public bool? PullTailExact { get; set; }
+    public JsonElement? ContainerCpu { get; set; }
+    public int UnrelatedAppended => Volatile.Read(ref UnrelatedCount);
+    public int PayloadMismatches => Accounting?.PayloadMismatches ?? 0;
+    public bool DeliberateDrop => scenario.Split(':').Contains("drop") || (IsPull && Environment.GetEnvironmentVariable("PULL_DROP_SEQ") is not null);
     public int Requested { get; set; }
     public int Submitted { get => Volatile.Read(ref SubmittedCount); set => SubmittedCount = value; }
     public int Expected => Appended.Count;
@@ -60,7 +80,7 @@ internal sealed class ProbeRun(string scenario, string store)
     public string[] PersistedObserverState { get; set; } = [];
     public string[] InitialObserverState { get; set; } = [];
     public double? SystemDurableMs { get; set; }
-    public string ProbeObserverId => Scenario.Contains("projection") ? typeof(BenchmarkProjection).FullName! : "probe-4748";
+    public string ProbeObserverId => IsPull ? ProbePullProgress.ObserverId : Scenario.Contains("projection") ? typeof(BenchmarkProjection).FullName! : "probe-4748";
     public string[] PersistedJobs { get; set; } = [];
     public string[] JobWriteSamples { get; set; } = [];
     public string[] CompletedJobEvidence { get; set; } = [];
@@ -101,7 +121,7 @@ internal sealed class ProbeRun(string scenario, string store)
         WallMs = Clock.Elapsed.TotalMilliseconds;
         if (!Scenario.Contains("projection") && !Scenario.StartsWith("appendonly"))
         {
-            Accounting = Delivery.Snapshot(Appended.Keys.ToArray(), Started);
+            Accounting = Delivery.Snapshot(Appended.Keys.ToArray(), Started, Appended);
             EffectMs = Accounting.EffectMs;
         }
     }
