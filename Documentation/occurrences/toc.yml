@@ -1,2 +1,4 @@
+- name: Triggers and handlers
+  href: triggers-and-handlers.mdx
 - name: Effect receipts
   href: effect-receipts.mdx
