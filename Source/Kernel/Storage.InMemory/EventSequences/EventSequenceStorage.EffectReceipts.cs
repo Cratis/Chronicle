@@ -22,6 +22,15 @@ public partial class EventSequenceStorage : IEffectReceiptStorage
     }
 
     /// <inheritdoc/>
+    public Task<IEnumerable<EffectReceipt>> GetEffectReceipts(OccurrenceId occurrenceId)
+    {
+        lock (_effectReceiptState.Sync)
+        {
+            return Task.FromResult<IEnumerable<EffectReceipt>>(_effectReceiptState.Receipts.Values.Where(receipt => receipt.Lease.OccurrenceId == occurrenceId).Select(receipt => receipt with { Reasons = receipt.Reasons.ToArray() }).ToArray());
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<EffectReceiptWriteResult> AppendManyWithEffectReceipt(IEnumerable<EventToAppendToStorage> events, EffectReceipt receipt)
     {
         if (await GetEffectReceipt(receipt.Id) is not null)

@@ -21,6 +21,20 @@ public partial class EventSequenceStorage : IEffectReceiptStorage
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<EffectReceipt>> GetEffectReceipts(OccurrenceId occurrenceId)
+    {
+        // Include receipts written before occurrence indexing existed; the immutable JSON is authoritative.
+        using var cursor = await ReceiptCollection.FindAsync(FilterDefinition<BsonDocument>.Empty);
+        var receipts = new List<EffectReceipt>();
+        while (await cursor.MoveNextAsync())
+        {
+            receipts.AddRange(cursor.Current.Select(document => JsonSerializer.Deserialize<EffectReceipt>(document["data"].AsString)!).Where(receipt => receipt.Lease.OccurrenceId == occurrenceId));
+        }
+
+        return receipts;
+    }
+
+    /// <inheritdoc/>
     public async Task<EffectReceiptWriteResult> AppendManyWithEffectReceipt(IEnumerable<EventToAppendToStorage> events, EffectReceipt receipt)
     {
         if (await GetEffectReceipt(receipt.Id) is not null)

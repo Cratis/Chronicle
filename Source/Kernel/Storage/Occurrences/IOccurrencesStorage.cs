@@ -71,4 +71,30 @@ public interface IOccurrencesStorage
     /// <param name="id">The occurrence identity.</param>
     /// <returns>The durable storage outcome.</returns>
     Task<bool> RetryQuarantined(OccurrenceId id);
+
+    /// <summary>
+    /// Atomically re-arms quarantined work and records the operator.
+    /// </summary>
+    /// <param name="id">The occurrence identity.</param>
+    /// <param name="principal">The authenticated operator.</param>
+    /// <param name="now">The kernel instant.</param>
+    /// <returns>Whether the occurrence was re-armed.</returns>
+    /// <exception cref="OccurrencesStorageNotSupported">The provider has not implemented audited recovery.</exception>
+    Task<bool> RetryQuarantined(OccurrenceId id, string principal, DateTimeOffset now) => throw new OccurrencesStorageNotSupported();
+
+    /// <summary>
+    /// Expires only the disconnected worker's live leases, without changing epochs.
+    /// </summary>
+    /// <param name="worker">The connection identity used as lease owner.</param>
+    /// <param name="now">The kernel instant.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="OccurrencesStorageNotSupported">The provider has not implemented disconnect expiry.</exception>
+    Task ExpireLeases(string worker, DateTimeOffset now) => throw new OccurrencesStorageNotSupported();
+
+    /// <summary>
+    /// Discovers triggers with pending or leased work, independently of event-log data.
+    /// </summary>
+    /// <returns>The triggers to rehydrate.</returns>
+    /// <exception cref="OccurrencesStorageNotSupported">The provider has not implemented queue discovery.</exception>
+    Task<IEnumerable<TriggerId>> GetPendingTriggers() => throw new OccurrencesStorageNotSupported();
 }

@@ -22,6 +22,24 @@ public partial class EventSequenceStorage : IEffectReceiptStorage
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<EffectReceipt>> GetEffectReceipts(OccurrenceId occurrenceId)
+    {
+        await using var namespaceScope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+        var receipts = new List<EffectReceipt>();
+        await foreach (var entry in scope.DbContext.Set<EffectReceiptEntry>().AsNoTracking().AsAsyncEnumerable())
+        {
+            var receipt = JsonSerializer.Deserialize<EffectReceipt>(entry.Data)!;
+            if (receipt.Lease.OccurrenceId == occurrenceId)
+            {
+                receipts.Add(receipt);
+            }
+        }
+
+        return receipts;
+    }
+
+    /// <inheritdoc/>
     public async Task<EffectReceiptWriteResult> AppendManyWithEffectReceipt(IEnumerable<EventToAppendToStorage> events, EffectReceipt receipt)
     {
         if (await GetEffectReceipt(receipt.Id) is not null)
