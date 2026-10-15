@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
@@ -15,6 +16,7 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Transactions;
 using Cratis.Serialization;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,13 +27,8 @@ namespace Cratis.Chronicle.Reducers;
 /// <summary>
 /// Represents an implementation of <see cref="IReducers"/>.
 /// </summary>
-public class Reducers : IReducers
+public partial class Reducers : IReducers
 {
-#if NET8_0
-    static readonly object _registerLock = new();
-#else
-    static readonly Lock _registerLock = new();
-#endif
     static readonly ConcurrentDictionary<Type, Lazy<string>> _fingerprints = new();
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly IEventStore _eventStore;
@@ -82,7 +79,7 @@ public class Reducers : IReducers
     {
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
-            lock (_registerLock)
+            lock (ReadModelBuilderOwnership.SyncFor(eventStore, ReadModelOwnershipSync))
             {
                 _registered = false;
                 RecreateHandlersForReconnect();
@@ -105,36 +102,30 @@ public class Reducers : IReducers
         _logger = logger;
     }
 
+    /// <summary>
+    /// Gets the fallback monitor used by native registries on custom stores.
+    /// The shared ownership monitor also serializes registration, reconnect and cancellation writes; no second lock is acquired.
+    /// </summary>
+    internal object ReadModelOwnershipSync { get; } = new();
+
+    /// <summary>
+    /// Gets the generation delivery policy supplied by the event store.
+    /// </summary>
+    internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
     /// <inheritdoc/>
     public Task Discover()
     {
-        DisconnectHandlers();
-        _handlersByType = _clientArtifacts.Reducers
-                            .ToFrozenDictionary(
-                                _ => _,
-                                reducerType =>
-                                {
-                                    var readModelType = reducerType.GetReadModelType();
-                                    _reducerValidator.Validate(reducerType);
-                                    reducerType.GetEventSequenceId(_eventStore.Name?.Value);
-                                    return CreateHandlerFor(reducerType, readModelType) as IReducerHandler;
-                                });
-
-        _handlersByModelType = _handlersByType.ToFrozenDictionary(
-            _ => _.Value.ReadModelType,
-            _ => _.Value);
-        return Task.CompletedTask;
+        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+        {
+            return DiscoverCore();
+        }
     }
 
     /// <inheritdoc/>
     public async Task Register()
     {
-        if (_registered)
-        {
-            return;
-        }
-
-        lock (_registerLock)
+        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
         {
             if (_registered)
             {
@@ -145,7 +136,7 @@ public class Reducers : IReducers
 
             foreach (var handler in _handlersByModelType.Values.Where(_ => _.IsActive))
             {
-                RegisterReducer(handler);
+                RegisterWhenDispatchable(handler);
             }
             _registered = true;
         }
@@ -159,19 +150,17 @@ public class Reducers : IReducers
     {
         var reducerType = typeof(TReducer);
         var modelType = typeof(TReadModel);
-        var handler = CreateHandlerFor(reducerType, modelType);
-        RegisterReducer(handler);
-        var handlersByType = new Dictionary<Type, IReducerHandler>(_handlersByType)
+        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
         {
-            { reducerType, handler }
-        };
-        var handlersByModelType = new Dictionary<Type, IReducerHandler>(_handlersByModelType)
-        {
-            { modelType, handler }
-        };
-        _handlersByType = handlersByType.ToFrozenDictionary();
-        _handlersByModelType = handlersByModelType.ToFrozenDictionary();
-        return Task.FromResult<IReducerHandler>(handler);
+            ReadModelBuilderOwnership.Validate(_eventStore, _clientArtifacts, Catalog, modelType, reducerType, false);
+            var handler = CreateHandlerFor(reducerType, modelType);
+            RegisterWhenDispatchable(handler);
+            var handlersByType = new Dictionary<Type, IReducerHandler>(_handlersByType) { { reducerType, handler } };
+            var handlersByModelType = new Dictionary<Type, IReducerHandler>(_handlersByModelType) { { modelType, handler } };
+            _handlersByType = handlersByType.ToFrozenDictionary();
+            _handlersByModelType = handlersByModelType.ToFrozenDictionary();
+            return Task.FromResult<IReducerHandler>(handler);
+        }
     }
 
     /// <inheritdoc/>
@@ -260,12 +249,23 @@ public class Reducers : IReducers
     }
 
     /// <inheritdoc/>
+    public Task<FastForwardResult> FastForward<TReducer>()
+        where TReducer : IReducer => FastForward(_handlersByType[typeof(TReducer)].Id);
+
+    /// <inheritdoc/>
+    public Task<FastForwardResult> FastForward(ReducerId reducerId) =>
+        ObserverFastForwarder.FastForward(_servicesAccessor.Services.Observers, _eventStore.Name, _eventStore.Namespace, reducerId);
+
+    /// <inheritdoc/>
     public async Task<object?> GetInstanceById(Type readModelType, ReadModelKey readModelKey)
     {
+        ReadProtectionGuard.Read(nameof(GetInstanceById));
         var handler = GetHandlerForReadModelType(readModelType);
-        var events = await _eventStore
+        var filter = ObserverEventFilter.For(handler.ReducerType, _eventStore.EventSources);
+        var events = (await _eventStore
             .GetEventSequence(handler.EventSequenceId)
-            .GetForEventSourceIdAndEventTypes((EventSourceId)readModelKey.Value, handler.EventTypes);
+            .GetForEventSourceIdAndEventTypes((EventSourceId)readModelKey.Value, handler.EventTypes))
+            .Where(@event => filter.Matches(@event.Context)).ToList();
 
         if (events.Count == 0)
         {
@@ -290,6 +290,7 @@ public class Reducers : IReducers
     /// <inheritdoc/>
     public async Task<IEnumerable<object>> GetInstances(Type readModelType, EventCount? eventCount = null)
     {
+        ReadProtectionGuard.Read(nameof(GetInstances));
         var handler = GetHandlerForReadModelType(readModelType);
         var events = await _eventStore
             .GetEventSequence(handler.EventSequenceId)
@@ -300,8 +301,10 @@ public class Reducers : IReducers
             ? orderedEvents.Take(eventCount.Value > int.MaxValue ? int.MaxValue : (int)eventCount.Value).ToList()
             : orderedEvents;
 
+        var filter = ObserverEventFilter.For(handler.ReducerType, _eventStore.EventSources);
         var result = new List<object>();
         foreach (var eventsForEventSource in eventsToReduce
+                     .Where(@event => filter.Matches(@event.Context))
                      .GroupBy(_ => _.Context.EventSourceId)
                      .Select(group => group.ToList()))
         {
@@ -352,28 +355,54 @@ public class Reducers : IReducers
             snapshot.CorrelationId)).ToList();
     }
 
+    Task DiscoverCore()
+    {
+        DisconnectHandlers();
+        _handlersByType = _clientArtifacts.Reducers
+                            .Where(IsDiscoverable)
+                            .ToFrozenDictionary(
+                                _ => _,
+                                reducerType =>
+                                {
+                                    var readModelType = ResolveReadModel(reducerType);
+                                    return CreateHandlerFor(reducerType, readModelType) as IReducerHandler;
+                                });
+
+        _handlersByModelType = _handlersByType.ToFrozenDictionary(
+            _ => _.Value.ReadModelType,
+            _ => _.Value);
+        return Task.CompletedTask;
+    }
+
     ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)
     {
+        EventStreamReadModel.RefuseReducer(readModelType);
+        EventStreamReadModel.RefuseReducer(reducerType);
+        var descriptor = new ReducerDescriptor(reducerType, readModelType, ReducerCatalog.IsSelfReducer(reducerType));
+        ReadModelBuilderOwnership.Validate(_eventStore, _clientArtifacts, Catalog, readModelType, reducerType, descriptor.IsSelfReducing);
+
+        // Preserve classic metadata validation order; self inference instead needs its selected static event set.
+        var sequence = descriptor.IsSelfReducing ? null : reducerType.GetEventSequenceId(_eventTypes, _eventStore.Name, readModelType);
+        var invoker = ReducerInvokerSelector.Create(descriptor, _eventTypes, _artifactActivator, _namingPolicy.GetReadModelName(readModelType));
+        sequence ??= Registrations.RegisteredObserverMetadata.SequenceFor(reducerType, reducerType.GetCustomAttribute<ReducerAttribute>()?.EventSequenceId, _eventTypes, _eventStore.Name, () => invoker.EventTypes);
         var handler = new ReducerHandler(
             _eventStore,
-            reducerType.GetReducerId(),
+            ResolveId(reducerType),
             reducerType,
-            reducerType.GetEventSequenceId(_eventStore.Name?.Value),
-            new ReducerInvoker(
-                _eventTypes,
-                _artifactActivator,
-                reducerType,
-                readModelType,
-                _namingPolicy.GetReadModelName(readModelType)),
-            ShouldReducerBeActive(reducerType),
+            sequence,
+            invoker,
+            ShouldReducerBeActive(reducerType, readModelType),
             _reducerObservers);
 
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>
         {
-            _handlersByType = _handlersByType.Where(_ => _.Key != reducerType).ToFrozenDictionary();
-            _handlersByModelType = _handlersByModelType.Where(_ => _.Key != readModelType).ToFrozenDictionary();
-            register?.Dispose();
+            lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+            {
+                _handlersByType = _handlersByType.Where(_ => !ReferenceEquals(_.Value, handler)).ToFrozenDictionary();
+                _handlersByModelType = _handlersByModelType.Where(_ => !ReferenceEquals(_.Value, handler)).ToFrozenDictionary();
+                register?.Dispose();
+            }
         });
 
         return handler;
@@ -404,13 +433,42 @@ public class Reducers : IReducers
             _ => _.Value);
     }
 
+    bool IsDiscoverable(Type type)
+    {
+        if (!Catalog.IsDiscoverable(type))
+        {
+            _logger.SelfReducerNearMiss(type);
+            return false;
+        }
+
+        return true;
+    }
+
+    void RegisterWhenDispatchable(IReducerHandler handler)
+    {
+        if (handler.EventTypes.Any())
+        {
+            RegisterReducer(handler);
+            return;
+        }
+
+        _logger.ReducerHasNoDispatchableMethods(
+            handler.ReducerType,
+            SkippedReducerMethods.Describe(handler.ReducerType, handler.ReadModelType, _eventTypes.AllClrTypes));
+    }
+
     void RegisterReducer(IReducerHandler handler)
     {
+        if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
+        {
+            GenerationDeliveryValidation.Validate(handler.EventTypes);
+        }
+
         _logger.RegisterReducer(
             handler.Id,
             handler.EventSequenceId);
 
-        var eventSourceFilter = handler.ReducerType.GetEventSourceFilter(_eventStore.EventSources);
+        var filter = ObserverEventFilter.For(handler.ReducerType, _eventStore.EventSources);
         var registration = new RegisterReducer
         {
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
@@ -418,6 +476,7 @@ public class Reducers : IReducers
             Namespace = _eventStore.Namespace,
             Reducer = new ReducerDefinition
             {
+                GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,
                 ReducerId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
@@ -426,9 +485,9 @@ public class Reducers : IReducers
                 Tags = handler.ReducerType.GetTags().ToArray(),
                 Filters = new()
                 {
-                    FilterTags = handler.ReducerType.GetFilterTags().ToArray(),
-                    EventSourceType = eventSourceFilter.EventSourceType.Value,
-                    EventStreamType = eventSourceFilter.EventStreamType.Value
+                    FilterTags = filter.FilterTags.ToArray(),
+                    EventSourceType = filter.EventSourceType.Value,
+                    EventStreamType = filter.EventStreamType.Value
                 },
                 Hash = GetFingerprint(handler.ReducerType)
             }
@@ -489,10 +548,25 @@ public class Reducers : IReducers
                 });
     }
 
-    string GetFingerprint(Type reducerType) => _fingerprints.GetOrAdd(
-        reducerType,
-        static (type, reducers) => new Lazy<string>(() => reducers.CreateFingerprint(type)),
-        this).Value;
+    string GetFingerprint(Type reducerType) => ReducerCatalog.IsSelfReducer(reducerType)
+        ? CreateSelfFingerprint(reducerType)
+        : _fingerprints.GetOrAdd(
+            reducerType,
+            static (type, reducers) => new Lazy<string>(() => reducers.CreateFingerprint(type)),
+            this).Value;
+
+    string CreateSelfFingerprint(Type model)
+    {
+        try
+        {
+            return SelfReducerFingerprint.Create(_eventTypes, model);
+        }
+        catch (Exception error)
+        {
+            _logger.ReducerFingerprintFailed(model, error);
+            return SelfReducerFingerprint.CreateFallback(_eventTypes, model);
+        }
+    }
 
     string CreateFingerprint(Type reducerType)
     {
@@ -600,6 +674,12 @@ public class Reducers : IReducers
 
     async Task HandleReplayNotification(IReducerHandler handler, ReplayState replayState, string partition)
     {
+        if (handler.Invoker is SelfReducerInvoker self)
+        {
+            await self.ReplayHooks.Invoke(_serviceProvider, replayState, partition);
+            return;
+        }
+
         await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
         var activatedReducerResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReducerType);
         if (activatedReducerResult.TryGetException(out var ex))
@@ -629,15 +709,14 @@ public class Reducers : IReducers
         }
     }
 
-    bool ShouldReducerBeActive(Type reducerType)
+    bool ShouldReducerBeActive(Type reducerType, Type readModelType)
     {
-        var active = reducerType.IsActive();
+        var active = reducerType.GetCustomAttribute<ReducerAttribute>()?.IsActive ?? true;
         if (!active)
         {
             return false;
         }
 
-        var readModelType = reducerType.GetReadModelType();
         if (readModelType.IsPassive())
         {
             return false;

@@ -47,6 +47,18 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     }
 
     /// <inheritdoc/>
+    public async Task<FastForwardResponse> FastForward(FastForward command, CallContext context = default)
+    {
+        var result = await grainFactory.GetObserver(command).FastForward();
+        return new FastForwardResponse
+        {
+            Outcome = (FastForwardOutcome)(int)result.Outcome,
+            PreviousNextEventSequenceNumber = result.PreviousNextEventSequenceNumber.Value,
+            NextEventSequenceNumber = result.NextEventSequenceNumber.Value
+        };
+    }
+
+    /// <inheritdoc/>
     public async Task<ReplayResponse> Replay(Replay command, CallContext context = default)
     {
         var jobId = await grainFactory.GetObserver(command).Replay();

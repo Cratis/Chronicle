@@ -7,6 +7,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
@@ -28,11 +29,13 @@ public static class ProjectionEventContextExtensions
     /// </summary>
     /// <param name="observable"><see cref="IObservable{T}"/> to filter.</param>
     /// <param name="eventType"><see cref="EventType"/> to filter for.</param>
+    /// <param name="generationDelivery">Whether dispatch must match the clause's generation.</param>
     /// <returns>Filtered <see cref="IObservable{T}"/>.</returns>
     public static IObservable<ProjectionEventContext> WhereEventTypeEquals(
-        this IObservable<ProjectionEventContext> observable, EventType eventType)
+        this IObservable<ProjectionEventContext> observable, EventType eventType, EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility)
     {
-        return observable.Where(_ => _.Event.Context.EventType.Id == eventType.Id);
+        return observable.Where(_ => _.Event.Context.EventType.Id == eventType.Id &&
+            (generationDelivery != EventGenerationDelivery.Pinned || _.Event.Context.EventType.Generation == eventType.Generation));
     }
 
     /// <summary>
@@ -87,6 +90,7 @@ public static class ProjectionEventContextExtensions
     /// <param name="eventCompliance">Optional handler for releasing a stored join event's compliance and security fields before projecting it.</param>
     /// <param name="joinEventSchema">Optional schema for the stored join event.</param>
     /// <param name="eventTypesStorage">Optional <see cref="IEventTypesStorage"/> to resolve the schema of the generation a stored join event was stored at, when it differs from <paramref name="joinEventSchema"/>.</param>
+    /// <param name="releasePinnedEvent">Optional pinned-generation release boundary, replacing compatibility release.</param>
     /// <returns>A new observable for the ResolveJoin operation.</returns>
     public static IObservable<ProjectionEventContext> ResolveJoin(
         this IObservable<ProjectionEventContext> observable,
@@ -96,7 +100,8 @@ public static class ProjectionEventContextExtensions
         ILogger logger,
         IEventCompliance? eventCompliance = null,
         JsonSchema? joinEventSchema = null,
-        IEventTypesStorage? eventTypesStorage = null)
+        IEventTypesStorage? eventTypesStorage = null,
+        Func<AppendedEvent, Task<AppendedEvent>>? releasePinnedEvent = null)
     {
         var schemasByStoredEventType = new ConcurrentDictionary<EventType, JsonSchema?>();
 
@@ -132,22 +137,31 @@ public static class ProjectionEventContextExtensions
                             if (!maybeLastEvent.HasValue) return;
                             var lastEvent = (AppendedEvent)maybeLastEvent;
 
-                            // The stored join event is released with the schema of the generation it was stored at, which
-                            // is not necessarily the one the projection was built with. Resolved once per generation.
-                            var storedEventSchema = eventTypesStorage is null
-                                ? joinEventSchema
-                                : schemasByStoredEventType.GetOrAdd(
-                                    lastEvent.Context.EventType,
-                                    static (storedEventType, resolution) => Task.Run(() => resolution.EventTypes.GetStoredSchemaFor(storedEventType)).GetAwaiter().GetResult() ?? resolution.Fallback,
-                                    (EventTypes: eventTypesStorage, Fallback: joinEventSchema));
-
-                            if (eventCompliance is not null &&
-                                storedEventSchema?.HasSchemaMetadata() == true &&
-                                lastEvent.Context.Subject?.IsSet == true)
+                            if (releasePinnedEvent is not null)
                             {
 #pragma warning disable CA2007
-                                lastEvent = Task.Run(() => eventCompliance.Release(lastEvent, storedEventSchema)).GetAwaiter().GetResult();
+                                lastEvent = Task.Run(() => releasePinnedEvent(lastEvent)).GetAwaiter().GetResult();
 #pragma warning restore CA2007
+                            }
+                            else
+                            {
+                                // The stored join event is released with the schema of the generation it was stored at, which
+                                // is not necessarily the one the projection was built with. Resolved once per generation.
+                                var storedEventSchema = eventTypesStorage is null
+                                    ? joinEventSchema
+                                    : schemasByStoredEventType.GetOrAdd(
+                                        lastEvent.Context.EventType,
+                                        static (storedEventType, resolution) => Task.Run(() => resolution.EventTypes.GetStoredSchemaFor(storedEventType)).GetAwaiter().GetResult() ?? resolution.Fallback,
+                                        (EventTypes: eventTypesStorage, Fallback: joinEventSchema));
+
+                                if (eventCompliance is not null &&
+                                    storedEventSchema?.HasSchemaMetadata() == true &&
+                                    lastEvent.Context.Subject?.IsSet == true)
+                                {
+#pragma warning disable CA2007
+                                    lastEvent = Task.Run(() => eventCompliance.Release(lastEvent, storedEventSchema)).GetAwaiter().GetResult();
+#pragma warning restore CA2007
+                                }
                             }
 
                             var changeset = context.Changeset.ResolvedJoin(

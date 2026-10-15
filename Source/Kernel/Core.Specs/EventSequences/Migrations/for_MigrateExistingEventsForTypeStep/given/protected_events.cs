@@ -69,8 +69,9 @@ public class protected_events : Specification
         var eventTypes = Substitute.For<IEventTypesStorage>();
         eventTypes.GetFor(typeId, 1).Returns(new EventTypeSchema(new EventType(typeId, 1), EventTypeOwner.Server, EventTypeSource.Code, _sourceSchema));
         eventTypes.GetFor(typeId, 2).Returns(new EventTypeSchema(new EventType(typeId, 2), EventTypeOwner.Server, EventTypeSource.Code, _targetSchema));
+        eventTypes.GetDefinition(typeId).Returns(new EventTypeDefinition(typeId, EventTypeOwner.Server, false, [new(1, _sourceSchema), new(2, _targetSchema)], []));
         var migrations = Substitute.For<IEventTypeMigrations>();
-        migrations.MigrateToAllGenerations(Arg.Any<EventStoreName>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<ExpandoObject>()).Returns(call =>
+        migrations.MigrateToAllGenerations(Arg.Any<EventTypeDefinition>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<ExpandoObject>()).Returns(call =>
         {
             var plaintext = call.ArgAt<JsonObject>(2);
             var name = (UsesObjectArray ? plaintext["contacts"]![0]!["name"] : plaintext["name"])!.GetValue<string>();
@@ -95,10 +96,19 @@ public class protected_events : Specification
         cursor.MoveNext().Returns(_ => Task.FromResult(page++ == 0));
         _sequence = Substitute.For<IEventSequenceStorage>();
         _sequence.GetFromSequenceNumber(Arg.Any<EventSequenceNumber>(), Arg.Any<EventSourceId?>(), Arg.Any<EventSourceType?>(), Arg.Any<EventStreamType?>(), Arg.Any<EventStreamId?>(), Arg.Any<IEnumerable<EventType>?>(), Arg.Any<IEnumerable<Tag>?>(), Arg.Any<CancellationToken>()).Returns(cursor);
-        _sequence.ReplaceGenerationContent(Arg.Any<EventSequenceNumber>(), Arg.Any<IDictionary<EventTypeGeneration, ExpandoObject>>()).Returns(call =>
+        _sequence.GetStoredGenerations(Arg.Any<EventSequenceNumber>()).Returns(call =>
         {
-            _stored[call.ArgAt<EventSequenceNumber>(0).Value] = call.ArgAt<IDictionary<EventTypeGeneration, ExpandoObject>>(1);
-            return Task.CompletedTask;
+            var number = call.Arg<EventSequenceNumber>();
+            var @event = _events.Single(_ => _.Context.SequenceNumber == number);
+            return new StoredEventGenerations(number, typeId, @event.Context.EventSourceId, @event.Context.Subject!, 1, _stored[number.Value].ToDictionary(_ => _.Key, _ => JsonSerializer.Serialize(_.Value)), 0, string.Empty);
+        });
+        _sequence.TryAddGenerations(Arg.Any<StoredEventGenerations>(), Arg.Any<IEnumerable<GenerationToAdd>>()).Returns(call =>
+        {
+            foreach (var addition in call.ArgAt<IEnumerable<GenerationToAdd>>(1))
+            {
+                _stored[call.Arg<StoredEventGenerations>().SequenceNumber.Value].Add(addition.Generation, addition.Content);
+            }
+            return true;
         });
         var storage = Substitute.For<IStorage>();
         var store = Substitute.For<IEventStoreStorage>();
@@ -110,6 +120,7 @@ public class protected_events : Specification
         var silo = new TestKitSilo();
         silo.AddService(storage);
         silo.AddService(migrations);
+        silo.AddService<IEventHashCalculator>(new EventHashCalculator());
         silo.AddService<IJsonSchemaMetadataManager>(_manager);
         silo.AddService<IExpandoObjectConverter>(_converter);
         silo.AddService(new JsonSerializerOptions());

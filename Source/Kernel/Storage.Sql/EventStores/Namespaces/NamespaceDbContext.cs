@@ -92,12 +92,15 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        EventStores.Occurrences.OccurrenceModel.Configure(modelBuilder);
+        EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);
 
         modelBuilder
             .Entity<ClosedStreamEntry>(entity =>
             {
                 entity.ToTable(WellKnownTableNames.ClosedStreams);
-                entity.HasKey(e => new { e.EventSequenceId, e.StreamType, e.StreamId });
+                entity.HasKey(e => new { e.EventSequenceId, e.StreamType, e.StreamId, e.EventSourceId, e.EventSourceType, e.Owner, e.Dimensions });
+                entity.Property(e => e.SequenceNumber).HasPrecision(20, 0);
             })
             .Entity<Patterns.BehaviorPattern>(entity =>
             {
@@ -137,6 +140,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             }
             entity.HasIndex(row => new { row.EventStore, row.IsOpen, row.RaisedSequenceNumber, row.Id });
             entity.HasIndex(row => new { row.EventStore, row.Namespace, row.IsOpen, row.RaisedSequenceNumber, row.Id });
+            entity.HasIndex(row => new { row.IsOpen, row.EventStore, row.Namespace });
         });
 
         // Match the column mappings to the provider-native JSON type the migrations create

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using MongoDB.Driver;
 using Orleans.Runtime.Messaging;
 
 namespace Cratis.Chronicle.Setup;
@@ -15,16 +16,17 @@ namespace Cratis.Chronicle.Setup;
 /// timeout. That is a transient state of a forming cluster, not a defect in the work being asked
 /// for: the same call succeeds seconds later once membership settles.
 /// <para>
-/// These are the only failures worth retrying at startup. Everything else - a genuine bug in the
-/// grain, storage that will not answer, a serialization mismatch - fails the same way on every
-/// attempt, so retrying it only delays a real error.
+/// A temporarily full Mongo connection wait queue is also retried within the same finite budget:
+/// concurrent registration can saturate admission without indicating a permanent storage defect.
+/// Everything else - a genuine bug in the grain or a serialization mismatch - fails immediately.
+/// Exhausting the budget still fails startup; retries do not make an unavailable store healthy.
 /// </para>
 /// </remarks>
 public static class SiblingSiloInstability
 {
     /// <summary>
     /// Determines whether an exception is a sibling silo that has not stabilized yet, rather than a
-    /// failure of the work itself.
+    /// failure of the work itself, or temporary saturation of storage admission.
     /// </summary>
     /// <param name="exception">The <see cref="Exception"/> to judge.</param>
     /// <returns><see langword="true"/> when the call is worth retrying.</returns>
@@ -34,6 +36,7 @@ public static class SiblingSiloInstability
         SiloUnavailableException => true,
         OrleansMessageRejectionException => true,
         ConnectionFailedException => true,
+        MongoWaitQueueFullException => true,
         _ => false
     };
 }

@@ -15,8 +15,24 @@ public class ReadModel : Grain<ReadModelDefinition>, IReadModel
     /// <inheritdoc/>
     public async Task SetDefinition(ReadModelDefinition definition)
     {
+        definition.Sink.EnsureReadModelSupported();
+        if (ReadModelDefinitions.AreEqual(State, definition))
+        {
+            return;
+        }
+
+        var previous = State;
         State = definition;
-        await WriteStateAsync();
+        try
+        {
+            await WriteStateAsync();
+        }
+        catch
+        {
+            // An unsuccessful write must not turn a retry into an unchanged-definition no-op.
+            State = previous;
+            throw;
+        }
     }
 
     /// <inheritdoc/>

@@ -22,4 +22,14 @@ public static class WellKnownConstraintDetailKeys
     /// itself.
     /// </remarks>
     public const string PropertyValue = "PropertyValue";
+
+    /// <summary>
+    /// The owner of the closure rejecting the append.
+    /// </summary>
+    public const string ClosedBy = "ClosedBy";
+
+    /// <summary>
+    /// The sequence number at which the scope was closed.
+    /// </summary>
+    public const string ClosedAtSequenceNumber = "ClosedAtSequenceNumber";
 }

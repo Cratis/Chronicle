@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-reducer
-description: Write a Chronicle IReducerFor<T> when model-bound projection attributes and the fluent IProjectionFor<T> builder cannot express a read-model state transition. Covers the admission test, the exact accepted method signatures, the nullable-current requirement, deletion, passivity and event filtering. Use only after the projection options are genuinely exhausted; do not use for ordinary event-to-property mapping.
+description: Write a Chronicle IReducerFor reducer when model-bound projection attributes and the fluent IProjectionFor builder cannot express a read-model state transition. Covers the admission test, the exact accepted method signatures, the nullable-current requirement, deletion, passivity and event filtering. Use only after the projection options are genuinely exhausted; do not use for ordinary event-to-property mapping.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-reducer/SKILL.md -->
@@ -18,7 +18,7 @@ This skill is verified against this exact source:
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle` | `18.3.0` | `Cratis.Chronicle.Reducers`, `Cratis.Chronicle.ReadModels`, `Cratis.Chronicle.Events` |
+| `Cratis.Chronicle` | `19.50.1` | `Cratis.Chronicle.Reducers`, `Cratis.Chronicle.ReadModels`, `Cratis.Chronicle.Events` |
 
 Reverify product sources before claiming support for another version.
 
@@ -99,6 +99,9 @@ The rules the invoker enforces:
   per event type** — do not write two handlers for the same event.
 - Return the complete next state. Never mutate `current` in place; use `with { }`.
 - The reducer must be **stateless**. Do not hold mutable state on the class.
+- A reducer with no dispatchable methods is not registered. Logs name skipped
+  reducer-like methods; CHR0006/CHR0007 flag them. CHR0051 checks nullable current
+  state, and CHR0057 rejects multiple `IReducerFor<T>` targets on one class.
 
 ### Returning null deletes the instance
 
@@ -137,14 +140,14 @@ read.
 
 ## Filtering which events reach the reducer
 
-Three attributes genuinely filter a reducer's input, and they correspond to
-metadata supplied at append time:
+These attributes genuinely filter a reducer's input, matching append metadata:
 
 | Attribute | Filters on |
 | --- | --- |
 | `[FilterEventsByTag("<tag>")]` | an appended tag; repeatable, and any one match admits the event |
 | `[EventSourceType("<value>")]` | the appended event source type |
 | `[EventStreamType("<value>")]` | the appended event stream type |
+| `[FromEventSource<TSource>("<stream>")]` | the source definition and declared stream (`Cratis.Chronicle.EventSources`) |
 
 `[Tag]` and `[Tags]` **label** the artifact; they do not filter. Note also that a
 **projection cannot be filtered at all** — its definition has no field for it.
@@ -164,11 +167,28 @@ await eventStore.EventLog.Append(
 
 Mind the parameter order on `Append`: `eventStreamType` comes before
 `eventStreamId`, which comes before `eventSourceType`.
+CHR0055 flags an unknown typed stream and CHR0056 contradictory routing.
+Filters remain effective during catch-up, replay and failed-partition recovery.
+
+## Definition changes replay
+
+The kernel classifies new definitions under `observers.definitionEvolution`:
+`Automatic` (default), `PartialOnly`, or `Manual`. Reducer method fingerprints
+make code changes visible even without subscription changes; assembly versions
+are ignored since 19.29.4 (that upgrade replays each reducer once). Changed
+implementation, keys or filters require full replay; adding event types permits
+partial replay only when history proves they follow all previously consumed
+events per source. Interleaved history requires full replay. Manual policies
+leave recommendations; they do not silently rebuild. Source at v19.50.0:
+`Documentation/hosting/configuration/observers.md`.
 
 ## Specifications
 
-Drive a sequence of events through the read-model scenario helper for the read
-model and assert on the resulting instance. Cover, at minimum:
+Start with `Specification` plus a direct call for pure reducer decisions:
+pass the event and current state explicitly and assert the returned next state.
+Add `ReadModelScenario<TReadModel>` only where event dispatch, filtering,
+metadata or read-model wiring contribute proof; drive the event sequence and
+assert on the resulting instance there. Cover, at minimum:
 
 - the first event, where `current` is `null`;
 - accumulation across several events on one event source;
@@ -178,7 +198,7 @@ model and assert on the resulting instance. Cover, at minimum:
 ## Route near misses
 
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
   `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
   output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
   `cratis-screenplay-modeling-lifecycle`): change the model first with
@@ -192,7 +212,9 @@ model and assert on the resulting instance. Cover, at minimum:
 
 - The admission test is satisfied and the justification names the specific
   limitation.
-- The current-state parameter is nullable on every handler method.
+- The current-state parameter is nullable on every handler method (CHR0051).
+- Logs contain no skipped reducer-like method warning (CHR0006/CHR0007);
+  CHR0055–CHR0057 are clean.
 - No handler method has more than three parameters, and any third is
   `EventContext`.
 - Exactly one handler exists per event type.

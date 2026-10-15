@@ -21,7 +21,7 @@ public interface IObserverStateStorage
     /// Get the information for a specific observer.
     /// </summary>
     /// <param name="observerId">The <see cref="ObserverId"/> to get for.</param>
-    /// <returns><see cref="ObserverState"/>.</returns>
+    /// <returns>The <see cref="ObserverState"/>, or <see cref="ObserverState.Empty"/> when no record exists.</returns>
     Task<ObserverState> Get(ObserverId observerId);
 
     /// <summary>

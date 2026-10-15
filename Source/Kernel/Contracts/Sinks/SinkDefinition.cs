@@ -20,4 +20,10 @@ public class SinkDefinition
     /// </summary>
     [ProtoMember(2)]
     public string TypeId { get; set; }
+
+    /// <summary>
+    /// Gets or sets event-sequence target metadata. Requires the EventSequence sink type, which is not implemented yet.
+    /// </summary>
+    [ProtoMember(3)]
+    public EventSequenceSinkConfiguration? EventSequence { get; set; }
 }

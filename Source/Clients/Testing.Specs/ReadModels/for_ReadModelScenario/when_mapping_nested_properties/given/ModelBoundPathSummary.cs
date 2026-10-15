@@ -1,0 +1,9 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Projections.ModelBound;
+
+namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_mapping_nested_properties.given;
+
+public record ModelBoundPathSummary(
+    [SetFrom<PathBriefed>($"{nameof(PathBriefed.Brief)}.{nameof(PathBrief.Topic)}")] string Topic);

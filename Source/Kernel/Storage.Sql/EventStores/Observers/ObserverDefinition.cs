@@ -43,4 +43,9 @@ public class ObserverDefinition
     /// Gets or sets a value indicating whether the observer is replayable.
     /// </summary>
     public bool IsReplayable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the event generation delivery policy.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
 }

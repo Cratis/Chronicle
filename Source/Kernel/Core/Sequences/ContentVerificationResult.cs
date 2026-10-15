@@ -1,0 +1,25 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Sequences;
+
+/// <summary>
+/// Describes whether a stored event's complete content matches an attempted append.
+/// </summary>
+public enum ContentVerificationResult
+{
+    /// <summary>
+    /// The complete content cannot be recovered in the requested generation.
+    /// </summary>
+    Unavailable = 0,
+
+    /// <summary>
+    /// The complete released content equals the attempted content.
+    /// </summary>
+    Equal = 1,
+
+    /// <summary>
+    /// The event type or complete released content differs.
+    /// </summary>
+    Different = 2
+}

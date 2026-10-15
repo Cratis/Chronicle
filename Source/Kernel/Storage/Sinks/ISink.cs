@@ -72,16 +72,45 @@ public interface ISink
         ApplyChanges(key, changeset, eventSequenceNumber);
 
     /// <summary>
+    /// Apply changes with a confirmed write outcome, never leaving them buffered in a bulk window.
+    /// </summary>
+    /// <param name="key">Key of the read model to upsert.</param>
+    /// <param name="changeset">The changes to apply.</param>
+    /// <param name="eventSequenceNumber">The sequence number of the event that caused the changes.</param>
+    /// <param name="mode">The <see cref="SinkWriteMode"/> to apply the changes with.</param>
+    /// <returns>Failures from drained buffered writes and from the requested write.</returns>
+    /// <remarks>
+    /// Sinks that do not buffer writes can use the default implementation. An unknown outcome of the requested
+    /// write must throw. An unknown drained batch outcome may instead be reported as failures for all affected keys.
+    /// Buffered outcomes are reported once; an exceptional exit must retain any failures not reported to a caller.
+    /// </remarks>
+    Task<IEnumerable<FailedPartition>> ApplyChangesImmediately(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode) =>
+        ApplyChanges(key, changeset, eventSequenceNumber, mode);
+
+    /// <summary>
     /// Begin bulk operation mode.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task BeginBulk();
 
     /// <summary>
+    /// Drain buffered writes while keeping the bulk window open.
+    /// </summary>
+    /// <returns>The window identity and unreported buffered write failures.</returns>
+    Task<BulkFlushResult> FlushBulk() => Task.FromResult(new BulkFlushResult(null, []));
+
+    /// <summary>
     /// End bulk operation mode.
     /// </summary>
-    /// <returns>The partitions whose writes failed during the final flush.</returns>
+    /// <returns>The unreported partitions whose buffered writes failed, including those from the final flush.</returns>
     Task<IEnumerable<FailedPartition>> EndBulk();
+
+    /// <summary>
+    /// End bulk operation mode within a shutdown deadline.
+    /// </summary>
+    /// <param name="cancellationToken">The token bounding the drain.</param>
+    /// <returns>Failed partitions, including batches whose outcome is unknown after cancellation.</returns>
+    Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken) => EndBulk();
 
     /// <summary>
     /// Enter replay state.

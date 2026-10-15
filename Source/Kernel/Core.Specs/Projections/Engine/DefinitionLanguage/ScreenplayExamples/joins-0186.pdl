@@ -1,0 +1,17 @@
+projection UserProfile => UserProfileReadModel
+  from ProfileCreated
+    UserId = userId
+    Name = name
+    OrganizationId = organizationId
+
+  from ProfileUpdated
+    Bio = bio
+    Avatar = avatarUrl
+
+  join Organization on OrganizationId
+    with OrganizationCreated
+      OrganizationName = name
+      OrganizationType = type
+    with OrganizationRenamed
+      OrganizationName = name
+      OrganizationType = type

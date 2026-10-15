@@ -33,6 +33,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
 /// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for getting the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
@@ -41,7 +42,8 @@ public class HandleEventsForPartition(
     IEventCompliance eventCompliance,
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
-    ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
+    ILogger<HandleEventsForPartition> logger,
+    IEventGenerationRelease? eventGenerationRelease = null) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
@@ -51,6 +53,9 @@ public class HandleEventsForPartition(
     IObserverSubscriber? _subscriber;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     IEventTypesStorage? _eventTypes;
+    EventType[] _generationPins = [];
+    EventStoreName _generationEventStore = EventStoreName.NotSet;
+    EventGenerationDelivery _generationDelivery;
     bool _isCollapsingProjection;
 
     IHandleEventsForPartition _selfGrainReference = null!;
@@ -75,8 +80,15 @@ public class HandleEventsForPartition(
             _observer = GrainFactory.GetGrain<IObserver>(State.ObserverKey);
             var subscription = await _observer.GetSubscription();
             _eventSourceId = State.Partition.ToString();
-            _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, State.Partition)) as IObserverSubscriber;
-            _isCollapsingProjection = subscription.IsCollapsingProjection;
+
+            // An unsubscribed observer reports a placeholder subscriber type that is not a grain interface, so
+            // resolving it throws and the step can never activate - it would fail and retry forever instead of
+            // reaching PerformStep, which reports the disconnection the job knows how to handle.
+            if (subscription.IsSubscribed)
+            {
+                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, State.Partition)) as IObserverSubscriber;
+                _isCollapsingProjection = subscription.IsCollapsingProjection;
+            }
         }
         await base.OnActivateAsync(cancellationToken);
     }
@@ -149,6 +161,7 @@ public class HandleEventsForPartition(
     {
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         var subscription = await _observer.GetSubscription();
+        _generationDelivery = subscription.GenerationDelivery;
         try
         {
             lastSuccessfullyHandledEventSequenceNumber = currentState.LastSuccessfullyHandledEventSequenceNumber;
@@ -170,6 +183,8 @@ public class HandleEventsForPartition(
             var eventTypesToRead = requestedEventTypes.Length != 0
                 ? requestedEventTypes
                 : await ResolveFallbackEventTypesToRead(subscription.EventTypes);
+            _generationPins = eventTypesToRead.ToArray();
+            _generationEventStore = currentState.ObserverKey.EventStore;
             var nonRedactionEventTypeIds = eventTypesToRead
                 .Where(et => et.Id != GlobalEventTypes.Redaction)
                 .Select(et => et.Id)
@@ -197,6 +212,7 @@ public class HandleEventsForPartition(
             var failureKind = FailureKind.Unknown;
 
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
+            var lastScannedEventSequenceNumber = EventSequenceNumber.Unavailable;
             while (await events.MoveNext())
             {
                 if (cancellationToken.IsCancellationRequested)
@@ -206,7 +222,7 @@ public class HandleEventsForPartition(
                 }
                 var handledCount = EventCount.Zero;
 
-                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds);
+                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds, subscription.Filters);
                 if (handleEventsResult.TryGetException(out var handleEventsException))
                 {
                     failed = true;
@@ -275,6 +291,8 @@ public class HandleEventsForPartition(
                     await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind);
                     return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), exceptionMessages, exceptionStackTrace));
                 }
+
+                lastScannedEventSequenceNumber = GetLastScanned(lastScannedEventSequenceNumber, events);
             }
 
             if (lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
@@ -286,7 +304,10 @@ public class HandleEventsForPartition(
                 logger.HandledAllEvents(currentState.Partition, lastSuccessfullyHandledEventSequenceNumber);
             }
 
-            return JobStepResult.Succeeded(CreateResult(lastSuccessfullyHandledEventSequenceNumber));
+            return JobStepResult.Succeeded(CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
+            {
+                LastScannedEventSequenceNumber = lastScannedEventSequenceNumber
+            });
         }
         catch (TaskCanceledException)
         {
@@ -357,17 +378,32 @@ public class HandleEventsForPartition(
 
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
+    static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, IEventCursor events)
+    {
+        foreach (var @event in events.Current)
+        {
+            if (!lastScanned.IsActualValue || @event.Context.SequenceNumber > lastScanned)
+            {
+                lastScanned = @event.Context.SequenceNumber;
+            }
+        }
+
+        return lastScanned;
+    }
+
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         HandleEventsForPartitionState state,
         IEventCursor events,
         ObserverSubscriberContext subscriberContext,
         TimeSpan subscriberTimeout,
-        HashSet<EventTypeId> nonRedactionEventTypeIds)
+        HashSet<EventTypeId> nonRedactionEventTypeIds,
+        ObserverFilters? filters)
     {
         try
         {
             var eventsToHandle = SetObservationStateIfSpecified(state.EventObservationState, events);
             eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsToHandle, nonRedactionEventTypeIds);
+            eventsToHandle = filters.Apply(eventsToHandle);
             if (eventsToHandle.Length != 0)
             {
                 var decryptedEvents = await DecryptEvents(eventsToHandle);
@@ -405,6 +441,11 @@ public class HandleEventsForPartition(
 
     async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
     {
+        if (_generationDelivery == EventGenerationDelivery.Pinned)
+        {
+            return await (eventGenerationRelease ?? throw new EventGenerationDeliveryNotSupported()).Release(_generationEventStore, _generationPins, _eventTypeSchemas, events);
+        }
+
         // The schemas read up front are those of the generations the observer subscribes to, while the events carry the
         // generation they were stored at - the schema of that generation is what says what to decrypt.
         var eventsToDecrypt = events as AppendedEvent[] ?? events.ToArray();

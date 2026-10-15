@@ -16,11 +16,12 @@ Everything else is ordinary EF Core.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.EntityFrameworkCore` | `22.16.0` | `BaseDbContext`, `ReadOnlyDbContext`, `WithEntityFrameworkCore`, column helpers, `EntityFrameworkReadModelForCommandResolver` |
-| `Cratis.Arc.Core` | `22.16.0` | `Cratis.Arc.Queries.ModelBound.ReadModelAttribute`, `ICanResolveReadModelForCommand` |
+| `Cratis.Arc.EntityFrameworkCore` | `22.75.0` | `BaseDbContext`, `ReadOnlyDbContext`, `WithEntityFrameworkCore`, column helpers, `EntityFrameworkReadModelForCommandResolver` |
+| `Cratis.Arc.Core` | `22.75.0` | `Cratis.Arc.Queries.ModelBound.ReadModelAttribute`, `ICanResolveReadModelForCommand` |
 | `Microsoft.EntityFrameworkCore` | `10.0.11` | EF Core itself, including all migration tooling |
 
-> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
+> Arc EF context, builder and observation surface rechecked at v22.75.0.
+> Verify provider-specific migration behavior against the configured provider.
 
 Reverify before claiming support for another version.
 
@@ -118,7 +119,8 @@ from the command's resolved key; a composite key throws
 (HTTP 400) rather than a server fault.
 
 `ARC0006` warns when such a parameter is non-nullable, because a command-scoped
-read model can be missing. It is the only Arc diagnostic that touches EF Core
+read model can be missing; reject a missing one rather than returning a nullable
+event from `Handle()`. It is the only Arc diagnostic that touches EF Core
 read models, and only because they share `[ReadModel]`.
 
 ## Write the migration
@@ -189,9 +191,14 @@ and `ObserveById<TEntity, TId>(id, configure?)`, returning
 `AddEntityFrameworkCoreObservation()` and `options.AddObservation(serviceProvider)`
 on the context — `WithEntityFrameworkCore` already does the first for you.
 
-Paging and sorting are applied at the source for these, and an out-of-range page
-size is clamped rather than throwing, and an unknown sort field is ignored rather
-than failing.
+Paging and sorting are applied at the source; the query pipeline validates
+`page >= 0` and `pageSize > 0`. Unknown observation sort fields are ignored.
+Auxiliary observations can pass `ignoreQueryContext: true` so only the primary
+uses client paging/sorting and writes totals. `ObserveSingle`/`ObserveById` emit
+`default` when the row is absent/deleted/outside the filter, remaining subscribed.
+Indexer-property keys (shared-type entities) are supported; composite and
+shadow-only keys are refused at setup. Source at Arc v22.75.0:
+`Source/DotNET/EntityFrameworkCore/Observe/DbSetObserveExtensions.cs`.
 
 ⚠️ Database-level change notification differs by provider: PostgreSQL uses
 LISTEN/NOTIFY, SQL Server uses Service Broker, and **SQLite has none at all** —

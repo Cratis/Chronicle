@@ -21,10 +21,14 @@ flowchart LR
 
 What that buys you is unusual, and worth sitting with:
 
-- **The original is never touched.** A generation-1 event written two years ago is still there, byte for byte. Migrations produce *additional* representations alongside it, never instead of it.
+- **Current backfills preserve stored generations.** They add missing representations without overwriting what is there. Earlier backfills may already have changed historical content, and SQL revisions replace content in place; upgrading cannot recover those originals.
 - **The kernel stores every generation.** Append a gen-1 event with a 1→2 migration and the kernel keeps both gen 1 and the upcasted gen 2.
 - **Two versions of your software can share one store.** Service A on the new code reads gen 2; Service B on the old code reads gen 1 — the same physical event, each getting the generation it understands, with no upgrade coordination between them.
-- **Back-filling is automatic.** Register a new generation and Chronicle starts a background job that produces it for all existing events. You don't trigger it, and you don't wait for it.
+- **Backfilling is automatic, with a defined scope.** Register a new generation and Chronicle starts a background job for that event type in the default namespace's event log only. Other namespaces and sequences are not covered.
+
+Backfill starts from the known appended generation's base content, not a separate revision. For legacy events whose appended generation is unknown, it uses the highest stored base generation and leaves the appended generation unknown. Each added representation records its source and the migration-definition version that produced it, alongside its content and hash. A concurrent revision or redaction prevents a stale write: the job re-reads and retries once, then logs and skips if the conflict persists. Existing representations do not change when you change a migration alone.
+
+Register new generations only after **every kernel silo has been upgraded**. During a rolling upgrade, old workers can still run destructive replace-all backfills.
 
 ## Why the kernel owns this
 

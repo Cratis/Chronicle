@@ -44,10 +44,11 @@ dialog, license, judgment, gray). See [general.md](./general.md).
 
 - PascalCase for class, interface, and object names.
 - camelCase for functions, properties, and local variables.
-- No `I` prefix on interfaces — Kotlin does not carry that convention; name
-  the interface for what it does (`CommandPipeline`, not `ICommandPipeline`)
-  unless a concrete/interface pair genuinely needs `Default<Name>` for the
-  implementation.
+- New application and Arc-style interfaces have no `I` prefix; name them for
+  what they do (`CommandPipeline`, not `ICommandPipeline`). Reserve
+  `Default<Name>` for a concrete/interface pair when needed. Chronicle.Kotlin's
+  published types retain their names (`IEventStore`, `IChronicleClient`,
+  `IProjectionFor`, `IReactorMiddleware`); do not rename framework APIs.
 - Never suffix a class with `Impl`, `Service`, or `Async` purely to
   disambiguate — name it for its role.
 
@@ -166,7 +167,8 @@ should assume by default:
 
 ## Testing
 
-- JUnit 5 is the house test runner for Kotlin and Java alike.
+- JUnit Jupiter is the house test runner for Kotlin and Java alike (the
+  Cratis JVM repositories use Jupiter 6.1.x).
 - A Kotlin test lives beside its Kotlin production code
   (`src/test/kotlin/.../<Thing>Test.kt`); a Java-facing surface also gets a
   Java test that compiles and runs against it, because Kotlin-only tests do

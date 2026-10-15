@@ -1,0 +1,38 @@
+// remove via join inside a child collection
+// Screenplay documentation: Documentation/screenplay/projections/removal.md
+
+type OrderLine
+  lineNumber Int
+  sku String
+module Conformance
+  feature Cases
+    slice StateView Case
+      event LineAdded
+        orderId String
+        lineNumber Int
+        sku String
+        quantity Int
+      event LineChanged
+        orderId String
+        lineNumber Int
+        sku String
+      event LineRemoved
+        orderId String
+        lineNumber Int
+      event ProductDiscontinued
+        sku String
+      event ProductRenamed
+        sku String
+        title String
+      readmodel OrderView
+        orderId String
+        lines OrderLine[]
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        children lines identified by sku
+          from LineAdded key sku
+            parent orderId
+            lineNumber = lineNumber
+          remove via join on ProductDiscontinued key sku

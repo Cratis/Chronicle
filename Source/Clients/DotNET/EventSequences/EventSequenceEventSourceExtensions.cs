@@ -79,6 +79,38 @@ public static class EventSequenceEventSourceExtensions
         eventSequence.AppendThroughEventSource(eventSource, eventSourceId, @event, eventStream, eventStreamId, correlationId, tags, concurrencyScope, occurred, subject);
 
     /// <summary>
+    /// Appends prepared content through a registered event source definition without serializing the event or running providers again.
+    /// </summary>
+    /// <typeparam name="TSource">The <see cref="IEventSource"/> to append through.</typeparam>
+    /// <param name="eventSequence">The <see cref="IEventSequence"/> that prepared the content.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> of the event source instance.</param>
+    /// <param name="preparedEvent">The content prepared by the sequence.</param>
+    /// <param name="eventStream">Optional name of a stream declared by the event source.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> within the stream. The format is left to the caller.</param>
+    /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event.</param>
+    /// <param name="tags">Optional tags to associate with the event.</param>
+    /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/>. When not set it is narrowed to the dimensions the definition declares.</param>
+    /// <param name="occurred">Optional time the event occurred.</param>
+    /// <param name="subject">Optional subject overriding the prepared event's subject.</param>
+    /// <returns><see cref="AppendResult"/> with details about whether or not it succeeded and more.</returns>
+    /// <exception cref="UnknownEventSource">The type is not a discovered event source.</exception>
+    /// <exception cref="EventStreamDoesNotBelongToEventSource">The stream is not declared by the event source.</exception>
+    /// <exception cref="PreparedEventBelongsToAnotherSequence">The content belongs to another sequence instance.</exception>
+    public static Task<AppendResult> AppendPrepared<TSource>(
+        this IEventSequence eventSequence,
+        EventSourceId eventSourceId,
+        PreparedEvent preparedEvent,
+        string? eventStream = default,
+        EventStreamId? eventStreamId = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
+        where TSource : IEventSource =>
+        eventSequence.AppendPreparedThroughEventSource(typeof(TSource), eventSourceId, preparedEvent, eventStream, eventStreamId, correlationId, tags, concurrencyScope, occurred, subject);
+
+    /// <summary>
     /// Appends several events through a registered event source definition.
     /// </summary>
     /// <typeparam name="TSource">The <see cref="IEventSource"/> to append through.</typeparam>

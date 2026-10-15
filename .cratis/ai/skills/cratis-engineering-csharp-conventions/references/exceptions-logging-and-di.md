@@ -1,6 +1,14 @@
 <!-- cratis-ai-managed: skills/cratis-engineering-csharp-conventions/references/exceptions-logging-and-di.md -->
 # Exceptions, logging, and dependency injection
 
+## Contents
+
+- Exceptions
+- Logging
+- Dependency injection
+- Service lifetimes — anything taking a scoped dependency is scoped or transient
+- Discovering implementations — `IInstancesOf<T>`, never `IEnumerable<T>`
+
 ## Exceptions
 
 Every exception type communicates *what went wrong in domain terms*. A built-in
@@ -230,10 +238,7 @@ builder.Host.UseDefaultServiceProvider(options =>
 });
 ```
 
-Enable it on an existing codebase in this order, or it will simply refuse to
-start: turn it on locally first, fix everything it names, and only then let it
-reach the deployed environments. Turning it on before the sweep converts a
-silent multi-tenant bug into a production outage.
+See "The two rules most often got wrong" in SKILL.md.
 
 And add an architecture specification, because validation only catches what a
 run actually resolves. Reflect over the assembly, find every `[Singleton]` whose
@@ -276,9 +281,11 @@ Rules:
 - Never register a type that exists to be discovered. Mark it `[Singleton]`, or
   rely on the `IFoo → Foo` convention for a transient, and delete the
   registration line.
-- `IInstancesOf<T>` resolves at the point of access, so an implementation added
-  later in the assembly becomes available without touching the consumer or any
-  composition root.
+- `IInstancesOf<T>` fixes its type set at construction and resolves instances on
+  each enumeration through the consumer's provider (Fundamentals 7.23.0). Late
+  assemblies do not update that set. A singleton captures the root provider;
+  never use it to enumerate scoped implementations. Resolve a scoped or
+  transient consumer inside a scope instead; follow `csharp.md`'s lifetime rule.
 - `IEnumerable<T>` remains the right type to **return** from a method that
   yields a sequence of values. The rule applies only to enumerating
   *implementations* of an abstraction.

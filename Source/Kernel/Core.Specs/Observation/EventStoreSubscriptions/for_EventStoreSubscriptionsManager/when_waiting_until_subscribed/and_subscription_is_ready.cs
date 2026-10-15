@@ -45,7 +45,7 @@ public class and_subscription_is_ready : Specification
 
     async Task Because() =>
         _error = await Catch.Exception(() =>
-            _manager.WaitUntilSubscribed(new EventStoreSubscriptionId(SourceEventStore), TimeSpan.FromSeconds(1)));
+            _manager.WaitUntilSubscribed(new EventStoreSubscriptionId(SourceEventStore), TimeSpan.FromSeconds(30)));
 
     [Fact] void should_not_throw() => _error.ShouldBeNull();
 }

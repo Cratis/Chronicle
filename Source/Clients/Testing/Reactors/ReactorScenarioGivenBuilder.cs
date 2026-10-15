@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Reactors;
 
 namespace Cratis.Chronicle.Testing.Reactors;
 
@@ -12,7 +11,7 @@ namespace Cratis.Chronicle.Testing.Reactors;
 /// <typeparam name="TReactor">The type of reactor under test.</typeparam>
 /// <param name="scenario">The <see cref="ReactorScenario{TReactor}"/> to drive.</param>
 public class ReactorScenarioGivenBuilder<TReactor>(ReactorScenario<TReactor> scenario)
-    where TReactor : class, IReactor
+    where TReactor : class
 {
     /// <summary>
     /// Specifies the <see cref="EventSourceId"/> that the events originate from.

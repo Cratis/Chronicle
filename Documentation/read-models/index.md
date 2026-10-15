@@ -24,15 +24,23 @@ You don't write to a read model directly — an [observer](../concepts/observers
 the events:
 
 - A [projection](../projections/) maps events into the model declaratively — the usual choice.
-- A [reducer](../reducers/) folds events into the model imperatively, when you need more control.
+- A [reducer](../reducers/) folds events into the model as state-transition code.
+
+Start with model-bound attributes, move to fluent mappings when the definition needs structure, and
+choose reducer code when transitions are clearer; a self-reducing model is the default for new
+reducers. **[Choose how to build a read model](../projections/choosing-a-read-model-style.mdx)** gives you
+one decision path with scenarios, the same view four ways, and the cost of switching later.
 
 ## What to read next
 
 | Topic | What it covers |
 | ------- | ----------- |
+| [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx) | Pick a builder based on the view you need. |
 | [Consistency models](./consistency.md) | The key decision: when does the read model have to be correct — immediately, or eventually? |
-| [Decision-consistent reads](./decision-reads) | Guard a .NET command against a projection changing after it was read. |
+| [Decision-consistent reads](./decision-reads) | Guard a command against a projection changing after it was read. |
+| [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) | Which mechanism makes a write-side rule hold, and why a plain read of a read model does not. |
 | [Empty child collections](./empty-child-collections) | Why a child collection with no children is absent rather than `[]`, and how to say what that means. |
+| [Read models scoped to one event stream](./per-stream.mdx) | Fold one account's month without mixing other months; guard a decision or make a plain query. |
 | [Getting a single instance](./getting-single-instance) | Retrieve one read model instance by its key. |
 | [Getting a collection](./getting-collection-instances) | Retrieve all instances of a read model. |
 | [Getting snapshots](./getting-snapshots) | Retrieve historical snapshots of a read model's state. |

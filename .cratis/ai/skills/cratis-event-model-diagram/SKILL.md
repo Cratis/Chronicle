@@ -20,8 +20,10 @@ and later). The grammar is owned by Mermaid, and
 file and Mermaid disagree. Confirm the Mermaid version available to the renderer
 before relying on a construct.
 
-The Cratis artifacts a diagram refers to are verified against `Cratis.Chronicle`
-`18.3.0` and the Arc query and command surface it is used with.
+The Cratis artifacts a diagram refers to were originally checked against `Cratis.Chronicle`
+18.3.0 and re-read against Chronicle 19.50.0 and the Arc query and command surface it is used with
+(current pins: `cratis-screenplay-toolchain` `references/versions.md`). The Mermaid claim above is
+external and was not re-verified here.
 
 ## What an event model is
 
@@ -101,6 +103,26 @@ tf 12 evt <EntityName><PastTenseVerb>
 - Several consumers of one read model: declare each consumer `ui` as its own
   `rf` frame with an explicit `->>` back to the `rmo`.
 
+## Connections read forward
+
+A diagram reads left to right, so every connection goes to a later frame, never back to an
+earlier one. In practice:
+
+- Number frames in story order and put elements that belong together next to each other: a
+  persona and the command it issues, a command and the events it produces, an event and the
+  read model that projects it. A read model's `->>` sources are frames that come **before** it.
+- When a later event must change what an earlier read model shows, do not draw an arrow back to
+  that read model. Draw a new `rmo` frame after the later event, sourced from the events that now
+  matter (it is the same read model carried to a later state), and give it its own consumer
+  `ui` frame if a person looks at it. The earlier frame stays as it was: it correctly showed
+  that earlier point in the story. The model itself is unchanged; its projection simply
+  consumes the later event.
+- If the natural place for a frame is already taken, insert it just before or after rather than
+  wiring across the gap.
+
+Adapted from Martin Dilger and Nebulit GmbH's core rules (`references/provenance.md`); their
+board mechanics (columns, cells, linked copies) do not apply to Mermaid frames.
+
 ## The command rules table
 
 Mermaid's eventmodeling grammar has no shape for validation or guards. After the
@@ -167,3 +189,5 @@ language. Include commands that emit no event.
   for a hand-written Chronicle implementation, or
   `cratis-screenplay-event-modeling` when the model is authored as a Screenplay
   `.play` document.
+
+Attribution for adapted method text: `references/provenance.md`.

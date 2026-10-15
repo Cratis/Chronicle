@@ -50,6 +50,16 @@ public interface IJsonSchemaMetadataValueHandler
     Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value);
 
     /// <summary>
+    /// Releases a value only when its complete original content can be recovered.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The protection key identifier.</param>
+    /// <param name="value">The protected value.</param>
+    /// <returns>The released value, or null when release cannot be proven. Unsupported handlers fail closed.</returns>
+    Task<JsonNode?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) => Task.FromResult<JsonNode?>(null);
+
+    /// <summary>
     /// Releases a stored value without treating an unconfirmed missing key as erasure.
     /// </summary>
     /// <param name="eventStore">The event store.</param>

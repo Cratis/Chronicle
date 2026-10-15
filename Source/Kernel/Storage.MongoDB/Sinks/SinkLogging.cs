@@ -22,6 +22,9 @@ internal static partial class SinkLogging
     [LoggerMessage(LogLevel.Error, "Bulk write to collection '{Collection}' for read model '{ReadModel}' reported a write concern error {Code} ({CodeName}): {ErrorMessage} - the outcome of {OperationCount} operations is unknown")]
     internal static partial void BulkWriteConcernErrorOccurred(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, int code, string codeName, string errorMessage, int operationCount);
 
+    [LoggerMessage(LogLevel.Error, "Shutdown bulk write to collection '{Collection}' for read model '{ReadModel}' failed with {ErrorType}; the outcome of {FailedPartitionCount} partitions is unknown")]
+    internal static partial void ShutdownBulkWriteOutcomeUnknown(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, string errorType, int failedPartitionCount);
+
     [LoggerMessage(LogLevel.Warning, "Replay of read model '{ReadModel}' ended with {FailedPartitionCount} failed partitions in its final flush; the rebuilt collection is promoted and the failed partitions are recorded for retry")]
     internal static partial void EndingReplayWithFailedPartitions(this ILogger<Sink> logger, ReadModelIdentifier readModel, int failedPartitionCount);
 

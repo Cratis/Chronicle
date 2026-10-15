@@ -1,7 +1,14 @@
 <!-- cratis-ai-managed: skills/cratis-arc-command/references/proxy-generation.md -->
 # Proxy generation
 
-Verified against `Cratis.Arc.ProxyGenerator.Build` `22.16.0`.
+## Contents
+
+- Wiring
+- MSBuild properties
+- What the generator extracts for client-side validation
+- Failure modes
+
+Verified against `Cratis.Arc.ProxyGenerator.Build` `22.75.0`.
 
 ## Wiring
 
@@ -9,7 +16,7 @@ Reference the build package from the project that contains the commands,
 queries and read models, and set an output path:
 
 ```xml
-<PackageReference Include="Cratis.Arc.ProxyGenerator.Build" Version="22.16.0" />
+<PackageReference Include="Cratis.Arc.ProxyGenerator.Build" Version="22.75.0" />
 
 <PropertyGroup>
   <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../<Web>/src/api</CratisProxiesOutputPath>
@@ -28,7 +35,8 @@ Output folders mirror the C# **namespace**, not the file path. A command in
 
 ## MSBuild properties
 
-The first nine properties below are declared with the default shown in the package's `.props`; the last three are read by the `.targets` only when set to `true` (absent means off).
+Properties below are forwarded by the package's `.props`/`.targets`; boolean
+switches without a declared default are off when absent.
 
 | Property | Default | Effect |
 | --- | --- | --- |
@@ -43,11 +51,19 @@ The first nine properties below are declared with the default shown in the packa
 | `CratisProxiesSkipFileIndexTracking` | `false` | Disables tracking which files the generator owns |
 | `CratisProxiesSkipIndexGeneration` | `false` | Does not write the per-folder `index.ts` barrels |
 | `CratisProxiesUseSourceFileAsOutputFile` | `false` | Names the generated file after the C# source file rather than the type |
+| `CratisProxiesUseProxyFileSuffix` | off | Emits `Name.proxy.ts` and matching barrels; avoids `.ts`/`.tsx` basename collisions |
 | `CratisProxiesEmitInterfaces` | off | **Arc ≥ 22.15.0** (the underlying `--emit-interfaces` flag exists from 22.14.0; the MSBuild property from 22.15.0). Emits plain TypeScript `interface`s instead of `@field`-decorated classes — no `@cratis/fundamentals` import in the output. Only for consumers that never reconstruct instances from JSON; command and query proxies need the classes |
 
 ⚠️ `CratisProxiesSkipOutputDeletion` defaults to `true`. Guidance that tells you
 to set it to `true` "so the generator does not delete your hand-written files"
 is describing the default, not a fix.
+
+The generator preserves hand-written `index.ts` exports, and generated files
+follow the Cratis ESLint configuration. Named concepts live only in the backend
+model: generated TypeScript erases them to primitives; nullable concept properties
+are optional. Source at Arc v22.75.0: `Tools/ProxyGenerator/ConceptMap.cs` and
+`Tools/ProxyGenerator.Build/build/Cratis.Arc.ProxyGenerator.Build.targets` under
+`Source/DotNET`.
 
 Item groups the target also forwards: `AssemblyToPackageMapping`,
 `ExcludeType`, `ExcludeNamespace`, `NamespaceRoot`, and `TypeToTsType`.
@@ -74,6 +90,9 @@ Recognised data annotations: `[Required]`, `[StringLength]`, `[MinLength]`,
 Rules declared on a `ConceptValidator<T>` are projected onto every property
 typed as that concept, so declaring a value's format once validates it in the
 browser too.
+
+Conditional `When`/`Unless` rules are not projected to the client. Extracted
+rules retain severity (`withSeverity`); command blocking thresholds still apply.
 
 ⚠️ **`Must(...)` is not extracted.** Neither is any rule that needs an injected
 dependency. Those run on the server only, which means

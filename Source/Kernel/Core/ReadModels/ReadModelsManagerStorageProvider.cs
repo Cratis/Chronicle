@@ -28,9 +28,11 @@ public class ReadModelsManagerStorageProvider(IStorage storage) : IGrainStorage
     {
         var actualGrainState = (grainState as IGrainState<ReadModelsManagerState>)!;
         var eventStore = storage.GetEventStore(grainId.Key.ToString()!);
-        foreach (var definition in actualGrainState.State!.ReadModels)
+        foreach (var definition in actualGrainState.State!.Modified.ToArray())
         {
             await eventStore.ReadModels.Save(definition);
         }
+
+        actualGrainState.State.Modified = [];
     }
 }

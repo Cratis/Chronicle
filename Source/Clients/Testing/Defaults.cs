@@ -31,14 +31,32 @@ public class Defaults
     /// <param name="clientArtifactsProvider">The artifacts available to this run.</param>
     /// <param name="serviceProvider">Optional service provider for activating artifacts.</param>
     public Defaults(IClientArtifactsProvider clientArtifactsProvider, IServiceProvider? serviceProvider = null)
+        : this(clientArtifactsProvider, serviceProvider, null)
     {
-        EventStore = new EventStoreForTesting(serviceProvider, clientArtifactsProvider);
+    }
+
+    /// <summary>
+    /// Initializes per-run services with Chronicle settings, including explicit artifacts.
+    /// </summary>
+    /// <param name="clientArtifactsProvider">The artifacts available to this run.</param>
+    /// <param name="serviceProvider">Optional service provider for activating artifacts.</param>
+    /// <param name="options">Optional Chronicle settings for this run.</param>
+    public Defaults(IClientArtifactsProvider clientArtifactsProvider, IServiceProvider? serviceProvider, ChronicleOptions? options)
+    {
+        EventStore = new EventStoreForTesting(serviceProvider, clientArtifactsProvider, options);
         var testingStore = (EventStoreForTesting)EventStore;
         JsonSchemaGenerator = testingStore.JsonSchemaGenerator;
         ClientArtifactsProvider = testingStore.ClientArtifactsProvider;
+        Options = testingStore.ClientOptions;
+        ScenarioOptions = options;
         EventTypes = testingStore.EventTypes;
         EventSerializer = testingStore.EventSerializer;
     }
+
+    /// <summary>
+    /// Gets the Chronicle settings used by this run.
+    /// </summary>
+    public ChronicleOptions Options { get; }
 
     /// <summary>
     /// Gets the default <see cref="IEventStore"/>.
@@ -64,4 +82,9 @@ public class Defaults
     /// Gets the default <see cref="IEventSerializer"/>.
     /// </summary>
     public IEventSerializer EventSerializer { get; }
+
+    /// <summary>
+    /// Gets the settings explicitly supplied to this run, or <see langword="null"/> so each scenario resolves its own settings as before.
+    /// </summary>
+    internal ChronicleOptions? ScenarioOptions { get; }
 }

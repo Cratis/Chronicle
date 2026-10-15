@@ -1,6 +1,19 @@
 <!-- cratis-ai-managed: skills/cratis-chronicle-projection/references/model-bound-attributes.md -->
 # Model-bound projection attributes
 
+## Contents
+
+- Namespaces that are not `Projections.ModelBound`
+- Source and shape
+- Setting values
+- Counters
+- Variants
+- Relationships
+- Source selection
+- Labels, not filters
+- What makes a type a model-bound projection
+- AutoMap
+
 Verified against `Cratis.Chronicle` `18.3.0`.
 
 Unless noted, every attribute below lives in
@@ -32,6 +45,7 @@ attribute takes no generic parameter at all.
 | `[Nested]` | non-generic | none | property, parameter; single |
 | `[FromAll]` | non-generic | `(string? contextProperty = default, string? property = default)` | **property only**; single |
 | `[FromEvery]` | non-generic | `(string? property = default, string? contextProperty = default)` | property, parameter; single |
+| `[NotProjected]` | non-generic | none | property, parameter |
 | `[NoAutoMap]` | non-generic | none | class, struct, property, parameter; inherited |
 | `[NotRewindable]` | non-generic | none | class, struct; single |
 | `[Passive]` | non-generic | none | class, struct; single |
@@ -40,6 +54,13 @@ attribute takes no generic parameter at all.
 
 Note that `[FromAll]` and `[FromEvery]` take their two optional arguments in
 **opposite order**. Always pass them by name.
+
+At **Cratis/Chronicle v19.50.0**, `[FromEvery]` includes child-only and nested-child
+contributing events in the owning parent's mappings (no attribute opt-out).
+`[FromAll]` subscribes to every sequence event type except join-only types;
+pair it with `[NotRewindable]`. `[NotProjected]` excludes a query-assembled member
+from AutoMap and CHR0024. Sources: `Projections/ModelBound/NotProjectedAttribute.cs`,
+`Projections/FromEveryBuilder.cs`, and `Documentation/projections/model-bound/`.
 
 ## Setting values
 
@@ -117,12 +138,7 @@ for reducers and reactors.
 
 ## What makes a type a model-bound projection
 
-Chronicle treats a type as a model-bound projection when the class, its primary
-constructor parameters, or its public instance properties carry an
-`[EventSequence]` attribute or any projection annotation — **except
-`[Passive]`**, which is deliberately excluded. `[Passive]` on its own therefore
-does not make a read model a projection; it changes how an existing projection
-is registered.
+See "What makes a type a model-bound projection" in SKILL.md.
 
 ## AutoMap
 

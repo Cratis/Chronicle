@@ -24,25 +24,19 @@ Map the event source id when the read model's primary identifier is not otherwis
 
 ## Child Projection Inclusion
 
-`FromEvery` maps events handled at the level where it is declared: `from` events and `join` events. It does not subscribe the parent to events handled only by child projections. `ExcludeChildProjections()` (or `exclude children` in the declaration language) stores an inclusion flag, but that flag currently does not change which events update the parent. The default is to store the flag as included; neither setting makes child-only events update parent-level fields.
+The kernel now honors the child-inclusion flag. In .NET, `FromEvery` includes events handled only by child projections by default, including nested child collections. These mappings update the containing parent using the child's resolved parent key, not a new root keyed by the child identifier. Existing fluent projections therefore start updating parent audit fields on child-only events.
+
+Call `ExcludeChildProjections()` to keep every-event mappings local to the level where they are declared. That level's own `from` and `join` events still apply the mappings. In the declaration language, `every` also includes child events by default; add `exclude children` to opt out.
 
 <ChronicleClientTabs snippet="projections/declarative/from-every/exclude-children" />
 
-Use a root `FromAll` mapping if the parent must observe every event type in the sequence, including events handled by children. Unlike `FromEvery`, that also observes unrelated event types.
-
-:::note[Client coverage]
-This example depends on declarative child collections, which are currently C#-only (see [Children](./children)). It stays C#-only until child projection scopes are available in the other clients.
-:::
+Use a root `FromAll` mapping only when the parent must also observe unrelated event types in the sequence. Its child-inclusion flag is true, so child-only events update their containing parent too. Use `FromEvery` for audit metadata that should follow just the projection's handled events.
 
 <ChronicleClientTabs snippet="projections/declarative/from-every/with-children" />
 
 ## Multiple Declarations
 
 Clients that support multiple every-event declarations merge the property mappings into one projection definition.
-
-:::note[Elixir]
-Elixir's `from_every/1` macro accumulates multiple declarations, but the registration coordinator currently only sends the first one to the kernel — a second `from_every` call is silently dropped. Use a single `from_every` call with all of the property mappings combined instead.
-:::
 
 <ChronicleClientTabs snippet="projections/declarative/from-every/multiple-declarations" />
 

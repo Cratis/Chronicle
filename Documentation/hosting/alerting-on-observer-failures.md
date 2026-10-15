@@ -29,7 +29,7 @@ Removal and retirement can fail when incident reconciliation or resource cleanup
 
 Automatic recovery, including projection-manager startup, leaves committed retirement intact. Explicit registration can reactivate the observer with a fresh lifecycle after discarding retained failed partitions and retry reminders. It does not reopen ended incident IDs. Probing or retiring an absent observer creates no observer record or alert reminder.
 
-Current recorded incidents are available through [scoped incident queries](/chronicle/hosting/alert-incident-queries/), with bounded pages, lookups, counts and sampled materialization health. Check that health before treating an empty result as no incidents. The query surface does not add incident gauges or deliver email or chat notifications; use the monitoring options below for delivery.
+Current recorded incidents are available through [scoped incident queries](/chronicle/hosting/alert-incident-queries/), with bounded pages, lookups, counts and sampled materialization health. Check that health before treating an empty result as no incidents. The query surface does not deliver email or chat notifications; use the monitoring options below for delivery. Open incidents are also published as the [`chronicle_alerts_open_incidents` gauge](/chronicle/hosting/configuration/open-telemetry/#open-alert-incident-metrics).
 
 ## Alert from metrics
 
@@ -109,6 +109,38 @@ Know the limits of counters before you depend on them:
 - **They say "recently", not "still".** The quarantine alerts fire when something is quarantined, then resolve after 30 minutes even if it is still stuck. The failing alert cannot tell a partition that is still failing from one that recovered after its latest failure. Keep the scheduled check below for the current state.
 - **They reset when the Kernel restarts.** `increase()` handles resets, and a partition that fails again after a restart is counted again.
 - **A gap in your own data raises false alerts.** The second half of each rule fires for every series that is above the threshold now and did not exist 30 minutes ago (15 for the failing alert). After Prometheus or the collector restarts, a scrape outage, or a series dropped by retention, every observer that has ever failed qualifies, and the alerts resolve once the window has passed. A `for:` clause does not help, because the condition stays true for the whole window. Inhibit these alerts in Alertmanager while your monitoring itself is recovering, for example with an alert on `time() - process_start_time_seconds < 1800` for the Prometheus job.
+
+### Alert on open incidents
+
+The counters above describe failures as they happen. The `chronicle_alerts_open_incidents` gauge describes what is open now, per observer, condition and severity, and drops back to `0` once an incident clears. Its `Severity` tag (`Warning` or `Critical`) is the incident's severity and is not the `severity` label of a Prometheus rule. Aggregate with `max`, never `sum`, because more than one instance can briefly report the same series. See [open alert incident metrics](/chronicle/hosting/configuration/open-telemetry/#open-alert-incident-metrics) for the sampling and failover behavior.
+
+```yaml title="chronicle-incident-alerts.yml"
+groups:
+  - name: chronicle-incidents
+    rules:
+      - alert: ChronicleCriticalIncidentOpen
+        expr: |
+          max by (EventStore, Namespace, ObserverId, EventSequenceId, Condition) (
+            chronicle_alerts_open_incidents{Severity="Critical"}
+          ) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical incident open for {{ $labels.ObserverId }} in {{ $labels.EventStore }}/{{ $labels.Namespace }}"
+      - alert: ChronicleIncidentGaugeUnavailable
+        expr: |
+          max(chronicle_alerts_open_incidents_available) == 0
+          or
+          absent(chronicle_alerts_open_incidents_available)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Open incident metrics are unavailable; an empty gauge does not mean no incidents"
+```
+
+The second rule fires when the owner's snapshot is stale or when no instance reports the gauge at all. Without it, a stalled refresh looks the same as a quiet cluster.
 
 ## Alert from a scheduled health check
 

@@ -5,6 +5,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Registrations;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -34,6 +35,14 @@ public interface IReducers
     Task<IReducerHandler> Register<TReducer, TReadModel>()
         where TReducer : IReducerFor<TReadModel>
         where TReadModel : class;
+
+    /// <summary>
+    /// Registers a reducer with its inferred read model.
+    /// </summary>
+    /// <param name="reducerType">The reducer CLR type.</param>
+    /// <returns>The registered handler.</returns>
+    /// <exception cref="TypeBasedArtifactRegistrationNotSupported">The custom registry does not support type-based registration.</exception>
+    Task<IReducerHandler> Register(Type reducerType) => throw new TypeBasedArtifactRegistrationNotSupported(GetType());
 
     /// <summary>
     /// Get a reduced read model instance by key by replaying events in-process.
@@ -138,17 +147,48 @@ public interface IReducers
         where TReducer : IReducer;
 
     /// <summary>
+    /// Gets a registered reducer's state.
+    /// </summary>
+    /// <param name="reducerType">The reducer CLR type.</param>
+    /// <returns>The reducer state.</returns>
+    /// <exception cref="TypeBasedArtifactRegistrationNotSupported">The custom registry does not support type-based state lookup.</exception>
+    Task<ReducerState> GetStateFor(Type reducerType) => throw new TypeBasedArtifactRegistrationNotSupported(GetType());
+
+    /// <summary>
     /// Replay a specific reducer.
     /// </summary>
     /// <typeparam name="TReducer">Type of reducer to replay.</typeparam>
-    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reducer is not replayable.</returns>
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reducer is not replayable or its observer is not in a state it can replay from (disconnected, quarantined); reconnect or release it before replaying.</returns>
     Task<JobId> Replay<TReducer>()
         where TReducer : IReducer;
+
+    /// <summary>
+    /// Replays a registered reducer CLR type.
+    /// </summary>
+    /// <param name="reducerType">The reducer CLR type.</param>
+    /// <returns>The replay job identifier.</returns>
+    /// <exception cref="TypeBasedArtifactRegistrationNotSupported">The custom registry does not support type-based replay.</exception>
+    Task<JobId> Replay(Type reducerType) => throw new TypeBasedArtifactRegistrationNotSupported(GetType());
 
     /// <summary>
     /// Replay a specific reducer by its identifier.
     /// </summary>
     /// <param name="reducerId"><see cref="ReducerId"/> to replay.</param>
-    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reducer is not replayable.</returns>
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reducer is not replayable or its observer is not in a state it can replay from (disconnected, quarantined); reconnect or release it before replaying.</returns>
     Task<JobId> Replay(ReducerId reducerId);
+
+    /// <summary>
+    /// Fast forward a reducer to the tail of the event log, skipping every event it has not yet handled without invoking it.
+    /// </summary>
+    /// <typeparam name="TReducer">Type of reducer to fast forward.</typeparam>
+    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    Task<FastForwardResult> FastForward<TReducer>()
+        where TReducer : IReducer;
+
+    /// <summary>
+    /// Fast forward a specific reducer by its identifier to the tail of the event log, skipping every event it has not yet handled without invoking it.
+    /// </summary>
+    /// <param name="reducerId"><see cref="ReducerId"/> to fast forward.</param>
+    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    Task<FastForwardResult> FastForward(ReducerId reducerId);
 }

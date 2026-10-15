@@ -14,5 +14,5 @@ public class and_the_checkpoint_interval_is_not_reached : given.a_debouncing_job
     }
 
     [Fact] void should_not_persist_the_checkpoint_before_the_interval_is_reached() => _stateStorageStats.Writes.ShouldEqual(0);
-    [Fact] void should_still_advance_the_checkpoint_in_memory() => _stateStorage.State.LastSuccessfullyHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)2UL);
+    [Fact] void should_keep_persistable_state_at_the_durable_position() => _stateStorage.State.LastSuccessfullyHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
 }

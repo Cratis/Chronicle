@@ -25,6 +25,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition;
 /// <param name="subscriberSelector">The <see cref="IObserverSubscriberSelector"/> for selecting the target client instance.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 public class TestableHandleEventsForPartition(
     [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
@@ -33,8 +34,9 @@ public class TestableHandleEventsForPartition(
     IEventCompliance eventCompliance,
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
-    ILogger<HandleEventsForPartition> logger)
-    : HandleEventsForPartition(state, throttle, storage, eventCompliance, subscriberSelector, configurationProvider, logger), IGrainType
+    ILogger<HandleEventsForPartition> logger,
+    IEventGenerationRelease? eventGenerationRelease = null)
+    : HandleEventsForPartition(state, throttle, storage, eventCompliance, subscriberSelector, configurationProvider, logger, eventGenerationRelease), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForPartition).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance);
     static readonly FieldInfo _subscriberField = typeof(HandleEventsForPartition).GetField("_subscriber", BindingFlags.NonPublic | BindingFlags.Instance);

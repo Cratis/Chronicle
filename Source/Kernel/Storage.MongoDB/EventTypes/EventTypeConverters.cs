@@ -29,7 +29,10 @@ public static class EventTypeConverters
             new Dictionary<string, BsonDocument>
             {
                 { schema.Type.Generation.ToString(), BsonDocument.Parse(schema.Schema.ToJson()) }
-            });
+            },
+            null,
+            schema.Visibility,
+            schema.Origin);
     }
 
     /// <summary>
@@ -38,8 +41,15 @@ public static class EventTypeConverters
     /// <param name="definition">The <see cref="EventTypeDefinition"/> to convert.</param>
     /// <param name="owner">The <see cref="EventTypeOwner"/>.</param>
     /// <param name="source">The <see cref="EventTypeSource"/>.</param>
+    /// <param name="visibility">The <see cref="EventTypeVisibility"/>.</param>
+    /// <param name="origin">The name of the event store the event type originates from when it is not the registering one, otherwise empty.</param>
     /// <returns>Converted <see cref="EventType"/>.</returns>
-    public static EventType ToMongoDB(this EventTypeDefinition definition, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
+    public static EventType ToMongoDB(
+        this EventTypeDefinition definition,
+        EventTypeOwner owner = EventTypeOwner.Client,
+        EventTypeSource source = EventTypeSource.Code,
+        EventTypeVisibility visibility = EventTypeVisibility.Unspecified,
+        string origin = "")
     {
         var schemas = definition.Generations.ToDictionary(
             g => g.Generation.ToString(),
@@ -57,7 +67,9 @@ public static class EventTypeConverters
             source,
             definition.Tombstone,
             schemas,
-            migrations);
+            migrations,
+            visibility,
+            origin);
     }
 
     /// <summary>
@@ -91,7 +103,9 @@ public static class EventTypeConverters
                schema.Tombstone),
             schema.Owner,
             schema.Source,
-            result);
+            result,
+            schema.Visibility,
+            schema.Origin ?? string.Empty);
     }
 
     /// <summary>

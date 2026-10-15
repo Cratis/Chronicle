@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grpc;
@@ -51,6 +52,11 @@ public record AddWebhook(
     bool IsActive)
 {
     /// <summary>
+    /// Gets the policy for delivering event generations.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
     /// Handles the command by registering the assembled definition.
     /// </summary>
     /// <param name="registrar">The <see cref="WebhookRegistrar"/> that decides what changed.</param>
@@ -78,7 +84,8 @@ public record AddWebhook(
             EventTypes = [.. EventTypes],
             Target = Target(),
             IsReplayable = IsReplayable,
-            IsActive = IsActive
+            IsActive = IsActive,
+            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery
         };
 
     Contracts.Primitives.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization>? Authorization() =>

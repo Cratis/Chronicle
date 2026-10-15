@@ -18,6 +18,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Identities;
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 public class IdentityStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IIdentityStorage
 {
+    /// <summary>
+    /// The maximum number of identity ids in one database query.
+    /// </summary>
+    const int IdentityReadBatchSize = 500;
+
     Dictionary<IdentityId, Concepts.Identities.Identity> _identitiesByIdentityId = [];
     Dictionary<string, IdentityId> _identityIdsBySubject = [];
     Dictionary<string, IdentityId> _identityIdsByUserName = [];
@@ -102,6 +107,29 @@ public class IdentityStorage(EventStoreName eventStore, EventStoreNamespaceName 
         await Populate();
 
         return _identitiesByIdentityId.ContainsKey(identityId);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<IdentityId, Concepts.Identities.Identity>> GetByIds(IEnumerable<IdentityId> identityIds)
+    {
+        var ids = identityIds.Select(_ => _.Value).Distinct().ToArray();
+        if (ids.Length == 0)
+        {
+            return new Dictionary<IdentityId, Concepts.Identities.Identity>();
+        }
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var result = new Dictionary<IdentityId, Concepts.Identities.Identity>();
+
+        // Chains can contain more ids than locators; keep SQL parameter counts bounded as well.
+        foreach (var batch in ids.Chunk(IdentityReadBatchSize))
+        {
+            var identities = await scope.DbContext.Identities.AsNoTracking().Where(_ => batch.Contains(_.Id)).ToListAsync();
+            foreach (var identity in identities)
+            {
+                result[identity.Id] = identity.ToIdentity();
+            }
+        }
+        return result;
     }
 
     /// <inheritdoc/>

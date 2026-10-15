@@ -7,6 +7,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -61,12 +62,13 @@ public class ResolveFutures(
         // This handles the case where resolving one future creates the parent data needed by another future
         var resolvedAny = true;
         var latestResolvedEvent = context.Event;
+        var queuedFutures = new HashSet<ProjectionFutureId>();
         while (resolvedAny)
         {
             resolvedAny = false;
             futures = await projectionFutures.GetFutures();
 
-            foreach (var future in futures)
+            foreach (var future in futures.Where(future => !queuedFutures.Contains(future.Id)))
             {
                 try
                 {
@@ -173,20 +175,15 @@ public class ResolveFutures(
                         JoinKey = childKey ?? key.Value
                     };
 
+                    ProvideToAncestors(childProjection, futureContext);
                     childProjection.OnNext(futureContext);
 
-                    // Successfully resolved the future
-                    await projectionFutures.ResolveFuture(future.Id);
+                    await QueueFutureSave(context, new PendingFutureSave(key, futureChangeset) { FutureId = future.Id }, queuedFutures);
                     logger.ResolvedFuture(future.Id, future.ProjectionId);
                     resolvedAny = true;
                     if (future.Event.Context.SequenceNumber > latestResolvedEvent.Context.SequenceNumber)
                     {
                         latestResolvedEvent = future.Event;
-                    }
-
-                    if (futureChangeset.HasChanges)
-                    {
-                        context.AddPendingFutureSave(key, futureChangeset);
                     }
                 }
                 catch (Exception ex)
@@ -196,10 +193,34 @@ public class ResolveFutures(
             }
         }
 
-        // The final pass resolved nothing, so the last fetch reflects the futures still awaiting a parent
+        // Queued writes remain persisted too, so a failed save keeps the tracker pending.
         futuresTracker.HasPending = futures.Any();
 
         return context with { Event = latestResolvedEvent };
+    }
+
+    /// <summary>
+    /// Provides a resolved future's event to every ancestor of the projection it belongs to, root first.
+    /// </summary>
+    /// <param name="childProjection">The projection the future belongs to.</param>
+    /// <param name="context">The <see cref="ProjectionEventContext"/> for the resolved future.</param>
+    /// <remarks>
+    /// Top-down handling runs an ancestor's mappings for its descendants' events on the way to the child. Deferring the
+    /// event discarded that changeset, so without this a child event arriving before its parent would leave the
+    /// ancestors' every-event mappings unapplied, and the read model would differ from one built in replay order.
+    /// </remarks>
+    static void ProvideToAncestors(IProjection childProjection, ProjectionEventContext context)
+    {
+        var ancestors = new List<IProjection>();
+        for (var current = childProjection.Parent; current is not null; current = current.ChildrenPropertyPath.IsRoot ? null : current.Parent)
+        {
+            ancestors.Insert(0, current);
+        }
+
+        foreach (var ancestor in ancestors)
+        {
+            ancestor.OnDescendantEvent(context with { OperationType = ancestor.GetOperationTypeFor(context.Event.Context.EventType) });
+        }
     }
 
     static IProjection? FindChildProjectionByPath(IProjection projection, PropertyPath childPath)
@@ -456,4 +477,18 @@ public class ResolveFutures(
             IEnumerable enumerable => enumerable.OfType<ExpandoObject>(),
             _ => null
         };
+
+    async Task QueueFutureSave(ProjectionEventContext context, PendingFutureSave pendingSave, HashSet<ProjectionFutureId> queuedFutures)
+    {
+        var futureId = pendingSave.FutureId!;
+        if (pendingSave.Changeset.HasChanges)
+        {
+            context.AddPendingFutureSave(pendingSave.Key, pendingSave.Changeset, futureId);
+            queuedFutures.Add(futureId);
+        }
+        else
+        {
+            await projectionFutures.ResolveFuture(futureId);
+        }
+    }
 }

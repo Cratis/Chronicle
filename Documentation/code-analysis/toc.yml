@@ -1,6 +1,6 @@
 - name: Code Analysis Rules
   href: index.md
-- name: CHR0001 - Event type must have [EventType] attribute
+- name: CHR0001 - Event type must have an event declaration attribute
   href: CHR0001.mdx
 - name: CHR0002 - Declarative projection event type must have [EventType] attribute
   href: CHR0002.mdx
@@ -102,3 +102,15 @@
   href: CHR0053.mdx
 - name: CHR0054 - Reactor method has an unsupported return type
   href: CHR0054.mdx
+- name: CHR0055 - Typed event source filter names an undeclared stream
+  href: CHR0055.mdx
+- name: CHR0056 - Explicit routing contradicts a typed event source filter
+  href: CHR0056.mdx
+- name: CHR0057 - An artifact must target one read model
+  href: CHR0057.mdx
+- name: CHR0062 - Concurrency applies across event sources
+  href: CHR0062.mdx
+- name: CHR0063 - Scope stream does not match append
+  href: CHR0063.mdx
+- name: CHR0064 - Invalid read model event stream
+  href: CHR0064.mdx

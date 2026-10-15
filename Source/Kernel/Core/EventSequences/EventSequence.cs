@@ -20,7 +20,6 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
-using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patterns;
@@ -62,7 +61,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the <see cref="ConcurrencyValidator"/> created per append.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 [EventSequencePlacement]
-public class EventSequence(
+public partial class EventSequence(
     IStorage storage,
     IConstraintValidationFactory constraintValidatorSetFactory,
     IEventTypeMigrations eventTypeMigrations,
@@ -77,6 +76,7 @@ public class EventSequence(
     ILogger<EventSequence> logger,
     ILogger<ConcurrencyValidator> concurrencyValidatorLogger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
+    readonly HashSet<EventTypeId> _unspecifiedVisibilityWarned = [];
     IEventSequenceStorage? _eventSequenceStorage;
     IEventTypesStorage? _eventTypesStorage;
     IIdentityStorage? _identityStorage;
@@ -88,6 +88,7 @@ public class EventSequence(
     IAppendedEventsQueues? _appendedEventsQueues;
     IConstraintValidation? _constraints;
     ConstraintsVersion _constraintsVersion = ConstraintsVersion.NotSet;
+    bool _closedStreamsChanged;
     TimeSpan _constraintsVersionCheckInterval;
     long _lastConstraintsVersionCheck;
     int _statePersistenceInterval = 1;
@@ -110,8 +111,14 @@ public class EventSequence(
         _eventSequenceId = _eventSequenceKey.EventSequenceId;
         _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
 
-        var namespaces = GrainFactory.GetGrain<INamespaces>(_eventSequenceKey.EventStore);
-        await @namespaces.Ensure(_eventSequenceKey.Namespace);
+        // Bootstrap ensures System/Default before registering its schemas and observers. Calling back
+        // into Namespaces(System) here can deadlock when its Ensure is activating this sequence to append
+        // NamespaceAdded. All other store/namespace combinations still need their normal creation path.
+        if (_eventSequenceKey.EventStore != EventStoreName.System || _eventSequenceKey.Namespace != EventStoreNamespaceName.Default || _eventSequenceId != EventSequenceId.System)
+        {
+            var namespaces = GrainFactory.GetGrain<INamespaces>(_eventSequenceKey.EventStore);
+            await namespaces.Ensure(_eventSequenceKey.Namespace);
+        }
 
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);
 
@@ -325,57 +332,8 @@ public class EventSequence(
         DateTimeOffset? occurred,
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags,
-        EventSourceName? eventSource = null)
-    {
-        try
-        {
-            await RefreshConstraintsIfChanged();
-            var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventSource, eventSourceType, eventStreamType, correlationId);
-            if (resolvedEventSourceType.TryGetError(out var eventSourceError))
-            {
-                return eventSourceError;
-            }
-
-            eventSourceType = resolvedEventSourceType.AsT0;
-            var getValidAndCompliantEvent = await GetValidAndCompliantEvent(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, subject);
-            if (getValidAndCompliantEvent.TryGetError(out var error))
-            {
-                return error;
-            }
-
-            var (compliantEvent, compliantContent, constraintContext) = getValidAndCompliantEvent.AsT0;
-            var concurrencyCheckPerformed = concurrencyScope.ShouldBeValidated;
-            var maybeConcurrencyViolation = await ConcurrencyValidator.Validate(eventSourceId, concurrencyScope);
-            if (maybeConcurrencyViolation.TryGetValue(out var concurrencyViolation))
-            {
-                return AppendResult.Failed(correlationId, concurrencyViolation).ReportingConcurrencyCheck(concurrencyCheckPerformed);
-            }
-
-            var appendResult = await AppendValidAndCompliantEvent(
-                eventSourceType,
-                eventSourceId,
-                eventStreamType,
-                eventStreamId,
-                eventType,
-                correlationId,
-                causation,
-                causedBy,
-                tags,
-                compliantEvent,
-                content,
-                constraintContext,
-                occurred,
-                subject,
-                namedTags,
-                eventSource);
-
-            return appendResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
-        }
-        catch (Exception ex)
-        {
-            return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
-        }
-    }
+        EventSourceName? eventSource = null) =>
+        await AppendValidated(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, namedTags, eventSource);
 
     /// <inheritdoc/>
     public async Task<AppendManyResult> AppendMany(
@@ -383,75 +341,8 @@ public class EventSequence(
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy,
-        ConcurrencyScopes concurrencyScopes)
-    {
-        using var span = activitySource.AppendMany();
-        span?.Activity?.Tag(_eventSequenceKey.EventStore);
-        span?.Activity?.Tag(_eventSequenceKey.Namespace);
-        span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
-        try
-        {
-            await RefreshConstraintsIfChanged();
-            events = events as IList<EventToAppend> ?? events.ToList();
-
-            // Validate sequentially with a shared set of batch claims so that two events in the same batch
-            // cannot both claim the same unique constraint value — the persisted index is only updated after
-            // the whole batch has been appended, so without this earlier events in the batch are invisible.
-            var batchClaims = new ConstraintBatchClaims();
-            var getValidAndCompliantEvents = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
-            foreach (var eventToAppend in events)
-            {
-                var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventToAppend.EventSource, eventToAppend.EventSourceType, eventToAppend.eventStreamType, correlationId);
-                if (resolvedEventSourceType.TryGetError(out var eventSourceError))
-                {
-                    getValidAndCompliantEvents.Add((eventToAppend, eventSourceError));
-                    continue;
-                }
-
-                var e = eventToAppend with { EventSourceType = resolvedEventSourceType.AsT0 };
-                var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject, batchClaims);
-                getValidAndCompliantEvents.Add((e, result));
-            }
-
-            var failedEvents = getValidAndCompliantEvents.Where(eventAndResult => !eventAndResult.Result.IsSuccess).ToList();
-
-            if (failedEvents.Count != 0)
-            {
-                return new()
-                {
-                    CorrelationId = correlationId,
-                    ConstraintViolations = failedEvents.SelectMany(r => r.Result.AsT1.ConstraintViolations).ToImmutableList(),
-                    Errors = failedEvents.SelectMany(r => r.Result.AsT1.Errors).ToImmutableList(),
-                };
-            }
-
-            var concurrencyCheckPerformed = concurrencyScopes.ShouldAllBeValidated;
-            var concurrencyViolations = await ConcurrencyValidator.Validate(concurrencyScopes);
-            if (concurrencyViolations.Any())
-            {
-                return AppendManyResult.Failed(correlationId, concurrencyViolations).ReportingConcurrencyCheck(concurrencyCheckPerformed);
-            }
-
-            var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
-            var validatedEvents = getValidAndCompliantEvents.ConvertAll(eventAndResult =>
-            {
-                var (compliantEvent, compliantContent, constraintContext) = eventAndResult.Result.AsT0;
-                return (eventAndResult.Event, CompliantEvent: compliantEvent, CompliantContent: compliantContent, ConstraintContext: constraintContext);
-            });
-
-            var appendManyResult = await AppendManyToStorage(validatedEvents, correlationId, causation, identity);
-            return appendManyResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
-        }
-        catch (Exception ex)
-        {
-            logger.ErrorAppendingMany(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
-            return new AppendManyResult
-            {
-                CorrelationId = correlationId,
-                Errors = [new AppendError(ex.Message)]
-            };
-        }
-    }
+        ConcurrencyScopes concurrencyScopes) =>
+        await AppendManyValidated(events, correlationId, causation, causedBy, concurrencyScopes);
 
     /// <inheritdoc/>
     public async Task Revise(
@@ -557,25 +448,91 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId)
+    public Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
+        CompleteStream(new ClosedStreamScope(
+            EventStreamType: eventStreamType.Value.Length == 0 ? EventStreamType.All : eventStreamType,
+            EventStreamId: eventStreamId.Value.Length == 0 ? EventStreamId.Default : eventStreamId));
+
+    /// <inheritdoc/>
+    public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default)
     {
-        if (eventStreamType == EventStreamType.All && eventStreamId.Value == EventStreamId.Default)
+        scope = scope.Normalized();
+        if (scope.IsEmpty) return CompleteStreamError.EmptyScope;
+        if (scope.IsDefaultStreamOnly) return CompleteStreamError.DefaultStreamCannotBeCompleted;
+
+        var closures = await ClosedStreamsStorage.GetCovering(scope, await ClosedStreamsStorage.GetDimensionsInUse());
+        if (closures.Any(closure => closure.Owner == ClosedStreamOwner.Manual)) return CompleteStreamError.AlreadyCompleted;
+
+        if (expectedTailSequenceNumber is not null && await GetScopeTail(scope) != expectedTailSequenceNumber)
         {
-            return CompleteStreamError.DefaultStreamCannotBeCompleted;
+            return CompleteStreamError.ExpectedTailMismatch;
         }
 
-        if (await ClosedStreamsStorage.IsStreamClosed(eventStreamType, eventStreamId))
-        {
-            return CompleteStreamError.AlreadyCompleted;
-        }
+        var sequenceNumber = State.SequenceNumber == EventSequenceNumber.First ? EventSequenceNumber.Unavailable : State.SequenceNumber - 1;
+        await ClosedStreamsStorage.Close(new(scope, ClosedStreamOwner.Manual, sequenceNumber, DateTimeOffset.UtcNow));
+        _closedStreamsChanged = true;
 
-        await ClosedStreamsStorage.CloseStream(eventStreamType, eventStreamId);
-        return State.SequenceNumber - 1;
+        return sequenceNumber;
     }
 
     /// <inheritdoc/>
     public Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
-        ClosedStreamsStorage.IsStreamClosed(eventStreamType, eventStreamId);
+        IsStreamCompleted(new ClosedStreamScope(
+            EventStreamType: eventStreamType.Value.Length == 0 ? EventStreamType.All : eventStreamType,
+            EventStreamId: eventStreamId.Value.Length == 0 ? EventStreamId.Default : eventStreamId));
+
+    /// <inheritdoc/>
+    public async Task<bool> IsStreamCompleted(ClosedStreamScope scope) =>
+        (await ClosedStreamsStorage.GetCovering(scope, await ClosedStreamsStorage.GetDimensionsInUse())).Any();
+
+    /// <inheritdoc/>
+    public async Task<Result<Sequences.ReopenStreamScopeError>> ReopenCompletedStream(ClosedStreamScope scope, string reason, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy)
+    {
+        scope = scope.Normalized();
+        var exactClosures = (await ClosedStreamsStorage.GetAll()).Where(closure => closure.Scope == scope).ToArray();
+        if (!exactClosures.Any(closure => closure.Owner == ClosedStreamOwner.Manual))
+        {
+            return exactClosures.Length > 0 ? Sequences.ReopenStreamScopeError.ClosedByEvent : Sequences.ReopenStreamScopeError.NotCompleted;
+        }
+
+        var audit = new Events.EventSequences.StreamScopeReopened(_eventSequenceId, scope.EventSourceId?.Value, scope.EventSourceType?.Value, scope.EventStreamType?.Value, scope.EventStreamId?.Value, reason);
+        var systemSequence = _eventSequenceId == EventSequenceId.System
+            ? this
+            : GrainFactory.GetSystemEventSequence(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+        var appended = await systemSequence.Append((EventSourceId)_eventSequenceId.Value, audit, correlationId, causation, causedBy);
+        if (!appended.IsSuccess) throw new Sequences.ReopenStreamScopeAuditFailed();
+        if (!await ClosedStreamsStorage.Reopen(ClosedStreamOwner.Manual, scope)) return Sequences.ReopenStreamScopeError.NotCompleted;
+        _closedStreamsChanged = true;
+
+        return Result<Sequences.ReopenStreamScopeError>.Success();
+    }
+
+    /// <summary>
+    /// Read the exact scope tail, preserving sentinel values as participating dimensions.
+    /// </summary>
+    /// <param name="scope">The normalized scope.</param>
+    /// <returns>The matching tail, or unavailable when empty.</returns>
+    internal async Task<EventSequenceNumber> GetScopeTail(ClosedStreamScope scope)
+    {
+        // Storage read criteria treat All/Default as wildcards. A closure treats them as real values,
+        // so sentinel scopes need an exact check on the returned event contexts.
+        if (scope.EventStreamType != EventStreamType.All && scope.EventStreamId?.Value != EventStreamId.Default && scope.EventSourceType != EventSourceType.Default)
+        {
+            return await EventSequenceStorage.GetTailSequenceNumber(eventSourceId: scope.EventSourceId, eventSourceType: scope.EventSourceType, eventStreamId: scope.EventStreamId, eventStreamType: scope.EventStreamType);
+        }
+
+        using var cursor = await EventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, scope.EventSourceId, scope.EventSourceType, scope.EventStreamType, scope.EventStreamId);
+        var tail = EventSequenceNumber.Unavailable;
+        while (await cursor.MoveNext())
+        {
+            foreach (var @event in cursor.Current.Where(@event => scope.Covers(new(@event.Context.EventSourceId, @event.Context.EventSourceType, @event.Context.EventStreamType, @event.Context.EventStreamId))))
+            {
+                if (tail == EventSequenceNumber.Unavailable || @event.Context.SequenceNumber > tail) tail = @event.Context.SequenceNumber;
+            }
+        }
+
+        return tail;
+    }
 
     /// <summary>
     /// Append a set of already validated and compliant events to storage — numbering the batch,
@@ -586,6 +543,7 @@ public class EventSequence(
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the append.</param>
     /// <param name="causation">The <see cref="Causation"/> chain for the append.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> that caused the append.</param>
+    /// <param name="effectReceipt">Optional occurrence effect to commit with the batch.</param>
     /// <returns>The <see cref="AppendManyResult"/> describing the outcome.</returns>
     /// <exception cref="InvalidAppendAcknowledgment">Storage did not acknowledge every submitted event.</exception>
     /// <remarks>
@@ -601,7 +559,8 @@ public class EventSequence(
         IReadOnlyList<(EventToAppend Event, ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintContext)> validatedEvents,
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
-        IEnumerable<IdentityId> causedByChain)
+        IEnumerable<IdentityId> causedByChain,
+        Occurrences.EffectReceipt? effectReceipt = null)
     {
         var eventsToAppend = new List<EventToAppendToStorage>();
         var constraintContexts = new List<ConstraintValidationContext>();
@@ -642,24 +601,18 @@ public class EventSequence(
             nextSequenceNumber = nextSequenceNumber.Next();
         }
 
-        Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>? appendResult = null;
-        do
+        async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendToStorage()
         {
-            HandleFailedAppendManyResult(appendResult, eventsToAppend);
             logger.AppendManyCallingStorage(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventsToAppend.Count);
-            appendResult = eventsToAppend.Exists(@event => @event.NamedTags.Count > 0)
+            return eventsToAppend.Exists(@event => @event.NamedTags.Count > 0)
                 ? await EventSequenceStorage.AppendManyWithNamedTags(eventsToAppend)
                 : await EventSequenceStorage.AppendMany(eventsToAppend);
         }
-        while (!appendResult.IsSuccess);
-
-        // Commit the advanced sequence number only after the batch has been durably appended, so a thrown
-        // storage error (handled by the caller's catch) cannot leave State.SequenceNumber advanced past
-        // events that were never persisted.
-        if (eventsToAppend.Count > 0)
-        {
-            State.SequenceNumber = eventsToAppend[^1].SequenceNumber.Next();
-        }
+        var appendResult = effectReceipt is null
+            ? await AppendWithRetries(AppendToStorage, error => RenumberAppendMany(eventsToAppend, error), () => ValidateAppendManyRetry(correlationId))
+            : await AppendEffectToStorage(eventsToAppend, effectReceipt, correlationId);
+        if (appendResult.TryGetError(out var retryFailure)) return retryFailure;
+        var recordedReceipt = effectReceipt is null ? null : await EffectReceiptStorage.GetEffectReceipt(ReceiptId(effectReceipt));
 
         List<AppendedEvent> appendedEventsList = new();
         await appendResult.Match(
@@ -679,6 +632,13 @@ public class EventSequence(
             throw new InvalidAppendAcknowledgment(eventsToAppend.Count, appendedEventsList.Count);
         }
 
+        // Commit the next slot only once the durable acknowledgment is complete. Receipt retries
+        // use this position to distinguish a commit-before-ack from a range already accounted for.
+        if (eventsToAppend.Count > 0)
+        {
+            State.SequenceNumber = eventsToAppend[^1].SequenceNumber.Next();
+        }
+
         foreach (var appendedEvent in appendedEventsList)
         {
             State.TailSequenceNumberPerEventType[appendedEvent.Context.EventType.Id] = appendedEvent.Context.SequenceNumber;
@@ -692,7 +652,36 @@ public class EventSequence(
                 constraintContexts.Zip(eventsToAppend, (constraintContext, eventToAppend) => (constraintContext, eventToAppend.SequenceNumber)));
         }
 
-        return AppendManyResult.Success(correlationId, appendedEventsList.Select(@event => @event.Context.SequenceNumber));
+        return new AppendManyResult
+        {
+            CorrelationId = correlationId,
+            SequenceNumbers = appendedEventsList.Select(@event => @event.Context.SequenceNumber).ToImmutableList(),
+            EffectReceipt = recordedReceipt is null ? null : Occurrences.EffectReceiptConverters.ToDetails(recordedReceipt)
+        };
+    }
+
+    async Task<Result<TAppended, TFailure>> AppendWithRetries<TAppended, TFailure>(
+        Func<Task<Result<TAppended, DuplicateEventSequenceNumber>>> append,
+        Func<DuplicateEventSequenceNumber, Task> renumber,
+        Func<Task<TFailure?>> validateRetry)
+        where TAppended : notnull
+        where TFailure : class
+    {
+        var result = await append();
+        while (result.TryGetError(out var duplicateError))
+        {
+            await renumber(duplicateError);
+            if (await validateRetry() is { } failure) return failure;
+            result = await append();
+        }
+
+        return Result<TAppended, TFailure>.Success(result.AsT0);
+    }
+
+    Task RenumberAppendMany(List<EventToAppendToStorage> eventsToAppend, DuplicateEventSequenceNumber error)
+    {
+        HandleFailedAppendManyResult((Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>)error, eventsToAppend);
+        return Task.CompletedTask;
     }
 
     IEnumerable<Causation> CausationForStorage(IEnumerable<Causation> causation) =>
@@ -716,7 +705,8 @@ public class EventSequence(
         DateTimeOffset? occurred,
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags,
-        EventSourceName? eventSource)
+        EventSourceName? eventSource,
+        EventPublication? publication)
     {
         using var span = activitySource.Append();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
@@ -726,8 +716,6 @@ public class EventSequence(
         span?.Activity?.Tag(eventSourceType, eventSourceId);
         try
         {
-            Result<AppendedEvent, DuplicateEventSequenceNumber>? appendResult = null;
-
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
 
             // Transform plaintext, then protect every target generation under the original subject.
@@ -739,9 +727,8 @@ public class EventSequence(
                 kvp => kvp.Key,
                 kvp => eventHashCalculator.Calculate(eventType.Id, eventSourceId, kvp.Value));
 
-            do
+            async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> AppendToStorage()
             {
-                await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventType.Id);
                 var eventOccurred = occurred ?? DateTimeOffset.UtcNow;
                 logger.Appending(
                     _eventSequenceKey.EventStore,
@@ -751,9 +738,34 @@ public class EventSequence(
                     eventSourceId,
                     State.SequenceNumber);
 
+                if (publication is not null)
+                {
+                    return await AppendPublicationToStorage(publication, new EventToAppendToStorage(
+                        State.SequenceNumber,
+                        eventSourceType,
+                        eventSourceId,
+                        eventStreamType,
+                        eventStreamId,
+                        eventType,
+                        correlationId,
+                        CausationForStorage(causation),
+                        identity,
+                        tags,
+                        eventOccurred,
+                        compliantEvent,
+                        contentHashes[eventType.Generation],
+                        subject)
+                    {
+                        NamedTags = namedTags,
+                        EventSource = eventSource ?? EventSourceName.NotSet,
+                        GenerationalContent = migratedContent,
+                        ContentHashes = contentHashes
+                    });
+                }
+
                 if (eventSource?.IsSet == true)
                 {
-                    appendResult = await AppendThroughEventSource(
+                    return await AppendThroughEventSource(
                         new EventToAppendToStorage(
                             State.SequenceNumber,
                             eventSourceType,
@@ -775,10 +787,9 @@ public class EventSequence(
                             GenerationalContent = migratedContent,
                             ContentHashes = contentHashes
                         });
-                    continue;
                 }
 
-                appendResult = namedTags.Count == 0
+                return namedTags.Count == 0
                     ? await EventSequenceStorage.Append(
                         State.SequenceNumber,
                         eventSourceType,
@@ -811,11 +822,18 @@ public class EventSequence(
                         subject,
                         namedTags);
             }
-            while (!appendResult.IsSuccess);
+            var appendResult = await AppendWithRetries(AppendToStorage, error => HandleFailedAppendResult((Result<AppendedEvent, DuplicateEventSequenceNumber>)error, eventType, eventSourceId, eventType.Id), () => ValidateAppendRetry(correlationId));
+            if (appendResult.TryGetError(out var retryFailure)) return retryFailure;
 
-            var appendedSequenceNumber = State.SequenceNumber;
-            State.SequenceNumber = appendedSequenceNumber.Next();
-            State.TailSequenceNumberPerEventType[eventType.Id] = appendedSequenceNumber;
+            var appendedSequenceNumber = appendResult.AsT0.Context.SequenceNumber;
+            if (State.SequenceNumber <= appendedSequenceNumber)
+            {
+                State.SequenceNumber = appendedSequenceNumber.Next();
+            }
+            if (!State.TailSequenceNumberPerEventType.TryGetValue(eventType.Id, out var tail) || tail < appendedSequenceNumber)
+            {
+                State.TailSequenceNumberPerEventType[eventType.Id] = appendedSequenceNumber;
+            }
 
             _metrics?.AppendedEvent(eventSourceId, eventType.Id);
             var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
@@ -927,6 +945,11 @@ public class EventSequence(
         try
         {
             var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
+            if (EnforceEventTypeVisibility(eventType, eventSchema, correlationId) is { } visibilityViolation)
+            {
+                return visibilityViolation;
+            }
+
             var schemaValidationResult = ValidateAgainstSchema(eventType, content, eventSchema, correlationId);
             if (schemaValidationResult.TryGetError(out var schemaError))
             {
@@ -975,7 +998,7 @@ public class EventSequence(
             State.SequenceNumber,
             ex);
 
-        return AppendResult.Failed(correlationId, [ex.Message]);
+        return AppendResult.Failed(correlationId, [ex is EventPublicationConflict ? AppendError.EventPublicationConflict : ex.Message]);
     }
 
     async Task<(ExpandoObject ExpandoObject, JsonObject CompliantContent)> MakeEventCompliant(EventSourceId eventSourceId, EventTypeSchema eventSchema, JsonObject content, Subject? subject = null)
@@ -996,6 +1019,12 @@ public class EventSequence(
         EventStreamId? eventStreamId = default,
         ConstraintBatchClaims? batchClaims = default)
     {
+        if (_closedStreamsChanged)
+        {
+            _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+            _closedStreamsChanged = false;
+        }
+
         var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
         var constraintValidationResult = await constraintContext.Validate();
         if (constraintValidationResult.IsValid)

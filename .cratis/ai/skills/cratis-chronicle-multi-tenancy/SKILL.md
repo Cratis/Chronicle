@@ -40,6 +40,14 @@ Reverify product sources before claiming support for another version.
 implicit conversion from `string`, a `Default` value of `"Default"`, and a
 `NotSet` value.
 
+For Arc .NET v22.75.0, there is no tenant-required configuration switch.
+An unresolved header/query tenant is `TenantId.NotSet`; Arc's
+`TenantNamespaceResolver` maps `IsDefault` (`NotSet` or `Default`) to Chronicle's
+default namespace. Refuse unresolved tenants in application authorization where
+required, not through an invented switch. Sources at Arc v22.75.0:
+`Source/DotNET/Arc.Core/Tenancy/TenancyOptions.cs` and
+`Source/DotNET/Chronicle/Tenancy/TenantNamespaceResolver.cs`.
+
 ## What a namespace actually isolates
 
 Verified against the storage naming and the grain keys, not inferred:
@@ -88,6 +96,12 @@ Task<IEventStore> GetEventStore(EventStoreName name, EventStoreNamespaceName? @n
 When the namespace is omitted, the registered **namespace resolver** supplies it.
 `IEventStore` exposes the namespace it was resolved for, and
 `IEventStore.GetNamespaces(...)` lists them.
+
+Behind Cratis AuthProxy (`v2.30.5`) the tenant reaches the backend on
+`x-cratis-tenant-id`, from the proxy's own resolver (host, claim, route,
+subdomain, selection page or fixed), and Arc resolves it per request. Map that
+tenant to the Chronicle namespace through the resolver; the proxy does not
+isolate storage.
 
 ## Resolving the namespace
 
@@ -179,7 +193,7 @@ the tenant identifier in the resolver rather than relying on that.
 | No resolver configured in a multi-tenant deployment | every tenant lands in `Default` and there is no isolation |
 | A singleton holding an event store, a collection, or a context | pinned to the default namespace forever, and it returns empty rather than throwing |
 | Registering a second resolver expecting a fallback | one resolver wins; the other is never called |
-| Expecting a once-only reactor to fire once globally | observers run per namespace, so it fires once per tenant |
+| Expecting `[OnceOnly]` to run once globally or once per tenant | observers run per namespace; the attribute excludes replay, not repeated events, catch-up or recovery |
 | Comparing sequence numbers across namespaces | they are independent sequences |
 | Erasing personal data in one namespace and calling it done | erasure is per namespace |
 | Relying on namespace casing | lookup is case-insensitive, storage naming is not |

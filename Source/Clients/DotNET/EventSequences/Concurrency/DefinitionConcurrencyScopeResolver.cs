@@ -32,26 +32,30 @@ internal static class DefinitionConcurrencyScopeResolver
     /// <param name="eventSourceId">The shared <see cref="EventSourceId"/>.</param>
     /// <param name="entries">The events with their routing, in batch order.</param>
     /// <param name="strategy">The <see cref="IConcurrencyScopeStrategy"/> to resolve each entry with.</param>
+    /// <param name="honorDeclaredConcurrency">Whether Enforce metadata supplies deferred dimensions.</param>
     /// <returns>The <see cref="ConcurrencyScope"/> to send for the event source id.</returns>
     /// <exception cref="IncompatibleConcurrencyScopesForEventSource">The entries require different guards.</exception>
     public static async Task<ConcurrencyScope> Resolve(
         EventSourceId eventSourceId,
         IReadOnlyList<(EventForEventSourceId Event, ResolvedEventRouting? Routing)> entries,
-        IConcurrencyScopeStrategy strategy)
+        IConcurrencyScopeStrategy strategy,
+        bool honorDeclaredConcurrency = false)
     {
         // Legacy-only batches keep the long-standing behavior of using the first event.
-        var relevant = entries.Any(_ => _.Routing is not null) ? entries : [entries[0]];
+        var relevant = entries.Any(_ => _.Routing is not null || (honorDeclaredConcurrency && _.Event.DeclaredConcurrency is not null)) ? entries : [entries[0]];
         var resolved = new List<ConcurrencyScope>();
         var cache = new Dictionary<object, ConcurrencyScope>();
 
         foreach (var (@event, routing) in relevant)
         {
-            var key = (routing?.Dimensions, @event.EventStreamType, @event.EventStreamId, @event.EventSourceType);
+            var dimensions = honorDeclaredConcurrency ? @event.DeclaredConcurrency ?? routing?.Dimensions : routing?.Dimensions;
+            var key = (dimensions, @event.EventStreamType, @event.EventStreamId, @event.EventSourceType);
             if (!cache.TryGetValue(key, out var scope))
             {
-                scope = routing is null
+                scope = dimensions is null
                     ? await strategy.GetScope(eventSourceId, @event.EventStreamType, @event.EventStreamId, @event.EventSourceType)
-                    : await strategy.GetScope(routing.Dimensions, eventSourceId, @event.EventStreamType, @event.EventStreamId, @event.EventSourceType);
+                    : await strategy.GetScope(dimensions.Value, eventSourceId, @event.EventStreamType, @event.EventStreamId, @event.EventSourceType);
+                scope = scope with { IssuedByStrategy = true };
                 cache[key] = scope;
             }
 
@@ -82,7 +86,7 @@ internal static class DefinitionConcurrencyScopeResolver
         scope != ConcurrencyScope.NotSet && scope != ConcurrencyScope.None && (scope.SequenceNumber.IsActualValue || scope.SequenceNumber.IsBeforeFirst);
 
     static bool SamePredicate(ConcurrencyScope left, ConcurrencyScope right) =>
-        left.EventSourceId == right.EventSourceId &&
+        left.EventSourceId?.Value == right.EventSourceId?.Value &&
         left.EventSourceType == right.EventSourceType &&
         left.EventStreamType == right.EventStreamType &&
         left.EventStreamId == right.EventStreamId &&

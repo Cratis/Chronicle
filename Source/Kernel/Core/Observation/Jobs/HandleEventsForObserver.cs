@@ -12,10 +12,13 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OneOf.Types;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -30,7 +33,9 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving subscriber grains off the activation thread.</param>
 /// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
 /// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for getting the observer's subscriber timeout.</param>
+/// <param name="observerServiceClient">The client that confirms buffered writes on every silo.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 public class HandleEventsForObserver(
     [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
@@ -40,7 +45,9 @@ public class HandleEventsForObserver(
     IGrainFactory grainFactory,
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
-    ILogger<HandleEventsForObserver> logger) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
+    IObserverServiceClient observerServiceClient,
+    ILogger<HandleEventsForObserver> logger,
+    IEventGenerationRelease? eventGenerationRelease = null) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
@@ -49,8 +56,15 @@ public class HandleEventsForObserver(
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     IEventTypesStorage? _eventTypes;
+    EventType[] _generationPins = [];
+    EventStoreName _generationEventStore = EventStoreName.NotSet;
 
     IHandleEventsForObserver _selfGrainReference = null!;
+    EventSequenceNumber _lastHandled = EventSequenceNumber.Unavailable;
+    EventSequenceNumber _lastDurableCheckpoint = EventSequenceNumber.Unavailable;
+    JobStepCheckpointDebounce _durableCheckpoints = new(1);
+    IReadOnlyDictionary<SiloAddress, Guid[]>? _windows;
+    Exception? _checkpointFailure;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -63,18 +77,86 @@ public class HandleEventsForObserver(
             _subscription = await _observer.GetSubscription();
         }
         await base.OnActivateAsync(cancellationToken);
+        var jobs = ServiceProvider.GetService<IOptions<JobsOptions>>()?.Value;
+        _durableCheckpoints = new(jobs?.StepCheckpointBatchInterval ?? 1);
+        var interval = jobs?.StepCheckpointFlushInterval ?? TimeSpan.Zero;
+        if (interval > TimeSpan.Zero)
+        {
+            this.RegisterGrainTimer(_ => FlushPendingCheckpoint(), new GrainTimerCreationOptions
+            {
+                DueTime = interval,
+                Period = interval,
+                Interleave = false
+            });
+        }
     }
 
     /// <inheritdoc/>
-    public async Task ReportNewSuccessfullyHandledEvent(EventSequenceNumber lastHandledEventSequenceNumber)
+    public async Task<EventSequenceNumber> ReportNewSuccessfullyHandledEvent(EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginJobStepScope(State);
-        State.LastSuccessfullyHandledEventSequenceNumber = lastHandledEventSequenceNumber;
-        var writeStateResult = await WriteCheckpointDebounced();
-        if (writeStateResult.TryGetException(out var error))
+        _lastHandled = lastHandledEventSequenceNumber;
+        if (_durableCheckpoints.Report(CheckpointAfterEveryBatch))
         {
-            logger.FailedToPersistSuccessfullyHandledEvent(error, lastHandledEventSequenceNumber);
-            writeStateResult.RethrowError();
+            await FlushCheckpoint();
+        }
+        else if (_checkpointFailure is not null)
+        {
+            throw new ObserverFlushFailed();
+        }
+
+        return State.LastSuccessfullyHandledEventSequenceNumber;
+    }
+
+    /// <inheritdoc/>
+    public async Task<EventSequenceNumber> FlushCheckpoint(bool start = false)
+    {
+        if (start)
+        {
+            _windows = null;
+            _checkpointFailure = null;
+            _lastHandled = State.LastSuccessfullyHandledEventSequenceNumber;
+            _durableCheckpoints.Persisted();
+        }
+
+        if (_checkpointFailure is not null)
+        {
+            throw new ObserverFlushFailed();
+        }
+
+        try
+        {
+            // Capture the handled position before awaiting: later deliveries cannot be covered by this flush.
+            var handled = _lastHandled;
+            var windows = await observerServiceClient.FlushAllFor(
+                new(_subscription.ObserverKey, ObserverType.Projection),
+                State.EventObservationState == EventObservationState.Replay);
+            if (_windows is not null && _windows.Any(previous =>
+                previous.Value.Length > 0 && (!windows.TryGetValue(previous.Key, out var current) || previous.Value.Except(current).Any())))
+            {
+                throw new BulkWindowLost();
+            }
+
+            _windows = windows;
+            if (handled.IsActualValue && handled != State.LastSuccessfullyHandledEventSequenceNumber)
+            {
+                // Base timer, status and cancellation writes now see only confirmed durable progress.
+                State.LastSuccessfullyHandledEventSequenceNumber = handled;
+                var writeStateResult = await WriteStateAsync();
+                if (writeStateResult.TryGetException(out var error))
+                {
+                    logger.FailedToPersistSuccessfullyHandledEvent(error, handled);
+                    writeStateResult.RethrowError();
+                }
+            }
+
+            _durableCheckpoints.Persisted();
+            return State.LastSuccessfullyHandledEventSequenceNumber;
+        }
+        catch (Exception error)
+        {
+            _checkpointFailure = error;
+            throw;
         }
     }
 
@@ -129,6 +211,9 @@ public class HandleEventsForObserver(
     protected override async Task<Catch<JobStepResult>> PerformStep(HandleEventsForObserverState currentState, CancellationToken cancellationToken)
     {
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+
+        // PerformStep runs outside the activation. Only grain calls may access persistent State.
+        _lastDurableCheckpoint = currentState.LastSuccessfullyHandledEventSequenceNumber;
         _subscription = await _observer.GetSubscription();
         try
         {
@@ -151,6 +236,8 @@ public class HandleEventsForObserver(
             var eventTypesToRead = requestedEventTypes.Length != 0
                 ? requestedEventTypes
                 : await ResolveFallbackEventTypesToRead(_subscription.EventTypes);
+            _generationPins = eventTypesToRead.ToArray();
+            _generationEventStore = currentState.ObserverKey.EventStore;
             var nonRedactionEventTypeIds = eventTypesToRead
                 .Where(et => et.Id != GlobalEventTypes.Redaction)
                 .Select(et => et.Id)
@@ -158,6 +245,9 @@ public class HandleEventsForObserver(
             _eventTypes = storage.GetEventStore(currentState.ObserverKey.EventStore).EventTypes;
             _eventTypeSchemas = (await _eventTypes.GetFor(eventTypesToRead))
                 .ToDictionary(_ => _.Type);
+
+            // Baseline every window before dispatch: losing a silo before the first checkpoint must be detectable.
+            _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint(start: true);
 
             using var events = await eventSequenceStorage.GetRange(
                 currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
@@ -177,12 +267,14 @@ public class HandleEventsForObserver(
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
 
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
+            var lastScannedEventSequenceNumber = EventSequenceNumber.Unavailable;
             while (await events.MoveNext())
             {
-                var eventsToHandle = SetObservationStateIfSpecified(currentState.EventObservationState, events)
+                var eventsRead = SetObservationStateIfSpecified(currentState.EventObservationState, events)
                     .OrderBy(_ => _.Context.SequenceNumber)
                     .ToArray();
-                eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsToHandle, nonRedactionEventTypeIds);
+                var eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsRead, nonRedactionEventTypeIds);
+                eventsToHandle = _subscription.Filters.Apply(eventsToHandle);
 
                 // Dispatch consecutive same-partition batches sequentially, in global sequence order, and return
                 // immediately on the first failure instead of continuing to later partitions. This is intentional:
@@ -196,7 +288,7 @@ public class HandleEventsForObserver(
                     if (cancellationToken.IsCancellationRequested)
                     {
                         LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
-                        return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
+                        return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
                     }
 
                     var partition = partitionEvents[0].Context.EventSourceId;
@@ -213,7 +305,8 @@ public class HandleEventsForObserver(
                         var exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
                         lastEventSequenceNumberAttempted = partitionEvents[0].Context.SequenceNumber;
                         await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace, handleEventsException.ToFailureKind());
-                        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), exceptionMessages, exceptionStackTrace));
+                        _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint();
+                        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(_lastDurableCheckpoint), exceptionMessages, exceptionStackTrace));
                     }
                     if (handleEventsResult.TryGetResult(out var handledEventsResult))
                     {
@@ -231,6 +324,11 @@ public class HandleEventsForObserver(
                         }
                     }
                 }
+
+                if (eventsRead.Length != 0)
+                {
+                    lastScannedEventSequenceNumber = eventsRead[^1].Context.SequenceNumber;
+                }
             }
 
             if (lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
@@ -242,12 +340,16 @@ public class HandleEventsForObserver(
                 logger.HandledAllEvents(lastSuccessfullyHandledEventSequenceNumber);
             }
 
-            return JobStepResult.Succeeded(CreateResult(lastSuccessfullyHandledEventSequenceNumber));
+            _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint();
+            return JobStepResult.Succeeded(CreateResult(_lastDurableCheckpoint) with
+            {
+                LastScannedEventSequenceNumber = lastScannedEventSequenceNumber
+            });
         }
         catch (TaskCanceledException)
         {
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
-            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
+            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
         }
         catch (Exception e)
         {
@@ -258,7 +360,7 @@ public class HandleEventsForObserver(
             }
 
             logger.FailedWithPartialSuccess(e, lastSuccessfullyHandledEventSequenceNumber);
-            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), e));
+            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(_lastDurableCheckpoint), e));
         }
     }
 
@@ -329,6 +431,24 @@ public class HandleEventsForObserver(
 
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
+    async Task FlushPendingCheckpoint()
+    {
+        if (!_durableCheckpoints.HasPendingCheckpoint || _checkpointFailure is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            await FlushCheckpoint();
+        }
+        catch (Exception error)
+        {
+            // A timer cannot fail PerformStep directly. Retain the failure and reject the next report/final flush.
+            logger.FailedToPersistSuccessfullyHandledEvent(error, _lastHandled);
+        }
+    }
+
     async Task<(JobStepResult? Result, EventSequenceNumber LastSuccessfullyHandledEventSequenceNumber)> HandleSubscriberResult(
         HandleEventsForObserverState currentState,
         Key partition,
@@ -345,7 +465,7 @@ public class HandleEventsForObserver(
         switch (eventObserverResult.State)
         {
             case ObserverSubscriberState.Ok:
-                await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
+                _lastDurableCheckpoint = await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
                 var okCountsPerEventType = handledEvents
                     .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
                     .CountByEventType();
@@ -363,9 +483,10 @@ public class HandleEventsForObserver(
                 var lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                 logger.EventHandlerDisconnected(partition, lastSuccessfullyHandledEventSequenceNumber);
                 await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, [SubscriberDisconnected], string.Empty, FailureKind.Disconnected);
+                _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint();
                 return (
                     JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-                        CreateResult(lastSuccessfullyHandledEventSequenceNumber),
+                        CreateResult(_lastDurableCheckpoint),
                         [SubscriberDisconnected],
                         string.Empty)),
                     lastSuccessfullyHandledEventSequenceNumber);
@@ -390,7 +511,7 @@ public class HandleEventsForObserver(
                 ? failedEvent.Context.SequenceNumber
                 : eventObserverResult.LastSuccessfulObservation.Next();
 
-            await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
+            _lastDurableCheckpoint = await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
             var failedCountsPerEventType = handledEvents
                 .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
@@ -405,9 +526,10 @@ public class HandleEventsForObserver(
         logger.FailedHandlingEvents(partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);
         var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
         await _observer.PartitionFailed(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace, FailureKind.Handling);
+        _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint();
         return (
             JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-                CreateResult(lastSuccessfullyHandledEventSequenceNumber),
+                CreateResult(_lastDurableCheckpoint),
                 eventObserverResult.ExceptionMessages,
                 eventObserverResult.ExceptionStackTrace)),
             lastSuccessfullyHandledEventSequenceNumber);
@@ -457,6 +579,11 @@ public class HandleEventsForObserver(
 
     async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
     {
+        if (_subscription.GenerationDelivery == EventGenerationDelivery.Pinned)
+        {
+            return await (eventGenerationRelease ?? throw new EventGenerationDeliveryNotSupported()).Release(_generationEventStore, _generationPins, _eventTypeSchemas, events);
+        }
+
         // The schemas read up front are those of the generations the observer subscribes to, while the events carry the
         // generation they were stored at - the schema of that generation is what says what to decrypt.
         var eventsToDecrypt = events as AppendedEvent[] ?? events.ToArray();

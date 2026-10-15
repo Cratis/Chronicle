@@ -34,6 +34,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | definitionEvolution | string | Automatic | Controls whether projection and reducer definition changes apply `Automatic`, `PartialOnly`, or `Manual` evolution. See [Definition evolution](#definition-evolution) |
 | replayOnDefinitionChange | boolean | false | Controls automatic replay for reactors and webhooks. Projection and reducer changes use `definitionEvolution` |
 | watchdogInterval | number | 60 | Interval in seconds between watchdog checks; the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
+| maxCatchupRecoveryAttempts | number | 5 | How many watchdog checks in a row may retry a stuck catch-up preparation, or a recovery that failed after quarantine was cleared, before the watchdog quarantines the observer. `0` or less quarantines on the first retry. See [Ending quarantine](#ending-quarantine) |
 | maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
 
@@ -88,21 +89,50 @@ A partition whose last attempt is a `Timeout` does not count toward the quaranti
 Quarantining stops retries and needs an operator to undo, which is the right answer for an observer
 that is wrong and the wrong answer for one waiting on congestion that will clear on its own.
 
-A quarantine ends when an operator clears it, with `cratis chronicle observers clear-quarantine` or from
-the Workbench, or when the observer is subscribed again. What subscribes it again depends on the observer:
+## Ending quarantine
+
+An observer's quarantine ends only through one of these actions:
+
+1. An operator clears it with `cratis chronicle observers clear-quarantine`, from the Workbench, or through
+   the corresponding clear-quarantine API.
+2. The observer receives a fresh subscription from its client or from the Kernel, as listed in the table below.
+   The Kernel re-establishing an event store subscription on its own does not end quarantine.
+
+What can establish a fresh subscription depends on the observer:
 
 | Observer | Subscribed again |
 | --- | --- |
 | Reactors and reducers of an application | When an instance of the application's client connects or reconnects, including after a Kernel restart, and when the client registers a changed definition |
 | Projections | When the Kernel starts, when a client registers a changed definition, and when a namespace is added |
 | Webhooks | When the Kernel starts, when a client registers a new or changed webhook, when a webhook is added or edited (target URL, headers, authorization or event types), and when a namespace is added |
-| Event store subscriptions | When the Kernel starts, when a namespace is added, and by the check the Kernel runs every minute, which subscribes one again if it is no longer subscribed or its event types changed |
+| Event store subscriptions | When the Kernel starts, when a namespace is added, and by the check the Kernel runs every minute, which subscribes one again if it is no longer subscribed or its event types changed. None of these ends quarantine; clear it with `cratis chronicle observers clear-quarantine` or from the Workbench |
 | The Kernel's own reactors and pattern capture | When the Kernel starts, when an event store is added, and when a namespace that already holds events is added. Pattern capture is also subscribed again when a client registers new event types |
 
-A Kernel restart therefore ends every quarantine once the Kernel and its clients are back. Deactivating the
-observer's grain and activating it again in a running Kernel does not end the quarantine: the observer is
-still **Quarantined** afterwards rather than **Disconnected**. An event store subscription is the exception,
-because the minute check then finds it no longer subscribed and subscribes it again.
+These actions do **not** end quarantine:
+
+- Watchdog ticks, including checks for missing jobs and stranded catch-up preparation.
+- Catch-up or replay completion, including completion for individual partitions.
+- Unsubscription or observer grain deactivation and reactivation.
+- Automatic event-store-subscription reconciliation, whether triggered by startup, manager reactivation,
+  source availability, namespace notifications, definition reconciliation, or the minute check.
+
+A Kernel restart ends quarantine only for observers that receive a fresh subscription as listed above;
+event store subscriptions remain quarantined until an operator clears them.
+
+Completing catch-up or replay still persists progress and clears completed-work markers without resuming the
+observer. Clearing quarantine then re-evaluates remaining work from the recorded position. For a subscribed
+observer, clearing resumes paused non-replay jobs, including catch-up jobs, and retries failed partitions that
+are not individually quarantined, subject to the configured retry limits. Recovery can quarantine the observer
+again if the underlying problem remains. If that recovery fails, for example because the job store is briefly
+unavailable, the observer is left **Disconnected** rather than **Quarantined**. The watchdog retries the recovery
+on each check, and after `maxCatchupRecoveryAttempts` failed retries in a row it quarantines the observer again so
+you can see it and clear it once the cause is fixed. An observer without a subscription follows the same routing as
+activation, including how pending replay is handled, and cannot deliver events until a subscription is established.
+Quarantine does not cancel already-running catch-up or replay jobs, and partition completion can still start
+required partition continuation work without ending the observer's quarantine.
+
+Clearing observer quarantine does not clear failed partitions or their separate quarantine status. Failed
+partitions stay recorded until they recover or are cleared.
 
 ## Scaled-out clients
 

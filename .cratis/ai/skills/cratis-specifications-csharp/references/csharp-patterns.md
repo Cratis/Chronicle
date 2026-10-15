@@ -1,9 +1,20 @@
 <!-- cratis-ai-managed: skills/cratis-specifications-csharp/references/csharp-patterns.md -->
 # C# specification patterns
 
+## Contents
+
+- Phases
+- Layered contexts
+- Substitution patterns
+- Assertion extension methods
+- Catching exceptions
+- Usings
+- One outcome per file
+
 Detail for the plain `Cratis.Specifications` surface: phases, substitution,
-assertions, and exception capture. Verified against `Cratis.Specifications`
-`4.1.1` and NSubstitute as consumed by that package.
+assertions, and exception capture. Verified against `Cratis.Specifications.XUnit`
+`4.1.1` (base and assertions) and its `Cratis.Specifications` dependency (`Catch`).
+NSubstitute is a separate collaborator-substitution dependency.
 
 ## Phases
 
@@ -12,7 +23,7 @@ assertions, and exception capture. Verified against `Cratis.Specifications`
 | `void Establish()` | Setup, before `Because()` | One per class in the chain, run base-first. Never call `base.Establish()` |
 | `void Because()` | The single action under test | Only in a concrete specification, never in a `given/` context |
 | `[Fact] void should_*()` | One assertion per fact | Expression-body form, no blank lines between facts |
-| `void Destroy()` | Teardown after each specification | Optional |
+| `void Destroy()` | Teardown after each fact by default | Optional; once per eligible class with [shared lifecycle](shared-lifecycle.md) |
 
 Every phase may be `async Task`.
 
@@ -82,7 +93,7 @@ _<collaborator>.<Method>(Arg.Any<<ArgumentType>>())
 
 ## Assertion extension methods
 
-From `Cratis.Specifications`:
+From the `Cratis.Specifications.XUnit` package, namespace `Cratis.Specifications`:
 
 | Method | Example |
 | --- | --- |
@@ -94,9 +105,20 @@ From `Cratis.Specifications`:
 | `.ShouldContainOnly(items)` | `_items.ShouldContainOnly(<expectedItems>)` |
 | `.ShouldBeOfExactType<T>()` | `_event.ShouldBeOfExactType<<EventType>>()` |
 | `.ShouldBeGreaterThan(n)` / `.ShouldBeLessThan(n)` | `_count.ShouldBeGreaterThan(0)` |
+| `.ShouldNotEqual(expected)` | Value inequality |
+| `.ShouldBeSame(expected)` / `.ShouldNotBeSame(expected)` | Reference identity |
+| `.ShouldMatch(Func<T, bool>)` | Value predicate |
+| `.ShouldBeInRange(low, high)` | Inclusive range |
+| `.ShouldBeGreaterThanOrEqual(n)` / `.ShouldBeLessThanOrEqual(n)` | Inclusive comparison |
+| `.ShouldContainSingleItem()` / `.ShouldEachConformTo(predicate)` | Collection cardinality / each-item predicate |
+| Collection `.ShouldEqual(IEnumerable<T>)` | Ordered sequence equality |
+| Collection `.ShouldContain(Predicate<T>)` | At least one matching item |
+| `.ShouldBeAssignableFrom<T>()` | Actual object is assignable to T |
+| String `.ShouldContain(substring, StringComparison)` | Explicit string comparison |
 
-Assert on values and types. Never assert on a presentation message string — it
-is text, not behavior.
+Assert on values and types. Do not assert on presentation message strings by
+default; assert exact text only when that wording is the specified behavior,
+and name that behavior in the fact.
 
 ## Catching exceptions
 
@@ -111,7 +133,9 @@ async Task Because() => _error = await Catch.Exception(_<sut>.<Action>);
 ```
 
 Use `Catch.Exception` rather than a `try`/`catch` in `Because()`; the captured
-exception is the outcome the facts assert on.
+exception is the outcome the facts assert on. Overloads accept `Action` and
+`Func<Task>`; `Catch.Exception<T>(Action)` captures only T and lets other
+exception types propagate.
 
 ## Usings
 

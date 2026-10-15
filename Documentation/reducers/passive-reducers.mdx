@@ -1,136 +1,74 @@
-# Passive Reducers
+---
+title: Passive and inactive reducers
+description: Choose on-demand reconstruction or disable active observation without changing read semantics.
+---
 
-Passive reducers are registered with the kernel but do not actively observe and materialize events through the sink. This is useful when you want to compute read model state on-demand rather than maintaining it continuously.
+Use a passive read model when you want to reconstruct state from events on demand instead of maintaining a sink. Disabling a reducer's activity is a different choice: it stops observation, but does not change how the model is read.
 
-:::note[Client coverage]
-Kotlin and Java expose the `isActive` toggle on `@Reducer`, and Elixir the `active: false` option on `use Chronicle.Reducers.Reducer` (Option 1 below). The read-model-level `[Passive]` marker (Option 2) is C#-only. TypeScript's `reducer()` decorator has neither.
-:::
+## Choose the read behavior
 
-## Understanding Passive vs Active Reducers
+| Configuration | Active observation | Sink | By-id read |
+| --- | --- | --- | --- |
+| Default | Enabled | Configured sink | Current materialized state, eventually consistent |
+| `[Reducer(isActive: false)]` only | Disabled | Still configured | Materialized state; it may be absent or stale |
+| `[Passive]` on the read model | Disabled | None | Reconstruct from the matching events |
 
-### Active Reducers (Default)
+For a [self reducer](self-reducing-read-models), the read model is also the reducer declaration, so place `[Passive]` on that same type. For a classic reducer, place it on the target model, not the reducer service.
 
-Active reducers:
+### On-demand reads
 
-- Automatically observe new events as they are appended
-- Continuously maintain up-to-date read model state
-- Persist state through the configured sink (typically MongoDB)
-- Are immediately available for querying without computation delay
-
-### What Makes a Reducer Passive?
-
-Passive reducers:
-
-- Are registered but do not actively observe events
-- Compute state on-demand when requested
-- Do not persist state through the sink
-- Are ideal for ad-hoc queries or temporary computations
-
-## Making a Reducer Passive
-
-There are two ways to make a reducer passive:
-
-### Option 1: Using the Reducer Attribute
-
-Set the `isActive` parameter to `false` on the reducer class:
-
-<ChronicleClientTabs snippet="reducers/passive-reducers/reducer-attribute" />
-
-### Option 2: Using the Passive Attribute on the Read Model
-
-Mark the read model class with the `[Passive]` attribute:
+Mark the read model `[Passive]`:
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/passive-attribute" />
 
-**Note:** The `[Passive]` attribute on the read model automatically makes all reducers targeting that read model passive, regardless of individual reducer settings.
-
-## Attribute Priority
-
-When determining if a reducer is passive:
-
-1. If the read model has `[Passive]` attribute → **Reducer is passive**
-2. If the reducer has `[Reducer(isActive: false)]` → **Reducer is passive**
-3. Otherwise → **Reducer is active** (default)
-
-This means the `[Passive]` attribute on the read model takes precedence over the reducer's `isActive` setting.
-
-## Use Cases for Passive Reducers
-
-### 1. On-Demand Reports
-
-Generate reports only when requested, avoiding the overhead of continuous state maintenance:
-
-<ChronicleClientTabs snippet="reducers/passive-reducers/on-demand-reports" />
-
-### 2. Temporary Analysis
-
-Perform exploratory data analysis without polluting your persistent storage:
-
-<ChronicleClientTabs snippet="reducers/passive-reducers/temporary-analysis" />
-
-### 3. Historical Snapshots
-
-Compute read model state at specific points in time without maintaining continuous state:
-
-<ChronicleClientTabs snippet="reducers/passive-reducers/historical-snapshots" />
-
-### 4. Development and Testing
-
-During development, you might want to register reducers without activating them:
-
-<ChronicleClientTabs snippet="reducers/passive-reducers/development-testing" />
-
-## Retrieving State from Passive Reducers
-
-Passive reducers compute state on-demand using the same API as active reducers:
+This disables active observation regardless of the reducer's `isActive` setting and selects on-demand reads through `IReadModels`. A sink collection cannot reconstruct passive state.
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/retrieving-state" />
 
-## Performance Considerations
+No matching history, or a history whose events are all filtered out, returns absent state. A null reducer result deletes state; a later accepted event can recreate it. Source/stream filters and tag filters apply to both classic and self passive reads with the same OR-within-tags and AND-across-categories semantics as active delivery.
 
-### Trade-offs
+### Disable observation only
 
-**Active Reducers:**
+Use `isActive: false` when you want the observer registered but not running:
 
-- ✅ Fast queries (state is pre-computed)
-- ✅ Always up-to-date
-- ❌ Continuous resource usage
-- ❌ Storage overhead
+<ChronicleClientTabs snippet="reducers/passive-reducers/reducer-attribute" />
 
-**Passive Reducers:**
+This does **not** make the model passive. Previously persisted state remains in its configured sink and is no longer maintained. By-id reads do not switch to event reconstruction unless the read model carries `[Passive]`.
 
-- ✅ No continuous resource usage
-- ✅ No storage overhead
-- ❌ Slower queries (computed on-demand)
-- ❌ Not pre-computed
+## Bounded analysis, not arbitrary-date history
 
-### Best Practices
+A bounded `GetInstances(eventCount)` reconstructs from a prefix of event-type-selected events. The prefix is taken **before** tag/source/stream metadata filtering; rejected events do not cause Chronicle to read farther to find N accepted events.
 
-1. **Use active reducers for frequently accessed data** - When read model state is queried often
-2. **Use passive reducers for infrequent queries** - When data is requested occasionally
-3. **Consider caching** - For passive reducers with expensive computations
-4. **Monitor performance** - Track computation time for passive reducers
-5. **Event volume matters** - Passive reducers process all events each time; large event streams may be slow
+<ChronicleClientTabs snippet="reducers/passive-reducers/historical-snapshots" />
 
-## Switching Between Active and Passive
+This is not a date-based snapshot query. `GetSnapshotsById` currently returns no reducer history; current materialized snapshots and historical projection snapshots are different read surfaces.
 
-You can change a reducer from active to passive (or vice versa) by updating the attribute:
+## Reports and exploratory analysis
+
+Passive models fit infrequent queries whose reconstruction cost is acceptable:
+
+<ChronicleClientTabs snippet="reducers/passive-reducers/on-demand-reports" />
+
+An exploratory model can declare a passive state shape such as this; supply its reducer before reading it:
+
+<ChronicleClientTabs snippet="reducers/passive-reducers/temporary-analysis" />
+
+A large event-source history is folded again on each on-demand read. Prefer a materialized reducer for frequent reads, consider application caching where appropriate, and measure reconstruction cost rather than assuming on-demand is cheaper.
+
+## Changing activity
+
+For development, disable observation without promising on-demand reads:
+
+<ChronicleClientTabs snippet="reducers/passive-reducers/development-testing" />
+
+The following declarations illustrate alternative activity settings; choose the one your deployment needs:
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/switching-active-passive" />
 
-When you change the `isActive` setting:
+Changing `isActive` updates observer activity, not the model's read strategy. Adding or removing `[Passive]` changes sink selection and by-id reconstruction semantics. Treat that as a read-model configuration change; do not assume toggling `isActive` has the same effect.
 
-- The reducer definition is updated in the kernel
-- Active reducers will unsubscribe from the event stream
-- Passive reducers will not start observing
-- Persisted state (for previously active reducers) remains in storage but won't be updated
+## Passive reads are not guards
 
-## Summary
+A passive read is fresh when you read it, but it does not note a position in the log and does not guard the append that follows. Another writer can append between your read and your write. To make a rule hold, use a [constraint](../constraints/index.md) or a [decision read](../read-models/decision-reads.mdx). A decision read can fold a reducer that has no filters and no constructor dependencies other than `ILogger<T>`, or a flat projection. See [Decision reads](../read-models/decision-reads.mdx#reducers). See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx).
 
-Passive reducers provide flexibility in how you manage read model state:
-
-- Use `[Reducer(isActive: false)]` to make a specific reducer passive
-- Use `[Passive]` on the read model to make all reducers for that model passive
-- The `[Passive]` attribute takes precedence over individual reducer settings
-- Passive reducers are ideal for on-demand computations, reports, and analysis
-- Choose active vs. passive based on access frequency and resource constraints
+Neither passive nor inactive reducers enable stream-id subscription filtering or exactly-once delivery. A passive or inactive reducer can still be read as a [decision read](../read-models/decision-reads.mdx#reducers) under the same admission rules as any reducer. See [self-reducer limits](self-reducing-read-models#reads-filters-and-preserved-limits) for the shared boundaries.

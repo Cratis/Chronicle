@@ -1,0 +1,21 @@
+// Text, number and Boolean literals set on the read model
+// Screenplay documentation: Documentation/screenplay/projections/property-mapping.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+      readmodel OrderView
+        orderId String
+        status String
+        priority Int
+        open Bool
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced
+          status = "Pending"
+          priority = 3
+          open = true

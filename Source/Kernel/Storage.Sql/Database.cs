@@ -18,6 +18,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 #if DEVELOPMENT
 using System.Collections.Frozen;
@@ -70,14 +72,17 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         WellKnownTableNames.Authorizations,
         WellKnownTableNames.Scopes,
         "__EFMigrationsHistory",
+        "DatabaseNames",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 #endif
 
+    readonly DatabaseNameResolver _databaseNames = new(options.Value.Storage.ConnectionDetails);
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ClusterDbContext>> _clusterOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<EventStoreDbContext>> _eventStoreOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<NamespaceDbContext>> _namespaceOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext>> _jobsOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<UniqueConstraintDbContext>> _uniqueConstraintOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<UniqueConstraintValuesDbContext>> _uniqueConstraintValuesOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<EventSequenceDbContext>> _eventSequenceOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ReadModelDbContext>> _readModelOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _migratedKeys = new();
@@ -86,10 +91,17 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     /// <inheritdoc/>
     public TimeSpan LiveQueryPollingInterval { get; } = TimeSpan.FromSeconds(options.Value.Sql.LiveQueryPollIntervalSeconds);
 
+    bool UsesBindings => options.Value.Storage.ConnectionDetails.GetDatabaseType() is DatabaseType.PostgreSql or DatabaseType.SqlServer;
+
     /// <inheritdoc/>
     public async Task<DbContextScope<ClusterDbContext>> Cluster()
     {
         var connectionString = options.Value.Storage.ConnectionDetails;
+        if (UsesBindings)
+        {
+            _databaseNames.ValidateClusterName();
+        }
+
         var key = $"cluster:{connectionString}";
         var dbContextOptions = _clusterOptions.GetOrAdd(
             key,
@@ -100,14 +112,27 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 #pragma warning disable CA2000
         var dbContext = new ClusterDbContext(dbContextOptions);
 #pragma warning restore CA2000
-        await EnsureMigratedOnce(key, connectionString, dbContext);
+        try
+        {
+            await EnsureMigratedOnce(key, connectionString, dbContext);
+            if (UsesBindings)
+            {
+                await _databaseNames.ReserveCluster(dbContext);
+            }
+        }
+        catch
+        {
+            await dbContext.DisposeAsync();
+            throw;
+        }
+
         return new DbContextScope<ClusterDbContext>(dbContext, static () => { });
     }
 
     /// <inheritdoc/>
     public async Task<DbContextScope<EventStoreDbContext>> EventStore(EventStoreName eventStore)
     {
-        var connectionString = GetConnectionStringForEventStore(eventStore);
+        var connectionString = await ResolveConnectionString(DatabaseIdentity.Store(eventStore.Value));
         var key = $"event-store:{eventStore.Value}:{connectionString}";
         var dbContextOptions = _eventStoreOptions.GetOrAdd(
             key,
@@ -117,14 +142,23 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 #pragma warning disable CA2000
         var dbContext = new EventStoreDbContext(dbContextOptions);
 #pragma warning restore CA2000
-        await EnsureMigratedOnce(key, connectionString, dbContext);
+        try
+        {
+            await EnsureMigratedOnce(key, connectionString, dbContext);
+        }
+        catch
+        {
+            await dbContext.DisposeAsync();
+            throw;
+        }
+
         return new DbContextScope<EventStoreDbContext>(dbContext, static () => { });
     }
 
     /// <inheritdoc/>
     public async Task<DbContextScope<NamespaceDbContext>> Namespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
     {
-        var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
+        var connectionString = await ResolveConnectionString(new(DatabaseKind.Namespace, eventStore.Value, @namespace.Value));
         var key = $"namespace:{eventStore.Value}:{@namespace.Value}:{connectionString}";
         var dbContextOptions = _namespaceOptions.GetOrAdd(
             key,
@@ -134,14 +168,25 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 #pragma warning disable CA2000
         var dbContext = new NamespaceDbContext(dbContextOptions);
 #pragma warning restore CA2000
-        await EnsureMigratedOnce(key, connectionString, dbContext);
+        try
+        {
+            await EnsureMigratedOnce(key, connectionString, dbContext);
+        }
+        catch
+        {
+            await dbContext.DisposeAsync();
+            throw;
+        }
+
         return new DbContextScope<NamespaceDbContext>(dbContext, static () => { });
     }
 
     /// <inheritdoc/>
     public DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace)
     {
-        var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
+        var connectionString = UsesBindings
+            ? _databaseNames.Known(new(DatabaseKind.Namespace, eventStore, @namespace), () => new ClusterDbContext(BuildOptions<ClusterDbContext>(serviceProvider, options.Value.Storage.ConnectionDetails)))
+            : ConnectionStringFor($"+es+{eventStore}+{@namespace}");
         var key = $"jobs:{eventStore}:{@namespace}:{connectionString}";
         return _jobsOptions.GetOrAdd(
             key,
@@ -157,6 +202,15 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             constraintName,
             _uniqueConstraintOptions,
             (options, name) => new UniqueConstraintDbContext(options, name, uniqueConstraintMigrator));
+
+    /// <inheritdoc/>
+    public Task<DbContextScope<UniqueConstraintValuesDbContext>> UniqueConstraintValuesTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string constraintName) =>
+        GetOrCreateTableDbContext(
+            eventStore,
+            @namespace,
+            constraintName,
+            _uniqueConstraintValuesOptions,
+            (options, name) => new UniqueConstraintValuesDbContext(options, name, uniqueConstraintMigrator));
 
     /// <inheritdoc/>
     public Task<DbContextScope<EventSequenceDbContext>> EventSequenceTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string eventSequenceName) =>
@@ -192,6 +246,8 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         // databases standing — either way we must not skip the check based on a pre-wipe
         // observation).
         _ensuredDatabaseKeys.Clear();
+        _databaseNames.Clear();
+        _jobsOptions.Clear();
     }
 
 #if DEVELOPMENT
@@ -201,6 +257,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         var storageType = options.Value.Storage.Type;
         var connectionDetails = options.Value.Storage.ConnectionDetails;
         var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);
+        var boundDatabases = UsesBindings ? await BoundDatabases() : [];
 
         if (isSqlite)
         {
@@ -221,30 +278,36 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         }
         else if (string.Equals(storageType, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase))
         {
-            await WipeAllPostgreSqlDatabases(connectionDetails);
+            await WipeAllPostgreSqlDatabases(connectionDetails, boundDatabases);
         }
         else if (string.Equals(storageType, StorageType.MsSql, StringComparison.OrdinalIgnoreCase))
         {
-            await WipeAllMsSqlDatabases(connectionDetails);
+            await WipeAllMsSqlDatabases(connectionDetails, boundDatabases);
         }
 
         // Cache invalidation must happen AFTER the wipe so that any in-flight migration that
         // populates the cache concurrently with the wipe is overwritten by a final empty cache.
         ClearTableMigrationCache(string.Empty);
 
-        // Only SQLite drops the job tables - the other backends truncate, so their schema survives
-        // the wipe. The job system caches the storage it resolves, and applying its migrations is
-        // part of resolving, so on SQLite it has to forget: otherwise it holds storage for tables
-        // that are gone and the next write says there is no such table as Jobs. Telling it to
-        // forget where the tables never went away is not harmless - the next job in every event
-        // store and namespace would re-run the migrations, and on a real database server that is
-        // slow enough to push the integration specs past their deadlines.
-        if (isSqlite)
-        {
-            serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
-        }
+        serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
     }
 
+#endif
+
+    /// <summary>
+    /// Binds a namespace before it is published to consumers, without changing IDatabase.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <returns>The binding operation.</returns>
+    internal async Task BindNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        var connectionString = await ResolveConnectionString(new(DatabaseKind.Namespace, eventStore.Value, @namespace.Value));
+        await using var context = new NamespaceDbContext(BuildOptions<NamespaceDbContext>(serviceProvider, connectionString));
+        await EnsureDatabaseExists(context, connectionString);
+    }
+
+#if DEVELOPMENT
     static string ExtractSqliteDataSource(string connectionString)
     {
         var builder = new DbConnectionStringBuilder { ConnectionString = connectionString };
@@ -334,7 +397,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         }
     }
 
-    static async Task WipeAllPostgreSqlDatabases(string clusterConnectionString)
+    static async Task WipeAllPostgreSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)
     {
         var builder = new NpgsqlConnectionStringBuilder(clusterConnectionString);
         var clusterDb = builder.Database;
@@ -357,7 +420,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             return;
         }
 
-        var databasesToWipe = new List<string> { clusterDb };
+        var databasesToWipe = new HashSet<string>(boundDatabases, StringComparer.Ordinal) { clusterDb };
 #pragma warning disable CA2100
         await using (var listCmd = new NpgsqlCommand("SELECT datname FROM pg_database WHERE datname LIKE @prefix || '+%' AND datname <> @cluster", maintenanceConn))
 #pragma warning restore CA2100
@@ -408,7 +471,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         await cmd.ExecuteNonQueryAsync();
     }
 
-    static async Task WipeAllMsSqlDatabases(string clusterConnectionString)
+    static async Task WipeAllMsSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)
     {
         var builder = new SqlConnectionStringBuilder(clusterConnectionString);
         var clusterDb = builder.InitialCatalog;
@@ -428,7 +491,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             return;
         }
 
-        var databasesToWipe = new List<string> { clusterDb };
+        var databasesToWipe = new HashSet<string>(boundDatabases, StringComparer.Ordinal) { clusterDb };
 #pragma warning disable CA2100
         await using (var listCmd = new SqlCommand("SELECT name FROM sys.databases WHERE name LIKE @prefix + '+%' AND name <> @cluster", maintenanceConn))
 #pragma warning restore CA2100
@@ -518,6 +581,14 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         return builder.Options;
     }
 
+#if DEVELOPMENT
+    async Task<string[]> BoundDatabases()
+    {
+        await using var scope = await Cluster();
+        return await scope.DbContext.DatabaseNames.Select(row => row.PhysicalName).ToArrayAsync();
+    }
+#endif
+
     async Task EnsureMigratedOnce(string key, string connectionString, DbContext context)
     {
         if (_migratedKeys.ContainsKey(key))
@@ -536,6 +607,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     /// <param name="context">The <see cref="DbContext"/> to migrate.</param>
     /// <param name="connectionString">The connection string used as the lock key.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <exception cref="DatabaseMigrationIncomplete">A duplicate object left migrations pending.</exception>
     async Task MigrateWithLock(DbContext context, string connectionString)
     {
         // For SQLite the file is created automatically when EF Core opens a connection
@@ -554,8 +626,13 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         }
         catch (Exception ex) when (IsAlreadyExistsException(ex))
         {
-            // A concurrent migration already completed and created the tables.
-            // This is safe to ignore: the schema is in the correct final state.
+            var pending = (await context.Database.GetPendingMigrationsAsync()).FirstOrDefault();
+            if (pending is not null)
+            {
+                throw new DatabaseMigrationIncomplete(context.Database.GetDbConnection().Database, pending, ex);
+            }
+
+            // Only a complete migration history proves the concurrent migration succeeded.
         }
         finally
         {
@@ -595,7 +672,16 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             {
                 try
                 {
-                    await creator.CreateAsync();
+                    if (databaseType == DatabaseType.SqlServer && context.Database.GetDbConnection().Database.Length > 124)
+                    {
+                        // SQL Server's default logical log filename appends _log to the database name.
+                        // Explicit file names keep that second sysname within 128 units too.
+                        await SqlServerDatabaseCreation.Create(connectionString);
+                    }
+                    else
+                    {
+                        await creator.CreateAsync();
+                    }
                 }
                 catch (Exception ex) when (IsAlreadyExistsException(ex))
                 {
@@ -619,7 +705,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         Func<DbContextOptions<TDbContext>, string, TDbContext> createDbContext)
         where TDbContext : DbContext, ITableDbContext
     {
-        var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
+        var connectionString = await ResolveConnectionString(new(DatabaseKind.Namespace, eventStore.Value, @namespace.Value));
         var key = $"{eventStore.Value}:{@namespace.Value}:{tableName}:{connectionString}";
         var dbContextOptions = optionsCache.GetOrAdd(
             key,
@@ -652,7 +738,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         string tableName,
         Func<DbContextOptions<ReadModelDbContext>, string, ReadModelDbContext> createDbContext)
     {
-        var connectionString = GetConnectionStringForReadModels(eventStore, @namespace);
+        var connectionString = await ResolveConnectionString(new(DatabaseKind.ReadModels, eventStore.Value, @namespace.Value));
         var key = $"readmodel:{eventStore.Value}:{@namespace.Value}:{tableName}:{connectionString}";
         var dbContextOptions = _readModelOptions.GetOrAdd(
             key,
@@ -672,26 +758,14 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         return new DbContextScope<ReadModelDbContext>(dbContext, static () => { });
     }
 
-    string GetConnectionStringForEventStore(EventStoreName eventStore) =>
-        ConnectionStringFor($"+es+{eventStore.Value}");
-
-    string GetConnectionStringForEventStoreAndNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
-        ConnectionStringFor($"+es+{eventStore.Value}+{@namespace.Value}");
-
-    /// <summary>
-    /// Builds the connection string for the read-model database of a given event store and namespace.
-    /// Mirrors MongoDB's read-model database naming: <c language="csharp">{eventStore}</c> for the default namespace and
-    /// <c language="csharp">{eventStore}+{namespace}</c> for non-default namespaces. The cluster database name is
-    /// always prefixed (separated by <c language="csharp">+</c>) so SQL backends — which serve every Chronicle
-    /// instance from the same server — can co-exist without colliding on read-model database names.
-    /// </summary>
-    /// <param name="eventStore">The event store the read model belongs to.</param>
-    /// <param name="namespace">The namespace the read model belongs to.</param>
-    /// <returns>A connection string targeting the read-model database.</returns>
-    string GetConnectionStringForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
-        @namespace == EventStoreNamespaceName.Default
-            ? ConnectionStringFor($"+{eventStore.Value}")
-            : ConnectionStringFor($"+{eventStore.Value}+{@namespace.Value}");
+    Task<string> ResolveConnectionString(DatabaseIdentity identity) => UsesBindings
+        ? _databaseNames.Resolve(
+            identity,
+            Cluster,
+            connection => new EventStoreDbContext(BuildOptions<EventStoreDbContext>(serviceProvider, connection)),
+            connection => new NamespaceDbContext(BuildOptions<NamespaceDbContext>(serviceProvider, connection)),
+            serviceProvider.GetService<ILogger<DatabaseNameResolver>>() ?? NullLogger<DatabaseNameResolver>.Instance)
+        : Task.FromResult(ConnectionStringFor(identity.LogicalName(string.Empty)));
 
     /// <summary>
     /// Builds the connection string for a per-event-store or per-namespace database.

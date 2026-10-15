@@ -1,0 +1,337 @@
+---
+applyTo: "**/*.cs"
+paths:
+  - "**/*.cs"
+profile: application
+---
+<!-- cratis-ai-managed: harnesses/copilot/instructions/reactors.instructions.md -->
+<!-- cratis-ai: generated Copilot instructions. Do not edit; rules/ is the source. -->
+
+# Reactor Instructions
+
+Reactors are the "if this then that" of event sourcing — they observe events and produce side effects. Unlike projections (which build state), reactors *do things*: send emails, trigger commands in other slices, call external APIs.
+
+**Model first:** when an accepted model under the model root covers this scope (or the repository is opted in: the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured) or the project explicitly set `mcpServers.screenplay.root` in `.cratis/ai.json`; master definition in `cratis-screenplay-modeling-lifecycle`), a reactor implements an automation that the model owns (`produces` / `invokes`); read the modeled slice first and keep the reactor to what the model leaves to code (gap-fill). Otherwise (not opted in) stay code-first: this file and the **cratis-chronicle-reactor** skill are the guide, and the entry-point session may propose a model at most once per session. A `.play` file outside the root, an untracked or uncommitted draft or an empty directory is not consent.
+
+## IReactor — Marker Interface
+
+`IReactor` is a **marker interface** with no methods to implement. Method dispatch is entirely by convention: the first parameter type of each public method determines which event it handles.
+
+```csharp
+public class InvoiceIssuedNotifier(INotificationService notifications) : IReactor
+{
+    /// <summary>
+    /// Reacts to <see cref="InvoiceIssued"/> events by sending a notification.
+    /// </summary>
+    /// <param name="event">The event.</param>
+    /// <param name="context">The event context.</param>
+    public async Task InvoiceIssued(InvoiceIssued @event, EventContext context) =>
+        await notifications.Notify($"Invoice '{@event.Number}' was issued.");
+}
+```
+
+## Method Signature
+
+```csharp
+public Task MethodName(TEvent @event, EventContext context)
+```
+
+- **First parameter** — the event type. This determines which events the method subscribes to.
+- **Second parameter onward** — dependencies, resolved when the method is invoked: `EventContext`, a read model, or a service. All are optional and there is no limit on how many; see [Taking Dependencies](#taking-dependencies). The analyzer constrains their *kind*, not their count — a primitive, value type or `string` after the first parameter is flagged because it cannot be resolved.
+- **Return type** — `Task` or `void`, or a side-effect type (`TEvent`, `EventForEventSourceId`, or an `IEnumerable<>` of either — or of `object` to mix them) returned directly (sync) or wrapped in `Task<...>` (async). Prefer `Task`/async for real side effects, but synchronous returns are fully supported — there is no "always async" requirement.
+- **Method name** — can be anything descriptive. The name is for readability, not dispatch.
+
+## Handling replay differently — `[Replay]`
+
+A reactor sees the same event twice for different reasons: as it happens, and again when its observer is replayed. When those call for different work, mark a second handler for the same event type with **`[Replay]`** and it takes over for the duration of the replay.
+
+```csharp
+public class OrderNotifications(INotificationService notifications) : IReactor
+{
+    public Task OrderPlaced(OrderPlaced @event) => notifications.Notify($"Order {@event.Number} placed.");
+
+    [Replay]
+    public Task OrderPlacedDuringReplay(OrderPlaced @event) => Task.CompletedTask;
+}
+```
+
+- With a `[Replay]` handler, **only** it runs during replay — the regular handler does not also run.
+- Without one, the regular handler runs during replay exactly as before, so this changes nothing for existing reactors.
+- An event type handled *only* by a `[Replay]` handler is still subscribed to.
+- Reach for **`[OnceOnly]`** when the side effect must not repeat **during replay**;
+  use `[Replay]` when replay needs different work. Neither suppresses ordinary
+  catch-up or recovery redelivery, nor limits runs per event source.
+
+## Taking Dependencies
+
+Beyond the event and `EventContext`, a handler method can take any number of additional parameters as dependencies. Only the first parameter is fixed (it is the event that drives dispatch); every parameter after it is resolved when the method is invoked.
+
+```csharp
+public class OrderProcessing(IShippingService shipping) : IReactor
+{
+    public async Task OrderPlaced(OrderPlaced @event, EventContext context, Order order, IPricingService pricing)
+    {
+        // 'order' is the read model, resolved by Chronicle for this event's key.
+        // 'pricing' is resolved from the service provider.
+        await shipping.Schedule(order, pricing.PriceFor(order));
+    }
+}
+```
+
+How each parameter is resolved:
+
+- **`EventContext`** — receives the event context (position independent).
+- **A read model** — a type that has a reducer or a projection (declarative or model-bound). Chronicle resolves it directly — read models never go through the service provider. A **materialized** read model (the default, for projections and reducers alike) is read from its sink, so it is **eventually consistent** — as current as its observer. Mark it **`[Passive]`** when the reactor needs it **strongly consistent**: a passive read model has no sink, so Chronicle computes it on demand from the events at the point the reactor runs.
+- **Any other type** — resolved from the service provider (constructor injection on the reactor itself is still preferred for collaborators used by every method).
+
+### Resolving the read model key
+
+By default the read model is materialized using the `EventSourceId` from the event context. When the key differs from the event source — for example the event carries the id of a related entity — implement `ICanResolveReadModelKey` on the reactor:
+
+```csharp
+public class OrderProcessing : IReactor, ICanResolveReadModelKey
+{
+    public ReadModelKey Resolve(object @event, EventContext context) =>
+        ((OrderLineAdded)@event).OrderId;
+
+    public Task OrderLineAdded(OrderLineAdded @event, Order order)
+    {
+        // 'order' was materialized using OrderId rather than the triggering event's source id.
+        return Task.CompletedTask;
+    }
+}
+```
+
+The resolved key applies to every read model parameter across all of the reactor's handler methods.
+
+## Returning Side-Effect Events
+
+Instead of taking a dependency on `IEventLog`, reactor handler methods can return events that should be appended automatically. The default target is the event log; the EventSourceId defaults to the one from the triggering event.
+
+### Return a single event
+
+```csharp
+public Task<SomeEvent> Handle(AnEvent @event, EventContext context) =>
+    Task.FromResult(new SomeEvent(@event.Name));
+```
+
+### Return a collection of events
+
+```csharp
+public Task<IEnumerable<object>> Handle(AnEvent @event, EventContext context) =>
+    Task.FromResult<IEnumerable<object>>([new SomeEvent(), new AnotherEvent()]);
+```
+
+### Target a specific event source id via `EventForEventSourceId`
+
+Return an `EventForEventSourceId` to append to an explicit `EventSourceId` — for example a different entity than the one that triggered the reactor. It also carries the `EventStreamType`, `EventStreamId`, `EventSourceType`, `Subject`, `Occurred` time, `Tags` and `Causation` per event:
+
+```csharp
+public Task<EventForEventSourceId> Handle(AnEvent @event, EventContext context) =>
+    Task.FromResult(new EventForEventSourceId(@event.RelatedId, new SomeEvent(@event.Name))
+    {
+        EventStreamType = new EventStreamType("custom"), // optional
+        EventSourceType = new EventSourceType("order"),  // optional
+        Subject = new Subject(@event.RelatedId),         // optional
+    });
+```
+
+### Return events for multiple event source ids
+
+Return `IEnumerable<EventForEventSourceId>` to append to several event source ids in one transaction:
+
+```csharp
+public Task<IEnumerable<EventForEventSourceId>> Handle(AnEvent @event, EventContext context) =>
+    Task.FromResult<IEnumerable<EventForEventSourceId>>(
+    [
+        new(@event.RelatedId, new SomeEvent()),
+        new(@event.OtherId, new AnotherEvent())
+    ]);
+```
+
+> Reactor-level metadata (`ICanProvideEventSourceId`, `ICanProvideSubject`, `[EventStreamType]`, …) applies to bare `TEvent` returns. An `EventForEventSourceId` is self-describing, so its own values are used instead. You can mix bare events and `EventForEventSourceId` in a single `IEnumerable<object>` return — each is appended with its respective metadata, all in one transaction.
+
+### Cross-stream via `EventForEventSourceId`
+
+To append a side-effect event to a **different** event source, return `EventForEventSourceId(id, @event)` (single or `IEnumerable<EventForEventSourceId>`) — the same cross-stream wrapper a command `Handle()` uses. The wrapper is self-describing, so it is also where you set the event stream type and id, source type, `Subject`, occurred time, tags and causation; set only the ones you need and the rest take the append defaults.
+
+```csharp
+public Task<IEnumerable<EventForEventSourceId>> Handle(AnEvent @event, EventContext context) =>
+    Task.FromResult<IEnumerable<EventForEventSourceId>>(
+    [
+        new EventForEventSourceId(@event.RelatedId, new SomeEvent())
+    ]);
+```
+
+> **Chronicle version note:** reactor side-effect handling of `EventForEventSourceId` wrappers has shipped since Chronicle 15.35.
+
+### Return a command (Arc + Chronicle)
+
+When the follow-up belongs to **another slice**, return its `[Command]` instead of an event — the same idiom as returning events, applied to intent. Arc's Chronicle integration executes a returned command through the full pipeline (validation, authorization, `Handle()`) in its own service scope; a collection is executed in order when **every** element is a command (events and commands do not mix in one return). An unauthorized, invalid or throwing result is a **side-effect failure** — it fails the partition like a failed append, so it is never silently dropped.
+
+```csharp
+public class RenewalBilling : IReactor
+{
+    [OnceOnly]
+    public Task<IssueRenewalInvoice> MembershipRenewed(MembershipRenewed @event, EventContext context) =>
+        Task.FromResult(new IssueRenewalInvoice(@event.MemberId, @event.Amount));
+}
+```
+
+- **A reactor runs with no principal.** It is not an HTTP request, so a returned command gated by `[Roles]`/`[Authorize]` is denied. Opt in on the reactor **class** with `[ExecuteCommandsAsSystem("<role>", …)]` (`Cratis.Arc.Chronicle.Reactors`), naming only the roles its returned commands need. The attribute covers **returned** commands only.
+- Mark the handler `[OnceOnly]` — a replay would otherwise execute the command again. Replay exclusion is not exactly-once: recovery re-delivers, so the command itself must be safe to repeat.
+- A reactor retry can execute the command's operations again; inline operations are not a substitute for reactor/outbox durability — see **cratis-arc-command-operation** (verified at Arc v22.48.1).
+- The imperative alternative — inject `ICommandPipeline` and call `Execute(command)` — remains supported (see the **cratis-arc-command-execution** skill). It needs `[OnceOnly]` (`ARCCHR0006` warns otherwise), its `CommandResult` must be inspected (a denied or invalid result is otherwise discarded), and it needs its own execution context: `[ExecuteCommandsAsSystem]` does not apply to it.
+
+## External event stores (outbox / inbox)
+
+Cross-service events route through Chronicle's outbox/inbox rather than a shared log:
+
+- The producing service appends its **public contract event** to `EventSequenceId.Outbox`.
+- The consuming observer listens to the implicit inbox sequence for the source store (`inbox-<source-store>`).
+- Chronicle creates/reuses the outbox→inbox subscription from the observer's `[EventStore]` metadata, or from `[EventStore]` on the event type/assembly. Put `[assembly: EventStore("<source-store>")]` in the contracts project when every event there originates from one service; use observer-level `[EventStore("<source-store>")]` to override.
+- An observer-level `[EventStore]` **cannot** be combined with `[EventSequence]`, `[EventLog]`, or `Reactor(eventSequence: ...)`.
+
+## Storage lookup failures are not absence
+
+At **Chronicle v19.50.1**, a failed next-event lookup leaves the observer's
+position unchanged. Routing defers delivery and the watchdog retries; only
+`NotFound` proves absence and permits fast-forward. The watchdog likewise does
+not advance on storage error. This fixes #4770, not every legacy delivery or
+completion limitation. Quarantined observers do not resume from this retry.
+Sources: `Source/Kernel/Core/Observation/States/Routing.cs` and
+`Observation/Observer.Watchdog.cs` at v19.50.1.
+
+## Confirming downstream completion — `WaitForCompletion`
+
+The default is fire-and-forget. When a caller's correctness depends on all observers (projections, reducers, reactors) having processed an appended event before returning — integration tests, synchronous webhook surfaces — call `WaitForCompletion` (from `Cratis.Chronicle.Observation`) on the `AppendResult`/`AppendManyResult`. At Chronicle **v19.50.0**, it returns `AppendResultWaitForCompletionResult` with
+`IsSuccess`, `FailedPartitions`, `TimedOut` and `OutstandingObservers`. Inspect
+all of these: timeout returns `TimedOut = true`, not a successful completion.
+The optional `TimeSpan?` defaults to a 5-second server wait plus 200 ms client
+grace; `Timeout.InfiniteTimeSpan` disables both deadlines. Filtering excludes
+observers that do not consume the appended events when the client supplies the
+first sequence number. Source: `Source/Clients/DotNET/Observation/AppendResultWaitForCompletionExtensions.cs`.
+Reach for it deliberately, not as a default.
+
+## Critical Rules
+
+1. **Idempotent** — Reactors may be called more than once for the same event (e.g. during replay or recovery). Design accordingly. For a side effect that must **not** repeat on replay (emails, payments, external writes), mark the handler method `[OnceOnly]` — Chronicle then skips that handler for every event arriving as part of a **replay** (observer rewind, redaction, revision). That is the whole of it: `[OnceOnly]` is replay-exclusion, **not** exactly-once and **not** a per-event-source counter. Recovering a failed partition re-delivers the event as an ordinary observation, so the handler runs again — which is the point of a retry. When the side effect must survive that retry too, take a `ReactorDelivery` parameter alongside the attribute and keep a receipt under its identity, which is stable across the failure and the recovery.
+2. **Use event data directly** — Never query the read model back inside a reactor. The event contains all the information you need.
+3. **Return events and commands instead of injecting the plumbing** — If the reactor needs to produce new events, return them directly as `Task<TEvent>`, `Task<EventForEventSourceId>`, or a collection thereof. For intent in another slice, return the `[Command]` (Arc executes it; a denied or invalid result fails the partition) — or inject `ICommandPipeline` and inspect the result. Either way the handler is `[OnceOnly]`. Avoid injecting `IEventLog` directly into a reactor.
+4. **Stable identity and single responsibility** — Give side-effecting reactors
+an explicit `[Reactor("stable-id")]`: full-type-name identity changes on a rename
+or move and catches up from the start, repeating side effects even with `[OnceOnly]`.
+Chronicle v19.50.0 discovery warns on likely drift; `ArtifactIdentityDrift = Fail`
+rejects Warning-level reactor/event-type drift (not Information-level read-model
+findings). Each reactor class should have a focused purpose. Multiple handler methods in one reactor are fine if they serve the same automation concern.
+5. **Failure behavior** — If a reactor throws, *or* a returned side-effect event fails to append (constraint violation, concurrency violation, or error), the failing event-source partition pauses until the issue is resolved. Repeated failures can **quarantine** the observer: once `QuarantineOnFailedPartitionCount`/`QuarantineOnFailedPartitionPercentage` (under `Observers`) is crossed, the observer enters the `Quarantined` state — reminders cancelled, retries stopped, automatic recovery suppressed. **A quarantine ends when an operator clears it (`ClearObserverQuarantine()`), or when the observer is subscribed again** — for an application observer that is when the client connects again, for example after a redeploy; Kernel-owned observers are subscribed again when the Kernel starts. A periodic watchdog (default 60s, `WatchdogInterval`) re-routes stuck/dead observers but does not rescue quarantined ones. Design for resilience.
+6. **Don't throw to validate malformed inbound events** — reactors are not data-quality validators; invalid payloads must be rejected at the command/append site. When a malformed cross-service fact reaches a consumer, throwing just to reject it pauses the partition and can quarantine the whole observer. Instead append a clear failure/dead-letter event (e.g. `ProvisioningFailed`) or surface it via the operational failure path, and skip partial side effects.
+7. **No state** — Reactors should be stateless. Inject dependencies via primary constructor, but do not store mutable state on the class.
+8. **An unattended, irreversible pass reads the log, not the sink — and carries a fuse.** A reactor that deletes, revokes, bills or notifies *because a read model says something is absent* is trusting a materialized sink that is only as current as its observer: a paused partition, a replay in progress or a lagging projection makes "absent" true of the sink and false of the world. Decide from a **`[Passive]`** read model (computed on demand from the events at the moment the reactor runs) or from the events themselves. And the code shape cannot tell an **empty subject set** ("nothing to consider" — fail-safe) from an **empty qualifying set** ("nothing survived the filter" — fail-destructive: every subject is about to be acted on), so an unattended pass states its expected population, refuses when the count is implausible, and caps how many subjects one run may touch — the same discipline as [guards-and-fuses.md](./guards-and-fuses.instructions.md), applied to a reactor.
+
+## Failure transitions **[convention]**
+
+A domain failure must produce a timely, observable workflow outcome rather than
+leave work looking active until a watchdog notices. Assign the transition to a
+reliable consumer: an existing state machine can be sufficient; do not add a
+redundant failure reactor when it already owns the event. Watchdogs cover missing
+signals, not ordinary handling of an already recorded failure. Specify the visible
+transition, repeated delivery, and stale failures from earlier attempts. Keep
+public reasons free of secrets. See **cratis-chronicle-reactor** for the distinction
+between domain failure and an observer's operational failure.
+
+## Slice Types That Use Reactors
+
+| Slice type | Pattern |
+|------------|---------|
+| **Automation** | Reacts to our own events, makes decisions, triggers side effects: an external call, a follow-up event (`produces`), or a follow-up command in another slice (`invokes`) |
+| **Translation** | Takes data from outside the model's own facts (an external system or another service) and records it as our own facts. A reactor is only its adapter code; a reactor that turns our own event into a follow-up event or command is an Automation |
+
+### Automation Example
+
+```csharp
+public class InvoiceIssuedNotifier(INotificationService notifications) : IReactor
+{
+    /// <summary>
+    /// Sends a notification when an invoice is issued.
+    /// </summary>
+    /// <param name="event">The event.</param>
+    /// <param name="context">The event context.</param>
+    public async Task InvoiceIssued(InvoiceIssued @event, EventContext context) =>
+        await notifications.Notify($"Invoice '{@event.Number}' was issued.");
+}
+```
+
+### Automation Example — Returning a Command
+
+```csharp
+[ExecuteCommandsAsSystem("invoicing")]
+public class RenewalBilling : IReactor
+{
+    /// <summary>
+    /// Reacts to a membership renewal by invoking the invoice issuing in the invoicing slice.
+    /// </summary>
+    /// <param name="event">The event.</param>
+    /// <param name="context">The event context.</param>
+    /// <returns>The command Arc executes as this reactor's side effect.</returns>
+    [OnceOnly]
+    public Task<IssueRenewalInvoice> MembershipRenewed(MembershipRenewed @event, EventContext context) =>
+        Task.FromResult(new IssueRenewalInvoice(@event.MemberId, @event.Amount));
+}
+```
+
+The command is returned, not executed: Arc runs it through validation and authorization under the roles the class opts into, and a rejected command fails the partition instead of vanishing. `[OnceOnly]` keeps a replay from issuing the renewal invoice twice.
+
+## Contract checks for a reactor
+
+- **Field lineage:** every field of a returned command or event comes from the trigger event, an injected read model, or a mapping the contract states. Nothing is invented or defaulted.
+- **Contract-authorized filtering:** every condition that skips an event is stated in the contract; do not add a skip the contract does not name.
+- **Repeated delivery:** write a specification for the same event arriving again. Recovery re-delivers even with `[OnceOnly]`.
+
+## Testing Reactors
+
+Start with `Specification` plus a direct call for pure reactor decisions, passing the event and supplied values explicitly. Add `ReactorScenario<TReactor>` (from `Cratis.Chronicle.Testing.Reactors`) only where invocation, dependency wiring or side effects contribute proof — construct it with an `IServiceProvider` of NSubstitute mocks, fire events through `Given`, and assert on the mocks:
+
+```csharp
+void Establish()
+{
+    _notifications = Substitute.For<INotificationService>();
+    _scenario = new(new ServiceCollection().AddSingleton(_notifications).BuildServiceProvider());
+}
+
+async Task Because() => await _scenario.Given.ForEventSource(_id).Events(new InvoiceIssued("INV-1001"));
+
+[Fact] async Task should_notify_about_the_issued_invoice() => await _notifications.Received(1).Notify(Arg.Is<string>(_ => _.Contains("INV-1001")));
+```
+
+### Read-model dependencies in scenarios — Chronicle 19.46.0+
+
+`ReactorScenario<TReactor>` does **not** build read models from `Given` events,
+including `[Passive]` models. Seed the handler's read-model parameter explicitly
+before firing the trigger:
+
+```csharp
+void Establish() => _scenario.Given.ForEventSourceId(_id).ReadModel(_order);
+async Task Because() => await _scenario.Given.ForEventSource(_id).Events(_orderPlaced);
+```
+
+In a separate absence specification, replace the seeding with
+`_scenario.Given.ForEventSourceId(_id).NoReadModel<Order>()` to deliberately pass
+`null` to an `Order?` parameter. Without either setup, resolution to `null` throws
+`ReadModelNotSeededForReactorScenario` (`Cratis.Chronicle.Testing.Reactors`), even
+for a nullable parameter. Its message names the type and missing key, suggests
+both setup methods, and lists other seeded keys for that type when any exist.
+Use the key from `ICanResolveReadModelKey.Resolve` for seeding or absence when
+implemented, not the triggering source id. `NoReadModel<T>()` does not remove a
+seeded instance. This guard applies to `EventStoreForTesting`, not an explicitly
+supplied store of another type; production read-model resolution is unchanged.
+
+Also in Chronicle 19.46.0+, `Events(...)` surfaces a synchronously throwing
+handler's own exception, preserving its stack, rather than the reflection
+`TargetInvocationException`. Capture it with `Catch.Exception` and assert the
+handler's exception type. `EventContext.From(...)` now defaults an omitted
+`occurred` to `DateTimeOffset.UtcNow`, not local `Now`; scenario contexts,
+`EventContext.Empty` and `EmptyWithEventSourceId(...)` use that helper. An
+explicit occurrence time is preserved, not normalized to UTC.
+
+For reactors that return side-effect events, assert the resulting appends through the scenario's event store; for non-event side effects, assert on the mocked services (as above). See [specs.scenarios.csharp.md](./specs.scenarios.csharp.instructions.md) for the full `*Scenario` family.

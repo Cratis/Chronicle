@@ -47,18 +47,31 @@ public class RetryFailedPartition(
                 return;
             }
 
+            // The step succeeded having read only events the observer's filters exclude: there is nothing for the
+            // subscriber to handle up to there, so the failure is resolved without claiming any event was handled.
+            // Whether anything arrived for the partition after what the step read is decided by the observer once the
+            // failure is cleared - checking here would race with appends live delivery skips while it is failed.
+            if (State.LastScannedEventSequenceNumber.IsActualValue)
+            {
+                logger.ClearingFailedPartitionWithOnlyExcludedEvents(Request.Key, State.LastScannedEventSequenceNumber);
+                await observer.FailedPartitionRecovered(Request.Key, EventSequenceNumber.Unavailable, State.LastScannedEventSequenceNumber);
+                return;
+            }
+
             // The step succeeded having read nothing. Clearing the failure here advances the observer past
             // the failed event without the handler ever running, so it is only correct when there genuinely
             // is no event left to handle — otherwise recovery silently discards the missed side effect and
-            // reports the observer healthy. Confirm it against the event sequence before clearing.
+            // reports the observer healthy. Confirm it against the event sequence before clearing. The retry
+            // reminder was removed when this recovery started, so a partition kept failed gets another one.
             if (await HasEventsLeftToHandle())
             {
                 logger.NotClearingFailedPartitionWithEventsLeftToHandle(Request.Key, Request.FromSequenceNumber);
+                await observer.FailedPartitionNotRecovered(Request.Key);
                 return;
             }
 
             logger.ClearingFailedPartitionWithNothingLeftToHandle(Request.Key, Request.FromSequenceNumber);
-            await observer.FailedPartitionRecovered(Request.Key, Request.FromSequenceNumber);
+            await observer.FailedPartitionRecovered(Request.Key, Request.FromSequenceNumber, EventSequenceNumber.Unavailable);
             return;
         }
 
@@ -69,7 +82,7 @@ public class RetryFailedPartition(
             return;
         }
 
-        await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber);
+        await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber, State.LastScannedEventSequenceNumber);
     }
 
     /// <inheritdoc/>

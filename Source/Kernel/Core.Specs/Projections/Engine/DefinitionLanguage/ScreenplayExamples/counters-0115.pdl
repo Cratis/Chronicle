@@ -1,0 +1,16 @@
+projection BlogPost => BlogPostReadModel
+  from PostPublished
+    Title = title
+    Content = content
+
+  from PostViewed
+    count ViewCount
+
+  from PostLiked
+    increment LikeCount
+
+  from PostUnliked
+    decrement LikeCount
+
+  from CommentAdded
+    count CommentCount

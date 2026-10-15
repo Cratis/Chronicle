@@ -4,9 +4,10 @@ Tags provide a way to organize and categorize your reducers for better discovera
 
 `[Tag]` and `[Tags]` label the reducer itself. They do not filter which appended events the reducer handles. For event filtering based on appended metadata, see [Filter reducers and reactors by tag](../events/filtering/by-tag), [Filter reducers and reactors by event source type](../events/filtering/by-event-source-type), and [Filter reducers and reactors by event stream type](../events/filtering/by-event-stream-type).
 
-:::note[Client coverage]
-Kotlin and Java tag a reducer with `@Tag`, which is repeatable and takes any number of tags. Elixir's `use Chronicle.Reducers.Reducer` and TypeScript's `reducer()` expose no way to attach descriptive tags to the reducer itself.
-:::
+Kotlin and Java use repeatable `@Tag` annotations. TypeScript uses `@tag(...)` or `@tags(...)` on
+the reducer class; those labels are sent with its observer registration.
+
+For [self reducers](self-reducing-read-models), place descriptive tags on the read model itself. They remain observer labels, not append-time event tags or delivery filters.
 
 ## Adding Tags
 

@@ -30,7 +30,7 @@ public class a_webhook_registrar : Specification
         _encryption = Substitute.For<IEncryption>();
         _oauthClient = Substitute.For<IOAuthClient>();
         _webhookMediator = Substitute.For<IWebhookMediator>();
-        _registrar = new WebhookRegistrar(_grainFactory, _webhookDefinitionComparer, _encryption, _oauthClient, _webhookMediator, Options.Create(new ChronicleOptions()));
+        _registrar = new WebhookRegistrar(_grainFactory, _webhookDefinitionComparer, _encryption, _oauthClient, _webhookMediator, Options.Create(new ChronicleOptions()), _storage);
     }
 
     protected static IEventSequence AnEventSequenceThatAppendsSuccessfully()

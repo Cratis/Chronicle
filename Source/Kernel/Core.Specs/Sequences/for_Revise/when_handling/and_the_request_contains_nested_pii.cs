@@ -32,6 +32,7 @@ public class and_the_request_contains_nested_pii : Specification
     Concepts.Events.EventContext _context;
     JsonSchema _schema;
     EventRevised _request;
+    readonly CorrelationId _correlationId = new(Guid.Parse("5e8ea947-54b4-49cf-92cc-58a4e8e7849f"));
     protected JsonObject _released;
     protected JsonObject _erased;
     protected Exception? _errorAfterErasure;
@@ -60,7 +61,7 @@ public class and_the_request_contains_nested_pii : Specification
     async Task Because()
     {
         await new Revise("store", "namespace", EventSequenceId.Log, 0, new EventType("event", 2, false), """{"profile":{"name":"revised name"}}""", CausedBy: new Identity("system", "system", "system", null))
-            .Handle(_grainFactory, new RequestCausation(new HttpContextAccessor()), Substitute.For<ICurrentPrincipalAccessor>(), _storage, _manager);
+            .Handle(_grainFactory, new RequestCausation(new HttpContextAccessor()), Substitute.For<ICurrentPrincipalAccessor>(), _storage, _manager, _correlationId);
         _request = (EventRevised)_systemSequence.ReceivedCalls().Single(call => call.GetMethodInfo().Name == nameof(IEventSequence.Append)).GetArguments()[1]!;
         await new EventSequencesReactor(_grainFactory, new JsonSerializerOptions(), NullLogger<EventSequencesReactor>.Instance, _storage, _manager).Revised(_request, _context);
         _released = (JsonObject)_targetSequence.ReceivedCalls().Single(call => call.GetMethodInfo().Name == nameof(IEventSequence.Revise)).GetArguments()[2]!;
@@ -68,9 +69,10 @@ public class and_the_request_contains_nested_pii : Specification
         await _keys.DeleteFor("store", "namespace", Identifier);
         _erased = await _manager.Release("store", "namespace", _schema, Identifier, JsonNode.Parse(_request.Content)!.AsObject());
         _errorAfterErasure = await Catch.Exception(() => new Revise("store", "namespace", EventSequenceId.Log, 0, new EventType("event", 2, false), """{"profile":{"name":"new personal value"}}""", CausedBy: new Identity("system", "system", "system", null))
-            .Handle(_grainFactory, new RequestCausation(new HttpContextAccessor()), Substitute.For<ICurrentPrincipalAccessor>(), _storage, _manager));
+            .Handle(_grainFactory, new RequestCausation(new HttpContextAccessor()), Substitute.For<ICurrentPrincipalAccessor>(), _storage, _manager, _correlationId));
     }
 
+    [Fact] void should_use_the_generated_correlation_identifier() => _systemSequence.ReceivedCalls().Single(call => call.GetMethodInfo().Name == nameof(IEventSequence.Append)).GetArguments()[2].ShouldEqual(_correlationId);
     [Fact] void should_not_persist_personal_plaintext_in_the_request() => _request.Content.Contains("revised name", StringComparison.Ordinal).ShouldBeFalse();
     [Fact] void should_release_the_request_before_the_revision_protects_it_again() => _released["profile"]!["name"]!.GetValue<string>().ShouldEqual("revised name");
     [Fact] void should_not_reveal_the_request_after_erasure() => _erased["profile"]!["name"]!.GetValue<string>().ShouldEqual(string.Empty);

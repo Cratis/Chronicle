@@ -14,4 +14,10 @@ public class ReadModelsManagerState
     /// Gets or sets the read model definitions.
     /// </summary>
     public IEnumerable<ReadModelDefinition> ReadModels { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the definitions that changed since the state was last written, which are the only ones the
+    /// storage provider needs to persist. It is not part of the persisted state.
+    /// </summary>
+    public IEnumerable<ReadModelDefinition> Modified { get; set; } = [];
 }

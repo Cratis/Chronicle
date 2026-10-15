@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Arc;
 using Cratis.Chronicle;
+using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
@@ -106,6 +107,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IStorage>().System.Users);
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IStorage>().System.Applications);
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
+        builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, AlertIncidentsMetricsOwnerKeeper>();
 
         builder.Services.AddChronicleMeters();
         var chronicleBuilder = new ChronicleBuilder(builder, builder.Services, builder.Configuration);

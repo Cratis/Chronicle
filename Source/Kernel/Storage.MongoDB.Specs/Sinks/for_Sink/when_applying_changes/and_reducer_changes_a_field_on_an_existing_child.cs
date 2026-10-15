@@ -180,7 +180,7 @@ public class and_reducer_changes_a_field_on_an_existing_child(context ctx) : ICl
     }
 
     [Fact] void should_not_throw_from_mongodb() => ctx.Error.ShouldBeNull();
-    [Fact] void should_keep_object_comparer_fine_grained() => ctx.RawDifferences[0].PropertyPath.Path.ShouldEqual("[members].status");
+    [Fact] void should_have_object_comparer_replace_the_whole_collection() => ctx.RawDifferences[0].PropertyPath.Path.ShouldEqual("[members]");
     [Fact] void should_find_the_team() => ctx.Result.ShouldNotBeNull();
     [Fact] void should_keep_one_member() => ctx.GetMembers().Length.ShouldEqual(1);
     [Fact] void should_update_the_member_status() => ctx.GetMemberStatus().ShouldEqual("approved");

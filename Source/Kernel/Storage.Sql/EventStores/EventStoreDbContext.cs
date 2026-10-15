@@ -136,6 +136,13 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
 
         base.OnModelCreating(modelBuilder);
+        Occurrences.OccurrenceModel.Configure(modelBuilder);
+        modelBuilder.Entity<Occurrences.TriggerDefinitionEntry>(entity =>
+        {
+            entity.ToTable("TriggerDefinitions");
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasMaxLength(64);
+        });
 
         // Match the column mappings to the provider-native JSON type the migrations create
         // (jsonb on Npgsql). PostgreSQL is the only provider that requires this because its

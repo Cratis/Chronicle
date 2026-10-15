@@ -31,6 +31,11 @@
         <PackageReference Include="SSH.NET" />
     </ItemGroup>
 
+    <!-- Keep the projection-path architecture specification independent of the runtime checkout location. -->
+    <ItemGroup>
+        <EmbeddedResource Include="../DotNET/Projections/**/*.cs" LogicalName="ProjectionPaths.%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
     <!-- Reuse the exact CoreDNS zone the Composition sample serves, so the +srv integration
          spec resolves against the same DNS records the scale-out story runs against. -->
     <ItemGroup>

@@ -35,8 +35,8 @@ public class when_the_holder_has_moved_on_to_another_value(MongoDBFixture fixtur
     {
         var definition = new UniqueConstraintDefinition(ConstraintName, []);
         var storage = new UniqueConstraintsStorage(_database, EventSequenceId.Log, Substitute.For<ILogger<UniqueConstraintsStorage>>());
-        await storage.Save(_holder, ConstraintName, EventSequenceNumber.First, _releasedValue);
-        await storage.Save(_holder, ConstraintName, _claimedAt, _currentValue);
+        await storage.Save(_holder, definition, EventSequenceNumber.First, _releasedValue);
+        await storage.Save(_holder, definition, _claimedAt, _currentValue);
 
         (_isAllowedToClaimReleasedValue, _) = await storage.IsAllowed(_otherEventSourceId, definition, _releasedValue);
         (_isAllowedToClaimCurrentValue, _) = await storage.IsAllowed(_otherEventSourceId, definition, _currentValue);

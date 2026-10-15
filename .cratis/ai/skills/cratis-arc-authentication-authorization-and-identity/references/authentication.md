@@ -1,7 +1,17 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/authentication.md -->
 # Authentication
 
-Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.41.1`. Types are in
+## Contents
+
+- The contract
+- The Microsoft Identity Platform handler
+- The reserved claim
+- ASP.NET Core hosting
+- Forwarded headers, ingress requirements and protected introspection
+- What is not here
+- The security boundary, stated plainly
+
+Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.75.0`. Types are in
 `Cratis.Arc.Authentication` and `Cratis.Arc.Identity`.
 
 ## The contract
@@ -52,7 +62,9 @@ It reads three headers, all constants on
 | `IdentityIdHeader` | `x-ms-client-principal-id` |
 | `IdentityNameHeader` | `x-ms-client-principal-name` |
 
-All three must be present or the result is `Anonymous`. The principal header is
+The host-wide `ArcOptions.TrustForwardedIdentityHeaders` must be true first;
+otherwise headers are ignored and the result is `Anonymous`. All three must be
+present or the result is `Anonymous`. The principal header is
 base64-decoded and deserialized into `ClientPrincipal`:
 
 ```csharp
@@ -125,11 +137,13 @@ whose `SchemeName` is `"MicrosoftIdentityPlatform"`. `builder.AddCratis()` (the
 `Cratis` package) calls this for you and makes it the **default** authentication
 scheme; `AddCratisArc()` from `Cratis.Arc` does not register it.
 
-⚠️ Today the default is that a plain `builder.AddCratis()` host trusts the unsigned
-`x-ms-client-principal*` headers from **any caller that can reach it** — it is safe
-only behind the ingress described below (tracked as open Arc#2946). If the host is
-not behind such an ingress, do not use this scheme: configure a credential-validating
-ASP.NET Core scheme yourself.
+At **v22.75.0**, `AddCratis()` registers the scheme but forwarded headers do not
+authenticate anybody until `Cratis:Arc:TrustForwardedIdentityHeaders=true`.
+`AddMicrosoftIdentityPlatformIdentityAuthentication()` warns at startup without
+that opt-in; built-in handlers warn on the first header-bearing request.
+The three-argument `MicrosoftIDentityPlatformAuthHandler` constructor is obsolete;
+use the constructor receiving `IOptions<ArcOptions>`.
+Source: [secure defaults](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/upgrading/secure-defaults.mdx).
 
 ## Forwarded headers, ingress requirements and protected introspection
 
@@ -139,44 +153,36 @@ prevents direct access to the backend**. The same applies to any custom header
 such as `X-User-ID`. Adding a bearer validator does not make a separately accepted
 forwarded-header mechanism safe.
 
-Arc applies that rule to one place itself: the protected introspection catalogs
-(`/.cratis/commands`, `/.cratis/queries`). By default those are enabled and
-**anonymous**. Configure `Cratis:Arc:Introspection`:
+Configure discovery through `Cratis:Arc:Introspection` at **v22.75.0**:
 
 | Option | Default | Effect |
 | --- | --- | --- |
-| `Enabled` | `true` | `false` leaves both catalog routes unmapped |
-| `RequireAuthentication` | `false` | `true` requires an authenticated caller, regardless of the host's default authorization policy |
-| `Roles` | `null` | Comma-separated, any one grants access; needs `RequireAuthentication: true` and no empty entries |
-| `TrustForwardedIdentityHeaders` | `false` | Accepts identity from the unsigned forwarded headers for the protected catalog; needs `Enabled` and `RequireAuthentication` |
+| `Enabled` | `true` | `false` leaves command/query catalogs unmapped |
+| `IdentityDiscovery` | `true` | `false` removes users, tenants and details schema |
+| `RequireAuthentication` | unset | Environment default: anonymous in Development, authenticated elsewhere |
+| `Roles` | `null` | Comma-separated, any one grants access; implies authentication |
+| `TrustForwardedIdentityHeaders` | `false` | Obsolete compatibility setting; turns on the host-wide trust flag |
 
-Today the default is that the catalogs are public, and with
-`RequireAuthentication: true` the forwarded headers are **ignored** for them until
-you set `TrustForwardedIdentityHeaders: true`: the built-in
-`MicrosoftIdentityPlatformAuthenticationHandler` returns
-`AuthenticationResult.Anonymous` for a protected catalog endpoint, so the request
-gets 401. **Only set the opt-in behind the trusted ingress above.**
+The `RequireAuthentication` getter remains `bool` and reads false when unset,
+but **assigning** false is an explicit anonymous-everywhere opt-in, with a warning
+outside Development. Explicit true requires authentication everywhere and fails
+startup if the host cannot enforce it. Roles cannot combine with explicit false.
+Under the environment default a host unable to authenticate omits discovery
+routes (404) and logs a warning. Disabling both discovery switches removes all
+discovery without enforcement checks; `/.cratis/me` remains.
 
-- Startup fails closed for unsafe combinations: `Roles` or the trust option
-  without the requirements above; on Arc.Core, `RequireAuthentication` with no
-  handler, or with only the built-in header handler and no trust opt-in; on
-  ASP.NET Core, a header-trusting scheme reachable from the default scheme or the
-  catalog's policy schemes without the opt-in, and a reachable scheme with
-  `ForwardDefaultSelector` when a header handler is registered.
-- **Custom handlers.** Arc cannot tell whether your own `IAuthenticationHandler`
-  reads forwarded headers, and startup accepts any custom handler as
-  credential-validating. If yours builds an identity from ingress headers, read
-  `IOptions<ArcOptions>` and return `AuthenticationResult.Anonymous` when
-  `TrustForwardedIdentityHeaders` is `false` and
-  `context.GetEndpointMetadata()?.RequireAuthentication == true`. A subclass of the
-  ASP.NET Core header handler that overrides `HandleAuthenticateAsync` without
-  calling the base is your own handler and carries the same obligation.
-- These options do **not** change `/.cratis/identity-details/schema`, command and
-  query invocation, or the user and tenant discovery endpoints. Restrict those at
-  the ingress. On ASP.NET Core a protected catalog's 401/403 is the configured
-  scheme's challenge, which a cookie scheme may turn into a redirect.
+Custom forwarded-header handlers must read `IOptions<ArcOptions>` and refuse
+headers whenever the host-wide flag is false, **on every endpoint**, not only
+protected catalogs. Startup no longer rejects the built-in header scheme for
+protected catalogs: it authenticates nobody without the opt-in. A subclass that
+bypasses `HandleAuthenticateAsync` in the base owns the same obligation.
+On ASP.NET Core, a scheme's challenge may redirect instead of returning 401.
 
-Discovery exposure as a whole is tracked in open Arc#2834.
+`[ExcludeFromDiscovery]` suppresses catalogs/OpenAPI, not endpoint invocation;
+it is not authorization. These .NET options do not establish a JVM equivalent.
+Sources: [IntrospectionOptions.cs](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Arc.Core/Introspection/IntrospectionOptions.cs),
+[DiscoveryExposure.cs](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Arc.Core/Introspection/DiscoveryExposure.cs),
+[secure defaults](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/upgrading/secure-defaults.mdx).
 
 ## What is not here
 

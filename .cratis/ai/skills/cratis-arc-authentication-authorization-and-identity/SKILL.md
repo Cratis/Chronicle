@@ -16,12 +16,14 @@ told about them. Each has its own extension point.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Core` | `22.41.1` | `Cratis.Arc.Identity`, `Cratis.Arc.Authorization`, `Cratis.Arc.Authentication`, `Cratis.Arc.Tenancy` |
-| `Cratis.Arc` | `22.41.1` | ASP.NET Core hosting, `AddMicrosoftIdentityPlatformIdentityAuthentication` |
-| `@cratis/arc` | `22.41.1` | `IdentityProvider`, `IIdentity` |
-| `@cratis/arc.react` | `22.41.1` | `IdentityProvider` component, `useIdentity`, `RequireRole` |
+| `Cratis.Arc.Core` | `22.75.0` | `Cratis.Arc.Identity`, `Cratis.Arc.Authorization`, `Cratis.Arc.Authentication`, `Cratis.Arc.Tenancy` |
+| `Cratis.Arc` | `22.75.0` | ASP.NET Core hosting, `AddMicrosoftIdentityPlatformIdentityAuthentication` |
+| `@cratis/arc` | `22.75.0` | `IdentityProvider`, `IIdentity` |
+| `@cratis/arc.react` | `22.75.0` | `IdentityProvider` component, `useIdentity`, `RequireRole` |
+| Cratis AuthProxy (`cratis/authproxy`) | `v2.30.5` | the trusted ingress described in [AuthProxy](references/authproxy.md) |
 
-> Re-verified at `22.41.1` (the latest release when written) against that tag's source and Arc's documentation: the types, attributes and members this skill names exist, and the authorization, introspection, identity and emission-guard behavior it describes matches them. **Authorization behavior changed materially after `22.16.0`**, the version this skill used to pin: named policies, schemes, fallback baselines, guest policies and Microsoft-attribute enforcement all arrived later. [authorization](references/authorization.md) has a version table; check it if you run an older version.
+> Rechecked at Arc v22.75.0 against the source-pinned authentication, identity,
+> discovery and authorization references below. **Authorization behavior changed materially after `22.16.0`**, the version this skill used to pin: named policies, schemes, fallback baselines, guest policies and Microsoft-attribute enforcement all arrived later. [authorization](references/authorization.md) has a version table; check it if you run an older version.
 
 Reverify before claiming support for another version.
 
@@ -44,14 +46,17 @@ is the trust boundary. But it means:
   the application itself to validate a token, that is ordinary ASP.NET Core
   authentication you configure yourself.
 
-Today the default is that a plain `builder.AddCratis()` host registers the
-unsigned-header scheme as its **default** authentication scheme, so any caller who
-can reach it can forge a principal for every authorized command and query (open
-Arc#2946). Run it only behind that ingress; otherwise use `AddCratisArc()` and
-configure a credential-validating scheme. Arc itself refuses the unsigned headers
-in one place — protected introspection — until
-`Cratis:Arc:Introspection:TrustForwardedIdentityHeaders` is set; see
-[authentication](references/authentication.md).
+At **Arc v22.75.0**, forwarded identity headers are ignored unless the host opts
+in with `Cratis:Arc:TrustForwardedIdentityHeaders=true` or
+`builder.AddCratis(options => options.TrustForwardedIdentityHeaders = true)`.
+Header-only requests otherwise remain anonymous. `AddCratis()` still registers
+the header scheme; it does not make the headers trusted. Opt in only behind the
+ingress above, otherwise configure a credential-validating scheme. The old
+`Introspection:TrustForwardedIdentityHeaders` setting is obsolete and enables the
+same host-wide flag. See [authentication](references/authentication.md).
+Source: [Arc v22.75.0 secure defaults](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/upgrading/secure-defaults.mdx).
+
+Cratis AuthProxy is the ingress that meets these obligations for Cratis applications. Read [AuthProxy](references/authproxy.md) when the application is deployed behind it (header contract, `/.cratis/me` fail-closed verification, tenant headers).
 
 ## Identity details — what the frontend is told
 
@@ -86,45 +91,36 @@ public class <Name>IdentityDetailsProvider : IProvideIdentityDetails<<Details>>
 
 | Route | What it does |
 | --- | --- |
-| `GET /.cratis/me` | The current identity. 401 when not authenticated, 403 when the provider says not authorized, otherwise the result plus the identity cookie |
+| `GET /.cratis/me` | The current identity. 401 when not authenticated, 403 when the provider says not authorized, otherwise the principal-derived identity JSON |
 | `GET /.cratis/identity-details/schema` | The JSON schema of the details type (`{}` without a details provider) |
 | `GET /.cratis/users` | Development tooling — aggregates every `ICanProvideUsers` |
 | `GET /.cratis/tenants` | Development tooling — aggregates every `ICanProvideTenants` |
 | `GET /.cratis/commands`, `GET /.cratis/queries` | Introspection catalogs of operation names, types and routes (`MapIntrospectionEndpoints()`) |
 
-Normal `UseCratisArc()` activation maps all of these `AllowAnonymous` by default,
-**including in Production**, unless an endpoint of the same name already exists; `/.cratis/me`
-does its own 401/403. There is no public constant for the identity routes — they
-are string literals in the endpoint mapper.
+At **v22.75.0**, discovery is anonymous only when the host's
+`IHostEnvironment.IsDevelopment()` is true. Elsewhere it requires authentication;
+if the host cannot authenticate callers, the routes are not mapped (404) and a
+warning is logged. `RequireAuthentication` unset selects that environment default;
+explicit `true` requires authentication everywhere (startup fails if unavailable);
+explicit `false` exposes discovery anonymously everywhere, warning outside
+Development. `Roles` implies authentication and cannot combine with explicit
+`false`. `Enabled=false` removes the two catalogs; `IdentityDiscovery=false`
+removes users, tenants and the details schema. Setting both removes all discovery
+without authentication checks; `/.cratis/me` remains. `[ExcludeFromDiscovery]`
+hides commands, read models, queries and controllers from catalogs/OpenAPI, **not
+from invocation or authorization**. These are .NET settings, not a JVM contract.
+Source: [secure defaults](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/upgrading/secure-defaults.mdx).
 
-⚠️ **A fallback policy does not protect an endpoint that is explicitly anonymous**,
-and the word "development" is not an environment check. Today the default is that
-these routes are public and expose your command, query, user and tenant surface;
-the exposure is tracked in open Arc#2834. To change it:
-
-- the two catalogs: configure `Cratis:Arc:Introspection` (`Enabled: false` unmaps
-  them; `RequireAuthentication`/`Roles` protect them; the
-  `TrustForwardedIdentityHeaders` opt-in is for the header handler only behind a
-  trusted ingress) — options table in [authentication](references/authentication.md);
-- `/.cratis/identity-details/schema`, `/.cratis/users` and `/.cratis/tenants` are
-  **not** affected by those options. Return fixtures only from the user and tenant
-  providers, and restrict all three at the trusted ingress.
-
-Test the discovery endpoints under Production settings, with your fallback policy
-enabled.
-
-`/.cratis/me` writes the result as JSON **and** as a base64 cookie named
-`.cratis-identity`, deliberately **not `HttpOnly`** so the frontend can read it
-without a round trip. `Secure` follows whether the request is HTTPS, `SameSite`
-is `Lax`, `Path` is `/`.
-
-⚠️ A non-`HttpOnly` cookie the browser can read is a cookie the user can edit.
-Treat everything in it as a **display** input. Never let it decide anything the
-server has not already decided. Today the default is that `/.cratis/me` returns
-whatever a presented `.cratis-identity` cookie decodes to *before* it looks at the
-authenticated principal, so a client can make it report any identity or roles
-(open Arc#2939). Commands and queries authorize on the request principal and are
-not affected; a frontend that shows or branches on `/.cratis/me` can be misled.
+`/.cratis/me` derives identity only from the authenticated request principal,
+never from `.cratis-identity`. The details provider runs for each authenticated
+identity request; `ModifyDetails` changes only the current response. Arc no
+longer writes the readable identity cookie (it expires a legacy one). Identity
+responses carry `Cache-Control: no-store, private` and `Vary: Cookie`.
+Stop reading the cookie; use `IdentityProvider.getCurrent()`/`refresh()` and
+`clearCache()` on logout. The frontend caches in memory, with a warned legacy
+cookie fallback **only after a 404**, never after 401/403.
+Sources: [IdentityProvider.cs](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Arc.Core/Identity/IdentityProvider.cs),
+[IdentityProvider.ts](https://github.com/Cratis/Arc/blob/v22.75.0/Source/JavaScript/Arc/identity/IdentityProvider.ts).
 
 ## Authorization — what Arc evaluates
 
@@ -145,10 +141,10 @@ and `AuthenticationSchemes` enforce nothing, and Microsoft's `[Authorize]` is **
 honored on model-bound commands and read models, so a command protected only by it
 is open. From `22.21.0` Microsoft's `[Authorize]`/`[AllowAnonymous]` are enforced on
 the ASP.NET Core host (never on the standalone Core host), and from `22.23.0` named
-policies and schemes are evaluated. The rest of this section is `22.41.1` behavior;
+policies and schemes are evaluated. The rest of this section is `22.75.0` behavior;
 see [authorization](references/authorization.md) for the version table.
 
-At `22.41.1`:
+At `22.75.0`:
 
 - **Named policies work.** `[Authorize(Policy = "…")]` requires the policy to
   succeed asynchronously. Implement
@@ -205,8 +201,9 @@ restrictive verdict wins, and a guard that throws, or cannot be constructed, fai
 closed — the latter denies every observable query in the process. The principal comes
 from `ObservableQueryEmissionContext.Principal`, never from ambient accessors or
 `IHttpContextAccessor`; the guard is constructed per emission, so keep it cheap and
-cache in a singleton. Guards do not protect the HTTP snapshot path. Read
-[observable emission guards](references/observable-emission-guards.md).
+cache in a singleton. Since 22.69.1, guards and read-model interceptors also
+protect plain HTTP snapshots, waits and long polls. Read
+[observable emission guards](references/observable-emission-guards.md) when implementing or reviewing revocation of an observable-query subscription.
 
 ### Validators are not an authorization boundary
 
@@ -239,14 +236,18 @@ the claim Arc reserves, and the ASP.NET Core scheme variant.
 
 ## Tenancy
 
+Anything that must be isolated per tenant has to enforce that isolation itself,
+downstream of resolution. Never treat a resolved tenant id as an authorization
+decision.
+
 `Cratis.Arc.Tenancy` resolves a tenant per request. The default resolver is
 **header-based** on `x-cratis-tenant-id`; `TenantResolverType` also offers
 `Query`, `Claim`, `Development`, `Subdomain` and `Fixed`, configured through
 `ArcOptions.Tenancy` or the `Use*Tenancy` extension methods.
 
 `ITenantIdAccessor.Current` gives the current `TenantId`, which is
-`TenantId.NotSet` (`"[NotSet]"`) when nothing resolved. See
-[tenancy](references/tenancy.md) for the exact defaults and each resolver's
+`TenantId.NotSet` (`"[NotSet]"`) when nothing resolved. Read
+[tenancy](references/tenancy.md) when selecting or configuring a tenant resolver, or handling an unresolved tenant; it gives the exact defaults and each resolver's
 behavior.
 
 Arc tenancy is request-scoped tenant *resolution*. It is not Chronicle's tenant
@@ -278,14 +279,14 @@ no details to give, not only when the identity is explicitly unset.
 `whileLoading` and `forbidden` slots.
 
 ⚠️ **`RequireRole` hides UI; it does not protect data.** The identity it reads
-comes from the deliberately non-`HttpOnly` cookie above. Every rule it expresses
+comes from the principal-derived identity endpoint, but browser state is editable. Every rule it expresses
 must also exist on the server as `[Authorize]`/`[Roles]` or an authorization
 filter.
 
 `Arc.React.MVVM` has **no** identity hook. It registers `IIdentityProvider` in
 its container so a view model can constructor-inject it; that is all.
 
-See [frontend](references/frontend.md) for the exact exported shapes.
+Read [frontend](references/frontend.md) when consuming identity in React or injecting it into a view model; it gives the exact exported shapes.
 
 ## Local development
 
@@ -297,11 +298,10 @@ implements as `ICanProvideUsers` and `ICanProvideTenants`.
 To run locally with an identity, supply the forwarded headers yourself — see
 [local development](references/local-development.md).
 
-⚠️ Those two endpoints are `AllowAnonymous` and mapped unconditionally, in
-Production too, and a fallback policy does not protect them. If your
-`ICanProvideUsers` implementation returns real users, that list is public. Return
-development fixtures only, and gate the implementation on a development
-environment check.
+Those endpoints follow the discovery exposure settings above. Return development
+fixtures from development providers; test deployed discovery access explicitly.
+Forwarded headers sent locally require the host-wide trust opt-in too; do not
+carry that shortcut into a directly reachable deployed host.
 
 ## Verify
 
@@ -327,7 +327,7 @@ environment check.
 - Discovery endpoints (`/.cratis/commands`, `/.cratis/queries`,
   `/.cratis/identity-details/schema`, `/.cratis/users`, `/.cratis/tenants`) are
   tested under Production settings; introspection is restricted or disabled where it
-  must not be public, and the rest are restricted at the ingress.
+  must not be public, including identity discovery.
 - `TrustForwardedIdentityHeaders` is set only behind an ingress that authenticates
   callers, strips caller-supplied identity headers, writes trusted ones and blocks
   direct backend access; custom handlers honor it.

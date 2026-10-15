@@ -37,7 +37,9 @@ public record RegisterSingleEventType(EventStoreName EventStore, Contracts.Event
                 chronicleType,
                 schema,
                 (Concepts.Events.EventTypeOwner)(int)Type.Owner,
-                (Concepts.Events.EventTypeSource)(int)Type.Source);
+                (Concepts.Events.EventTypeSource)(int)Type.Source,
+                (Concepts.Events.EventTypeVisibility)(int)Type.Visibility,
+                Type.EventStore ?? string.Empty);
 
         if (mutated)
         {

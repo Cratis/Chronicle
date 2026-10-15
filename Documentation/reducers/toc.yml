@@ -1,7 +1,9 @@
 - name: Overview
   href: index.mdx
-- name: Getting Started
+- name: Build a separate reducer
   href: getting-started.mdx
+- name: Self-reducing Read Models
+  href: self-reducing-read-models.mdx
 - name: Passive Reducers
   href: passive-reducers.mdx
 - name: Event Processing

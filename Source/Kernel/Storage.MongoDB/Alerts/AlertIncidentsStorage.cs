@@ -132,6 +132,26 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<AlertIncidentObserverCount>> GetOpenCountsByObserver(CancellationToken cancellationToken = default)
+    {
+        await EnsureIndexes();
+        var counts = await _collection.Value.Aggregate(new AggregateOptions { Collation = Collation.Simple })
+            .Match(Builders<AlertIncidentDocument>.Filter.Eq(_ => _.IsOpen, true))
+            .Group(row => new { row.EventStore, row.Namespace, row.ObserverId, row.EventSequenceId, row.Condition, row.Severity }, group => new
+            {
+                group.Key.EventStore,
+                group.Key.Namespace,
+                group.Key.ObserverId,
+                group.Key.EventSequenceId,
+                group.Key.Condition,
+                group.Key.Severity,
+                Count = group.LongCount()
+            }).ToListAsync(cancellationToken);
+
+        return counts.Select(_ => new AlertIncidentObserverCount(_.EventStore, _.Namespace, _.ObserverId, _.EventSequenceId, _.Condition, (AlertSeverity)_.Severity!.Value, _.Count)).ToArray();
+    }
+
+    /// <inheritdoc/>
     public Task<AlertIncidentStoragePage> EnumerateOpen(AlertIncidentCursor? after, int limit, CancellationToken cancellationToken = default) =>
         Page(Builders<AlertIncidentDocument>.Filter.Eq(_ => _.IsOpen, true), after, limit, cancellationToken);
 
@@ -182,5 +202,6 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
     Task EnsureIndexes() => _collection.Value.EnsureIndexesOnceAsync(
         _ensuredIndexes,
         new(Builders<AlertIncidentDocument>.IndexKeys.Ascending(_ => _.EventStore).Ascending(_ => _.IsOpen).Ascending(_ => _.RaisedSequenceNumber).Ascending(_ => _.Id), new CreateIndexOptions { Name = "store-open-raised-id", Collation = Collation.Simple }),
-        new(Builders<AlertIncidentDocument>.IndexKeys.Ascending(_ => _.EventStore).Ascending(_ => _.Namespace).Ascending(_ => _.IsOpen).Ascending(_ => _.RaisedSequenceNumber).Ascending(_ => _.Id), new CreateIndexOptions { Name = "store-namespace-open-raised-id", Collation = Collation.Simple }));
+        new(Builders<AlertIncidentDocument>.IndexKeys.Ascending(_ => _.EventStore).Ascending(_ => _.Namespace).Ascending(_ => _.IsOpen).Ascending(_ => _.RaisedSequenceNumber).Ascending(_ => _.Id), new CreateIndexOptions { Name = "store-namespace-open-raised-id", Collation = Collation.Simple }),
+        new(Builders<AlertIncidentDocument>.IndexKeys.Ascending(_ => _.IsOpen).Ascending(_ => _.EventStore).Ascending(_ => _.Namespace), new CreateIndexOptions { Name = "open-store-namespace", Collation = Collation.Simple }));
 }

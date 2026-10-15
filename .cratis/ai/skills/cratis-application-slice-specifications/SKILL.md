@@ -1,6 +1,6 @@
 ---
 name: cratis-application-slice-specifications
-description: Specify the backend behavior of an event-sourced Cratis application slice with the in-process scenario family — CommandScenario, EventScenario, ReadModelScenario and ReactorScenario — including what to cover for each slice type and where the specification files live. Use when adding or changing backend behavior in an application built on Cratis. Do not use for framework library specifications and do not use for frontend behavior.
+description: Specify the backend behavior of an event-sourced Cratis application slice — plain-call specs for pure decisions, plus CommandScenario, EventScenario, ReadModelScenario and ReactorScenario where the pipeline, validation, constraints or projections matter — including what to cover for each slice type and where the specification files live. Use when adding or changing backend behavior in an application built on Cratis. Do not use for framework library specifications and do not use for frontend behavior.
 license: MIT
 metadata:
   cratis-hint-paths: "**/when_*/**/*.cs **/for_*/**/*.cs"
@@ -9,12 +9,14 @@ metadata:
 
 # Cratis application slice specifications
 
-A slice is specified from the outside, through the pipeline it actually runs on.
-The scenario family exercises the real Arc and Chronicle code paths in-process —
-no HTTP, no fixture, no server — so a specification says what the slice does
-rather than what its classes do.
+Start a pure decision with a plain method call: `Handle()`,
+`Handle(providedValue)`, reducer logic or a reactor's decision needs no host,
+services or harness. Add a scenario where the pipeline, validation,
+authorization, constraints or projections contribute proof. The scenario family
+exercises the real Arc and Chronicle code paths in-process — no HTTP, no fixture,
+no server.
 
-This skill decides **which scenario** and **what to cover**. The C# mechanics
+This skill decides **when to add a scenario** and **what to cover**. The C# mechanics
 (`Establish`/`Because`, substitutes, contexts) live in
 `cratis-specifications-csharp`.
 
@@ -22,12 +24,18 @@ This skill decides **which scenario** and **what to cover**. The C# mechanics
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Testing` | `22.16.0` | `CommandScenario<TCommand>` and the `CommandResult` assertions |
-| `Cratis.Arc.Chronicle.Testing` | `22.16.0` | `Given`, `EventLog`, `AppendedEvents` and the appended-event assertions on a command scenario |
+| `Cratis.Arc.Testing` | `22.75.0` | `CommandScenario<TCommand>` and the `CommandResult` assertions |
+| `Cratis.Arc.Chronicle.Testing` | `22.75.0` | `Given`, `EventLog`, `AppendedEvents` and the appended-event assertions on a command scenario |
 | `Cratis.Chronicle.Testing` | `18.3.0` | `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` |
 | `Cratis.Specifications.XUnit` | `4.x` | The `Specification` base and the `ShouldXxx` assertions |
 
-> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
+> Arc command/query/decision scenario surface rechecked at v22.75.0. Arc depends
+> on Chronicle 19.39.1; later Chronicle reactor setup below has its own minimum
+> version and is not downgraded by this Arc verification.
+
+Reactor read-model setup and the `EventContext.From` UTC default below are
+verified separately at **Chronicle 19.46.0**, the minimum version for that
+guidance; see `cratis-chronicle-reactor/references/specifications.md` for sources.
 
 `Cratis.Testing` is the meta-package that brings `Cratis.Arc.Testing` and
 `Cratis.Arc.Chronicle.Testing` together. Reverify against the owning product
@@ -49,7 +57,7 @@ repository before claiming support for another version.
   the contract for this skill). Decide this with the decision rule in
   `cratis-screenplay-modeling-lifecycle`: model-first only when an accepted
   model under the model root covers this scope, or the repository is opted in
-  (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set `mcpServers.screenplay.root`
+  (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set `mcpServers.screenplay.root`
   in `.cratis/ai.json`); an empty directory, install output, a `.play` file
   outside the root or an uncommitted draft does not count, and framework, infrastructure, client, adapter and not-opted-in
   brownfield work stays code-first. Opted in but no model for this scope: model
@@ -77,8 +85,9 @@ you did.
 ## Step 1 — Place the files
 
 Specifications live **in the slice folder**, beside the `.cs` they specify, each
-file wrapped in `#if DEBUG … #endif` so specification code compiles only in
-Debug.
+file wrapped in `#if DEBUG … #endif` when it compiles into the application
+assembly, so specification code ships only in Debug. A dedicated `<Source>.Specs`
+project is not shipped and needs no wrapper.
 
 ```
 <Feature>/<Slice>/
@@ -95,15 +104,30 @@ Debug.
 A behavior covering several subjects groups under
 `<Slice>/for_<Subject>/when_<behavior>/`.
 
-## Step 2 — Pick the scenario by slice type
+## Step 2 — Start with the decision; add the scenario by slice type
+
+Specify a pure decision with the plain `Specification` base first. A direct
+`Handle()` call does not run validation, authorization, `Provide()` or operations;
+keep a scenario for that wiring and for appended-event behavior.
 
 | Slice type | Scenario | Skill |
 | --- | --- | --- |
-| State Change — a command appends events | `CommandScenario<TCommand>` | this one |
+| Pure command decision, reducer logic or reactor decision | Plain method call with `Specification` (default) | `cratis-specifications-csharp` |
+| State Change — command pipeline and appended events | `CommandScenario<TCommand>` | this one |
 | Append semantics, a constraint | `EventScenario` | `cratis-chronicle-event-specifications` |
+| Query pipeline — arguments, authorization, validation, interceptors | `QueryScenario<TReadModel>` | [query and decision scenarios](references/query-and-decision-scenarios.md) |
 | State View — a projection or reducer | `ReadModelScenario<TReadModel>` | `cratis-chronicle-read-model-specifications` |
 | Automation or Translation — a reactor | `ReactorScenario<TReactor>` | `cratis-specifications-csharp` |
 | A host, transport, or real-infrastructure boundary | Out-of-process integration | `cratis-specifications-csharp` |
+
+For a class-based reactor scenario on **Chronicle 19.46.0+**, explicitly seed
+handler read-model parameters with `Given.ForEventSourceId(id).ReadModel(instance)`
+or declare intentional absence with `.NoReadModel<T>()`. An unseeded model throws
+`ReadModelNotSeededForReactorScenario` even if nullable; `Given` events do not
+build read models, including passive ones. Use the reactor's resolved key, not
+necessarily the trigger's source id. This is **not** the command-scenario event
+seeding described in Step 5. Read `cratis-chronicle-reactor` for the setup examples,
+exception diagnostics, synchronous handler throws and UTC context defaults.
 
 ## Step 3 — Cover every outcome of a State Change slice
 
@@ -183,6 +207,13 @@ produces. Pin an instance only when the events would be noise.
 
 Both builder methods return `void`; there is nothing to await.
 
+That is **legacy** read-model mode: seeded events populate an in-memory model,
+not the append log. For protected or stream decisions call `UseDecisionReads()`
+before seeding; actual events and decisions then share one in-process log.
+Pinned models cannot supply decision guards. Read
+[query and decision scenarios](references/query-and-decision-scenarios.md) when
+specifying query pipelines, routed conflicts, projection admission or completion.
+
 Validator and `Provide()` dependencies are registered in `_scenario.Services`;
 the concrete validator itself is discovered automatically.
 
@@ -194,10 +225,11 @@ the concrete validator itself is discovered automatically.
 ```
 
 `ShouldNotBeSuccessful()` alone cannot distinguish a validation rejection from an
-unhandled exception, so both facts are required. **Never assert on a message
-string** — it is presentation text. A `.play` specification may pin the message
-(`then error "<message>"`); the C# specification for the same rejection pins the
-*kind* instead, and the two together cover the rule.
+unhandled exception, so both facts are required. **Do not assert on a message
+string by default** — it is presentation text; assert one only when that exact
+text is the specified behavior, and name that requirement in the fact. A `.play`
+specification may pin the message (`then error "<message>"`); prefer pinning the
+*kind* in C# unless the exact wording is part of the behavior being specified.
 
 **Isolate the rule.** Each rejection specification violates **only** the rule it
 is named after: build the command valid in every other respect. Otherwise
@@ -214,7 +246,7 @@ proven*.
 | `ShouldBeSuccessful()` / `ShouldNotBeSuccessful()` | Authorized, valid, no exceptions — or not |
 | `ShouldBeValid()` | Validation only; it checks neither authorization nor exceptions |
 | `ShouldHaveValidationErrors()` | At least one validation error |
-| `ShouldHaveValidationErrorFor(message)` | A validation error with that **message** |
+| `ShouldHaveValidationErrorFor(message)` | A validation error whose message **contains** that text (a substring match; compare messages for equality when exact wording is specified) |
 | `ShouldHaveValidationErrorBecauseOf(reason)` | A validation error with that `ValidationResultReason` |
 | `ShouldBeAuthorized()` / `ShouldNotBeAuthorized()` | The authorization outcome |
 | `ShouldHaveExceptions()` / `ShouldNotHaveExceptions()` | Whether the handler threw |
@@ -254,7 +286,7 @@ single append is `0`, never `1`.
 ## Lineage
 
 Step 0, repeat execution and rule isolation are adapted in our own words from
-ideas recorded in `references/provenance.md`.
+ideas recorded in `references/provenance.md`. Read `references/provenance.md` when checking attribution or the origin of Step 0, repeat-execution coverage, and rule isolation.
 
 ## What breaks
 
@@ -275,11 +307,11 @@ ideas recorded in `references/provenance.md`.
 - **The command scenario reports success but nothing was appended.** The
   assertion is on `CommandResult` only; add a
   `ShouldHaveAppendedEvent<TCommand, TEvent>` fact.
-- **Injected-validator branches flip with test ordering.** The command-scenario
-  pipeline can cache enough state that a validator branch depends on execution
-  order under parallel xUnit runs. Use `CommandScenario` for the valid path, test
-  rejected state variants by instantiating the validator directly, and only then
-  put that command's specifications in a small `[Collection]`.
+- **Injected-validator branches flip with test ordering.** This was observed in
+  the 22.16-era harness. Arc 22.23.2 stopped replacing the process-wide provider;
+  later releases isolated stores and event-source services per scenario. Reproduce
+  at 22.75.0 before applying the old direct-validator/small `[Collection]`
+  workaround; no current reproduction was verified here.
 
 ## How it is proven
 

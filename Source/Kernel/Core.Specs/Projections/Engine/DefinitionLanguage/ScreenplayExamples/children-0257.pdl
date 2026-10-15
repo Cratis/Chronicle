@@ -1,0 +1,29 @@
+projection BlogPost => BlogPostReadModel
+  from PostPublished
+    Title = title
+    Content = content
+    AuthorId = authorId
+    PublishedAt = $eventContext.occurred
+
+  from PostUpdated
+    Content = content
+    UpdatedAt = $eventContext.occurred
+
+  children comments identified by commentId
+    from CommentAdded key commentId
+      parent postId
+      AuthorId = authorId
+      Content = content
+      CreatedAt = $eventContext.occurred
+
+    from CommentEdited key commentId
+      parent postId
+      Content = content
+      EditedAt = $eventContext.occurred
+
+    remove with CommentDeleted key commentId
+      parent postId
+
+    join User on AuthorId
+      with UserRegistered
+        AuthorName = name

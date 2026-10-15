@@ -81,12 +81,25 @@ public class Reducer(
 
             var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey!.ConnectionId!);
 
-            await _observer.Subscribe<IReducerObserverSubscriber>(
-                ObserverType.Reducer,
-                definition.EventTypes.Select(_ => _.EventType).ToArray(),
-                localSiloDetails.SiloAddress,
-                connectedClient,
-                filters: definition.Filters);
+            if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned)
+            {
+                await _observer.SubscribeWithGenerationDelivery<IReducerObserverSubscriber>(
+                    ObserverType.Reducer,
+                    definition.EventTypes.Select(_ => _.EventType).ToArray(),
+                    localSiloDetails.SiloAddress,
+                    definition.GenerationDelivery,
+                    connectedClient,
+                    filters: definition.Filters);
+            }
+            else
+            {
+                await _observer.Subscribe<IReducerObserverSubscriber>(
+                    ObserverType.Reducer,
+                    definition.EventTypes.Select(_ => _.EventType).ToArray(),
+                    localSiloDetails.SiloAddress,
+                    connectedClient,
+                    filters: definition.Filters);
+            }
 
             _subscribed = true;
         }

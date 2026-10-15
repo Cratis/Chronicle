@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Projections;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 
@@ -26,4 +28,11 @@ public record ProjectionFuture(
     string IdentifiedByProperty,
     string ParentIdentifiedByProperty,
     object ParentKey,
-    DateTimeOffset Created);
+    DateTimeOffset Created)
+{
+    /// <summary>
+    /// Gets the full event context. Absent in documents stored before context was preserved.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public BsonDocument? Context { get; init; }
+}

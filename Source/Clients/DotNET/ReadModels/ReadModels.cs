@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
+using System.Linq.Expressions;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -16,6 +18,7 @@ using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
+using Cratis.Chronicle.Transactions;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -37,7 +40,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="reducerObservers"><see cref="IReducerObservers"/> for managing reducer observers.</param>
 /// <param name="materializedReadModels">The <see cref="IMaterializedReadModels"/> for materialized read model operations.</param>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
-public class ReadModels(
+public partial class ReadModels(
     IEventStore eventStore,
     INamingPolicy namingPolicy,
     IProjections projections,
@@ -68,59 +71,39 @@ public class ReadModels(
     /// <inheritdoc/>
     public async Task Register()
     {
-        var readModels = new List<IHaveReadModel>();
-
-        readModels.AddRange(projections.GetAllHandlers());
-        readModels.AddRange(reducers.GetAllHandlers());
-
-        var readModelDefinitions = readModels.ConvertAll(readModel =>
-        {
-            var observerType = readModel switch
-            {
-                IProjectionHandler => ReadModelObserverType.Projection,
-                IReducerHandler => ReadModelObserverType.Reducer,
-                _ => ReadModelObserverType.Projection
-            };
-
-            var observerIdentifier = readModel switch
-            {
-                IProjectionHandler projectionHandler => projectionHandler.Id.Value,
-                IReducerHandler reducerHandler => reducerHandler.Id.Value,
-                _ => string.Empty
-            };
-
-            return new ReadModelDefinition
-            {
-                Type = new()
-                {
-                    Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
-                    Generation = ReadModelGeneration.First,
-                },
-                ContainerName = namingPolicy.GetReadModelName(readModel.ReadModelType),
-                DisplayName = readModel.ReadModelType.Name,
-                Sink = new()
-                {
-                    ConfigurationId = Guid.Empty,
-                    TypeId = GetSinkTypeIdFor(readModel.ReadModelType)
-                },
-                Schema = schemaGenerator.GenerateForReadModel(readModel.ReadModelType).ToJson(),
-                Indexes = GetIndexesForType(readModel.ReadModelType, string.Empty),
-                ObserverType = observerType,
-                ObserverIdentifier = observerIdentifier
-            };
-        });
-
-        await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
-        {
-            EventStore = eventStore.Name,
-            Owner = ReadModelOwner.Client,
-            ReadModels = readModelDefinitions
-        });
+        var payload = PrepareRegistration();
+        await RegisterPrepared(payload);
     }
 
     /// <inheritdoc/>
     public async Task Register<TReadModel>()
     {
+        var observerType = ReadModelObserverType.Projection;
+        var observerIdentifier = string.Empty;
+
+        if (eventTypes.IsEventTarget(typeof(TReadModel)))
+        {
+            var targetHandler = (IHaveReadModel?)projections.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel))
+                ?? reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
+            if (targetHandler is IReducerHandler targetReducer)
+            {
+                observerType = ReadModelObserverType.Reducer;
+                observerIdentifier = targetReducer.Id.Value;
+            }
+            else if (targetHandler is IProjectionHandler targetProjection)
+            {
+                observerIdentifier = targetProjection.Id.Value;
+            }
+
+            await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
+            {
+                EventStore = eventStore.Name,
+                Owner = ReadModelOwner.Client,
+                ReadModels = [CreateEventTargetDefinition(typeof(TReadModel), observerType, observerIdentifier)]
+            });
+            return;
+        }
+
         // A read model nothing in this client knows yet, carrying model-bound attributes, is a request to register it
         // explicitly - its projection is registered along with it, which in turn registers the read model below.
         if (!projections.HasFor<TReadModel>() &&
@@ -130,9 +113,6 @@ public class ReadModels(
             await projections.Register<TReadModel>();
             return;
         }
-
-        var observerType = ReadModelObserverType.Projection;
-        var observerIdentifier = string.Empty;
 
         if (projections.HasFor<TReadModel>())
         {
@@ -162,7 +142,7 @@ public class ReadModels(
                     Identifier = typeof(TReadModel).GetReadModelIdentifier(),
                     Generation = ReadModelGeneration.First,
                 },
-                ContainerName = namingPolicy.GetReadModelName(typeof(TReadModel)),
+                ContainerName = GetContainerNameFor(typeof(TReadModel)),
                 DisplayName = typeof(TReadModel).Name,
                 Sink = new()
                 {
@@ -186,6 +166,7 @@ public class ReadModels(
     /// <inheritdoc/>
     public async Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
+        ReadProtectionGuard.Read(nameof(GetInstanceById));
         var readModelType = typeof(TReadModel);
         var result = await GetInstanceById(readModelType, key, sessionId);
         var instance = (TReadModel)result;
@@ -203,6 +184,9 @@ public class ReadModels(
     /// <inheritdoc/>
     public async Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
+        ReadProtectionGuard.Read(nameof(GetInstanceById));
+        EventStreamReadModel.RequireStreamScope(readModelType);
+
         // Validate that the read model is known by either projections or reducers
         if (!projections.HasFor(readModelType) && !reducers.HasFor(readModelType))
         {
@@ -233,34 +217,14 @@ public class ReadModels(
         };
 
         var response = await _chronicleServicesAccessor.Services.ReadModels.GetInstanceByKey(request);
-        var readModelJson = response.ReadModel;
-
-        // A "null" JSON value means the model was not found in the sink (e.g. removed or never created).
-        if (readModelJson == "null")
-        {
-            return default!;
-        }
-
-        // Mirror the __lastHandledEventSequenceNumber that the sink writes so that
-        // GetInstanceById results are consistent with sink-stored read models.
-        if (response.LastHandledEventSequenceNumber != EventSequenceNumber.Unavailable)
-        {
-            var jsonNode = JsonNode.Parse(readModelJson);
-            if (jsonNode is JsonObject jsonObj)
-            {
-                jsonObj["__lastHandledEventSequenceNumber"] =
-                    JsonValue.Create(response.LastHandledEventSequenceNumber);
-                readModelJson = jsonObj.ToJsonString(jsonSerializerOptions);
-            }
-        }
-
-        var instance = JsonSerializer.Deserialize(readModelJson, readModelType, jsonSerializerOptions);
-        return instance ?? throw new InvalidOperationException($"Read model returned null for type '{readModelType.Name}' with key '{key.Value}'");
+        return DeserializeInstance(readModelType, key, response);
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null)
     {
+        ReadProtectionGuard.Read(nameof(GetInstances));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         var readModelType = typeof(TReadModel);
 
         // Validate that the read model is known by projections or reducers
@@ -298,6 +262,9 @@ public class ReadModels(
     /// <inheritdoc/>
     public async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
     {
+        ReadProtectionGuard.Read(nameof(GetSnapshotsById));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
+
         // Check for projection first
         if (projections.HasFor<TReadModel>())
         {
@@ -329,8 +296,37 @@ public class ReadModels(
     }
 
     /// <inheritdoc/>
+    public ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
+    {
+        ReadProtectionGuard.Read(nameof(Observe));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
+        var readModelType = typeof(TReadModel);
+        if (!projections.HasFor(readModelType) && !reducers.HasFor(readModelType))
+        {
+            throw new UnknownReadModel(readModelType);
+        }
+
+        if (IsPassive(readModelType))
+        {
+            throw new ReadModelCannotBeObserved(readModelType, "Passive read models have no materialized sink");
+        }
+
+        if (readModelType.IsEventTypeTarget())
+        {
+            throw new ReadModelCannotBeObserved(readModelType, "Event targets publish events instead of storing a collection");
+        }
+
+        var predicate = filter?.Compile();
+        var instances = materializedReadModels.ObserveInstances<TReadModel>(InstanceCountToSkip.Zero, InstanceCount.Unlimited);
+        return new ReadModelObservation<TReadModel>(instances.Select(set =>
+            (IEnumerable<TReadModel>)(predicate is null ? set.ToArray() : set.Where(predicate).ToArray())));
+    }
+
+    /// <inheritdoc/>
     public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
     {
+        ReadProtectionGuard.Read(nameof(Watch));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         if (reducers.HasFor<TReadModel>())
         {
             return reducerObservers.GetWatcher<TReadModel>().Observable
@@ -354,6 +350,8 @@ public class ReadModels(
     /// <inheritdoc/>
     public IReadModelWatcher<TReadModel> GetWatcherFor<TReadModel>()
     {
+        ReadProtectionGuard.Read(nameof(GetWatcherFor));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         if (!projections.HasFor<TReadModel>())
         {
             throw new UnknownReadModel(typeof(TReadModel));
@@ -385,6 +383,33 @@ public class ReadModels(
 
     /// <inheritdoc/>
     public Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances) => _releaser.Release(instances);
+
+    object DeserializeInstance(Type readModelType, ReadModelKey key, GetInstanceByKeyResponse response)
+    {
+        var readModelJson = response.ReadModel;
+
+        // A "null" JSON value means the model was not found in the sink (e.g. removed or never created).
+        if (readModelJson == "null")
+        {
+            return default!;
+        }
+
+        // Mirror the __lastHandledEventSequenceNumber that the sink writes so that
+        // GetInstanceById results are consistent with sink-stored read models.
+        if (response.LastHandledEventSequenceNumber != EventSequenceNumber.Unavailable)
+        {
+            var jsonNode = JsonNode.Parse(readModelJson);
+            if (jsonNode is JsonObject jsonObj)
+            {
+                jsonObj["__lastHandledEventSequenceNumber"] =
+                    JsonValue.Create(response.LastHandledEventSequenceNumber);
+                readModelJson = jsonObj.ToJsonString(jsonSerializerOptions);
+            }
+        }
+
+        var instance = JsonSerializer.Deserialize(readModelJson, readModelType, jsonSerializerOptions);
+        return instance ?? throw new InvalidOperationException($"Read model returned null for type '{readModelType.Name}' with key '{key.Value}'");
+    }
 
     /// <summary>
     /// Reads the snapshots one read model instance passed through.
@@ -450,6 +475,77 @@ public class ReadModels(
     }
 
     /// <summary>
+    /// Creates the registration of an event type that is the target of a projection or reducer. No read model is
+    /// registered for it: the registration names the event type, its schema and the sequence to publish to.
+    /// </summary>
+    /// <param name="eventTargetType">The event type.</param>
+    /// <param name="observerType">Whether a projection or a reducer maintains it.</param>
+    /// <param name="observerIdentifier">The identifier of that projection or reducer.</param>
+    /// <returns>The <see cref="ReadModelDefinition"/> carrying the event sequence sink.</returns>
+    /// <exception cref="TypeIsNotAnEventType">Thrown when the event type is not registered with this client.</exception>
+    /// <exception cref="EventLogIsNotAPublicationTarget">Thrown when the destination is the event log.</exception>
+    /// <exception cref="PrivateEventTypeCannotBePublishedToOutbox">Thrown when the outbox is the destination and the event type is not public.</exception>
+    ReadModelDefinition CreateEventTargetDefinition(Type eventTargetType, ReadModelObserverType observerType, string observerIdentifier)
+    {
+        var descriptor = eventTypes.GetDescriptorFor(eventTargetType, eventStore.Name);
+        if (descriptor.PublishingSequence == EventSequenceId.Log)
+        {
+            throw new EventLogIsNotAPublicationTarget(eventTargetType);
+        }
+
+        if (descriptor.PublishingSequence == EventSequenceId.Outbox && !descriptor.PublicationEligibility)
+        {
+            throw new PrivateEventTypeCannotBePublishedToOutbox(eventTargetType, eventStore.Name);
+        }
+
+        var eventType = descriptor.EventType;
+
+        if (!eventTypes.HasFor(eventType.Id))
+        {
+            throw new TypeIsNotAnEventType(eventTargetType);
+        }
+
+        return new ReadModelDefinition
+        {
+            Type = new()
+            {
+                Identifier = eventTargetType.GetReadModelIdentifier(),
+                Generation = ReadModelGeneration.First,
+            },
+            ContainerName = namingPolicy.GetReadModelName(eventTargetType),
+            DisplayName = eventTargetType.Name,
+            Sink = new()
+            {
+                ConfigurationId = Guid.Empty,
+                TypeId = SinkTypeId.EventSequence,
+                EventSequence = new()
+                {
+                    EventType = eventType.ToContract(),
+                    EventSequence = descriptor.PublishingSequence.Value,
+                    IsPublic = descriptor.PublicationEligibility
+                }
+            },
+            Schema = (eventStore.Connection is Connections.IKernelCapabilities capabilities &&
+                capabilities.Capabilities.Contains(Contracts.Clients.KernelCapabilities.PreciseEventTypeSchemas)
+                    ? schemaGenerator.Generate(eventTargetType, eventTypes)
+                    : schemaGenerator.GenerateLegacyEventType(eventTargetType, eventTypes)).ToJson(),
+            Indexes = [],
+            ObserverType = observerType,
+            ObserverIdentifier = observerIdentifier
+        };
+    }
+
+    /// <summary>
+    /// Resolves the container name for a read model type.
+    /// </summary>
+    /// <param name="readModelType">The read model type to resolve the container name for.</param>
+    /// <returns>The container name override from a projection, or the naming policy's name.</returns>
+    string GetContainerNameFor(Type readModelType) =>
+        projections is IKnowReadModelContainerNames containerNames && containerNames.GetContainerNameOverride(readModelType) is { } containerName
+            ? containerName
+            : namingPolicy.GetReadModelName(readModelType);
+
+    /// <summary>
     /// Resolves the <see cref="SinkTypeId"/> for a read model type.
     /// </summary>
     /// <param name="readModelType">The read model type to resolve the sink for.</param>
@@ -460,9 +556,10 @@ public class ReadModels(
     /// projection when resolving the instance by key instead of reading an empty sink and returning null.
     /// </remarks>
     SinkTypeId GetSinkTypeIdFor(Type readModelType) =>
-        readModelType.IsPassive() || (projections is IKnowPassiveProjections passiveProjections && passiveProjections.IsPassive(readModelType))
-            ? SinkTypeId.None
-            : _defaultSinkTypeId;
+        IsPassive(readModelType) ? SinkTypeId.None : _defaultSinkTypeId;
+
+    bool IsPassive(Type readModelType) =>
+        readModelType.IsPassive() || (projections is IKnowPassiveProjections passiveProjections && passiveProjections.IsPassive(readModelType));
 
     List<IndexDefinition> GetIndexesForType(Type type, string prefix)
     {

@@ -102,6 +102,15 @@ public class ConstraintBuilder(
     }
 
     /// <inheritdoc/>
+    public IConstraintBuilder ClosesStreamOn<TEvent>(Action<IClosesStreamBuilder<TEvent>>? configure = default, ConstraintName? name = default)
+    {
+        var closing = new ClosesStreamBuilder<TEvent>(eventTypes, namingPolicy);
+        configure?.Invoke(closing);
+        AddConstraint(closing.Build(name ?? eventTypes.GetEventTypeFor(typeof(TEvent)).Id.Value));
+        return this;
+    }
+
+    /// <inheritdoc/>
     public void AddConstraint(IConstraintDefinition constraint)
     {
         _constraints.Add(constraint);
@@ -110,7 +119,7 @@ public class ConstraintBuilder(
     /// <inheritdoc/>
     public IImmutableList<IConstraintDefinition> Build()
     {
-        var constraints = MergeUniqueEventTypeConstraintsSharingName(_constraints);
+        var constraints = ClosesStreamDeclarations.Merge(MergeUniqueEventTypeConstraintsSharingName(_constraints)).ToList();
         ThrowIfDuplicateConstraintNames(constraints);
 
         return constraints.Select(ApplyEventSequences).ToImmutableList();
@@ -210,6 +219,7 @@ public class ConstraintBuilder(
         {
             UniqueConstraintDefinition unique => unique with { EventSequences = [.. unique.EventSequences.Concat(_eventSequences).Distinct()] },
             UniqueEventTypeConstraintDefinition uniqueEventType => uniqueEventType with { EventSequences = [.. uniqueEventType.EventSequences.Concat(_eventSequences).Distinct()] },
+            ClosesStreamConstraintDefinition closing => closing with { EventSequences = [.. closing.EventSequences.Concat(_eventSequences).Distinct()] },
             _ => definition
         };
     }

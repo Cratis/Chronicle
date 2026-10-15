@@ -41,6 +41,83 @@ public interface IEventSequence
     ITransactionalEventSequence Transactional { get; }
 
     /// <summary>
+    /// Snapshots an event using this store's serializer and additional-information providers exactly once.
+    /// </summary>
+    /// <param name="event">The event to prepare.</param>
+    /// <returns>Content reusable for append and verification on this sequence instance.</returns>
+    /// <exception cref="PreparedEventsNotSupported">This implementation does not support preparation.</exception>
+    Task<PreparedEvent> Prepare(object @event) => throw new PreparedEventsNotSupported();
+
+    /// <summary>
+    /// Appends prepared content without serializing the event or running providers again.
+    /// </summary>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="preparedEvent">The content prepared by this sequence.</param>
+    /// <param name="eventStreamType">Optional stream type.</param>
+    /// <param name="eventStreamId">Optional stream id.</param>
+    /// <param name="eventSourceType">Optional source type.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional tags.</param>
+    /// <param name="concurrencyScope">Optional concurrency scope.</param>
+    /// <param name="occurred">Optional occurrence time.</param>
+    /// <param name="subject">Optional subject overriding the prepared event's subject.</param>
+    /// <returns>The append outcome.</returns>
+    /// <exception cref="PreparedEventsNotSupported">This implementation does not support prepared appends.</exception>
+    /// <exception cref="PreparedEventBelongsToAnotherSequence">The content belongs to another sequence instance.</exception>
+    Task<AppendResult> AppendPrepared(
+        EventSourceId eventSourceId,
+        PreparedEvent preparedEvent,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) => throw new PreparedEventsNotSupported();
+
+    /// <summary>
+    /// Appends prepared content through a registered event source definition without serializing the event or running providers again.
+    /// </summary>
+    /// <param name="eventSource">The type of the <see cref="IEventSource"/> to append through.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> of the event source instance.</param>
+    /// <param name="preparedEvent">The content prepared by this sequence.</param>
+    /// <param name="eventStream">Optional name of a stream declared by the event source.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> within the stream. The format is left to the caller.</param>
+    /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event.</param>
+    /// <param name="tags">Optional tags to associate with the event.</param>
+    /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/>. When not set it is narrowed to the dimensions the definition declares.</param>
+    /// <param name="occurred">Optional time the event occurred.</param>
+    /// <param name="subject">Optional subject overriding the prepared event's subject.</param>
+    /// <returns>The append outcome.</returns>
+    /// <exception cref="UnknownEventSource">The type is not a discovered event source.</exception>
+    /// <exception cref="EventStreamDoesNotBelongToEventSource">The stream is not declared by the event source.</exception>
+    /// <exception cref="PreparedEventsNotSupported">This implementation does not support prepared appends.</exception>
+    /// <exception cref="PreparedEventBelongsToAnotherSequence">The content belongs to another sequence instance.</exception>
+    Task<AppendResult> AppendPreparedThroughEventSource(
+        Type eventSource,
+        EventSourceId eventSourceId,
+        PreparedEvent preparedEvent,
+        string? eventStream = default,
+        EventStreamId? eventStreamId = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) => throw new PreparedEventsNotSupported();
+
+    /// <summary>
+    /// Compares prepared content with the complete, strictly released content at an exact sequence number.
+    /// </summary>
+    /// <param name="sequenceNumber">The event to verify.</param>
+    /// <param name="preparedEvent">Content prepared by this sequence, in the generation to compare.</param>
+    /// <param name="eventSourceId">Optional event source to require.</param>
+    /// <returns>Equal, different, or unavailable. Unavailable is never proof of a duplicate.</returns>
+    /// <exception cref="PreparedEventBelongsToAnotherSequence">The content belongs to another sequence instance.</exception>
+    Task<ContentVerificationResult> VerifyContent(EventSequenceNumber sequenceNumber, PreparedEvent preparedEvent, EventSourceId? eventSourceId = default) =>
+        Task.FromResult(ContentVerificationResult.Unavailable);
+
+    /// <summary>
     /// Get all events for a specific <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
@@ -50,6 +127,28 @@ public interface IEventSequence
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to narrow to. Omit, or pass <see cref="EventSourceType.Default"/> or <see cref="EventSourceType.Unspecified"/>, to not narrow.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> filterEventTypes, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, EventSourceType? eventSourceType = default);
+
+    /// <summary>
+    /// Reads metadata without event content at one locator. Authorize the read before calling.
+    /// </summary>
+    /// <param name="sequenceNumber">The sequence locator.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The metadata, or null if the event does not exist.</returns>
+    /// <exception cref="EventMetadataReadsNotSupported">The implementation does not support metadata reads.</exception>
+    Task<EventMetadata?> GetMetadataAt(EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default)
+        => throw new EventMetadataReadsNotSupported();
+
+    /// <summary>
+    /// Reads metadata at up to 500 locators without event content. Missing events are omitted.
+    /// Authorize the read before calling. Identity names resolve at read time, not append time.
+    /// </summary>
+    /// <param name="sequenceNumbers">The sequence locators.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The matching metadata keyed by locator.</returns>
+    /// <exception cref="TooManyEventLocators">More than 500 locators were supplied.</exception>
+    /// <exception cref="EventMetadataReadsNotSupported">The implementation does not support metadata reads.</exception>
+    Task<IImmutableDictionary<EventSequenceNumber, EventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+        => throw new EventMetadataReadsNotSupported();
 
     /// <summary>
     /// Check if there are events for a specific <see cref="EventSourceId"/>.
@@ -363,4 +462,45 @@ public interface IEventSequence
     /// append targeting the same stream results in a constraint violation of type <c language="csharp">StreamClosed</c>.
     /// </remarks>
     Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId);
+
+    /// <summary>
+    /// Manually complete a nonempty scope, optionally guarded by its expected tail.
+    /// </summary>
+    /// <param name="scope">The scope to close.</param>
+    /// <param name="expectedTailSequenceNumber">The expected scope tail, or null for no guard.</param>
+    /// <returns>The sequence tail at closure, or a completion error.</returns>
+    /// <exception cref="ClosedStreamScopesNotSupported">The implementation does not support scopes.</exception>
+    /// <remarks>
+    /// Covering manual closures return AlreadyCompleted. Event-owned coverage alone still writes a manual
+    /// closure, so later reopening events cannot undo the operator's explicit decision.
+    /// </remarks>
+    Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default) =>
+        throw new ClosedStreamScopesNotSupported();
+
+    /// <summary>
+    /// Check whether a scope is covered by a persisted closure.
+    /// </summary>
+    /// <param name="scope">The scope to inspect.</param>
+    /// <returns>True if covered.</returns>
+    /// <exception cref="ClosedStreamScopesNotSupported">The implementation does not support scopes.</exception>
+    Task<bool> IsStreamCompleted(ClosedStreamScope scope) => throw new ClosedStreamScopesNotSupported();
+
+    /// <summary>
+    /// Check whether a stream is covered by a persisted closure.
+    /// </summary>
+    /// <param name="eventStreamType">The stream type.</param>
+    /// <param name="eventStreamId">The stream identifier.</param>
+    /// <returns>True if covered.</returns>
+    Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
+        IsStreamCompleted(ClosedStreamScope.ForStream(
+            eventStreamType.Value.Length == 0 ? EventStreamType.All : eventStreamType,
+            eventStreamId.Value.Length == 0 ? EventStreamId.Default : eventStreamId));
+
+    /// <summary>
+    /// Inspect closed scopes within optional dimensions.
+    /// </summary>
+    /// <param name="within">The scope filter, or null for all closures.</param>
+    /// <returns>The matching closed scopes.</returns>
+    /// <exception cref="ClosedStreamScopesNotSupported">The implementation does not support scopes.</exception>
+    Task<IImmutableList<ClosedStream>> GetClosedStreams(ClosedStreamScope? within = default) => throw new ClosedStreamScopesNotSupported();
 }

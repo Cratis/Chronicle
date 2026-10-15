@@ -42,6 +42,8 @@ public class all_dependencies : Specification
     protected IIdentityProvider _identityProvider;
     protected Reactors _reactors;
 
+    protected virtual Observation.EventGenerationDelivery GenerationDelivery => Observation.EventGenerationDelivery.Compatibility;
+
     void Establish()
     {
         _eventStore = Substitute.For<IEventStore>();
@@ -100,7 +102,10 @@ public class all_dependencies : Specification
             _reactorContextValuesBuilder,
             new ReactorMethodArgumentsResolver(),
             _logger,
-            _loggerFactory);
+            _loggerFactory)
+        {
+            GenerationDelivery = GenerationDelivery
+        };
     }
 
     protected virtual ICausationManager CreateCausationManager() => Substitute.For<ICausationManager>();

@@ -26,4 +26,10 @@ public class GetInstanceByKeyResponse
     /// </summary>
     [ProtoMember(3)]
     public ulong LastHandledEventSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the fold honored the requested event stream scope.
+    /// </summary>
+    [ProtoMember(4)]
+    public bool StreamScoped { get; set; }
 }

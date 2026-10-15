@@ -31,13 +31,15 @@ static class ProjectionDefinitionCreator<TModel>
     /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
     /// <param name="artifactsActivator">The <see cref="IClientArtifactsActivator"/>.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
+    /// <param name="variantDeclarations">Receives what the projection declared about being a variant, when it did.</param>
     /// <returns>A <see cref="Monads.Catch{T}"/> wrapping the built definition.</returns>
     public static Monads.Catch<Contracts.Projections.ProjectionDefinition> CreateAndDefine(
         Type type,
         INamingPolicy namingPolicy,
         IEventTypes eventTypes,
         IClientArtifactsActivator artifactsActivator,
-        JsonSerializerOptions jsonSerializerOptions)
+        JsonSerializerOptions jsonSerializerOptions,
+        IDictionary<Type, FluentVariantDeclaration> variantDeclarations)
     {
         try
         {
@@ -54,7 +56,13 @@ static class ProjectionDefinitionCreator<TModel>
                 eventTypes,
                 jsonSerializerOptions);
             activateResult.AsT0.Define(builder);
-            return builder.Build();
+            var definition = builder.Build();
+            if (builder.VariantDeclaration is not null)
+            {
+                variantDeclarations[type] = builder.VariantDeclaration;
+            }
+
+            return definition;
         }
         catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is TargetInvocationException)
         {

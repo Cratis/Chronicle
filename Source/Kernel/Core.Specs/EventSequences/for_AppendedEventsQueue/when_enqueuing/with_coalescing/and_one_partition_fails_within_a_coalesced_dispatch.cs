@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_enqueuing
 /// that partition group so the remaining partitions in the same dispatch still deliver — the failed one is recovered
 /// through the observer's own partition-failure and catch-up machinery.
 /// </summary>
-public class and_one_partition_fails_within_a_coalesced_dispatch : given.a_single_subscriber_with_an_event_type
+public class and_one_partition_fails_within_a_coalesced_dispatch : given.a_single_subscriber_with_queue_telemetry
 {
     AppendedEvent _failingPartitionEvent;
     AppendedEvent _healthyPartitionEvent;
@@ -58,4 +58,6 @@ public class and_one_partition_fails_within_a_coalesced_dispatch : given.a_singl
 
     [Fact] void should_still_deliver_the_healthy_partition() =>
         _handledEventsPerPartition.ContainsKey(_healthyPartition).ShouldBeTrue();
+
+    [Fact] void should_count_only_the_failed_partitions_events_as_suspected_undelivered() => _suspectedUndelivered.ShouldEqual(1);
 }

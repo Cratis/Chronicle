@@ -1,9 +1,19 @@
 <!-- cratis-ai-managed: skills/cratis-chronicle-read-model/references/queries.md -->
 # Read-model queries
 
-Verified against `Cratis.Arc.Core` and `Cratis.Arc.MongoDB` as checked out
-alongside `Cratis.Chronicle` `18.3.0`. Confirm the exact Arc package version in
-the consuming project before citing one.
+## Contents
+
+- Where the pieces live
+- Discovery rules
+- Snapshot queries
+- Observable queries
+- The `Observe` family — exact signatures
+- Cost and composition
+- Custom routes
+- Reading without a query surface
+
+Verified against `Cratis.Arc.Core` and `Cratis.Arc.MongoDB` **v22.75.0**.
+Chronicle projection behavior is owned by the Chronicle guidance.
 
 ## Where the pieces live
 
@@ -13,7 +23,8 @@ the consuming project before citing one.
 | `PathAttribute` (`[Path]`) | `Cratis.Arc.Queries.ModelBound` | `Cratis.Arc.Core` |
 | the `Observe` extensions | `MongoDB.Driver` | `Cratis.Arc.MongoDB` |
 
-`[ReadModel]` is a bare marker with **no constructor parameters**. `[Path]` takes
+`[ReadModel]` has no constructor parameters; its `RequireQueryAttribute = true`
+property opts into explicit endpoint discovery. `[Path]` takes
 one `string path` and targets a class or a method.
 
 The `Observe` extensions are deliberately declared in the `MongoDB.Driver`
@@ -22,8 +33,17 @@ Chronicle extensions — Chronicle declares no `Observe` on `IMongoCollection<T>
 
 ## Discovery rules
 
-Arc scans the read-model type for **static** methods, public and non-public
-alike. Instance methods are never discovered.
+Arc discovers **public static** methods; private and compiler-generated methods
+are never queries. Use `[ReadModel(RequireQueryAttribute = true)]` and `[Query]`
+on intended endpoints when the type also has folds (`Create`/`Reduce`) or public
+helpers. `[Query]` alone does not hide siblings. ARC0026 checks invalid/ambiguous
+query declarations; ARCCHR0019 warns about fold-like statics exposed by convention.
+A `CancellationToken` parameter is supplied by Arc, not a query argument/proxy
+input. Concept parameters are always caller-supplied, never DI. Invalid bool,
+overflow, concept or collection-element GET/QUERY arguments return HTTP 400.
+Minimal-API concepts serialize as primitives since 22.26.0.
+Sources at Arc v22.75.0: `Arc.Core/Queries/ModelBound/ReadModelAttribute.cs`,
+`QueryAttribute.cs`, and `Documentation/backend/csharp/chronicle/code-analysis/ARCCHR0019.md`.
 
 The declared return type is validated after unwrapping at most one `Task<>`:
 
@@ -84,27 +104,32 @@ Return `ISubject<...>` directly. Do **not** return `Task<ISubject<...>>`.
 ISubject<IEnumerable<TDocument>> Observe<TDocument>(
     this IMongoCollection<TDocument> collection,
     Expression<Func<TDocument, bool>>? filter,
-    FindOptions? options = null);
+    FindOptions? options = null,
+    bool ignoreQueryContext = false);
 
 ISubject<IEnumerable<TDocument>> Observe<TDocument>(
     this IMongoCollection<TDocument> collection,
     FilterDefinition<TDocument>? filter = null,
-    FindOptions? options = null);
+    FindOptions? options = null,
+    bool ignoreQueryContext = false);
 
 // single-valued
 ISubject<TDocument> ObserveSingle<TDocument>(
     this IMongoCollection<TDocument> collection,
     Expression<Func<TDocument, bool>>? filter,
-    FindOptions? options = null);
+    FindOptions? options = null,
+    bool ignoreQueryContext = false);
 
 ISubject<TDocument> ObserveSingle<TDocument>(
     this IMongoCollection<TDocument> collection,
     FilterDefinition<TDocument>? filter = null,
-    FindOptions? options = null);
+    FindOptions? options = null,
+    bool ignoreQueryContext = false);
 
 ISubject<TDocument> ObserveById<TDocument, TId>(
     this IMongoCollection<TDocument> collection,
-    TId id);
+    TId id,
+    bool ignoreQueryContext = false);
 ```
 
 Two details that catch people out:
@@ -119,17 +144,22 @@ Two details that catch people out:
 Also available in the same place: `FindById<T, TId>` and
 `FindByIdAsync<T, TId>`.
 
+Single-instance `ObserveSingle`/`ObserveById` (MongoDB and EF) emit `default`
+when absent, deleted or outside the filter, without ending the subscription.
+Guard React `result.hasData` and `result.isReady` before dereferencing data.
+
 ## Cost and composition
 
-The behavior below was checked against **Arc v22.49.0**
-([collection observation](https://github.com/Cratis/Arc/blob/v22.49.0/Documentation/backend/csharp/mongodb/observing-collections.md),
-[implementation](https://github.com/Cratis/Arc/blob/v22.49.0/Source/DotNET/MongoDB/MongoCollectionExtensions.cs)).
+The behavior below was checked against **Arc v22.75.0**
+([collection observation](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/mongodb/observing-collections.md),
+[implementation](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/MongoDB/MongoCollectionExtensions.cs)).
 Do not generalize it to every provider or custom observable.
 
 - Per-collection `Observe` reads an initial filtered set, retains it in memory,
   and applies change-stream updates. It does **not** re-query the entire
   collection for every event. Updates/replacements perform a keyed membership
-  lookup; paged removals can query to refill the page.
+  lookup for unpaged observations. Paged observations re-read the page and total
+  on every change; sort ties and unsorted pages use `_id`.
 - Collection emissions still construct a snapshot of the retained set. In-memory
   joins, sorting, mapping, and serialization downstream can be expensive even
   without a full database re-query. Measure retained rows, payload size, change
@@ -148,7 +178,7 @@ Do not generalize it to every provider or custom observable.
 - Prefer a purpose-built projected summary for frequently recomputed joins.
   Query-time composition is supported, not forbidden. Bound each input and define
   count, paging, missing-related-data, and subscription-disposal behavior.
-  In v22.49.0 auxiliary observations can use `ignoreQueryContext: true` so client
+  At v22.75.0 MongoDB and EF auxiliary observations can use `ignoreQueryContext: true` so client
   paging/counts belong to the primary source. That option reads **all matching
   auxiliary rows**; it is not a performance limit. Confirm version support before
   using it, and keep an explicit narrow filter.

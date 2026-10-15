@@ -6,6 +6,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Schemas;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.EventSequences;
@@ -15,6 +16,20 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// </summary>
 public interface IEventSequenceStorage
 {
+    /// <summary>
+    /// Gets whether reads reliably identify revisions, including revisions of another generation.
+    /// </summary>
+    /// <remarks>Verification must fail closed when historical revisions cannot be ruled out.</remarks>
+    bool SupportsRevisionTracking => false;
+
+    /// <summary>
+    /// Renders content through this backend's append serialization without writing an event.
+    /// </summary>
+    /// <param name="content">The schema-converted, protected append content.</param>
+    /// <param name="schema">The generation schema.</param>
+    /// <returns>The JSON exposed by a storage read, or null if the backend cannot provide it.</returns>
+    string? SerializeContentForVerification(ExpandoObject content, JsonSchema schema) => null;
+
     /// <summary>
     /// Ensure any required indexes exist on the event sequence collection.
     /// </summary>
@@ -260,6 +275,16 @@ public interface IEventSequenceStorage
     Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber);
 
     /// <summary>
+    /// Reads only metadata at the supplied sequence locators. Missing events are omitted.
+    /// </summary>
+    /// <param name="sequenceNumbers">The bounded collection of locators.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The stored metadata, without event content.</returns>
+    /// <exception cref="EventMetadataReadsNotSupported">The provider does not support metadata-only reads.</exception>
+    Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+        => throw new EventMetadataReadsNotSupported();
+
+    /// <summary>
     /// Get the last instance of the specified event types for a specific event source.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
@@ -362,11 +387,25 @@ public interface IEventSequenceStorage
 
     /// <summary>
     /// Replace the generational content for an event at a specific sequence number.
-    /// Used during event type migration when new generations are added and existing events
-    /// need their content updated with the migrated content for all generations.
+    /// Retained for compatibility; generation backfill uses the guarded, add-only operation instead.
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to update.</param>
     /// <param name="content">The new content per <see cref="EventTypeGeneration"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task ReplaceGenerationContent(EventSequenceNumber sequenceNumber, IDictionary<EventTypeGeneration, ExpandoObject> content);
+
+    /// <summary>
+    /// Reads protected base content independently of revision delivery.
+    /// </summary>
+    /// <param name="sequenceNumber">The event to read.</param>
+    /// <returns>The stored generations, or null when the event does not exist.</returns>
+    Task<StoredEventGenerations?> GetStoredGenerations(EventSequenceNumber sequenceNumber);
+
+    /// <summary>
+    /// Atomically adds missing generations, hashes and provenance without replacing existing content.
+    /// </summary>
+    /// <param name="observed">The snapshot to guard against concurrent revision, redaction or source changes.</param>
+    /// <param name="generations">The generations to add.</param>
+    /// <returns>True if all generations were added; false on a conflict or an existing target.</returns>
+    Task<bool> TryAddGenerations(StoredEventGenerations observed, IEnumerable<GenerationToAdd> generations);
 }

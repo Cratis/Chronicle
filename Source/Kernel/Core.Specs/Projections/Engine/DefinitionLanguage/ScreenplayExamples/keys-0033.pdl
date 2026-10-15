@@ -1,0 +1,2 @@
+projection Doc => DocReadModel
+  from EventA key idA, EventB key idB, EventC

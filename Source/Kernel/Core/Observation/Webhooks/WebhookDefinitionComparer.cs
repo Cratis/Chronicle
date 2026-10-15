@@ -35,7 +35,7 @@ public class WebhookDefinitionComparer(
 
         logger.ComparingDefinitions(webhookKey.WebhookId);
 
-        if (objectComparer.Compare(first, second, out _))
+        if (first.GenerationDelivery == second.GenerationDelivery && objectComparer.Compare(first, second, out _))
         {
             return new WebhookDefinitionComparisonResult(WebhookDefinitionCompareResult.Same, null);
         }
@@ -48,7 +48,10 @@ public class WebhookDefinitionComparer(
             IsReplayableChanged: first.IsReplayable != second.IsReplayable,
             IsActiveChanged: first.IsActive != second.IsActive,
             OwnerChanged: first.Owner != second.Owner,
-            EventSequenceIdChanged: first.EventSequenceId != second.EventSequenceId);
+            EventSequenceIdChanged: first.EventSequenceId != second.EventSequenceId)
+        {
+            GenerationDeliveryChanged = first.GenerationDelivery != second.GenerationDelivery
+        };
 
         return new WebhookDefinitionComparisonResult(WebhookDefinitionCompareResult.Different, changedProperties);
     }

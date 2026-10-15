@@ -133,6 +133,10 @@ public class Observers
     /// that silent, permanent spin into a visible, operator-actionable state. Unlike <see cref="MaxRetryAttempts"/>,
     /// 0 is not treated as infinite here - a value of 0 or less always quarantines on the very first stranded
     /// recovery, since leaving this unbounded reintroduces the loop this setting exists to close.
+    /// <para>
+    /// The same bound applies to the watchdog retrying the recovery a subscribed observer is owed once its quarantine
+    /// is cleared, when that recovery failed and left the observer disconnected.
+    /// </para>
     /// </remarks>
     public int MaxCatchupRecoveryAttempts { get; init; } = 5;
 }

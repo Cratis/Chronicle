@@ -1,6 +1,13 @@
 <!-- cratis-ai-managed: skills/cratis-arc-react-page/references/queries-and-commands.md -->
 # Queries and commands reference
 
+## Contents
+
+- Query proxy hooks
+- Observable query transport
+- Command proxy
+- `<Arc>` configuration
+
 A Debug build generates one typed proxy class per query and per command. The
 proxy exposes static React hooks; the page calls those. Never edit a generated
 file — fix the C# source and rebuild.
@@ -214,10 +221,20 @@ view model as `ICommandScope`. It exposes `hasChanges`, `isPerforming`,
 `execute()` (which runs only the commands that have changes), and
 `revertChanges()`.
 
+At Arc v22.75.0 `CommandForm` hides raw server exception text by default
+("An unexpected error occurred. Please try again."). Customize `exceptionMessage`
+or `exceptionDisplayComponent` (`ExceptionDisplayProps`); `showErrors={false}`
+hides built-in display. Dynamic accessors need `fieldName`; custom field validation
+failures block submit. `useIdentity(type)` deserializes typed details.
+Sources: `Source/JavaScript/Arc.React/Arc.tsx` and
+`commands/CommandForm/CommandForm.tsx` at v22.75.0.
+
 ## `<Arc>` configuration
 
 The top-level provider configures the microservice name, API base path, and
-query transport. Its props include `microservice`, `origin`, `basePath`,
+query transport. Verified at Arc v22.75.0: `basePath` is deprecated and does not
+configure routing; use `apiBasePath` for APIs, router basename for client routing
+and `UsePathBase` on the host. Its props include `microservice`, `origin`,
 `apiBasePath`, `httpHeadersCallback` (merged into every request — bearer and
 tenant headers), `detailsType`, `queryTransportMethod`, `queryConnectionCount`,
 `queryDirectMode`, `observableQueryTransferMode`, and `queryCacheRetentionMs`.

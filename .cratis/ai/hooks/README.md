@@ -13,6 +13,7 @@ Three layers:
 | Hard block | `PreToolUse` on a write | `scripts/cratis-guard-writes.sh` | zero | exits **2** — the write does not happen |
 | Hard block | `PreToolUse` on `Bash` | `scripts/cratis-guard-store-mutations.sh` | zero; parses only commands that mention `cratis` | exits **2** — the store-changing `cratis chronicle` command does not run |
 | Hard block | `PreToolUse` on `Bash` | `scripts/cratis-guard-pr-body.sh` | fetches shared rules only for `gh pr create/edit` | exits **2** for inline bodies, invalid notes or conflicting release labels; warns and allows when offline with no cache |
+| Cleanup of delivered work | `PostToolUse` on `Bash` (`gh pr merge`, `git pull/merge/worktree`) and `SessionStart` (Pi: `tool_result` and `session_start`) | `scripts/cratis-cleanup-worktrees.sh --hook` | zero when the command is unrelated | never blocks; removes delivered worktrees and branches, reports what it kept |
 | Quality gate (Claude) | `Stop` | `scripts/cratis-quality-gate.sh` | one build/test run, only when relevant files changed | exits **2** — the turn does not end |
 | Quality gate (Pi) | explicit `cratis_quality_gate` tool | same script | only at a requested verification checkpoint | error on failure; no turn-end hook |
 
@@ -60,6 +61,29 @@ Tracked-file stability follows Git-visible contents, not byte-exact disk content
 conversion and Git's assume-unchanged or skip-worktree settings can hide raw disk changes. If you
 use those settings, independently verify raw file contents or remove the hiding settings before
 relying on this check.
+
+## Cleanup of delivered work
+
+`scripts/cratis-cleanup-worktrees.sh` is the one place that removes linked worktrees and local
+branches after their work shipped; worktrees pile up otherwise (`gh pr merge --delete-branch`
+cannot delete a branch that a worktree still has checked out, so the pair is left behind) and eat disk.
+It removes only on **evidence of delivery**, never on a guess: the tip is merged into `origin/<default>`
+and was integrated rather than merely sitting on the default branch's first-parent history (where a
+brand-new empty branch sits), or it is merged and its upstream is gone, or GitHub reports a merged pull
+request whose head is exactly that tip. It never forces: a dirty, locked or current worktree is kept, as
+is anything undelivered, and every kept item is reported with its reason. Ignored files (`node_modules`,
+build output, `.ai-work/`) go with a delivered worktree; they are the disk being reclaimed.
+
+- **When it runs.** After a Bash command that delivers or integrates work, and at the start of every
+  session, so orphans left by any earlier session, crash or harness are collected too.
+  Claude Code and Pi are wired (`settings.template.json`, the `cratis-hooks` Pi extension).
+  Harnesses with no hook wiring (Copilot, Cursor, OpenCode) rely on the **ship-changes** prompt, whose
+  final step runs the same script, and on running it by hand.
+- **By hand.** `bash .cratis/ai/hooks/scripts/cratis-cleanup-worktrees.sh [--dry-run]` from any worktree;
+  run from the main checkout to also collect the worktree you are standing in.
+- **Self-test.** `--self-test` plants delivered, dirty, unmerged and brand-new cases and fails if any is
+  handled wrongly.
+- **Opt out.** `CRATIS_HOOKS_SKIP_CLEANUP=1`.
 
 ## What is enforced
 
@@ -184,8 +208,10 @@ property is only reported when it really sits inside an `[EventType]`.
 ### Project-specific gate configuration
 
 The shipped gates discover the repository's own solution and package, so most repositories need no
-configuration at all. A repository whose project is not where discovery lands — several packages, a
-frontend under `Source/<App>` — states only what differs in its own
+configuration at all. An eligible root workspace or solution keeps repository-wide dispatch. Without
+one, discovery uses only each gate's matching, non-excluded changes and runs it once per affected
+project directory, choosing the deepest containing project for each path. A repository
+that needs a different location or has changes outside several candidate projects states only what differs in its own
 `.cratis/ai/quality-gates.project.json`, which the gate merges over the managed file by gate id:
 
 ```json
@@ -403,7 +429,10 @@ A gate whose `requires.commands` are not on `PATH`, whose `requires.paths` do no
 script may instead be defined in the root `package.json` — this assumes Yarn Berry, where a
 root-defined `g:` script runs from every workspace, and no workspace `package.json` is inspected), or whose `workingDirectoryFrom` matches
 nothing in the repository, is a **no-op with a message on stderr**
-rather than a failure — that is how a repository with no .NET solution or no frontend stays quiet.
+rather than a failure — a repository with no .NET solution or no frontend runs no corresponding gate.
+With no working-tree changes the script exits silently. An empty plan for a changed tree reports
+`cratis-quality-gate: no gates selected — product verification was not performed.` on stderr; this
+is not evidence of product verification.
 
 An override in `.cratis/ai/quality-gates.project.json` is merged shallowly: a field it states
 replaces the managed one. The one exception is `requires.packageScripts`: an override that sets
@@ -422,10 +451,31 @@ gates it needs in `.cratis/ai/quality-gates.project.json`.
 repository and silently no-op in every other, which is the worst of both: it looks configured and
 checks nothing. So the .NET and frontend gates state *what kind of project* they build and let the
 gate script find it — `workingDirectoryFrom: ["*.slnx", "*.sln", "**/*.slnx", "**/*.sln"]` runs
-`dotnet build` in whichever directory holds the repository's own solution, preferring one at the
-root because the globs are tried in order. The frontend gates discover `package.json` the same way.
-The same shipped file therefore activates in an application repository, activates in a framework
-repository, and stays quiet in a repository that has no project at all.
+`dotnet build` in the directories holding the affected solutions. The frontend gates discover
+`package.json` the same way. For each changed path surviving the gate's `changed`/`excludeChanged`
+filters, discovery preserves an eligible root project and otherwise selects its deepest containing
+project within the first glob holding eligible candidates, running once per affected directory.
+The default root-first glob order retains dependent-workspace coverage; explicit glob preferences
+remain honored. Unrelated
+README edits and excluded `dist`, `bin`, or `obj` changes never influence that selection. A single
+eligible project may own source outside its directory; multiple candidates with an uncontained
+trigger report `UNVERIFIED` and exit 2, requiring explicit configuration rather than checking one
+arbitrary package.
+
+When `.cratis/ai.manifest.json` exists, discovery excludes the installed `.cratis/ai/` tree and
+symlinks resolving into it. Without the install manifest, authored corpus packages remain eligible.
+Containment resolves paths physically with `cd -P`, including directory symlinks followed by `..`;
+both the project-file target and the execution directory must be inside the task-owning repository
+and outside the managed tree. This depends on actual targets, not a global exclusion of similarly
+named authored directories. Candidate resolution is cached across gates, and path filtering and
+prefix selection use batch passes rather than per-path subprocesses.
+
+Gate commands read from `/dev/null`, never the remaining directory list. If some affected directories
+run while others have unmet requirements, the gate reports `UNVERIFIED` and exits 2; a wholly
+inapplicable gate remains a no-op. Pi preserves the script's diagnostics when planning fails.
+
+The same shipped file therefore activates in application and framework repositories, and reports
+an empty plan without running gates in a repository that has no project at all.
 
 **Overriding it, in order of increasing force.** Set `workingDirectory` on a gate to pin one of
 several candidate projects; drop a `quality-gates.json` of your own in place of the shipped one; or

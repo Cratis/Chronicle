@@ -1,0 +1,7 @@
+projection Doc => DocReadModel
+  nested command
+    automap
+
+    from CommandSetForSlice
+    from CommandUpdated
+    clear with CommandClearedForSlice

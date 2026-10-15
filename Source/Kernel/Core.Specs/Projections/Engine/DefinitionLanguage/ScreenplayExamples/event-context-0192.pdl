@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from StateChanged
+    CurrentState = state
+    SequenceNumber = $eventContext.sequenceNumber
+    ChangedAt = $eventContext.occurred

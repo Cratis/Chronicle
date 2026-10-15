@@ -41,6 +41,20 @@ Consecutive `AddEvent` calls keep their existing source-grouped order. Each `Add
 
 Legacy-only `AddEvent` calls retain their historical event-sequence behavior. Once `AddEvents` participates, every event in the unit of work must name the same event sequence; a mismatch is rejected before the ordered batch is staged.
 
+## Contribute an enrollment scope (.NET)
+
+Attach an `IUnitOfWorkEnrollmentContributor` with `IUnitOfWork.AddEnrollmentContributor` when a command must require a concurrency scope for the events it stages. Keep the returned `IDisposable` handle for that command invocation and dispose it when the command finishes. Each registration is independent, including nested commands sharing a unit of work. Alternate unit-of-work implementations that do not support contributors throw `UnitOfWorkEnrollmentContributorsNotSupported` when a contributor is attached.
+
+Chronicle calls `GetRequiredScope(UnitOfWorkEnrollment)` before staging events, in registration order. The enrollment describes the event sequence, event source, caller-supplied scope (`NotSet` if omitted), and events for that source in this call. Return `ConcurrencyScope.NotSet` when no requirement applies. `AddEvents` consults each distinct event target, including targets without a supplied scope entry; scope-only entries are not consulted.
+
+A required scope replaces `NotSet`, but cannot replace a conflicting explicit scope. Event-type filters compare as sets. Null filters and the `All`, `Default`, and unspecified source-type sentinels compare as equivalent non-narrowing filters. Conflicts throw `ConflictingEnrollmentScope` before anything from that enrollment call is staged. Required scopes remain on the unit after the contributor is removed: later legacy appends, ordered batches, and scope-only entries cannot drop or contradict the requirement. Once a requirement is enrolled, every event in the unit must target the same event sequence, including events staged before the requirement. A required scope cannot share its event source with an enrolled decision read.
+
+To classify a `ConflictingEnrollmentScope`, inspect its get-only typed properties: `EventSourceId`, `Effective` and `Required` (`ConcurrencyScope`), and `EventSequenceId` (the attempted sequence, supplied by Chronicle's unit of work; null for the original three-argument constructor). Its message is redacted by design: it names differing scope dimensions without including identifiers or scope values. You can log or surface the message without exposing those values; treat the typed properties as sensitive diagnostic data.
+
+Chronicle calls `Enrolled(enrollment, effectiveScope)` only after staging succeeds. Use it to record provenance for the accepted enrollment; its default implementation does nothing. Contributors must not enroll events or reads, change registrations, commit, roll back, or dispose the unit during consultation or notification; such mutations throw `UnitOfWorkMutatedDuringEnrollment`. A consultation exception stages nothing. A notification exception propagates and marks the unit failed: subsequent commit throws `UnitOfWorkEnrollmentNotificationFailed` without appending anything. Roll back or dispose that unit.
+
+Atomicity is per call to `AddEvent`, `AddEventWithNamedTags`, or `AddEvents`, not per transactional `AppendMany` invocation: transactional methods that loop single-event enrollments can stage earlier events before a later enrollment fails. The transaction owner must roll back the failed operation. Contributors are not consulted for decision reads or at commit, and units without contributors retain their existing scope behavior.
+
 ## Staging after completion begins
 
 Stage all events before committing or rolling back. Once commit begins (even while its append is pending), after a failed commit, after rollback, or after disposal, newly staged events cannot be included in that unit's commit. The default `UnitOfWorkLifecyclePolicy.Compatibility` preserves existing `AddEvent` and `AddEvents` behavior for units without decision reads: late calls still stage their events, but Chronicle emits an error-level log for **each** attempt, with the unit's correlation id and no event content. Units with decision reads continue to reject late staging.
@@ -48,6 +62,16 @@ Stage all events before committing or rolling back. Once commit begins (even whi
 Opt in to `UnitOfWorkLifecyclePolicy.Strict` through `ChronicleOptions.UnitOfWorkLifecyclePolicy` (also inherited by `ChronicleClientOptions` and `ChronicleAspNetCoreOptions`). In strict mode, both enrollment methods throw `UnitOfWorkIsCompleted` before inspecting or changing their input or the staged events. This applies to units created by the client's `UnitOfWorkManager`, including those used by ASP.NET Core middleware. For units constructed directly, pass the policy to the `UnitOfWork` constructor; custom `IUnitOfWork` implementations are unaffected. Strict will become the default in the next major release.
 
 While a commit is in flight, disposing the unit does nothing in either mode: it does not roll back, discard staged events, or call the completion callback early. The callback runs once when the pending commit finishes. This differs from the former Compatibility behavior; it prevents disposal from replacing an in-flight commit's failure. In Compatibility mode, public `Rollback()` during a pending commit still clears staged events for units without a claimed and enrolled decision read, but cannot cancel events already submitted to Chronicle. A claimed unit with an enrolled decision read refuses public rollback during a pending commit and retains its staged events. In Strict mode, `Rollback()` refuses any pending commit without changing staged events. These pending-commit refusals throw `UnitOfWorkIsCompleting`; see [decision-consistent reads](../read-models/decision-reads) for ownership rules.
+
+## In ASP.NET Core
+
+`AddCratisChronicle` registers middleware that begins a unit of work for every request and commits it after the endpoint returns. Three things follow:
+
+- **Stage with `Transactional.Append`.** A plain `eventLog.Append` is written immediately and takes no part in the unit of work. It is not covered by decision reads enrolled in the unit.
+- **Commit early to report the outcome.** The middleware commits after the response is written, so a constraint or concurrency rejection cannot change that response, and nothing tells the caller. Call `IUnitOfWorkCompletionFeature.CommitAsync()` before you respond and check `IsSuccess` and `GetDecisionConflicts()`. The middleware does not commit a completed unit again.
+- **Check the result.** A failed commit does not throw.
+
+[Scenarios](../dynamic-consistency-boundary/scenarios.mdx#in-an-aspnet-core-endpoint) shows an endpoint with decision reads, and [Decision reads](../read-models/decision-reads.mdx) lists the ownership rules.
 
 ## Roll Back
 
@@ -59,3 +83,4 @@ Rollback before commit begins discards the events staged in the unit of work. No
 - [Appending many events](./appending-many)
 - [Optimistic concurrency](./concurrency)
 - [Constraints](/chronicle/constraints/)
+- [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx)

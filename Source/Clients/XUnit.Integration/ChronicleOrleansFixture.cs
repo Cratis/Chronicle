@@ -34,14 +34,20 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     protected override async Task OnBeforeInitializeAsync()
     {
+        if (DatabaseNamePrefix.Length > 0)
+        {
+            await BootstrapKernel();
+            return;
+        }
+
         // The silo is reused across tests. Point the artifacts provider at the current
         // fixture so that DiscoverAll picks up this test's event types, reactors, etc.
         DelegatingClientArtifactsProvider.Instance?.SetCurrent(this);
 
-        // For the very first test the factory hasn't been created yet — InitializeFixture
-        // will create it and the DI-registered IEventStore will do the initial discovery.
-        if (_webApplicationFactory is null)
+        // Bootstrap before the first client registration as well as after every storage reset.
+        if (CurrentWebApplicationFactory is null)
         {
+            await BootstrapKernel();
             return;
         }
 
@@ -87,6 +93,10 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //     multicast event.
         var sharedEventStore = Services.GetRequiredService<IEventStore>();
         connection.Lifecycle.OnConnected += sharedEventStore.RegisterAll;
+
+        // Stop KeepAlive delivery before the first wipe: activation collection does not reach these grains, and
+        // their background queues must settle before either storage or projection pipelines can be reset.
+        await KernelCore::Cratis.Chronicle.DevelopmentTools.KeepAliveGrainReset.Reset(GrainFactory);
 
         // 2. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
         //    service whose cache persists across test classes. Without this, a test that registers
@@ -143,25 +153,9 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //     the new reader never sees.
         Services.GetRequiredService<IStorage>().Clear();
 
-        // 3b. Re-bootstrap kernel reactors for the system event store and the test event store.
-        //     The ChronicleServerStartupTask that normally does this has been removed from the
-        //     test silo (it deadlocks during silo startup), and the previous test's DiscoverAll
-        //     leaves nothing useful in the wiped database. Without re-registering here, events
-        //     such as EventStoreAdded / NamespaceAdded never reach the kernel reactors and
-        //     downstream webhook/subscription definitions never get saved.
-        var grainFactory = Services.GetRequiredService<IGrainFactory>();
-        var kernelReactors = Services.GetRequiredService<IReactors>();
-        await grainFactory.GetGrain<INamespaces>(
-            (string)KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System).EnsureDefault();
-        await kernelReactors.DiscoverAndRegister(
-            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System,
-            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
-        await grainFactory.GetGrain<INamespaces>(
-            (string)(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore)
-            .EnsureDefault();
-        await kernelReactors.DiscoverAndRegister(
-            (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
-            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
+        // The startup task is removed from the test silo. Restore its System event schemas and
+        // kernel reactors after the wipe, before any client can create namespaces again.
+        await BootstrapKernel();
 
         // 4. Re-discover artifacts from the current test fixture. Discover() creates new
         //    handler objects with fresh CancellationTokens (but does not register them yet).
@@ -281,6 +275,8 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <returns>A task that completes when grain deactivation has stabilized.</returns>
     protected async Task DeactivateAllGrains()
     {
+        // Do not swallow a failed KeepAlive reset. Continuing to the final storage wipe would leak old live delivery.
+        await KernelCore::Cratis.Chronicle.DevelopmentTools.KeepAliveGrainReset.Reset(GrainFactory);
         try
         {
             var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);
@@ -323,5 +319,24 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
             // If the management grain is unavailable (e.g. silo is shutting down),
             // we can safely ignore the error — the grains will be deactivated anyway.
         }
+    }
+
+    async Task BootstrapKernel()
+    {
+        var grainFactory = Services.GetRequiredService<IGrainFactory>();
+        var eventTypes = Services.GetRequiredService<KernelCore::Cratis.Chronicle.EventTypes.IEventTypes>();
+        var kernelReactors = Services.GetRequiredService<IReactors>();
+        await grainFactory.GetGrain<INamespaces>(
+            (string)KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System).EnsureDefault();
+        await eventTypes.DiscoverAndRegister(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System);
+        await kernelReactors.DiscoverAndRegister(
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System,
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
+        await grainFactory.GetGrain<INamespaces>(
+            (string)(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore)
+            .EnsureDefault();
+        await kernelReactors.DiscoverAndRegister(
+            (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
     }
 }

@@ -39,7 +39,7 @@ public class EventConverter(
         var revisions = await ResolveRevisions(@event);
 
         var originalContent = @event.Revisions.Any() && @event.Content.TryGetValue(EventTypeGeneration.First.ToString(), out var originalBson)
-            ? originalBson.ToString()
+            ? EventContentBson.ToJson(originalBson)
             : string.Empty;
 
         var generationalContent = BuildGenerationalContent(@event);
@@ -63,13 +63,15 @@ public class EventConverter(
                 Subject: @event.Subject?.IsSet == true ? @event.Subject : new Subject(@event.EventSourceId.Value))
             {
                 NamedTags = (@event.NamedTags ?? []).Select(tag => new NamedTag(new TagName(tag.Name), tag.Value)).ToArray(),
-                EventSource = @event.EventSource ?? EventSourceName.NotSet
+                EventSource = @event.EventSource ?? EventSourceName.NotSet,
+                AppendedGeneration = @event.AppendedGeneration is { } appended ? new EventTypeGeneration(appended) : null
             },
             resolvedContent)
         {
             OriginalContent = originalContent,
             Revisions = revisions,
-            GenerationalContent = generationalContent
+            GenerationalContent = generationalContent,
+            GenerationalHashes = @event.ContentHashes.Where(_ => int.TryParse(_.Key, out var generation) && generation > 0).ToDictionary(_ => int.Parse(_.Key), _ => new EventHash(_.Value))
         };
     }
 
@@ -86,7 +88,7 @@ public class EventConverter(
     }
 
     static JsonObject ParseContent(IDictionary<string, BsonDocument> content, string generationKey)
-        => (JsonNode.Parse(content[generationKey].ToString()) as JsonObject)!;
+        => EventContentBson.ToJsonObject(content[generationKey]);
 
     static ExpandoObject ConvertToRawExpandoObject(JsonObject document)
     {
@@ -104,7 +106,9 @@ public class EventConverter(
         JsonArray array => array.Select(ConvertJsonNodeToClrType).ToArray(),
         JsonValue value when value.TryGetValue<bool>(out var b) => b,
         JsonValue value when value.TryGetValue<long>(out var l) => l,
+        JsonValue value when value.TryGetValue<ulong>(out var u) => u,
         JsonValue value when value.TryGetValue<double>(out var d) => d,
+        JsonValue value when value.TryGetValue<decimal>(out var decimalValue) => decimalValue,
         JsonValue value when value.TryGetValue<string>(out var s) => s,
         _ => node.ToString()
     };
@@ -115,7 +119,7 @@ public class EventConverter(
         foreach (var (key, value) in @event.Content)
         {
             if (int.TryParse(key, out var generation))
-                result[generation] = value.ToString();
+                result[generation] = EventContentBson.ToJson(value);
         }
         return result;
     }
@@ -165,7 +169,7 @@ public class EventConverter(
             var causedBy = await identityStorage.GetFor([revision.CausedBy]);
             var revisionKey = revision.EventTypeGeneration.ToString();
             var revisionContentJson = revision.Content.TryGetValue(revisionKey, out var contentBson)
-                ? contentBson.ToString()
+                ? EventContentBson.ToJson(contentBson)
                 : string.Empty;
 
             result.Add(new ConceptsEventRevision(

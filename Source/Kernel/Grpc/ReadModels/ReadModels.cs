@@ -21,6 +21,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Grpc.Core;
 using ProtoBuf.Grpc;
 using AppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
 
@@ -166,13 +167,30 @@ internal sealed class ReadModels(
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
+        var streamScoped = !string.IsNullOrEmpty(request.EventStreamType) || !string.IsNullOrEmpty(request.EventStreamId);
+        if (streamScoped && (string.IsNullOrEmpty(request.EventStreamType) || ((EventStreamType)request.EventStreamType).IsAll))
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, "Stream-scoped decision reads require an explicit event stream type."));
+        }
+        if (streamScoped && definition.ObserverType != Concepts.ReadModels.ReadModelObserverType.Projection)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, "Stream-scoped decision reads require a projection."));
+        }
+        var streamScope = streamScoped
+            ? new ImmediateProjectionStreamScope(
+                string.IsNullOrEmpty(request.EventSourceId) ? request.ReadModelKey : request.EventSourceId,
+                string.IsNullOrEmpty(request.EventSourceType) ? null : (EventSourceType)request.EventSourceType,
+                string.IsNullOrEmpty(request.EventStreamType) ? EventStreamType.All : (EventStreamType)request.EventStreamType,
+                string.IsNullOrEmpty(request.EventStreamId) ? EventStreamId.Default : (EventStreamId)request.EventStreamId)
+            : null;
+
         // A materialized read model — projection or reducer alike — already has its state written to the sink by
         // its observer, so read it from there rather than re-projecting or round-tripping to a connected reducer
         // client. For a projection this is also the only path that reflects joins and custom key resolvers
         // (UsingKey), because ImmediateProjection replays by EventSourceId alone and misses cross-source events.
         // A session pins a projection to an in-flight state, and an unspecified key ("*") cannot be looked up by
         // key at all, so both of those keep replaying.
-        if (materializedReadModels.IsMaterialized(definition) &&
+        if (!streamScoped && materializedReadModels.IsMaterialized(definition) &&
             string.IsNullOrEmpty(request.SessionId) &&
             request.ReadModelKey != ReadModelKey.Unspecified.Value)
         {
@@ -188,13 +206,15 @@ internal sealed class ReadModels(
                     request.Namespace,
                     request.EventSequenceId,
                     request.ReadModelKey,
-                    (ProjectionSessionId)Guid.Parse(request.SessionId))
+                    (ProjectionSessionId)Guid.Parse(request.SessionId),
+                    streamScope)
                 : new ImmediateProjectionKey(
                     (ProjectionId)definition.ObserverIdentifier.Value,
                     request.EventStore,
                     request.Namespace,
                     request.EventSequenceId,
-                    request.ReadModelKey);
+                    request.ReadModelKey,
+                    StreamScope: streamScope);
 
             var projection = grainFactory.GetGrain<IImmediateProjection>(projectionKey);
             var result = await projection.GetModelInstance();
@@ -205,7 +225,8 @@ internal sealed class ReadModels(
                 {
                     ReadModel = "null",
                     ProjectedEventsCount = (ulong)result.ProjectedEventsCount,
-                    LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber
+                    LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber,
+                    StreamScoped = streamScoped
                 };
             }
 
@@ -221,7 +242,8 @@ internal sealed class ReadModels(
             {
                 ReadModel = releasedReadModel.ToJsonString(jsonSerializerOptions),
                 ProjectedEventsCount = (ulong)result.ProjectedEventsCount,
-                LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber
+                LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber,
+                StreamScoped = streamScoped
             };
         }
 
@@ -490,13 +512,21 @@ internal sealed class ReadModels(
 
         if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
         {
+            var streamScope = !string.IsNullOrEmpty(request.EventStreamType) || !string.IsNullOrEmpty(request.EventStreamId)
+                ? new ImmediateProjectionStreamScope(
+                    string.IsNullOrEmpty(request.EventSourceId) ? request.ReadModelKey : request.EventSourceId,
+                    string.IsNullOrEmpty(request.EventSourceType) ? null : (EventSourceType)request.EventSourceType,
+                    string.IsNullOrEmpty(request.EventStreamType) ? EventStreamType.All : (EventStreamType)request.EventStreamType,
+                    string.IsNullOrEmpty(request.EventStreamId) ? EventStreamId.Default : (EventStreamId)request.EventStreamId)
+                : null;
             var projectionKey = new ImmediateProjectionKey(
                 (ProjectionId)definition.ObserverIdentifier.Value,
                 request.EventStore,
                 request.Namespace,
                 request.EventSequenceId,
                 request.ReadModelKey,
-                (ProjectionSessionId)Guid.Parse(request.SessionId));
+                (ProjectionSessionId)Guid.Parse(request.SessionId),
+                streamScope);
 
             var projection = grainFactory.GetGrain<IImmediateProjection>(projectionKey);
             await projection.Dehydrate();

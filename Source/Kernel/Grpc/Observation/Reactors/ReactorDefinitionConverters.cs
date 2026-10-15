@@ -20,8 +20,12 @@ internal static class ReactorDefinitionConverters
             reactorDefinition.ReactorId,
             ReactorOwner.Client,
             reactorDefinition.EventSequenceId,
-            reactorDefinition.EventTypes.Select(_ => _.ToChronicle()),
-            reactorDefinition.IsReplayable,
+            reactorDefinition.EventTypes.Select(_ => _.ToChronicle()).ToArray(),
+            reactorDefinition.IsReplayable && !reactorDefinition.IsNotReplayable,
             reactorDefinition.Tags,
-            reactorDefinition.Filters.ToChronicle());
+            reactorDefinition.Filters.ToChronicle())
+        {
+            GenerationDelivery = (Concepts.Observation.EventGenerationDelivery)reactorDefinition.GenerationDelivery,
+            StartAtTail = reactorDefinition.StartAtTail
+        };
 }

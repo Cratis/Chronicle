@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Linq.Expressions;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -46,6 +48,17 @@ public interface IReadModels
     Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null);
 
     /// <summary>
+    /// Folds an instance of a read model declaring <see cref="EventStreamAttribute{TSource}"/> from one stream.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="eventSourceId">The owning event source id, also the model key.</param>
+    /// <param name="eventStreamId">The stream id. The default id does not narrow by stream id.</param>
+    /// <returns>The instance, or null when no matching events created it. This plain read supplies no append guard.</returns>
+    /// <exception cref="DecisionReadRefused">The implementation does not support stream scope.</exception>
+    Task<TReadModel> GetInstanceById<TReadModel>(EventSourceId eventSourceId, EventStreamId eventStreamId)
+        => throw new DecisionReadRefused(DecisionReadRefusalReason.StreamScopeNotSupported, typeof(TReadModel));
+
+    /// <summary>
     /// Get a read model instance by its key.
     /// </summary>
     /// <param name="readModelType">The read model type.</param>
@@ -61,6 +74,21 @@ public interface IReadModels
     /// <param name="eventCount">Optional maximum number of events to process. Defaults to <see cref="EventCount.Unlimited"/>.</param>
     /// <returns>Collection of read model instances.</returns>
     Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null);
+
+    /// <summary>
+    /// Observes the full collection of a projection- or reducer-backed read model, initially and after changes.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="filter">Optional filter, compiled once and applied client-side after release.</param>
+    /// <returns>A subject that replays the latest collection. Its dedicated stream stops when the last subscriber leaves, on completion, or on disposal.</returns>
+    /// <exception cref="UnknownReadModel">No projection or reducer handles the read model.</exception>
+    /// <remarks>
+    /// The default implementation refuses collection observation. Existing or custom implementations remain usable
+    /// through the other members of this interface and must override this method to support collection observation.
+    /// </remarks>
+    /// <exception cref="ReadModelCannotBeObserved">The implementation does not support collection observation, or the read model is passive or targets an event sequence.</exception>
+    ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
+        => throw new ReadModelCannotBeObserved(typeof(TReadModel), "this implementation does not support collection observation");
 
     /// <summary>
     /// Get snapshots of a read model grouped by CorrelationId by walking through events from the beginning.

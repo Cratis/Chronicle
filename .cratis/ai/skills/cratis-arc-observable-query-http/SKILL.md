@@ -14,7 +14,7 @@ request is made. Choose the transport first, then the command.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Core` | `22.16.0` | `ObservableQueryHttp`, `ObservableQueryHandler`, the demultiplexer routes |
+| `Cratis.Arc.Core` | `22.75.0` | `ObservableQueryHttp`, `ObservableQueryHandler`, the demultiplexer routes |
 
 > Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
 
@@ -120,6 +120,40 @@ inconvenient — a proxy that buffers, a client with no streaming support.
 authorization and the `Count()` a paged query performs. Long polling a hot query
 is not free.
 
+## Diagnosis and emission protection (Arc v22.75.0)
+
+Plain HTTP snapshots/waits/long polls run read-model interceptors and
+`IGuardObservableQueryEmission`: denied data returns unauthorized; suppressed
+emissions remain 202 until an allowed value (or the wait deadline). Failures
+respect `ExposeExceptionDetails`. `IAsyncEnumerable` plain-query requests still
+return 400; do not assume every streaming return shape works on snapshot HTTP.
+
+For a MongoDB-backed query stuck at Loading with no first result, check database
+connectivity, replica-set change-stream support and permissions first (Arc#2916).
+The collection watch logs failure then completes without `OnError`; frontend
+error UI is not reliable evidence the watch is healthy. A waiting HTTP request
+still has its timeout/completion contract; do not describe it as an infinite wait.
+Sources at v22.75.0: `Arc.Core/Queries/ObservableQueryHttp.cs`,
+`ObservableQueryHandler.cs` and
+[MongoDB observations](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/mongodb/observing-collections.md).
+
+### Local `cratis` template ports
+
+Templates `v1.7.4` still publishes MongoDB on host port `27017` and configures
+`mongodb://localhost:27017` for the app (`Templates/Cratis/docker-compose.yml:3–13`,
+`appsettings.json:35–37`). Its Vite dev server runs on `9000` and proxies `/api`,
+`/.cratis` and `/swagger` to `http://localhost:5000`
+(`Templates/Cratis/.frontend/vite.config.ts:24–39`). A backend started on another
+port needs matching proxy targets; a healthy Chronicle container alone does not
+prove the browser can reach the app or its MongoDB read models.
+
+The bundled development MongoDB replica set advertises `localhost:27017`
+(Chronicle `v19.34.0`, `Docker/entrypoint.sh:23–25`). For that setup, merely changing
+Docker's host mapping to another port does not change the advertised member
+address. Keep `27017` available, or deliberately reconfigure the replica set and
+application connection together. These are local template defaults, not Arc
+requirements or production topology advice.
+
 ## What comes back
 
 Every transport carries the same `QueryResult` shape:
@@ -131,7 +165,8 @@ paging { page, size, totalItems, totalPages }, changeSet?
 ```
 
 `data` is the full snapshot. `changeSet` may also be present for collection
-updates, carrying `added`, `replaced` and `removed`.
+updates, carrying `added`, `replaced` and `removed`. Items without `Id` use
+full snapshots; `IHaveKnownChanges` supports known-change collection results.
 
 Paging and sorting keys work here too: `page`, `pageSize`, `sortby`,
 `sortDirection`. `pageSize` is what enables paging at all, and `page` is
@@ -164,7 +199,7 @@ apply. Do not construct or suggest credentials.
 - Diagnosing a whole slice rather than one endpoint: the slice diagnostics
   guidance.
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
   `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
   output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
   `cratis-screenplay-modeling-lifecycle`): change the model first with

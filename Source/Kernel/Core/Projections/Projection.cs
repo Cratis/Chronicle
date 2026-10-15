@@ -17,12 +17,16 @@ using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Projections.Engine;
+using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Orleans.Providers;
 using Orleans.Utilities;
@@ -55,6 +59,7 @@ public class Projection(
     /// <inheritdoc/>
     public async Task SetDefinition(ProjectionDefinition definition)
     {
+        ProjectionGenerationDeliveryValidation.Validate(definition);
         var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
         logger.SettingDefinition(key.ProjectionId);
         var previousDefinition = State;
@@ -138,6 +143,10 @@ public class Projection(
         DiscardingTheEngineOnFailure(eventStoreNamespace, () => ProjectForSingleReadModel(eventStoreNamespace, initialState, events));
 
     /// <inheritdoc/>
+    public Task<SingleReadModelProjectionState> FoldForSingleReadModel(EventStoreNamespaceName eventStoreNamespace, SingleReadModelProjectionState initialState, IEnumerable<AppendedEvent> events) =>
+        DiscardingTheEngineOnFailure(eventStoreNamespace, () => FoldSingleReadModel(eventStoreNamespace, initialState, events));
+
+    /// <inheritdoc/>
     public Task<IEnumerable<ExpandoObject>> Process(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events) =>
         DiscardingTheEngineOnFailure(eventStoreNamespace, () => Project(eventStoreNamespace, events));
 
@@ -179,110 +188,21 @@ public class Projection(
     public async Task<IEnumerable<ExpandoObject>> ProcessForPreview(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events, ReadModelDefinition readModelDefinition)
     {
         var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
-        var eventStoreNamespaceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace);
-        var eventSequenceStorage = eventStoreNamespaceStorage.GetEventSequence(State.EventSequenceId);
+        var eventSequenceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace).GetEventSequence(State.EventSequenceId);
         var projection = await GetOrCreateProjectionForNamespaceWithReadModel(eventStoreNamespace, readModelDefinition);
 
         // Determine the identifier property name from the schema
-        var identifierPropertyName = "_id";
-        var schema = readModelDefinition.GetSchemaForLatestGeneration();
-        if (schema.Properties.ContainsKey("_id"))
-        {
-            identifierPropertyName = "_id";
-        }
-        else if (schema.Properties.ContainsKey("id"))
-        {
-            identifierPropertyName = "id";
-        }
+        var schemaProperties = readModelDefinition.GetSchemaForLatestGeneration().Properties;
+        var identifierPropertyName = !schemaProperties.ContainsKey("_id") && schemaProperties.ContainsKey("id") ? "id" : "_id";
 
-        // First pass: resolve keys and group events by key value
-        var eventsByKeyValue = new Dictionary<string, (Key Key, List<AppendedEvent> Events)>();
-
-        foreach (var @event in events)
-        {
-            var keyResolver = projection!.GetKeyResolverFor(@event.Context.EventType);
-            var keyResult = await keyResolver(eventSequenceStorage!, NullSink.Instance, @event);
-
-            if (keyResult is DeferredKey)
-            {
-                continue;
-            }
-
-            var key = (keyResult as ResolvedKey)!.Key;
-            var keyValue = key.Value.ToString()!;
-
-            if (!eventsByKeyValue.TryGetValue(keyValue, out var entry))
-            {
-                entry = (key, []);
-                eventsByKeyValue[keyValue] = entry;
-            }
-
-            entry.Events.Add(@event);
-        }
-
-        // Second pass: process each group of events for each key
-        var readModelsByKeyValue = new Dictionary<string, ExpandoObject>();
-
-        foreach (var (keyValue, (_, eventsForKey)) in eventsByKeyValue)
-        {
-            var state = new ExpandoObject();
-            var hasReadModel = false;
-
-            foreach (var @event in eventsForKey)
-            {
-                var keyResolver = projection!.GetKeyResolverFor(@event.Context.EventType);
-                var keyResult = await keyResolver(eventSequenceStorage!, NullSink.Instance, @event);
-                var key = (keyResult as ResolvedKey)!.Key;
-                var operationType = projection.GetOperationTypeFor(@event.Context.EventType);
-
-                var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
-                var context = new ProjectionEventContext(
-                    key,
-                    @event,
-                    changeset,
-                    operationType,
-                    false);
-
-                await HandleEventFor(projection!, context, eventSequenceStorage);
-
-                var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, changeset, CreatesInstance(projection!, context));
-                if (changeset.HasBeenRemoved())
-                {
-                    state = new ExpandoObject();
-                }
-                else if (shouldMaterialize && changeset.HasChanges)
-                {
-                    state = ApplyActualChanges(key, changeset.Changes, state);
-                }
-
-                if (shouldMaterialize)
-                {
-                    ReadModelSubjects.TrackChanges(state, changeset.Changes, @event);
-                }
-
-                hasReadModel = shouldMaterialize;
-            }
-
-            if (hasReadModel)
-            {
-                readModelsByKeyValue[keyValue] = state;
-            }
-        }
-
-        // Inject id property into each read model before returning
-        var results = new List<ExpandoObject>();
-        foreach (var (keyValue, readModel) in readModelsByKeyValue)
-        {
-            var readModelDict = (IDictionary<string, object?>)readModel;
-
-            // Set the id property with the key value using the identifier property name
-            readModelDict[identifierPropertyName] = keyValue;
-
-            results.Add(readModel);
-        }
-
-        return results;
+        var sink = await ProjectInMemory(projection, eventSequenceStorage, events);
+        return [.. sink.ReadModels.Select(readModel => WithIdentifier(readModel, identifierPropertyName))];
     }
+
+    static bool SuppressesDirectRootUpdate(Change[] changes) =>
+        changes.OfType<Joined>().Any(joined => joined.ArrayIndexers.IsEmpty) &&
+        !changes.OfType<Joined>().Any(joined => joined.HasKeyedFrom) &&
+        !changes.Any(change => change is ChildAdded or ChildRemoved);
 
     static bool CreatesInstance(EngineProjection projection, ProjectionEventContext context) =>
         projection.Accepts(context.Event.Context.EventType) && context.CreatesInstance;
@@ -290,10 +210,10 @@ public class Projection(
     static bool ShouldMaterializeReadModel(
         bool isMaterialized,
         Key key,
-        Changeset<AppendedEvent, ExpandoObject> changeset,
+        Change[] changes,
         bool createsInstance)
     {
-        if (changeset.HasBeenRemoved())
+        if (changes.Any(change => change is Removed))
         {
             return false;
         }
@@ -305,20 +225,50 @@ public class Projection(
 
         // The materializing pipeline writes the instance for an event that creates it even when the event changes
         // nothing, so an event without properties still brings its read model into existence.
-        if (!changeset.HasChanges)
+        if (changes.Length == 0)
         {
             return createsInstance;
         }
 
-        var hasDirectKeyScopedChanges = changeset.Changes.Any(change =>
+        var hasDirectKeyScopedChanges = changes.Any(change =>
             change is PropertiesChanged<ExpandoObject> or ChildAdded or ChildRemoved);
-        var hasConstructiveChanges = changeset.Changes.Any(change =>
+        var hasConstructiveChanges = changes.Any(change =>
             change is ChildAdded or ChildRemoved);
-        var hasJoined = changeset.HasJoined();
+        var hasJoined = changes.Any(change => change is Joined or ChildRemovedFromAll);
         var onlyPropertyUpdatesAlongsideJoin = hasJoined && hasDirectKeyScopedChanges && !hasConstructiveChanges;
         var isRootLevelJoin = hasJoined && !key.ArrayIndexers.All.Any();
 
         return !onlyPropertyUpdatesAlongsideJoin && !isRootLevelJoin;
+    }
+
+    static void PrepareSingleReadModelSink(PreviewSink sink, Key key, AppendedEvent @event, SingleReadModelProjectionState state)
+    {
+        // SetInitialState may fill a placeholder's missing properties in place. Keep that working
+        // state separate: only its recorded changes reach the instance, just as in a materialized sink.
+        if (state.Exists)
+        {
+            var workingState = state.Model.Clone();
+            ((IDictionary<string, object?>)workingState)[WellKnownProperties.ReadModelInstanceInitialized] = state.IsInitialized;
+            sink.Set(key.Value.ToString()!, workingState, @event.Context.SequenceNumber);
+        }
+        else
+        {
+            sink.Remove(key.Value.ToString()!);
+        }
+    }
+
+    static void SeedSingleReadModelAtCreation(EngineProjection projection, ProjectionEventContext context)
+    {
+        if (context.NeedsInitialState && !context.Changeset.HasJoined())
+        {
+            context.Changeset.AddPropertiesFrom(projection.InitialModelState, projection.GetChildrenPropertyPaths());
+        }
+    }
+
+    static ExpandoObject WithIdentifier(PreviewReadModel readModel, string identifierPropertyName)
+    {
+        ((IDictionary<string, object?>)readModel.State)[identifierPropertyName] = readModel.KeyValue;
+        return readModel.State;
     }
 
     async Task<ExpandoObject> ProjectForSingleReadModel(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events)
@@ -352,9 +302,9 @@ public class Projection(
                 operationType,
                 false);
 
-            await HandleEventFor(projection!, context, eventSequenceStorage);
+            await HandleEventFor(projection!, context, NullSink.Instance, eventSequenceStorage);
 
-            var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, changeset, CreatesInstance(projection!, context));
+            var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, [.. changeset.Changes], CreatesInstance(projection!, context));
             if (changeset.HasBeenRemoved())
             {
                 state = new ExpandoObject();
@@ -364,7 +314,7 @@ public class Projection(
             {
                 if (changeset.HasChanges)
                 {
-                    state = ApplyActualChanges(key, changeset.Changes, state);
+                    state = InMemoryChanges.Apply(key, changeset.Changes, state);
                 }
 
                 ReadModelSubjects.TrackChanges(state, changeset.Changes, @event);
@@ -384,113 +334,138 @@ public class Projection(
         return state;
     }
 
-    async Task<IEnumerable<ExpandoObject>> Project(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events)
+    async Task<SingleReadModelProjectionState> FoldSingleReadModel(EventStoreNamespaceName eventStoreNamespace, SingleReadModelProjectionState initialState, IEnumerable<AppendedEvent> events)
     {
         var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
-        var eventStoreNamespaceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace);
-        var eventSequenceStorage = eventStoreNamespaceStorage.GetEventSequence(State.EventSequenceId);
+        var eventSequenceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace).GetEventSequence(State.EventSequenceId);
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
-
-        // First pass: resolve keys and group events by key value
-        var eventsByKeyValue = new Dictionary<string, (Key Key, List<AppendedEvent> Events)>();
+        var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
+        var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
+        var result = initialState.Exists ? initialState with { Model = initialState.Model.Clone() } : SingleReadModelProjectionState.Empty;
 
         foreach (var @event in events)
         {
-            var keyResolver = projection!.GetKeyResolverFor(@event.Context.EventType);
-            var keyResult = await keyResolver(eventSequenceStorage!, NullSink.Instance, @event);
-
-            if (keyResult is DeferredKey)
+            var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, NullSink.Instance, @event);
+            if (keyResult is not ResolvedKey resolved)
             {
                 continue;
             }
 
-            var key = (keyResult as ResolvedKey)!.Key;
-            var keyValue = key.Value.ToString()!;
+            var key = resolved.Key;
 
-            if (!eventsByKeyValue.TryGetValue(keyValue, out var entry))
-            {
-                entry = (key, []);
-                eventsByKeyValue[keyValue] = entry;
-            }
-
-            entry.Events.Add(@event);
+            PrepareSingleReadModelSink(sink, key, @event, result);
+            var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, result.Model);
+            var context = new ProjectionEventContext(key, @event, changeset, projection.GetOperationTypeFor(@event.Context.EventType), false);
+            context = await initialize.Perform(projection, context);
+            await HandleEventFor(projection, context, NullSink.Instance, eventSequenceStorage);
+            SeedSingleReadModelAtCreation(projection, context);
+            result = ApplySingleReadModelChanges(projection, context, result);
         }
 
-        // Second pass: process each group of events for each key
-        var readModelsByKeyValue = new Dictionary<string, ExpandoObject>();
-        var lastSequenceByKeyValue = new Dictionary<string, EventSequenceNumber>();
-
-        foreach (var (keyValue, (_, eventsForKey)) in eventsByKeyValue)
-        {
-            var state = new ExpandoObject();
-            var hasReadModel = false;
-
-            foreach (var @event in eventsForKey)
-            {
-                var keyResolver = projection!.GetKeyResolverFor(@event.Context.EventType);
-                var keyResult = await keyResolver(eventSequenceStorage!, NullSink.Instance, @event);
-                var key = (keyResult as ResolvedKey)!.Key;
-                var operationType = projection.GetOperationTypeFor(@event.Context.EventType);
-
-                var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
-                var context = new ProjectionEventContext(
-                    key,
-                    @event,
-                    changeset,
-                    operationType,
-                    false);
-
-                await HandleEventFor(projection!, context, eventSequenceStorage);
-
-                var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, changeset, CreatesInstance(projection!, context));
-                if (changeset.HasBeenRemoved())
-                {
-                    state = new ExpandoObject();
-                    lastSequenceByKeyValue.Remove(keyValue);
-                }
-                else if (shouldMaterialize && (changeset.HasChanges || !hasReadModel))
-                {
-                    state = ApplyActualChanges(key, changeset.Changes, state);
-                    lastSequenceByKeyValue[keyValue] = @event.Context.SequenceNumber;
-                }
-
-                if (shouldMaterialize)
-                {
-                    ReadModelSubjects.TrackChanges(state, changeset.Changes, @event);
-                }
-
-                hasReadModel = shouldMaterialize;
-            }
-
-            if (hasReadModel)
-            {
-                readModelsByKeyValue[keyValue] = state;
-            }
-        }
-
-        // Inject id and metadata properties into each read model before returning
-        var results = new List<ExpandoObject>();
-        foreach (var (keyValue, readModel) in readModelsByKeyValue)
-        {
-            var readModelDict = (IDictionary<string, object?>)readModel;
-
-            // Set the id property with the key value using the schema's property name
-            readModelDict[_identifierPropertyName] = keyValue;
-
-            // Set the last handled event sequence number to mirror what the sink writes
-            if (lastSequenceByKeyValue.TryGetValue(keyValue, out var lastSeq))
-            {
-                readModelDict[WellKnownProperties.LastHandledEventSequenceNumber] = (ulong)lastSeq;
-            }
-
-            results.Add(readModel);
-        }
-
-        return results;
+        return result;
     }
 
-    async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context, IEventSequenceStorage? eventSequenceStorage = null)
+    SingleReadModelProjectionState ApplySingleReadModelChanges(EngineProjection projection, ProjectionEventContext context, SingleReadModelProjectionState state)
     {
+        var changeset = context.Changeset;
+        if (changeset.HasBeenRemoved())
+        {
+            return SingleReadModelProjectionState.Empty;
+        }
+
+        if (!ShouldMaterializeReadModel(state.Exists, context.Key, [.. changeset.Changes], CreatesInstance(projection, context)))
+        {
+            return state;
+        }
+
+        var model = InMemoryChanges.Apply(context.Key, changeset.Changes, state.Model);
+        ((IDictionary<string, object?>)model)[_identifierPropertyName] = context.Key.Value.ToString();
+        ReadModelSubjects.TrackChanges(model, changeset.Changes, context.Event);
+        return new(model, true, state.IsInitialized || CreatesInstance(projection, context));
+    }
+
+    async Task<IEnumerable<ExpandoObject>> Project(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events)
+    {
+        var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
+        var eventSequenceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace).GetEventSequence(State.EventSequenceId);
+        var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
+
+        var sink = await ProjectInMemory(projection, eventSequenceStorage, events);
+
+        // Set the last handled event sequence number to mirror what the sink writes
+        return [.. sink.ReadModels.Select(readModel =>
+        {
+            var state = WithIdentifier(readModel, _identifierPropertyName);
+            ((IDictionary<string, object?>)state)[WellKnownProperties.LastHandledEventSequenceNumber] = (ulong)readModel.LastHandledEventSequenceNumber;
+            return state;
+        })];
+    }
+
+    /// <summary>
+    /// Projects events into read models held in memory, in the order the events happened.
+    /// </summary>
+    /// <remarks>
+    /// Keys resolve against the read models built so far, the way they resolve against the sink of a saved projection,
+    /// so a join event reaches the read models holding the child it refers to and a keyed update finds the child it
+    /// updates.
+    /// </remarks>
+    /// <param name="projection">The projection to project with.</param>
+    /// <param name="eventSequenceStorage">The storage of the event sequence the events come from.</param>
+    /// <param name="events">The events to project.</param>
+    /// <returns>The <see cref="PreviewSink"/> holding the read models built.</returns>
+    async Task<PreviewSink> ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, IEnumerable<AppendedEvent> events)
+    {
+        var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
+        foreach (var @event in events)
+        {
+            var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
+            if (keyResult is ResolvedKey resolvedKey)
+            {
+                await ProjectInMemory(projection, eventSequenceStorage, sink, resolvedKey, @event);
+            }
+        }
+
+        return sink;
+    }
+
+    async Task ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, PreviewSink sink, ResolvedKey resolvedKey, AppendedEvent @event)
+    {
+        var key = resolvedKey.Key;
+        var keyValue = key.Value.ToString()!;
+        var initialState = sink.GetInitialState(key);
+        var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, initialState);
+        var context = new ProjectionEventContext(key, @event, changeset, projection.GetOperationTypeFor(@event.Context.EventType), false, resolvedKey.JoinKey);
+
+        await HandleEventFor(projection, context, sink, eventSequenceStorage);
+
+        if (changeset.HasBeenRemoved())
+        {
+            sink.Remove(keyValue);
+            return;
+        }
+
+        var originalChanges = changeset.Changes.ToArray();
+        var appliedJoins = sink.ApplyJoinsOnRoots(originalChanges, @event)
+            .Concat(sink.ApplyJoinsOnChildren(originalChanges, @event)).ToArray();
+        var hasReadModel = sink.TryGet(keyValue, out var state);
+        if (!ShouldMaterializeReadModel(hasReadModel, key, originalChanges, CreatesInstance(projection, context)) || SuppressesDirectRootUpdate(originalChanges))
+        {
+            return;
+        }
+
+        var changes = originalChanges.Where(change => !appliedJoins.Any(joined => ReferenceEquals(joined, change))).ToArray();
+        if (changes.Length > 0 || (!hasReadModel && CreatesInstance(projection, context)))
+        {
+            state = InMemoryChanges.Apply(key, changes, state);
+            sink.Set(keyValue, state, @event.Context.SequenceNumber);
+        }
+
+        ReadModelSubjects.TrackChanges(state, changes, @event);
+    }
+
+    async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context, ISink sink, IEventSequenceStorage eventSequenceStorage)
+    {
+        context = context with { Key = InMemoryChildKeys.Bind(context.Key, context.Changeset.InitialState) };
         if (projection.Accepts(context.Event.Context.EventType))
         {
             projection.OnNext(context);
@@ -501,10 +476,10 @@ public class Projection(
             // For child projections, resolve the child key (which includes ArrayIndexers for the
             // children property path). Without this, the child projection's Project subscriber
             // returns early because context.Key.ArrayIndexers.HasFor(childrenProperty) is false.
-            if (eventSequenceStorage is not null && child.Accepts(context.Event.Context.EventType))
+            if (child.Accepts(context.Event.Context.EventType))
             {
                 var childKeyResolver = child.GetKeyResolverFor(context.Event.Context.EventType);
-                var childKeyResult = await childKeyResolver(eventSequenceStorage, NullSink.Instance, context.Event);
+                var childKeyResult = await childKeyResolver(eventSequenceStorage, sink, context.Event);
                 if (childKeyResult is ResolvedKey childResolvedKey)
                 {
                     var childContext = context with
@@ -512,45 +487,13 @@ public class Projection(
                         Key = childResolvedKey.Key,
                         OperationType = child.GetOperationTypeFor(context.Event.Context.EventType)
                     };
-                    await HandleEventFor(child, childContext, eventSequenceStorage);
+                    await HandleEventFor(child, childContext, sink, eventSequenceStorage);
                     continue;
                 }
             }
 
-            await HandleEventFor(child, context, eventSequenceStorage);
+            await HandleEventFor(child, context, sink, eventSequenceStorage);
         }
-    }
-
-    ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state)
-    {
-        var changesToApply = changes.ToList();
-        var collectionPathsWithChildOperations = changesToApply.GetCollectionPathsWithChildOperations();
-        var wholeCollectionReplacementPaths = changesToApply.GetWholeCollectionReplacementPaths();
-
-        foreach (var change in changesToApply)
-        {
-            switch (change)
-            {
-                case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    state = propertiesChanged.ApplyToStateWithoutChildOperationConflicts(state, collectionPathsWithChildOperations, wholeCollectionReplacementPaths);
-                    break;
-
-                case ChildAdded childAdded:
-                    var items = state.EnsureCollection<object>(childAdded.ChildrenProperty, childAdded.ArrayIndexers);
-                    items.Add(childAdded.Child);
-                    break;
-
-                case Joined joined:
-                    state = ApplyActualChanges(key, joined.Changes, state);
-                    break;
-
-                case ResolvedJoin resolvedJoin:
-                    state = ApplyActualChanges(key, resolvedJoin.Changes, state);
-                    break;
-            }
-        }
-
-        return state;
     }
 
     /// <summary>
@@ -602,7 +545,8 @@ public class Projection(
             var eventStoreStorage = storage.GetEventStore(key.EventStore);
             var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
-            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, State, readModelDefinition, eventTypeSchemas);
+            // Direct computation belongs to the immediate/read lane, not materialized observer delivery.
+            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, State with { GenerationDelivery = EventGenerationDelivery.Compatibility }, readModelDefinition, eventTypeSchemas);
             _projectionsByNamespace[eventStoreNamespace] = projection;
         }
 
@@ -616,7 +560,7 @@ public class Projection(
         var eventStoreStorage = storage.GetEventStore(key.EventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
-        return await projectionFactory.Create(key.EventStore, eventStoreNamespace, State, readModelDefinition, eventTypeSchemas);
+        return await projectionFactory.Create(key.EventStore, eventStoreNamespace, State with { GenerationDelivery = EventGenerationDelivery.Compatibility }, readModelDefinition, eventTypeSchemas);
     }
 
     async Task EvolveForAllNamespaces(

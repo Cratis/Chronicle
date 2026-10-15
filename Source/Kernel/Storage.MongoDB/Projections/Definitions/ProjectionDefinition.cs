@@ -118,4 +118,9 @@ public class ProjectionDefinition
     /// <see cref="AutoMap"/> is enabled.
     /// </summary>
     public IEnumerable<string> NoAutoMapProperties { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the event generation delivery policy.
+    /// </summary>
+    public Concepts.Observation.EventGenerationDelivery GenerationDelivery { get; set; }
 }

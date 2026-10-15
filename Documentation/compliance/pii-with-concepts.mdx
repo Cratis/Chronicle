@@ -41,6 +41,17 @@ Another example, documenting why the value is sensitive with the optional `detai
 
 <ChronicleClientTabs snippet="compliance/pii-with-concepts/national-id" />
 
+## Optional constructor parameters
+
+In the .NET client, a concept parameter that defaults to null retains its underlying type and
+`[PII]` metadata in the precise schema. Supplying a value therefore encrypts it just as it does
+for a required parameter. Read models always use this shape; event registration uses it when the
+kernel advertises precise event type schema support.
+
+If an older schema omitted the classification, adding it does not encrypt earlier values. See
+[Adding PII to an existing event type](pii#adding-pii-to-an-existing-event-type) before assuming
+that erasure protects that history.
+
 ## Placement
 
 Concept types belong in the feature folder they are primarily associated with, or at the feature root if they are shared across slices. Do not create a separate `Concepts/` folder — keep concepts co-located with the code that uses them.

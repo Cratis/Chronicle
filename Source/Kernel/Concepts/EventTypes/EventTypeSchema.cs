@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Targets;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Concepts.EventTypes;
@@ -13,4 +14,16 @@ namespace Cratis.Chronicle.Concepts.EventTypes;
 /// <param name="Owner">The <see cref="EventTypeOwner">owner</see> of the event type.</param>
 /// <param name="Source">The <see cref="EventTypeSource">source</see> of the event type.</param>
 /// <param name="Schema">The <see cref="JsonSchema">JSON schema</see>.</param>
-public record EventTypeSchema(EventType Type, EventTypeOwner Owner, EventTypeSource Source, JsonSchema Schema);
+/// <param name="Visibility">The <see cref="EventTypeVisibility">visibility</see> of the event type. Unspecified for event types registered by clients that predate visibility.</param>
+/// <param name="Origin">The name of the event store the event type originates from when it is not the registering one, otherwise empty.</param>
+public record EventTypeSchema(
+    EventType Type,
+    EventTypeOwner Owner,
+    EventTypeSource Source,
+    JsonSchema Schema,
+    EventTypeVisibility Visibility = EventTypeVisibility.Unspecified,
+    string Origin = "") : IHaveTargetSchema
+{
+    /// <inheritdoc/>
+    public JsonSchema GetTargetSchema() => Schema;
+}

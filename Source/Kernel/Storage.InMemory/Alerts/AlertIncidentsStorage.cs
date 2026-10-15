@@ -71,6 +71,20 @@ public class AlertIncidentsStorage : IAlertIncidentsStorage
     }
 
     /// <inheritdoc/>
+    public Task<IEnumerable<AlertIncidentObserverCount>> GetOpenCountsByObserver(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
+        {
+            var counts = _incidents.Values.Where(row => row.IsOpen)
+                .GroupBy(row => (row.Target.EventStore, row.Target.Namespace, row.Target.ObserverId, row.Target.EventSequenceId, row.Condition, Severity: row.Severity!.Value))
+                .Select(group => new AlertIncidentObserverCount(group.Key.EventStore, group.Key.Namespace, group.Key.ObserverId, group.Key.EventSequenceId, group.Key.Condition, group.Key.Severity, group.LongCount())).ToArray();
+
+            return Task.FromResult<IEnumerable<AlertIncidentObserverCount>>(counts);
+        }
+    }
+
+    /// <inheritdoc/>
     public Task<AlertIncidentStoragePage> EnumerateOpen(AlertIncidentCursor? after, int limit, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

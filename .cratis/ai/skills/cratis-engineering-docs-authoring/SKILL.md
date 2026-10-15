@@ -51,8 +51,7 @@ Use Diátaxis to choose the page's main job. Include brief context needed to mak
 | Explanation | Understand why and when | Concepts, boundaries, trade-offs, diagram |
 | Reference | Look up exact information | Exhaustive tables, fields, commands, signatures |
 
-For the detailed mechanical format, read
-[site-format.md](references/site-format.md).
+Read [site-format.md](references/site-format.md) when drafting a page for the Cratis Astro Starlight site; the owning repository’s stricter format remains authoritative.
 
 ## Drafting workflow
 

@@ -18,6 +18,9 @@ namespace Cratis.Chronicle.Seeding;
 /// <param name="EventTypeId">The type of the seeded event.</param>
 /// <param name="Content">The JSON content of the seeded event.</param>
 /// <param name="IsGlobal">Whether the entry applies to every namespace rather than one.</param>
+/// <param name="EventSourceType">The optional event source type.</param>
+/// <param name="EventStreamType">The optional event stream type.</param>
+/// <param name="EventStreamId">The optional event stream identifier.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventSeeding)]
 public record AddSeedEntry(
@@ -26,7 +29,10 @@ public record AddSeedEntry(
     EventSourceId EventSourceId,
     EventTypeId EventTypeId,
     string Content,
-    bool IsGlobal)
+    bool IsGlobal,
+    EventSourceType? EventSourceType = default,
+    EventStreamType? EventStreamType = default,
+    EventStreamId? EventStreamId = default)
 {
     /// <summary>
     /// Handles the command by seeding the single entry through its seeding grain.
@@ -42,6 +48,6 @@ public record AddSeedEntry(
         var grain = grainFactory.GetGrain<IResultAwareEventSeeding>(key.ToString());
 
         // The result is dropped for the same reason SeedEvents drops it - see the note there.
-        await grain.SeedWithResult([new SeedingEntry(EventSourceId, EventTypeId, Content, [])]);
+        await grain.SeedWithResult([new SeedingEntry(EventSourceId, EventTypeId, Content, [], EventSourceType, EventStreamType, EventStreamId)]);
     }
 }

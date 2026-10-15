@@ -25,6 +25,11 @@ public class IdentityStorage(
     IEventStoreNamespaceDatabase database,
     ILogger<IdentityStorage> logger) : IIdentityStorage
 {
+    /// <summary>
+    /// The maximum number of identity ids in one database query.
+    /// </summary>
+    const int IdentityReadBatchSize = 500;
+
     Dictionary<IdentityId, Identity> _identitiesByIdentityId = [];
     Dictionary<string, IdentityId> _identityIdsBySubject = [];
     Dictionary<string, IdentityId> _identityIdsByUserName = [];
@@ -122,6 +127,27 @@ public class IdentityStorage(
         await Populate();
 
         return _identitiesByIdentityId.ContainsKey(identityId);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<IdentityId, Identity>> GetByIds(IEnumerable<IdentityId> identityIds)
+    {
+        var ids = identityIds.Select(_ => _.Value).Distinct().ToArray();
+        if (ids.Length == 0)
+        {
+            return new Dictionary<IdentityId, Identity>();
+        }
+        var result = new Dictionary<IdentityId, Identity>();
+        foreach (var batch in ids.Chunk(IdentityReadBatchSize))
+        {
+            var filter = Builders<MongoDBIdentity>.Filter.In(_ => _.Id, batch);
+            var identities = await GetCollection().Find(filter).ToListAsync().ConfigureAwait(false);
+            foreach (var identity in identities)
+            {
+                result[identity.Id] = new Identity(identity.Subject, identity.Name, identity.UserName);
+            }
+        }
+        return result;
     }
 
     /// <inheritdoc/>

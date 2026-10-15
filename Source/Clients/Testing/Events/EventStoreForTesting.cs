@@ -6,8 +6,6 @@ extern alias KernelCore;
 extern alias KernelGrpc;
 
 using System.Collections.Concurrent;
-using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
@@ -19,7 +17,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.ExternalServices;
@@ -35,12 +32,10 @@ using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Seeding;
-using Cratis.Chronicle.Testing.Compliance;
 using Cratis.Chronicle.Testing.EventSequences;
 using Cratis.Chronicle.Testing.ReadModels;
 using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
-using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Traces;
@@ -51,15 +46,7 @@ using Microsoft.Extensions.Options;
 using EventStoreSubscriptionsImpl = Cratis.Chronicle.EventStoreSubscriptions.EventStoreSubscriptions;
 using ExternalServicesImpl = Cratis.Chronicle.ExternalServices.ExternalServices;
 using FailedPartitionsImpl = Cratis.Chronicle.Observation.FailedPartitions;
-using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
-using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
-using InMemoryEventSourcesStorage = Cratis.Chronicle.Storage.InMemory.EventSources.EventSourcesStorage;
-using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
-using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
-using InMemoryUniqueEventTypesConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueEventTypesConstraintsStorage;
 using JobsImpl = Cratis.Chronicle.Jobs.Jobs;
-using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
-using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
 using ObserversImpl = Cratis.Chronicle.Observation.Observers;
 using ReactorsImpl = Cratis.Chronicle.Reactors.Reactors;
 using WebhooksImpl = Cratis.Chronicle.Webhooks.Webhooks;
@@ -73,20 +60,19 @@ namespace Cratis.Chronicle.Testing.Events;
 /// Provides a fully in-process event store backed by real client implementations wired to
 /// in-process contract service implementations — no live Chronicle server required.
 /// </remarks>
-public class EventStoreForTesting : IEventStore
+public class EventStoreForTesting : IEventStore, IDisposable
 {
     readonly ReadModelsForTesting _readModelsForTesting;
-    readonly InProcessCompliance _compliance = new();
+    readonly IEventLog? _scenarioEventLog;
     readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly EventTypes _eventTypes;
     readonly EventSources.EventSources _eventSources;
-    readonly InMemoryEventSourcesStorage _eventSourcesStorage = new();
+
     readonly Projections.Projections _projections;
     readonly Reducers.Reducers _reducers;
     readonly ICanProvideConstraints _constraintProvider;
     readonly ClientArtifactsActivator _artifactActivator;
-    readonly IServiceProvider _serviceProvider;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
     readonly Lazy<IConstraints> _constraints;
     readonly Lazy<IReactors> _reactors;
@@ -126,16 +112,34 @@ public class EventStoreForTesting : IEventStore
     /// </summary>
     /// <param name="serviceProvider">Optional service provider for resolving artifacts, options, and logging.</param>
     /// <param name="clientArtifactsProvider">Artifacts to discover.</param>
-    /// <param name="options">Optional settings for the unit-of-work lifecycle policy.</param>
-#pragma warning disable CA2000 // Dispose objects before losing scope
+    /// <param name="options">Optional Chronicle settings, including explicit artifacts and the unit-of-work lifecycle policy.</param>
     public EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options)
+        : this(serviceProvider, clientArtifactsProvider, options, null, null)
     {
-        _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
+    }
+
+    /// <summary>
+    /// Adopts an event scenario's already seeded storage and selected event log for read-model folding.
+    /// </summary>
+    /// <param name="serviceProvider">The artifact service provider.</param>
+    /// <param name="clientArtifactsProvider">Artifacts to discover.</param>
+    /// <param name="options">The scenario's client settings.</param>
+    /// <param name="testingStore">The scenario's storage, or null to create a new store.</param>
+    /// <param name="eventLog">The scenario's selected event log, or null to create one.</param>
+#pragma warning disable CA2000 // Dispose objects before losing scope
+    internal EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options, TestingEventStore? testingStore, IEventLog? eventLog)
+    {
+        _scenarioEventLog = eventLog;
+        ServiceProvider = serviceProvider ?? new DefaultServiceProvider();
+        var configuredOptions = options ?? (ServiceProvider is DefaultServiceProvider ? null :
+            ServiceProvider.GetService<IOptions<ChronicleOptions>>()?.Value);
+        ClientOptions = configuredOptions ?? new ChronicleOptions();
         _jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
-        ClientArtifactsProvider = clientArtifactsProvider;
+        ExplicitSnapshot = ClientOptions.ExplicitArtifacts.CreateSnapshot();
+        ClientArtifactsProvider = ExplicitSnapshot.ApplyTo(clientArtifactsProvider);
         _namingPolicy = new CamelCaseNamingPolicy();
         var loggerFactory = new NullLoggerFactory();
-        _artifactActivator = new ClientArtifactsActivator(_serviceProvider, loggerFactory);
+        _artifactActivator = new ClientArtifactsActivator(ServiceProvider, loggerFactory);
         JsonSchemaGenerator = new JsonSchemaGenerator(
             new ComplianceMetadataResolver(
                 new KnownInstancesOf<ICanProvideComplianceMetadataForType>(Activate<ICanProvideComplianceMetadataForType>(ClientArtifactsProvider.ComplianceForTypesProviders)),
@@ -145,31 +149,19 @@ public class EventStoreForTesting : IEventStore
                 new KnownInstancesOf<ICanProvideSecurityMetadataForProperty>(Activate<ICanProvideSecurityMetadataForProperty>(ClientArtifactsProvider.SecurityForPropertiesProviders))),
             _namingPolicy);
 
-        var topLevelGrainFactory = new TestingGrainFactory();
-        var topLevelStorage = new InMemoryStorage(
-            new InMemoryEventSequenceStorage(
-                (KernelConceptsNs::EventStoreName)(string)Name,
-                (KernelConceptsNs::EventStoreNamespaceName)(string)Namespace,
-                KernelSequenceConcepts::EventSequenceId.Log,
-                new InMemoryIdentityStorage()),
+        // Discovery needs a connection first; the root resolves the registry only after discovery.
+        TestingStore = AdoptOrCreateStorage(testingStore);
+        Connection = TestingStore.Connection;
 
-            // The registry needs Connection during construction; schema lookups happen after discovery below.
-            eventTypesStorage: new InMemoryEventTypesStorage(() => _eventTypes!, JsonSchemaGenerator),
-            eventSourcesStorage: _eventSourcesStorage);
-        Connection = new ChronicleConnectionForTesting(topLevelGrainFactory, topLevelStorage, _compliance, _jsonSerializerOptions, () => _eventTypes!);
-
-        var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, _serviceProvider);
-
+        var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, ServiceProvider);
         _eventTypes = new EventTypes(this, JsonSchemaGenerator, ClientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation: false, namingPolicy: _namingPolicy);
+        _eventTypes.UseMigrationServices(ServiceProvider);
         _eventTypes.Discover().GetAwaiter().GetResult();
+        EventTypeMigrators = _eventTypes.PreparedMigrators;
 
         // The in-memory event log validates appends against the same definitions a real Kernel would hold.
         _eventSources = new EventSources.EventSources(this, ClientArtifactsProvider);
         _eventSources.Discover().GetAwaiter().GetResult();
-        foreach (var definition in _eventSources.All)
-        {
-            _eventSourcesStorage.Save(definition.ToKernel()).GetAwaiter().GetResult();
-        }
 
         EventSerializer = new EventSerializer(ClientArtifactsProvider, _artifactActivator, _eventTypes, _jsonSerializerOptions);
 
@@ -183,12 +175,13 @@ public class EventStoreForTesting : IEventStore
             _artifactActivator,
             _jsonSerializerOptions,
             NullLogger<Projections.Projections>.Instance);
+        ExplicitSnapshot.ApplyTo(_projections);
         _projections.Discover().GetAwaiter().GetResult();
 
         _reducers = new Reducers.Reducers(
             this,
             ClientArtifactsProvider,
-            _serviceProvider,
+            ServiceProvider,
             _artifactActivator,
             new ReducerValidator(),
             _eventTypes,
@@ -225,47 +218,16 @@ public class EventStoreForTesting : IEventStore
             materializedReadModels,
             NullLogger<Chronicle.ReadModels.ReadModels>.Instance);
 
-        _readModelsForTesting = new ReadModelsForTesting(realReadModels);
+        _constraintProvider = TestingEventStore.DiscoverConstraints(ClientArtifactsProvider, _eventTypes, _artifactActivator);
+        _readModelsForTesting = CreateReadModelsForStorage(realReadModels, testingStore);
         ReadModels = _readModelsForTesting;
         DecisionReads.RegisterTesting(this, new DecisionReadsForTesting(
             this,
             new DecisionReads(this, _projections, JsonSchemaGenerator, _jsonSerializerOptions),
             _readModelsForTesting));
 
-        _constraintProvider = CreateConstraintProvider(_artifactActivator);
-
         _constraints = new Lazy<IConstraints>(() => new Constraints(this, [_constraintProvider]));
-        _reactors = new Lazy<IReactors>(() => new ReactorsImpl(
-            this,
-            _eventTypes,
-            ClientArtifactsProvider,
-            _serviceProvider,
-            _artifactActivator,
-            new ReactorMiddlewaresActivator(ClientArtifactsProvider, _artifactActivator, NullLogger<ReactorMiddlewaresActivator>.Instance),
-            EventSerializer,
-            new CausationManager(),
-            new BaseIdentityProvider(),
-            new ActivitySource<ReactorsImpl>(),
-            new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>(
-            [
-                new EventResultHandler(),
-                new EventsResultHandler(),
-                new EventForEventSourceIdResultHandler(),
-                new EventsForEventSourceIdResultHandler(),
-                new MixedSideEffectsResultHandler(),
-                new EventsWithConcurrencyScopesResultHandler()
-            ])),
-            new ReactorContextValuesBuilder(new KnownInstancesOf<IReactorContextValuesProvider>(
-            [
-                new EventSourceIdValuesProvider(),
-                new EventStreamIdValuesProvider(),
-                new EventStreamTypeValuesProvider(),
-                new EventSourceTypeValuesProvider(),
-                new SubjectValuesProvider()
-            ])),
-            new ReactorMethodArgumentsResolver(),
-            NullLogger<ReactorsImpl>.Instance,
-            new NullLoggerFactory()));
+        _reactors = new Lazy<IReactors>(CreateReactors);
         _webhooks = new Lazy<IWebhooks>(() => new WebhooksImpl(_eventTypes, this, NullLogger<WebhooksImpl>.Instance));
         _externalServices = new Lazy<IExternalServices>(() => new ExternalServicesImpl(this, NullLogger<ExternalServicesImpl>.Instance));
         _subscriptions = new Lazy<IEventStoreSubscriptions>(() => new EventStoreSubscriptionsImpl(
@@ -280,14 +242,12 @@ public class EventStoreForTesting : IEventStore
         // Worker hosts configure ChronicleClientOptions instead. IOptions<T> can resolve an
         // unconfigured default, so falling back must consider the policy, not just nullability.
         // DefaultServiceProvider cannot resolve unregistered interfaces.
-        var configuredOptions = options ?? (_serviceProvider is DefaultServiceProvider ? null :
-            _serviceProvider.GetService<IOptions<ChronicleOptions>>()?.Value);
         var lifecyclePolicy = configuredOptions?.UnitOfWorkLifecyclePolicy ?? UnitOfWorkLifecyclePolicy.Compatibility;
-        if (options is null && lifecyclePolicy == UnitOfWorkLifecyclePolicy.Compatibility && _serviceProvider is not DefaultServiceProvider)
+        if (options is null && lifecyclePolicy == UnitOfWorkLifecyclePolicy.Compatibility && ServiceProvider is not DefaultServiceProvider)
         {
-            lifecyclePolicy = _serviceProvider.GetService<IOptions<ChronicleClientOptions>>()?.Value.UnitOfWorkLifecyclePolicy ?? lifecyclePolicy;
+            lifecyclePolicy = ServiceProvider.GetService<IOptions<ChronicleClientOptions>>()?.Value.UnitOfWorkLifecyclePolicy ?? lifecyclePolicy;
         }
-        var logger = _serviceProvider is DefaultServiceProvider ? null : _serviceProvider.GetService<ILogger<UnitOfWork>>();
+        var logger = ServiceProvider is DefaultServiceProvider ? null : ServiceProvider.GetService<ILogger<UnitOfWork>>();
         _unitOfWorkManager = new Lazy<IUnitOfWorkManager>(() => new UnitOfWorkManager(this, null, lifecyclePolicy, logger));
         _patterns = new Lazy<IPatterns>(() => new Patterns.Patterns(this));
         _seeding = new Lazy<IEventSeeding>(() => new EventSeeding(
@@ -296,19 +256,20 @@ public class EventStoreForTesting : IEventStore
             _eventTypes,
             EventSerializer,
             ClientArtifactsProvider,
-            _serviceProvider,
+            ServiceProvider,
             _artifactActivator,
-            NullLogger<EventSeeding>.Instance));
+            NullLogger<EventSeeding>.Instance,
+            EventSources));
         _pii = new Lazy<IPIIManager>(() => new PIIManager(Name, Namespace, Connection));
         _identities = new Lazy<IIdentityManager>(() => new IdentityManager(Name, Namespace, Connection));
     }
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
     /// <inheritdoc/>
-    public EventStoreName Name => "testing";
+    public EventStoreName Name => TestingStore.Name;
 
     /// <inheritdoc/>
-    public EventStoreNamespaceName Namespace => "default";
+    public EventStoreNamespaceName Namespace => TestingStore.Namespace;
 
     /// <inheritdoc/>
     public IChronicleConnection Connection { get; }
@@ -326,7 +287,7 @@ public class EventStoreForTesting : IEventStore
     public IConstraints Constraints => _constraints.Value;
 
     /// <inheritdoc/>
-    public IEventLog EventLog => (IEventLog)GetEventSequence(EventSequenceId.Log);
+    public IEventLog EventLog => _scenarioEventLog ?? (IEventLog)GetEventSequence(EventSequenceId.Log);
 
     /// <inheritdoc/>
     public IReactors Reactors => _reactors.Value;
@@ -381,6 +342,16 @@ public class EventStoreForTesting : IEventStore
     public RegistrationOutcome Registration { get; private set; } = RegistrationOutcome.NotRun;
 
     /// <summary>
+    /// Gets the settings used to configure this test store.
+    /// </summary>
+    internal ChronicleOptions ClientOptions { get; }
+
+    /// <summary>
+    /// Gets the original immutable recipes for this scenario store.
+    /// </summary>
+    internal ExplicitArtifactsSnapshot ExplicitSnapshot { get; }
+
+    /// <summary>
     /// Gets the <see cref="IJsonSchemaGenerator"/> used by this event store.
     /// </summary>
     internal IJsonSchemaGenerator JsonSchemaGenerator { get; }
@@ -394,6 +365,28 @@ public class EventStoreForTesting : IEventStore
     /// Gets the <see cref="IEventSerializer"/> used by this event store.
     /// </summary>
     internal IEventSerializer EventSerializer { get; }
+
+    /// <summary>
+    /// Gets the migrators activated with this store's service provider.
+    /// </summary>
+    internal IEventTypeMigrators EventTypeMigrators { get; }
+
+    /// <summary>
+    /// Gets the single storage root used by append and read-model processing.
+    /// </summary>
+    internal TestingEventStore TestingStore { get; }
+
+    /// <summary>
+    /// Gets the provider used to activate the store's artifacts.
+    /// </summary>
+    internal IServiceProvider ServiceProvider { get; }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        TestingStore.Dispose();
+        GC.SuppressFinalize(this);
+    }
 
     /// <inheritdoc/>
     public Task DiscoverAll() => Task.CompletedTask;
@@ -415,12 +408,15 @@ public class EventStoreForTesting : IEventStore
         _sequences.GetOrAdd(id, CreateEventSequence);
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default) =>
-        Task.FromResult(Enumerable.Empty<EventStoreNamespaceName>());
+    public Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
+    {
+        ReadProtectionGuard.Read(nameof(GetNamespaces));
+        return Task.FromResult(Enumerable.Empty<EventStoreNamespaceName>());
+    }
 
     /// <summary>
     /// Registers a pre-seeded read model instance so that production code calling
-    /// <see cref="IReadModels.GetInstanceById{TReadModel}"/> can retrieve it during the test.
+    /// <see cref="IReadModels.GetInstanceById{TReadModel}(ReadModelKey, ReadModelSessionId?)"/> can retrieve it during the test.
     /// </summary>
     /// <typeparam name="TReadModel">The type of read model to register.</typeparam>
     /// <param name="eventSourceId">The event source identifier to associate with the read model instance.</param>
@@ -429,101 +425,24 @@ public class EventStoreForTesting : IEventStore
         where TReadModel : class =>
         _readModelsForTesting.RegisterInstance(eventSourceId, instance);
 
-    IEventSequence CreateEventSequence(EventSequenceId id)
+    TestingEventStore AdoptOrCreateStorage(TestingEventStore? scenarioStorage) =>
+        scenarioStorage ?? new TestingEventStore("testing", "default", () => _eventTypes);
+
+    ReadModelsForTesting CreateReadModelsForStorage(IReadModels inner, TestingEventStore? scenarioStorage)
     {
-        var kernelEventSequenceId = (KernelSequenceConcepts::EventSequenceId)(string)id;
-        var kernelEventStoreName = (KernelConceptsNs::EventStoreName)(string)Name;
-        var kernelNamespaceName = (KernelConceptsNs::EventStoreNamespaceName)(string)Namespace;
-
-        var identityStorage = new InMemoryIdentityStorage();
-        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventStoreName, kernelNamespaceName, kernelEventSequenceId, identityStorage);
-        var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
-        var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
-        var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
-        var constraintsStorage = new InMemoryConstraintsStorage(_constraintProvider);
-        var eventTypesStorage = new InMemoryEventTypesStorage(() => _eventTypes, JsonSchemaGenerator);
-
-        var storage = new InMemoryStorage(
-            eventSequenceStorage,
-            uniqueConstraintsStorage,
-            uniqueEventTypesStorage,
-            constraintsStorage,
-            closedStreamsStorage,
-            identityStorage,
-            eventTypesStorage,
-            _eventSourcesStorage);
-
-        var grain = InProcessEventSequence.Create(
-            storage,
-            kernelEventSequenceId,
-            kernelEventStoreName,
-            kernelNamespaceName,
-            _compliance).GetAwaiter().GetResult();
-
-        var grainFactory = new InProcessGrainFactory(grain);
-        var eventCompliance = _compliance.CreateEventCompliance();
-
-        var sequencesService = new KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences(
-            InProcessCommandPipeline.Create(
-                grainFactory,
-                storage,
-                _jsonSerializerOptions,
-                services =>
-                {
-                    services.AddSingleton<IUnitOfWorkManager>(new NoOpUnitOfWorkManager());
-                    services.AddSingleton<IEventLog>(new NoOpEventLog());
-                    services.AddSingleton<IEventTypes>(_eventTypes);
-                    services.AddSingleton<KernelCore::Cratis.Chronicle.Events.IEventCompliance>(eventCompliance);
-                }),
-            storage,
-            eventCompliance,
-            _jsonSerializerOptions,
-            new InProcessQueryContextManager(),
-            grainFactory,
-            NullLogger<KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences>.Instance);
-
-        var constraintsService = new InProcessNoOpConstraintsService();
-        var services = new InProcessServices(sequencesService, constraintsService);
-#pragma warning disable CA2000 // Dispose objects before losing scope — EventLog/EventSequence takes ownership
-        var connection = new InProcessChronicleConnection(services);
-#pragma warning restore CA2000
-
-        var inProcessConstraints = new InProcessConstraints(_constraintProvider);
-        inProcessConstraints.Discover().GetAwaiter().GetResult();
-
-        if (id == EventSequenceId.Log)
+        if (scenarioStorage is null)
         {
-            return new EventLog(
-                Name,
-                Namespace,
-                connection,
-                _eventTypes,
-                inProcessConstraints,
-                EventSerializer,
-                new CorrelationIdAccessor(),
-                new NoConcurrencyScopeStrategies(),
-                new CausationManager(),
-                new NoUnitOfWorkManager(),
-                new BaseIdentityProvider(),
-                _jsonSerializerOptions,
-                eventSources: _eventSources);
+            TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, EventTypeMigrators, _eventSources.All).GetAwaiter().GetResult();
         }
 
-        return new EventSequence(
-            Name,
-            Namespace,
-            id,
-            connection,
-            _eventTypes,
-            inProcessConstraints,
-            EventSerializer,
-            new CorrelationIdAccessor(),
-            new NoConcurrencyScopeStrategies(),
-            new CausationManager(),
-            new NoUnitOfWorkManager(),
-            new BaseIdentityProvider(),
-            _jsonSerializerOptions,
-            eventSources: _eventSources);
+        return new ReadModelsForTesting(inner, EventLog, this, foldReads: _scenarioEventLog is not null);
+    }
+
+    IEventSequence CreateEventSequence(EventSequenceId id)
+    {
+        var constraints = new InProcessConstraints(_constraintProvider);
+        constraints.Discover().GetAwaiter().GetResult();
+        return TestingStore.CreateSequence(id, EventSerializer, constraints, _eventSources);
     }
 
     T[] Activate<T>(IEnumerable<Type> artifactTypes)
@@ -538,65 +457,44 @@ public class EventStoreForTesting : IEventStore
             return activated.AsT0;
         }).ToArray();
 
-    CompositeConstraintProvider CreateConstraintProvider(IClientArtifactsActivator artifactActivator) =>
-        new(
-            new ConstraintsByBuilderProvider(
-                ClientArtifactsProvider,
-                _eventTypes,
-                _namingPolicy,
-                artifactActivator,
-                NullLogger<ConstraintsByBuilderProvider>.Instance),
-            new UniqueConstraintProvider(ClientArtifactsProvider, _eventTypes, _namingPolicy),
-            new UniqueEventTypeConstraintsProvider(ClientArtifactsProvider, _eventTypes));
-
-    sealed class NoConcurrencyScopeStrategies : IConcurrencyScopeStrategies
+    ReactorsImpl CreateReactors()
     {
-        /// <inheritdoc/>
-        public IConcurrencyScopeStrategy GetFor(IEventSequence eventSequence) => NoConcurrencyScopeStrategy.Instance;
-    }
-
-    sealed class NoConcurrencyScopeStrategy : IConcurrencyScopeStrategy
-    {
-        internal static readonly NoConcurrencyScopeStrategy Instance = new();
-
-        /// <inheritdoc/>
-        public Task<ConcurrencyScope> GetScope(
-            EventSourceId eventSourceId,
-            EventStreamType? eventStreamType = default,
-            EventStreamId? eventStreamId = default,
-            EventSourceType? eventSourceType = default,
-            IEnumerable<EventType>? eventTypes = default) =>
-            Task.FromResult(ConcurrencyScope.None);
-    }
-
-    sealed class NoUnitOfWorkManager : IUnitOfWorkManager
-    {
-        /// <inheritdoc/>
-        public IUnitOfWork Current => throw new NoUnitOfWorkHasBeenStarted();
-
-        /// <inheritdoc/>
-        public bool HasCurrent => false;
-
-        /// <inheritdoc/>
-        public bool TryGetFor(CorrelationId correlationId, [MaybeNullWhen(false)] out IUnitOfWork unitOfWork)
+        var reactors = new ReactorsImpl(
+            this,
+            _eventTypes,
+            ClientArtifactsProvider,
+            ServiceProvider,
+            _artifactActivator,
+            new ReactorMiddlewaresActivator(ClientArtifactsProvider, _artifactActivator, NullLogger<ReactorMiddlewaresActivator>.Instance),
+            EventSerializer,
+            new CausationManager(),
+            new BaseIdentityProvider(),
+            new ActivitySource<ReactorsImpl>(),
+            new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>(
+            [
+                new EventResultHandler(),
+                new EventsResultHandler(),
+                new EventForEventSourceIdResultHandler(),
+                new EventsForEventSourceIdResultHandler(),
+                new MixedSideEffectsResultHandler(),
+                new EventsWithConcurrencyScopesResultHandler()
+            ])),
+            new ReactorContextValuesBuilder(new KnownInstancesOf<IReactorContextValuesProvider>(
+            [
+                new EventSourceIdValuesProvider(),
+                new EventStreamIdValuesProvider(),
+                new EventStreamTypeValuesProvider(),
+                new EventSourceTypeValuesProvider(),
+                new SubjectValuesProvider()
+            ])),
+            new ReactorMethodArgumentsResolver(),
+            NullLogger<ReactorsImpl>.Instance,
+            Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        ExplicitSnapshot.ApplyTo(reactors);
+        if (ExplicitSnapshot.Reactors.Length > 0 || ExplicitSnapshot.Types.Any(_ => _.Kind == ExplicitArtifactKind.Reactor))
         {
-            unitOfWork = null;
-            return false;
+            reactors.Discover().GetAwaiter().GetResult();
         }
-
-        /// <inheritdoc/>
-        public IUnitOfWork Begin(CorrelationId correlationId) => throw new NotSupportedException("Unit of work is not supported in test scenarios.");
-
-        /// <inheritdoc/>
-        public void SetCurrent(IUnitOfWork unitOfWork) => throw new NotSupportedException("Unit of work is not supported in test scenarios.");
-    }
-
-    sealed class CompositeConstraintProvider(params ICanProvideConstraints[] providers) : ICanProvideConstraints
-    {
-        /// <inheritdoc/>
-        public IImmutableList<IConstraintDefinition> Provide() =>
-            providers
-                .SelectMany(p => p.Provide())
-                .ToImmutableList();
+        return reactors;
     }
 }

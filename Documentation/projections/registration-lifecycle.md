@@ -67,8 +67,12 @@ client-owned full set never retires server-owned projections (or the other way a
 
 ### Renamed read models and shared containers
 
-A renamed read model keeps its type name and thus its **container name**. Without retirement, the old
-projection and its successor would keep writing the same container with different definitions and
-overwrite each other's documents. With retirement the old projection stops, and because another
-registered projection targets the same container, Chronicle raises a replay recommendation for the
-successor so the container can be rebuilt cleanly from its definition alone.
+Moving a read model to another namespace changes its full-name identity but can preserve its short
+type name and therefore its default **container name**. Renaming the type itself normally changes the
+container too: the default .NET naming policy pluralizes the short type name. An explicit fluent
+container override can also preserve a shared container.
+
+When the successor targets the same container, retirement stops the old projection and Chronicle
+raises a replay recommendation for the remaining projection so that container can be rebuilt from its
+definition alone. This does not migrate documents to a newly named container or plan a successor
+reducer's rebuild. See [switching read-model styles](choosing-a-read-model-style.mdx#what-it-costs-to-switch-later).

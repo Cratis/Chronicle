@@ -9,5 +9,8 @@ public class UniqueReservedName : IConstraint
 {
     public void Define(IConstraintBuilder builder) => builder
         .ForEventLog()
-        .Unique(b => b.On<NameReserved>(e => e.Name).WithName(nameof(UniqueReservedName)));
+        .Unique(b => b
+            .On<NameReserved>(e => e.Name)
+            .On<PublicNameReserved>(e => e.Name)
+            .WithName(nameof(UniqueReservedName)));
 }

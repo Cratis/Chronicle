@@ -53,7 +53,7 @@ This attribute affects only subject discovery from the object passed to `Release
 
 ## When release can't recover a value
 
-A property that can't be decrypted — its encryption key was deleted, or it was encrypted under a different subject entirely — degrades on its own; the rest of the instance still comes back intact. What a caller sees for each of those cases is covered in [Read models and PII](../compliance/read-models#one-property-never-fails-the-whole-read).
+A property that can't be decrypted — its encryption key was deleted, or it was encrypted under a different subject entirely — degrades on its own; the rest of the instance still comes back intact. The property comes back as the empty value of its type: an empty string for a string, `0` or `false` for a non-nullable number or boolean, `null` for a nullable one, and an empty collection or object for a collection or value object. Whether an erased value should be distinguishable from a stored `0`, `false` or empty value is an open decision in [issue 4620](https://github.com/Cratis/Chronicle/issues/4620). What a caller sees for each of those cases is covered in [Read models and PII](../compliance/read-models#one-property-never-fails-the-whole-read).
 
 If the release call itself can't complete — a schema mismatch, for instance — Chronicle logs the failure and returns the instance exactly as you passed it in, still encrypted. If a value you expect to read back stays ciphertext after calling `Release`, check the application logs for that failure before assuming the data is unrecoverable.
 

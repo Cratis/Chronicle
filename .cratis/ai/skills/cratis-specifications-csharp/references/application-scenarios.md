@@ -1,23 +1,40 @@
 <!-- cratis-ai-managed: skills/cratis-specifications-csharp/references/application-scenarios.md -->
 # In-process scenario specifications
 
-The four scenario helpers exercise the real Arc and Chronicle pipelines
-in-process. They are the default for event-sourced *application* behavior. A
-library or framework repository reaches for one only to test the very engine it
-provides.
+## Contents
 
-Verified against `Cratis.Arc.Testing` `22.16.0` and `Cratis.Chronicle.Testing`
-`18.3.0`.
+- `CommandScenario<TCommand>`
+- `EventScenario`
+- `ReadModelScenario<TReadModel>`
+- `ReactorScenario<TReactor>`
+- Application conventions
+
+The four scenario helpers exercise the real Arc and Chronicle pipelines
+in-process. Use them for event-sourced *application* behavior where the pipeline,
+validation, constraints or projections matter; a pure decision (`Handle()`,
+`Handle(providedValue)`, reducer or reactor logic) is specified first as a plain
+call. A library or framework repository reaches for a scenario only to test the
+very engine it provides.
+
+Arc scenarios verified at **v22.75.0** (Chronicle dependency 19.39.1).
+Separate Chronicle-only scenario claims retain their version-qualified sources.
+Read [query and decision scenarios](../../cratis-application-slice-specifications/references/query-and-decision-scenarios.md)
+when using `QueryScenario<T>`, buffered emissions or `UseDecisionReads()`.
+Guarded decisions need actual seeded events, not pinned models; their given
+state and appends share one in-process log, unlike legacy dictionary seeding.
 
 | Helper | Exercises | Use for |
 | --- | --- | --- |
 | `CommandScenario<TCommand>` | Authorization, validators, `Provide()`, `Handle()`, appended events | State Change behavior |
+| `QueryScenario<TReadModel>` | Argument conversion, authorization, validation, interceptors and buffered observations | Query pipeline behavior |
 | `EventScenario` | Chronicle append semantics without the command pipeline | Constraints, raw sequencing, concurrency |
 | `ReadModelScenario<TReadModel>` | Projection or reducer state from a sequence of events | State View behavior |
 | `ReactorScenario<TReactor>` | Reactor invocation and its side effects | Automation and Translation behavior |
 
-Wrap every scenario specification file in `#if DEBUG … #endif` so specification
-code compiles only in Debug.
+Wrap scenario specification files in `#if DEBUG … #endif` only when they compile
+into the application assembly, so specification code ships only in Debug.
+Dedicated spec projects need no wrapper. The example below uses the application
+assembly convention.
 
 ## `CommandScenario<TCommand>`
 
@@ -74,6 +91,85 @@ from `Cratis.Arc.Chronicle.Testing`.
   pass against a read-model shape the projection never produces.
 - **Validator and `Provide()` dependencies** are registered in
   `_scenario.Services`; the concrete validator is discovered automatically.
+- **Caller setup (Arc 22.75.1+, re-verified at 22.76.0):** register a substituted
+  `ICurrentPrincipalAccessor`, `ICurrentPrincipalOverride` or
+  `IAuthorizationPolicyRuntime` in `Services` before first execution. The scenario
+  preserves these registrations instead of replacing them with Arc defaults,
+  so role/policy success and denial specs run as the caller you supplied.
+  Source: `Testing/ScenarioServices.cs` and `Testing/Commands/CommandScenario.cs`
+  under `Source/DotNET/`.
+
+### Pin generated values
+
+Verified at **Arc v22.75.0**, available in `Cratis.Arc.Testing` **22.67.0+**.
+For the `AllocateCartId` command from `cratis-arc-command`, whose
+`Handle([GeneratedValue("cart")] CartId cartId)` returns that id, specify the
+pipeline with a known concept pin. Import `Cratis.Arc.Commands` and
+`Cratis.Arc.Testing.Commands`; the usual specification global usings supply
+`Cratis.Specifications` and `Xunit`. In a dedicated spec project:
+
+```csharp
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Arc.Commands;
+using Cratis.Arc.Testing.Commands;
+
+namespace Shopping.Carts.for_AllocateCartId.when_allocating;
+
+public class and_value_is_pinned : Specification
+{
+    readonly CommandScenario<AllocateCartId> _scenario = new();
+    readonly CartId _cartId = new(Guid.Parse("9a073b78-423c-43bc-b94c-19e4c83d1001"));
+    CommandResult _result = default!;
+
+    void Establish() => _scenario.PinGeneratedValue("cart", _cartId);
+    async Task Because() => _result = await _scenario.Execute(new AllocateCartId());
+    void Destroy() => _scenario.Dispose();
+
+    [Fact] void should_succeed() => _result.ShouldBeSuccessful();
+    [Fact] void should_return_the_pinned_id() =>
+        ((CommandResult<CartId>)_result).Response.ShouldEqual(_cartId);
+    [Fact] void should_capture_the_pinned_id() =>
+        _scenario.GeneratedValues.Last<CartId>("cart").ShouldEqual(_cartId);
+    [Fact] void should_capture_it_once() =>
+        _scenario.GeneratedValues.All<CartId>("cart").ShouldContainOnly(_cartId);
+}
+```
+
+- Pins use the attribute's explicit name, or the C# parameter name without one.
+  Names are case-sensitive and pins are keyed by command type plus name.
+- Supply the concept, not a raw `Guid`. Incompatible/null pins yield
+  `PinnedGeneratedValueHasWrongType` during execution. Pins still undergo normal
+  concept validation; only validated values are captured.
+- Strict is the default. Without a pin, an unpinned generated parameter yields
+  `GeneratedValueNotPinned` as an exception outcome in `CommandResult`; `Execute`
+  does not throw it to the spec. Assert the unsuccessful/exception outcome when
+  specifying that failure, not a request-validation rejection.
+- `AllowGeneration()` opts into normal generation for unpinned values, including
+  nested commands, when exact values do not matter. Explicit pins still win.
+  Each pin supplies the same value on every execution; it is not a queue.
+- For a child invoked through `ICommandPipeline`, configure
+  `_scenario.PinGeneratedValue<ParentCommand, ChildCommand>("child", childId)`.
+  The extension declares `PinGeneratedValue<TOtherCommand>` but C# requires
+  **both** type arguments at the call site. This does not replace a same-named
+  parent pin.
+- `Last<T>(name)` returns the latest capture of that name and declared type,
+  failing if absent. `All<T>(name)` returns a read-only snapshot in resolution
+  order across executions (empty if none). Both include nested commands. Same
+  name/type captures combine; use distinct names to distinguish commands.
+- Configure pins and `AllowGeneration()` before the first execution, even if it
+  fails or has no generated parameters. Changes after that throw
+  `GeneratedValuesMustBePinnedBeforeExecution`; create a new scenario instead.
+  Validation alone neither generates values nor freezes configuration.
+- Do not log or trace captures. Do not replace/seed the production generator.
+  A direct-call decision spec supplies the known argument to `Handle()` itself.
+
+Guide: [Pin generated values in command specs](/arc/backend/csharp/testing/generated-values/).
+Source: **Arc v22.75.0**, `Source/DotNET/Testing/Commands/CommandScenarioGeneratedValueExtensions.cs`,
+`ScenarioGeneratedValueFixture.cs`, `ScenarioGeneratedValues.cs` and
+`GeneratedValuesCommandScenarioExtender.cs`;
+`Source/DotNET/Testing.Specs/Commands/for_CommandScenario/generated_values/when_pinning_a_value.cs`.
 
 ### Unhappy paths assert twice
 
@@ -89,13 +185,11 @@ different: an unauthorized result carries **no** validation errors, so assert
 existing command therefore breaks both its happy-path and its validation-failure
 specifications — switch those assertions rather than patching around them.
 
-Never assert on a message string.
+Do not assert on message strings by default — they are presentation text.
+Assert exact text only when that wording is the specified behavior, and name
+that behavior in the fact.
 
-> **Validator state can be order-sensitive.** The command-scenario pipeline can
-> cache enough state that injected-validator branches depend on execution order
-> when xUnit runs classes in parallel. Use `CommandScenario` for the valid path,
-> test rejected state variants by instantiating the validator directly, and only
-> for that case put the command's specifications in a small xUnit `[Collection]`.
+See "Step 1" in SKILL.md for the order-sensitive validator caveat.
 
 ## `EventScenario`
 
@@ -122,13 +216,10 @@ async Task Because() =>
 and `ShouldNotHaveConstraintViolations()`,
 `ShouldHaveConstraintViolationFor(name)`,
 `ShouldHaveConcurrencyViolations()` and its negation, `ShouldHaveErrors()` and
-its negation. Assert the constraint **name**, never the message.
+its negation. Assert the constraint **name** by default. Assert exact message
+text only when that wording is the specified behavior, and name it in the fact.
 
-⚠️ `EventScenario` wires a strategy that always answers `ConcurrencyScope.None`,
-which the validator skips, so an append that lets the strategy choose the scope
-never produces a concurrency violation. `ShouldHaveConcurrencyViolations()`
-cannot pass for such an append and its negation passes vacuously — specify concurrency against the
-real kernel with an out-of-process integration specification instead.
+See "Step 1" in SKILL.md for the vacuous concurrency assertions caveat.
 
 ## `ReadModelScenario<TReadModel>`
 
@@ -184,12 +275,57 @@ async Task Because() =>
 Construct with an `IServiceProvider` of substituted collaborators and assert on
 those substitutes after `Given` fires the events.
 
+### Read-model parameters — Chronicle 19.46.0+
+
+`Given` events invoke the reactor; they **do not build read models**, including
+passive ones. In the present-state specification, seed a pre-built instance:
+
+```csharp
+void Establish() => _scenario.Given.ForEventSourceId(_id).ReadModel(_author);
+```
+
+In a **separate absence specification**, deliberately let an `Author?` handler
+parameter receive `null`:
+
+```csharp
+void Establish() => _scenario.Given.ForEventSourceId(_id).NoReadModel<Author>();
+```
+
+Both return `ReactorSourceGivenBuilder<TReactor>` for chaining, not a `Task`.
+Use the triggering source id by default or `ICanResolveReadModelKey.Resolve`'s
+key when implemented. Absence matches the exact type and key and does not remove
+a seeded instance. Missing setup throws `ReadModelNotSeededForReactorScenario`
+(`Cratis.Chronicle.Testing.Reactors`), **even for nullable parameters**. Its
+message names the type/key, explains both setups, and lists other seeded keys
+for that type when any exist. Fix the fixture/key rather than hiding missing
+setup with `NoReadModel<T>()`. This guard applies to `EventStoreForTesting`, not
+production resolution or an explicitly supplied store of another type.
+
+Also in **Chronicle 19.46.0+**, a synchronous handler throw surfaces its own
+exception, not reflection's `TargetInvocationException`, preserving the handler
+stack. Capture with `await Catch.Exception(() => _scenario.Given.ForEventSource(_id).Events(...))`
+and assert the handler's exception type.
+
+`EventContext.From(...)` defaults omitted `occurred` to `DateTimeOffset.UtcNow`,
+previously local `Now`. Scenario contexts, `EventContext.Empty` and
+`EmptyWithEventSourceId(...)` use this helper; explicit times retain their offset,
+and the positional constructor has no such default.
+
+Sources at **Chronicle tag `v19.46.0`**:
+`Source/Clients/Testing/Reactors/{ReactorScenario,ReactorSourceGivenBuilder,ScenarioReactorMethodArgumentsResolver,ReadModelNotSeededForReactorScenario}.cs`
+and `Source/Clients/DotNET/Events/EventContext.cs`. For exact signatures and
+source-backed examples, read `cratis-chronicle-reactor/references/specifications.md`.
+
 ## Application conventions
 
-- **Use a per-specification value for anything under a uniqueness check** — a
-  fresh `Guid`, or a truncated `Guid.NewGuid().ToString("N")[..9]`. Hardcoded
-  values cause order-dependent flakes. Do not add `[Collection(…)]` to work
-  around a collision; that is the wrong fix here.
+- **Use a per-specification fixture value for anything under a shared uniqueness
+  check** — a fresh `Guid`, or a truncated `Guid.NewGuid().ToString("N")[..9]`.
+  Hardcoded values in shared storage cause order-dependent flakes. This is
+  fixture isolation, not advice to generate inside production `Handle()`;
+  for generated parameters, pin the typed expected fixture value before
+  execution. A known fixed pin is appropriate in an isolated scenario such as
+  the allocation-only example above. Do not add `[Collection(…)]` to work around
+  a collision; that is the wrong fix here.
 - **Sequence numbers are zero-based.** The first event is `0`, the tail of two
   events is `1`. The tail after a single append is `0`, never `1`.
 - A behavior covering several subjects groups its specifications under

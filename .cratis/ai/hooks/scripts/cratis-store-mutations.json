@@ -8,7 +8,7 @@
     "local file can tighten the shipped lists but only a replacement file can loosen them.",
     "",
     "Scope: only the \u0022group\u0022 command group is guarded. Every other cratis group (ai, arc, context, llm,",
-    "screenplay, prologue, completions) and every top-level command (init, new, render, run, update,",
+    "screenplay, prologue, completions, direct) and every top-level command (init, new, render, run, update,",
     "version, get-started, llm-context) is out of scope and always allowed.",
     "",
     "Fields:",
@@ -28,7 +28,11 @@
     "Anything under the group that is on neither list is blocked as unknown: the guard fails closed, so a",
     "command added by a newer CLI is refused until someone classifies it here."
   ],
-  "verifiedAgainst": "cratis 3.13.1",
+  "verifiedAgainst": "cratis 3.53.1",
+  "source": "https://github.com/Cratis/cli/blob/v3.53.1/Documentation/reference/llm-context.md",
+  "policyExceptions": [
+    "report-error is cataloged read-only, but blocked because it opens an external browser issue form"
+  ],
   "group": "chronicle",
   "helpOptions": [
     "-h",
@@ -175,7 +179,15 @@
     },
     {
       "command": "observers clear-quarantine",
-      "effect": "clears an observer\u0027s quarantine so it resumes processing"
+      "effect": "clears observer-level quarantine only, not a partition\u0027s quarantine"
+    },
+    {
+      "command": "observers clear-partition-quarantine",
+      "effect": "clears a failed partition\u0027s quarantine and resets its retry budget; retries the handler unless --no-retry is given"
+    },
+    {
+      "command": "observers remove",
+      "effect": "deletes an observer\u0027s definition, state, handled counts, failed partitions and projection definition across every namespace of the event store; leaves read model data"
     },
     {
       "command": "jobs stop",

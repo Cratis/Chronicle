@@ -32,6 +32,12 @@ To inspect or replay observers, use the [Cratis CLI](/cli/):
 
 That's expected — reactors can run more than once for the same event during replay or recovery. The fix is not to prevent it but to make the reactor **idempotent**: record that the side effect happened and skip it if it already did. Chronicle gives you the key to record it under — see [Delivery identity](/chronicle/reactors/delivery-identity/), and [Reacting to events](/chronicle/tutorial/reacting/) for the wider pattern.
 
+## My reactor re-ran all its side effects after a rename
+
+The default reactor id is its full type name. A class rename or namespace move creates a new observer, which catches up from the beginning as ordinary observation. `OnceOnly` does not skip that catch-up.
+
+Preserve the previous stored id explicitly to retain its processing position. Inspect any abandoned observer before removing it; removal does not transfer a position or undo duplicate side effects. See [Reactor identity and renaming](/chronicle/reactors/identity/). The [.NET discovery report](/chronicle/clients/dotnet/discovery-report/) exposes likely identity changes before registration, but a still-subscribed old instance during a rolling deployment can hide them.
+
 ## My reactor throws and the stream seems stuck
 
 When a reactor throws, the failing event source partition pauses — by design, so it doesn't silently skip events. Chronicle retries it on its own, with an exponential backoff, and tries again whenever the observer subscribes, for example after you redeploy. A partition that keeps failing is **quarantined** once it has used up its retry attempts (10 by default), and a quarantined partition is not retried automatically. The limits are set in [observer configuration](/chronicle/hosting/configuration/observers/).
@@ -62,6 +68,33 @@ A partition that ran out of retries before your fix was deployed is quarantined,
 <ChronicleClientTabs snippet="troubleshooting/clear-reactor-partition-quarantine" />
 
 Every refusal has its own outcome, so nothing reports success when it changed nothing. The same operation is available on the `Observers` service as `ClearPartitionQuarantine`.
+
+## An observer may have skipped events
+
+Chronicle counts and logs a **suspected** skip when an observer's position moves past a live event and no delivery path the observer saw covers it. It is a warning to investigate, not proof that the event was lost: a catch-up job may have delivered it without reporting it. The counters `chronicle-observer-events-suspected-skipped` and `chronicle-appended-events-queue-suspected-undelivered-events` are described in [Open Telemetry](/chronicle/hosting/configuration/open-telemetry/#suspected-skipped-events).
+
+The observer writes this warning, inside the scope of the observer it concerns:
+
+```text
+Observer may have skipped 1 event(s) of partition <partition>, first at sequence number <number> (<reason>); its position is <position>. This is a suspicion, not proof: investigate and consider replaying the partition
+```
+
+The reason says how the position moved past the event:
+
+| Reason | What happened |
+| --- | --- |
+| `HeldBackWhilePreparingCatchUp` | The event arrived while the observer was preparing a catch-up, was held back, and the position later moved past it. |
+| `HeldBackWhileReplaying` | The event arrived while its partition was replaying, was held back, and the position later moved past it. |
+| `HeldBackWhileCatchingUp` | The event arrived while its partition was catching up, was held back, and the position later moved past it. |
+| `PassedByPartitionJob` | The event arrived after another partition's job had already moved the observer's position beyond it, so the observer treated it as handled. |
+
+The appended-events queue writes a different warning when handing events to an observer fails: `Dispatching <count> event(s) <first>-<last> of partition <partition> to observer <observer> failed; they may not have been delivered`. The queue cannot tell whether the observer got to handle them.
+
+Warnings are rate-limited to 10 per observer, or per queue, per minute. When more were suspected, a further warning says how many were not logged. The counters are never limited.
+
+A suspicion is also raised for an event that a catch-up round delivered when the live copy of that event only reached the observer after the round had finished, because the appended-events queue lagged behind a whole round. The event was handled, so there is nothing to replay.
+
+Investigate whether the partition's read model or side effects reflect the event. If they do not, consider replaying the partition with [`cratis chronicle observers replay-partition`](/cli/chronicle/observers/#replay-partition). For a reactor, remember that a replay skips handlers marked [`[OnceOnly]`](/chronicle/reactors/once-only/). To retry a partition that failed, see [My reactor throws and the stream seems stuck](#my-reactor-throws-and-the-stream-seems-stuck).
 
 ## A constraint is rejecting an append I expected to succeed
 

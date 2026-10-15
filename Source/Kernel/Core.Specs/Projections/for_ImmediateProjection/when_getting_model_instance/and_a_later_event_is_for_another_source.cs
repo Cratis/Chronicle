@@ -26,13 +26,13 @@ public class and_a_later_event_is_for_another_source : given.an_immediate_projec
             .Returns(initialCursor);
         _eventSequenceStorage.GetFromSequenceNumber((EventSequenceNumber)6, eventSourceId: ReadModelKey, eventTypes: Arg.Any<IEnumerable<EventType>>())
             .Returns(cachedCursor);
-        _projection.ProcessForSingleReadModel(EventStoreNamespaceName.Default, Arg.Any<ExpandoObject>(), Arg.Any<IEnumerable<AppendedEvent>>())
+        _projection.FoldForSingleReadModel(EventStoreNamespaceName.Default, Arg.Any<SingleReadModelProjectionState>(), Arg.Any<IEnumerable<AppendedEvent>>())
             .Returns(_ =>
             {
                 _processingCalls++;
                 var state = new ExpandoObject();
                 ((IDictionary<string, object?>)state)["name"] = "Created";
-                return Task.FromResult(state);
+                return Task.FromResult(new SingleReadModelProjectionState(state, true, true));
             });
         _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>())
             .Returns(new JsonObject { ["name"] = "Created" });

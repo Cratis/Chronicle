@@ -217,8 +217,15 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
             items.Add(item);
             foreach (var difference in SetProperties(workingState, propertyMappers, arrayIndexers))
             {
-                var propertyPath = PropertyPath.CreateFrom([difference.PropertyPath.LastSegment]);
-                propertyPath.SetValue(item, difference.Changed!, ArrayIndexers.NoIndexers);
+                var childSegments = childrenProperty.Segments.ToArray();
+                var differenceSegments = difference.PropertyPath.Segments.ToArray();
+                var hasCollectionPrefix = differenceSegments.Length > childSegments.Length &&
+                    differenceSegments.Take(childSegments.Length).Select(segment => segment.Value)
+                        .SequenceEqual(childSegments.Select(segment => segment.Value));
+                var propertyPath = PropertyPath.CreateFrom(hasCollectionPrefix
+                    ? differenceSegments.Skip(childSegments.Length).ToArray()
+                    : differenceSegments);
+                propertyPath.SetValue(item, difference.Changed!, arrayIndexers);
             }
             Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!, arrayIndexers));
         }
@@ -446,7 +453,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
             .OfType<ExpandoObject>()
             .Cast<IDictionary<string, object?>>()
             .SingleOrDefault(_ =>
-                _.TryGetValue(indexer.IdentifierProperty.Path, out var identifier) &&
+                ChildIdentity.TryGetValue(_, indexer.IdentifierProperty, out var identifier) &&
                 Equals(identifier, indexer.Identifier));
     }
 

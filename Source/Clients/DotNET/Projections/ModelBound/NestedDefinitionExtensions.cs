@@ -41,8 +41,7 @@ static class NestedDefinitionExtensions
             return;
         }
 
-        var propertyPath = new PropertyPath(memberName);
-        var propertyName = namingPolicy.GetPropertyName(propertyPath);
+        var propertyName = (string)ProjectionPropertyPaths.Resolve(memberName, namingPolicy, ProjectionPathRole.Target);
 
         if (!definition.Nested.TryGetValue(propertyName, out var nestedDef))
         {
@@ -99,8 +98,7 @@ static class NestedDefinitionExtensions
             return;
         }
 
-        var propertyPath = new PropertyPath(memberName);
-        var propertyName = namingPolicy.GetPropertyName(propertyPath);
+        var propertyName = (string)ProjectionPropertyPaths.Resolve(memberName, namingPolicy, ProjectionPathRole.Target);
 
         if (!parentChildrenDef.Nested.TryGetValue(propertyName, out var nestedDef))
         {
@@ -175,8 +173,7 @@ static class NestedDefinitionExtensions
             {
                 constructorParamNames.Add(parameter.Name!);
 
-                var paramPath = new PropertyPath(parameter.Name!);
-                var paramPropertyName = namingPolicy.GetPropertyName(paramPath);
+                var paramPropertyName = (string)ProjectionPropertyPaths.Resolve(parameter.Name!, namingPolicy, ProjectionPathRole.Target);
 
                 foreach (var (setFromAttr, setFromEventType) in parameter.GetAttributesOfGenericType<SetFromAttribute<object>>())
                 {

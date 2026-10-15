@@ -12,6 +12,16 @@ Event seeding is a Chronicle Server capability that lets you provide a predefine
 
 Use event seeding when you need deterministic, append-only data to be part of the system from the beginning. Chronicle tracks seeded events so it is safe to start applications multiple times without duplicating data.
 
+## Seed identity and routing
+
+Chronicle compares the event source identifier, event type, content, tag set, event source
+type, stream type, and stream identifier when deciding what has already been seeded. The
+number of identical entries matters: yielding an entry twice seeds two events.
+
+Identical payloads routed to different streams are distinct seeds. Entries that omit routing
+use the same defaults as legacy seed definitions and do not cause existing seeds to be
+appended again.
+
 ## Next steps
 
 - [Seeding with C Sharp](./seeding-with-csharp)

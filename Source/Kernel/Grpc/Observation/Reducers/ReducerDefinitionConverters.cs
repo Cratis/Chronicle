@@ -19,10 +19,13 @@ internal static class ReducerDefinitionConverters
         new(
             reducerDefinition.ReducerId,
             reducerDefinition.EventSequenceId,
-            reducerDefinition.EventTypes.Select(_ => _.ToChronicle()),
+            reducerDefinition.EventTypes.Select(_ => _.ToChronicle()).ToArray(),
             reducerDefinition.ReadModel,
             reducerDefinition.IsActive,
             reducerDefinition.Tags,
             reducerDefinition.Filters.ToChronicle(),
-            reducerDefinition.Hash);
+            reducerDefinition.Hash)
+        {
+            GenerationDelivery = (Concepts.Observation.EventGenerationDelivery)reducerDefinition.GenerationDelivery
+        };
 }

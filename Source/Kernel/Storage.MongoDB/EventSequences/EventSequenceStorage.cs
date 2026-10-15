@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
@@ -39,7 +40,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class EventSequenceStorage(
+public partial class EventSequenceStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
@@ -49,9 +50,15 @@ public class EventSequenceStorage(
     IIdentityStorage identityStorage,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
+    ILogger<EventSequenceStorage> logger) : IEventSequenceStorage, IEventPublicationStorage
 {
     readonly IMongoCollection<Event> _collection = database.GetEventSequenceCollectionFor(eventSequenceId);
+
+    /// <inheritdoc/>
+    public bool SupportsRevisionTracking => true;
+
+    /// <inheritdoc/>
+    public string SerializeContentForVerification(ExpandoObject content, JsonSchema schema) => EventContentBson.ToJson(SerializeContent(content, schema));
 
     /// <inheritdoc/>
     public async Task<Chronicle.Storage.EventSequences.EventSequenceState> GetState()
@@ -235,8 +242,7 @@ public class EventSequenceStorage(
             foreach (var (generation, expandoContent) in content)
             {
                 var schema = await eventTypesStorage.GetFor(eventType.Id, generation);
-                var jsonObject = expandoObjectConverter.ToJsonObject(expandoContent, schema.Schema);
-                generationalContent[generation.ToString()] = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+                generationalContent[generation.ToString()] = SerializeContent(expandoContent, schema.Schema);
             }
 
             var hashesForStorage = contentHashes.ToDictionary(
@@ -260,6 +266,7 @@ public class EventSequenceStorage(
                 [],
                 subject?.IsSet == true ? subject : null)
             {
+                AppendedGeneration = eventType.Generation.Value,
                 NamedTags = namedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value)).ToArray()
             };
             var collection = _collection;
@@ -273,7 +280,7 @@ public class EventSequenceStorage(
             foreach (var (gen, genDoc) in generationalContent)
             {
                 if (int.TryParse(gen, out var genNumber))
-                    genContentDict[genNumber] = genDoc.ToString();
+                    genContentDict[genNumber] = EventContentBson.ToJson(genDoc);
             }
 
             var eventHash = contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet;
@@ -297,11 +304,13 @@ public class EventSequenceStorage(
                     eventHash,
                     Subject: resolvedSubject)
                 {
-                    NamedTags = namedTags
+                    NamedTags = namedTags,
+                    AppendedGeneration = eventType.Generation
                 },
                 returnContent)
             {
-                GenerationalContent = genContentDict
+                GenerationalContent = genContentDict,
+                GenerationalHashes = contentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
             });
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
@@ -349,8 +358,7 @@ public class EventSequenceStorage(
                 foreach (var (generation, content) in eventToAppend.GenerationalContent)
                 {
                     var schema = await eventTypesStorage.GetFor(eventToAppend.EventType.Id, generation);
-                    var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
-                    generationalContent[generation.ToString()] = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+                    generationalContent[generation.ToString()] = SerializeContent(content, schema.Schema);
                 }
 
                 var hashesForStorage = eventToAppend.ContentHashes.ToDictionary(
@@ -377,6 +385,7 @@ public class EventSequenceStorage(
                     [],
                     Subject: eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null)
                 {
+                    AppendedGeneration = eventToAppend.EventType.Generation.Value,
                     NamedTags = eventToAppend.NamedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value)).ToArray(),
                     EventSource = eventToAppend.EventSource.IsSet ? eventToAppend.EventSource : null
                 };
@@ -403,11 +412,13 @@ public class EventSequenceStorage(
                         Subject: resolvedSubject)
                     {
                         NamedTags = eventToAppend.NamedTags,
-                        EventSource = eventToAppend.EventSource
+                        EventSource = eventToAppend.EventSource,
+                        AppendedGeneration = eventToAppend.EventType.Generation
                     },
                     eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
                 {
-                    GenerationalContent = generationalContent.ToDictionary(kvp => int.Parse(kvp.Key), kvp => kvp.Value.ToString())
+                    GenerationalContent = generationalContent.ToDictionary(kvp => int.Parse(kvp.Key), kvp => EventContentBson.ToJson(kvp.Value)),
+                    GenerationalHashes = eventToAppend.ContentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
                 });
             }
 
@@ -449,7 +460,7 @@ public class EventSequenceStorage(
 
         var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
-        var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+        var document = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions), schema.Schema);
 
         var revision = new EventRevision(
             eventType.Generation,
@@ -810,6 +821,33 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+    {
+        var numbers = sequenceNumbers.Distinct().ToArray();
+        if (numbers.Length == 0)
+        {
+            return [];
+        }
+        var filter = Builders<Event>.Filter.In(_ => _.SequenceNumber, numbers);
+        var projection = Builders<Event>.Projection.Exclude(_ => _.Content).Exclude(_ => _.ContentHashes).Exclude(_ => _.Revisions);
+        var events = await _collection.Find(filter).SortBy(_ => _.SequenceNumber).Project<Event>(projection).ToListAsync(cancellationToken).ConfigureAwait(false);
+        return events.Select(_ => new StoredEventMetadata(
+            _.SequenceNumber,
+            _.Type,
+            _.EventSourceType,
+            _.EventSourceId,
+            _.EventStreamType,
+            _.EventStreamId,
+            _.Occurred,
+            _.CorrelationId,
+            _.Causation,
+            _.CausedBy,
+            _.Tags.Select(tag => new Concepts.Events.Tag(tag)).ToArray(),
+            _.Subject ?? new Subject(_.EventSourceId.Value),
+            _.EventSource ?? EventSourceName.NotSet)).ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber)
     {
         logger.GettingEventAtSequenceNumber(eventSequenceId, sequenceNumber);
@@ -1026,7 +1064,7 @@ public class EventSequenceStorage(
         {
             var schema = await eventTypesStorage.GetFor(existingEvent.Type, generation);
             var jsonObject = expandoObjectConverter.ToJsonObject(expandoContent, schema.Schema);
-            generationalContent[generation.ToString()] = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+            generationalContent[generation.ToString()] = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions), schema.Schema);
         }
 
         var update = Builders<Event>.Update.Set(e => e.Content, generationalContent);
@@ -1037,6 +1075,14 @@ public class EventSequenceStorage(
     public async Task EnsureIndexes()
     {
         await database.EnsureIndexesForEventSequence(eventSequenceId).ConfigureAwait(false);
+        await ReceiptCollection.EnsureIndexesAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("occurrenceId"),
+                new CreateIndexOptions { Name = "occurrenceId" })).ConfigureAwait(false);
+        await _collection.EnsureIndexesAsync(
+            new CreateIndexModel<Event>(
+                Builders<Event>.IndexKeys.Ascending(e => e.PublicationId),
+                new CreateIndexOptions { Unique = true, Sparse = true, Name = "publication_identity" })).ConfigureAwait(false);
         await _collection.EnsureIndexesAsync(
             new CreateIndexModel<Event>(
                 Builders<Event>.IndexKeys.Ascending(e => e.Subject),
@@ -1073,7 +1119,7 @@ public class EventSequenceStorage(
         JsonSerializerOptions jsonSerializerOptions)
     {
         var content = CreateRedactionContent(originalRawEvent, reason);
-        var document = BsonDocument.Parse(JsonSerializer.Serialize(content.ToPayload(), jsonSerializerOptions));
+        var document = EventContentBson.FromJson(JsonSerializer.Serialize(content.ToPayload(), jsonSerializerOptions));
         var generationalContent = new Dictionary<string, BsonDocument>
         {
             { EventTypeGeneration.First.ToString(), document }
@@ -1166,6 +1212,9 @@ public class EventSequenceStorage(
             ? FilterDefinition<Event>.Empty
             : Builders<Event>.Filter.And([.. filters]);
     }
+
+    BsonDocument SerializeContent(ExpandoObject content, JsonSchema schema) =>
+        EventContentBson.FromJson(JsonSerializer.Serialize(expandoObjectConverter.ToJsonObject(content, schema), jsonSerializerOptions), schema);
 
     async Task<DuplicateEventSequenceNumber> AbortAndResolveNextAvailableSequenceNumber(IClientSessionHandle session)
     {

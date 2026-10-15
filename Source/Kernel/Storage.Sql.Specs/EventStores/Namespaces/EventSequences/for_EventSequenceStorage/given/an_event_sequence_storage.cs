@@ -26,7 +26,7 @@ public class an_event_sequence_storage : Specification, IDisposable
 {
     protected string _tableName = EventSequenceId.Log.Value;
     protected static readonly EventStoreName _eventStore = "test-store";
-    protected static readonly EventStoreNamespaceName _namespace = "test-namespace";
+    protected EventStoreNamespaceName _namespace = "test-namespace";
     protected EventSequenceId _eventSequenceId = EventSequenceId.Log;
     string? _provider;
     protected static readonly EventType _eventType = new("some-event-type", EventTypeGeneration.First);
@@ -35,6 +35,7 @@ public class an_event_sequence_storage : Specification, IDisposable
     protected IEventSequenceMigrator _migrator;
     protected IDatabase _database;
     protected IIdentityStorage _identityStorage;
+    protected Chronicle.Storage.EventTypes.IEventTypesStorage _eventTypesStorage;
     protected EventSequenceStorage _storage;
 
     void Establish()
@@ -67,13 +68,16 @@ public class an_event_sequence_storage : Specification, IDisposable
         _identityStorage = Substitute.For<IIdentityStorage>();
         _identityStorage.GetFor(Arg.Any<IEnumerable<IdentityId>>()).Returns(Identity.System);
 
+        _eventTypesStorage = Substitute.For<Chronicle.Storage.EventTypes.IEventTypesStorage>();
         _storage = new EventSequenceStorage(
             _eventStore,
             _namespace,
             _eventSequenceId,
             _database,
             _identityStorage,
-            Substitute.For<ILogger<EventSequenceStorage>>());
+            Substitute.For<ILogger<EventSequenceStorage>>(),
+            _eventTypesStorage,
+            new Json.ExpandoObjectConverter(new Schemas.TypeFormats()));
     }
 
     protected EventSequenceDbContext CreateContext()

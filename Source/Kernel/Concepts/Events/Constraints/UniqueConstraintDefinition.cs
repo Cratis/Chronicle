@@ -30,6 +30,7 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
 {
     readonly IEnumerable<EventTypeId>? _removedWith = RemovedWith;
     readonly IEnumerable<EventSequenceId>? _eventSequences;
+    readonly IEnumerable<UniqueConstraintEventDefinition>? _removalEventDefinitions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UniqueConstraintDefinition"/> class from a single removal event.
@@ -53,6 +54,23 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         ConstraintScope? scope)
         : this(name, eventDefinitions, removedWith is null ? [] : [removedWith], ignoreCasing, scope)
     {
+    }
+
+    /// <summary>
+    /// Gets how claimed values are retained. The default keeps one value per event source.
+    /// </summary>
+    public UniqueConstraintMode Mode { get; init; }
+
+    /// <summary>
+    /// Gets the removal events and properties identifying the value to release.
+    /// </summary>
+    /// <remarks>
+    /// A removal event without properties releases all values held by its event source.
+    /// </remarks>
+    public IEnumerable<UniqueConstraintEventDefinition> RemovalEventDefinitions
+    {
+        get => _removalEventDefinitions ?? [];
+        init => _removalEventDefinitions = value;
     }
 
     /// <summary>
@@ -115,6 +133,8 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         other is not null &&
         Name == other.Name &&
         IgnoreCasing == other.IgnoreCasing &&
+        Mode == other.Mode &&
+        RemovalEventDefinitions.SequenceEqual(other.RemovalEventDefinitions) &&
         Scope == other.Scope &&
         EventDefinitions.SequenceEqual(other.EventDefinitions) &&
         RemovedWith.SequenceEqual(other.RemovedWith) &&
@@ -126,6 +146,12 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         var hashCode = default(HashCode);
         hashCode.Add(Name);
         hashCode.Add(IgnoreCasing);
+        hashCode.Add(Mode);
+        foreach (var removalEventDefinition in RemovalEventDefinitions)
+        {
+            hashCode.Add(removalEventDefinition);
+        }
+
         hashCode.Add(Scope);
         foreach (var eventDefinition in EventDefinitions)
         {
@@ -178,7 +204,9 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
             }
         }
 
-        if (!RemovedWith.SequenceEqual(existingDefinition.RemovedWith) || IgnoreCasing != existingDefinition.IgnoreCasing || Scope != existingDefinition.Scope)
+        if (!RemovedWith.SequenceEqual(existingDefinition.RemovedWith) ||
+            !RemovalEventDefinitions.SequenceEqual(existingDefinition.RemovalEventDefinitions) ||
+            Mode != existingDefinition.Mode || IgnoreCasing != existingDefinition.IgnoreCasing || Scope != existingDefinition.Scope)
         {
             changes.Add(ConstraintChangeType.IndexedPropertiesChanged);
         }

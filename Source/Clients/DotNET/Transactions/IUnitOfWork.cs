@@ -44,6 +44,41 @@ public interface IUnitOfWork : IDisposable
     bool HasEnrolledDecisionReads => false;
 
     /// <summary>
+    /// Gets whether this unit permanently uses enforced read protection and a strict lifecycle.
+    /// </summary>
+    bool IsEnforcingReadProtection => false;
+
+    /// <summary>
+    /// Begins invocation read protection before any event or read dependency is enrolled.
+    /// Only the first caller receives the owning lifetime; subsequent leases cannot end enforcement.
+    /// </summary>
+    /// <returns>The invocation frame, disposed by the owning command pipeline in a finally block.</returns>
+    /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot enforce read protection.</exception>
+    ReadProtectionFrame EnforceReadProtection() => throw new UnitOfWorkReadProtectionNotSupported(GetType());
+
+    /// <summary>
+    /// Allows explicit reads without permitting immediate appends or removing existing dependencies.
+    /// </summary>
+    /// <param name="allowance">Advisory reads or reads contributed before exposure.</param>
+    /// <param name="reason">The explicit reason for the region.</param>
+    /// <returns>The flow-local read region.</returns>
+    /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot support allowances.</exception>
+    IDisposable AllowReads(ReadAllowance allowance, string reason) => throw new UnitOfWorkReadProtectionNotSupported(GetType());
+
+    /// <summary>
+    /// Atomically validates target, staged overlap and distinct contributions before enrolling a read.
+    /// </summary>
+    /// <param name="contribution">The stream or aggregate dependency.</param>
+    /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot enroll contributions.</exception>
+    void EnrolContributedRead(ContributedRead contribution) => throw new UnitOfWorkReadProtectionNotSupported(GetType());
+
+    /// <summary>
+    /// Gets the append conditions captured by the trusted commit.
+    /// </summary>
+    /// <returns>The immutable append-condition descriptions.</returns>
+    IReadOnlyList<AppendCondition> GetAppendConditions() => [];
+
+    /// <summary>
     /// Add an event that has occurred to the <see cref="IUnitOfWork"/>.
     /// </summary>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> for the event.</param>
@@ -96,6 +131,53 @@ public interface IUnitOfWork : IDisposable
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes) =>
         throw new UnitOfWorkBatchEnrollmentNotSupported(GetType());
+
+    /// <summary>
+    /// Enrolls an event with its scope origin. Alternate implementations retain their existing enrollment behavior.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="event">The event.</param>
+    /// <param name="causation">The causation.</param>
+    /// <param name="options">The enrollment options.</param>
+    /// <exception cref="ConcurrencyScopeOriginNotValidForEvents">The origin is reserved for reads.</exception>
+    void AddEventWithOptions(EventSequenceId eventSequenceId, EventSourceId eventSourceId, object @event, Causation causation, EventEnrollmentOptions options)
+    {
+        ConcurrencyScopeOriginNotValidForEvents.ThrowIfNotValid(options.Origin);
+        var namedTags = options.NamedTags?.ToArray() ?? [];
+        if (namedTags.Length != 0)
+        {
+            AddEventWithNamedTags(eventSequenceId, eventSourceId, @event, namedTags, causation, options.EventStreamType, options.EventStreamId, options.EventSourceType, options.ConcurrencyScope, options.Tags, options.Occurred, options.Subject);
+        }
+        else
+        {
+            AddEvent(eventSequenceId, eventSourceId, @event, causation, options.EventStreamType, options.EventStreamId, options.EventSourceType, options.ConcurrencyScope, options.Tags, options.Occurred, options.Subject);
+        }
+    }
+
+    /// <summary>
+    /// Enrolls an ordered batch with the origin of its supplied scopes.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="events">The ordered events.</param>
+    /// <param name="concurrencyScopes">The supplied scopes.</param>
+    /// <param name="origin">The scope contribution.</param>
+    /// <exception cref="ConcurrencyScopeOriginNotValidForEvents">The origin is reserved for reads.</exception>
+    void AddEvents(EventSequenceId eventSequenceId, IEnumerable<EventForEventSourceId> events, IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes, ConcurrencyScopeOrigin origin)
+    {
+        ConcurrencyScopeOriginNotValidForEvents.ThrowIfNotValid(origin);
+        AddEvents(eventSequenceId, events, concurrencyScopes);
+    }
+
+    /// <summary>
+    /// Attaches a contributor for the lifetime of an enrollment scope, such as one command invocation.
+    /// </summary>
+    /// <param name="contributor">The contributor to consult before enrollment.</param>
+    /// <returns>A handle that removes only this registration on disposal.</returns>
+    /// <exception cref="UnitOfWorkEnrollmentContributorsNotSupported">The implementation does not support contributors.</exception>
+    /// <exception cref="UnitOfWorkMutatedDuringEnrollment">A contributor attempted to change registrations.</exception>
+    IDisposable AddEnrollmentContributor(IUnitOfWorkEnrollmentContributor contributor) =>
+        throw new UnitOfWorkEnrollmentContributorsNotSupported(GetType());
 
     /// <summary>Enroll a protected read as a commit dependency.</summary>
     /// <param name="read">The protected read.</param>

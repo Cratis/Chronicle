@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Captures;
 using Cratis.DependencyInjection;
 
@@ -15,7 +16,7 @@ namespace Cratis.Chronicle.Captures.Engine;
 public class CaptureContentMapper : ICaptureContentMapper
 {
     /// <inheritdoc/>
-    public JsonObject Map(AppendDefinition append, CaptureChange change)
+    public JsonObject Map(AppendDefinition append, CaptureChange change, JsonObject? context = default)
     {
         var item = change.Current ?? change.Previous ?? [];
 
@@ -27,14 +28,27 @@ public class CaptureContentMapper : ICaptureContentMapper
         var content = new JsonObject();
         foreach (var (property, expression) in append.FieldAssignments)
         {
-            content[property] = ResolveExpression(expression, item);
+            content[property] = ResolveExpression(expression, item, context);
         }
 
         return content;
     }
 
-    static JsonNode? ResolveExpression(string expression, JsonObject item)
+    static JsonNode? ResolveExpression(string expression, JsonObject item, JsonObject? context)
     {
+        if (context is not null)
+        {
+            if (expression == WellKnownExpressions.EventSourceId)
+            {
+                return CaptureItemPath.Resolve(context, "eventSourceId")?.DeepClone();
+            }
+
+            if (expression.StartsWith("$context.", StringComparison.Ordinal))
+            {
+                return CaptureItemPath.Resolve(context, expression["$context.".Length..])?.DeepClone();
+            }
+        }
+
         if (expression.StartsWith("$.", StringComparison.Ordinal))
         {
             return CaptureItemPath.Resolve(item, expression[2..])?.DeepClone();

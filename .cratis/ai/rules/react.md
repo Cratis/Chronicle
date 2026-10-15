@@ -150,7 +150,7 @@ Out-of-dialog execution branches in this order:
 const result = await command.execute();
 if (!result.isAuthorized) { redirectToLogin(); return; }
 if (!result.isValid)      { /* validationResults → inline field errors */ return; }
-if (result.hasExceptions) { toast.error('Something went wrong'); console.error(result.exceptionMessages); return; }
+if (result.hasExceptions) { toast.error({ title: 'Something went wrong' }); console.error(result.exceptionMessages); return; }
 // happy path — refresh queries, close, etc.
 ```
 
@@ -164,12 +164,19 @@ if (result.hasExceptions) { toast.error('Something went wrong'); console.error(r
 - **`asCommandFormField<P>(Component, opts)`** — wrap a custom input (rich text, address picker) so it participates in `CommandForm` with validation/error wiring.
 - **`CommandScope`** + `useCommandScope()` (`@cratis/arc.react/commands`) — aggregate state across multiple commands (and queries) on one screen; commands and queries rendered inside the scope register themselves (the `ICommandScope` API also exposes `addCommand`/`addQuery`/`addChildScope` for manual registration); scopes nest (a child reports up to its parent); injectable as `ICommandScope` (nearest enclosing scope). Props: `setHasChanges`, `setIsPerforming`, `onBeforeExecute`, `onSuccess(cmd, result)`, `onFailed`, `onException`, `onUnauthorized`. `ICommandScope` members: `hasChanges`, `isPerforming`, `hasValidationFailures`, `hasExceptions`, `validationFailures`/`exceptions` (this scope), `aggregatedValidationFailures`/`aggregatedExceptions` (scope + children), `execute()` (runs only commands with changes), `revertChanges()`, `parent`.
 
+At Arc v22.75.0 `CommandForm` defaults to safe exception text rather than raw
+server messages; customize with `exceptionMessage` or `exceptionDisplayComponent`
+(`ExceptionDisplayProps`). `showErrors={false}` hides built-in display. Dynamic
+accessors need explicit `fieldName`; custom field validation failures block submit.
+
 ### `<Arc>` global configuration
 
 Top-level provider for microservice name and API base path. Config props (with defaults):
 
 | Prop | Default | Notes |
 |---|---|---|
+| `apiBasePath` | — | Backend API prefix; `<Arc basePath>` is deprecated, not router configuration |
+| `detailsType` | — | Constructor for typed identity details |
 | `httpHeadersCallback` | — | returns `HeadersInit` merged into every request (bearer/tenant headers) |
 | `queryTransportMethod` | `ServerSentEvents` | SSE is capped at 4 connections on HTTP/1.1 |
 | `observableQueryTransferMode` | `Delta` | `Delta` = server ChangeSet/client diff; `Full` = all items as `added` |

@@ -44,6 +44,16 @@ public record Event(
     Subject? Subject = null)
 {
     /// <summary>
+    /// Gets the generation of the original append. Null for historic documents where it is unknown.
+    /// </summary>
+    public uint? AppendedGeneration { get; init; }
+
+    /// <summary>
+    /// Gets the provenance of generations added by backfill. Missing for historical and append-derived content.
+    /// </summary>
+    public IDictionary<string, DerivedGeneration>? DerivedGenerations { get; init; }
+
+    /// <summary>
     /// Gets the structured named tags. Missing in historic documents.
     /// </summary>
     public IEnumerable<NamedTagDocument> NamedTags { get; init; } = [];
@@ -53,4 +63,14 @@ public record Event(
     /// Missing, or null, in historic documents and in events not appended through a definition.
     /// </summary>
     public EventSourceName? EventSource { get; init; }
+
+    /// <summary>
+    /// Gets the opaque publication identity, atomically stored with the event. Absent for ordinary appends.
+    /// </summary>
+    public string? PublicationId { get; init; }
+
+    /// <summary>
+    /// Gets the immutable publication intent fingerprint. Preserved through revision and redaction.
+    /// </summary>
+    public string? PublicationFingerprint { get; init; }
 }

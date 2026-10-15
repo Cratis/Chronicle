@@ -2,10 +2,6 @@
 
 Projections can populate a single nullable child object on a read model using the `Nested()` method. Unlike [children collections](children), which manage an array of items identified by a key, `Nested()` targets a scalar nullable property that is set from an event and cleared (set to null) by another event.
 
-:::note[Client coverage]
-Declarative nested-object projections (`Nested()`/`ClearWith()`) are currently a C#-only mechanism. Kotlin and Java have no fluent nested-object API, TypeScript's builder throws `not implemented yet` for this method, and Elixir has no equivalent nested-object embedding pattern. The examples on this page are shown in C# only until nested projection scopes are implemented for the other clients.
-:::
-
 ## Defining a nested object projection
 
 Use the `Nested()` method with `ClearWith<TEvent>()` to define the nested relationship:

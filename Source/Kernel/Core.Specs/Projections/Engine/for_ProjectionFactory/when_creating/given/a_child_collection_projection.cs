@@ -25,6 +25,7 @@ public class a_child_collection_projection : Specification
     protected static readonly EventStoreName _eventStore = "event-store";
     protected static readonly EventStoreNamespaceName _namespace = "namespace";
     protected ProjectionFactory _factory;
+    protected IEventSequenceStorage _eventSequenceStorage;
     protected ProjectionDefinition _definition;
     protected ReadModelDefinition _readModel;
 
@@ -35,7 +36,8 @@ public class a_child_collection_projection : Specification
         var namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         storage.GetEventStore(_eventStore).Returns(eventStoreStorage);
         eventStoreStorage.GetNamespace(_namespace).Returns(namespaceStorage);
-        namespaceStorage.GetEventSequence(EventSequenceId.Log).Returns(Substitute.For<IEventSequenceStorage>());
+        _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
+        namespaceStorage.GetEventSequence(EventSequenceId.Log).Returns(_eventSequenceStorage);
 
         var typeFormats = new TypeFormats();
         var keyResolvers = new KeyResolvers(NullLogger<KeyResolvers>.Instance);

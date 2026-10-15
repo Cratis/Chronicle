@@ -1,0 +1,15 @@
+projection PlayerScore => PlayerScoreReadModel
+  from PlayerJoined
+    PlayerName = name
+    Score = 0
+
+  from PointsEarned
+    add Score by points
+    LastScored = $eventContext.occurred
+
+  from PointsLost
+    subtract Score by points
+
+  from BonusAwarded
+    add Score by bonusPoints
+    add BonusTotal by bonusPoints

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Webhooks;
 
@@ -10,6 +11,15 @@ namespace Cratis.Chronicle.Webhooks;
 /// </summary>
 public interface IWebhookDefinitionBuilder
 {
+    /// <summary>
+    /// Sets the generation delivery policy. Compatibility is the default.
+    /// </summary>
+    /// <param name="generationDelivery">The generation delivery policy.</param>
+    /// <returns>The builder for continuation.</returns>
+    /// <exception cref="WebhookGenerationDeliveryNotSupported">The builder does not support pinned delivery.</exception>
+    IWebhookDefinitionBuilder WithGenerationDelivery(EventGenerationDelivery generationDelivery) =>
+        generationDelivery == EventGenerationDelivery.Compatibility ? this : throw new WebhookGenerationDeliveryNotSupported();
+
     /// <summary>
     /// Sets the <see cref="EventSequenceId"/> that the webhook observer should be registered on.
     /// </summary>

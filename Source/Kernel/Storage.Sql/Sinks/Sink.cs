@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections;
 using System.Dynamic;
-using System.Globalization;
 using System.Linq.Expressions;
 using System.Reactive.Linq;
 using System.Text.Json;
@@ -21,13 +19,11 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Monads;
-using Cratis.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnDocuments;
 
 #pragma warning disable SA1202 // Private helpers grouped next to the public methods they back.
 #pragma warning disable SA1204 // Static helpers grouped at the bottom for readability.
@@ -44,9 +40,22 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// only touch the modified columns — matching MongoDB's <c language="csharp">$set</c> semantics and removing the
 /// stale-snapshot overwrite class of bug that whole-document upserts suffered from.
 /// </summary>
-public class Sink : ISink
+public partial class Sink : ISink
 {
     static readonly IEnumerable<FailedPartition> _noFailedPartitions = [];
+
+    /// <summary>
+    /// The exception type suffixes and message fragments identifying a unique constraint violation.
+    /// SqliteException error code 19 is SQLITE_CONSTRAINT; the message names UNIQUE / PRIMARY KEY.
+    /// PostgreSQL's PostgresException sets SqlState 23505; SQL Server's SqlException sets Number 2627/2601.
+    /// We treat them all alike: the row already exists, the caller should retry as UPDATE.
+    /// </summary>
+    static readonly (string ExceptionSuffix, string[] MessageFragments)[] _uniqueViolations =
+    [
+        ("SqliteException", ["UNIQUE"]),
+        ("PostgresException", ["duplicate key"]),
+        ("SqlException", ["PRIMARY KEY", "UNIQUE KEY"])
+    ];
 
     readonly Concepts.EventStoreName _eventStoreName;
     readonly Concepts.EventStoreNamespaceName _namespace;
@@ -168,16 +177,46 @@ public class Sink : ISink
 
         if (changeset.HasBeenRemoved())
         {
-            var toRemove = await scope.DbContext.Entries.FirstOrDefaultAsync(BuildIdPredicate(id));
-            if (toRemove is not null)
-            {
-                scope.DbContext.Entries.Remove(toRemove);
-                await scope.DbContext.SaveChangesAsync();
-            }
-
+            await RemoveEntry(scope, id);
             return _noFailedPartitions;
         }
 
+        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber);
+
+        var nonJoinedChanges = changeset.Changes
+            .Where(c => c is not Joined and not ChildRemovedFromAll)
+            .ToArray();
+        if (nonJoinedChanges.Length == 0 || !await ShouldWriteDirectChanges(scope, id, changeset, nonJoinedChanges))
+        {
+            return _noFailedPartitions;
+        }
+
+        var entry = await GetOrAttachEntity(scope, id, key);
+        if (IsSkippedByWatermark(entry, mode, eventSequenceNumber))
+        {
+            entry.State = EntityState.Detached;
+            return _noFailedPartitions;
+        }
+
+        ApplyChangesToEntity(entry, nonJoinedChanges);
+        AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
+        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber));
+
+        return _noFailedPartitions;
+    }
+
+    async Task RemoveEntry(DbContextScope<ReadModelDbContext> scope, string id)
+    {
+        var toRemove = await scope.DbContext.Entries.FirstOrDefaultAsync(BuildIdPredicate(id));
+        if (toRemove is not null)
+        {
+            scope.DbContext.Entries.Remove(toRemove);
+            await scope.DbContext.SaveChangesAsync();
+        }
+    }
+
+    async Task ApplyJoinsAndChildRemovals(DbContextScope<ReadModelDbContext> scope, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
+    {
         foreach (var joined in changeset.Changes.OfType<Joined>())
         {
             await ApplyJoinedChange(scope, joined, eventSequenceNumber);
@@ -187,48 +226,49 @@ public class Sink : ISink
         {
             await RemoveChildFromAllEntries(scope, childRemovedFromAll, eventSequenceNumber);
         }
+    }
 
-        var nonJoinedChanges = changeset.Changes
-            .Where(c => c is not Joined and not ChildRemovedFromAll)
-            .ToArray();
-        if (nonJoinedChanges.Length == 0)
+    async Task<bool> ShouldWriteDirectChanges(DbContextScope<ReadModelDbContext> scope, string id, IChangeset<AppendedEvent, ExpandoObject> changeset, Change[] nonJoinedChanges)
+    {
+        var joins = changeset.Changes.OfType<Joined>().ToArray();
+        var onlyPropertyUpdates = nonJoinedChanges.All(c => c is PropertiesChanged<ExpandoObject>);
+        if (!onlyPropertyUpdates || joins.Any(joined => joined.HasKeyedFrom))
         {
-            return _noFailedPartitions;
+            return true;
         }
 
-        var joins = changeset.Changes.OfType<Joined>().ToArray();
-        var hasJoined = joins.Length > 0;
-        var onlyPropertyUpdates = nonJoinedChanges.All(c => c is PropertiesChanged<ExpandoObject>);
-        if (onlyPropertyUpdates && joins.Any(joined => joined.ArrayIndexers.IsEmpty) && !joins.Any(joined => joined.HasKeyedFrom))
+        if (joins.Any(joined => joined.ArrayIndexers.IsEmpty))
         {
             // A root join's direct all-event properties have no keyed From target. ApplyJoinedChange
             // already updated the matched rows; even an existing row at the event source id may be
             // unrelated to the join. Keep the keyed path only for a genuine From+Join event.
-            return _noFailedPartitions;
+            return false;
         }
 
-        if (hasJoined && onlyPropertyUpdates && !joins.Any(joined => joined.HasKeyedFrom))
+        if (joins.Length == 0)
         {
-            // When the event was consumed by a Children Join and the only remaining changes are
-            // FromEvery-style PropertiesChanged, we must not upsert a phantom row keyed on the
-            // joined value (e.g. a User's GroupId becoming a fake Group). Only update if the row
-            // already exists.
-            var exists = await scope.DbContext.Entries.AnyAsync(BuildIdPredicate(id));
-            if (!exists)
-            {
-                return _noFailedPartitions;
-            }
+            return true;
         }
 
-        var entry = await GetOrAttachEntity(scope, id, key);
-        if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark && eventSequenceNumber.IsActualValue && !AdvancesWatermark(entry, eventSequenceNumber))
+        // When the event was consumed by a Children Join and the only remaining changes are
+        // FromEvery-style PropertiesChanged, we must not upsert a phantom row keyed on the
+        // joined value (e.g. a User's GroupId becoming a fake Group). Only update if the row
+        // already exists.
+        return await scope.DbContext.Entries.AnyAsync(BuildIdPredicate(id));
+    }
+
+    bool IsSkippedByWatermark(EntityEntry<DynamicReadModelEntity> entry, SinkWriteMode mode, EventSequenceNumber eventSequenceNumber)
+    {
+        if (mode != SinkWriteMode.OnlyWhenAdvancingWatermark || !eventSequenceNumber.IsActualValue)
         {
-            entry.State = EntityState.Detached;
-            return _noFailedPartitions;
+            return false;
         }
 
-        ApplyChangesToEntity(entry, nonJoinedChanges);
-        AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
+        return !AdvancesWatermark(entry, eventSequenceNumber);
+    }
+
+    async Task SaveRecoveringFromInsertRace(DbContextScope<ReadModelDbContext> scope, EntityEntry<DynamicReadModelEntity> entry, PendingWrite write)
+    {
         try
         {
             await scope.DbContext.SaveChangesAsync();
@@ -240,20 +280,20 @@ public class Sink : ISink
             // to the freshly-loaded entity, and try the save again. This matches MongoDB's
             // upsert semantics — the second write becomes an UPDATE atop the first.
             entry.State = EntityState.Detached;
-            var reloaded = await scope.DbContext.Entries.FirstOrDefaultAsync(BuildIdPredicate(id));
+            var reloaded = await scope.DbContext.Entries.FirstOrDefaultAsync(BuildIdPredicate(write.Id));
             if (reloaded is null)
             {
                 throw;
             }
 
             var reloadedEntry = scope.DbContext.Entries.Entry(reloaded);
-            ApplyChangesToEntity(reloadedEntry, nonJoinedChanges);
-            AdvanceLastHandledSequenceNumber(reloadedEntry, eventSequenceNumber);
+            ApplyChangesToEntity(reloadedEntry, write.Changes);
+            AdvanceLastHandledSequenceNumber(reloadedEntry, write.SequenceNumber);
             await scope.DbContext.SaveChangesAsync();
         }
-
-        return _noFailedPartitions;
     }
+
+    ProjectedColumn? FindColumn(string name) => _columns.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.Ordinal));
 
     /// <inheritdoc/>
     /// <remarks>
@@ -363,174 +403,6 @@ public class Sink : ISink
     Task<DbContextScope<ReadModelDbContext>> OpenActiveScope() =>
         _database.ReadModelTable(_eventStoreName, _namespace, ActiveTableName, _columns);
 
-    async Task PerformRenameSwap(ReplayContext context)
-    {
-        var replayName = ReplayTableNameFor(_tableName);
-
-        // Open the scope on the replay table so the DbContext we use for DDL is bound to
-        // the rebuilt table. Other scopes may still be reading the primary table.
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, replayName, _columns);
-
-        await scope.DbContext.EnsureReplayPromotions();
-        var replayHasRows = await scope.DbContext.Entries.AsNoTracking().AnyAsync();
-        var databaseType = scope.DbContext.Database.GetDatabaseType();
-        var revertName = context.RevertContainerName.Value;
-        var physicalRevert = PrimaryKeyNames.TableIdentifier(databaseType, revertName);
-        var marker = new ReplayPromotion(ReplayPromotion.IdentifierFor(_tableName, revertName), _tableName, revertName, physicalRevert);
-        var recoveryName = $"chronicle_replay_backup_{Guid.NewGuid():N}";
-        var preservedLegacyBackup = false;
-
-        // Publish both renames and their constraint names in one transaction. Otherwise a concurrent
-        // read can see the primary table missing and recreate it through EnsureTableExists, making
-        // replay -> primary collide. A database transaction also protects readers on other silos
-        // and restores the previous tables if any step of the promotion fails.
-        var database = scope.DbContext.Database;
-        var strategy = database.CreateExecutionStrategy();
-        await strategy.ExecuteInTransactionAsync(
-            async () =>
-            {
-                // Verification can fail to observe a commit after its acknowledgment is lost. Every attempt must
-                // independently recognize that this replay already published, even if a late writer
-                // has recreated and populated the replay table.
-                if (await SwapHasCommitted(scope.DbContext, marker))
-                {
-                    return;
-                }
-
-                preservedLegacyBackup = false;
-                if (!replayHasRows)
-                {
-                    // No backup is touched on this path, so its ownership cannot block an empty replay.
-                    await ExecuteDdl(scope, BuildDropSql(scope, replayName));
-                    return;
-                }
-
-                // Re-check on every attempt before touching the backup. A reader can recreate an empty
-                // replay table after a committed swap; it must never replace the rebuilt primary.
-                if (!await scope.DbContext.Entries.AsNoTracking().AnyAsync())
-                {
-                    throw new ReplayTableBecameEmpty(replayName);
-                }
-
-                // Never move or replace the live or replay table because of identifier truncation.
-                var namesCollide = physicalRevert == PrimaryKeyNames.TableIdentifier(databaseType, _tableName)
-                    || physicalRevert == PrimaryKeyNames.TableIdentifier(databaseType, replayName);
-                if (namesCollide)
-                {
-                    throw new UnverifiedReplayBackup(_tableName, physicalRevert);
-                }
-
-                if (await TableExists(database, databaseType, revertName)
-                    && !await scope.DbContext.ReplayPromotions.AnyAsync(promotion =>
-                        promotion.BackupTableName == physicalRevert && promotion.ContainerName == _tableName))
-                {
-                    // On upgrade a truncated name can collide with an old, markerless backup. Its
-                    // identity is unknowable, so preserve it, never drop it or invent a completion marker.
-                    // Exact-name half-swaps and tables owned by another read model still need recovery.
-                    if (physicalRevert == revertName || !await TableExists(database, databaseType, _tableName)
-                        || await scope.DbContext.ReplayPromotions.AnyAsync(promotion =>
-                            promotion.BackupTableName == physicalRevert || promotion.RevertContainerName == revertName))
-                    {
-                        throw new UnverifiedReplayBackup(_tableName, physicalRevert);
-                    }
-
-                    await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, physicalRevert, recoveryName));
-                    await PrimaryKeyConstraints.NameAfterTable(scope, recoveryName);
-                    preservedLegacyBackup = true;
-                }
-
-                // The old backup is absent, safely preserved, or owned by an earlier identified replay.
-                await ExecuteDdl(scope, BuildDropSql(scope, revertName));
-                await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, _tableName, revertName));
-                await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, replayName, _tableName));
-
-                // Constraint names must move in the same transaction, before the next replay is created.
-                await PrimaryKeyConstraints.NameAfterTable(scope, revertName);
-                await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
-                await RecordPromotion(scope.DbContext, marker);
-            },
-
-            () => SwapHasCommitted(scope.DbContext, marker));
-
-        if (preservedLegacyBackup)
-        {
-            _logger.PreservedLegacyReplayBackup(_eventStoreName.Value, _namespace.Value, _tableName, physicalRevert, recoveryName);
-        }
-    }
-
-    static Task<bool> SwapHasCommitted(ReadModelDbContext context, ReplayPromotion marker) =>
-        context.ReplayPromotions.AnyAsync(promotion => promotion.Id == marker.Id
-            && promotion.ContainerName == marker.ContainerName && promotion.RevertContainerName == marker.RevertContainerName);
-
-    static async Task RecordPromotion(ReadModelDbContext context, ReplayPromotion marker)
-    {
-        // Retain older completion rows until their logical backups are pruned, but transfer ownership
-        // of a colliding physical table. Pruning the old name must not drop the newly created backup.
-        await context.ReplayPromotions.Where(promotion => promotion.BackupTableName == marker.BackupTableName)
-            .ExecuteUpdateAsync(properties => properties.SetProperty(promotion => promotion.BackupTableName, (string?)null));
-        context.ReplayPromotions.Add(marker);
-        try
-        {
-            // The marker INSERT shares the DDL transaction. Neither can survive a rollback alone.
-            await context.SaveChangesAsync();
-        }
-        finally
-        {
-            // A rolled-back attempt must insert again rather than retain EF's accepted/tracked state.
-            context.Entry(marker).State = EntityState.Detached;
-        }
-    }
-
-    static Task<bool> TableExists(DatabaseFacade database, DatabaseType databaseType, string table)
-    {
-        var name = PrimaryKeyNames.TableIdentifier(databaseType, table);
-        var query = databaseType switch
-        {
-            DatabaseType.PostgreSql => database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM pg_tables WHERE schemaname = current_schema() AND tablename = {name}"),
-            DatabaseType.SqlServer => database.SqlQuery<int>($"SELECT 1 AS [Value] FROM sys.tables WHERE schema_id = SCHEMA_ID() AND name = {name}"),
-            _ => database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM sqlite_master WHERE type = 'table' AND name = {name}")
-        };
-        return query.AnyAsync();
-    }
-
-    /// <summary>
-    /// Frees the replay table's primary key name before the replay table is created. The primary table of a
-    /// database that swapped replays before primary keys followed their tables still holds that name.
-    /// </summary>
-    async Task NamePrimaryKeyAfterPrimaryTable()
-    {
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
-        await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
-    }
-
-    static async Task ExecuteDdl(DbContextScope<ReadModelDbContext> scope, string sql)
-    {
-#pragma warning disable EF1002 // sql is built from delimited identifiers via ISqlGenerationHelper.
-        await scope.DbContext.Database.ExecuteSqlRawAsync(sql);
-#pragma warning restore EF1002
-    }
-
-    static string BuildDropSql(DbContextScope<ReadModelDbContext> scope, string tableName)
-    {
-        var sqlHelper = scope.DbContext.GetService<ISqlGenerationHelper>();
-        return $"DROP TABLE IF EXISTS {sqlHelper.DelimitIdentifier(tableName)}";
-    }
-
-    static string BuildRenameSql(DbContextScope<ReadModelDbContext> scope, DatabaseType databaseType, string oldName, string newName)
-    {
-        if (databaseType == DatabaseType.SqlServer)
-        {
-            // sp_rename takes name strings, not identifiers. The new name must be the unqualified
-            // table name — Microsoft's docs are explicit on this.
-            var oldEscaped = oldName.Replace("'", "''", StringComparison.Ordinal);
-            var newEscaped = newName.Replace("'", "''", StringComparison.Ordinal);
-            return $"EXEC sp_rename N'{oldEscaped}', N'{newEscaped}'";
-        }
-
-        var sqlHelper = scope.DbContext.GetService<ISqlGenerationHelper>();
-        return $"ALTER TABLE {sqlHelper.DelimitIdentifier(oldName)} RENAME TO {sqlHelper.DelimitIdentifier(newName)}";
-    }
-
     /// <inheritdoc/>
     public Task EnsureIndexes() => Task.CompletedTask;
 
@@ -548,15 +420,9 @@ public class Sink : ISink
             return Option<Key>.None();
         }
 
-        var rootSegmentName = pathSegments[0].Value;
-        var rootColumn = _columns.FirstOrDefault(c => string.Equals(c.Name, rootSegmentName, StringComparison.Ordinal));
-        if (rootColumn?.IsJson != true)
-        {
-            return Option<Key>.None();
-        }
-
+        var rootColumn = FindColumn(pathSegments[0].Value);
         var keyColumn = _columns.FirstOrDefault(c => c.IsKey);
-        if (keyColumn is null)
+        if (rootColumn?.IsJson != true || keyColumn is null)
         {
             return Option<Key>.None();
         }
@@ -565,30 +431,25 @@ public class Sink : ISink
         var entries = await scope.DbContext.Entries.AsNoTracking().ToListAsync();
         foreach (var entry in entries)
         {
-            if (entry[rootColumn.Name] is not string jsonValue || string.IsNullOrEmpty(jsonValue))
+            var keyValue = ContainsChildValue(entry, rootColumn, pathSegments, childValue) ? entry[keyColumn.Name] : null;
+            if (keyValue is not null)
             {
-                continue;
-            }
-
-            var collection = DeserializeJsonColumn(jsonValue);
-            if (collection is null)
-            {
-                continue;
-            }
-
-            if (TryFindValueInDeserialized(collection, pathSegments, 1, childValue))
-            {
-                var keyValue = entry[keyColumn.Name];
-                if (keyValue is null)
-                {
-                    continue;
-                }
-
                 return new Option<Key>(new Key(keyValue, ArrayIndexers.NoIndexers));
             }
         }
 
         return Option<Key>.None();
+    }
+
+    static bool ContainsChildValue(DynamicReadModelEntity entry, ProjectedColumn rootColumn, IPropertyPathSegment[] pathSegments, object childValue)
+    {
+        if (entry[rootColumn.Name] is not string jsonValue || string.IsNullOrEmpty(jsonValue))
+        {
+            return false;
+        }
+
+        var collection = DeserializeJsonColumn(jsonValue);
+        return collection is not null && TryFindValueInDeserialized(collection, pathSegments, 1, childValue);
     }
 
     /// <inheritdoc/>
@@ -664,8 +525,7 @@ public class Sink : ISink
             return;
         }
 
-        var columnName = segments[0].Value;
-        var rootColumn = _columns.FirstOrDefault(c => string.Equals(c.Name, columnName, StringComparison.Ordinal));
+        var rootColumn = FindColumn(segments[0].Value);
         if (rootColumn is null)
         {
             return;
@@ -673,13 +533,8 @@ public class Sink : ISink
 
         var entries = await scope.DbContext.Entries.ToListAsync();
         var modified = false;
-        foreach (var entry in entries)
+        foreach (var entry in entries.Where(entry => EntryMatchesJoin(entry, rootColumn, segments, joinValue)))
         {
-            if (!EntryMatchesJoin(entry, rootColumn, segments, joinValue))
-            {
-                continue;
-            }
-
             ApplyChangesToEntity(scope.DbContext.Entries.Entry(entry), joined.Changes);
             AdvanceLastHandledSequenceNumber(scope.DbContext.Entries.Entry(entry), eventSequenceNumber);
             modified = true;
@@ -693,32 +548,22 @@ public class Sink : ISink
 
     async Task RemoveChildFromAllEntries(DbContextScope<ReadModelDbContext> scope, ChildRemovedFromAll childRemoved, EventSequenceNumber eventSequenceNumber)
     {
-        var childrenColumnName = childRemoved.ChildrenProperty.Segments.First().Value;
-        var column = _columns.FirstOrDefault(c => string.Equals(c.Name, childrenColumnName, StringComparison.Ordinal));
+        var column = FindColumn(childRemoved.ChildrenProperty.Segments.First().Value);
         if (column?.IsJson != true)
         {
             return;
         }
 
-        var segments = childRemoved.ChildrenProperty.Segments.ToArray();
-        var identifierSegment = childRemoved.IdentifiedByProperty.LastSegment.Value;
-
+        var removal = new ChildRemoval(childRemoved.ChildrenProperty.Segments.ToArray(), childRemoved.IdentifiedByProperty, childRemoved.Key);
         var entries = await scope.DbContext.Entries.ToListAsync();
         var modified = false;
         foreach (var entry in entries)
         {
-            if (entry[column.Name] is not string jsonValue || string.IsNullOrEmpty(jsonValue))
+            if (!TryRemoveChildren(entry, column, removal))
             {
                 continue;
             }
 
-            var content = DeserializeJsonColumn(jsonValue);
-            if (!RemoveChildrenFromPath(content, segments, 1, identifierSegment, childRemoved.Key))
-            {
-                continue;
-            }
-
-            entry[column.Name] = SerializeJsonColumn(content, column);
             var trackedEntry = scope.DbContext.Entries.Entry(entry);
             trackedEntry.Property(column.Name).IsModified = true;
             AdvanceLastHandledSequenceNumber(trackedEntry, eventSequenceNumber);
@@ -731,298 +576,21 @@ public class Sink : ISink
         }
     }
 
-    static bool RemoveChildrenFromPath(object? node, IPropertyPathSegment[] segments, int index, string identifier, object? key)
+    static bool TryRemoveChildren(DynamicReadModelEntity entry, ProjectedColumn column, ChildRemoval removal)
     {
-        if (index == segments.Length)
+        if (entry[column.Name] is not string jsonValue || string.IsNullOrEmpty(jsonValue))
         {
-            if (node is not IList<object?> children)
-            {
-                return false;
-            }
-
-            var removed = false;
-            for (var childIndex = children.Count - 1; childIndex >= 0; childIndex--)
-            {
-                if (children[childIndex] is IDictionary<string, object?> child &&
-                    child.TryGetValue(identifier, out var value) && CompareLoose(value, key))
-                {
-                    children.RemoveAt(childIndex);
-                    removed = true;
-                }
-            }
-
-            return removed;
+            return false;
         }
 
-        if (node is IDictionary<string, object?> nested)
+        var content = DeserializeJsonColumn(jsonValue);
+        if (!RemoveChildrenFromPath(content, 1, removal))
         {
-            return nested.TryGetValue(segments[index].Value, out var value) &&
-                RemoveChildrenFromPath(value, segments, index + 1, identifier, key);
+            return false;
         }
 
-        var modified = false;
-        if (node is IList<object?> parents)
-        {
-            foreach (var parent in parents)
-            {
-                modified |= RemoveChildrenFromPath(parent, segments, index, identifier, key);
-            }
-        }
-
-        return modified;
-    }
-
-    void ApplyChangesToEntity(EntityEntry<DynamicReadModelEntity> entry, IEnumerable<Change> changes)
-    {
-        foreach (var change in changes)
-        {
-            switch (change)
-            {
-                case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    ApplyPropertyChanges(entry, propertiesChanged);
-                    break;
-
-                case ChildAdded childAdded:
-                    ApplyChildAdded(entry, childAdded);
-                    break;
-
-                case ChildRemoved childRemoved:
-                    ApplyChildRemoved(entry, childRemoved);
-                    break;
-
-                case NestedCleared nestedCleared:
-                    ApplyNestedCleared(entry, nestedCleared);
-                    break;
-
-                case Joined joined:
-                    ApplyChangesToEntity(entry, joined.Changes);
-                    break;
-
-                case ResolvedJoin resolvedJoin:
-                    ApplyChangesToEntity(entry, resolvedJoin.Changes);
-                    break;
-            }
-        }
-    }
-
-    void ApplyPropertyChanges(EntityEntry<DynamicReadModelEntity> entry, PropertiesChanged<ExpandoObject> propertiesChanged)
-    {
-        foreach (var difference in propertiesChanged.Differences)
-        {
-            ApplySingleDifference(entry, difference);
-        }
-    }
-
-    void ApplySingleDifference(EntityEntry<DynamicReadModelEntity> entry, PropertyDifference difference)
-    {
-        var firstSegment = difference.PropertyPath.Segments.FirstOrDefault()?.Value;
-        if (firstSegment is null ||
-            (firstSegment == WellKnownProperties.ReadModelInstanceInitialized && difference.Changed is not bool))
-        {
-            return;
-        }
-
-        var column = _columns.FirstOrDefault(c => string.Equals(c.Name, firstSegment, StringComparison.Ordinal));
-        if (column is null)
-        {
-            // The PropertyPath has no top-level column segment — it is leaf-relative (e.g. "FloatValue").
-            // When updating an existing child via SetProperties, property mappers produce leaf-only paths
-            // paired with collection-locating ArrayIndexers (e.g. {Children[StringValue=SecondKey]}).
-            // Fall back to locating the JSON column through the ArrayIndexers and applying the change
-            // within the correct element, matching MongoDB $set semantics for nested array updates.
-            TryApplyDifferenceViaArrayIndexers(entry, difference);
-            return;
-        }
-
-        if (!column.IsJson)
-        {
-            if (difference.PropertyPath.Segments.Count() != 1)
-            {
-                return;
-            }
-
-            SetTypedColumn(entry, column, difference.Changed);
-            return;
-        }
-
-        var current = LoadJsonColumnState(entry, column);
-        var indexers = difference.ArrayIndexers ?? ArrayIndexers.NoIndexers;
-        var subPath = BuildSubPath(difference.PropertyPath);
-
-        // BuildSubPath returns an empty PropertyPath when the difference targets the JSON column
-        // itself (a single-segment path such as "PointValue"). An empty PropertyPath still yields a
-        // single empty-string segment, so checking Segments.Any() would wrongly route the whole
-        // value through ApplyDifferenceToJsonRoot and store it under an "" key (e.g.
-        // {"":{"Longitude":..}}), which then materializes back as a default value. IsSet is false
-        // for an empty path, so use it to detect "replace the entire column value".
-        if (!subPath.IsSet)
-        {
-            entry.Entity[column.Name] = SerializeJsonColumn(UnwrapForJson(difference.Changed), column);
-        }
-        else
-        {
-            var rebuilt = ApplyDifferenceToJsonRoot(current, column, subPath, indexers, difference.Changed);
-            entry.Entity[column.Name] = SerializeJsonColumn(rebuilt, column);
-        }
-
-        entry.Property(column.Name).IsModified = true;
-    }
-
-    void TryApplyDifferenceViaArrayIndexers(EntityEntry<DynamicReadModelEntity> entry, PropertyDifference difference)
-    {
-        var indexers = difference.ArrayIndexers;
-        if (indexers.IsEmpty)
-        {
-            return;
-        }
-
-        foreach (var indexer in indexers.All)
-        {
-            var columnName = indexer.ArrayProperty.Segments.FirstOrDefault()?.Value;
-            if (columnName is null)
-            {
-                continue;
-            }
-
-            var jsonColumn = _columns.FirstOrDefault(c => string.Equals(c.Name, columnName, StringComparison.Ordinal) && c.IsJson);
-            if (jsonColumn is null)
-            {
-                continue;
-            }
-
-            // The difference's PropertyPath is already relative to the array element (e.g. "FloatValue").
-            // Pass it directly as the subPath — ApplyDifferenceToJsonRoot will locate the element via
-            // the ArrayIndexers and apply the leaf property change within it.
-            var current = LoadJsonColumnState(entry, jsonColumn);
-            var rebuilt = ApplyDifferenceToJsonRoot(current, jsonColumn, difference.PropertyPath, indexers, difference.Changed);
-            entry.Entity[jsonColumn.Name] = SerializeJsonColumn(rebuilt, jsonColumn);
-            entry.Property(jsonColumn.Name).IsModified = true;
-            return;
-        }
-    }
-
-    void ApplyChildAdded(EntityEntry<DynamicReadModelEntity> entry, ChildAdded childAdded)
-    {
-        var pathSegments = childAdded.ChildrenProperty.Segments.ToArray();
-        if (pathSegments.Length == 0)
-        {
-            return;
-        }
-
-        var columnName = pathSegments[0].Value;
-        var column = _columns.FirstOrDefault(c => string.Equals(c.Name, columnName, StringComparison.Ordinal));
-        if (column?.IsJson != true)
-        {
-            return;
-        }
-
-        var current = LoadJsonColumnState(entry, column);
-        var unwrappedState = UnwrapForJson(childAdded.State);
-
-        var identifierName = childAdded.IdentifiedByProperty.LastSegment.Value;
-        var identifierValue = UnwrapConceptValue(childAdded.Key);
-        if (pathSegments.Length == 1)
-        {
-            // Top-level children collection on the column: upsert by identifier so repeated
-            // ChildAdded events for the same identifier (e.g. during replay) update in place
-            // instead of duplicating. Mirrors how MongoDB's projection engine treats a child
-            // re-introduced via ChildAdded as a replacement when the identifier already exists.
-            var list = current as IList<object?> ?? new List<object?>();
-            UpsertChildInList(list, identifierName, identifierValue, unwrappedState);
-            entry.Entity[column.Name] = SerializeJsonColumn(list, column);
-        }
-        else
-        {
-            // Nested children — e.g. Configurations.Hubs — locate the matching parent inside the
-            // column's JSON tree using ArrayIndexers, then upsert into its child collection.
-            var rootList = current as IList<object?> ?? new List<object?>();
-            var indexers = childAdded.ArrayIndexers ?? ArrayIndexers.NoIndexers;
-            UpsertNestedChild(rootList, pathSegments, 1, indexers, identifierName, identifierValue, unwrappedState);
-            entry.Entity[column.Name] = SerializeJsonColumn(rootList, column);
-        }
-
-        entry.Property(column.Name).IsModified = true;
-    }
-
-    void ApplyChildRemoved(EntityEntry<DynamicReadModelEntity> entry, ChildRemoved childRemoved)
-    {
-        var columnName = childRemoved.ChildrenProperty.Segments.First().Value;
-        var column = _columns.FirstOrDefault(c => string.Equals(c.Name, columnName, StringComparison.Ordinal));
-        if (column?.IsJson != true)
-        {
-            return;
-        }
-
-        if (LoadJsonColumnState(entry, column) is not IList<object?> current)
-        {
-            return;
-        }
-
-        var identifier = childRemoved.IdentifiedByProperty.LastSegment.Value;
-        var keyAsString = childRemoved.Key?.ToString();
-        var retained = new List<object?>(current.Count);
-        foreach (var item in current)
-        {
-            if (item is IDictionary<string, object?> dict
-                && dict.TryGetValue(identifier, out var value)
-                && (Equals(value, childRemoved.Key) || (value is not null && value.ToString() == keyAsString)))
-            {
-                continue;
-            }
-
-            retained.Add(item);
-        }
-
-        entry.Entity[column.Name] = SerializeJsonColumn(retained, column);
-        entry.Property(column.Name).IsModified = true;
-    }
-
-    void ApplyNestedCleared(EntityEntry<DynamicReadModelEntity> entry, NestedCleared nestedCleared)
-    {
-        var pathSegments = nestedCleared.NestedProperty.Segments.ToArray();
-        if (pathSegments.Length == 0)
-        {
-            return;
-        }
-
-        var columnName = pathSegments[0].Value;
-        var column = _columns.FirstOrDefault(c => string.Equals(c.Name, columnName, StringComparison.Ordinal));
-        if (column is null)
-        {
-            return;
-        }
-
-        if (pathSegments.Length == 1)
-        {
-            // Clearing the column itself — represent "no value" as JSON null so that downstream
-            // deserialization sees a missing object rather than an empty record. NestedCleared is
-            // explicit about wiping the nested object; preserving a JSON "{}" would resurrect it
-            // as an empty instance and break tests that assert ShouldBeNull.
-            entry.Entity[column.Name] = column.IsJson ? "null" : null;
-            entry.Property(column.Name).IsModified = true;
-            return;
-        }
-
-        if (!column.IsJson)
-        {
-            return;
-        }
-
-        // Clear a sub-path within the JSON column — navigate to the parent, then null out the
-        // final property. Mirrors the column-level case for nested-in-children scenarios.
-        var current = LoadJsonColumnState(entry, column);
-        var indexers = nestedCleared.ArrayIndexers ?? ArrayIndexers.NoIndexers;
-        var subPath = BuildSubPath(nestedCleared.NestedProperty);
-        if (!subPath.Segments.Any())
-        {
-            entry.Entity[column.Name] = column.IsArray ? "[]" : "null";
-            entry.Property(column.Name).IsModified = true;
-            return;
-        }
-
-        var rebuilt = ApplyDifferenceToJsonRoot(current, column, subPath, indexers, null);
-        entry.Entity[column.Name] = SerializeJsonColumn(rebuilt, column);
-        entry.Property(column.Name).IsModified = true;
+        entry[column.Name] = SerializeJsonColumn(content, column);
+        return true;
     }
 
     async Task<EntityEntry<DynamicReadModelEntity>> GetOrAttachEntity(DbContextScope<ReadModelDbContext> scope, string id, Key key)
@@ -1059,6 +627,18 @@ public class Sink : ISink
         // .Equals on the original ConceptAs identifier — silently miss every match. Funnel the
         // raw column values through JsonSerializer to get a JsonNode-shaped JSON document that
         // matches what the converter expects to parse.
+        var dict = ToJsonNodeValues(entity);
+        var json = (JsonObject)JsonSerializer.SerializeToNode(dict, ReadModelDbContext.JsonSerializerOptions)!;
+        var result = _expandoObjectConverter.ToExpandoObject(json, _schema);
+        var resultDictionary = (IDictionary<string, object?>)result;
+        ApplyInitializedMarker(entity, resultDictionary, dict);
+        ReattachSinkOwnedValues(entity, resultDictionary);
+
+        return result;
+    }
+
+    Dictionary<string, object?> ToJsonNodeValues(DynamicReadModelEntity entity)
+    {
         var dict = new Dictionary<string, object?>();
         foreach (var column in _columns)
         {
@@ -1067,34 +647,44 @@ public class Sink : ISink
                 continue;
             }
 
-            if (column.IsJson && value is string jsonText)
-            {
-                dict[column.Name] = string.IsNullOrEmpty(jsonText) ? null : JsonNode.Parse(jsonText);
-            }
-            else
-            {
-                dict[column.Name] = JsonSerializer.SerializeToNode(value, ReadModelDbContext.JsonSerializerOptions);
-            }
+            dict[column.Name] = ToJsonNode(column, value);
         }
 
-        var json = (JsonObject)JsonSerializer.SerializeToNode(dict, ReadModelDbContext.JsonSerializerOptions)!;
-        var result = _expandoObjectConverter.ToExpandoObject(json, _schema);
-        var resultDictionary = (IDictionary<string, object?>)result;
-        if (entity.TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) && initialized is bool isInitialized)
+        return dict;
+    }
+
+    static JsonNode? ToJsonNode(ProjectedColumn column, object value)
+    {
+        if (column.IsJson && value is string jsonText)
         {
-            // Schema conversion supplies CLR defaults for absent numeric properties. A placeholder must
-            // retain absence so the root event can fill in the projection's initial values instead.
-            if (!isInitialized)
-            {
-                foreach (var column in _columns.Where(column => !dict.ContainsKey(column.Name)))
-                {
-                    resultDictionary.Remove(column.Name);
-                }
-            }
-
-            resultDictionary[WellKnownProperties.ReadModelInstanceInitialized] = isInitialized;
+            return string.IsNullOrEmpty(jsonText) ? null : JsonNode.Parse(jsonText);
         }
 
+        return JsonSerializer.SerializeToNode(value, ReadModelDbContext.JsonSerializerOptions);
+    }
+
+    void ApplyInitializedMarker(DynamicReadModelEntity entity, IDictionary<string, object?> resultDictionary, Dictionary<string, object?> presentValues)
+    {
+        if (!entity.TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) || initialized is not bool isInitialized)
+        {
+            return;
+        }
+
+        // Schema conversion supplies CLR defaults for absent numeric properties. A placeholder must
+        // retain absence so the root event can fill in the projection's initial values instead.
+        if (!isInitialized)
+        {
+            foreach (var column in _columns.Where(column => !presentValues.ContainsKey(column.Name)))
+            {
+                resultDictionary.Remove(column.Name);
+            }
+        }
+
+        resultDictionary[WellKnownProperties.ReadModelInstanceInitialized] = isInitialized;
+    }
+
+    static void ReattachSinkOwnedValues(DynamicReadModelEntity entity, IDictionary<string, object?> resultDictionary)
+    {
         // The schema-aware conversion only carries schema-declared properties. The compliance subject is a
         // sink-owned column that lives outside the read model schema, so re-attach it onto the materialized
         // instance — both the read path (releasing PII on read) and the projection pipeline (decrypting the
@@ -1102,274 +692,23 @@ public class Sink : ISink
         // encrypted on read and the next event double-encrypts the already-encrypted carry-over state.
         if (entity.TryGetValue(WellKnownProperties.Subject, out var subject) && subject is string subjectValue)
         {
-            ((IDictionary<string, object?>)result)[WellKnownProperties.Subject] = subjectValue;
+            resultDictionary[WellKnownProperties.Subject] = subjectValue;
         }
 
-        if (entity.TryGetValue(WellKnownProperties.Subjects, out var subjects) &&
-            subjects is string { Length: > 0 } subjectsValue &&
-            JsonSerializer.Deserialize<ExpandoObject>(subjectsValue, ReadModelDbContext.JsonSerializerOptions) is { } subjectsDocument)
+        if (TryReadSubjects(entity) is { } subjectsDocument)
         {
-            ((IDictionary<string, object?>)result)[WellKnownProperties.Subjects] = subjectsDocument;
-        }
-
-        return result;
-    }
-
-    void SeedDefaults(DynamicReadModelEntity entity)
-    {
-        foreach (var column in _columns)
-        {
-            if (column.IsKey || column.IsNullable)
-            {
-                continue;
-            }
-
-            if (column.Name == WellKnownProperties.ReadModelInstanceInitialized)
-            {
-                entity[column.Name] = true;
-            }
-            else if (column.IsJson)
-            {
-                entity[column.Name] = column.IsArray ? "[]" : "{}";
-            }
-            else if (column.ClrType == typeof(string))
-            {
-                entity[column.Name] = string.Empty;
-            }
-            else if (column.ClrType.IsValueType)
-            {
-                entity[column.Name] = Activator.CreateInstance(column.ClrType);
-            }
+            resultDictionary[WellKnownProperties.Subjects] = subjectsDocument;
         }
     }
 
-    void SetTypedColumn(EntityEntry<DynamicReadModelEntity> entry, ProjectedColumn column, object? value)
+    static ExpandoObject? TryReadSubjects(DynamicReadModelEntity entity)
     {
-        entry.Entity[column.Name] = CoerceForColumn(column, value);
-        entry.Property(column.Name).IsModified = true;
-    }
-
-    /// <summary>
-    /// Determines whether a guarded write would move the row's last handled event sequence number forward.
-    /// </summary>
-    /// <param name="entry">The <see cref="EntityEntry{TEntity}"/> for the read model row.</param>
-    /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> about to be applied.</param>
-    /// <returns>True when the write must be applied, false when it must be skipped.</returns>
-    /// <remarks>
-    /// A guarded write never creates the row, matching the MongoDB sink, where a conditional upsert would surface
-    /// the already-applied case as a duplicate key error. A row that predates the watermark column carries no
-    /// value, which the null check admits so it establishes one on its first guarded write.
-    /// </remarks>
-    bool AdvancesWatermark(EntityEntry<DynamicReadModelEntity> entry, EventSequenceNumber eventSequenceNumber)
-    {
-        if (entry.State == EntityState.Added)
+        if (!entity.TryGetValue(WellKnownProperties.Subjects, out var subjects) || subjects is not string { Length: > 0 } subjectsValue)
         {
-            return false;
+            return null;
         }
 
-        var column = _columns.FirstOrDefault(c => string.Equals(c.Name, WellKnownProperties.LastHandledEventSequenceNumber, StringComparison.Ordinal));
-        if (column is null ||
-            !entry.Entity.TryGetValue(column.Name, out var existingValue) ||
-            existingValue is null)
-        {
-            return true;
-        }
-
-        return Convert.ToInt64(existingValue, CultureInfo.InvariantCulture) < (long)eventSequenceNumber.Value;
-    }
-
-    void AdvanceLastHandledSequenceNumber(EntityEntry<DynamicReadModelEntity> entry, EventSequenceNumber eventSequenceNumber)
-    {
-        // A sentinel is not a position in the sequence; storing one would pin the watermark at the top of the
-        // range and permanently block every later guarded write to the row.
-        if (!eventSequenceNumber.IsActualValue)
-        {
-            return;
-        }
-
-        var column = _columns.FirstOrDefault(c => string.Equals(c.Name, WellKnownProperties.LastHandledEventSequenceNumber, StringComparison.Ordinal));
-        if (column is null)
-        {
-            return;
-        }
-
-        var incoming = (long)(ulong)eventSequenceNumber;
-        var existing = entry.Entity.TryGetValue(column.Name, out var existingValue) && existingValue is not null
-            ? Convert.ToInt64(existingValue, CultureInfo.InvariantCulture)
-            : 0L;
-        var next = Math.Max(incoming, existing);
-        if (next == existing && entry.State != EntityState.Added)
-        {
-            return;
-        }
-
-        entry.Entity[column.Name] = next;
-        entry.Property(column.Name).IsModified = true;
-    }
-
-    object? LoadJsonColumnState(EntityEntry<DynamicReadModelEntity> entry, ProjectedColumn column)
-    {
-        if (!entry.Entity.TryGetValue(column.Name, out var current) || current is null)
-        {
-            return column.IsArray ? new List<object?>() : new ExpandoObject();
-        }
-
-        if (current is string jsonString)
-        {
-            return DeserializeJsonColumn(jsonString) ?? (column.IsArray ? new List<object?>() : new ExpandoObject());
-        }
-
-        return current;
-    }
-
-    object ApplyDifferenceToJsonRoot(object? current, ProjectedColumn column, PropertyPath subPath, ArrayIndexers indexers, object? changed)
-    {
-        if (current is ExpandoObject rootExpando)
-        {
-            subPath.SetValue(rootExpando, changed!, indexers);
-            return rootExpando;
-        }
-
-        if (current is IList<object?> list)
-        {
-            // The JSON column is an array (e.g. Features). The change targets a specific element
-            // selected by an ArrayIndexer whose ArrayProperty matches the column name; the subPath
-            // is the property path WITHIN that element. EnsurePath cannot run here because it
-            // navigates from an ExpandoObject root and would mis-classify the column name as a
-            // PropertyName instead of an ArrayProperty — instead, locate the element ourselves
-            // and apply the inner change directly to it. Sub-element indexers (deeper arrays inside
-            // the located element, e.g. Slices inside Features) need their ArrayProperty rewritten
-            // to drop the column prefix so EnsurePath can find them while walking the subPath.
-            var indexer = indexers.All.FirstOrDefault(i => i.ArrayProperty.LastSegment.Value == column.Name);
-            if (indexer is null)
-            {
-                return list;
-            }
-
-            var element = LocateOrCreateChild(list, indexer);
-            if (!subPath.Segments.Any())
-            {
-                // The whole element is being replaced.
-                ReplaceChildContents(element, changed);
-            }
-            else
-            {
-                var rewrittenIndexers = RewriteIndexersRelativeTo(column.Name, indexers);
-                subPath.SetValue(element, changed!, rewrittenIndexers);
-            }
-
-            return list;
-        }
-
-        var fresh = new ExpandoObject();
-        subPath.SetValue(fresh, changed!, indexers);
-        return fresh;
-    }
-
-    static ArrayIndexers RewriteIndexersRelativeTo(string columnName, ArrayIndexers indexers)
-    {
-        // The change's indexers carry absolute paths from the read model root (e.g.
-        // "Features.Slices"). After we have descended into the column's array element we hand
-        // EnsurePath a sub-context, and it walks paths relative to that element. Drop the column
-        // prefix from every indexer's ArrayProperty / IdentifierProperty so they match the path
-        // segments EnsurePath sees while traversing the subPath.
-        var rewritten = new List<ArrayIndexer>();
-        foreach (var indexer in indexers.All)
-        {
-            var arraySegments = indexer.ArrayProperty.Segments.ToArray();
-            if (arraySegments.Length == 0 || !string.Equals(arraySegments[0].Value, columnName, StringComparison.Ordinal))
-            {
-                rewritten.Add(indexer);
-                continue;
-            }
-
-            if (arraySegments.Length == 1)
-            {
-                // The indexer was for the column itself — no longer needed inside its element.
-                continue;
-            }
-
-            var trimmedArray = PropertyPath.CreateFrom(arraySegments.Skip(1).ToArray());
-            var identifierSegments = indexer.IdentifierProperty.Segments.ToArray();
-            var trimmedIdentifier = identifierSegments.Length > 0 && string.Equals(identifierSegments[0].Value, columnName, StringComparison.Ordinal)
-                ? PropertyPath.CreateFrom(identifierSegments.Skip(1).ToArray())
-                : indexer.IdentifierProperty;
-
-            // Normalize identifiers to string form. JSON round-trips turn Guid identifiers into
-            // strings and strip ConceptAs<T> wrappers, so the inside-EnsurePath comparison of the
-            // stored value (string) against the original Identifier (concept/Guid) never matches
-            // and manufactures a duplicate entry instead of finding the existing one. Comparing
-            // the two as strings makes the lookup deterministic across types.
-            var normalizedIdentifier = UnwrapConceptValue(indexer.Identifier)?.ToString();
-            rewritten.Add(new ArrayIndexer(trimmedArray, trimmedIdentifier, normalizedIdentifier!));
-        }
-
-        return new ArrayIndexers(rewritten);
-    }
-
-    static ExpandoObject LocateOrCreateChild(IList<object?> list, ArrayIndexer indexer)
-    {
-        var identifierName = indexer.IdentifierProperty.LastSegment.Value;
-        var identifierValue = UnwrapConceptValue(indexer.Identifier);
-        var identifierAsString = identifierValue?.ToString();
-
-        for (var i = 0; i < list.Count; i++)
-        {
-            if (list[i] is not IDictionary<string, object?> dict)
-            {
-                continue;
-            }
-
-            if (!dict.TryGetValue(identifierName, out var stored))
-            {
-                continue;
-            }
-
-            var storedAsString = stored?.ToString();
-            if (Equals(stored, identifierValue) || string.Equals(storedAsString, identifierAsString, StringComparison.Ordinal))
-            {
-                if (list[i] is ExpandoObject existing)
-                {
-                    return existing;
-                }
-
-                // Reify the dictionary as an ExpandoObject so EnsurePath can navigate it.
-                var promoted = new ExpandoObject();
-                var promotedDict = (IDictionary<string, object?>)promoted;
-                foreach (var kvp in dict)
-                {
-                    promotedDict[kvp.Key] = kvp.Value;
-                }
-
-                list[i] = promoted;
-                return promoted;
-            }
-        }
-
-        var fresh = new ExpandoObject();
-        ((IDictionary<string, object?>)fresh)[identifierName] = identifierValue;
-        list.Add(fresh);
-        return fresh;
-    }
-
-    static void ReplaceChildContents(ExpandoObject target, object? replacement)
-    {
-        var dict = (IDictionary<string, object?>)target;
-        dict.Clear();
-        if (replacement is ExpandoObject sourceExpando)
-        {
-            foreach (var kvp in (IDictionary<string, object?>)sourceExpando)
-            {
-                dict[kvp.Key] = kvp.Value;
-            }
-        }
-        else if (replacement is IDictionary<string, object?> sourceDict)
-        {
-            foreach (var kvp in sourceDict)
-            {
-                dict[kvp.Key] = kvp.Value;
-            }
-        }
+        return JsonSerializer.Deserialize<ExpandoObject>(subjectsValue, ReadModelDbContext.JsonSerializerOptions);
     }
 
     System.Linq.Expressions.Expression<Func<DynamicReadModelEntity, bool>> BuildIdPredicate(string id)
@@ -1411,274 +750,6 @@ public class Sink : ISink
         return false;
     }
 
-    static object? CoerceForColumn(ProjectedColumn column, object? value)
-    {
-        if (value is null)
-        {
-            return null;
-        }
-
-        if (value.IsConcept())
-        {
-            value = value.GetConceptValue();
-        }
-
-        var clr = Nullable.GetUnderlyingType(column.ClrType) ?? column.ClrType;
-        if (clr.IsInstanceOfType(value))
-        {
-            return value;
-        }
-
-        try
-        {
-            if (clr.IsEnum)
-            {
-                return Convert.ChangeType(value, Enum.GetUnderlyingType(clr), CultureInfo.InvariantCulture);
-            }
-
-            if (clr == typeof(Guid))
-            {
-                return value is string s ? Guid.Parse(s) : value;
-            }
-
-            if (clr == typeof(DateTime) && value is string dt)
-            {
-                return DateTime.Parse(dt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-            }
-
-            if (clr == typeof(DateTimeOffset) && value is string dto)
-            {
-                return DateTimeOffset.Parse(dto, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-            }
-
-            if (clr == typeof(DateOnly) && value is string d)
-            {
-                return DateOnly.Parse(d, CultureInfo.InvariantCulture);
-            }
-
-            if (clr == typeof(TimeOnly) && value is string t)
-            {
-                return TimeOnly.Parse(t, CultureInfo.InvariantCulture);
-            }
-
-            return Convert.ChangeType(value, clr, CultureInfo.InvariantCulture);
-        }
-        catch
-        {
-            return value;
-        }
-    }
-
-    static object? DeserializeJsonColumn(string json)
-    {
-        if (string.IsNullOrEmpty(json))
-        {
-            return null;
-        }
-
-        using var doc = JsonDocument.Parse(json);
-        return ConvertJsonElement(doc.RootElement);
-    }
-
-    static object? ConvertJsonElement(JsonElement element)
-    {
-        switch (element.ValueKind)
-        {
-            case JsonValueKind.Object:
-                var expando = new ExpandoObject();
-                var dict = (IDictionary<string, object?>)expando;
-                foreach (var property in element.EnumerateObject())
-                {
-                    dict[property.Name] = ConvertJsonElement(property.Value);
-                }
-
-                return expando;
-
-            case JsonValueKind.Array:
-                var list = new List<object?>();
-                foreach (var item in element.EnumerateArray())
-                {
-                    list.Add(ConvertJsonElement(item));
-                }
-
-                return list;
-
-            case JsonValueKind.String:
-                return element.GetString();
-
-            case JsonValueKind.Number:
-                if (element.TryGetInt64(out var i))
-                {
-                    return i;
-                }
-
-                return element.GetDouble();
-
-            case JsonValueKind.True:
-                return true;
-
-            case JsonValueKind.False:
-                return false;
-
-            default:
-                return null;
-        }
-    }
-
-    static string SerializeJsonColumn(object? value, ProjectedColumn column)
-    {
-        if (value is null)
-        {
-            return column.IsArray ? "[]" : "{}";
-        }
-
-        var unwrapped = UnwrapForJson(value);
-        return JsonSerializer.Serialize(unwrapped, ReadModelDbContext.JsonSerializerOptions);
-    }
-
-    static object? UnwrapForJson(object? value)
-    {
-        if (value is null)
-        {
-            return null;
-        }
-
-        if (value.IsConcept())
-        {
-            return value.GetConceptValue();
-        }
-
-        if (value is ExpandoObject expando)
-        {
-            var dict = new Dictionary<string, object?>();
-            foreach (var kvp in (IDictionary<string, object?>)expando)
-            {
-                dict[kvp.Key] = UnwrapForJson(kvp.Value);
-            }
-
-            return dict;
-        }
-
-        // A schema-defined dictionary property (additionalProperties) round-trips as
-        // Dictionary<object, object> (not IDictionary<string, object?>), because its keys and values
-        // are typed by whatever the schema declares. Falling through to the generic IEnumerable branch
-        // below would iterate its KeyValuePair<,> entries as plain elements, serializing the dictionary
-        // as a JSON array of { "Key": ..., "Value": ... } objects instead of a JSON object.
-        if (value.GetType().IsDictionary() && value is IEnumerable dictionaryEntries)
-        {
-            var result = new Dictionary<string, object?>();
-            foreach (var entry in dictionaryEntries.GetKeyValuePairs())
-            {
-                result[entry.Key] = UnwrapForJson(entry.Value);
-            }
-
-            return result;
-        }
-
-        if (value is string)
-        {
-            return value;
-        }
-
-        if (value is IEnumerable enumerable)
-        {
-            var list = new List<object?>();
-            foreach (var item in enumerable)
-            {
-                list.Add(UnwrapForJson(item));
-            }
-
-            return list;
-        }
-
-        return value;
-    }
-
-    static PropertyPath BuildSubPath(PropertyPath path)
-    {
-        var segments = path.Segments.Skip(1).ToArray();
-        if (segments.Length == 0)
-        {
-            return new PropertyPath(string.Empty);
-        }
-
-        return PropertyPath.CreateFrom(segments);
-    }
-
-    static bool TryFindValueInDeserialized(object? node, IPropertyPathSegment[] segments, int index, object target)
-    {
-        if (node is null || index >= segments.Length)
-        {
-            return false;
-        }
-
-        var segment = segments[index];
-        switch (node)
-        {
-            case IList<object?> list:
-                foreach (var item in list)
-                {
-                    if (TryFindValueInDeserialized(item, segments, index, target))
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-
-            case IDictionary<string, object?> dict:
-                if (!dict.TryGetValue(segment.Value, out var value))
-                {
-                    return false;
-                }
-
-                if (index == segments.Length - 1)
-                {
-                    return CompareLoose(value, target);
-                }
-
-                return TryFindValueInDeserialized(value, segments, index + 1, target);
-
-            default:
-                if (index == segments.Length - 1)
-                {
-                    return CompareLoose(node, target);
-                }
-
-                return false;
-        }
-    }
-
-    static bool CompareLoose(object? value, object? target)
-    {
-        if (value is null && target is null)
-        {
-            return true;
-        }
-
-        if (value is null || target is null)
-        {
-            return false;
-        }
-
-        if (value.Equals(target))
-        {
-            return true;
-        }
-
-        if (target.IsConcept() && value.Equals(target.GetConceptValue()))
-        {
-            return true;
-        }
-
-        if (value.IsConcept() && (value.GetConceptValue()?.Equals(target) ?? false))
-        {
-            return true;
-        }
-
-        return string.Equals(value.ToString(), target.ToString(), StringComparison.Ordinal);
-    }
-
     static (IPropertyPathSegment[] Segments, object? Value) GetChildJoinFilter(Joined joined)
     {
         var lastIndexer = joined.ArrayIndexers.All.Last();
@@ -1686,158 +757,13 @@ public class Sink : ISink
         return (combined.Segments.ToArray(), lastIndexer.Identifier);
     }
 
-    static void UpsertChildInList(IList<object?> list, string identifierName, object? identifierValue, object? newChild)
-    {
-        // Upsert by identifier so repeated ChildAdded events (e.g. during replay, or when a
-        // projection re-introduces the same child after a redaction) update in place instead of
-        // appending duplicates. Merge into the existing entry so that any child collections
-        // populated by earlier ChildAdded events (e.g. Slices.Events) survive the replacement of
-        // the parent's own properties — a wholesale replace would clobber them.
-        var identifierAsString = identifierValue?.ToString();
-        for (var i = 0; i < list.Count; i++)
-        {
-            if (list[i] is IDictionary<string, object?> existing
-                && existing.TryGetValue(identifierName, out var stored)
-                && (Equals(stored, identifierValue) || (stored?.ToString() == identifierAsString)))
-            {
-                if (newChild is IDictionary<string, object?> incoming)
-                {
-                    foreach (var kvp in incoming)
-                    {
-                        existing[kvp.Key] = kvp.Value;
-                    }
-                }
-                else
-                {
-                    list[i] = AsExpando(newChild);
-                }
-
-                return;
-            }
-        }
-
-        list.Add(AsExpando(newChild));
-    }
-
-    static object? AsExpando(object? value)
-    {
-        // EnsurePath walks ExpandoObject roots and filters list items via OfType<ExpandoObject>();
-        // any dictionary in the list that isn't an actual ExpandoObject becomes invisible to the
-        // path walker, which then creates a *second* element at the same identifier instead of
-        // mutating the existing one. Promote Dictionary<string, object?> values (the form
-        // UnwrapForJson produces from ExpandoObject) to ExpandoObject before they enter the list.
-        if (value is ExpandoObject)
-        {
-            return value;
-        }
-
-        if (value is IDictionary<string, object?> dict)
-        {
-            var expando = new ExpandoObject();
-            var expandoDict = (IDictionary<string, object?>)expando;
-            foreach (var kvp in dict)
-            {
-                expandoDict[kvp.Key] = kvp.Value;
-            }
-
-            return expando;
-        }
-
-        return value;
-    }
-
-    static void UpsertNestedChild(IList<object?> parentList, IPropertyPathSegment[] segments, int index, ArrayIndexers indexers, string identifierName, object? identifierValue, object? newChild)
-    {
-        var parentSegmentName = segments[index - 1].Value;
-        var indexer = indexers.All.FirstOrDefault(i => i.ArrayProperty.LastSegment.Value == parentSegmentName);
-        if (indexer is null)
-        {
-            return;
-        }
-
-        var parentIdentifierName = indexer.IdentifierProperty.LastSegment.Value;
-        var parentIdentifierValue = UnwrapConceptValue(indexer.Identifier);
-        var parentIdentifierAsString = parentIdentifierValue?.ToString();
-
-        foreach (var item in parentList)
-        {
-            if (item is not IDictionary<string, object?> parentDict)
-            {
-                continue;
-            }
-
-            if (!parentDict.TryGetValue(parentIdentifierName, out var matchValue))
-            {
-                continue;
-            }
-
-            var matchAsString = matchValue?.ToString();
-            if (!Equals(matchValue, parentIdentifierValue) && !string.Equals(matchAsString, parentIdentifierAsString, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            var childCollectionName = segments[index].Value;
-            IList<object?> childList;
-            if (parentDict.TryGetValue(childCollectionName, out var existing) && existing is IList<object?> existingList)
-            {
-                childList = existingList;
-            }
-            else
-            {
-                childList = new List<object?>();
-                parentDict[childCollectionName] = childList;
-            }
-
-            if (index == segments.Length - 1)
-            {
-                UpsertChildInList(childList, identifierName, identifierValue, newChild);
-                return;
-            }
-
-            UpsertNestedChild(childList, segments, index + 1, indexers, identifierName, identifierValue, newChild);
-            return;
-        }
-    }
-
-    static object? UnwrapConceptValue(object? value)
-    {
-        if (value is null)
-        {
-            return null;
-        }
-
-        if (value.IsConcept())
-        {
-            return value.GetConceptValue();
-        }
-
-        return value;
-    }
-
     static bool IsUniqueViolation(DbUpdateException ex)
     {
-        // SqliteException error code 19 is SQLITE_CONSTRAINT; the message names UNIQUE / PRIMARY KEY.
-        // PostgreSQL's PostgresException sets SqlState 23505; SQL Server's SqlException sets Number 2627/2601.
-        // We treat them all alike: the row already exists, the caller should retry as UPDATE.
         var inner = ex.InnerException?.GetType().FullName ?? string.Empty;
         var message = ex.InnerException?.Message ?? string.Empty;
-        if (inner.EndsWith("SqliteException", StringComparison.Ordinal) && message.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        if (inner.EndsWith("PostgresException", StringComparison.Ordinal) && message.Contains("duplicate key", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        if (inner.EndsWith("SqlException", StringComparison.Ordinal) && (message.Contains("PRIMARY KEY", StringComparison.OrdinalIgnoreCase) || message.Contains("UNIQUE KEY", StringComparison.OrdinalIgnoreCase)))
-        {
-            return true;
-        }
-
-        return false;
+        return _uniqueViolations.Any(violation =>
+            inner.EndsWith(violation.ExceptionSuffix, StringComparison.Ordinal) &&
+            violation.MessageFragments.Any(fragment => message.Contains(fragment, StringComparison.OrdinalIgnoreCase)));
     }
 
     static string GetIdString(Key key)
@@ -1852,6 +778,8 @@ public class Sink : ISink
 
         return key.Value?.ToString() ?? string.Empty;
     }
+
+    sealed record PendingWrite(string Id, Change[] Changes, EventSequenceNumber SequenceNumber);
 
     sealed record ObservedPage(long TotalCount, DynamicReadModelEntity[] Entries);
 

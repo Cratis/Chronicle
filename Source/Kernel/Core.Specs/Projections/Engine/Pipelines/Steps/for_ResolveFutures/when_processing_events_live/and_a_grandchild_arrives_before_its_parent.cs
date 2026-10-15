@@ -12,24 +12,33 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_ResolveFutures
 
 public class and_a_grandchild_arrives_before_its_parent : given.a_resolve_futures_step
 {
+    readonly List<string> _projected = [];
     ProjectionFuture _future;
+    IProjection _child;
+    IProjection _grandchild;
     ProjectionEventContext? _resolvedContext;
     bool _resolved;
     bool _resolvedBeforeParent;
 
     void Establish()
     {
-        var child = Substitute.For<IProjection>();
-        child.Parent.Returns(_projection);
-        child.ChildrenPropertyPath.Returns(new PropertyPath("children"));
-        child.IdentifiedByProperty.Returns(new PropertyPath("childId"));
-        var grandchild = Substitute.For<IProjection>();
-        grandchild.Parent.Returns(child);
-        grandchild.Path.Returns(new ProjectionPath("children.grandchildren"));
-        grandchild.ChildrenPropertyPath.Returns(new PropertyPath("children.grandchildren"));
-        grandchild.OnNext(Arg.Do<ProjectionEventContext>(context => _resolvedContext = context));
-        child.ChildProjections.Returns([grandchild]);
-        _projection.ChildProjections.Returns([child]);
+        _child = Substitute.For<IProjection>();
+        _child.Parent.Returns(_projection);
+        _child.ChildrenPropertyPath.Returns(new PropertyPath("children"));
+        _child.IdentifiedByProperty.Returns(new PropertyPath("childId"));
+        _grandchild = Substitute.For<IProjection>();
+        _grandchild.Parent.Returns(_child);
+        _grandchild.Path.Returns(new ProjectionPath("children.grandchildren"));
+        _grandchild.ChildrenPropertyPath.Returns(new PropertyPath("children.grandchildren"));
+        _grandchild.OnNext(Arg.Do<ProjectionEventContext>(context =>
+        {
+            _resolvedContext = context;
+            _projected.Add("grandchild");
+        }));
+        _projection.OnDescendantEvent(Arg.Do<ProjectionEventContext>(_ => _projected.Add("root")));
+        _child.OnDescendantEvent(Arg.Do<ProjectionEventContext>(_ => _projected.Add("child")));
+        _child.ChildProjections.Returns([_grandchild]);
+        _projection.ChildProjections.Returns([_child]);
 
         _future = new ProjectionFuture(
             ProjectionFutureId.New(),
@@ -72,4 +81,8 @@ public class and_a_grandchild_arrives_before_its_parent : given.a_resolve_future
     [Fact] void should_index_the_parent_and_grandchild() => _resolvedContext!.Key.ArrayIndexers.All.Count().ShouldEqual(2);
     [Fact] void should_use_the_matching_parent_key() => _resolvedContext!.Key.ArrayIndexers.All.First().Identifier.ShouldEqual("parent-key");
     [Fact] void should_leave_no_future_pending() => _tracker.HasPending.ShouldBeFalse();
+    [Fact] void should_apply_the_ancestors_descendant_event_mappings_before_projecting_the_grandchild() => _projected.ShouldEqual<IEnumerable<string>>(["root", "child", "grandchild"]);
+    [Fact] void should_give_the_root_the_resolved_key() => _projection.Received(1).OnDescendantEvent(Arg.Is<ProjectionEventContext>(_ => _.Key == _resolvedContext!.Key && _.Changeset == _resolvedContext.Changeset));
+    [Fact] void should_give_the_child_the_resolved_key() => _child.Received(1).OnDescendantEvent(Arg.Is<ProjectionEventContext>(_ => _.Key == _resolvedContext!.Key && _.Changeset == _resolvedContext.Changeset));
+    [Fact] void should_not_give_the_grandchild_a_descendant_event() => _grandchild.DidNotReceive().OnDescendantEvent(Arg.Any<ProjectionEventContext>());
 }

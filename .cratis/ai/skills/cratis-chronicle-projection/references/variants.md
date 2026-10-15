@@ -1,6 +1,15 @@
 <!-- cratis-ai-managed: skills/cratis-chronicle-projection/references/variants.md -->
 # Variants — mutually exclusive read models for one entity
 
+## Contents
+
+- Declaring a group — model-bound
+- Declaring a group — fluent (`IProjectionFor<T>`)
+- Only the entering event can create a variant
+- Sharing handlers across variants
+- Startup-crash trap
+- Best practices
+
 Verified against `Cratis.Chronicle` `19.1.0` (first version carrying this
 feature; the skill's own baseline in `SKILL.md` is `18.3.0` — variants need at
 least `19.1.0`).

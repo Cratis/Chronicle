@@ -76,7 +76,7 @@ Where a repository organizes its migrations (a dedicated project, a versioned fi
 
 ## Observation **[contract]**
 
-An EF Core read model can back an observable query: `dbSet.Observe(...)`, `ObserveById(...)` and `ObserveSingle(...)` (extension methods declared in the `Microsoft.EntityFrameworkCore` namespace, so they are in scope wherever the `DbSet` is) push changes through the provider's change notifier — see the skill for what each provider supports.
+An EF Core read model can back an observable query: `dbSet.Observe(...)`, `ObserveById(...)` and `ObserveSingle(...)` (extension methods declared in the `Microsoft.EntityFrameworkCore` namespace, so they are in scope wherever the `DbSet` is) push changes through the provider's change notifier — see the skill for what each provider supports. At Arc v22.75.0 auxiliary sources support `ignoreQueryContext: true`; single-instance observations emit `default` on absence/deletion/filter exit. Indexer-property keys are supported; composite/shadow-only keys are refused at setup.
 
 ## See also
 

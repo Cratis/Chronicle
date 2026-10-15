@@ -16,7 +16,8 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
 /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
-public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger) : ICanPerformProjectionPipelineStep
+/// <param name="projectionFutures">The persisted futures to acknowledge after successful writes.</param>
+public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
@@ -67,7 +68,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
             }
 
             // TODO: Return the number of affected records and pass this along to the changeset storage
-            var failedPartitions = await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber, WriteModeFor(projection, context));
+            var failedPartitions = await ApplyMainChanges(projection, context, pendingSavesToFold);
 
             if (failedPartitions.Any())
             {
@@ -79,6 +80,8 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
                 return context;
             }
 
+            await ResolveSavedFutures(pendingSavesToFold);
+
             await changesetStorage.Save(
                 projection.ReadModel.ContainerName,
                 context.Key,
@@ -88,6 +91,21 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
                 context.Changeset);
         }
 
+        await ApplyPendingFutureSaves(context);
+
+        return context;
+    }
+
+    Task<IEnumerable<FailedPartition>> ApplyMainChanges(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
+    {
+        var mode = WriteModeFor(projection, context);
+        return foldedFutureSaves.Length > 0
+            ? sink.ApplyChangesImmediately(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode)
+            : sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode);
+    }
+
+    async Task ApplyPendingFutureSaves(ProjectionEventContext context)
+    {
         var foldedSet = context.Changeset.HasChanges
             ? new HashSet<PendingFutureSave>(context.PendingFutureSaves
                 .Where(p => Equals(p.Key.Value, context.Key.Value)
@@ -95,10 +113,38 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
             : [];
         foreach (var pendingSave in context.PendingFutureSaves.Where(p => !foldedSet.Contains(p)))
         {
-            await sink.ApplyChanges(pendingSave.Key, pendingSave.Changeset, context.Event.Context.SequenceNumber);
+            await ApplyPendingFutureSave(context, pendingSave);
+        }
+    }
+
+    async Task ApplyPendingFutureSave(ProjectionEventContext context, PendingFutureSave pendingSave)
+    {
+        var failedPartitions = (await sink.ApplyChangesImmediately(pendingSave.Key, pendingSave.Changeset, context.Event.Context.SequenceNumber, SinkWriteMode.Always)).ToArray();
+        foreach (var failedPartition in failedPartitions)
+        {
+            context.AddFailedPartition(failedPartition);
         }
 
-        return context;
+        if (!failedPartitions.Any(failure => Equals(failure.EventSourceId.Value, pendingSave.Key.Value)))
+        {
+            await ResolveSavedFuture(pendingSave);
+        }
+    }
+
+    async Task ResolveSavedFutures(IEnumerable<PendingFutureSave> pendingSaves)
+    {
+        foreach (var pendingSave in pendingSaves)
+        {
+            await ResolveSavedFuture(pendingSave);
+        }
+    }
+
+    async Task ResolveSavedFuture(PendingFutureSave pendingSave)
+    {
+        if (pendingSave.FutureId is { } futureId)
+        {
+            await projectionFutures!.ResolveFuture(futureId);
+        }
     }
 
     /// <summary>

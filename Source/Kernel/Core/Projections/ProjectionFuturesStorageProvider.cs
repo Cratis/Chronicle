@@ -34,7 +34,17 @@ public class ProjectionFuturesStorageProvider(IStorage storage) : IGrainStorage
         var futures = await futuresStorage.GetForProjection(projectionKey.ProjectionId);
         actualGrainState.State = new()
         {
-            Futures = futures.ToList()
+            Futures = futures.Select(future => future with
+            {
+                Event = future.Event with
+                {
+                    Context = future.Event.Context with
+                    {
+                        EventStore = projectionKey.EventStore,
+                        Namespace = projectionKey.Namespace
+                    }
+                }
+            }).ToList()
         };
     }
 

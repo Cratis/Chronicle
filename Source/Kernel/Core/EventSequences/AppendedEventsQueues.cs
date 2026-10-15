@@ -19,6 +19,7 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
 {
     IAppendedEventsQueue[] _queues = [];
     AppendedEventsQueueRouter _router = null!;
+    bool _isResetting;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -30,8 +31,25 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
     }
 
     /// <inheritdoc/>
+    public async Task ResetForDevelopment()
+    {
+        _isResetting = true;
+        await Task.WhenAll(_queues.Select(queue => queue.ResetForDevelopment()));
+        _router = new AppendedEventsQueueRouter(_queues.Length);
+        for (var queueIndex = 0; queueIndex < _queues.Length; queueIndex++)
+        {
+            _router.Seed(queueIndex, []);
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
+        if (_isResetting)
+        {
+            return;
+        }
+
         var batch = appendedEvents as IReadOnlyList<AppendedEvent> ?? appendedEvents.ToArray();
         if (batch.Count == 0)
         {
@@ -44,6 +62,11 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
     /// <inheritdoc/>
     public async Task<AppendedEventsQueueSubscription> Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null)
     {
+        if (_isResetting)
+        {
+            return new AppendedEventsQueueSubscription(observerKey, _router.GetQueueIndexFor(observerKey));
+        }
+
         var eventTypesList = eventTypes as IReadOnlyCollection<EventType> ?? eventTypes.ToArray();
         var queueIndex = _router.Subscribe(observerKey, eventTypesList.Select(eventType => eventType.Id));
         var subscription = new AppendedEventsQueueSubscription(observerKey, queueIndex);
@@ -54,6 +77,11 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
     /// <inheritdoc/>
     public async Task<AppendedEventsQueueSubscription> SubscribeToAllEventTypes(ObserverKey observerKey, ObserverFilters? filters = null)
     {
+        if (_isResetting)
+        {
+            return new AppendedEventsQueueSubscription(observerKey, _router.GetQueueIndexFor(observerKey));
+        }
+
         var queueIndex = _router.SubscribeToAllEventTypes(observerKey);
         var subscription = new AppendedEventsQueueSubscription(observerKey, queueIndex);
         await _queues[queueIndex].SubscribeToAllEventTypes(observerKey, filters);

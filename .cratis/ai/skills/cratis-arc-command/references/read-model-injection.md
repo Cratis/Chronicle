@@ -1,7 +1,19 @@
 <!-- cratis-ai-managed: skills/cratis-arc-command/references/read-model-injection.md -->
 # Injecting a read model into a command
 
-Verified against `Cratis.Arc.Core` `22.16.0` and `Cratis.Chronicle` `18.3.0`.
+## Contents
+
+- Nullability is the required/optional switch
+- `null` is not always what absence looks like
+- Which provider owns a read model type
+
+Arc injection verified at **v22.75.0**, with Chronicle dependency 19.39.1;
+separate Chronicle absence behavior below retains its original version context.
+Source: [read models in commands](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/chronicle/read-models/injecting-into-commands.md).
+Plain models and keyed reads are advisory, not concurrency guards. For protected
+reads use [decisions and routing](decisions-and-routing.md): opt into
+`[ProtectedDecision]` before taking `DecisionRead<T>`; constructor-injected
+validators are refused there.
 
 A read model can be injected into a `CommandValidator<T>` constructor, into
 `Provide()`, or into `Handle()`. Arc resolves it through an
@@ -47,7 +59,10 @@ failure rather than a server fault.
 `ARC0006` warns when a read-model parameter is non-nullable, precisely because a
 command-scoped read model can be missing. Make it nullable when absence is part
 of the command's valid behavior; keep it non-nullable when absence really is a
-rejection.
+rejection. When absence is a rejection, check the nullable parameter and return
+`ValidationResult.Error(...)` through `Result<TEvent, ValidationResult>`; never
+return a nullable event or `null` from `Handle()`, which Arc treats as success
+with nothing appended.
 
 ## `null` is not always what absence looks like
 

@@ -15,8 +15,8 @@ namespace Cratis.Chronicle.Storage.EventTypes.for_IEventTypesStorage;
 /// <param name="inner">The <see cref="IEventTypesStorage"/> to delegate to.</param>
 public class DelegatingEventTypesStorage(IEventTypesStorage inner) : IEventTypesStorage
 {
-    public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code) =>
-        inner.Register(type, schema, owner, source);
+    public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "") =>
+        inner.Register(type, schema, owner, source, visibility, origin);
 
     public Task<bool> Register(EventTypeDefinition definition) => inner.Register(definition);
 

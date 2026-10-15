@@ -48,11 +48,59 @@ Chain multiple `ForEventSource` calls to seed events for different event sources
 
 The returned value is an `AppendResult`, so every [append assertion](assertions) is available on it. When you supply more than one event to a single `When`, each is appended in order and the result of the final append is returned.
 
+## Reading and observing read models
+
+Use `scenario.ReadModels` to read projections and reducers built from the events you seed with
+`Given`, append with `When`, or append directly through `EventLog`. The read models share the
+scenario's own event storage, including the events needed to resolve child and join keys. Do not
+use `Defaults.Instance.EventStore.ReadModels` for these reads: it belongs to a different store.
+
+For example, suppose your discovered `ProjectSummary` projects `ProjectOpened` and `ProjectRenamed`.
+In an existing specification with an `EventScenario scenario` and an `EventSourceId projectId`:
+
+1. Seed the project with `await scenario.Given.ForEventSource(projectId).Events(new ProjectOpened("Original"));`.
+2. Act with `await scenario.When.ForEventSource(projectId).Events(new ProjectRenamed("Renamed"));`.
+3. Read its current state with `var project = await scenario.ReadModels.GetInstanceById<ProjectSummary>(projectId.Value);`.
+   The projected name is now `Renamed`. Use `await scenario.ReadModels.GetInstances<ProjectSummary>()`
+   to read the collection instead.
+
+A model-bound parent with a `[ChildrenFrom<T>]` collection works the same way. Seed the parent and
+append each child to its own event source, supplying the parent identifier in the child event's
+configured `parentKey` property. Reading the parent returns both children with their distinct keys.
+
+To observe the collection, import `System.Reactive.Linq` and subscribe, for example with
+`using var subscription = scenario.ReadModels.Observe<ProjectSummary>().Subscribe(projects => Console.WriteLine(projects.Count()));`.
+The subscription receives the initial collection and receives it again after a successful append
+changes the result. Await an emission signal in a specification rather than sleeping before an
+assertion. Passive read models and event-target projections cannot be observed.
+
+These reads use the in-process projection and reducer processors, not a running observer or a
+production read-model sink. They do not cover production sink encryption or observer lifecycle.
+Use [ReadModelScenario](../read-models/scenario.mdx) to specify a read model's transformations directly.
+
 ## Testing AppendMany
 
 `AppendMany` appends a collection of events in one call and returns an `AppendManyResult`:
 
 <ChronicleClientTabs snippet="testing/events/scenario/append-many" />
+
+## Closing and reopening streams
+
+`EventScenario` runs the same closed-stream check as the kernel. A scope closed with `EventSequence.CompleteStream`, or by an event type declared with `[ClosesStream]`, rejects later appends to it with a constraint violation named `closed-stream`.
+
+Closing event types are found by the same discovery as other constraints. Append the closing event and assert on the rejection of a covered event:
+
+<ChronicleClientTabs snippet="testing/events/scenario/closing-event" />
+
+Seed a closed state with `Given`, append the reopening event with `When`, and assert that the scope accepts events again:
+
+<ChronicleClientTabs snippet="testing/events/scenario/reopening-event" />
+
+Manual closure goes through `EventSequence`. `GetClosedStreams` shows what is closed and by whom:
+
+<ChronicleClientTabs snippet="testing/events/scenario/manual-close" />
+
+Within one `AppendMany`, a covered event after a closing event is refused, and close, reopen, then a covered event succeeds. A manual closure on the same scope also refuses the reopening event, because a `ReopenedBy` event only lifts its own constraint's closure. See [Closing streams](../../closing-streams/index.mdx) for the rules.
 
 ## PII compliance
 
@@ -74,9 +122,15 @@ returns an empty list) to disable constraints. This differs from the older const
 accept a constraint provider, where `null` means no constraints. Existing constructors continue
 using the default shared provider.
 
+To select an identity while keeping automatic discovery, use `new EventScenario(eventSequenceId, eventStoreName, namespaceName)`. For run-specific artifacts, use `new EventScenario(defaults, eventSequenceId, eventStoreName, namespaceName)`. Neither overload takes a constraint provider; the existing explicit-provider overload still treats `null` as no constraints.
+
+## Event generations
+
+Discovered event migrations run on append. An event appended in an older generation retains its original content and also stores the migrated generations. This does not determine which generation an ordinary read delivers. Migrators use the service provider supplied to `Defaults`, including their constructor dependencies.
+
 ## Isolation
 
-Create a **new `EventScenario` instance per test** to keep tests isolated. The in-memory store accumulates state across calls on the same instance. Each instance starts with an empty event log and sequence number zero.
+Create a **new `EventScenario` instance per test** to keep tests isolated. The in-memory store accumulates state across calls on the same instance. Each instance starts with an empty event log and sequence number zero. Dispose the scenario after the specification to release its in-memory resources.
 
 If your specs supply event types or constraints at runtime, construct `new Defaults(artifactsProvider)`
 and pass it to `new EventScenario(defaults)`. This uses that registry for event serialization and

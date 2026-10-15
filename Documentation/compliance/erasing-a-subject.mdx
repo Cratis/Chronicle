@@ -14,7 +14,17 @@ Erasure in Chronicle is the deletion of an encryption key. Every `[PII]` value i
 
 `IEventStore.PII` is an `IPIIManager`. `DeleteEncryptionKeyFor` removes every revision of the key, evicts it from every silo's cache, and records the erasure so that nothing puts the key back afterwards.
 
-Read one of that subject's events afterwards and nothing breaks. The event is still there, its sequence number is still there, and every field that was not marked `[PII]` still holds its value — only the PII properties come back as empty strings. That is the whole point of crypto-shredding: the log stays immutable and the personal data stops existing.
+Read one of that subject's events afterwards and nothing breaks. The event is still there, its sequence number is still there, and every field that was not marked `[PII]` still holds its value — only the PII properties lose their values. What a caller gets for an erased property depends on its schema type:
+
+| Property type | Released value after erasure |
+|---|---|
+| String | An empty string |
+| Non-nullable number or boolean | `0` or `false` |
+| Nullable number or boolean | `null` |
+| Collection | An empty collection |
+| Object or value object | An empty object |
+
+That is the whole point of crypto-shredding: the log stays immutable and the personal data stops existing. The consequence is that an erased `0`, `false` or empty string is indistinguishable from a value that was genuinely recorded as `0`, `false` or empty. Whether Chronicle should let a caller tell the two apart is an open decision, tracked in [issue 4620](https://github.com/Cratis/Chronicle/issues/4620).
 
 Causation property values are not encrypted under the subject's key, so deleting the key does not erase them. Set [`events.causationPropertyRetention` to `Omit`](../hosting/configuration/events.md) to prevent **new** causation property values from being retained, including on forwarded events, revisions, and redactions. `Omit` does not remove values already stored in historical causation chains; handle those separately when assessing an erasure.
 

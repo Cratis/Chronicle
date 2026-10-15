@@ -20,6 +20,7 @@ public sealed class ConstraintBatchClaims
 {
     readonly Dictionary<ClaimKey, EventSourceId> _claims = [];
     readonly Dictionary<EventTypeCycleKey, EventTypeCycleState> _eventTypeCycles = [];
+    readonly Dictionary<(ClosedStreamOwner Owner, ClosedStreamScope Scope), ClosedStream?> _closureChanges = [];
 
     enum EventTypeCycleState
     {
@@ -99,6 +100,30 @@ public sealed class ConstraintBatchClaims
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> the cycle is released for.</param>
     internal void ReleaseEventTypeCycle(ConstraintName constraintName, ResolvedConstraintScope? scope, EventSourceId eventSourceId) =>
         _eventTypeCycles[new EventTypeCycleKey(constraintName, scope, eventSourceId)] = EventTypeCycleState.Released;
+
+    /// <summary>
+    /// Record a closure established by an earlier valid event in this batch.
+    /// </summary>
+    /// <param name="closure">The owned closure.</param>
+    internal void RecordClosure(ClosedStream closure) =>
+        _closureChanges[(closure.Owner, closure.Scope.Normalized())] = closure with { Scope = closure.Scope.Normalized() };
+
+    /// <summary>
+    /// Record an exact owned reopening established by an earlier valid event in this batch.
+    /// </summary>
+    /// <param name="owner">The owning constraint.</param>
+    /// <param name="scope">The exact scope.</param>
+    internal void RecordReopen(ClosedStreamOwner owner, ClosedStreamScope scope) => _closureChanges[(owner, scope.Normalized())] = null;
+
+    /// <summary>
+    /// Apply earlier batch transitions to persisted covering closures.
+    /// </summary>
+    /// <param name="scope">The append scope.</param>
+    /// <param name="persisted">The persisted covering closures.</param>
+    /// <returns>The covering closures after earlier valid batch events.</returns>
+    internal IEnumerable<ClosedStream> GetBatchClosuresCovering(ClosedStreamScope scope, IEnumerable<ClosedStream> persisted) =>
+        persisted.Where(closure => !_closureChanges.ContainsKey((closure.Owner, closure.Scope.Normalized())))
+            .Concat(_closureChanges.Values.OfType<ClosedStream>().Where(closure => closure.Scope.Covers(scope)));
 
     record ClaimKey(ConstraintName ConstraintName, string ScopeKey, UniqueConstraintValue Value);
 

@@ -12,6 +12,12 @@ repository. They are **conventions**, not framework contracts: nothing here is
 enforced by an analyzer unless this skill says so. Follow them for consistency;
 do not claim the framework requires them.
 
+## Verified product sources
+
+| Package | Version | Purpose |
+| --- | --- | --- |
+| `Cratis.Fundamentals` | `7.23.0` | DI lifetime attributes and `IInstancesOf<T>` instance resolution |
+
 ## Route near misses
 
 - The question is what a Cratis product API *does*: resolve it against the
@@ -108,6 +114,11 @@ binds to the root scope's default namespace forever and returns empty results.
 The fix is almost always to drop `[Singleton]`, not to reach for
 `IServiceScopeFactory`. See
 [exceptions-logging-and-di.md](references/exceptions-logging-and-di.md).
+
+Enable it on an existing codebase in this order, or it will simply refuse to
+start: turn it on locally first, fix everything it names, and only then let it
+reach the deployed environments. Turning it on before the sweep converts a
+silent multi-tenant bug into a production outage.
 
 **Use `IInstancesOf<T>`, never `IEnumerable<T>`, to enumerate implementations of
 an abstraction.** `IEnumerable<T>` only works when every implementation is

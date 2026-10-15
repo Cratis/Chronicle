@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Monads;
@@ -23,17 +24,33 @@ namespace Cratis.Chronicle.Storage.InMemory.EventSequences;
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage serves.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> this storage serves.</param>
 /// <param name="identityStorage">The <see cref="IIdentityStorage"/> for resolving the identity chain that caused an append.</param>
-public class EventSequenceStorage(
+/// <param name="effectReceipts">The namespace-wide receipt state, when owned by a namespace storage.</param>
+public partial class EventSequenceStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
-    IIdentityStorage identityStorage) : IEventSequenceStorage
+    IIdentityStorage identityStorage,
+    Occurrences.EffectReceiptState? effectReceipts) : IEventSequenceStorage, IEventPublicationStorage
 {
     static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
 
     readonly List<AppendedEvent> _events = [];
     readonly Dictionary<EventSequenceNumber, IdentityId[]> _originalCausedByChains = [];
+    readonly Dictionary<EventSequenceNumber, StoredEventMetadata> _metadata = [];
+    readonly Dictionary<EventSequenceNumber, uint> _appendedGenerations = [];
     readonly object _lock = new();
+
+    /// <summary>
+    /// Initializes storage with its original constructor contract and a private receipt scope.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="eventSequenceId">The destination sequence.</param>
+    /// <param name="identityStorage">The identity resolver.</param>
+    public EventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IIdentityStorage identityStorage)
+        : this(eventStore, @namespace, eventSequenceId, identityStorage, null)
+    {
+    }
 
     /// <summary>
     /// Gets the events stored in this storage instance.
@@ -44,10 +61,38 @@ public class EventSequenceStorage(
         {
             lock (_lock)
             {
-                return _events.ToImmutableList();
+                return _events.Select(@event => @event with
+                {
+                    Context = @event.Context with
+                    {
+                        AppendedGeneration = _appendedGenerations.TryGetValue(@event.Context.SequenceNumber, out var generation) ? new EventTypeGeneration(generation) : null
+                    },
+                    GenerationalHashes = _generationHashes.TryGetValue(@event.Context.SequenceNumber, out var hashes)
+                        ? hashes.ToImmutableDictionary(_ => (int)_.Key.Value, _ => _.Value)
+                        : new Dictionary<int, EventHash>()
+                }).ToImmutableList();
             }
         }
     }
+
+    /// <inheritdoc/>
+    public bool SupportsRevisionTracking => true;
+
+    /// <summary>
+    /// Gets the generation of the original append, independently of the generation currently read.
+    /// </summary>
+    /// <param name="sequenceNumber">The sequence number of the event.</param>
+    /// <returns>The appended generation, or null if it was not recorded.</returns>
+    public uint? GetAppendedGeneration(EventSequenceNumber sequenceNumber)
+    {
+        lock (_lock)
+        {
+            return _appendedGenerations.TryGetValue(sequenceNumber, out var generation) ? generation : null;
+        }
+    }
+
+    /// <inheritdoc/>
+    public string SerializeContentForVerification(ExpandoObject content, JsonSchema schema) => Serialize(content);
 
     /// <inheritdoc/>
     public Task EnsureIndexes() => Task.CompletedTask;
@@ -167,12 +212,14 @@ public class EventSequenceStorage(
                 return Result<AppendedEvent, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable));
             }
 
-            var hash = contentHashes.TryGetValue(eventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
-            var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, tags, occurred, content, hash, subject, namedTags);
+            var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, tags, occurred, content, contentHashes, subject, namedTags);
             _events.Add(appended);
             _originalCausedByChains[sequenceNumber] = causedByChain.ToArray();
+            TrackMetadata(appended, _originalCausedByChains[sequenceNumber]);
+            _appendedGenerations[sequenceNumber] = eventType.Generation.Value;
+            _generationHashes[sequenceNumber] = new Dictionary<EventTypeGeneration, EventHash>(contentHashes);
 
-            return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(appended);
+            return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(ToAppendAcknowledgment(appended, eventType, content, contentHashes));
         }
     }
 
@@ -208,7 +255,6 @@ public class EventSequenceStorage(
             for (var index = 0; index < eventsToAppend.Count; index++)
             {
                 var e = eventsToAppend[index];
-                var hash = e.ContentHashes.TryGetValue(e.EventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
                 var appendedEvent = BuildAppendedEvent(
                     e.SequenceNumber,
                     e.EventSourceType,
@@ -222,14 +268,17 @@ public class EventSequenceStorage(
                     e.Tags,
                     e.Occurred,
                     e.GenerationalContent,
-                    hash,
+                    e.ContentHashes,
                     e.Subject,
                     e.NamedTags,
                     e.EventSource);
 
                 _events.Add(appendedEvent);
                 _originalCausedByChains[e.SequenceNumber] = e.CausedByChain.ToArray();
-                appended.Add(appendedEvent);
+                TrackMetadata(appendedEvent, _originalCausedByChains[e.SequenceNumber]);
+                _appendedGenerations[e.SequenceNumber] = e.EventType.Generation.Value;
+                _generationHashes[e.SequenceNumber] = new Dictionary<EventTypeGeneration, EventHash>(e.ContentHashes);
+                appended.Add(ToAppendAcknowledgment(appendedEvent, e.EventType, e.GenerationalContent, e.ContentHashes));
             }
         }
 
@@ -264,6 +313,7 @@ public class EventSequenceStorage(
                 occurred,
                 Serialize(content));
 
+            // Persistent providers revise content, not the stored append metadata. Keep the metadata index unchanged.
             _events[index] = original with
             {
                 Context = original.Context with { EventType = eventType, Hash = hash },
@@ -301,6 +351,9 @@ public class EventSequenceStorage(
 
             _events[index] = Redacted(original, reason, correlationId, causation, occurred, _originalCausedByChains[sequenceNumber]);
             _originalCausedByChains.Remove(sequenceNumber);
+            RedactMetadata(sequenceNumber, correlationId, causation, causedByChain, occurred);
+            _generationHashes.Remove(sequenceNumber);
+            _derivedGenerations.Remove(sequenceNumber);
             return Task.FromResult(original);
         }
     }
@@ -333,6 +386,9 @@ public class EventSequenceStorage(
                 affectedEventTypes.Add(new EventType(original.Context.EventType.Id, EventTypeGeneration.First, false));
                 _events[index] = Redacted(original, reason, correlationId, causation, occurred, _originalCausedByChains[original.Context.SequenceNumber]);
                 _originalCausedByChains.Remove(original.Context.SequenceNumber);
+                RedactMetadata(original.Context.SequenceNumber, correlationId, causation, causedByChain, occurred);
+                _generationHashes.Remove(original.Context.SequenceNumber);
+                _derivedGenerations.Remove(original.Context.SequenceNumber);
             }
         }
 
@@ -427,6 +483,25 @@ public class EventSequenceStorage(
             found is not null
                 ? (Option<AppendedEvent>)found
                 : Option<AppendedEvent>.None());
+    }
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
+        {
+            var result = new List<StoredEventMetadata>();
+            foreach (var locator in sequenceNumbers.Distinct().OrderBy(_ => _.Value))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (_metadata.TryGetValue(locator, out var metadata))
+                {
+                    result.Add(metadata);
+                }
+            }
+            return Task.FromResult<IReadOnlyList<StoredEventMetadata>>(result);
+        }
     }
 
     /// <inheritdoc/>
@@ -686,6 +761,54 @@ public class EventSequenceStorage(
         return events;
     }
 
+    static ImmutableArray<Causation> SnapshotCausation(IEnumerable<Causation> chain) =>
+        chain.Select(cause => cause with { Properties = cause.Properties.ToImmutableDictionary() }).ToImmutableArray();
+
+    static AppendedEvent ToAppendAcknowledgment(
+        AppendedEvent stored,
+        EventType eventType,
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes) => stored with
+        {
+            Context = stored.Context with
+            {
+                EventType = eventType,
+                Hash = contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet
+            },
+            Content = content.TryGetValue(eventType.Generation, out var value) ? value : content.Values.FirstOrDefault() ?? new ExpandoObject()
+        };
+
+    void TrackMetadata(AppendedEvent appended, IEnumerable<IdentityId> chain)
+    {
+        var context = appended.Context;
+        _metadata[context.SequenceNumber] = new StoredEventMetadata(
+            context.SequenceNumber,
+            context.EventType.Id,
+            context.EventSourceType,
+            context.EventSourceId,
+            context.EventStreamType,
+            context.EventStreamId,
+            context.Occurred,
+            context.CorrelationId,
+            SnapshotCausation(context.Causation),
+            chain.ToImmutableArray(),
+            context.Tags.ToImmutableArray(),
+            context.Subject,
+            context.EventSource);
+    }
+
+    void RedactMetadata(EventSequenceNumber number, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> chain, DateTimeOffset occurred)
+    {
+        _metadata[number] = _metadata[number] with
+        {
+            EventTypeId = GlobalEventTypes.Redaction,
+            Occurred = occurred,
+            CorrelationId = correlationId,
+            Causation = SnapshotCausation(causation),
+            CausedByChain = chain.ToImmutableArray()
+        };
+    }
+
     AppendedEvent BuildAppendedEvent(
         EventSequenceNumber sequenceNumber,
         EventSourceType eventSourceType,
@@ -699,13 +822,15 @@ public class EventSequenceStorage(
         IEnumerable<Tag> tags,
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
-        EventHash hash,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes,
         Subject? subject = null,
         IReadOnlyCollection<NamedTag>? namedTags = null,
         EventSourceName? eventSource = null)
     {
+        // Default reads use the highest stored generation; append acknowledgments retain the appended one.
+        var highestGeneration = content.Keys.MaxBy(_ => _.Value) ?? eventType.Generation;
         var eventContext = new EventContext(
-            eventType,
+            eventType with { Generation = highestGeneration },
             eventSourceType,
             eventSourceId,
             eventStreamType,
@@ -718,20 +843,22 @@ public class EventSequenceStorage(
             causation,
             causedBy,
             tags,
-            hash,
+            contentHashes.TryGetValue(highestGeneration, out var hash) ? hash : EventHash.NotSet,
             Subject: subject?.IsSet is true ? subject : new Subject(eventSourceId.Value))
         {
             NamedTags = namedTags ?? [],
-            EventSource = eventSource ?? EventSourceName.NotSet
+            EventSource = eventSource ?? EventSourceName.NotSet,
+            AppendedGeneration = eventType.Generation
         };
 
-        var eventContent = content.TryGetValue(eventType.Generation, out var generationContent)
+        var eventContent = content.TryGetValue(highestGeneration, out var generationContent)
             ? generationContent
             : content.Values.FirstOrDefault() ?? new ExpandoObject();
 
         return new AppendedEvent(eventContext, eventContent)
         {
-            GenerationalContent = content.ToDictionary(kvp => (int)kvp.Key.Value, kvp => Serialize(kvp.Value))
+            GenerationalContent = content.ToDictionary(kvp => (int)kvp.Key.Value, kvp => Serialize(kvp.Value)),
+            GenerationalHashes = contentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
         };
     }
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
@@ -9,6 +10,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Security;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Options;
 using WebhookDefinition = Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition;
 
@@ -23,6 +25,7 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="oauthClient"><see cref="IOAuthClient"/> for testing OAuth authorization.</param>
 /// <param name="webhookMediator"><see cref="IWebhookMediator"/> for testing webhook endpoints.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
+/// <param name="storage">Storage for validating registered event generations.</param>
 /// <remarks>
 /// Registering a webhook is a diff, not a write: the definition is compared with what is stored and only what
 /// actually changed becomes an event. Testing lives here too, because a validator has to ask the same questions
@@ -34,7 +37,8 @@ public sealed class WebhookRegistrar(
     IEncryption encryption,
     IOAuthClient oauthClient,
     IWebhookMediator webhookMediator,
-    IOptions<ChronicleOptions> options)
+    IOptions<ChronicleOptions> options,
+    IStorage storage)
 {
     const string WebhookTestPartitionKey = "test";
     readonly TimeSpan _webhookTestTimeout = TimeSpan.FromSeconds(options.Value.Webhooks.TestTimeoutSeconds);
@@ -46,8 +50,15 @@ public sealed class WebhookRegistrar(
     /// <param name="webhooks">The webhook definitions to add or update.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="WebhookRegistrationFailed">Thrown when an event recording the registration could not be appended.</exception>
+    /// <exception cref="ObserverPinsMultipleGenerationsOfEventType">The webhook pins multiple generations of one type.</exception>
+    /// <exception cref="EventTypeGenerationNotRegisteredForObserver">A pinned generation is not registered.</exception>
     internal async Task Add(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
     {
+        webhooks = webhooks.ToArray();
+
+        // Validate the entire request before appending any registration changes.
+        await ValidatePins(eventStore, webhooks);
+
         var eventSequence = grainFactory.GetSystemEventSequence(eventStore);
         var webhooksManager = grainFactory.GetGrain<Chronicle.Observation.Webhooks.IWebhooks>(eventStore);
 
@@ -74,7 +85,10 @@ public sealed class WebhookRegistrar(
                     encryptedWebhook.Target.Url,
                     encryptedWebhook.Target.Headers,
                     encryptedWebhook.IsReplayable,
-                    encryptedWebhook.IsActive);
+                    encryptedWebhook.IsActive)
+                {
+                    GenerationDelivery = encryptedWebhook.GenerationDelivery
+                };
 
                 await Append(eventSequence, webhook.Identifier, addedEvent);
                 await AppendAuthorizationEvent(eventSequence, webhook.Identifier, encryptedWebhook.Target.Authorization);
@@ -83,10 +97,7 @@ public sealed class WebhookRegistrar(
             {
                 var changedProperties = compareResult.ChangedProperties;
 
-                if (changedProperties.EventTypesChanged)
-                {
-                    await Append(eventSequence, webhook.Identifier, new EventTypesSetForWebhook(encryptedWebhook.EventTypes));
-                }
+                await AppendGenerationChanges(eventSequence, encryptedWebhook, changedProperties);
 
                 if (changedProperties.TargetUrlChanged)
                 {
@@ -219,6 +230,48 @@ public sealed class WebhookRegistrar(
             Success = false,
             ErrorMessage = exception?.Message ?? "Unable to connect to webhook endpoint."
         };
+    }
+
+    async Task ValidatePins(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
+    {
+        foreach (var webhook in webhooks.Where(_ => _.GenerationDelivery == Contracts.Observation.EventGenerationDelivery.Pinned))
+        {
+            await ValidatePins(eventStore, webhook);
+        }
+    }
+
+    async Task ValidatePins(EventStoreName eventStore, WebhookDefinition webhook)
+    {
+        var pins = webhook.EventTypes.Select(_ => _.ToChronicle()).ToArray();
+        var duplicate = pins.GroupBy(_ => _.Id).FirstOrDefault(_ => _.Select(pin => pin.Generation).Distinct().Count() > 1);
+        if (duplicate is not null)
+        {
+            throw new ObserverPinsMultipleGenerationsOfEventType(duplicate.Key);
+        }
+
+        var eventTypes = storage.GetEventStore(eventStore).EventTypes;
+        foreach (var pin in pins)
+        {
+            if (!await eventTypes.HasFor(pin.Id, pin.Generation) || !(await eventTypes.GetDefinition(pin.Id)).Generations.Any(_ => _.Generation == pin.Generation))
+            {
+                throw new EventTypeGenerationNotRegisteredForObserver(pin);
+            }
+        }
+    }
+
+    async Task AppendGenerationChanges(
+        IEventSequence eventSequence,
+        Concepts.Observation.Webhooks.WebhookDefinition webhook,
+        WebhookDefinitionChangedProperties changedProperties)
+    {
+        if (changedProperties.GenerationDeliveryChanged)
+        {
+            await Append(eventSequence, webhook.Identifier, new GenerationDeliverySetForWebhook(webhook.GenerationDelivery, webhook.EventTypes));
+        }
+        else if (changedProperties.EventTypesChanged)
+        {
+            await Append(eventSequence, webhook.Identifier, new EventTypesSetForWebhook(webhook.EventTypes));
+        }
     }
 
     Concepts.Observation.Webhooks.WebhookDefinition EncryptWebhookSecrets(Concepts.Observation.Webhooks.WebhookDefinition definition)

@@ -43,6 +43,11 @@ public record ObserverSubscription(
     public IReadOnlyList<ObserverSubscriberTarget> Targets { get; init; } = [];
 
     /// <summary>
+    /// Gets the event generation delivery policy.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
     /// Check whether the subscription is subscribed.
     /// </summary>
     public bool IsSubscribed => !ObserverId.Equals(ObserverId.Unspecified) && !Equals(Unsubscribed);

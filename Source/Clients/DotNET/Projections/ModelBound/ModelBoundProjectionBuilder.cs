@@ -6,7 +6,6 @@ using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
@@ -45,7 +44,7 @@ internal class ModelBoundProjectionBuilder(
     {
         _fromEveryAttributes.Clear();
 
-        var projectionId = new ProjectionId(modelType.FullName!);
+        var projectionId = ArtifactIdentity.ModelProjectionIdFor(modelType);
         var readModelIdentifier = modelType.GetReadModelIdentifier();
         var fromEventSequenceAttr = modelType.GetCustomAttribute<EventSequenceAttribute>();
         var notRewindableAttr = modelType.GetCustomAttribute<NotRewindableAttribute>();
@@ -104,6 +103,7 @@ internal class ModelBoundProjectionBuilder(
             definition.EventSequenceId = InferEventSequenceId(modelType, definition, _currentEventStoreName);
         }
 
+        EventStreamReadModel.ValidateProjection(modelType, definition);
         return definition;
     }
 
@@ -168,7 +168,7 @@ internal class ModelBoundProjectionBuilder(
     HashSet<string> GetMemberNames(Type modelType)
     {
         var names = modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Select(property => _namingPolicy.GetPropertyName(new PropertyPath(property.Name)));
+            .Select(property => (string)ProjectionPropertyPaths.Resolve(property.Name, _namingPolicy, ProjectionPathRole.Target));
 
         return new HashSet<string>(names, StringComparer.Ordinal);
     }
@@ -189,7 +189,7 @@ internal class ModelBoundProjectionBuilder(
 
             var keyProperty = attr.GetType().GetProperty(nameof(EntersOnAttribute<object>.Key));
             var key = keyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
-            var convertedKey = key.StartsWith('$') ? key : _namingPolicy.GetPropertyName(new PropertyPath(key));
+            var convertedKey = key.StartsWith('$') ? key : (string)ProjectionPropertyPaths.Resolve(key, _namingPolicy, ProjectionPathRole.Source);
 
             if (!definition.From.TryGetValue(eventTypeId, out var fromDefinition))
             {
@@ -221,14 +221,14 @@ internal class ModelBoundProjectionBuilder(
         var keyParameter = primaryConstructor?.GetParameters().FirstOrDefault(p => p.GetCustomAttribute<KeyAttribute>(true) is not null);
         if (keyParameter is not null)
         {
-            return _namingPolicy.GetPropertyName(new PropertyPath(keyParameter.Name!));
+            return ProjectionPropertyPaths.Resolve(keyParameter.Name!, _namingPolicy, ProjectionPathRole.Target);
         }
 
         var keyProperty = modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .FirstOrDefault(p => Attribute.IsDefined(p, typeof(KeyAttribute), true));
         if (keyProperty is not null)
         {
-            return _namingPolicy.GetPropertyName(new PropertyPath(keyProperty.Name));
+            return ProjectionPropertyPaths.Resolve(keyProperty.Name, _namingPolicy, ProjectionPathRole.Target);
         }
 
         throw new VariantMustDeclareKeyProperty(modelType);
@@ -236,10 +236,12 @@ internal class ModelBoundProjectionBuilder(
 
     EventSequenceId InferEventSequenceId(Type modelType, ProjectionDefinition definition, string? currentEventStoreName)
     {
+        // Model-bound projections have always selected source ownership from the latest registered generation,
+        // matching the single owner sent on the wire. Keep that source-selection contract while resolving facets through the registry.
         var eventStores = definition.From.Keys
             .Where(et => _eventTypes.HasFor(new EventTypeId(et.Id)))
             .Select(et => _eventTypes.GetClrTypeFor(new EventTypeId(et.Id)))
-            .Select(t => t.GetEventStoreName())
+            .Select(type => _eventTypes.GetDescriptorFor(type, currentEventStoreName is null ? EventStoreName.NotSet : new(currentEventStoreName)).EventStore)
             .Where(name => name is not null)
             .Select(name => name!)
             .Distinct()
@@ -308,16 +310,14 @@ internal class ModelBoundProjectionBuilder(
         if (!string.IsNullOrEmpty(key))
         {
             PropertyValidator.ValidatePropertyExists(eventType, key);
-            var keyPropertyPath = new PropertyPath(key);
-            fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
+            fromDefinition.Key = ProjectionPropertyPaths.Resolve(key, _namingPolicy, ProjectionPathRole.Source);
         }
 
         var parentKey = (attr as IFromEventAttribute)?.ParentKey;
         if (!string.IsNullOrEmpty(parentKey))
         {
             PropertyValidator.ValidatePropertyExists(eventType, parentKey);
-            var parentKeyPropertyPath = new PropertyPath(parentKey);
-            fromDefinition.ParentKey = _namingPolicy.GetPropertyName(parentKeyPropertyPath);
+            fromDefinition.ParentKey = ProjectionPropertyPaths.Resolve(parentKey, _namingPolicy, ProjectionPathRole.Source);
         }
 
         var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
@@ -342,15 +342,13 @@ internal class ModelBoundProjectionBuilder(
             {
                 // Map from event context property
                 PropertyValidator.ValidatePropertyExists<EventContext>(attribute.ContextProperty);
-                var contextPropertyPath = new PropertyPath(attribute.ContextProperty);
-                var convertedContextPropertyName = _namingPolicy.GetPropertyName(contextPropertyPath);
+                var convertedContextPropertyName = ProjectionPropertyPaths.Resolve(attribute.ContextProperty, _namingPolicy, ProjectionPathRole.Source);
                 properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
             }
             else if (!string.IsNullOrEmpty(attribute.Property))
             {
                 // Map from event property
-                var eventPropertyPath = new PropertyPath(attribute.Property);
-                properties[propertyName] = _namingPolicy.GetPropertyName(eventPropertyPath);
+                properties[propertyName] = ProjectionPropertyPaths.Resolve(attribute.Property, _namingPolicy, ProjectionPathRole.Source);
             }
             else
             {
@@ -429,8 +427,7 @@ internal class ModelBoundProjectionBuilder(
         ChildrenDefinition? childrenDef = null)
     {
         var memberName = parameter.Name!;
-        var propertyPath = new PropertyPath(memberName);
-        var propertyName = _namingPolicy.GetPropertyName(propertyPath);
+        var propertyName = (string)ProjectionPropertyPaths.Resolve(memberName, _namingPolicy, ProjectionPathRole.Target);
 
         var targetFrom = isRoot ? definition.From : childrenDef?.From ?? definition.From;
         var targetJoin = isRoot ? definition.Join : childrenDef?.Join ?? definition.Join;
@@ -514,7 +511,7 @@ internal class ModelBoundProjectionBuilder(
 
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<JoinAttribute<object>>())
         {
-            targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, memberName, propertyName);
+            targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, memberName, propertyName, childrenDef?.IdentifiedBy);
         }
 
         // A [RemovedWith] that sits alongside a [ChildrenFrom] on the same collection property means "remove the
@@ -605,8 +602,7 @@ internal class ModelBoundProjectionBuilder(
         Type? modelType = null,
         ChildrenDefinition? childrenDef = null)
     {
-        var propertyPath = new PropertyPath(property.Name);
-        var propertyName = _namingPolicy.GetPropertyName(propertyPath);
+        var propertyName = (string)ProjectionPropertyPaths.Resolve(property.Name, _namingPolicy, ProjectionPathRole.Target);
 
         var targetFrom = isRoot ? definition.From : childrenDef?.From ?? definition.From;
         var targetJoin = isRoot ? definition.Join : childrenDef?.Join ?? definition.Join;
@@ -692,7 +688,7 @@ internal class ModelBoundProjectionBuilder(
 
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<JoinAttribute<object>>())
         {
-            targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, property.Name, propertyName);
+            targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, property.Name, propertyName, childrenDef?.IdentifiedBy);
         }
 
         // A [RemovedWith] that sits alongside a [ChildrenFrom] on the same collection property means "remove the

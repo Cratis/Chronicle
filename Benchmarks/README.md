@@ -49,6 +49,18 @@ Measures the performance of bulk appending events to the event log.
 Parameters:
 - EventCount: 10, 100, 1000 events per batch
 
+### StronglyConsistentPerKeyReadBenchmark
+
+Measures a strongly consistent read of one key as its stream grows, for a passive projection (folded in the Kernel
+by an immediate projection grain) and a passive reducer (folded in the client).
+
+Parameters:
+- StreamLength: 10, 100, 1000, 10000 events for the key
+
+The projection is read cold (a fresh session, so a newly activated grain folds the whole stream), warm (nothing
+appended since the last read), warm after one event appended to the key, and warm after one event appended to another
+key. The passive reducer has no cache, so it is read once per iteration.
+
 ### Future Benchmarks
 
 The following observer benchmarks are planned but require additional infrastructure:

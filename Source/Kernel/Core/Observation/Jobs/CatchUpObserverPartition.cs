@@ -27,12 +27,15 @@ public class CatchUpObserverPartition(
             logger.NotAllEventsWereHandled(nameof(CatchUpObserverPartition), State.LastHandledEventSequenceNumber);
         }
 
-        if (!State.LastHandledEventSequenceNumber.IsActualValue)
+        // A step that completed having read only events the observer's filters exclude handled nothing, yet the
+        // partition is caught up all the same and must stop holding back live delivery.
+        var lastScanned = State.HandledAllEvents ? State.LastScannedEventSequenceNumber : EventSequenceNumber.Unavailable;
+        if (!State.LastHandledEventSequenceNumber.IsActualValue && !lastScanned.IsActualValue)
         {
             logger.NoEventsWereHandled(nameof(CatchUpObserverPartition));
             return;
         }
-        await observer.PartitionCaughtUp(Request.Key, State.LastHandledEventSequenceNumber);
+        await observer.PartitionCaughtUp(Request.Key, State.LastHandledEventSequenceNumber, lastScanned);
     }
 
     /// <inheritdoc/>

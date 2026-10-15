@@ -37,7 +37,7 @@ public class SetBuilder<TReadModel, TEvent, TParentBuilder>(TParentBuilder paren
     /// <inheritdoc/>
     public TParentBuilder To(PropertyPath propertyPath)
     {
-        _expression = new EventContentPropertyExpression(namingPolicy.GetPropertyName(propertyPath));
+        _expression = new EventContentPropertyExpression(ProjectionPropertyPaths.Resolve(propertyPath, namingPolicy, ProjectionPathRole.Source));
         return parent;
     }
 
@@ -56,6 +56,15 @@ public class SetBuilder<TReadModel, TEvent, TParentBuilder>(TParentBuilder paren
 
         return _expression!.Build();
     }
+
+    /// <summary>
+    /// Converts an accessor using this builder's serialization naming policy.
+    /// </summary>
+    /// <param name="expression">The member expression.</param>
+    /// <param name="description">The description of the property being configured.</param>
+    /// <returns>The serialized property path.</returns>
+    private protected PropertyPath ResolvePropertyPath(LambdaExpression expression, string description) =>
+        ProjectionPropertyPaths.FromExpression(expression, namingPolicy, ProjectionPathRole.Source, description);
 
     void ThrowIfMissingToExpression()
     {
@@ -92,7 +101,6 @@ public class SetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
     : SetBuilder<TReadModel, TEvent, TParentBuilder>(parent, targetProperty, namingPolicy, forceEventProperty), ISetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>
 {
     readonly TParentBuilder _parent = parent;
-    readonly INamingPolicy _namingPolicy = namingPolicy;
 
     /// <inheritdoc/>
     public TParentBuilder ToValue(TProperty value)
@@ -140,23 +148,15 @@ public class SetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
     /// <inheritdoc/>
     public TParentBuilder To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
-        if (!eventPropertyAccessor.TryGetPropertyPath(out var propertyPath))
-        {
-            throw new InvalidPropertyExpression($"property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'", eventPropertyAccessor);
-        }
-
-        _expression = new EventContentPropertyExpression(_namingPolicy.GetPropertyName(propertyPath));
+        var propertyPath = ResolvePropertyPath(eventPropertyAccessor, $"property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'");
+        _expression = new EventContentPropertyExpression(propertyPath);
         return _parent;
     }
 
     /// <inheritdoc/>
     public TParentBuilder ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor)
     {
-        if (!eventContextPropertyAccessor.TryGetPropertyPath(out var propertyPath))
-        {
-            throw new InvalidPropertyExpression($"the event context value for property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'", eventContextPropertyAccessor);
-        }
-
+        var propertyPath = ResolvePropertyPath(eventContextPropertyAccessor, $"the event context value for property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'");
         _expression = new EventContextPropertyExpression(propertyPath);
         return _parent;
     }

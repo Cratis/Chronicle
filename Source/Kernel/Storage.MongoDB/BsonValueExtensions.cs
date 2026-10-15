@@ -4,6 +4,7 @@
 using System.Collections;
 using System.Globalization;
 using Cratis.Arc.MongoDB;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Geospatial;
 using Cratis.Reflection;
@@ -72,7 +73,12 @@ public static class BsonValueExtensions
 
         if (targetType is not null)
         {
-            input = TypeConversion.Convert(targetType, input);
+            input = (Nullable.GetUnderlyingType(targetType) ?? targetType) == typeof(decimal) ? input switch
+            {
+                double value => DecimalValues.FromDouble(value),
+                float value => DecimalValues.FromSingle(value),
+                _ => TypeConversion.Convert(targetType, input)
+            } : TypeConversion.Convert(targetType, input);
         }
 
         if (inputType.IsEnum)
@@ -98,7 +104,7 @@ public static class BsonValueExtensions
                 return new BsonInt64(actualValue);
 
             case ulong actualValue:
-                return new BsonDecimal128((long)actualValue);
+                return new BsonDecimal128((decimal)actualValue);
 
             case float actualValue:
                 return new BsonDouble(actualValue);
@@ -351,6 +357,10 @@ public static class BsonValueExtensions
                 return new BsonInt32(value is int actualInt ? actualInt : int.Parse(value.ToString()!));
 
             case JsonObjectType.Number:
+                if (value is decimal decimalValue)
+                {
+                    return new BsonDecimal128(decimalValue);
+                }
                 return new BsonDouble(value is double actualDouble ? actualDouble : double.Parse(value.ToString()!));
         }
 
@@ -470,7 +480,10 @@ public static class BsonValueExtensions
                 break;
 
             case TypeCode.UInt64:
-                result = (ulong)value.ToInt64();
+                var unsigned = value.ToDecimal();
+
+                // Older writers narrowed UInt64 through Int64 before storing Decimal128.
+                result = unsigned < 0 ? unchecked((ulong)value.ToInt64()) : (ulong)unsigned;
                 break;
 
             case TypeCode.Single:
@@ -482,7 +495,7 @@ public static class BsonValueExtensions
                 break;
 
             case TypeCode.Decimal:
-                result = value.ToDecimal();
+                result = value is BsonDouble storedDouble ? DecimalValues.FromDouble(storedDouble.Value) : value.ToDecimal();
                 break;
 
             case TypeCode.DateTime:

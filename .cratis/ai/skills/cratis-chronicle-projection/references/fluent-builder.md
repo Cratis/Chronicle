@@ -1,6 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-chronicle-projection/references/fluent-builder.md -->
 # The fluent projection builder
 
+## Contents
+
+- The interfaces
+- `IProjectionBuilderFor<TReadModel>` — its own members
+- Inherited from `IProjectionBuilder<TReadModel, TBuilder>`
+- Keys live on the per-event builder
+- `Set(...).To(...)`
+- When the fluent form is the only option
+- AutoMap default
+
 Verified against `Cratis.Chronicle` `18.3.0`, namespace
 `Cratis.Chronicle.Projections`.
 
@@ -42,6 +52,12 @@ same builder is automatically reclassified into an update-only join. There is
 no fluent equivalent of the model-bound `[GlobalFor<T>]` shared handler — a
 mapping shared across variants is repeated on each variant's builder.
 
+At **Cratis/Chronicle v19.50.0**, `FromEvery` also maps child-only events onto
+the owning parent. `IFromEveryBuilder.ExcludeChildProjections()` opts out;
+model-bound `[FromEvery]` has no opt-out. `FromAll` can count into dictionary
+properties with a per-event context key (`Projections/FromEveryBuilder.cs`,
+`IFromEveryBuilder.cs`, `Documentation/projections/declarative/`).
+
 ## Inherited from `IProjectionBuilder<TReadModel, TBuilder>`
 
 ```csharp
@@ -51,7 +67,7 @@ IProjectionBuilder<TReadModel, TBuilder> NoAutoMap();   // returns the BASE inte
 TBuilder WithInitialValues(Func<TReadModel> initialValueProviderCallback);
 TBuilder From<TEvent>(Action<IFromBuilder<TReadModel, TEvent>>? builderCallback = default);
 TBuilder Join<TEvent>(Action<IJoinBuilder<TReadModel, TEvent>>? builderCallback = default);
-TBuilder FromEvery(Action<IFromEveryBuilder<TReadModel>> builderCallback);   // callback required
+TBuilder FromEvery(Action<IFromEveryBuilder<TReadModel>> builderCallback);   // callback required; includes child-only events
 TBuilder FromAll(Action<IFromAllBuilder<TReadModel>> builderCallback);       // callback required
 TBuilder RemovedWith<TEvent>(Action<RemovedWithBuilder<TReadModel, TEvent>>? builderCallback = default);
 TBuilder RemovedWithJoin<TEvent>(Action<RemovedWithJoinBuilder<TReadModel, TEvent>>? builderCallback = default);

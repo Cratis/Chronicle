@@ -105,8 +105,7 @@ into an approval ceremony merely because this skill is available.
     commit trailer citing the old id and point it at the new one. A reader
     arriving at either record must be able to reach the other.
 
-The exact front-matter fields, the closed value sets, and the index shape are in
-[record-format.md](references/record-format.md).
+Read [record-format.md](references/record-format.md) when authoring or updating a record or regenerating its index; it defines the exact front-matter fields, closed value sets, and index shape.
 
 ## What breaks
 

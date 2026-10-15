@@ -216,6 +216,26 @@ In `appsettings.json`:
 { "Cratis": { "Chronicle": { "RegistrationRetry": { "MaxAttempts": 10, "MaximumDelay": "00:01:00" } } } }
 ```
 
+### ArtifactIdentityDrift
+
+Controls the .NET client's check for likely artifact renames or moves before each foreground registration run. Background retries retain its findings without repeating snapshots or drift logs.
+
+| | |
+|---|---|
+| Type | `ArtifactIdentityDriftPolicy` |
+| Default | `Warn` |
+| Values | `Warn`, `Fail`, `Ignore` |
+
+`Warn` logs findings and continues registering. `Fail` throws `ArtifactIdentityDriftDetected` before any artifacts are registered when Warning-level reactor or event type findings exist, without retrying. Information-level reducer and projection findings never fail registration. `Ignore` skips the check and its kernel calls. Snapshot failures never prevent registration, even with `Fail`; a failed subscription confirmation omits that reactor or reducer candidate. Projections skip confirmation because the kernel keeps them subscribed until registration retires them.
+
+In `appsettings.json`:
+
+```json
+{ "Cratis": { "Chronicle": { "ArtifactIdentityDrift": "Fail" } } }
+```
+
+Use `Fail` in CI or staging to investigate likely identity changes before deploying. This is a heuristic: rolling deployments can hide reactor or reducer renames, and unrelated same-named observers or same-shaped events can match. Projections are more prone to false positives because subscribed candidates are included; their findings remain informational. Event types cannot be removed to acknowledge a finding; preserve the old id or switch to `Warn` after reviewing an intentional new identity. See [Discovery report and identity drift](../clients/dotnet/discovery-report.md) for findings, log levels, and limitations.
+
 ### Tls
 
 TLS certificate settings for the gRPC connection. TLS is active when both `CertificatePath` and `CertificatePassword` are set. See [TLS](tls) for full details.
@@ -229,6 +249,20 @@ TLS certificate settings for the gRPC connection. TLS is active when both `Certi
 |---|---|---|
 | `CertificatePath` | `string?` | Path to a PFX certificate file |
 | `CertificatePassword` | `string?` | Password for the certificate file |
+
+### Occurrences
+
+Kernel delivery settings under `Cratis:Chronicle:Occurrences`. These settings do not change observer retry policy.
+
+| Property | Type | Default | Behavior |
+|---|---|---|---|
+| `MaxInFlight` | `int` | `1` | Maximum live leases per trigger and scope; values below one use one |
+| `MaxAttempts` | `int` | `10` | Quarantines exhausted work; zero permits unlimited attempts |
+| `BackoffDelay` | `int` | `1` | Initial failure retry delay in seconds; negative values use zero |
+| `ExponentialBackoffDelayFactor` | `float` | `2` | Multiplier per failed attempt; values below one use one |
+| `MaximumBackoffDelay` | `int` | `600` | Failure retry delay cap in seconds; negative values use zero |
+
+Lease duration is selected by the claim or renew request, not this section: zero or a negative value uses 60 seconds, and the maximum is 600 seconds. Claims return at most 1,000 occurrences and remain subject to `MaxInFlight`. Kernel time controls expiry and backoff. See [occurrence delivery and receipts](../concepts/effect-receipts.md#record-and-deliver-an-occurrence) for ordering, quarantine and recovery.
 
 ### Authentication
 

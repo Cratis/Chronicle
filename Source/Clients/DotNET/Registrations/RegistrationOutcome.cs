@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Discovery;
 
 namespace Cratis.Chronicle.Registrations;
 
@@ -31,6 +32,10 @@ namespace Cratis.Chronicle.Registrations;
 /// observe rather than assume. <see cref="ArtifactRegistration.IsRegistered"/> means the client built a definition for
 /// the artifact and the kernel accepted the batch it travelled in; the registration operation itself returns no
 /// per-definition verdict, so a finer-grained claim than that would be invented.
+/// For newly registered active projections, success also means the kernel subscribed their observers in the event
+/// store's existing namespaces. It does not mean an event appended afterwards is already reflected in materialized
+/// read models. For read-your-writes, use <see cref="Observation.AppendResultWaitForCompletionExtensions.WaitForCompletion"/>
+/// on the append result before reading, or use a passive read model.
 /// </para>
 /// <para>
 /// <b>What it deliberately does not cover: reactors and reducers.</b> Their <c language="csharp">Register()</c> only opens a duplex
@@ -48,7 +53,7 @@ namespace Cratis.Chronicle.Registrations;
 /// <em>before</em> the handlers run, and only rolled back <em>after</em> they have all finished, so polling it races:
 /// it reads <see langword="true"/> while registration is still in flight and while a registration that is about to be
 /// reported as failed is still running. It answers "connected", which is necessary and not sufficient. Use
-/// <see cref="IEventStore.Registration"/>, which only ever transitions once registration has completed.
+/// <see cref="IEventStore.Registration"/> and its <see cref="IsRegistering"/> flag instead.
 /// </para>
 /// </remarks>
 public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistration> Artifacts, Exception? Failure = null)
@@ -69,6 +74,19 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
     public bool IsSuccess => HasRun && Failure is null && Artifacts.All(_ => _.IsRegistered);
 
     /// <summary>
+    /// Gets a value indicating whether a registration run is in flight, or a reconnect will re-register after
+    /// a disconnect. The other members describe the previous run while this is true.
+    /// </summary>
+    public bool IsRegistering { get; init; }
+
+    /// <summary>
+    /// Gets the likely identity changes detected before this registration run, retained across background retries.
+    /// These are heuristic findings, not per-artifact registration failures.
+    /// Only reactor and event type findings prevent registration under the Fail policy.
+    /// </summary>
+    public IImmutableList<ArtifactIdentityDrift> IdentityDrift { get; init; } = ImmutableList<ArtifactIdentityDrift>.Empty;
+
+    /// <summary>
     /// Gets the declared artifacts that did not register, each carrying the failure that stopped it.
     /// </summary>
     public IEnumerable<ArtifactRegistration> Failures => Artifacts.Where(_ => !_.IsRegistered);
@@ -87,18 +105,26 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
     public virtual bool Equals(RegistrationOutcome? other) =>
         other is not null &&
         HasRun == other.HasRun &&
+        IsRegistering == other.IsRegistering &&
         Equals(Failure, other.Failure) &&
-        Artifacts.SequenceEqual(other.Artifacts);
+        Artifacts.SequenceEqual(other.Artifacts) &&
+        IdentityDrift.SequenceEqual(other.IdentityDrift);
 
     /// <inheritdoc/>
     public override int GetHashCode()
     {
         var hashCode = default(HashCode);
         hashCode.Add(HasRun);
+        hashCode.Add(IsRegistering);
         hashCode.Add(Failure);
         foreach (var artifact in Artifacts)
         {
             hashCode.Add(artifact);
+        }
+
+        foreach (var drift in IdentityDrift)
+        {
+            hashCode.Add(drift);
         }
 
         return hashCode.ToHashCode();

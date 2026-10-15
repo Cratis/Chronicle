@@ -56,7 +56,7 @@ Declaring it on the holding member rather than on the nested type is worth prefe
 `clear` is a statement of its own, alongside `increment`, `decrement` and `count`. It names the member the event empties:
 
 ```text
-projection Notes => MbClearingProjectNotes
+projection Notes => MyApp.ReadModels.MbClearingProjectNotes
     from MbClearingProjectNoted
         note = note
     from MbClearingProjectNoteCleared
@@ -66,7 +66,7 @@ projection Notes => MbClearingProjectNotes
 A clear reaches a member of a nested object through its path — the same clear the `MbClearingContract` example above declares with an attribute:
 
 ```text
-projection Employees => MbClearingEmployee
+projection Employees => MyApp.ReadModels.MbClearingEmployee
     from MbClearingNoticeWithdrawn
         clear contract.noticeGiven
 ```

@@ -477,6 +477,12 @@ jobs:
           name: workbench
           path: ./Source/Workbench/wwwroot
 
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -485,12 +491,6 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@master
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Prepare Docker tags
         id: docker-tags
@@ -561,6 +561,12 @@ jobs:
           name: workbench
           path: ./Source/Workbench/wwwroot
 
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -569,12 +575,6 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@master
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Prepare Docker tags
         id: docker-tags
@@ -628,6 +628,12 @@ jobs:
           name: workbench
           path: ./Source/Workbench/wwwroot
 
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -636,12 +642,6 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@master
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Prepare Docker tags
         id: docker-tags
@@ -710,6 +710,12 @@ jobs:
           name: workbench
           path: ./Source/Workbench/wwwroot
 
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -718,12 +724,6 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@master
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Prepare Docker tags
         id: docker-tags

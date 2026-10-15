@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Concepts.Targets;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Concepts.ReadModels;
@@ -31,12 +32,15 @@ public record ReadModelDefinition(
     ReadModelObserverIdentifier ObserverIdentifier,
     SinkDefinition Sink,
     IDictionary<ReadModelGeneration, JsonSchema> Schemas,
-    IReadOnlyCollection<IndexDefinition> Indexes)
+    IReadOnlyCollection<IndexDefinition> Indexes) : IHaveTargetSchema
 {
     /// <summary>
     /// Gets the latest generation of the read model.
     /// </summary>
     public ReadModelGeneration LatestGeneration => Schemas.Keys.Max() ?? ReadModelGeneration.Unspecified;
+
+    /// <inheritdoc/>
+    public JsonSchema GetTargetSchema() => GetSchemaForLatestGeneration();
 
     /// <summary>
     /// Gets the schema for the latest generation of the read model.

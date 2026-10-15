@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// <para>
 /// Constraint definitions are discovered locally from the supplied <see cref="ICanProvideConstraints"/>
 /// provider. Registration with the kernel is a no-op because the kernel grain already receives
-/// the constraint definitions via <see cref="InMemoryConstraintsStorage"/> during setup.
+/// the constraint definitions via production storage during setup.
 /// </para>
 /// </remarks>
 /// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies constraint definitions.</param>

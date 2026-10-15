@@ -10,6 +10,20 @@ message DehydrateSessionRequest {
    string EventSequenceId = 4;
    string ReadModelKey = 5;
    string SessionId = 6;
+   string EventSourceType = 7;
+   string EventStreamType = 8;
+   string EventStreamId = 9;
+   string EventSourceId = 10;
+}
+message EventSequenceSinkConfiguration {
+   EventType EventType = 1;
+   string EventSequence = 2;
+   bool IsPublic = 3;
+}
+message EventType {
+   string Id = 1;
+   uint32 Generation = 2;
+   bool Tombstone = 3;
 }
 message GetAllInstancesRequest {
    string EventStore = 1;
@@ -35,11 +49,16 @@ message GetInstanceByKeyRequest {
    string EventSequenceId = 4;
    string ReadModelKey = 5;
    string SessionId = 6;
+   string EventSourceType = 7;
+   string EventStreamType = 8;
+   string EventStreamId = 9;
+   string EventSourceId = 10;
 }
 message GetInstanceByKeyResponse {
    string ReadModel = 1;
    uint64 ProjectedEventsCount = 2;
    uint64 LastHandledEventSequenceNumber = 3;
+   bool StreamScoped = 4;
 }
 message GetInstancesRequest {
    string EventStore = 1;
@@ -153,6 +172,7 @@ message SerializableDateTimeOffset {
 message SinkDefinition {
    .bcl.Guid ConfigurationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string TypeId = 2;
+   EventSequenceSinkConfiguration EventSequence = 3;
 }
 message UpdateDefinitionRequest {
    string EventStore = 1;

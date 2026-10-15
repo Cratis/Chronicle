@@ -121,12 +121,15 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return expandoObject;
     }
 
+    static bool HasProtectedValueMetadata(JsonSchema schema) =>
+        schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any();
+
     JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty)
     {
         // Compliance handlers replace protected scalar values with opaque strings while the registered schema
         // intentionally remains the schema of the plaintext event. Keep those strings opaque until the
         // compliance manager releases them instead of coercing ciphertext through the plaintext scalar type.
-        if (value is string compliantValue && schemaProperty.GetComplianceMetadata().Any())
+        if (value is string compliantValue && HasProtectedValueMetadata(schemaProperty))
         {
             return JsonValue.Create(compliantValue);
         }
@@ -165,7 +168,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             return new JsonArray([.. items]);
         }
 
-        if (typeFormats.IsKnown(schemaProperty.Format!))
+        if (typeFormats.IsKnown(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!))
         {
             // A complex formatted value (e.g. a geospatial type) serializes to a JSON object/array
             // through its registered converter (GeoJSON); a scalar formatted value (guid, date, ...)
@@ -206,10 +209,10 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             // A JSON object carrying a known format identifies a complex CLR type (e.g. a geospatial
             // type serialized as GeoJSON). Deserialize the whole object into that type so the
             // ExpandoObject holds the typed value rather than a generic nested structure.
-            if (typeFormats.IsKnown(schemaProperty.Format!))
+            if (typeFormats.IsKnown(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!))
             {
                 return jsonNode.Deserialize(
-                    typeFormats.GetTypeForFormat(schemaProperty.Format!),
+                    typeFormats.GetTypeForFormat(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!),
                     Globals.JsonSerializerOptions);
             }
 
@@ -229,14 +232,14 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             return array.Select(_ => ConvertFromJsonNode(_, schemaProperty.Item!)).ToArray();
         }
 
-        if (typeFormats.IsKnown(schemaProperty.Format!))
+        if (typeFormats.IsKnown(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!))
         {
             try
             {
                 return ConvertJsonValueToSchemaType(jsonNode, schemaProperty);
             }
             catch (Exception ex) when (
-                schemaProperty.GetComplianceMetadata().Any() &&
+                HasProtectedValueMetadata(schemaProperty) &&
                 jsonNode.AsValue().TryGetValue<string>(out _) &&
                 ex is FormatException or InvalidCastException or InvalidOperationException or OverflowException)
             {
@@ -268,7 +271,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         var value = jsonNode.AsValue();
 
-        var isCompliant = schemaProperty.GetComplianceMetadata().Any();
+        var isCompliant = HasProtectedValueMetadata(schemaProperty);
 
         // Nullable enum values are represented as a discriminated union with a null value. We need to get the actual property definition.
         // Other types could also be represented in this manner and it is therefor important to get the actual property definition.
@@ -362,6 +365,10 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                     {
                         return numberAsString;
                     }
+                }
+                if (value.TryGetValue<decimal>(out var decimalValue) && value.GetValue<object>() is decimal)
+                {
+                    return decimalValue;
                 }
                 return value.GetValue<double>();
         }
@@ -472,7 +479,14 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
     object? ConvertJsonValueToSchemaType(JsonNode jsonNode, JsonSchema schemaProperty)
     {
-        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format!);
+        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!);
+        if (Nullable.GetUnderlyingType(targetType) == typeof(decimal) || targetType == typeof(decimal))
+        {
+            if (DecimalValues.TryFromLiteral(jsonNode.AsValue(), out var decimalValue))
+            {
+                return decimalValue;
+            }
+        }
         return jsonNode.AsValue().ToTargetTypeValue(targetType);
     }
 
@@ -483,12 +497,17 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             return null;
         }
 
-        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format!);
-        input = TypeConversion.Convert(targetType, input);
+        var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!);
+        input = (Nullable.GetUnderlyingType(targetType) ?? targetType) == typeof(decimal) ? input switch
+        {
+            double value => DecimalValues.FromDouble(value),
+            float value => DecimalValues.FromSingle(value),
+            _ => TypeConversion.Convert(targetType, input)
+        } : TypeConversion.Convert(targetType, input);
         return input.ToJsonValue();
     }
 
-    JsonValue? ConvertToJsonNodeFromUnknownFormat(object? value, JsonSchema schemaProperty)
+    JsonNode? ConvertToJsonNodeFromUnknownFormat(object? value, JsonSchema schemaProperty)
     {
         if (value is null)
         {
@@ -540,9 +559,20 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 return JsonValue.Create<int>(value is int actualInt ? actualInt : int.Parse(value.ToString()!));
 
             case JsonObjectType.Number:
+                if (value is decimal decimalValue)
+                {
+                    return JsonValue.Create(decimalValue);
+                }
                 return JsonValue.Create<double>(value is double actualDouble ? actualDouble : double.Parse(value.ToString()!));
+
+            case JsonObjectType.None:
+                // A default-only property ({"default": null}) describes no type, so keep the value as it is.
+                return ConvertUnknownSchemaTypeToJsonValue(value);
         }
 
+        // The schema declares a type the value does not have - for instance a composite key that a
+        // storage provider hands back flattened to a string for an object-typed property. Emitting the
+        // mismatched value would make the instance unreadable for the client, so leave it out.
         return null;
     }
 }

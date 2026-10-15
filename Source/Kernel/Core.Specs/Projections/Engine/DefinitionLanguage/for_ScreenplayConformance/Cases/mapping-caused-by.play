@@ -1,0 +1,21 @@
+// $causedBy, which Chronicle compiles and has no runtime resolver for
+// Screenplay documentation: Documentation/screenplay/projections/expressions.mdx
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+      readmodel OrderView
+        orderId String
+        placedAt DateTime
+        position Int
+        correlation Uuid
+        source String
+        placedBy String
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced
+          placedBy = $causedBy.name

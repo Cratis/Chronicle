@@ -26,7 +26,7 @@ public static class ReactorDefinitionConverters
             Id = definition.Identifier,
             Owner = definition.Owner,
             EventSequenceId = definition.EventSequenceId,
-            EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType, et.EventType.Generation, et.Key.Expression)).ToArray(),
+            EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType.Id, et.EventType.Generation, et.Key.Expression)).ToArray(),
             IsReplayable = definition.IsReplayable,
             Tags = JsonSerializer.Serialize(definition.Tags ?? [], _jsonOptions),
             Filters = (definition.Filters ?? Concepts.Observation.ObserverFilters.None).ToSql()

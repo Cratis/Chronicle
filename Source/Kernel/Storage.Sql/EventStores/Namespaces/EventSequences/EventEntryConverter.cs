@@ -84,6 +84,7 @@ public static class EventEntryConverter
             Causation = JsonSerializer.Serialize(causation, _jsonSerializerOptions),
             CausedBy = JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions),
             Type = eventType.Id,
+            AppendedGeneration = eventType.Generation.Value,
             Occurred = occurred,
             EventSourceType = eventSourceType,
             EventSourceId = eventSourceId,
@@ -148,6 +149,7 @@ public static class EventEntryConverter
             Causation = JsonSerializer.Serialize(causation, _jsonSerializerOptions),
             CausedBy = JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions),
             Type = eventType.Id,
+            AppendedGeneration = eventType.Generation.Value,
             Occurred = occurred,
             EventSourceType = eventSourceType,
             EventSourceId = eventSourceId,
@@ -160,6 +162,13 @@ public static class EventEntryConverter
             Tags = SerializeTags(tags)
         };
     }
+
+    /// <summary>
+    /// Serializes one generation using the same options as append.
+    /// </summary>
+    /// <param name="content">The generation content.</param>
+    /// <returns>The stored JSON.</returns>
+    public static string SerializeContent(ExpandoObject content) => JsonSerializer.Serialize(content, _jsonSerializerOptions);
 
     /// <summary>
     /// Serialize a collection of <see cref="Tag">tags</see> to the JSON array form stored on an <see cref="EventEntry"/>.
@@ -531,10 +540,57 @@ public static class EventEntryConverter
             Subject: GetSubject(entry))
         {
             NamedTags = namedTags ?? [],
-            EventSource = ToEventSourceName(entry)
+            EventSource = ToEventSourceName(entry),
+            AppendedGeneration = entry.AppendedGeneration is { } appended ? new EventTypeGeneration(appended) : null
         };
 
-        return new AppendedEvent(eventContext, content) { GenerationalContent = GetAllGenerationalContent(entry) };
+        var hashes = string.IsNullOrEmpty(entry.ContentHashes)
+            ? new Dictionary<string, string>()
+            : JsonSerializer.Deserialize<Dictionary<string, string>>(entry.ContentHashes, _jsonSerializerOptions) ?? [];
+        return new AppendedEvent(eventContext, content)
+        {
+            GenerationalContent = GetAllGenerationalContent(entry),
+            GenerationalHashes = hashes.Where(_ => int.TryParse(_.Key, out var generation) && generation > 0).ToDictionary(_ => int.Parse(_.Key), _ => new EventHash(_.Value)),
+            RevisedGeneration = entry.RevisedGeneration is { } revised ? new EventTypeGeneration(revised) : null
+        };
+    }
+
+    /// <summary>
+    /// Converts stored event content using its registered generation schema.
+    /// </summary>
+    /// <param name="entry">The stored event.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="identityStorage">The identity storage.</param>
+    /// <param name="namedTags">The named tags.</param>
+    /// <param name="resolveSchema">Resolves a generation schema within the current read.</param>
+    /// <param name="converter">The schema-aware JSON converter.</param>
+    /// <returns>The appended event.</returns>
+    public static async Task<AppendedEvent> ToAppendedEvent(
+        EventEntry entry,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IIdentityStorage identityStorage,
+        IReadOnlyCollection<NamedTag>? namedTags,
+        Func<EventType, Task<Cratis.Chronicle.Schemas.JsonSchema?>> resolveSchema,
+        Cratis.Chronicle.Json.IExpandoObjectConverter converter)
+    {
+        var result = await ToAppendedEvent(entry, eventStore, @namespace, identityStorage, namedTags);
+        if (result.Context.EventType.Id == GlobalEventTypes.Redaction)
+        {
+            return result;
+        }
+        var schema = await resolveSchema(result.Context.EventType);
+        if (schema is null)
+        {
+            return result;
+        }
+        var content = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
+        if (content?.TryGetValue(result.Context.EventType.Generation.ToString(), out var element) != true)
+        {
+            return result;
+        }
+        return result with { Content = converter.ToExpandoObject(System.Text.Json.Nodes.JsonNode.Parse(element.GetRawText())!.AsObject(), schema) };
     }
 
     static ExpandoObject ConvertJsonObjectToExpando(JsonElement element)
@@ -570,7 +626,12 @@ public static class EventEntryConverter
                     return l;
                 }
 
-                return element.GetDouble();
+                if (element.TryGetUInt64(out var unsigned))
+                {
+                    return unsigned;
+                }
+
+                return element.TryGetDecimal(out var decimalValue) ? decimalValue : element.GetDouble();
             case JsonValueKind.True:
                 return true;
             case JsonValueKind.False:

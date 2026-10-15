@@ -1,6 +1,14 @@
 <!-- cratis-ai-managed: skills/cratis-application-slice-conformance/references/build-prompts.md -->
 # Slice build prompts
 
+## Contents
+
+- 1. Standing project instructions
+- 2. Build a slice: the mandatory flow
+- 3. One slice per iteration (loop prompt)
+- 4. Result packet
+- 5. Learning candidates
+
 Standing instructions for an implementer, or an unattended loop, that builds one slice at a
 time from its contract. Paste or reference them in the brief; they restate rules already in
 `SKILL.md` as an operating procedure. Adapted from Martin Dilger and Nebulit GmbH's build kit (see

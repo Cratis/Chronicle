@@ -9,6 +9,8 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 
@@ -17,31 +19,43 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage
+/// <param name="logger">Optional <see cref="ILogger{EventTypesStorage}"/> for logging.</param>
+public partial class EventTypesStorage(EventStoreName eventStore, IDatabase database, ILogger<EventTypesStorage>? logger = null) : IEventTypesStorage
 {
+    const int MaxMigrationVersionAttempts = 5;
+    readonly ILogger<EventTypesStorage> _logger = logger ?? NullLogger<EventTypesStorage>.Instance;
     readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
     ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
-    public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
+    public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "")
     {
         await using var scope = await database.EventStore(eventStore);
 
         var existingEventType = await scope.DbContext.EventTypes.FirstOrDefaultAsync(_ => _.Id == type.Id);
+
+        // Unspecified means the client said nothing, which must not undo what a newer client declared.
+        if (visibility == EventTypeVisibility.Unspecified && existingEventType is not null)
+        {
+            visibility = existingEventType.Visibility;
+        }
+
         if (existingEventType is not null &&
             existingEventType.Owner == owner && existingEventType.Source == source && existingEventType.Tombstone == type.Tombstone &&
+            existingEventType.Visibility == visibility && existingEventType.Origin == origin &&
             existingEventType.Schemas.TryGetValue(type.Generation, out var storedSchema) &&
             JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema, schema.ToJson()))
         {
             return false;
         }
 
-        var eventSchema = new EventTypeSchema(type, owner, source, schema);
+        var eventSchema = new EventTypeSchema(type, owner, source, schema, visibility, origin);
         if (_eventTypes.Any(_ => _.Id == type.Id))
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
         }
         var eventType = eventSchema.ToSql();
+        eventType.MigrationVersionsJson = existingEventType?.MigrationVersionsJson ?? "{}";
         _eventTypes.Add(eventType);
 
         await scope.DbContext.EventTypes.Upsert(eventType);
@@ -59,6 +73,11 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
         var existing = await scope.DbContext.EventTypes.FirstOrDefaultAsync(_ => _.Id == definition.Id);
         if (existing is not null)
         {
+            // The full definition carries no visibility or origin, so what is already stored is kept.
+            eventType.Visibility = existing.Visibility;
+            eventType.Origin = existing.Origin;
+            eventType.MigrationVersionsJson = existing.MigrationVersionsJson;
+
             // Preserve the stored schema when only CLR titles differ; those titles are not needed to
             // resolve composite keys (which use read-model schemas, not event schemas).
             foreach (var (generation, incomingSchema) in eventType.Schemas.ToArray())
@@ -173,7 +192,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
             return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generation)).ToKernel(generation);
         }
         var eventType = await GetSpecificEventType(type) ?? throw new UnknownEventType(eventStore, type);
-        if (eventType.Schemas.Count == 0)
+        if (!eventType.Schemas.ContainsKey(generation))
         {
             throw new MissingEventSchemaForEventType(
                 eventStore,

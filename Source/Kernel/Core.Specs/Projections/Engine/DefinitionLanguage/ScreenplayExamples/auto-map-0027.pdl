@@ -1,0 +1,6 @@
+projection User => UserReadModel
+  no automap
+
+  from UserRegistered
+    Name = name
+    Email = email

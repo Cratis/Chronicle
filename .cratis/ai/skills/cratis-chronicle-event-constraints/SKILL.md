@@ -18,11 +18,12 @@ Constraints are discovered automatically. There is no registration call.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle` (client) | `18.3.0` | `[Unique]`, `[RemoveConstraint]`, `IConstraint`, `IConstraintBuilder`, `IUniqueConstraintBuilder`, `ConstraintViolation`, `IAppendResult` |
-| `Cratis.Chronicle` code analysis | `18.3.0` | `CHR0017`, `CHR0018`, `CHR0020` |
-| `Cratis.Chronicle.Testing` | `18.3.0` | `EventScenario` and the `IAppendResult` `Should*` assertions |
+| `Cratis.Chronicle` (client) | `19.50.1` | uniqueness, stream closing, constraint builders and append results |
+| `Cratis.Chronicle` code analysis | `19.50.1` | `CHR0017`, `CHR0018`, `CHR0020` |
+| `Cratis.Chronicle.Testing` | `19.50.1` | `EventScenario` and the `IAppendResult` `Should*` assertions |
 
-> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
+Sources: `Source/Clients/DotNET/Events/Constraints/`,
+`EventSequences/IEventSequence.cs` and `Source/Clients/Testing/` at v19.50.0.
 
 Reverify against the Chronicle repository before claiming support for another
 version. Never translate an attribute argument order or an assertion name from
@@ -32,14 +33,15 @@ memory.
 
 - The rule rejects **command input** — a range, a format, a cross-field
   condition: use `cratis-arc-command-validation`.
-- The rule is state-dependent and belongs in the handler under concurrency (the
-  DCB pattern): also `cratis-arc-command-validation`.
+- The rule is state-dependent and needs concurrency protection: use enrolled
+  stream/projection decision reads with `cratis-arc-command-validation`.
+  Plain injected models and `Result<,>` alone remain advisory.
 - You are creating or changing a read model that the rule reads: use
   `cratis-chronicle-read-model`.
 - You are writing the specification and want the `EventScenario` mechanics in
   depth: use `cratis-chronicle-event-specifications`.
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
   `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
   output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
   `cratis-screenplay-modeling-lifecycle`): change the model first with
@@ -59,12 +61,12 @@ memory.
 | The same value must be unique across **several** event types | `IConstraint` with one `[Unique(name: …)]` name, or a fluent `Unique(…)` |
 | Case-insensitive matching, composite keys, or a scoped constraint | `IConstraint` |
 
-**Per-event-source versus across-event-sources is the constraint *kind*, not a
-setting.** Class-level `[Unique]` (and the generic `Unique<TEvent>()` builder
-call) means "at most one such event per event source id". Property-level
-`[Unique]` (and `Unique(unique => unique.On<T>(…))`) means "this value is unique
-across event sources". Choosing the wrong one gives a constraint that never
-fires rather than a compile error.
+Class-level `[Unique]` (and `Unique<TEvent>()`) means "at most one such event
+per event source id". Property-level `[Unique]` (and `Unique(unique => unique.On<T>(…))`)
+means "this value is unique across event sources". `Mode` tunes **property-value
+retention**, not that distinction: `PerEventSource` (default) releases the old
+value when the source claims a new one; `PerValue` keeps every value reserved
+until a removal releases it. Reclaiming one's own value succeeds in either mode.
 
 ## Step 2 — `[Unique]` — the default
 
@@ -95,8 +97,16 @@ public record UserRemoved;
   several on one removal event to release several claimed values at once.
 - To enforce the same property across **multiple** event types, give each its
   `[Unique(name: "UniqueEmail")]` with the **same name**.
-- Several removal events may declare the same name; **any one of them releases
-  the claim on its own**.
+- Several removal events may declare the same name; **any one releases the claim**.
+- `Mode = UniqueConstraintMode.PerValue` retains all values. A removal can use
+  `Properties = [nameof(RemovalEvent.Value)]` to release one value (composite
+  properties in constraint order); empty `Properties` releases all values held
+  by the source in the scope.
+- `EventSequences = [EventSequenceId.LogId]` limits validation/indexing to the
+  event log. Empty means every sequence; when declarations share a name, their
+  sequence sets combine and an unrestricted declaration wins.
+- Null/missing property values do not claim `""`; clearing a default-mode value
+  releases its claim. `IgnoreCasing` is honored by the kernel.
 
 ## Step 3 — `IConstraint` — the advanced form
 
@@ -117,7 +127,7 @@ public class UniqueProjectName : IConstraint
 ```
 
 `IUniqueConstraintBuilder` also carries `WithName(name)`, `WithMessage(message)`,
-and an `On(EventType, string[])` overload. `On<TEvent>` is **variadic** —
+`WithMode(UniqueConstraintMode)`, and an `On(EventType, string[])` overload. `On<TEvent>` is **variadic** —
 `On<T>(e => e.Tenant, e => e.Email)` constrains the composite of both
 properties, not two independent values.
 
@@ -131,6 +141,8 @@ Always pass them by name.
 
 `ConstraintScope` is a record of three optional dimensions, not an enum, and you
 never construct it — the three `Per…` calls select which dimensions participate.
+`ForEventSequences(...)` / `ForEventLog()` select the sequences to validate and
+index. Keep these separate from scope dimensions.
 
 ## Step 4 — Keep `Define` declarative
 
@@ -177,8 +189,12 @@ plaintext-derived hashes, not the personal value itself.
 Specify the constraint with `EventScenario`: seed the conflicting state through
 `Given`, append again, and assert
 `ShouldHaveConstraintViolationFor(<Module>ConstraintNames.UniqueX)` — **the
-constraint name, never the message**. A message is presentation text and will
-change without the behavior changing.
+constraint name by default**. A message is presentation text and will change
+without the behavior changing. Assert exact message text only when that wording
+is the specified behavior, and name that behavior in the fact.
+
+The example compiles into the application assembly, so it uses `#if DEBUG`.
+Dedicated spec projects need no wrapper.
 
 ```csharp
 #if DEBUG
@@ -209,10 +225,37 @@ Use per-test unique values (`$"{Guid.NewGuid():N}"`) so specifications are not
 order-dependent. For a release, append the removal event and then assert the
 value can be claimed again.
 
-⚠️ **`EventScenario` disables concurrency checking.** It wires a no-op
-concurrency-scope strategy, so `ShouldHaveConcurrencyViolations()` can never
-become true through the in-process scenario. Constraint violations are fully
-exercisable there; concurrency violations need the real kernel.
+⚠️ **The default `EventScenario` client scope strategy answers `ConcurrencyScope.None`.**
+A scenario-only concurrency assertion without a checked scope is vacuous.
+The scenario runs the kernel grain/validator, but explicit-scope violations
+have not been proven end to end here; use real-client integration for that proof.
+Constraints are fully exercisable. Dispose the scenario in `Destroy()`.
+
+## Close a stream at its business end
+
+Choose the lifetime with **cratis-chronicle-event-modeling**, then enforce it at
+append time. `IEventSequence.CompleteStream(ClosedStreamScope,
+expectedTailSequenceNumber?)` returns `Result<EventSequenceNumber, CompleteStreamError>`:
+`EmptyScope`, `AlreadyCompleted`, or `ExpectedTailMismatch` are not successful
+new closures. An append matching a persisted closed scope is refused with
+`StreamClosed`. Unspecified dimensions are wildcards, so name the intended
+source/type/stream dimensions precisely.
+
+Prefer an event-owned declaration when closing is a business fact:
+`[ClosesStream]` / `IConstraintBuilder.ClosesStreamOn<TEvent>()`. The attribute
+has `Dimensions`, `EventStreamIdFrom`, `ReopenedBy`, `Name` and `EventSequences`;
+default dimensions are source id, stream type and stream id. Closing happens in
+the **same grain turn** as append, **not crash-atomically** with it. Registering
+the declaration is not retroactive; reindex rebuilds event-owned closures.
+Reopening events remove only their constraint's exact closure, never a manual
+operator closure.
+
+Read [closing scope and recovery](references/closing-streams.md) when implementing
+"close the books", choosing a scope, specifying the refusal, or repairing a
+mistaken manual close. `IsStreamCompleted` and `GetClosedStreams` inspect;
+Workbench's **Closed streams** page is read-only. Kernel `ReopenStreamScope`
+requires an authorized operator and records `StreamScopeReopened` before
+removing a manual closure. Closing does not erase history or prevent replay.
 
 ## What breaks
 
@@ -241,5 +284,6 @@ exercisable there; concurrency violations need the real kernel.
   `CHR0020` are all clean.
 - Every constraint has an `EventScenario` specification that seeds the conflict
   and asserts `ShouldHaveConstraintViolationFor(<name>)` on the name.
-- No specification asserts on a violation message string.
+- Violation message strings are not asserted by default. Exact wording is
+  asserted only when it is the specified behavior, named in the fact.
 - Build clean in Debug and Release, and the specifications pass.

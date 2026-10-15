@@ -1,0 +1,72 @@
+---
+title: Event source questions and pitfalls
+description: Short answers about event sources, streams and tags, stable names and renames, concurrency surprises and when not to use a definition.
+---
+
+Use this page for a quick answer. Each answer links to the page that explains it.
+
+## What is the difference between an event source, a stream and a tag?
+
+An **event source** is one instance of a kind of thing, such as one account. You identify it with the `EventSourceId`, and its kind is the event source type, which is the name of the definition. A **stream** is a named part of an event source, such as the transactions of one month, identified by an event stream type and an event stream id. A **tag** is a label on an event that you can filter by. Only the first two take part in concurrency scopes. Tags do not. See [Event source](../concepts/event-source.md) and [Appending with tags](../events/appending-with-tags.mdx).
+
+## Can an event belong to two event sources or two streams?
+
+No. Each event has one event source id and one stream. A fact that concerns two entities is written as one event per event source, in one atomic append. See [Append for several event sources](./appending.mdx#append-for-several-event-sources) and [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md).
+
+## Is the event source id part of the definition?
+
+No. The definition declares the kind. The id is passed on every append, so one definition serves every account, every project and every transfer.
+
+## When should I not use a definition?
+
+Skip it when:
+
+- One history and one guard per entity are enough. Plain appends with an event source id need nothing else.
+- The rule is a unique value or a create-once rule. A [constraint](../constraints/index.md) enforces it for every writer, with or without a definition.
+- The streams would be created from data you do not control. A definition declares streams ahead of time. Stream ids can vary freely, but stream types are a closed list.
+- You need the unit of work's `Transactional` appends to use the declared names. They take the routing values directly.
+
+## What happens when I rename an event source or a stream?
+
+The definition's names are written on every event, so a rename is a data change, not a refactoring:
+
+- Events already stored keep the old event source type and event stream type. Observers that filter on the new name do not see them.
+- The kernel keeps the old registration, because stored events refer to it. Registering the new name adds a second definition.
+- If you rename a stream inside a definition, the registered definition is replaced. Appends to the old stream name are rejected, but stored events keep it.
+- A closure is stored by value. Closing the old name does not close the new one.
+
+Choose stable names. If the name must change, keep the old string as the name and put the new wording in `Description`, or append new events under the new name and have observers handle both until the old events no longer matter.
+
+## Can a stream turn off its event source's concurrency dimensions?
+
+No. A stream with `None` inherits the event source's dimensions. Declare the dimensions you want on the stream. See [Concurrency](./concurrency.mdx#which-dimensions-apply).
+
+## Why did two concurrent first appends both succeed?
+
+The first append into a scope has nothing to compare with, so the kernel skips the check by default. Turn on `CheckFirstAppendIntoAScope`, or use `ExpectingNoMatchingEvent()` for one append. See [The first append into a scope](./concurrency.mdx#the-first-append-into-a-scope).
+
+## Why did my batch throw `IncompatibleConcurrencyScopesForEventSource`?
+
+Events for one event source id in the batch need different guards, for example two months of one account. Pass one explicit scope for that id or append in separate batches. See [A batch that needs two guards](./concurrency.mdx#a-batch-that-needs-two-guards-for-one-event-source-id).
+
+## Why does my observer not see events I appended?
+
+Observers match on the stored event source type and event stream type. Check that the append names the stream, since an append without one has the default stream type and does not pass a stream filter. Check the spelling and casing of both names. Events written before you switched to a definition match only if the definition's names equal the old strings. See [Filter observers](./filtering.mdx).
+
+## Does a definition limit which event types I can append?
+
+No. It carries no list of event types. Any event type can be appended through any definition.
+
+## Can I use a secret or personal data as an event source id?
+
+No. Event source ids are stored in plaintext and cannot be encrypted. See [Event source id](../events/event-source-id.mdx) and [Concurrency](../events/concurrency.mdx#why-low-entropy-identifiers-depend-on-it).
+
+## Does a definition replace a decision read?
+
+No. A definition says what an append is guarded by when you pass nothing. A decision read guards a decision based on state you read. They work together. See [Dynamic Consistency Boundary](./dcb.mdx).
+
+## Next steps
+
+- [Overview](./index.mdx)
+- [Scenarios](./scenarios.mdx)
+- [How it works](./how-it-works.mdx)

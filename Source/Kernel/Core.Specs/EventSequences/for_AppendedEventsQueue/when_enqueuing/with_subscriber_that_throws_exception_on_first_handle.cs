@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_enqueuing;
 
-public class with_subscriber_that_throws_exception_on_first_handle : given.a_single_subscriber_with_an_event_type
+public class with_subscriber_that_throws_exception_on_first_handle : given.a_single_subscriber_with_queue_telemetry
 {
     AppendedEvent _appendedEvent;
     EventSourceId _eventSourceId;
@@ -36,4 +36,6 @@ public class with_subscriber_that_throws_exception_on_first_handle : given.a_sin
     }
 
     [Fact] void should_not_retry_the_failed_batch() => _observer.Received(1).Handle(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>());
+    [Fact] void should_count_suspected_undelivered_events() => _suspectedUndelivered.ShouldEqual(1);
+    [Fact] void should_warn_that_the_events_may_not_have_been_delivered() => _recordedLogs.SuspectedUndeliveredWarnings.Count().ShouldEqual(1);
 }

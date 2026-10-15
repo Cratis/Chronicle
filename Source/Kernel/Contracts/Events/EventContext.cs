@@ -123,4 +123,10 @@ public class EventContext
     /// </summary>
     [ProtoMember(18)]
     public string EventSource { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the appended generation, or zero when unknown.
+    /// </summary>
+    [ProtoMember(19)]
+    public uint AppendedGeneration { get; set; }
 }

@@ -7,6 +7,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -21,10 +22,12 @@ namespace Cratis.Chronicle.Projections.Engine;
 public class Projection : IProjection, IDisposable
 {
     readonly Subject<ProjectionEventContext> _subject = new();
+    readonly Subject<ProjectionEventContext> _descendantEventSubject = new();
     KeyResolver? _allEventsKeyResolver;
     bool _allEventsResolvesToEventSourceId = true;
     Dictionary<EventTypeId, KeyResolver> _keyResolverByEventTypeId = [];
     Dictionary<EventTypeId, ProjectionOperationType> _operationTypeByEventTypeId = [];
+    Dictionary<EventType, KeyResolver> _keyResolverByEventType = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projection"/> class.
@@ -73,6 +76,7 @@ public class Projection : IProjection, IDisposable
         SubscribesToAllEvents = subscribesToAllEvents;
         _allEventsKeyResolver = allEventsKeyResolver;
         Event = FilterEventTypes(_subject);
+        EventIncludingDescendantEvents = Event.Merge(FilterEventTypes(_descendantEventSubject));
         Path = path;
         ChildrenPropertyPath = childrenPropertyPath;
         IdentifiedByProperty = identifiedByProperty;
@@ -111,6 +115,16 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public ProjectionScope Scope { get; }
+
+    /// <summary>
+    /// Gets the event generation delivery policy.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; }
+
+    /// <summary>
+    /// Gets the release boundary for events read from storage during key or join resolution.
+    /// </summary>
+    public Func<EventType, AppendedEvent, Task<AppendedEvent>>? ReleaseStoredEvent { get; init; }
 
     /// <inheritdoc/>
     public AutoMap AutoMap { get; }
@@ -152,28 +166,47 @@ public class Projection : IProjection, IDisposable
     /// </summary>
     internal CompositeDisposable Subscriptions { get; } = new();
 
-    /// <inheritdoc/>
-    public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => SubscribesToAllEvents || _keyResolverByEventTypeId.ContainsKey(_.Event.Context.EventType.Id));
+    /// <summary>
+    /// Gets the <see cref="IObservable{T}">observable</see> the mappings this level applies to its descendants' events subscribe to.
+    /// </summary>
+    /// <remarks>
+    /// Carries every event of <see cref="Event"/> plus the events provided through <see cref="OnDescendantEvent"/>, which
+    /// reach only these mappings.
+    /// </remarks>
+    internal IObservable<ProjectionEventContext> EventIncludingDescendantEvents { get; }
 
     /// <inheritdoc/>
-    public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => SubscribesToAllEvents || _keyResolverByEventTypeId.ContainsKey(_.Context.EventType.Id));
+    public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => Accepts(_.Event.Context.EventType));
+
+    /// <inheritdoc/>
+    public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => Accepts(_.Context.EventType));
 
     /// <inheritdoc/>
     public void OnNext(ProjectionEventContext context) => _subject.OnNext(context);
 
     /// <inheritdoc/>
-    public bool Accepts(EventType eventType) => SubscribesToAllEvents || _keyResolverByEventTypeId.ContainsKey(eventType.Id);
+    public void OnDescendantEvent(ProjectionEventContext context) => _descendantEventSubject.OnNext(context);
 
     /// <inheritdoc/>
-    public bool HasKeyResolverFor(EventType eventType) =>
-        SubscribesToAllEvents || _keyResolverByEventTypeId.ContainsKey(eventType.Id);
+    public bool Accepts(EventType eventType) => SubscribesToAllEvents ||
+        (GenerationDelivery == EventGenerationDelivery.Pinned ? _keyResolverByEventType.ContainsKey(eventType) : _keyResolverByEventTypeId.ContainsKey(eventType.Id));
+
+    /// <inheritdoc/>
+    public bool HasKeyResolverFor(EventType eventType) => Accepts(eventType);
+
+    /// <inheritdoc/>
+    public Task<AppendedEvent> ReleaseEvent(EventType pin, AppendedEvent @event) =>
+        ReleaseStoredEvent is null ? Task.FromResult(@event) : ReleaseStoredEvent(pin, @event);
 
     /// <inheritdoc/>
     public KeyResolver GetKeyResolverFor(EventType eventType)
     {
-        if (_keyResolverByEventTypeId.TryGetValue(eventType.Id, out var keyResolver))
+        var found = GenerationDelivery == EventGenerationDelivery.Pinned
+            ? _keyResolverByEventType.TryGetValue(eventType, out var keyResolver)
+            : _keyResolverByEventTypeId.TryGetValue(eventType.Id, out keyResolver);
+        if (found)
         {
-            return keyResolver;
+            return keyResolver!;
         }
 
         // An event type with no explicit From/Join/RemovedWith registration reaches here only when the
@@ -190,7 +223,10 @@ public class Projection : IProjection, IDisposable
     /// <inheritdoc/>
     public ProjectionOperationType GetOperationTypeFor(EventType eventType)
     {
-        if (_operationTypeByEventTypeId.TryGetValue(eventType.Id, out var operationType))
+        var found = GenerationDelivery == EventGenerationDelivery.Pinned
+            ? OperationTypes.TryGetValue(eventType, out var operationType)
+            : _operationTypeByEventTypeId.TryGetValue(eventType.Id, out operationType);
+        if (found)
         {
             return operationType;
         }
@@ -237,6 +273,7 @@ public class Projection : IProjection, IDisposable
         }
 
         _keyResolverByEventTypeId = keyResolverByEventTypeId;
+        _keyResolverByEventType = eventTypes.DistinctBy(_ => _.EventType).ToDictionary(_ => _.EventType, _ => _.KeyResolver);
 
         // A child collection routes events to a parent document, so a projection with any child projection can
         // collapse distinct event sources and must keep the coarse lock regardless of its own resolvers.
@@ -273,7 +310,9 @@ public class Projection : IProjection, IDisposable
     public void Dispose()
     {
         _subject.OnCompleted();
+        _descendantEventSubject.OnCompleted();
         Subscriptions.Dispose();
         _subject.Dispose();
+        _descendantEventSubject.Dispose();
     }
 }

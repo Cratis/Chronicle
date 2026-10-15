@@ -91,6 +91,28 @@ public class AlertIncidentsStorage(EventStoreName eventStore, EventStoreNamespac
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<AlertIncidentObserverCount>> GetOpenCountsByObserver(CancellationToken cancellationToken = default)
+    {
+        await using var databaseScope = await database.Namespace(eventStore, @namespace);
+
+        // Terminated grouping keys prevent SQL Server from merging names that differ by trailing spaces.
+        var counts = await databaseScope.DbContext.AlertIncidents.AsNoTracking().Where(_ => _.IsOpen)
+            .GroupBy(_ => new
+            {
+                EventStore = _.EventStore + "\u0001",
+                Namespace = _.Namespace + "\u0001",
+                ObserverId = _.ObserverId + "\u0001",
+                EventSequenceId = _.EventSequenceId + "\u0001",
+                Condition = _.Condition + "\u0001",
+                _.Severity
+            })
+            .Select(group => new { group.Key.EventStore, group.Key.Namespace, group.Key.ObserverId, group.Key.EventSequenceId, group.Key.Condition, group.Key.Severity, Count = group.LongCount() })
+            .ToListAsync(cancellationToken);
+
+        return counts.Select(_ => new AlertIncidentObserverCount(_.EventStore[..^1], _.Namespace[..^1], _.ObserverId[..^1], _.EventSequenceId[..^1], _.Condition[..^1], (AlertSeverity)_.Severity!.Value, _.Count)).ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<AlertIncidentStoragePage> EnumerateOpen(AlertIncidentCursor? after, int limit, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);

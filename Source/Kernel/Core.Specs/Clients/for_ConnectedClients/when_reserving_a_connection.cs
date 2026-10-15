@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,7 +19,8 @@ public class when_reserving_a_connection : Specification
         _connectedClients = new ConnectedClients(
             Substitute.For<ILogger<ConnectedClients>>(),
             Substitute.For<IMeter<ConnectedClients>>(),
-            Options.Create(new ChronicleOptions()));
+            Options.Create(new ChronicleOptions()),
+            Substitute.For<IStorage>());
     }
 
     async Task Because()

@@ -177,41 +177,32 @@ public class ObjectComparer : IObjectComparer
             return;
         }
 
-        CompareEnumerableValuesStrict(leftValueAsEnumerable, rightValueAsEnumerable, leftElements, rightElements, propertyPath, mode, differences);
+        CompareEnumerableValuesStrict(leftValue, rightValue, leftElements, rightElements, propertyPath, mode, differences);
     }
 
-    void CompareEnumerableValuesStrict(IEnumerable leftValueAsEnumerable, IEnumerable rightValueAsEnumerable, object[] leftElements, object[] rightElements, PropertyPath propertyPath, ObjectComparerMode mode, List<PropertyDifference> differences)
+    void CompareEnumerableValuesStrict(object leftValue, object rightValue, object[] leftElements, object[] rightElements, PropertyPath propertyPath, ObjectComparerMode mode, List<PropertyDifference> differences)
     {
-        var leftElementType = leftValueAsEnumerable.GetType().GetElementType();
-        var rightElementType = rightValueAsEnumerable.GetType().GetElementType();
+        // An element has no path of its own: a difference found inside one would be recorded against the
+        // collection's path while carrying only the element (or one of its members) as its value, and a sink
+        // applying it would replace the whole collection with that element. Any differing element therefore
+        // makes the whole collection the difference, carrying the full collections as its values.
+        var leftElementType = leftValue.GetType().GetElementType();
+        var rightElementType = rightValue.GetType().GetElementType();
+        var sharedElementType = leftElementType == rightElementType &&
+            (leftElementType?.IsPrimitive == true || leftElementType == typeof(string))
+                ? leftElementType
+                : null;
 
-        if (leftElementType == rightElementType &&
-            (leftElementType?.IsPrimitive == true || leftElementType == typeof(string)))
+        for (var i = 0; i < leftElements.Length; i++)
         {
-            for (var i = 0; i < leftElements.Length; i++)
-            {
-                var elementDifferences = new List<PropertyDifference>();
-                CompareValues(leftElementType, leftElements[i], rightElements[i], propertyPath, mode, elementDifferences);
-                differences.AddRange(elementDifferences);
+            var elementType = sharedElementType ?? leftElements[i]?.GetType() ?? rightElements[i]?.GetType() ?? typeof(object);
+            var elementDifferences = new List<PropertyDifference>();
+            CompareValues(elementType, leftElements[i], rightElements[i], propertyPath, mode, elementDifferences);
 
-                if (elementDifferences.Count > 0) break;
-            }
-        }
-        else
-        {
-            for (var i = 0; i < leftElements.Length; i++)
+            if (elementDifferences.Count > 0)
             {
-                var elementDifferences = new List<PropertyDifference>();
-                CompareValues(
-                    leftElements[i]?.GetType() ?? rightElements[i]?.GetType() ?? typeof(object),
-                    leftElements[i],
-                    rightElements[i],
-                    propertyPath,
-                    mode,
-                    elementDifferences);
-                differences.AddRange(elementDifferences);
-
-                if (elementDifferences.Count > 0) break;
+                differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+                return;
             }
         }
     }

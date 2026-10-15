@@ -39,6 +39,16 @@ public class EventEntry
     public EventTypeId Type { get; set; } = EventTypeId.Unknown;
 
     /// <summary>
+    /// Gets or sets the generation of the original append. Null for historic rows where it is unknown.
+    /// </summary>
+    public uint? AppendedGeneration { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most recently revised generation. Null for unrevised or legacy rows.
+    /// </summary>
+    public uint? RevisedGeneration { get; set; }
+
+    /// <summary>
     /// Gets or sets the time the event occurred.
     /// </summary>
     public DateTimeOffset Occurred { get; set; }
@@ -75,6 +85,11 @@ public class EventEntry
     public string ContentHashes { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the JSON provenance of generations added by backfill. Null for legacy and append-derived content.
+    /// </summary>
+    public string? DerivedGenerations { get; set; }
+
+    /// <summary>
     /// Gets or sets the subject that identifies the compliance target for the event.
     /// </summary>
     public string? Subject { get; set; }
@@ -84,6 +99,23 @@ public class EventEntry
     /// Null for events not appended through a definition, including events stored before event sources existed.
     /// </summary>
     public string? EventSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets the publication identity hash used for binary, collation-independent uniqueness.
+    /// </summary>
+#pragma warning disable CA1819 // EF Core requires byte-array properties for portable binary SQL columns.
+    public byte[]? PublicationIdentityHash { get; set; }
+#pragma warning restore CA1819
+
+    /// <summary>
+    /// Gets or sets the opaque original publication identity. Null for ordinary appends.
+    /// </summary>
+    public string? PublicationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the immutable intent fingerprint, preserved through revision and redaction.
+    /// </summary>
+    public string? PublicationFingerprint { get; set; }
 
     /// <summary>
     /// Gets or sets the tags for the event, serialized as a JSON array of strings.

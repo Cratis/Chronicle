@@ -18,7 +18,7 @@ public class after_removal_is_cached_and_the_model_is_recreated : given.an_immed
     ProjectionResult _firstCachedAbsence;
     ProjectionResult _secondCachedAbsence;
     ProjectionResult _afterRecreation;
-    ExpandoObject _recreationInitialState;
+    SingleReadModelProjectionState _recreationInitialState;
     int _processingCalls;
 
     void Establish()
@@ -40,9 +40,9 @@ public class after_removal_is_cached_and_the_model_is_recreated : given.an_immed
             .GetFromSequenceNumber((EventSequenceNumber)3, eventSourceId: ReadModelKey, eventTypes: Arg.Any<IEnumerable<EventType>>())
             .Returns(recreateCursor);
         _projection
-            .ProcessForSingleReadModel(
+            .FoldForSingleReadModel(
                 EventStoreNamespaceName.Default,
-                Arg.Any<ExpandoObject>(),
+                Arg.Any<SingleReadModelProjectionState>(),
                 Arg.Any<IEnumerable<AppendedEvent>>())
             .Returns(call =>
             {
@@ -51,11 +51,11 @@ public class after_removal_is_cached_and_the_model_is_recreated : given.an_immed
                 var state = new ExpandoObject();
                 if (events[^1].Context.EventType == _recreatedEventType)
                 {
-                    _recreationInitialState = call.Arg<ExpandoObject>();
+                    _recreationInitialState = call.Arg<SingleReadModelProjectionState>();
                     ((IDictionary<string, object?>)state)["name"] = "Recreated";
                 }
 
-                return Task.FromResult(state);
+                return Task.FromResult(new SingleReadModelProjectionState(state, events[^1].Context.EventType == _recreatedEventType, events[^1].Context.EventType == _recreatedEventType));
             });
         _expandoObjectConverter
             .ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>())
@@ -90,7 +90,9 @@ public class after_removal_is_cached_and_the_model_is_recreated : given.an_immed
     [Fact] void should_process_only_the_recreation_event() => _afterRecreation.ProjectedEventsCount.ShouldEqual(1);
     [Fact] void should_advance_to_the_recreation_tail() => _afterRecreation.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)3);
     [Fact] void should_not_process_events_for_either_cached_read() => _processingCalls.ShouldEqual(2);
-    [Fact] void should_recreate_from_an_empty_state() => _recreationInitialState.ShouldBeEmpty();
+    [Fact] void should_recreate_from_an_empty_state() => _recreationInitialState.Model.ShouldBeEmpty();
+    [Fact] void should_carry_absence_into_the_recreation_batch() => _recreationInitialState.Exists.ShouldBeFalse();
+    [Fact] void should_carry_the_uninitialized_root_into_the_recreation_batch() => _recreationInitialState.IsInitialized.ShouldBeFalse();
     [Fact] void should_contain_the_recreated_state() => _afterRecreation.ReadModel["name"]!.GetValue<string>().ShouldEqual("Recreated");
     [Fact] void should_not_contain_state_from_before_the_removal() => _afterRecreation.ReadModel.ContainsKey("oldName").ShouldBeFalse();
 }

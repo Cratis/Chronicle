@@ -54,7 +54,9 @@ one to add weight.
   `(part of #n)` for anything that stays open (in repositories released by
   `cratis/release-action`, `(#n)` is what closes the issue), never `Closes`, `Fixes` or
   `Refs` before a number (also in bold or a link), and no issue reference
-  inside an HTML comment, which still closes the issue; and absolute
+  inside an HTML comment (release-action removes comments before publishing,
+  so the issue is silently not closed; a body that is only a comment counts as
+  empty and GitHub generates the notes); and absolute
   `https://` links only. Sections are in
   a fixed order (Added, Changed, Fixed, Removed, Security, Deprecated); within
   a section, put changes requiring action first, then new capabilities and
@@ -102,6 +104,7 @@ Only when asked to fix a release that violates the contract:
    `https://` URLs. Do not invent changes, versions or issue numbers.
 2. Publish the corrected text with `gh release edit TAG --notes-file FILE`,
    only when the request authorizes editing that release.
+   Read back the body with `gh release view TAG --json body` and compare it with the corrected text. If it differs, correct and repeat the authorized edit and readback, or report the blocker rather than claiming the repair succeeded.
 3. In a repository released by `cratis/release-action`, editing a release
    does not re-run release-action, so an issue that a `(#n)` would have
    closed stays open. For each one, confirm the release

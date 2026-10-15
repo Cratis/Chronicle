@@ -22,4 +22,7 @@ public record ReduceResult(
     /// Gets whether or not the reduce operation was successful.
     /// </summary>
     public bool IsSuccess => !ErrorMessages.Any();
+
+    /// <summary>Gets the number of successfully dispatched events, including handlers returning null.</summary>
+    internal int DispatchedEvents { get; init; }
 }

@@ -1,0 +1,12 @@
+projection Order => OrderReadModel
+  from OrderPlaced
+    OrderNumber = orderNumber
+    CustomerId = customerId
+    Total = total
+    PlacedAt = $eventContext.occurred
+    TrackingId = $eventContext.correlationId
+
+  from OrderShipped
+    ShippedAt = $eventContext.occurred
+    ShipmentSequence = $eventContext.sequenceNumber
+    Status = "Shipped"

@@ -3,7 +3,9 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Sinks;
 using Cratis.Chronicle.Transactions;
@@ -91,6 +93,12 @@ public class ChronicleOptions(
     /// Strict will become the default in the next major version.
     /// </summary>
     public UnitOfWorkLifecyclePolicy UnitOfWorkLifecyclePolicy { get; set; } = UnitOfWorkLifecyclePolicy.Compatibility;
+
+    /// <summary>
+    /// Gets or sets how client reactors, reducers, and typed materialized projections receive event generations.
+    /// Defaults to Compatibility; Pinned requests kernel selection and release of the subscribed generation.
+    /// </summary>
+    public EventGenerationDelivery EventGenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
 
     /// <summary>
     /// Gets a value indicating whether to automatically discover and register artifacts.
@@ -207,6 +215,13 @@ public class ChronicleOptions(
     /// Gets or sets how registering the client's artifacts is retried when the kernel does not accept them.
     /// </summary>
     public RegistrationRetryOptions RegistrationRetry { get; set; } = new RegistrationRetryOptions();
+
+    /// <summary>
+    /// Gets or sets how likely artifact renames or moves are handled before registration. Defaults to Warn.
+    /// Fail escalates only Warning-level reactor and event type findings, not Information-level read model findings.
+    /// Snapshot failures never prevent registration, even under Fail.
+    /// </summary>
+    public ArtifactIdentityDriftPolicy ArtifactIdentityDrift { get; set; } = ArtifactIdentityDriftPolicy.Warn;
 
     /// <summary>
     /// Gets or sets the TLS configuration.

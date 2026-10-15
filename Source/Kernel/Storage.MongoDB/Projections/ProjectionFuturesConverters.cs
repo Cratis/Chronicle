@@ -5,7 +5,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
-using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 
@@ -22,7 +21,7 @@ public static class ProjectionFuturesConverters
     /// <returns>The MongoDB projection future.</returns>
     public static ProjectionFuture ToMongoDB(this Concepts.Projections.ProjectionFuture future, JsonSerializerOptions jsonSerializerOptions)
     {
-        var content = BsonDocument.Parse(JsonSerializer.Serialize(future.Event.Content, jsonSerializerOptions));
+        var content = EventContentBson.FromJson(JsonSerializer.Serialize(future.Event.Content, jsonSerializerOptions));
 
         var @event = new Event(
             future.Event.Context.SequenceNumber,
@@ -39,7 +38,10 @@ public static class ProjectionFuturesConverters
             future.IdentifiedByProperty,
             future.ParentIdentifiedByProperty,
             future.ParentKey.Value,
-            future.Created);
+            future.Created)
+        {
+            Context = EventContentBson.FromJson(JsonSerializer.Serialize(future.Event.Context, jsonSerializerOptions))
+        };
     }
 
     /// <summary>
@@ -50,17 +52,18 @@ public static class ProjectionFuturesConverters
     /// <returns>The kernel projection future.</returns>
     public static Concepts.Projections.ProjectionFuture ToKernel(this ProjectionFuture document, JsonSerializerOptions jsonSerializerOptions)
     {
-        var contentJson = document.Event.Content.ToJson();
+        var contentJson = EventContentBson.ToJson(document.Event.Content);
         var content = JsonSerializer.Deserialize<System.Dynamic.ExpandoObject>(contentJson, jsonSerializerOptions)!;
 
-        var appendedEvent = new AppendedEvent(
-            EventContext.Empty with
+        var context = document.Context is not null
+            ? JsonSerializer.Deserialize<EventContext>(EventContentBson.ToJson(document.Context), jsonSerializerOptions)!
+            : EventContext.Empty with
             {
                 SequenceNumber = document.Event.EventSequenceId,
                 EventType = new(document.Event.EventType.Id, document.Event.EventType.Generation),
                 EventSourceId = document.Event.EventSourceId
-            },
-            content);
+            };
+        var appendedEvent = new AppendedEvent(context, content);
 
         return new Concepts.Projections.ProjectionFuture(
             document.Id,

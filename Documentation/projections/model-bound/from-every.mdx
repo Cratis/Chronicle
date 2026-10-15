@@ -52,8 +52,14 @@ Every-event mappings are part of the projection definition Chronicle receives. C
 
 Prefer context properties for audit metadata. Use payload properties only when the event contracts are intentionally consistent. If a property should update only for selected event types, use an event-specific mapping instead.
 
+## Child Events
+
+The kernel now honors child inclusion in every-event mappings. In .NET, `[FromEvery]` includes events handled only by child projections, including nested child collections. A child's event updates the containing parent's audit fields using the child's resolved parent key; it does not create a root document keyed by the child identifier.
+
+This changes existing projections: a child-only event now advances a root `[FromEvery]` timestamp even without a root `[FromEvent]` for that event. In the declaration language, `every` includes child events by default; use `exclude children` to keep mappings local to their level.
+
 ## Limitations
 
 - Only one every-event mapping can target the same read model property.
 - Payload-property mappings are skipped for events that do not carry the source property.
-- Child-projection inclusion is client-specific; check the client-specific projection API if you need every-event mappings to include or exclude child projections.
+- The .NET model-bound `[FromEvery]` attribute has no child-exclusion option today. Use a [declarative projection](../declarative/from-every) with `ExcludeChildProjections()` when you need that opt-out.

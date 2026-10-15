@@ -49,5 +49,48 @@ public enum DecisionReadRefusalReason
     FoldIncomplete = 13,
 
     /// <summary>The listed kernel definition disagrees with the client definition. This diagnostic does not certify agreement with the executing projection.</summary>
-    DefinitionMismatch = 14
+    DefinitionMismatch = 14,
+
+    /// <summary>
+    /// The reader or kernel does not support event stream scoping.
+    /// </summary>
+    StreamScopeNotSupported = 15,
+
+    /// <summary>
+    /// The projection is keyed by stream identifier and requires a stream-scoped read.
+    /// </summary>
+    StreamKeyRequiresStreamScope = 16,
+
+    /// <summary>
+    /// A stream-scoped read must select one stream type rather than all stream types.
+    /// </summary>
+    AllStreamsNotSupported = 17,
+
+    /// <summary>
+    /// A stream-keyed projection requires an explicit stream identifier rather than the default wildcard.
+    /// </summary>
+    StreamKeyRequiresExplicitStreamId = 18,
+
+    /// <summary>
+    /// The immediate fold cannot honor the projection's pinned generation delivery.
+    /// </summary>
+    GenerationDeliveryNotSupported = 19,
+
+    /// <summary>The reducer accepts non-infrastructure constructor dependencies.</summary>
+    ReducerDependencies = 20,
+
+    /// <summary>The reducer filters its events and no exact kernel filter pushdown is available.</summary>
+    ReducerFilters = 21,
+
+    /// <summary>The handler generation is unavailable or a revision uses another generation.</summary>
+    ReducerGeneration = 22,
+
+    /// <summary>Not every fetched handled-type event was dispatched successfully.</summary>
+    ReducerDispatchIncomplete = 23,
+
+    /// <summary>The read model declares an event stream and cannot be read by key alone.</summary>
+    ReadModelRequiresStreamScope = 24,
+
+    /// <summary>The supplied stream type or event source type differs from the read model's declaration.</summary>
+    StreamScopeDoesNotMatchReadModel = 25
 }

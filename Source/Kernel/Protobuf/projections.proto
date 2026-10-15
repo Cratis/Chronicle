@@ -27,6 +27,15 @@ message DraftReadModelDefinition {
    string Identifier = 3;
    string DisplayName = 4;
 }
+enum EventGenerationDelivery {
+   Compatibility = 0;
+   Pinned = 1;
+}
+message EventSequenceSinkConfiguration {
+   EventType EventType = 1;
+   string EventSequence = 2;
+   bool IsPublic = 3;
+}
 message EventType {
    string Id = 1;
    uint32 Generation = 2;
@@ -128,6 +137,7 @@ message ProjectionDefinition {
    map<string,ChildrenDefinition> Nested = 18;
    bool SubscribesToAllEvents = 19;
    repeated string NoAutoMapProperties = 20;
+   EventGenerationDelivery GenerationDelivery = 21;
 }
 enum ProjectionOwner {
    PROJECTION_OWNER_None = 0;
@@ -181,6 +191,7 @@ message RegisterRequest {
    ProjectionOwner Owner = 2;
    repeated ProjectionDefinition Projections = 3;
    bool FullSet = 4;
+   string Registrant = 5;
 }
 message RemovedWithDefinition {
    string Key = 1;
@@ -195,6 +206,7 @@ message SaveProjectionRequest {
    string EventSequenceId = 3; // default value could not be applied: event-log
    string Declaration = 4;
    DraftReadModelDefinition DraftReadModel = 5;
+   EventGenerationDelivery GenerationDelivery = 6;
 }
 message SaveProjectionResult {
    repeated ProjectionDeclarationSyntaxError Errors = 1;
@@ -206,6 +218,7 @@ message SerializableDateTimeOffset {
 message SinkDefinition {
    .bcl.Guid ConfigurationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string TypeId = 2;
+   EventSequenceSinkConfiguration EventSequence = 3;
 }
 service Projections {
    rpc GetAllDeclarations (GetAllDeclarationsRequest) returns (IEnumerable_ProjectionWithDeclaration);

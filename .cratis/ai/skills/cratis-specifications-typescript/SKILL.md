@@ -15,7 +15,9 @@ base: setup is separated from the action, and each `it()` verifies one outcome.
 
 ## Verified product sources
 
-This skill is verified against the frameworks these specifications run on:
+Helper and setup patterns are verified against Fundamentals **v7.23.0**
+(`for_JsonSerializer/given/given.ts`, `vitest.setup.ts`) and Arc **v22.75.0**
+(`Source/JavaScript/Arc/given.ts`). The execution stack is:
 
 | Framework | Role |
 | --- | --- |
@@ -24,10 +26,17 @@ This skill is verified against the frameworks these specifications run on:
 | Chai | Assertions, always through the `.should` fluent interface |
 | Sinon | Stubbing and call verification |
 
-The `given()` helper is supplied by the Cratis TypeScript package under
-specification and is imported from that package root. Reverify the helper's
-location and signature against the owning repository before relying on a
-different import path.
+`given()` is a small **local file** inside the package under specification, not
+a published package export. Import it with a relative path to that file; create
+it if absent. Fundamentals constructs a parameterless context; Arc passes the
+Mocha `Suite` to the context constructor and binds the callback's `this` to it.
+Match the owning package's helper signature rather than assuming one import path.
+
+Configure Vitest to load a setup file that calls `chai.should()` and registers
+`sinon-chai` and `chai-as-promised`; otherwise `.should` is undefined or plugin
+assertions are unavailable. Load the reflection polyfill when specifying
+metadata-dependent code (Fundamentals' setup imports its local `reflection`
+entry). The Specifications repository publishes no TypeScript helper.
 
 ## Route near misses
 
@@ -155,8 +164,7 @@ value.should.be.instanceOf(<Type>);
 (() => <throwingCall>()).should.throw(<ErrorType>);
 ```
 
-Full Sinon and Chai detail is in
-[typescript-patterns.md](references/typescript-patterns.md).
+Read [typescript-patterns.md](references/typescript-patterns.md) when choosing detailed assertions, configuring or restoring Sinon stubs, or arranging asynchronous specifications.
 
 ## Step 6 — Apply the naming conventions
 

@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/local-development.md -->
 # Running with an identity locally
 
-Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.41.1`.
+Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.75.0`.
 
 ## What Arc does not give you
 
@@ -29,18 +29,18 @@ public record User(ClientPrincipal MicrosoftIdentity, object Details);
 public interface ICanProvideUsers { Task<IEnumerable<User>> Provide(); }
 ```
 
-⚠️ Both are mapped `AllowAnonymous` and **unconditionally** — there is no
-environment check in the mapper, so they are anonymous in Production too, and an
-ASP.NET `FallbackPolicy` does not protect them. Without providers they return
-empty arrays. Whatever your implementations return is public to anyone who can
-reach the application. The `Cratis:Arc:Introspection` options do not affect them;
-restrict them at the ingress (see the discovery note in the skill). Register them only for a development
-environment, and return fixtures rather than production users or tenants.
+At **v22.75.0**, both follow `Introspection.IdentityDiscovery` and discovery
+access settings: anonymous by default only in Development, authenticated elsewhere,
+or unmapped (404) if the host cannot authenticate. Return development fixtures,
+not production users or tenants.
+Source: [secure defaults](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/upgrading/secure-defaults.mdx).
 
 ## Supplying an identity locally
 
 Because the shipped handler reads forwarded headers, the way to run with an
-identity locally is to send those headers yourself. All three are required:
+identity locally is to send those headers yourself **after explicitly enabling**
+`Cratis:Arc:TrustForwardedIdentityHeaders=true` in the isolated development host.
+Without it they are ignored. All three are required:
 
 - `x-ms-client-principal-id`
 - `x-ms-client-principal-name`

@@ -37,13 +37,14 @@ public class ReducerEventStoreAndEventSequenceAnalyzer : DiagnosticAnalyzer
     {
         var namedTypeSymbol = (INamedTypeSymbol)context.Symbol;
 
-        if (!WellKnownTypes.ImplementsIReducer(namedTypeSymbol, context.Compilation))
+        var self = SelfReducerPolicy.IsSelf(namedTypeSymbol, context.Compilation);
+        if (!self && !WellKnownTypes.ImplementsIReducer(namedTypeSymbol, context.Compilation))
         {
             return;
         }
 
-        var eventStoreAttribute = namedTypeSymbol
-            .GetAttributes()
+        var attributes = (self ? SelfReducerPolicy.Attributes(namedTypeSymbol) : namedTypeSymbol.GetAttributes()).ToArray();
+        var eventStoreAttribute = attributes
             .FirstOrDefault(attr => attr.AttributeClass?.ToDisplayString() == WellKnownTypes.EventStoreAttributeName);
 
         if (eventStoreAttribute is null)
@@ -51,11 +52,11 @@ public class ReducerEventStoreAndEventSequenceAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        var hasEventSequenceAttribute = namedTypeSymbol.GetAttributes().Any(attr =>
+        var hasEventSequenceAttribute = attributes.Any(attr =>
             attr.AttributeClass?.ToDisplayString() == WellKnownTypes.EventSequenceAttributeName ||
             attr.AttributeClass?.ToDisplayString() == WellKnownTypes.EventLogAttributeName);
 
-        var reducerAttribute = namedTypeSymbol.GetAttributes().FirstOrDefault(attr =>
+        var reducerAttribute = attributes.FirstOrDefault(attr =>
             attr.AttributeClass?.ToDisplayString() == WellKnownTypes.ReducerAttributeName);
 
         var hasEventSequenceOnReducerAttribute = reducerAttribute?.ConstructorArguments.Length > 1 &&

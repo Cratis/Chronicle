@@ -5,14 +5,9 @@ namespace Cratis.Chronicle.Reducers.Validators.for_TypeMustImplementOnlyOneReduc
 
 public class when_type_implements_multiple_reducers : Specification
 {
-    class MyReducer : IReducerFor<string>, IReducerFor<object>
-    {
-        public ReducerId Id => throw new NotImplementedException();
-    }
-
     Exception _result;
 
-    void Because() => _result = Catch.Exception(() => TypeMustImplementOnlyOneReducer.ThrowIfTypeImplementsMoreThanOneReducer(typeof(MyReducer)));
+    void Because() => _result = Catch.Exception(() => TypeMustImplementOnlyOneReducer.ThrowIfTypeImplementsMoreThanOneReducer(TypeImplementingTwice.Of(typeof(IReducerFor<>), typeof(string), typeof(object))));
 
     [Fact] void should_throw_an_exception() => _result.ShouldBeOfExactType<TypeMustImplementOnlyOneReducer>();
 }

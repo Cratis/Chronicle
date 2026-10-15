@@ -19,5 +19,5 @@ public class and_not_all_events_were_handled : given.a_retry_failed_partition_jo
     async Task Because() => await _job.Start(_request);
 
     [Fact] void should_call_failed_partition_partially_recovered() => _observer.Received(1).FailedPartitionPartiallyRecovered((Key)"some-partition", _lastHandled);
-    [Fact] void should_not_call_failed_partition_recovered() => _observer.DidNotReceive().FailedPartitionRecovered(Arg.Any<Key>(), Arg.Any<EventSequenceNumber>());
+    [Fact] void should_not_call_failed_partition_recovered() => _observer.DidNotReceive().FailedPartitionRecovered(Arg.Any<Key>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>());
 }

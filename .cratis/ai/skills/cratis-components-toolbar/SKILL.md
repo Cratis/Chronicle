@@ -10,15 +10,16 @@ license: MIT
 The `Toolbar` family builds **canvas-style tool palettes** — the pill-shaped bar
 of icon buttons you find in a drawing or diagram editor. For a page action menu
 over a list, use `DataPage.MenuItems` instead (see the
-**cratis-arc-react-page** skill).
+**cratis-arc-react-page** skill). `ActionMenubar` (`Common`) shares the toolbar's
+`focusMode` contract when building an action bar outside DataPage.
 
 ## Verified product sources
 
 | Package | Version | Verified from |
 | --- | --- | --- |
-| `@cratis/components` | `4.6.0` | its package manifest, `Source/Toolbar/*` (exports and props), `Documentation/Toolbar/*`, `Documentation/Common/icon.md` |
-| `react-icons` | `5.7.0` | dependency of `@cratis/components@4.6.0` — the icon source the examples use |
-| `react` | `^19.0.0` | peer of `@cratis/components@4.6.0` |
+| `@cratis/components` | `4.26.4` | its package manifest, `Source/Toolbar/*` (exports and props), `Documentation/Toolbar/*`, `Documentation/Common/icon.md` |
+| `react-icons` | `5.7.0` | dependency of `@cratis/components@4.26.4` — the icon source the examples use |
+| `react` | `^19.0.0` | peer of `@cratis/components@4.26.4` |
 
 ## Import from the subpath
 
@@ -29,7 +30,7 @@ is `<ToolbarGroup>`, never `<Toolbar.Group>`.
 import {
     Toolbar, ToolbarButton, ToolbarSeparator, ToolbarGroup,
     ToolbarSection, ToolbarContext, ToolbarFanOutItem, ToolbarFolder,
-    ToolbarSlot, ToolbarSlotProvider, ToolbarLayout, useToolbarSlot,
+    ToolbarSlot, ToolbarSlotProvider, ToolbarLayout, useToolbarSlot, ToolbarFocusMode,
 } from '@cratis/components/Toolbar';
 ```
 
@@ -86,6 +87,13 @@ const [activeTool, setActiveTool] = useState('select');
         active={activeTool === 'rect'} onClick={() => setActiveTool('rect')} />
 </Toolbar>
 ```
+
+When `active` is supplied, `ToolbarButton` sets `aria-pressed`; omission keeps
+it an ordinary button. `ToolbarFocusMode.Arrows` (default) enables arrows and
+Home/End while keeping each tool's Tab stop. `SingleTabStop` uses the WAI-ARIA
+pattern (returns to the last focused tool); custom widgets and explicit tab
+indices retain their own behavior. `None` disables toolbar keyboard handling.
+Name the toolbar with `aria-label` or `aria-labelledby`.
 
 ## Step 3 — Separators and horizontal layout
 
@@ -158,6 +166,21 @@ away from the screen edge the toolbar sits against.
 `mode` is `'grid'` (default) or `'list'`; `maxColumns` (default `5`) applies to
 grid mode only, and `folderDirection` is `'right'` or `'left'`.
 
+For a headed catalog use `presentation='drawer'` and `items` (children optional):
+
+```tsx
+<ToolbarFolder icon={<FaShapes />} title='Shapes' presentation='drawer'
+    items={[{ id: 'rect', title: 'Rectangle', icon: <FaVectorSquare />, payload: 'rect' }]}
+    onActivate={item => insertShape(item.payload)} />
+```
+
+This excerpt assumes the host's `insertShape` and icons. Each `ToolbarDrawerItem`
+has `id`, `title`, `icon`, `payload`, optional `disabled` and `disabledReason`.
+`heading` defaults to `title`; `closeLabel` falls back to
+`messages.toolbar.closeDrawer`, then English. `onItemDragStart/End` receive the
+item and drag event; drawer tiles are `draggable` by default. `closeOnInsert`
+(default false) closes on activation or successful drop, never cancelled drag.
+
 ## Step 6 — Contributing buttons from elsewhere
 
 A slot lets a component far from the toolbar contribute buttons without prop
@@ -190,6 +213,9 @@ a `slotName`.
 | --- | --- | --- |
 | `children` | `ReactNode` | required |
 | `orientation` | `'vertical' \| 'horizontal'` | `'vertical'` |
+| `focusMode` | `ToolbarFocusMode` (also exported by `Common`) | `Arrows` |
+| `aria-label` / `aria-labelledby` | `string` | provider `messages.toolbar.label` fallback |
+| `className` / `pt` | class / `ToolbarParts` | root presentation |
 | `draggable` | `boolean` | `false` — makes child buttons draggable |
 | `onItemDragStart` | `(data: unknown, event: React.DragEvent) => void` | — |
 
@@ -200,7 +226,8 @@ a `slotName`.
 | `title` | `string` | **required** — the accessible name and the tooltip text |
 | `icon` | `string \| ReactNode` | — |
 | `text` | `string` | — |
-| `active` | `boolean` | `false` |
+| `active` | `boolean` | when supplied, sets `aria-pressed` |
+| `className` / `pt` | class / `ToolbarButtonParts` | per-instance presentation |
 | `onClick` | `() => void` | — |
 | `tooltipPosition` | `'top' \| 'right' \| 'bottom' \| 'left'` | `'right'` |
 | `draggable` | `boolean` | inherited from the enclosing `Toolbar` |
@@ -237,7 +264,10 @@ Renders nothing itself — it is a marker `ToolbarSection` reads.
 `tooltipPosition?` (default `'right'`) ·
 `folderDirection?: 'right' | 'left'` (default `'right'`) ·
 `mode?: 'grid' | 'list'` (default `'grid'`) · `maxColumns?: number` (default `5`) ·
-`children: ReactNode`.
+`children?: ReactNode` · `className?: string` · `pt?: ToolbarFolderParts`.
+`presentation?: 'compact' | 'drawer'` (default compact), `heading`, `closeLabel`,
+`items`, `onActivate`, `onItemDragStart/End`, `draggable`, `closeOnInsert` configure
+the drawer described above (default `maxColumns` is 3 there).
 
 ### `ToolbarSlot` / `ToolbarSlotProvider` / `ToolbarLayout`
 

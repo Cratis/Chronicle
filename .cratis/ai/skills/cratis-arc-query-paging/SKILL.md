@@ -10,16 +10,28 @@ license: MIT
 Arc applies paging and sorting for you. You never write `Skip`/`Take` or read
 the query string — you choose a **return shape** that the framework can narrow.
 
+- An accepted `.play` model under the model root covers the behavior, or the
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
+  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
+  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
+  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
+  say so and do not author `.play` from memory.
+  Edit code here only for infrastructure, clients, adapters, Screenplay code
+  attachments, or gap-fill scope (`cratis-screenplay-render-and-gap-fill`);
+  never edit Stage-managed output.
+
 ## Verified product sources
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Core` | `22.16.0` | `QueryableQueryRenderer`, `Paging`, `Sorting`, `PagingInfo` |
-| `Cratis.Arc.MongoDB` | `22.16.0` | `Observe` helpers that page at the source |
-| `Cratis.Arc.EntityFrameworkCore` | `22.16.0` | `DbSet<T>` observe helpers that page at the source |
-| `@cratis/arc.react` | `22.16.0` | `useWithPaging`, `useSuspenseWithPaging` |
+| `Cratis.Arc.Core` | `22.75.0` | `QueryableQueryRenderer`, `Paging`, `Sorting`, `PagingInfo` |
+| `Cratis.Arc.MongoDB` | `22.75.0` | `Observe` helpers that page at the source |
+| `Cratis.Arc.EntityFrameworkCore` | `22.75.0` | `DbSet<T>` observe helpers that page at the source |
+| `@cratis/arc.react` | `22.75.0` | `useWithPaging`, `useSuspenseWithPaging` |
 
-> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
+> Rechecked at Arc v22.75.0: request parsing, paging validation and storage
+> observation contracts. Do not transfer a provider's ordering guarantee to another.
 
 Reverify before claiming support for another version. A small, bounded result
 set does not need any of this — `IEnumerable<T>` is fine.
@@ -28,10 +40,10 @@ set does not need any of this — `IEnumerable<T>` is fine.
 
 | Query-string key | Effect |
 | --- | --- |
-| `pageSize` | **Required to page at all** on the query string; any parseable integer is accepted (`0` yields an empty page, negatives are clamped by `Skip`) — the JSON body reader, by contrast, treats `pageSize <= 0` as not paged |
+| `pageSize` | **Required to page at all** on the query string; parseable values enroll paging validation (`page >= 0`, `pageSize > 0`) — the JSON body reader, by contrast, treats `pageSize <= 0` as not paged |
 | `page` | Zero-based. Defaults to `0` when `pageSize` is present |
 | `sortby` | Field name; PascalCased before use, so `?sortby=name` sorts on `Name` |
-| `sortDirection` | `desc` (case-insensitive) sorts descending; **anything else, including a missing value, is ascending** |
+| `sortDirection` | `asc`/`ascending` or `desc`/`descending`, case-insensitive; unknown values are `malformedRequest` (HTTP 400) |
 
 Two consequences that surprise people:
 
@@ -39,12 +51,12 @@ Two consequences that surprise people:
 - **Sorting needs both keys.** `sortby` without `sortDirection` is ignored
   entirely.
 
-Paging is **not** validated on the request path at 22.16.0: `PageNumber`/`PageSize`
-concept validators exist (`page >= 0`, `pageSize > 0`) but nothing feeds the
-query-string paging into them, so an out-of-range value produces an empty or
-clamped page rather than a validation failure. Validate paging arguments in the
-frontend, or expose them as explicit query arguments if the rule must be
-enforced.
+GET paging/sorting keys are matched case-insensitively. `QueryPipeline.ValidatePaging`
+runs the page validators whenever `paging.IsPaged`: negative page and zero or
+negative size fail validation. This was already true at 22.16.0. A missing sort
+direction parses as ascending, but GET sorting still needs both nonempty keys.
+Sources at Arc v22.75.0: `Arc.Core/Queries/QueryStringQueryRequestReader.cs`,
+`SortDirections.cs` and `QueryPipeline.cs` under `Source/DotNET`.
 
 ## Which return shapes page
 
@@ -92,10 +104,10 @@ query-shaped method on a read model is generic — a generic method is registere
 and routed but can never be invoked, because there is nothing to close its type
 parameters with.
 
-For MongoDB `Observe` cost, distinguish the initial retained result, incremental
-membership updates, and page-refill queries from an application callback that
-explicitly re-runs a query. It does not always fetch the whole collection per
-change. See the read-model skill's [versioned query-cost guidance](../cratis-chronicle-read-model/references/queries.md#cost-and-composition).
+At v22.75.0, paged MongoDB observations re-read the page and total on each
+change; unpaged observations retain incremental membership. The watch does not
+always fetch the whole collection. MongoDB observation breaks sort ties on `_id`
+and orders unsorted pages on `_id`. See the read-model skill's [versioned query-cost guidance](../cratis-chronicle-read-model/references/queries.md#cost-and-composition).
 
 ## Page the source, not the answer
 
@@ -124,9 +136,13 @@ a second round trip to the store per query.
 Because `sortby` is PascalCased, the client sends the camelCase property name
 the generated proxy uses and the server resolves the CLR property.
 
-Give any list with a natural order a default `OrderBy`. Paging without one is
-unstable across storage providers, which return unordered results in different
-orders.
+Give any list with a natural order a default `OrderBy`; do not generalize the
+MongoDB observation tie-break to every `IQueryable` provider. Generated proxies
+provide field-named sort helpers. For composed MongoDB/EF observations, pass
+`ignoreQueryContext: true` to auxiliary sources so only the primary consumes
+client paging/sorting and writes totals. Single-instance observations emit
+`default` when absent/deleted/outside the filter; guard `hasData`/`isReady` in React.
+Source: [Arc v22.75.0 MongoDB observations](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/mongodb/observing-collections.md).
 
 ## Consume it from the frontend
 
@@ -182,13 +198,3 @@ pinning, keep it in a method a specification can supply arguments to.
 - Creating the read model or its projection: the Chronicle read-model guidance.
 - Inspecting an observable query over HTTP: `cratis-arc-observable-query-http`.
 - Whole-slice performance work: the performance review guidance.
-- An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
-  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
-  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
-  `cratis-screenplay-modeling-lifecycle`): change the model first with
-  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
-  say so and do not author `.play` from memory.
-  Edit code here only for infrastructure, clients, adapters, Screenplay code
-  attachments, or gap-fill scope (`cratis-screenplay-render-and-gap-fill`);
-  never edit Stage-managed output.

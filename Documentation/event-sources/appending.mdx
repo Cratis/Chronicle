@@ -1,0 +1,78 @@
+---
+title: Append through a definition
+description: Append one event, several events, or events for several event sources through an event source definition, and what Chronicle rejects.
+---
+
+Use this page to write events through a definition. If you have not declared one yet, read [Define an event source](./defining.mdx).
+
+## Append to a stream
+
+`Append<TSource>` takes the event source id and the event as usual. The stream name and the stream id are optional.
+
+<ChronicleClientTabs snippet="event-sources/appending/append-to-stream" variants="csharp" />
+
+Chronicle fills in the routing from the definition:
+
+| Value on the event | Taken from |
+|---|---|
+| Event source type | The definition's name, `Account` here |
+| Event stream type | The stream name you pass, or the default (`All`) when you pass none |
+| Event stream id | The stream id you pass, or the default when you pass none |
+| `EventContext.EventSource` | The definition's name |
+
+You can pass `eventSourceType` or `eventStreamType` on the definition-less overloads, but not on the typed ones: they have no such parameters, and the definition decides.
+
+## Append without a stream
+
+A stream is optional. An event appended without one carries the event source type and the default stream:
+
+<ChronicleClientTabs snippet="event-sources/appending/append-without-stream" variants="csharp" />
+
+The concurrency guard then comes from the event source's own dimensions, because no stream supplies others.
+
+## Append several events
+
+`AppendMany<TSource>` writes a list of events for one event source id, to one stream and one stream id, in one atomic append.
+
+<ChronicleClientTabs snippet="event-sources/appending/append-many" variants="csharp" />
+
+## Append for several event sources
+
+To write events for several event sources in one atomic append, give each `EventForEventSourceId` the definition it goes through with `EventSource`, and its stream with `EventStream` and `EventStreamId`.
+
+<ChronicleClientTabs snippet="event-sources/appending/several-sources" variants="csharp" />
+
+Every event has exactly one event source. The append is all or nothing: if either event fails a constraint or a concurrency check, neither is written. Events in one batch can go through different definitions, and some can skip definitions altogether.
+
+Each event source id in the batch is guarded by one concurrency scope. When events for the same id need different guards, Chronicle refuses the batch. See [Concurrency](./concurrency.mdx#a-batch-that-needs-two-guards-for-one-event-source-id).
+
+## Other overloads
+
+| API | Use |
+|---|---|
+| `Append(Type eventSource, …)` and `AppendMany(Type eventSource, …)` | When the definition is known only at run time |
+| `AppendPrepared<TSource>` | When you prepared the event content on the same sequence |
+| `EventForEventSourceId.EventSource` and `.EventStream` | Batches across event sources |
+
+The unit of work's `Transactional` sequence has no typed overloads. To stage an event with the unit of work, pass the routing values yourself. They must equal what the definition declares.
+
+## What Chronicle rejects
+
+| Problem | What happens | When |
+|---|---|---|
+| The type is not a discovered definition | `UnknownEventSource` is thrown | Before anything is sent |
+| The stream is not one the definition declares | `EventStreamDoesNotBelongToEventSource` is thrown | Before anything is sent |
+| An `EventForEventSourceId` carries an explicit `EventSourceType` or `EventStreamType` that contradicts the definition | `EventRoutingContradictsEventSource` is thrown | Before anything is sent |
+| The kernel does not know the definition, the stream, or the event source type | The result carries an error that starts with `UnknownEventSource`, `UnknownEventStreamForEventSource` or `EventSourceTypeDoesNotMatchEventSource` | At append, for example when the definition was not registered yet |
+| A constraint or a concurrency scope fails | `IsSuccess` is false and the result lists the violations | At append |
+
+<ChronicleClientTabs snippet="event-sources/appending/errors" variants="csharp" />
+
+Read the result. A constraint violation or a concurrency violation does not throw.
+
+## Next steps
+
+- [Concurrency](./concurrency.mdx): choose what an append conflicts with.
+- [Scenarios](./scenarios.mdx): complete examples.
+- [Dynamic Consistency Boundary](./dcb.mdx): a guarded decision that appends through a definition. The wider picture is in [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md).
+- [Appending events](../events/appending.mdx)

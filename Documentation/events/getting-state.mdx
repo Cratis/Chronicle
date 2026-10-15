@@ -26,7 +26,7 @@ Kotlin and Java don't currently expose a way to read the tail sequence number at
 
 <ChronicleClientTabs snippet="events/getting-state/tail-for-event-source" />
 
-This scoped form (filtering by event source and event types) is currently C#-only. Elixir and TypeScript can capture the *overall* tail (see above), but neither exposes a way to scope it to specific event types.
+This scoped form (filtering by event source and event types) is currently C#-only. TypeScript can capture the *overall* tail (see above) but doesn't expose a way to scope it to specific event types. Elixir scopes the tail to an observer's event types with `get_tail_sequence_number_for_observer/2`.
 
 ### Check whether an observer is caught up
 

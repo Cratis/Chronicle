@@ -1,0 +1,8 @@
+projection Doc => DocReadModel
+  from RecordCreated
+    Name = name
+    CreatedAt = $eventContext.occurred
+
+  from RecordUpdated
+    Name = name
+    UpdatedAt = $eventContext.occurred

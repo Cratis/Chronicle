@@ -27,7 +27,7 @@ public class ChronicleInProcessFixture : ChronicleFixture
     /// rejects cannot otherwise run any integration scenario, and the failure arrives as a container
     /// start timeout that says nothing about why.
     /// </remarks>
-    public static string ImageName => Environment.GetEnvironmentVariable("CHRONICLE_MONGODB_IMAGE") ?? "mongo";
+    public static string ImageName => Environment.GetEnvironmentVariable("CHRONICLE_MONGODB_IMAGE") ?? "mongo:8.2";
 
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)

@@ -102,7 +102,53 @@ BODY_SNIPPETS = {
     "troubleshooting/clear-reactor-partition-quarantine": """
         IEventStore eventStore = default!;
     """,
+    "site-concepts/projections-and-read-models/get-instance": """
+        IEventStore eventStore = default!;
+        ReadModelKey bookId = new("book-42");
+    """,
 }
+
+# The cratis.io Concepts guides (site-concepts/<page>/...) reuse type names such as
+# BookBorrowed and DepositMade across pages with different shapes, and the snippets of one
+# page reference each other. Each page therefore compiles in a generator-only namespace of
+# its own, so the rendered snippets keep the exact type names the page's prose uses.
+SITE_CONCEPTS_PREFIX = "site-concepts/"
+SITE_CONCEPTS_NAMESPACE_ROOT = "Cratis.Chronicle.Docs.SiteConcepts"
+
+# The Dynamic Consistency Boundary guides compile the same way: one generator-only namespace per
+# page, so each page's snippets share the domain types they introduce (events, read models) without
+# colliding with the global names used elsewhere. Unlike the Concepts guides, these snippets keep
+# their using directives inside the namespace, so an ASP.NET Core import used by one snippet cannot
+# make Chronicle's attributes ambiguous for the others.
+DCB_PREFIX = "dynamic-consistency-boundary/"
+DCB_NAMESPACE_ROOT = "Cratis.Chronicle.Docs.DynamicConsistencyBoundary"
+
+
+# The event source and stream guides compile the same way: one generator-only namespace per page, with
+# the using directives kept inside it, so each page's snippets share the definitions and events they
+# introduce without colliding with the names used on the other pages.
+EVENT_SOURCES_PREFIX = "event-sources/"
+EVENT_SOURCES_NAMESPACE_ROOT = "Cratis.Chronicle.Docs.EventSourceGuides"
+
+
+def page_namespace(relative_path: str, prefix: str, root: str) -> str | None:
+    if not relative_path.startswith(prefix):
+        return None
+
+    page = relative_path[len(prefix):].split("/", 1)[0]
+    return f"{root}.{''.join(part.capitalize() for part in page.split('-'))}"
+
+
+def site_concepts_namespace(relative_path: str) -> str | None:
+    return page_namespace(relative_path, SITE_CONCEPTS_PREFIX, SITE_CONCEPTS_NAMESPACE_ROOT)
+
+
+def dcb_namespace(relative_path: str) -> str | None:
+    return page_namespace(relative_path, DCB_PREFIX, DCB_NAMESPACE_ROOT)
+
+
+def event_sources_namespace(relative_path: str) -> str | None:
+    return page_namespace(relative_path, EVENT_SOURCES_PREFIX, EVENT_SOURCES_NAMESPACE_ROOT)
 
 # This excerpt is from an ASP.NET Core action. Supply only the action context
 # and a final response in the compiler harness; keep the public snippet intact.
@@ -258,6 +304,12 @@ def generate_source() -> str:
     for path in files:
         relative_path = snippet_key(path)
         snippet_usings, body = split_usings(extract_snippet(path))
+        dcb_ns = dcb_namespace(relative_path) or event_sources_namespace(relative_path)
+        if dcb_ns is not None:
+            scoped_usings = "\n".join(sorted(set(snippet_usings)))
+            declarations.append(f"namespace {dcb_ns}\n{{\n{textwrap.indent(scoped_usings, '    ')}\n\n{textwrap.indent(body, '    ')}\n}}")
+            continue
+
         # The action snippet qualifies HttpContext in its compiler-only wrapper.
         # A global ASP.NET Core import would make Chronicle's [Tags] ambiguous.
         usings.update(
@@ -265,7 +317,16 @@ def generate_source() -> str:
             if relative_path != ACTION_SNIPPET or using != "using Microsoft.AspNetCore.Http;"
         )
 
-        if relative_path == "read-models/decision-reads/detached-read":
+        site_namespace = site_concepts_namespace(relative_path)
+        if site_namespace is not None:
+            if relative_path in BODY_SNIPPETS:
+                body = (
+                    "public static class Example_" + re.sub(r"[^A-Za-z0-9_]", "_", relative_path) + "\n{\n"
+                    + method(relative_path, BODY_SNIPPETS[relative_path], body)
+                    + "\n}"
+                )
+            declarations.append(f"namespace {site_namespace}\n{{\n{textwrap.indent(body, '    ')}\n}}")
+        elif relative_path == "read-models/decision-reads/detached-read":
             declarations.append(
                 "namespace DecisionReadExample\n{\n"
                 "    public record OrderPlaced;\n"
@@ -364,6 +425,7 @@ def main() -> int:
                 "--configuration",
                 "Release",
                 "-p:DisableProxyGenerator=true",
+                "-p:CratisProxiesOutputPath=",
                 "-p:DisableDockerBuild=true",
             ],
             cwd=REPO_ROOT,

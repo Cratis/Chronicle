@@ -21,8 +21,11 @@ internal static class WebhookDefinitionConverter
             EventSequenceId = definition.EventSequenceId.Value,
             EventTypes = definition.EventTypes.Select(_ => _.ToContract()).ToArray(),
             Identifier = definition.Identifier.Value,
+            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)definition.GenerationDelivery,
             IsActive = definition.IsActive,
             IsReplayable = definition.IsReplayable,
+            IsInactive = !definition.IsActive,
+            IsNotReplayable = !definition.IsReplayable,
             Target = definition.Target.ToContract()
         };
 

@@ -8,8 +8,14 @@ namespace Cratis.Chronicle.Concepts.Events;
 /// </summary>
 /// <param name="Definition">The <see cref="EventTypeDefinition"/> to register.</param>
 /// <param name="Source">The <see cref="EventTypeSource"/> the event type came from.</param>
+/// <param name="Visibility">The <see cref="EventTypeVisibility"/> the event type was registered with.</param>
+/// <param name="Origin">The name of the event store the event type originates from when it is not the registering one, otherwise empty.</param>
 /// <remarks>
 /// <see cref="EventTypeDefinition"/> carries the owner and tombstone metadata of an event type but not the source it
 /// came from - pairing the two is what makes it possible to register a whole batch of event types in one operation.
 /// </remarks>
-public record EventTypeToRegister(EventTypeDefinition Definition, EventTypeSource Source);
+public record EventTypeToRegister(
+    EventTypeDefinition Definition,
+    EventTypeSource Source,
+    EventTypeVisibility Visibility = EventTypeVisibility.Unspecified,
+    string Origin = "");

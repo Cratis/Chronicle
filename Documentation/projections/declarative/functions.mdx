@@ -2,8 +2,6 @@
 
 Projections support several built-in functions for mathematical operations and counting. These functions allow you to perform calculations directly within projections without needing custom logic.
 
-> **TypeScript note:** of these, only `Increment()`/`Decrement()` are implemented in TypeScript's fluent builder today. `Count()`, `Add()`, and `Subtract()` type-check but throw `Error('... is not implemented yet.')` at runtime (`FromBuilder.ts`), so those examples below are C#-only.
-
 ## Counting events
 
 Use `Count()` to increment a counter each time an event is processed:

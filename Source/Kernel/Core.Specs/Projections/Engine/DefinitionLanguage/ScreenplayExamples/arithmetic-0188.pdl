@@ -1,0 +1,6 @@
+projection Doc => DocReadModel
+  from SaleCompleted
+    add TotalRevenue by saleAmount
+    add TaxCollected by taxAmount
+    increment SalesCount
+    count CompletedTransactions

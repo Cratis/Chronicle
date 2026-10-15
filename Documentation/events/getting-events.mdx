@@ -9,6 +9,29 @@ Event sequences support multiple ways of reading events depending on your needs.
 
 Use the client APIs to select the pattern that best matches your scenario, such as replaying state, building read models, or auditing changes.
 
+## Read metadata by sequence locator
+
+Use `GetMetadataAt` when you already know an event's sequence number and need its context,
+not its payload. The single-locator overload returns `null` for a missing event. The batch
+overload returns an immutable dictionary keyed by sequence number and omits missing events.
+
+<ChronicleClientTabs snippet="events/getting-events/metadata-at" />
+
+A request accepts at most 500 locators, including duplicates. Chronicle rejects larger
+requests before querying storage and removes duplicates from accepted requests. These are
+point lookups, not reads of everything after a checkpoint.
+
+Metadata includes routing, occurred time, correlation, causation, tags, subject, source name,
+and the caused-by identity chain. It contains no payload, generation, content hash or
+revision content, and does not release compliance-protected data. Identity names resolve
+from storage on each read, so a rename appears on the next metadata read. See
+[identity resolution](../concepts/correlation-identity-causation#identity-resolution-on-metadata-reads)
+for the resolution statuses and privacy boundaries.
+
+Your application must authorize access to the event store, namespace and requested events
+**before** calling this API. Metadata can still contain personal information, including
+identity names, tags and causation properties.
+
 ## Examples
 
 ### Read events for a single event source

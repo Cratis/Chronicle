@@ -358,7 +358,7 @@ public class ReadModelMigrator(
                 nameof(UInt64) => "NUMERIC(20,0)",
                 nameof(Single) => "REAL",
                 nameof(Double) => "DOUBLE PRECISION",
-                nameof(Decimal) => "DECIMAL",
+                nameof(Decimal) => "NUMERIC",
                 _ => "TEXT"
             },
             DatabaseType.SqlServer => unwrapped.Name switch
@@ -370,12 +370,13 @@ public class ReadModelMigrator(
                 nameof(UInt64) => "DECIMAL(20,0)",
                 nameof(Single) => "REAL",
                 nameof(Double) => "FLOAT",
-                nameof(Decimal) => "DECIMAL(18,2)",
+                nameof(Decimal) => "DECIMAL(38,18)",
                 _ => "NVARCHAR(MAX)"
             },
             _ => unwrapped.Name switch
             {
-                nameof(Single) or nameof(Double) or nameof(Decimal) => "REAL",
+                nameof(Single) or nameof(Double) => "REAL",
+                nameof(Decimal) => "TEXT",
                 _ => "INTEGER"
             }
         };

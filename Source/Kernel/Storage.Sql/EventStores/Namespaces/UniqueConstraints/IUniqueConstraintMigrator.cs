@@ -9,6 +9,14 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 public interface IUniqueConstraintMigrator
 {
     /// <summary>
+    /// Ensures the per-value unique constraint table exists.
+    /// </summary>
+    /// <param name="tableName">The table name.</param>
+    /// <param name="context">The database context for the table.</param>
+    /// <returns>Awaitable task.</returns>
+    Task EnsureValuesTableMigrated(string tableName, UniqueConstraintValuesDbContext context);
+
+    /// <summary>
     /// Ensures the unique constraint table exists and has the correct schema.
     /// </summary>
     /// <param name="tableName">The name of the unique constraint table.</param>

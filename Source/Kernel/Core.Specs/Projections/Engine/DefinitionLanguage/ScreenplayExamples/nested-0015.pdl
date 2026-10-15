@@ -1,0 +1,9 @@
+projection Slice => SliceReadModel
+  from SliceCreated
+    Name = name
+
+  nested command
+    from CommandSetForSlice
+      Name = commandName
+      Schema = schema
+    clear with CommandClearedForSlice

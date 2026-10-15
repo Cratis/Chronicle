@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Captures.Engine;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Captures;
 
 namespace Cratis.Chronicle.Captures;
@@ -18,6 +19,13 @@ public interface ICapturesManager : IGrainWithStringKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Ensure();
+
+    /// <summary>
+    /// Subscribe every started events capture in a namespace that was added after the captures started.
+    /// </summary>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> that was added.</param>
+    /// <returns>Awaitable task.</returns>
+    Task NamespaceAdded(EventStoreNamespaceName @namespace);
 
     /// <summary>
     /// Start a capture. Once started it captures on its schedule and can not be changed until stopped.

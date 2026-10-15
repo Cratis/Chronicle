@@ -7,9 +7,13 @@ query filter on state before it can trust a field, and a shape meant for one sta
 only make sense in another.
 
 Variants let you declare several mutually exclusive read models for the same logical entity instead. Each
-variant is an ordinary model-bound projection with its own shape — only the properties that stage of the
-entity's life actually has. Entering one variant automatically removes the entity from every other variant
-in the group, so at any point in time an entity exists in exactly one of them.
+variant is an ordinary model-bound projection with its own shape — the properties that stage of the entity's
+life needs. Entering one variant automatically removes the entity from every other variant in the group,
+so at any point in time an entity exists in exactly one of them.
+
+The stages can differ a lot, or hardly at all. Variants fit entities whose stages are really different
+things, and they fit just as well when the stages share nearly the same shape: each variant is its own
+collection, so a query for one stage reads only that stage and there is no `Status` to filter or index.
 
 ## Declaring a group of variants
 
@@ -42,6 +46,11 @@ create one.
 `[EntersOn<T>]`, Chronicle reclassifies that mapping into an update-only join on the variant's own key
 before it ever reaches the projection engine — the entering event stays the only door into the variant.
 
+Because the mapping is a join, it is also resolved when the variant is created: the join is re-resolved
+against the last stored event of the joined stream whenever the variant handles its own event. A
+`BuildCompleted` appended before the entering event therefore never creates a `PullRequestItem` on its own,
+but its value is on the `PullRequestItem` the moment the entering event creates it.
+
 If the same non-entering event also has a `[Join<TEvent>]` attribute, the join keeps its mappings and
 routing rather than being replaced. Non-conflicting `From` mappings are added, and the join wins on
 conflicting properties. Its key remains the event source ID. Its `On` uses the attribute's explicit
@@ -62,7 +71,9 @@ be repeated on each variant type. Declare it once on a type marked `[GlobalFor<T
 
 <ChronicleClientTabs snippet="projections/model-bound/variants/shared-handler" />
 
-Every mapping declared on the shared handler is merged into every variant of `WorkItem`. Like any other
+Every mapping declared on the shared handler is merged into every variant of `WorkItem`, so a member that only
+the shared handler populates, like `Title` here, is populated on whichever variant the entity is in. The
+`CHR0024` analyzer counts the entering events and the shared handlers of a variant's group as mapping sources. Like any other
 non-entering event, a shared mapping can only update an already-active variant — it can never create or
 resurrect one, so it is safe to share across a group whose members enter at different times.
 
@@ -79,12 +90,13 @@ unpredictable point at runtime once a shared event happens to arrive for that va
 1. **Pick an identity type that means something on its own** — `WorkItem` in the examples above, not a
    marker interface with no purpose beyond grouping. It is the type every variant, and every shared
    handler, points back to.
-2. **Give every variant only the properties that stage of the entity actually has.** A shared property
+2. **Give every variant the properties that stage of the entity needs.** A shared property
    that every stage needs belongs on a `[GlobalFor<T>]` handler instead of being copy-pasted onto each
    variant.
-3. **Reach for variants when the shapes genuinely diverge.** A single read model with a `Status` property
-   is still the right choice when every stage shares almost all of its properties and differs only in a
-   flag or two — see [Choosing a read-model style](../choosing-a-read-model-style).
+3. **Variants suit both kinds of shape.** Use them when the stages genuinely diverge, each with properties
+   the others do not have. Use them just as well when the stages share nearly the same shape: each
+   variant is its own collection, so a query for one stage reads only that stage, with no `Status`
+   property to filter on or index. The two uses are not mutually exclusive.
 4. **Remember each variant is its own collection.** There is no built-in query that spans a whole group —
    a caller that needs "this entity, whichever stage it's currently in" queries each variant explicitly
    (or by its shared key) rather than assuming a single combined collection.

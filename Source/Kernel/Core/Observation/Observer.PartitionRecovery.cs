@@ -110,7 +110,7 @@ public partial class Observer
 
     bool CanRecoverFailedPartitions()
     {
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
             return false;

@@ -1,6 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-arc-react-page/references/dialogs.md -->
 # Dialogs reference
 
+## Contents
+
+- Choose the dialog
+- Opening a dialog
+- The enums
+- `CommandDialog`
+- `CommandForm` fields
+- `Dialog` — data without a command
+- Host-registered confirmation and busy indicators
+
 The Cratis dialog wrappers own command execution, validation timing, busy
 state, and footer buttons. Never use a vendor or hand-rolled modal — dialogs are Components-owned.
 
@@ -76,6 +86,9 @@ The most-used props:
 | --- | --- |
 | `command` | the generated command class |
 | `title` | dialog header |
+| `subtitle` / `closeIcon` | secondary header content / dismissal glyph (`ReactNode`) |
+| `placement` | `'center' \| 'start' \| 'end'`; RTL-aware side sheets |
+| `confirmBeforeExecute` | `(values) => boolean \| Promise<boolean>`; pre-execution approval |
 | `okLabel` / `cancelLabel` | button labels (`'Ok'` / `'Cancel'` by default) |
 | `initialValues` | synchronous baseline; also the change-tracking baseline |
 | `currentValues` | reactive overlay for late-loading values |
@@ -89,6 +102,10 @@ The most-used props:
 | `initialFocus` | which control receives focus when the dialog opens |
 | `dismissable` | X, Escape, and backdrop dismissal |
 | `pt` | `DialogParts` — per-part attributes (`backdrop`, `positioner`, `root`, `header`, `title`, `close`, `content`, `footer`, `confirm`, `cancel`); `ptOptions`/`unstyled` are accepted no-ops |
+
+Dialog presentation props, including `subtitle`, `placement` and `closeIcon`,
+are forwarded to the dialog (4.14.1+), not the form. `children` may also be a
+render function receiving the command form context (4.25.1+).
 
 `CommandDialog.Column` exists for multi-column layouts:
 
@@ -105,8 +122,10 @@ The most-used props:
 
 ### Execution flow
 
-On confirm, `CommandDialog` applies `onBeforeExecute`, sets busy, executes the
-command, and on failure calls `onValidationFailure(result.validationResults)`
+On confirm, after validation, `CommandDialog` applies `onBeforeExecute` and
+awaits `confirmBeforeExecute` when supplied. Only `true` executes; fields are
+disabled while it is pending, and changed command values discard approval.
+The command then executes, and on failure calls `onValidationFailure(result.validationResults)`
 or `onFailed(result)` and **keeps the dialog open**. On success it calls
 `onSuccess(result.response)` and then the close gate.
 
@@ -165,7 +184,9 @@ selection — renaming a command property produces a compile error at every
 binding.
 
 `AutoCommandForm` renders a field per command property from the generated
-property descriptors, with `exclude` for the ones you do not want:
+property descriptors, with `exclude` for the ones you do not want and `footer`
+for custom footer content. Generated fields bind to their own property; this
+requires Arc and Arc React >=22.16.0:
 
 ```tsx
 <AutoCommandForm command={RegisterInvoice} exclude={['invoiceId']} />
@@ -222,20 +243,12 @@ const handleConfirm = async (): Promise<boolean> => {
 `onClose(result)` is the combined handler for both outcomes and closes unless it
 returns `false`.
 
-### Initial focus
-
-`DialogInitialFocus.Confirm` is the default and *arms* the confirm button — a
-browser fires `click` from the `keydown` of Enter, so a held Enter confirms.
-For a destructive dialog use `DialogInitialFocus.Cancel`, which focuses the
-least destructive action and degrades to `Content` when the button set has
-nothing to dismiss with. `DialogInitialFocus.Content` focuses the title so
-nothing is armed. There is deliberately no "focus nothing" option — a modal
-must move focus into itself.
+See "Initial focus" in SKILL.md.
 
 ## Host-registered confirmation and busy indicators
 
 `ConfirmationDialog` takes no props at all; it reads its title, message, and
 buttons from the dialog request. `BusyIndicatorDialog` takes the busy-indicator
 request. Register both once at the app root through `DialogComponents` and
-raise them by hook — see the skill's step 5. From a view model, use the
+raise them by hook — see the skill's Step 6. From a view model, use the
 injectable `IDialogs` abstraction instead of the hooks.

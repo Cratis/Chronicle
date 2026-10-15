@@ -18,7 +18,7 @@ public class and_reactor_forwards_event_to_outbox(context context) : Given<conte
         public SomeEvent Event;
         public EventSequenceNumber OutboxTailSequenceNumber;
 
-        public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
+        public override IEnumerable<Type> EventTypes => [typeof(SomeEvent), typeof(PublicSomeEvent)];
         public override IEnumerable<Type> Reactors => [typeof(OutboxForwardingReactor)];
 
         protected override void ConfigureServices(IServiceCollection services)

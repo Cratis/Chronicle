@@ -11,8 +11,10 @@ Use the `.Passive()` method to mark a projection as passive:
 This projection:
 
 - Will not be actively maintained in persistent storage
-- Can be queried on-demand using the `IProjections` service
+- Can be read on demand through `ReadModels.GetInstanceById`
 - Reconstructs the read model from events when requested
+
+A read model declaring `[EventStream<TSource>(stream)]` is also passive, even without `.Passive()`. It stays keyed by event source ID but requires a stream-aware instance read; a key-only read is refused rather than mixing stream IDs. See [Read models scoped to one event stream](../../read-models/per-stream.mdx).
 
 ## Using passive projections
 
@@ -36,24 +38,28 @@ Events should match the read model structure or use explicit mapping:
 
 When you call `GetInstanceById` on a passive projection:
 
-1. Chronicle retrieves all relevant events for the specified event source ID
-2. The projection logic is applied to reconstruct the read model in memory
-3. The resulting read model is returned without being persisted
-4. Each call reconstructs the model from scratch, ensuring up-to-date data
+1. The first read folds relevant events for the specified event source ID in memory.
+2. Chronicle retains the computed state and its last handled sequence number in the immediate-projection activation.
+3. Later reads reuse that state and apply newer events; if no relevant events were appended, the cached result is returned.
+4. The result has no persistent read-model sink. If the activation loses its cache, a later read reconstructs it.
+
+By-ID reads select one event source. A cross-source join or custom-key aggregation cannot generally
+reconstruct the same answer as its materialized counterpart this way. See
+[consistency models](../../read-models/consistency.md) before making an existing projection passive.
 
 ## When to use passive projections
 
 Passive projections are ideal for:
 
 - **Infrequent queries**: When read models are accessed rarely or sporadically
-- **Real-time data**: When you always need the most current state without caching concerns
-- **Memory-sensitive scenarios**: When you want to avoid storing projection state
+- **Current source state**: When you need an on-demand fold instead of waiting for materialization
+- **Storage-sensitive scenarios**: When you want to avoid a persistent read-model sink
 - **Temporary calculations**: For read models that are computed and discarded
 - **Testing and debugging**: When you need to inspect event-driven state without persistence
 
 ## Performance considerations
 
-- Passive projections have higher latency since they reconstruct on each request
-- They consume more CPU but less storage compared to active projections
-- Consider caching strategies if the same passive projection is accessed frequently
-- Use for read models with simple event processing logic to minimize reconstruction time
+- A cold read folds the history; a warm read can apply only the newer events.
+- Passive projections trade persistent storage for read-time processing and cached memory.
+- Plan for cold-read cost even when repeated reads benefit from the kernel's cache.
+- Use bounded, source-local histories when read latency matters.

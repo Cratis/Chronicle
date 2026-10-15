@@ -1,0 +1,19 @@
+projection Project => ProjectReadModel
+  from ProjectCreated
+    Name = name
+    ManagerId = managerId
+
+  join User on ManagerId
+    with UserCreated
+      ManagerName = name
+
+  children tasks identified by taskId
+    from TaskAdded
+      Title = title
+      AssignedTo = assigneeId
+
+    join User on AssignedTo
+      with UserCreated
+        AssigneeName = name
+      with UserUpdated
+        AssigneeName = name

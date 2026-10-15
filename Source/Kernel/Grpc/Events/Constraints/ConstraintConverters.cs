@@ -17,6 +17,7 @@ internal static class ConstraintConverters
     /// </summary>
     /// <param name="constraint"><see cref="Contracts.Events.Constraints.Constraint"/> to convert from.</param>
     /// <returns>Collection of <see cref="IConstraintDefinition"/>.</returns>
+    /// <exception cref="UnknownConstraintType">The type is unknown or its closing declaration is absent.</exception>
     public static IConstraintDefinition ToChronicle(this Contracts.Events.Constraints.Constraint constraint)
     {
         var scope = constraint.Scope?.ToChronicle();
@@ -32,7 +33,9 @@ internal static class ConstraintConverters
                     constraint.Definition.Value0!.IgnoreCasing,
                     scope)
                 {
-                    EventSequences = eventSequences
+                    EventSequences = eventSequences,
+                    Mode = (UniqueConstraintMode)constraint.Definition.Value0!.Mode,
+                    RemovalEventDefinitions = constraint.Definition.Value0!.RemovalEventDefinitions.Select(_ => _.ToChronicle()).ToArray()
                 },
 
             Contracts.Events.Constraints.ConstraintType.UniqueEventType =>
@@ -45,7 +48,18 @@ internal static class ConstraintConverters
                     EventSequences = eventSequences
                 },
 
-            _ => null!
+            Contracts.Events.Constraints.ConstraintType.ClosesStream when constraint.ClosesStream is not null =>
+                new ClosesStreamConstraintDefinition(
+                    constraint.Name,
+                    constraint.ClosesStream.EventTypeIds.Select(id => (EventTypeId)id).ToArray(),
+                    (ClosedStreamDimensions)constraint.ClosesStream.Dimensions,
+                    constraint.ClosesStream.ReopenedBy.Select(id => (EventTypeId)id).ToArray(),
+                    constraint.ClosesStream.EventStreamIdFrom)
+                {
+                    EventSequences = eventSequences
+                },
+
+            _ => throw new UnknownConstraintType(constraint.GetType())
         };
     }
 

@@ -95,6 +95,7 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="isReplayable">Whether the observer supports replay scenarios. Defaults to true.</param>
     /// <param name="filters">Optional <see cref="ObserverFilters"/> to apply when observing events.</param>
     /// <param name="reactivateRetired">Whether explicit registration may start a fresh lifecycle for a retired observer. Automatic recovery must pass false.</param>
+    /// <param name="automatic">Whether this subscription is automatic reconciliation, which updates the subscription without ending quarantine.</param>
     /// <returns>Awaitable task.</returns>
     Task Subscribe<TObserverSubscriber>(
         ObserverType type,
@@ -103,8 +104,38 @@ public interface IObserver : IGrainWithStringKey
         object? subscriberArgs = default,
         bool isReplayable = true,
         ObserverFilters? filters = default,
-        bool reactivateRetired = true)
+        bool reactivateRetired = true,
+        bool automatic = false)
         where TObserverSubscriber : IObserverSubscriber;
+
+    /// <summary>
+    /// Subscribes with an explicit generation delivery policy without changing the legacy grain method.
+    /// </summary>
+    /// <typeparam name="TObserverSubscriber">The subscriber type.</typeparam>
+    /// <param name="type">The observer type.</param>
+    /// <param name="eventTypes">The subscribed event types.</param>
+    /// <param name="siloAddress">The subscriber's silo.</param>
+    /// <param name="generationDelivery">The generation delivery policy.</param>
+    /// <param name="subscriberArgs">The subscriber arguments.</param>
+    /// <param name="isReplayable">Whether the observer supports replay.</param>
+    /// <param name="filters">The observation filters.</param>
+    /// <param name="reactivateRetired">Whether retired observers may reactivate.</param>
+    /// <param name="automatic">Whether registration is automatic.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SubscribeWithGenerationDelivery<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        EventGenerationDelivery generationDelivery,
+        object? subscriberArgs = default,
+        bool isReplayable = true,
+        ObserverFilters? filters = default,
+        bool reactivateRetired = true,
+        bool automatic = false)
+        where TObserverSubscriber : IObserverSubscriber =>
+        generationDelivery == EventGenerationDelivery.Compatibility
+            ? Subscribe<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, reactivateRetired, automatic)
+            : Task.FromException(new EventGenerationDeliveryNotSupported());
 
     /// <summary>
     /// Subscribe a kernel observer additively, retaining the highest generation of every already subscribed type.
@@ -207,7 +238,7 @@ public interface IObserver : IGrainWithStringKey
     /// <summary>
     /// Rewind the observer.
     /// </summary>
-    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the observer is not replayable.</returns>
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the observer is not replayable or not in a state it can replay from (disconnected, quarantined).</returns>
     Task<JobId> Replay();
 
     /// <summary>
@@ -276,6 +307,16 @@ public interface IObserver : IGrainWithStringKey
     Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Notify that a partition replay finished, including how far the replay read.
+    /// </summary>
+    /// <param name="partition">The partition being replayed.</param>
+    /// <param name="lastHandledEventSequenceNumber">The last event sequence number handled by the replay, or <see cref="EventSequenceNumber.Unavailable"/> when it handled nothing.</param>
+    /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the replay read for the partition, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when the replay did not complete.</param>
+    /// <param name="replayedEventTypes">The event types included in the replay, or empty when the replay cannot prove it handled the partition's failed event.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes);
+
+    /// <summary>
     /// Notify that the partition has failed.
     /// </summary>
     /// <param name="partition">The partition that failed.</param>
@@ -301,6 +342,27 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
     Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
+    /// Notify that the partition has recovered, including how far the recovery read.
+    /// </summary>
+    /// <param name="partition">The partition that has recovered.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event the recovery handled, or <see cref="EventSequenceNumber.Unavailable"/> when it handled nothing.</param>
+    /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the recovery read for the partition, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when it read nothing.</param>
+    /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
+    Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
+
+    /// <summary>
+    /// Notify that a recovery attempt ended without recovering the partition and without recording a new failure.
+    /// </summary>
+    /// <param name="partition">The partition that is still failed.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The retry reminder is removed when the recovery starts, so the partition needs another retry scheduled.
+    /// </remarks>
+    [AlwaysInterleave]
+    Task FailedPartitionNotRecovered(Key partition);
 
     /// <summary>
     /// Notify that the partition has partially recovered.
@@ -395,12 +457,40 @@ public interface IObserver : IGrainWithStringKey
     Task CaughtUp(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Notify that the observer has been caught up, including how far the catchup read.
+    /// </summary>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
+    /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the catchup read, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when the catchup did not complete every step.</param>
+    /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
+    Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
+
+    /// <summary>
+    /// Notify that a specific catch-up job concluded, including how far it read.
+    /// </summary>
+    /// <param name="jobId">The catch-up job that concluded.</param>
+    /// <param name="lastHandledEventSequenceNumber">The last handled event.</param>
+    /// <param name="lastScannedEventSequenceNumber">The last scanned event, or unavailable when not every step completed.</param>
+    /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
+    Task CaughtUp(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
+
+    /// <summary>
     /// Notify that the partition was caught.
     /// </summary>
     /// <param name="partition">The partition that has caught up.</param>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
+    /// Notify that the partition was caught up, including how far the catchup read.
+    /// </summary>
+    /// <param name="partition">The partition that has caught up.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
+    /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the catchup read for the partition, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when the catchup did not complete.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
 
     /// <summary>
     /// Attempt to recover a failed partition.
@@ -423,6 +513,24 @@ public interface IObserver : IGrainWithStringKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task ClearFailedPartitions();
+
+    /// <summary>
+    /// Fast forward the observer to the tail of the event sequence, skipping all events it has not yet handled
+    /// without invoking its subscriber.
+    /// </summary>
+    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    Task<FastForwardResult> FastForward();
+
+    /// <summary>
+    /// Position a brand new observer at the tail of the event sequence, so that it does not observe history that
+    /// predates its first registration.
+    /// </summary>
+    /// <remarks>
+    /// Only an observer that has never been persisted is positioned. One that already has state keeps its position,
+    /// which makes the call safe to repeat on every registration. Call it before subscribing.
+    /// </remarks>
+    /// <returns>True if the observer was new and has been positioned at the tail, false if it already existed.</returns>
+    Task<bool> StartAtTailWhenNew();
 
     /// <summary>
     /// Attempt to recover all failed partitions.

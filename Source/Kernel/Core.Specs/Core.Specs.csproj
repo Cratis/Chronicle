@@ -14,6 +14,9 @@
 
     <ItemGroup>
         <ProjectReference Include="../Core/Core.csproj" />
+        <ProjectReference Include="../Storage.InMemory/Storage.InMemory.csproj" />
+        <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
+        <ProjectReference Include="../Storage.Sql/Storage.Sql.csproj" />
         <!-- Keep the client isolated: its mirrored concepts share names with kernel types. -->
         <ProjectReference Include="../../Clients/DotNET/DotNET.csproj">
             <Aliases>Client</Aliases>
@@ -31,5 +34,8 @@
         <PackageReference Include="protobuf-net.Grpc.Reflection" />
     </ItemGroup>
     <ItemGroup>
+        <None Update="Observation/Webhooks/for_WebhookObserverSubscriber/Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
+        <None Update="Projections/Engine/DefinitionLanguage/ScreenplayExamples/*.pdl;Projections/Engine/DefinitionLanguage/ScreenplayExamples/*.json" CopyToOutputDirectory="PreserveNewest" />
+        <None Update="Projections/Engine/DefinitionLanguage/for_ScreenplayConformance/Cases/*.play" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>

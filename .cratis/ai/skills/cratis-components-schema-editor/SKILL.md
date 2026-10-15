@@ -22,8 +22,8 @@ case where the shape itself is data.
 
 | Package | Version | Verified from |
 | --- | --- | --- |
-| `@cratis/components` | `4.6.0` | its package manifest and the `SchemaEditor` / `ObjectContentEditor` sources |
-| `react` | `^19.0.0` | peer of `@cratis/components@4.6.0` |
+| `@cratis/components` | `4.26.4` | its package manifest and the `SchemaEditor` / `ObjectContentEditor` sources |
+| `react` | `^19.0.0` | peer of `@cratis/components@4.26.4` |
 
 ## The schema type these editors consume
 
@@ -43,7 +43,7 @@ interface JsonSchema {
 interface JsonSchemaProperty {
     id?: string; name?: string; type?: string; format?: string; description?: string;
     items?: JsonSchema; properties?: Record<string, JsonSchemaProperty>;
-    required?: boolean; $ref?: string;
+    required?: string[]; $ref?: string;
 }
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
@@ -55,8 +55,9 @@ Three limits to design around:
   navigation walks `properties` and `items` literally. A schema that relies on
   references will not render its referenced shapes.
 - **`type` is a plain string**, not a union — there is no exhaustiveness check.
-- **`required` is read but never rendered or edited** by `SchemaEditor`. Its
-  table has two columns, Property and Type. Do not promise a required toggle.
+- **Required and key toggles are opt-in.** `allowRequired` edits the object's
+  `required: string[]`; `allowKeyProperty` edits `x-key` (at most one key per
+  object). Both table columns and tree toggles are supported.
 
 ## `SchemaEditor`
 
@@ -65,8 +66,10 @@ import { SchemaEditor } from '@cratis/components/SchemaEditor';
 import type { JsonSchema, TypeFormat } from '@cratis/components/SchemaEditor';
 ```
 
-The editor is internally stateful and pushes the **whole new schema** out on
-every structural change.
+The default `layout='table'` has Edit/Save/Cancel and pushes the **whole new
+schema** out on every structural change. `layout='tree'` applies edits live,
+with `readOnly` for display. Read [tree layout](references/tree-layout.md) when
+using concepts, render slots, selection, parts or controlled property trees.
 
 ```tsx
 const [schema, setSchema] = useState<JsonSchema>(initialSchema);
@@ -84,11 +87,12 @@ const [schema, setSchema] = useState<JsonSchema>(initialSchema);
 
 | Prop | Type | Default |
 | --- | --- | --- |
-| `schema` | `JsonSchema` | **required** |
+| `schema` | `JsonSchema` | required unless a tree is controlled through `properties` |
+| `layout` | `'table' \| 'tree'` | `'table'` |
 | `eventTypeName` | `string` | `''` — the breadcrumb root label |
 | `canEdit` | `boolean` | `true` |
 | `canNotEditReason` | `string` | shown when `canEdit` is false |
-| `onChange` | `(schema: JsonSchema) => void` | receives the complete new schema |
+| `onChange` | `ChangeHandler<JsonSchema>` | complete new schema; optional second metadata argument |
 | `onSave` | `() => void` | takes **no arguments** |
 | `onCancel` | `() => void` | |
 | `editMode` | `boolean` | initial edit state only — see below |
@@ -97,8 +101,14 @@ const [schema, setSchema] = useState<JsonSchema>(initialSchema);
 | `typeFormats` | `TypeFormat[]` | the default vocabulary |
 | `className` | `string` | |
 | `labels` | `Partial<SchemaEditorLabels>` | override every visible and accessible string |
+| `allowRequired` | `boolean` | opt-in Required column/toggle |
+| `allowKeyProperty` | `boolean \| (property, context) => boolean` | opt-in Key column/toggle; table function enables the column |
+| `header` / `footer` | `ReactNode` | content around the properties, both layouts |
+| `isPropertyProtected` | `(property: Property) => boolean` | prevents rename/removal, both layouts |
+| `validatePropertyName` | `(name, property, siblings) => string \| undefined` | extra name check, both layouts |
+| `onPropertyRenamed` / `onPropertyRemoved` | callbacks on the property | both layouts; rename includes previous name |
 
-### Two behaviors that decide how you wire it
+### Table-layout behaviors that decide how you wire it
 
 - **`editMode` is initial state, not a controlled prop.** It seeds the internal
   flag once; changing it later has no effect. Drive edit mode from inside the
@@ -121,10 +131,10 @@ The default vocabulary covers `string` (plain, `guid`, `date-time`, `date`,
 `time`), `integer` (plain, `int16`, `int32`, `int64`), `number` (plain, `float`,
 `double`), and `boolean`. Supply your own `typeFormats` to narrow or extend it.
 
-**`typeFormats` is the only extension point.** There is no registry mapping a
-schema type to a custom editor component — the cell renderers are a fixed
-branch on `array` / `object` / everything else. You can change the vocabulary,
-not the widget.
+`typeFormats` changes the table vocabulary, not its fixed cell renderer.
+Both layouts have header/footer and protection/name callbacks. The tree adds
+concept types, row render slots, `getPropertyRowState`, selection and `pt`;
+see [tree layout](references/tree-layout.md).
 
 Changing a property's type has side effects worth knowing: switching to `array`
 seeds `items` as a string and clears `format`; switching to `object` seeds an
@@ -134,10 +144,10 @@ clears both `items` and `properties`.
 ### Nested navigation
 
 Drilling into an object property or an array's item definition pushes a
-breadcrumb segment. Array item definitions use the reserved path segment
-`$items`, rendered in the breadcrumb as `[items]`. Nested navigation is
-**click-driven only** — the breadcrumbs and rows are not keyboard-operable, so
-do not document a keyboard path that does not exist.
+breadcrumb segment in table layout. Array item definitions use the reserved
+path segment `$items`, rendered as `[items]`. Breadcrumb and drill-in buttons
+are keyboard-activatable; do not promise arrow-key grid navigation. Tree layout
+shows nested properties inline.
 
 ### Property-name validation
 
@@ -147,7 +157,9 @@ among its siblings. Save is disabled while any name is invalid.
 
 ### Localization
 
-`SchemaEditorLabels` has fourteen fields, nine of them accessible names:
+`SchemaEditorLabels` retains fourteen required fields and adds optional labels
+for the tree, concepts, key/required toggles and name diagnostics. The original
+fields include:
 menu actions `edit`, `save`, `cancel`, `addProperty`; accessible names `actions`,
 `navigateBack`, `navigateToItemDefinition`, `navigateToProperties`,
 `propertyName`, `propertyType`, `arrayItemType`, `deleteProperty`; and the
@@ -215,14 +227,14 @@ Anything richer belongs in the caller.
 `ObjectNavigationalBar` (`@cratis/components/ObjectNavigationalBar`) is the
 shared breadcrumb both editors use. Standalone, it takes `navigationPath`,
 `onNavigate`, and `backLabel` (which is both the tooltip and the accessible
-name — localize it). It is click-only, like the editors' own breadcrumbs.
+name — localize it). Its breadcrumb buttons are keyboard-activatable.
 
 ## Styling
 
-Both editors expose `className` only — no `pt`. Restyle their internals with CSS
-scoped under that class, reaching the controls they render (buttons, inputs,
-the embedded `Dropdown`) through their `data-cratis-part` values and the
-`--cratis-*` tokens; there is no global provider pass-through in Components 4 —
+The tree layout of `SchemaEditor` accepts `pt: SchemaEditorParts`; its table
+layout and `ObjectContentEditor` use `className`. Reach internal controls
+through documented `data-cratis-part` values and the `--cratis-*` tokens;
+there is no global provider pass-through in Components 4 —
 see the **cratis-components-styling** skill.
 
 ## Verify
@@ -232,10 +244,10 @@ see the **cratis-components-styling** skill.
   relied on for rendering.
 - The parent holds the schema or object state and updates it from `onChange`;
   `onSave` is treated as a signal, not a carrier of data.
-- `editMode` on `SchemaEditor` is treated as initial state, not a controlled
-  prop.
-- Nothing in the UI or the documentation promises a required-flag toggle,
-  nested object editing, or keyboard navigation in these editors.
+- Table `editMode` is initial state, not controlled; tree edits are live unless
+  `readOnly` or host-controlled through `properties`.
+- Required/key toggles are opted into. No nested **object-instance** editing or
+  arrow-key grid navigation is promised.
 - Every visible and accessible string is supplied through `labels` /
   `backLabel` in a localized application.
 - Lint and the TypeScript build pass.

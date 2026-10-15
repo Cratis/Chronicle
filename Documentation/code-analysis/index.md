@@ -47,7 +47,7 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0035](CHR0035) | Read model declares a reserved compliance subject property | Error | Chronicle reserves `_subject`, `__subject`, and `__subjects` for internal compliance-subject tracking; a same-named property collides with stored metadata |
 | [CHR0036](CHR0036) | Reducer must not have mutable state | Warning | Reducers are re-created and replayed, so mutable instance state or direct storage injection makes the fold non-deterministic; keep them stateless |
 | [CHR0037](CHR0037) | Event type migration generations must belong to one event type | Warning | The two generations referenced by an EventTypeMigration must resolve to the same event type id and differ only by generation, or the migration never applies — checked for both `EventTypeGenerationFor<T>` and the older explicit-id [EventType] style |
-| [CHR0039](CHR0039) | Assertion result is discarded and can never fail | Warning | An awaitable-returning `Should*` assertion on a Cratis testing surface whose result is discarded throws on an awaitable nobody observes, so the assertion silently passes regardless of behavior and CS4014 does not fire outside an async method |
+| [CHR0039](CHR0039) | Assertion result is discarded and can never fail | Error | An awaitable-returning `Should*` assertion on a Cratis testing surface whose result is discarded throws on an awaitable nobody observes, so the assertion silently passes regardless of behavior and CS4014 does not fire outside an async method |
 | [CHR0040](CHR0040) | Several [SetFromContext] for the same event type on one member | Warning | They write the same property in the definition, so only the last declared is kept and the earlier capture is silently dropped; capturing from several *different* event types is the supported use and is not flagged |
 | [CHR0041](CHR0041) | Event filter attribute on a projection has no effect | Warning | A projection observes every event of the types it declares and cannot filter on event metadata — only reactors and reducers can — so [EventStreamType], [EventSourceType], and [FilterEventsByTag] on a projection are silently ignored |
 | [CHR0042](CHR0042) | A joined property is also written locally | Warning | A property written by both a local mapping and a join — model-bound or fluent — always ends up with the joined value regardless of arrival order, so a local write can never reset it; a flag latched from both sides silently sticks |
@@ -62,6 +62,22 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0052](CHR0052) | `[Encrypted]` cannot be applied to an `EventSourceId<T>` | Error | The event source id is used to correlate events and cannot be encrypted |
 | [CHR0053](CHR0053) | `[PII]` and `[Encrypted]` cannot both apply to the same value | Error | Combining them encrypts the value twice, under two different keys, and it cannot be released correctly |
 | [CHR0054](CHR0054) | Reactor method has an unsupported return type | Warning | A reactor method with an event parameter must return a shape Chronicle discovers as a handler |
+| [CHR0055](CHR0055) | Unknown event stream on typed event-source filter | Error | `[FromEventSource<TSource>("stream")]` must name a stream the event source definition declares |
+| [CHR0056](CHR0056) | Explicit routing contradicts typed event-source filter | Error | `[EventSourceType]` or `[EventStreamType]` on the same type may only repeat what `[FromEventSource<TSource>]` already says |
+| [CHR0057](CHR0057) | An artifact must target one read model | Warning | A class implementing multiple closed projection or reducer interfaces fails during default artifact discovery; split it into one artifact per read model |
+
+## Explicit registration evidence
+
+CHR0001, CHR0002, CHR0003, CHR0005 and CHR0007 accept event types nominated by semantically bound `ExplicitArtifacts.RegisterEventType<T>()` or `RegisterEventType(typeof(T), ...)` calls anywhere in the same compilation, including another source file. Their existing diagnostic ids, severities and messages remain unchanged. Reactor return types and event sequences also use that evidence. Explicit `RegisterReactor` and `RegisterReducer` calls opt plain observers into the existing method-signature checks.
+
+This is **possible-registration evidence**, not whole-program verification:
+
+- Dead or conditional calls count even if never executed. A registration on one client does not prove membership on another client.
+- Calls hidden in a referenced library, reflection, plugin, configuration or open-generic wrapper are not proven. A literal closed generic or `typeof` call in source is the supported evidence shape; a variable containing a Type is not evaluated.
+- Callbacks, supplied ids, generations, store ownership and control flow are not interpreted. Other analyzer families remain marker-based; this does not make every rule aware of explicit metadata.
+- Plain migration method roles and endpoint relationships are validated at runtime; the migration-id analyzer does not prove them.
+
+Validate the actual store configuration at runtime. If registration is correct but invisible to these analyzers, suppress only the relevant CHR0001/2/3/5/7 diagnostic at that use site rather than disabling the analyzers globally. See [explicit artifact registration](../clients/dotnet/explicit-artifacts) for the registration and snapshot contract.
 
 ## Quick Fixes
 

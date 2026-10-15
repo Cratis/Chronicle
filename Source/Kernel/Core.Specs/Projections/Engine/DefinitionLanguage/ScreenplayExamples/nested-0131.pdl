@@ -1,0 +1,11 @@
+projection Doc => DocReadModel
+  children tasks identified by taskId
+    from TaskAdded key taskId
+      parent projectId
+      Title = title
+
+    nested assignee
+      from TaskAssigned
+        Name = assigneeName
+        Email = assigneeEmail
+      clear with TaskUnassigned

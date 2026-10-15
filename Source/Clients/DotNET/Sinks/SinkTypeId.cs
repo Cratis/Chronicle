@@ -15,6 +15,11 @@ public record SinkTypeId(string Value) : ConceptAs<string>(Value)
     public static readonly SinkTypeId None = "None";
 
     /// <summary>
+    /// Gets the identifier of the sink that publishes to an event sequence.
+    /// </summary>
+    public static readonly SinkTypeId EventSequence = "EventSequence";
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="SinkTypeId"/>.
     /// </summary>
     /// <param name="value">String value to convert from.</param>

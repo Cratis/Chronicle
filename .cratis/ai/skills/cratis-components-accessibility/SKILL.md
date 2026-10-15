@@ -18,7 +18,7 @@ what is written here.
 
 | Package | Version | Verified from |
 | --- | --- | --- |
-| `@cratis/components` | `4.6.0` | `Source/Dialogs/*` (`DialogInitialFocus`, `DialogImplementation`), `Source/CommandForm/fields/fieldAccessibility.tsx`, `Source/for_accessibility/*`, `Source/SchemaEditor/*`, `Source/ObjectNavigationalBar/*`, `Source/MIGRATION.md`, `Documentation/Styling/pass-through.md`, `Documentation/Common/cratis-components-provider.md`, `Documentation/renderers/index.md` |
+| `@cratis/components` | `4.26.4` | `Source/Dialogs/*` (`DialogInitialFocus`, `DialogImplementation`), `Source/CommandForm/fields/fieldAccessibility.tsx`, `Source/for_accessibility/*`, `Source/SchemaEditor/*`, `Source/ObjectNavigationalBar/*`, `Source/MIGRATION.md`, `Documentation/Styling/pass-through.md`, `Documentation/Common/cratis-components-provider.md`, `Documentation/renderers/index.md` |
 
 Focus, overlay and collection behavior come from React Aria **internally** — the
 dialog is a React Aria `Modal` inside a `ModalOverlay`; you never import React
@@ -90,7 +90,9 @@ different name.
 | `SchemaEditor` | `labels` | — |
 | `ObjectNavigationalBar` | `backLabel` — tooltip **and** accessible name | — |
 | `ToolbarButton` | `title` — required; the accessible name and the tooltip | — |
-| `Toolbar` | `aria-label` | `messages.toolbar` (`label`, default `'Tools'`) |
+| `Toolbar` | `aria-label`, `aria-labelledby` | `messages.toolbar` (`label`, default `'Tools'`) |
+| `ToolbarFolder` drawer | `closeLabel` | `messages.toolbar.closeDrawer` |
+| `FilterPanel` | `aria-label`, `searchAriaLabel` | `messages.filter` (`label`, `searchAriaLabel`) |
 | `ToolbarFanOutItem` / `ToolbarFolder` | `tooltip` / `title` — required | — |
 | `RatingField` | `starAriaLabel` | — |
 | `ChipsField` | `removeAriaLabel` | — |
@@ -187,8 +189,22 @@ nothing.
   motion, forced colors and responsive behavior.** Components supplies semantic
   behavior and the `--cratis-focus-ring` token; it cannot infer the product's
   color relationships.
-- **No skip links, roving-tabindex utilities or live regions** for application
-  layouts beyond the toast region (`messages.notifications.region` names it).
+- **Query state is announced.** Loading rows contain `role='status'`; failure
+  and unauthorized rows contain `role='alert'`. `empty-row` is only for a real
+  empty result. `Message live={false}` avoids double announcement inside an
+  existing live region.
+- **FilterPanel is a named non-modal dialog.** It uses the overlay environment,
+  and Escape returns focus to its anchor. Localize `messages.filter`.
+- **Toolbars navigate by keyboard.** `ToolbarFocusMode.Arrows` is the default
+  (arrows/Home/End, each tool retains its Tab stop); `SingleTabStop` implements
+  the WAI-ARIA toolbar pattern, while `None` keeps native focus. `ToolbarButton`
+  exposes `aria-pressed` when `active` is supplied. Tabs, toggle groups, tag
+  groups and breadcrumbs also provide keyboard semantics; name each control.
+- **ErrorBoundary uses neutral recovery copy**, never exception text. Supply
+  `fallback` (node or `(reset) => node`) to localize it; `onError` reports
+  diagnostics, `onReset` runs before retry remounts only the protected section.
+- **Application layouts still own skip links and announcements.** Library
+  status regions and focus behavior do not certify the surrounding application.
 
 ## Verify
 

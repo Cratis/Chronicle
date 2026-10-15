@@ -35,7 +35,8 @@ public class when_targeting_a_non_administrator : Specification
             _grainFactory,
             _storage,
             Microsoft.Extensions.Options.Options.Create(new Configuration.ChronicleOptions { Authentication = new() { DefaultAdminUsername = "admin" } }),
-            Substitute.For<EventSequences.IEventSerializer>()));
+            Substitute.For<EventSequences.IEventSerializer>(),
+            CorrelationId.New()));
 
     [Fact] void should_reject_the_target() => _exception.ShouldBeOfExactType<InitialPasswordCanOnlyBeSetForAdministrator>();
 }

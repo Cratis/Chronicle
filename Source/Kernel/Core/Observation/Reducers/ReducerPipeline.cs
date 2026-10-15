@@ -57,7 +57,7 @@ public class ReducerPipeline(
     /// <inheritdoc/>
     public async Task Reduce(ReducerContext context, ReducerDelegate reducer)
     {
-        var schema = ReadModel.GetSchemaForLatestGeneration();
+        var schema = ReadModel.GetTargetSchema();
         var storedInitial = await Sink.FindOrDefault(context.Key);
         var initial = storedInitial;
         object? storedSubject = null;

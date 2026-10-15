@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from UserRegistered
+    Name = name
+    Email = contactInfo.email
+    City = address.city

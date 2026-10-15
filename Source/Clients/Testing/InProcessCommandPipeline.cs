@@ -7,6 +7,8 @@ using System.Text.Json;
 using Cratis.Arc;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Testing.EventSequences;
 using KernelCore::Cratis.Chronicle.Setup;
@@ -59,6 +61,7 @@ internal static class InProcessCommandPipeline
         services.AddSingleton(grainFactory);
         services.AddSingleton(storage);
         services.AddSingleton(jsonSerializerOptions);
+        services.AddSingleton<IExpandoObjectConverter>(new ExpandoObjectConverter(new TypeFormats()));
 
         // One accessor instance serves both the request causation and anything else that asks for
         // IHttpContextAccessor. AddCratisArcCore() discovers the host application's own filters and

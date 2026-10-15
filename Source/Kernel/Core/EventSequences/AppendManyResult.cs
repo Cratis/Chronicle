@@ -24,6 +24,16 @@ public class AppendManyResult
     public IEnumerable<EventSequenceNumber> SequenceNumbers { get; init; } = [];
 
     /// <summary>
+    /// Gets the immutable receipt when this append settles an occurrence effect.
+    /// </summary>
+    public Occurrences.EffectReceiptDetails? EffectReceipt { get; init; }
+
+    /// <summary>
+    /// Gets whether the effect was already durable before this attempt.
+    /// </summary>
+    public bool EffectAlreadyRecorded { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether the operation was successful.
     /// </summary>
     public bool IsSuccess => !HasConstraintViolations && !HasConcurrencyViolations && !HasErrors;
@@ -117,6 +127,8 @@ public class AppendManyResult
         ConstraintViolations = ConstraintViolations,
         Errors = Errors,
         ConcurrencyViolations = ConcurrencyViolations,
-        ConcurrencyCheckPerformed = performed
+        ConcurrencyCheckPerformed = performed,
+        EffectReceipt = EffectReceipt,
+        EffectAlreadyRecorded = EffectAlreadyRecorded
     };
 }

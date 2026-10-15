@@ -49,8 +49,12 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// storage, and its sink container is left untouched. Leave unset for a partial registration (for example saving a
     /// single projection), which must never retire anything.
     /// </param>
+    /// <param name="registrant">
+    /// Optional identity of the application registering. It is recorded per projection, and a full set only retires
+    /// projections the same registrant registered - applications sharing an event store never retire each other's.
+    /// </param>
     /// <returns>Awaitable task.</returns>
-    Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null);
+    Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null);
 
     /// <summary>
     /// Forget a single registered projection.

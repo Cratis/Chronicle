@@ -37,6 +37,7 @@ using Cratis.Chronicle.Storage.SequenceQueries;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -65,6 +66,16 @@ public class EventStoreStorage(
     ILoggerFactory loggerFactory) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
+    readonly Occurrences.OccurrencesStorage _occurrences = new(eventStoreDatabase.GetCollection<BsonDocument>("occurrences").Database);
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(eventStoreDatabase.GetCollection<BsonDocument>("trigger-definitions").Database);
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
 
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore;

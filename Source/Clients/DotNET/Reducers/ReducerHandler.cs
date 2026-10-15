@@ -65,6 +65,10 @@ public class ReducerHandler(
     {
         var eventAndContexts = events.Select(@event => new EventAndContext(@event.Content, @event.Context));
         var result = await invoker.Invoke(serviceProvider, eventAndContexts, initial);
+        if (!result.IsSuccess)
+        {
+            return result;
+        }
 
         var modelKey = new ReadModelKey(events.First().Context.EventSourceId.Value);
         var @namespace = eventStore.Namespace;

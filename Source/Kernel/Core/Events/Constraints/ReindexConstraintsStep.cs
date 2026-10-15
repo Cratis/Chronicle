@@ -25,6 +25,12 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="complianceManager"><see cref="IJsonSchemaMetadataManager"/> for releasing (decrypting) PII before hashing.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between ExpandoObject and JsonObject.</param>
 /// <param name="logger">The logger.</param>
+/// <remarks>
+/// Closing constraints rebuild only when explicitly named by the job. Their transitions are staged before
+/// deleting rows. If a redacted property-sourced closing or reopening event has no recoverable scope in the
+/// existing snapshot, that entire owner's rows stay untouched and a structured warning identifies the
+/// constraint and event position. Other constraints still rebuild; no reopening tombstones are retained.
+/// </remarks>
 public class ReindexConstraintsStep(
     [PersistentState(nameof(ReindexConstraintsStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<ReindexConstraintsStepState> state,
@@ -40,7 +46,7 @@ public class ReindexConstraintsStep(
     /// <param name="definition">The <see cref="UniqueConstraintDefinition"/> being reindexed.</param>
     /// <param name="event">The <see cref="AppendedEvent"/> being processed.</param>
     /// <param name="content">The released (plaintext) content of the event.</param>
-    /// <param name="seen">The set of already-cleared (event source, scope) entries for this definition.</param>
+    /// <param name="seen">The already-cleared scopes, each paired with an unspecified event source.</param>
     /// <param name="validator">The <see cref="UniqueConstraintValidator"/> that updates the index.</param>
     /// <param name="uniqueConstraintsStorage">The <see cref="IUniqueConstraintsStorage"/> to update.</param>
     /// <returns>Awaitable task.</returns>
@@ -57,9 +63,12 @@ public class ReindexConstraintsStep(
             @event.Context.EventStreamType,
             @event.Context.EventStreamId);
 
-        if (seen.Add((@event.Context.EventSourceId, scopeKey)))
+        // One step owns the complete sequence for every changed definition. Both retention modes must clear
+        // the whole scope before its first event is replayed, not as each owner is encountered: a later
+        // owner may still hold a stale value that an earlier owner claimed in the history being rebuilt.
+        if (seen.Add((EventSourceId.Unspecified, scopeKey)))
         {
-            await uniqueConstraintsStorage.Remove(@event.Context.EventSourceId, definition.Name, scopeKey);
+            await uniqueConstraintsStorage.ClearValues(definition, scopeKey);
         }
 
         var context = new ConstraintValidationContext(
@@ -116,7 +125,12 @@ public class ReindexConstraintsStep(
             var uniqueConstraintsStorage = namespaceStorage.GetUniqueConstraintsStorage(currentState.EventSequenceId);
             var eventTypesStorage = eventStoreStorage.EventTypes;
 
-            var allConstraintDefinitions = await eventStoreStorage.Constraints.GetDefinitions();
+            var allConstraintDefinitions = (await eventStoreStorage.Constraints.GetDefinitions()).ToArray();
+            var requestedNames = currentState.Changes.Select(change => change.Name).ToHashSet();
+            var closingDefinitions = allConstraintDefinitions.OfType<ClosesStreamConstraintDefinition>()
+                .Where(definition => requestedNames.Contains(definition.Name) && definition.AppliesTo(currentState.EventSequenceId)).ToArray();
+            var closingReindexer = new ClosesStreamConstraintReindexer(namespaceStorage.GetClosedStreamsConstraints(currentState.EventSequenceId), logger);
+            await closingReindexer.Initialize(closingDefinitions);
             var constraintsByName = allConstraintDefinitions
                 .OfType<UniqueConstraintDefinition>()
                 .ToDictionary(_ => _.Name);
@@ -132,7 +146,7 @@ public class ReindexConstraintsStep(
                 .Where(_ => _.AppliesTo(currentState.EventSequenceId))
                 .ToArray();
 
-            if (changedDefinitions.Length == 0)
+            if (changedDefinitions.Length == 0 && closingDefinitions.Length == 0)
             {
                 return JobStepResult.Succeeded(null);
             }
@@ -141,6 +155,8 @@ public class ReindexConstraintsStep(
             var validators = changedDefinitions.ToDictionary(_ => _.Name, _ => new UniqueConstraintValidator(_, uniqueConstraintsStorage));
             var schemaCache = new Dictionary<EventType, EventTypeSchema>();
 
+            // GetFromSequenceNumber supplies an ascending sequence-number cursor in every provider. Consume
+            // its batches and events sequentially so releases precede subsequent claims, including on retry.
             using var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, cancellationToken: cancellationToken);
             while (await cursor.MoveNext())
             {
@@ -158,13 +174,23 @@ public class ReindexConstraintsStep(
                     // PII before establishing the validation context. The append-time index write already uses
                     // plaintext; reindexing must match it or a rebuilt PII index would diverge from new appends.
                     var content = await ReleaseContent(jobStepKey.Scope, jobStepKey.Namespace, @event, eventSchema);
+                    closingReindexer.Include(@event, content);
 
                     foreach (var definition in changedDefinitions)
                     {
-                        await ReindexEvent(definition, @event, content, seenConstraintEntries[definition.Name], validators[definition.Name], uniqueConstraintsStorage);
+                        try
+                        {
+                            await ReindexEvent(definition, @event, content, seenConstraintEntries[definition.Name], validators[definition.Name], uniqueConstraintsStorage);
+                        }
+                        catch (DuplicateUniqueConstraintValue error)
+                        {
+                            logger.SkippingDuplicateUniqueConstraintClaim(definition.Name, @event.Context.EventSourceId, @event.Context.SequenceNumber, error);
+                        }
                     }
                 }
             }
+
+            await closingReindexer.Commit(cancellationToken);
 
             return JobStepResult.Succeeded(null);
         }

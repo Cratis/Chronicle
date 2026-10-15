@@ -1,7 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-arc-command/references/command-result.md -->
 # CommandResult and ValidationResult
 
-Verified against `Cratis.Arc.Core` `22.16.0` and `@cratis/arc` `22.16.0`.
+## Contents
+
+- Server side
+- Severity filtering
+- Client side
+- Executing with a severity
+
+Verified against `Cratis.Arc.Core` and `@cratis/arc` **v22.75.0**.
+Sources: `Source/DotNET/Arc.Core/Commands/CommandResult.cs`,
+`CommandValidationResults.cs` and `Source/JavaScript/Arc/commands/Command.ts`.
 
 ## Server side
 
@@ -37,10 +46,15 @@ value into the error body.
 `ValidationResultSeverity`: `Unknown = 0`, `Information = 1`, `Warning = 2`,
 `Error = 3`.
 
-Only *blocking* results survive onto the result. With no `allowedSeverity`, only
-`Error` blocks — information and warnings are filtered out entirely. With an
-`allowedSeverity`, anything strictly greater than it blocks. So passing
-`Warning` keeps errors blocking and lets warnings through.
+Only *blocking* results survive onto the result. For an unannotated command,
+with no `allowedSeverity`, only `Error` blocks; with a caller threshold, anything
+strictly greater blocks. `[BlockOnValidationSeverity(ValidationResultSeverity.Warning)]`
+(`Cratis.Arc.Commands.ModelBound`) declares an inclusive blocking floor across
+HTTP, Validate, Provide and in-process execution. Caller `X-Allowed-Severity` or
+`allowedSeverity` can tighten, never loosen, that floor; attributed commands
+also block `Unknown`. The generated proxy carries `blockOnValidationSeverity`
+and applies it client-side. This attribute does not change an unannotated
+command's legacy filtering.
 
 ## Client side
 

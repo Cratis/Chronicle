@@ -59,11 +59,17 @@ message EventTypeRegistration {
    repeated EventTypeGenerationDefinition Generations = 3;
    repeated EventTypeMigrationDefinition Migrations = 4;
    string EventStore = 5;
+   EventTypeVisibility Visibility = 6;
 }
 enum EventTypeSource {
    EVENT_TYPE_SOURCE_Unknown = 0;
    Code = 1;
    User = 2;
+}
+enum EventTypeVisibility {
+   Unspecified = 0;
+   Private = 1;
+   Public = 2;
 }
 message ObserveEventTypesRequest {
    string EventStore = 1;

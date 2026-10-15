@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
@@ -137,8 +136,7 @@ static class ChildrenDefinitionExtensions
         bool includeSelfReferencingEvents = false,
         IReadOnlySet<Type>? ancestorCreatorEventTypes = null)
     {
-        var propertyPath = new PropertyPath(memberName);
-        var propertyName = namingPolicy.GetPropertyName(propertyPath);
+        var propertyName = (string)ProjectionPropertyPaths.Resolve(memberName, namingPolicy, ProjectionPathRole.Target);
         var eventTypeId = getOrCreateEventType(eventType);
 
         var keyProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.Key));
@@ -165,7 +163,7 @@ static class ChildrenDefinitionExtensions
         // Apply naming policy to identifiedBy to ensure consistent casing
         var identifiedByWithNaming = string.IsNullOrEmpty(identifiedBy) || identifiedBy == WellKnownExpressions.EventSourceId
             ? identifiedBy
-            : namingPolicy.GetPropertyName(new PropertyPath(identifiedBy));
+            : (string)ProjectionPropertyPaths.Resolve(identifiedBy, namingPolicy, ProjectionPathRole.Target);
 
         if (!targetChildren.TryGetValue(propertyName, out var childrenDef))
         {
@@ -187,8 +185,8 @@ static class ChildrenDefinitionExtensions
             targetChildren[propertyName] = childrenDef;
         }
 
-        var keyExpression = key == WellKnownExpressions.EventSourceId ? key : namingPolicy.GetPropertyName(new PropertyPath(key));
-        var parentKeyExpression = parentKey == WellKnownExpressions.EventSourceId ? parentKey : namingPolicy.GetPropertyName(new PropertyPath(parentKey));
+        var keyExpression = key == WellKnownExpressions.EventSourceId ? key : (string)ProjectionPropertyPaths.Resolve(key, namingPolicy, ProjectionPathRole.Source);
+        var parentKeyExpression = parentKey == WellKnownExpressions.EventSourceId ? parentKey : (string)ProjectionPropertyPaths.Resolve(parentKey, namingPolicy, ProjectionPathRole.Source);
 
         childrenDef.From[eventTypeId] = new FromDefinition
         {
@@ -214,8 +212,7 @@ static class ChildrenDefinitionExtensions
 
                 foreach (var parameter in primaryConstructor.GetParameters())
                 {
-                    var paramPath = new PropertyPath(parameter.Name!);
-                    var paramPropertyName = namingPolicy.GetPropertyName(paramPath);
+                    var paramPropertyName = (string)ProjectionPropertyPaths.Resolve(parameter.Name!, namingPolicy, ProjectionPathRole.Target);
 
                     // Process SetFromContext attributes on constructor parameters. The generic event type is honored,
                     // so [SetFromContext<OtherEvent>] binds the context mapping to OtherEvent rather than the child's
@@ -417,7 +414,7 @@ static class ChildrenDefinitionExtensions
                     // Process Join attributes on constructor parameters
                     foreach (var (joinAttr, joinEventType) in parameter.GetAttributesOfGenericType<JoinAttribute<object>>())
                     {
-                        childrenDef.Join.ProcessJoinAttribute(getOrCreateEventType, namingPolicy, joinAttr, joinEventType, parameter.Name!, paramPropertyName);
+                        childrenDef.Join.ProcessJoinAttribute(getOrCreateEventType, namingPolicy, joinAttr, joinEventType, parameter.Name!, paramPropertyName, childrenDef.IdentifiedBy);
                     }
 
                     // A [RemovedWith] alongside a [ChildrenFrom] on the same parameter is the removal trigger for
@@ -608,7 +605,7 @@ static class ChildrenDefinitionExtensions
         string memberName,
         ICustomAttributeProvider member)
     {
-        var nestedChildName = namingPolicy.GetPropertyName(new PropertyPath(memberName));
+        var nestedChildName = (string)ProjectionPropertyPaths.Resolve(memberName, namingPolicy, ProjectionPathRole.Target);
         if (!parentChildrenDef.Children.TryGetValue(nestedChildName, out var nestedChildDef))
         {
             return;
@@ -873,7 +870,7 @@ static class ChildrenDefinitionExtensions
             p => p.PropertyType == parentIdType && !p.Name.Equals(childKey, StringComparison.OrdinalIgnoreCase));
 
         return match is not null
-            ? namingPolicy.GetPropertyName(new PropertyPath(match.Name))
+            ? (string)ProjectionPropertyPaths.Resolve(match.Name, namingPolicy, ProjectionPathRole.Source)
             : null;
     }
 

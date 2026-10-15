@@ -1,0 +1,37 @@
+---
+title: "CHR0056: Explicit routing contradicts a typed event source filter"
+description: "CHR0056 reports [EventSourceType] or [EventStreamType] on a type whose [FromEventSource<TSource>] filter already implies different values."
+---
+
+## Rule description
+
+`[FromEventSource<TSource>("stream")]` decides both filters of a reactor or reducer: the event source type is the definition's name, and the event stream type is the stream name. If the same type also carries `[EventSourceType]` or `[EventStreamType]`, the explicit value may only repeat what the typed filter implies. A different value contradicts it.
+
+CHR0056 reports each contradicting attribute on its own line. The rule is checked only when the stream exists. If the stream is undeclared, [CHR0055](CHR0055.mdx) reports it instead.
+
+## Severity
+
+Error
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0056/violation" variants="csharp" />
+
+## How to fix
+
+Remove the `[EventSourceType]` and `[EventStreamType]` attributes. The typed filter says the same thing, and it is the one that is checked against the definition.
+
+<ChronicleClientTabs snippet="code-analysis/chr0056/fix" variants="csharp" />
+
+If you really need to filter on a different event source type or stream type, drop `[FromEventSource<TSource>]` and use the two string attributes alone. See [Migrate from string routing](../event-sources/migrating.mdx).
+
+## Why this rule exists
+
+Two filters that disagree can never both match, so the observer would not receive any event, and nothing would say why. The rule reports the disagreement at the attribute that causes it.
+
+## Related topics
+
+- [Filter observers by event source and stream](../event-sources/filtering.mdx)
+- [Migrate from string routing](../event-sources/migrating.mdx)
+- [CHR0055](CHR0055.mdx): unknown event stream on a typed event source filter.
+- [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md): the event source type and stream type are dimensions of a concurrency scope, not only of an observer filter.

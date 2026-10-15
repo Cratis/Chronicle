@@ -30,13 +30,11 @@ When you genuinely need read-after-write for a specific case, you have two tools
 The classic mistake is enforcing a rule by reading a model first: "is this email taken? no → append." Because the read is eventual, two commands can race and both pass. Enforce invariants on the **write side** instead:
 
 - A [constraint](../constraints/) rejects an append that would violate a rule (uniqueness, for example) — evaluated against authoritative state at append time.
-- A **Dynamic Consistency Boundary** scopes a decision to exactly the events it depends on, so the decision is made against consistent state without loading a whole aggregate.
+- A [decision read](../read-models/decision-reads.mdx) guards a rule over state you read first. See the Dynamic Consistency Boundary below.
 
 ## The Dynamic Consistency Boundary
 
-Traditional event sourcing draws the consistency boundary around a fixed **aggregate** — you load all of an entity's events to make any decision about it. That's rigid: real decisions often span more or less than one entity.
-
-A [Dynamic Consistency Boundary](../dynamic-consistency-boundary/) lets the *decision* define the boundary. You scope to precisely the events that matter for the rule you're enforcing — no more, no less — and Chronicle guarantees consistency over that scope. It's the boundary, made to fit the decision instead of the other way around.
+Traditional event sourcing draws the consistency boundary around a fixed aggregate. A [Dynamic Consistency Boundary](../dynamic-consistency-boundary/) lets the decision define it: the append is rejected when an event the decision used changed after it was read. Chronicle gives you that for one event source, optionally narrowed to one stream and to the event types the decision reads. A plain read of a read model, even a fresh one, guards nothing. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) shows which mechanism fits which rule, and [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) says what maps and what does not.
 
 ## How to choose
 
@@ -44,11 +42,13 @@ A [Dynamic Consistency Boundary](../dynamic-consistency-boundary/) lets the *dec
 |---|---|
 | A view to read and render | A normal [projection](./projection.md) — embrace eventual consistency |
 | The UI to update as data changes | An [observable query](../scenarios/real-time-query) |
-| An invariant guaranteed at write time | A [constraint](../constraints/) or a [DCB](../dynamic-consistency-boundary/) |
+| A unique value, or something created once | A [constraint](../constraints/) |
+| A rule over state that must hold while writers race | A [decision read](../read-models/decision-reads.mdx), see [DCB](../dynamic-consistency-boundary/) |
 | Read-after-write for one specific case | A [passive read model](../projections/declarative/passive.mdx), or [waiting for the append's observers](../read-models/consistency.md#read-after-write--waiting-for-a-materialized-read-model) |
 
 ## See also
 
 - [Read Models](../read-models/) — consistency and retrieval in depth.
 - [Dynamic Consistency Boundary](../dynamic-consistency-boundary/) — the full model.
+- [Event sources and streams](../event-sources/index.mdx) — declare the dimensions an append is guarded by.
 - [Designing read models](./designing-read-models) — designing for eventual consistency.

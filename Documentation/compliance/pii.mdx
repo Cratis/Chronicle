@@ -27,6 +27,22 @@ Two gaps remain. Elixir has no way to mark a whole multi-field struct as PII in 
 Whichever path applies, the marker lands on the individual **leaf** values in the schema, not on the object that contains them — so a concept nested inside a value object is still encrypted, and the document keeps its shape on release.
 :::
 
+## Adding PII to an existing event type
+
+You may add `[PII]` to a property in an existing generation without introducing a new generation.
+The kernel accepts the added compliance metadata and logs a warning naming the event type,
+generation and schema property path. Adding `[Encrypted]` security metadata follows the same rule.
+Removing or changing existing protection metadata within that generation is refused.
+
+Only subsequent appends use the new encryption policy. Earlier values remain plaintext and remain
+readable even after the subject's encryption keys are erased. A schema update does not rewrite
+history, and introducing a new generation does not encrypt the original stored generation either.
+
+If historical plaintext must no longer be available, [redact those events](../events/redaction).
+Treat the registration warning as a prompt to review the existing history, not as confirmation that
+it has been protected. During a rolling deployment, writers must retain protection metadata once
+it has been registered; an older writer without it is refused.
+
 ## Marker signatures
 
 The marker, in each client:

@@ -3,9 +3,7 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.ReadModels;
@@ -41,16 +39,15 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// <param name="initialState">Optional initial state for the read model before any events are applied.</param>
 /// <param name="defaults">The <see cref="Defaults"/> to use for service resolution.</param>
 /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving reducer and projection instances.</param>
-public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults defaults, IServiceProvider? serviceProvider)
+public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults defaults, IServiceProvider? serviceProvider) : IDisposable
     where TReadModel : class
 {
     readonly TReadModel? _initialState = initialState;
     readonly INamingPolicy _namingPolicy = new CamelCaseNamingPolicy();
     readonly IEventTypes _eventTypes = defaults.EventTypes;
-    readonly IEventSerializer _eventSerializer = defaults.EventSerializer;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator = defaults.JsonSchemaGenerator;
     readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
-    readonly List<(EventSourceId EventSourceId, object Event)> _collectedEvents = [];
+    readonly List<ReadModelEvent> _collectedEvents = [];
     readonly List<Action<EventStoreForTesting>> _readModelSeeds = [];
     IServiceProvider? _resolvedServiceProvider;
     IClientArtifactsActivator? _artifactsActivator;
@@ -100,7 +97,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <remarks>
     /// This property returns <see langword="null"/> if <see cref="Given"/> has not been used yet or if
     /// the events produced no state changes. Accessing this property triggers event processing the first
-    /// time it is called after events have been collected via <see cref="CollectEventsFor"/> or
+    /// time it is called after events have been collected via <see cref="CollectEventsFor(EventSourceId, IEnumerable{object})"/> or
     /// <see cref="ProcessEventsFor"/>.
     /// When the seeded events materialize more than one instance — for example a multi-source join —
     /// a single result is ambiguous, so this throws <see cref="MultipleInstancesMaterialized"/>; select the
@@ -320,14 +317,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// </remarks>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate with the events.</param>
     /// <param name="events">The event instances to collect in order.</param>
-    public void CollectEventsFor(EventSourceId eventSourceId, IEnumerable<object> events)
-    {
-        _processed = false;
-        foreach (var @event in events)
-        {
-            _collectedEvents.Add((eventSourceId, @event));
-        }
-    }
+    public void CollectEventsFor(EventSourceId eventSourceId, IEnumerable<object> events) =>
+        CollectEventsFor(eventSourceId, events, EventSourceType.Default, EventStreamType.All, EventStreamId.Default);
 
     /// <summary>
     /// Feeds the provided events for a specific event source through the read model's projection or reducer and updates <see cref="Instance"/>.
@@ -346,6 +337,39 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _eventStore?.Dispose();
+        if (serviceProvider is null && Services.Any() && _resolvedServiceProvider is IDisposable disposable) disposable.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Collects events together with their source and stream route.
+    /// </summary>
+    /// <param name="eventSourceId">The event source identifier.</param>
+    /// <param name="events">The event instances to collect in order.</param>
+    /// <param name="eventSourceType">The event source type.</param>
+    /// <param name="eventStreamType">The event stream type.</param>
+    /// <param name="eventStreamId">The event stream identifier.</param>
+    /// <param name="tags">Append tags to combine with static event tags.</param>
+    internal void CollectEventsFor(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        EventSourceType eventSourceType,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        IEnumerable<string>? tags = null)
+    {
+        var appendTags = tags?.ToArray() ?? [];
+        _processed = false;
+        foreach (var @event in events)
+        {
+            _collectedEvents.Add(new(eventSourceId, @event, eventSourceType, eventStreamType, eventStreamId, @event.GetType().GetTags().Concat(appendTags).Distinct(StringComparer.Ordinal).ToArray()));
+        }
+    }
+
     IServiceProvider ResolvedServiceProvider() => _resolvedServiceProvider ??= serviceProvider ?? BuildServiceProvider();
 
 #pragma warning disable CA2000 // Dispose objects before losing scope — held for the scenario's lifetime
@@ -356,7 +380,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     {
         if (_eventStore is null)
         {
-            _eventStore = new EventStoreForTesting(ResolvedServiceProvider(), defaults.ClientArtifactsProvider);
+            _eventStore = new EventStoreForTesting(ResolvedServiceProvider(), defaults.ClientArtifactsProvider, defaults.ScenarioOptions);
+            ((ReadModelsForTesting)_eventStore.ReadModels).DisableObservation();
             foreach (var seed in _readModelSeeds)
             {
                 seed(_eventStore);
@@ -370,7 +395,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     {
         if (!Services.Any())
         {
-            return new DefaultServiceProvider();
+            return ((EventStoreForTesting)defaults.EventStore).ServiceProvider;
         }
 
         Services.AddLogging();
@@ -413,61 +438,36 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         }
     }
 
-    async Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> ProcessEvents(IEnumerable<(EventSourceId EventSourceId, object Event)> events)
+    Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> ProcessEvents(IEnumerable<ReadModelEvent> events)
     {
-        var eventsList = events.ToList();
-        var readModelType = typeof(TReadModel);
-
-        var reducerType = _inlineProjection ? null : FindReducerType(readModelType);
-        if (reducerType is not null)
+        var reducerType = _inlineProjection ? null : FindReducerType(typeof(TReadModel));
+        var fold = new ReadModelFold<TReadModel>
         {
-            var reduced = await ReducerReadModelProcessor.Process<TReadModel>(
-                reducerType,
-                eventsList.Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, Causation.Unknown())),
-                _eventTypes,
-                ArtifactsActivator(),
-                ResolvedServiceProvider(),
-                _namingPolicy,
-                _initialState);
-
-            // A reducer is single-instance; key its result by the event source id it reduced so that
-            // InstanceForEventSourceId / Instances behave the same as for a projection. Only the single-source
-            // case is keyed — reducing events across more than one source is misuse of a single-instance API.
-            var reducerInstances = new Dictionary<EventSourceId, TReadModel>();
-            var distinctEventSourceIds = eventsList.Select(e => e.EventSourceId).Distinct().ToList();
-            if (reduced is not null && distinctEventSourceIds.Count == 1)
-            {
-                reducerInstances[distinctEventSourceIds[0]] = reduced;
-            }
-
-            return (reduced, reducerInstances);
-        }
-
-        var projectionDefinition = ProjectionDefinition();
-        if (projectionDefinition is not null)
-        {
-            return await ProjectionReadModelProcessor.Process(
-                projectionDefinition,
-                eventsList,
-                _eventTypes,
-                _eventSerializer,
-                _jsonSchemaGenerator,
-                _initialState,
-                _strictEventSubscription);
-        }
-
-        throw new NoReadModelHandlerFound(readModelType);
+            EventStore = EventStore(),
+            EventTypes = _eventTypes,
+            SchemaGenerator = _jsonSchemaGenerator,
+            ServiceProvider = ResolvedServiceProvider(),
+            ReducerType = reducerType,
+            ProjectionDefinition = reducerType is null ? ProjectionDefinition() : null,
+            InitialState = _initialState,
+            StrictEventSubscription = _strictEventSubscription
+        };
+        return fold.Process(events);
     }
 
     Type? FindReducerType(Type readModelType) =>
-        ClientArtifactsProvider.Reducers.FirstOrDefault(t =>
-            t.GetInterfaces().Any(i =>
-                i.IsGenericType &&
-                i.GetGenericTypeDefinition() == typeof(IReducerFor<>) &&
-                i.GetGenericArguments()[0] == readModelType));
+        EventStore().ExplicitSnapshot.Projections.Any(_ => _.ReadModelType == readModelType) ? null :
+        EventStore().Reducers.GetAllHandlers().FirstOrDefault(_ => _.ReadModelType == readModelType)?.ReducerType;
 
     Contracts.Projections.ProjectionDefinition? FindProjectionDefinition(Type readModelType)
     {
+        var explicitProjection = EventStore().ExplicitSnapshot.Projections.FirstOrDefault(_ => _.ReadModelType == readModelType);
+        if (explicitProjection is not null)
+        {
+            return ((Projections.Projections)EventStore().Projections).Definitions
+                .FirstOrDefault(_ => _.Identifier == explicitProjection.Id.Value);
+        }
+
         // Try fluent IProjectionFor<TReadModel> projection
         var projectionType = ClientArtifactsProvider.Projections.FirstOrDefault(t =>
             t.GetInterfaces().Any(i =>
@@ -539,6 +539,36 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 
     Contracts.Projections.ProjectionDefinition? BuildFluentProjectionDefinition(Type projectionType, Type readModelType)
     {
+        var variantDeclarations = new Dictionary<Type, FluentVariantDeclaration>();
+        var definition = CreateFluentDefinition(projectionType, readModelType, variantDeclarations);
+
+        if (!variantDeclarations.TryGetValue(projectionType, out var declaration))
+        {
+            return definition;
+        }
+
+        // A fluent variant is told what removes it only once its siblings are known, which discovery does after
+        // building every projection. Do the same for the group this projection belongs to, so entering the variant
+        // moves the entity out of the others here as it does under a running kernel.
+        var definitions = new Dictionary<Type, Contracts.Projections.ProjectionDefinition> { [projectionType] = definition };
+        foreach (var siblingType in ClientArtifactsProvider.Projections.Where(candidate => candidate != projectionType))
+        {
+            var siblingReadModelType = siblingType.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0];
+            var siblingDeclarations = new Dictionary<Type, FluentVariantDeclaration>();
+            var sibling = CreateFluentDefinition(siblingType, siblingReadModelType, siblingDeclarations);
+            if (siblingDeclarations.TryGetValue(siblingType, out var siblingDeclaration) && siblingDeclaration.Identity == declaration.Identity)
+            {
+                variantDeclarations[siblingType] = siblingDeclaration;
+                definitions[siblingType] = sibling;
+            }
+        }
+
+        VariantReclassifier.CrossWireGroups(definitions, variantDeclarations);
+        return definition;
+    }
+
+    Contracts.Projections.ProjectionDefinition CreateFluentDefinition(Type projectionType, Type readModelType, IDictionary<Type, FluentVariantDeclaration> variantDeclarations)
+    {
         var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(readModelType);
         var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<TReadModel>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)
             ?? throw new ProjectionDefinitionBuildFailed(projectionType, new InvalidOperationException("CreateAndDefine method not found on ProjectionDefinitionCreator."));
@@ -550,7 +580,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 _namingPolicy,
                 _eventTypes,
                 ArtifactsActivator(),
-                _jsonSerializerOptions
+                _jsonSerializerOptions,
+                variantDeclarations
             ])!;
 
         if (result.TryGetException(out var exception))

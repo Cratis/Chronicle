@@ -15,13 +15,17 @@ namespace Cratis.Chronicle.Seeding;
 /// <param name="GlobalByEventType">Global seed entries grouped by event type.</param>
 /// <param name="GlobalByEventSource">Global seed entries grouped by event source.</param>
 /// <param name="NamespacedEntries">Seed entries scoped to specific namespaces.</param>
+/// <param name="GlobalSetIsAuthoritative">Whether the global entries replace the owner's declaration and legacy entries.</param>
+/// <param name="GlobalSetOwner">The program identifier supplying the global entries.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventSeeding)]
 public record SeedEvents(
     EventStoreName EventStore,
     IEnumerable<Contracts.Seeding.EventTypeSeedEntries> GlobalByEventType,
     IEnumerable<Contracts.Seeding.EventSourceSeedEntries> GlobalByEventSource,
-    IEnumerable<Contracts.Seeding.NamespacedSeedEntries> NamespacedEntries)
+    IEnumerable<Contracts.Seeding.NamespacedSeedEntries> NamespacedEntries,
+    bool GlobalSetIsAuthoritative = false,
+    string GlobalSetOwner = "")
 {
     /// <summary>
     /// Handles the command by seeding the global and namespaced entries through their seeding grains.
@@ -35,9 +39,10 @@ public record SeedEvents(
             GlobalByEventSource.SelectMany(_ => _.Entries),
             GlobalByEventType.SelectMany(_ => _.Entries));
 
-        if (globalEntries.Count > 0)
+        if (globalEntries.Count > 0 || GlobalSetIsAuthoritative)
         {
-            await Seed(grainFactory, EventSeedingKey.ForGlobal(EventStore), globalEntries);
+            var grain = grainFactory.GetGrain<IGlobalEventSeeding>(EventSeedingKey.ForGlobal(EventStore).ToString());
+            await grain.SeedGlobalWithResult(ToEntries(globalEntries), GlobalSetIsAuthoritative, GlobalSetOwner);
         }
 
         foreach (var namespacedGroup in NamespacedEntries)
@@ -72,13 +77,18 @@ public record SeedEvents(
     static Task<SeedingResult> Seed(IGrainFactory grainFactory, EventSeedingKey key, IEnumerable<Contracts.Seeding.SeedingEntry> entries)
     {
         var grain = grainFactory.GetGrain<IResultAwareEventSeeding>(key.ToString());
-        return grain.SeedWithResult(
+        return grain.SeedWithResult(ToEntries(entries));
+    }
+
+    static IEnumerable<SeedingEntry> ToEntries(IEnumerable<Contracts.Seeding.SeedingEntry> entries) =>
         [
             .. entries.Select(_ => new SeedingEntry(
                 _.EventSourceId,
                 _.EventTypeId,
                 _.Content,
-                _.Tags?.Select(tag => new Concepts.Events.Tag(tag)).ToArray() ?? []))
-        ]);
-    }
+                _.Tags?.Select(tag => new Concepts.Events.Tag(tag)).ToArray() ?? [],
+                SeedRouting.SourceType(_.EventSourceType),
+                SeedRouting.StreamType(_.EventStreamType),
+                SeedRouting.StreamId(_.EventStreamId)))
+        ];
 }

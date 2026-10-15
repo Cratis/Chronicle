@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-command-validation
-description: Add a rejection rule to an existing Arc command — choosing between ConceptValidator, CommandValidator, a short-circuiting Provide, and a read-model-injected Handle returning Result<TEvent, ValidationResult>. Use when a command must refuse work under some condition. Do not use to define a new command, and do not use for append-time Chronicle constraints.
+description: Add a rejection rule to an existing Arc command — choosing between ConceptValidator, CommandValidator, a short-circuiting Provide, and a read-model-injected Handle returning a Result of either the event or a ValidationResult. Use when a command must refuse work under some condition. Do not use to define a new command, and do not use for append-time Chronicle constraints.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-command-validation/SKILL.md -->
@@ -24,12 +24,18 @@ rejection on it.)
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Core` | `22.16.0` | `CommandValidator<T>`, `ConceptValidator<T>`, `ValidationResult`, `CommandResult`, the command pipeline, `ARC0004`–`ARC0013` |
-| `Cratis.Fundamentals` | `7.19.2` | `Cratis.Monads.Result<TResult, TError>` |
+| `Cratis.Arc.Core` | `22.75.0` | `CommandValidator<T>`, `ConceptValidator<T>`, `ValidationResult`, `CommandResult`, the command pipeline, `ARC0004`–`ARC0013` |
+| `Cratis.Fundamentals` | `7.23.0` | `Cratis.Monads.Result<TResult, TError>` |
 | `Cratis.Chronicle` | `18.3.0` | Read-model resolution for command-side injection |
 | `FluentValidation` | `12.1.1` | `RuleFor(...)`, `.WithMessage(...)` |
 
-> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
+> Arc validation and decision boundaries rechecked at v22.75.0. Arc depends on
+> Chronicle 19.39.1 / Fundamentals 7.23.0; separate product claims retain their
+> version-qualified verification.
+
+Fundamentals rechecked at v7.23.0 in
+[`Result<TResult, TError>`](https://github.com/Cratis/Fundamentals/blob/v7.23.0/Source/DotNET/Fundamentals/Monads/Result%7BTResult,TError%7D.cs):
+success is first, error second, with implicit conversions from both types.
 
 Reverify against the owning product repository before claiming support for
 another version.
@@ -46,7 +52,7 @@ another version.
 - Writing the specification for the rejection: use
   `cratis-application-slice-specifications`.
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
+  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
   `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
   output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
   `cratis-screenplay-modeling-lifecycle`): change the model first with
@@ -63,7 +69,7 @@ another version.
 | A reusable value invariant — length, format, range | `ConceptValidator<T>` on the concept type |
 | Command input, cross-field, or a pre-handler check | `CommandValidator<TCommand>` with `RuleFor(...)` |
 | A dependency on data the handler must fetch first | `Provide()` — fetch, and short-circuit if unusable |
-| State-dependent and must hold **under concurrency** | Inject the read model into `Handle()`, return `Result<TEvent, ValidationResult>` |
+| State-dependent and must hold **under concurrency** | Guard the read with `IStreamReads`/`StreamDecision`, or `[ProtectedDecision]` + `DecisionRead<T>`; return events through Arc |
 | Uniqueness | A Chronicle constraint, never a command-side read |
 | A genuine defect or missing infrastructure | `throw` a domain exception |
 
@@ -145,27 +151,49 @@ public async Task<Result<Customer, ValidationResult>> Provide(IReadModels readMo
   directly, and do not duplicate one rejection in both the validator and
   `Provide()` — pick one owner.
 
-## Step 5 — Concurrency-sensitive rules: the read model in `Handle()`
+## Step 5 — Guard a concurrency-sensitive decision
 
-Use this when the rule depends on accumulated event-sourced state — a count, a
-running total — and must still hold when two requests arrive at once. Arc
-resolves the read model before `Handle()` runs and the handler returns a
-`Result<TEvent, ValidationResult>`: success carries the event, failure carries a
-typed validation error.
+Plain read-model injection or `IReadModels.GetInstanceById` is **advisory**, even
+inside `Handle()` returning `Result<,>`: it enrolls no guard against a competing
+append. Choose the first boundary that fits at Arc v22.75.0:
+
+1. One routed stream: `Provide(IStreamReads reads) => reads.ForCommand()` returns
+   `Task<StreamDecision>`; `Handle(StreamDecision decision)` returns
+   `decision.Append(...)` (`EventsWithConcurrencyScopes`), guarding the read tail.
+2. Projected state: mark the command `[ProtectedDecision]` and take
+   `DecisionRead<T>` (`.Exists`/`.Instance`) or command-aware `IDecisionReads`.
+   Only Chronicle-admitted, direct event-source-keyed projections with known
+   event types qualify; reducers, joins, children and passive shapes are refused.
+   Only parameterless validators constructed/certified by Arc run. Constructor
+   dependencies are refused; static/service-locator decision state is still your
+   responsibility. Command-level `[Unprotected]` opts out, not into safety.
+3. Stream-level automatic scopes: `concurrency: true` on routing attributes
+   (`EventStreamId`, `EventStreamType`, `EventSourceType`). Exact returned scopes
+   take precedence; do not combine automatic capture with exact scopes.
+
+`ARCCHR0011/0012` flag unprotected reads and immediate append bypasses. Return
+events, never append them directly. Read
+[protected and stream decisions](../cratis-arc-command/references/decisions-and-routing.md)
+when choosing the guard. This handler excerpt assumes `CartSummary` is an
+admitted projection; domain types are the slice's existing types.
 
 ```csharp
 using Cratis.Monads;
+using Cratis.Arc.Chronicle.ReadModels;
 
 [Command]
+[ProtectedDecision]
 public record AddItemToCart(CartId CartId, ItemId ItemId)
 {
     /// <summary>Adds the item; rejects when the cart already holds the maximum.</summary>
     /// <param name="cart">The current cart summary, resolved by the command's event-source id.</param>
     /// <returns>The event on success, or a validation error.</returns>
-    public Result<ItemAddedToCart, ValidationResult> Handle(CartSummary cart) =>
-        cart.ItemCount >= 3
-            ? ValidationResult.Error("A cart can hold at most 3 items.")
-            : new ItemAddedToCart(ItemId);
+    public Result<ItemAddedToCart, ValidationResult> Handle(DecisionRead<CartSummary> cart) =>
+        !cart.Exists
+            ? ValidationResult.Error("Cart must exist.")
+            : cart.Instance.ItemCount >= 3
+                ? ValidationResult.Error("A cart can hold at most 3 items.")
+                : new ItemAddedToCart(ItemId);
 }
 ```
 
@@ -197,14 +225,18 @@ var other = await readModels.GetInstanceById<Other>((EventSourceId)otherId);
 A missing instance resolves to `null`, never to a default object. A nullable
 parameter receives that `null`; a non-nullable one is **rejected as a validation
 failure (400)**, not crashed. `ARC0006` warns on a non-nullable command-scoped
-read-model parameter for exactly this reason. `cratis-arc-command` carries the
+read-model parameter for exactly this reason. Handle a nullable parameter by rejecting (a validator,
+`Provide()`, or `Result<TEvent, ValidationResult>`), never by returning a
+nullable event from `Handle()`. `cratis-arc-command` carries the
 full resolution and nullability reference, including the passive-projection case
 where absence is *not* `null`.
 
 ## Step 6 — Specify the rejection
 
 Every rule gets a specification of its failure case, using
-`CommandScenario<TCommand>`. Assert **both** that the command did not succeed
+`CommandScenario<TCommand>`. For protected reads, call `UseDecisionReads()`
+before seeding actual events; pinned read models cannot supply a guard. Queue a
+competing append on the relevant route and assert the conflict. Assert **both** that the command did not succeed
 and that it failed *as a validation*:
 
 ```csharp
@@ -213,8 +245,10 @@ and that it failed *as a validation*:
 ```
 
 `ShouldNotBeSuccessful()` alone cannot tell a rejection from an unhandled
-exception, which is precisely the mistake this skill exists to prevent. Never
-assert on a message string — it is presentation text. See
+exception, which is precisely the mistake this skill exists to prevent. Do not
+assert on a message string by default — it is presentation text. Assert exact
+wording only when it is the specified behavior, and name that requirement in
+the fact. See
 `cratis-application-slice-specifications` for the scenario mechanics.
 
 ## What breaks
@@ -228,9 +262,9 @@ assert on a message string — it is presentation text. See
 - **The rule never fires.** The read-model type has no backing Chronicle
   projection, reducer, `DbSet<T>`, or MongoDB collection, so nothing registered
   it for command-side resolution.
-- **Two requests both win.** The rule is in a validator or a `Provide()` read
-  rather than in `Handle()` with `Result<,>`, or it is a uniqueness rule that
-  belongs in a Chronicle constraint.
+- **Two requests both win.** A plain read was mistaken for a protected decision;
+  moving it to `Handle()` or returning `Result<,>` does not guard it. Enroll a
+  stream/projection decision read, or use an append-time uniqueness constraint.
 - **`ARC0005` on build.** `Provide()` returns a value no `Handle()` parameter
   consumes.
 

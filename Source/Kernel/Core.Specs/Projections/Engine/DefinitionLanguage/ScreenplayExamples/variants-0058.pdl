@@ -1,0 +1,9 @@
+projection WorkItem
+  from TitleChanged
+    title = title
+
+  variant BacklogItem
+    enters on IssueCreated
+
+  variant PullRequestItem
+    enters on PullRequestCreated

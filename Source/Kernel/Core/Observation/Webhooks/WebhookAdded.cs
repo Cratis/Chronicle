@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -25,4 +26,10 @@ public record WebhookAdded(
     WebhookTargetUrl TargetUrl,
     IReadOnlyDictionary<string, string> TargetHeaders,
     bool IsReplayable,
-    bool IsActive);
+    bool IsActive)
+{
+    /// <summary>
+    /// Gets the policy for delivering event generations.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+}

@@ -69,6 +69,13 @@ public class nested_children_with_joins : given.a_model_bound_projection_builder
         var joinDef = teamChildrenDef.Join.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         joinDef.Properties.Keys.ShouldContain(nameof(JoinedTeam.Name));
     }
+
+    [Fact]
+    void should_default_nested_join_on_to_the_child_identity()
+    {
+        var teamChildrenDef = _result.Children[nameof(JoinedOrganization.Departments)].Children[nameof(JoinedDepartment.Teams)];
+        teamChildrenDef.Join.Values.Single().On.ShouldEqual(teamChildrenDef.IdentifiedBy);
+    }
 }
 
 [EventType]
@@ -94,7 +101,7 @@ public record JoinedTeam(
     [Key] JoinedTeamId Id,
 
     [SetFrom<JoinedTeamAdded>]
-    [Join<JoinedTeamRenamed>(nameof(JoinedTeamRenamed.Id))]
+    [Join<JoinedTeamRenamed>]
     string Name);
 
 public record JoinedDepartment(

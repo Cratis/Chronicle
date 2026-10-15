@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 namespace Cratis.Chronicle.AspNetCore.Diagnostics;
 
 /// <summary>
-/// Represents a <see cref="IHealthCheck"/> reporting whether the client holds a live connection to the Chronicle kernel.
+/// Represents a <see cref="IHealthCheck"/> reporting whether the client is connected and its artifact registration succeeded.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="ChronicleHealthCheck"/> class.
@@ -30,9 +30,37 @@ public class ChronicleHealthCheck(IChronicleClient client, IOptions<ChronicleAsp
         try
         {
             var store = await client.GetEventStore(eventStore);
-            return store.Connection.Lifecycle.IsConnected
-                ? HealthCheckResult.Healthy($"Connected to the Chronicle kernel for event store '{eventStore}'.")
-                : new HealthCheckResult(context.Registration.FailureStatus, $"Not connected to the Chronicle kernel for event store '{eventStore}'.");
+            if (!store.Connection.Lifecycle.IsConnected)
+            {
+                return new HealthCheckResult(context.Registration.FailureStatus, $"Not connected to the Chronicle kernel for event store '{eventStore}'.");
+            }
+
+            var registration = store.Registration;
+            if (registration.IsRegistering)
+            {
+                return new HealthCheckResult(context.Registration.FailureStatus, $"Registration is in progress for event store '{eventStore}'.");
+            }
+
+            if (!registration.HasRun && !client.Options.AutoDiscoverAndRegister)
+            {
+                return HealthCheckResult.Healthy($"Connected to the Chronicle kernel for event store '{eventStore}'; automatic registration is off.");
+            }
+
+            if (!registration.HasRun)
+            {
+                return new HealthCheckResult(context.Registration.FailureStatus, $"Registration has not completed for event store '{eventStore}'.");
+            }
+
+            if (!registration.IsSuccess)
+            {
+                var data = new Dictionary<string, object>
+                {
+                    ["failedArtifacts"] = registration.Failures.Select(_ => _.ArtifactType.FullName ?? _.ArtifactType.Name).ToArray()
+                };
+                return new HealthCheckResult(context.Registration.FailureStatus, $"Registration failed for event store '{eventStore}'.", registration.Failure, data);
+            }
+
+            return HealthCheckResult.Healthy($"Connected to the Chronicle kernel for event store '{eventStore}'.");
         }
         catch (Exception ex)
         {

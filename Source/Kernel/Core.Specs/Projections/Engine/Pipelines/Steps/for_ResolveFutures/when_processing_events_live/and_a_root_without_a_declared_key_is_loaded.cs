@@ -14,7 +14,7 @@ public class and_a_root_without_a_declared_key_is_loaded : given.a_first_level_c
     async Task Because()
     {
         await ProcessRoot(RootWith("_id", "root-key"));
-        _resolvedAfterMongoReload = _resolved;
+        _resolvedAfterMongoReload = _result!.PendingFutureSaves.Any();
         _childAfterMongoReload = HasChild;
 
         _resolved = false;

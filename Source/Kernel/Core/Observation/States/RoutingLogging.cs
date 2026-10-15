@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.EventSequences;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.States;
@@ -36,6 +37,9 @@ internal static partial class RoutingLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Observer is ready for observing. Transitioning to observing state.")]
     internal static partial void Observing(this ILogger<Routing> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Could not look up the next relevant event from {NextEventSequenceNumber}: {Error}. Keeping the observer position unchanged and waiting for the next watchdog tick.")]
+    internal static partial void NextEventLookupFailed(this ILogger<Routing> logger, EventSequenceNumber nextEventSequenceNumber, GetSequenceNumberError error);
 
     [LoggerMessage(LogLevel.Debug, "Observer will fast forward to tail of event sequence.")]
     internal static partial void FastForwarding(this ILogger<Routing> logger);

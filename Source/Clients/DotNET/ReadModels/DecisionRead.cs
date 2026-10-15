@@ -33,6 +33,24 @@ public sealed class DecisionRead<T> : IDecisionRead
         IsProtected = true;
     }
 
+    /// <summary>
+    /// Creates a read guarding one event stream independently of the model key.
+    /// </summary>
+    /// <param name="key">The model key.</param>
+    /// <param name="instance">The folded model.</param>
+    /// <param name="store">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="boundary">The pre-fold boundary.</param>
+    /// <param name="types">The event types.</param>
+    /// <param name="streamScope">The event stream to guard.</param>
+    internal DecisionRead(ReadModelKey key, T? instance, EventStoreName store, EventStoreNamespaceName @namespace, EventSequenceNumber boundary, EventType[] types, DecisionReadStreamScope streamScope)
+        : this(key, instance, store, @namespace, boundary, types)
+    {
+        EventStreamType = streamScope.EventStreamType;
+        EventStreamId = streamScope.EventStreamId;
+        _scope = new ConcurrencyScope(boundary, streamScope.EventSourceId, streamScope.EventStreamType, streamScope.EventStreamId, streamScope.EventSourceType, types);
+    }
+
     DecisionRead(ReadModelKey key, T? instance)
     {
         Key = key;
@@ -62,6 +80,12 @@ public sealed class DecisionRead<T> : IDecisionRead
 
     /// <inheritdoc/>
     public EventSequenceId EventSequenceId => EventSequenceId.Log;
+
+    /// <inheritdoc/>
+    public EventStreamType? EventStreamType { get; }
+
+    /// <inheritdoc/>
+    public EventStreamId? EventStreamId { get; }
 
     /// <inheritdoc/>
     ConcurrencyScope IDecisionRead.Scope => _scope;

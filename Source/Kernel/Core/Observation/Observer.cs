@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.DevelopmentTools;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
@@ -40,6 +41,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
@@ -55,7 +57,8 @@ public partial class Observer(
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
-    ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable, IDisposable
+    ILoggerFactory loggerFactory,
+    IEventGenerationRelease? eventGenerationRelease = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
 
@@ -64,7 +67,7 @@ public partial class Observer(
     /// </summary>
     /// <remarks>
     /// A job being started is not listed by the jobs manager until its start completes, so a catch-up arriving in the
-    /// meantime - routing after an interleaved <see cref="CaughtUp"/>, or the appended-events queue triggering one -
+    /// meantime - routing after an interleaved <see cref="CaughtUp(JobId, EventSequenceNumber)"/>, or the appended-events queue triggering one -
     /// would find no owner and start a second job over the same events. It adopts the outcome of this acquisition instead.
     /// </remarks>
     Task<JobId>? _pendingCatchUpAcquisition;
@@ -76,6 +79,12 @@ public partial class Observer(
     bool _stateWritingSuspended;
     bool _resumingQuarantine;
     bool _subscriptionSetupFailed;
+    bool _isQuarantined;
+    bool _recoverSubscriptionAfterQuarantine;
+    bool _retryRecoveryAfterQuarantine;
+    int _owedRecoveryAttempts;
+    int _recoveryGeneration;
+    int _recoveriesInProgress;
 
     /// <summary>
     /// Set once the observer has been removed, so nothing this activation does afterwards writes it back.
@@ -93,6 +102,16 @@ public partial class Observer(
     int _catchUpHandoversInFlight;
 
     /// <summary>
+    /// Completes when the last catch-up handover in flight has finished routing; null while no handover is in flight.
+    /// </summary>
+    /// <remarks>
+    /// A handover routes the observer from an interleaving <see cref="CaughtUp(JobId, EventSequenceNumber)"/> call. A transition requested while that
+    /// routing is in progress is only scheduled, and routing's own choice of next state replaces it. <see cref="Replay"/>
+    /// waits on this before transitioning, so its transition runs in its own turn and is never deferred or replaced.
+    /// </remarks>
+    TaskCompletionSource? _catchUpHandoversSettled;
+
+    /// <summary>
     /// Counts every time catch-up ownership started moving - a handover entering or an acquisition starting.
     /// </summary>
     /// <remarks>
@@ -107,6 +126,11 @@ public partial class Observer(
 
     /// <inheritdoc/>
     protected override Type InitialState => typeof(Routing);
+
+    /// <summary>
+    /// Gets whether the activation is quarantined, independently of reloadable stored-state snapshots.
+    /// </summary>
+    bool IsQuarantined => _isQuarantined;
 
     ObserverDefinition Definition => observerDefinition.State;
 
@@ -124,6 +148,8 @@ public partial class Observer(
     {
         _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
         _observerId = _observerKey.ObserverId;
+        State = State with { Identifier = _observerId };
+        SeedSuspectedSkipOwnership();
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
@@ -169,6 +195,23 @@ public partial class Observer(
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
 
+    /// <inheritdoc/>
+    public async Task ResetForDevelopment()
+    {
+        if (_removed)
+        {
+            return;
+        }
+
+        await Unsubscribe();
+
+        // DeactivateOnIdle only schedules deactivation. Seal first so late callbacks and OnDeactivateAsync cannot
+        // re-persist the old cursor after the resetter wipes storage. This uses the same seal as observer removal,
+        // without deleting any persisted definition here.
+        _removed = true;
+        DeactivateOnIdle();
+    }
+
 #pragma warning disable CA1721 // Property names should not match get methods
     /// <inheritdoc/>
     public Task<ObserverDefinition> GetDefinition() => Task.FromResult(observerDefinition.State);
@@ -193,7 +236,7 @@ public partial class Observer(
     public Task<bool> HasFailedPartitions() => Task.FromResult(Failures.HasFailedPartitions);
 
     /// <inheritdoc/>
-    public Task<bool> IsObserverQuarantined() => Task.FromResult(State.RunningState == ObserverRunningState.Quarantined);
+    public Task<bool> IsObserverQuarantined() => Task.FromResult(IsQuarantined);
 
     /// <inheritdoc/>
     public Task<IEnumerable<Key>> GetFailedPartitionKeys() => Task.FromResult(Failures.Partitions.Select(p => p.Partition));
@@ -202,10 +245,16 @@ public partial class Observer(
     public async Task ClearObserverQuarantine()
     {
         ThrowIfSealed();
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (IsQuarantined)
         {
-            // With nobody subscribed this is the routing pass every activation of an unsubscribed observer already runs, so it drops nothing a plain reactivation would not.
             await ReviveFromQuarantine();
+        }
+        else if (_retryRecoveryAfterQuarantine && _subscription.IsSubscribed)
+        {
+            // The quarantine ended but recovering its subscription never reached a settled state - recovery or the
+            // persistence of a transition failed, dropping the transition that would have carried it on. Clearing
+            // again retries that recovery rather than doing nothing.
+            await RetryRecoveryAfterQuarantine();
         }
     }
 
@@ -295,9 +344,24 @@ public partial class Observer(
         object? subscriberArgs = null,
         bool isReplayable = true,
         ObserverFilters? filters = null,
-        bool reactivateRetired = true)
+        bool reactivateRetired = true,
+        bool automatic = false)
         where TObserverSubscriber : IObserverSubscriber
-        => SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, reactivateRetired: reactivateRetired);
+        => SubscribeWithGenerationDelivery<TObserverSubscriber>(type, eventTypes, siloAddress, EventGenerationDelivery.Compatibility, subscriberArgs, isReplayable, filters, reactivateRetired, automatic);
+
+    /// <inheritdoc/>
+    public Task SubscribeWithGenerationDelivery<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        EventGenerationDelivery generationDelivery,
+        object? subscriberArgs = null,
+        bool isReplayable = true,
+        ObserverFilters? filters = null,
+        bool reactivateRetired = true,
+        bool automatic = false)
+        where TObserverSubscriber : IObserverSubscriber =>
+        SubscribeToEventTypes<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, reactivateRetired: reactivateRetired, automatic: automatic, generationDelivery: generationDelivery);
 
     /// <inheritdoc/>
     public async Task SubscribeToAllEvents<TObserverSubscriber>(
@@ -309,6 +373,7 @@ public partial class Observer(
         where TObserverSubscriber : IObserverSubscriber
     {
         ThrowIfSealed();
+        SupersedeRecoveryAfterQuarantine();
         var owner = GetOwner<TObserverSubscriber>();
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -316,7 +381,7 @@ public partial class Observer(
         logger.Subscribing();
         logger.SubscribingToAllEvents();
 
-        await ReadStateAsync();
+        await ReloadObserverState();
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
         if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
@@ -344,20 +409,7 @@ public partial class Observer(
         State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
 
-        if (await TransitionToReplayIfNeeded())
-        {
-            return;
-        }
-        await ResumeJobs();
-
-        // Recovering failed partitions starts one job per partition through the jobs manager. An observer
-        // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
-        // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
-        // returned: the client timed out, retried, and the observer was recorded as never subscribed.
-        // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards, in
-        // bounded turns of its own that repeated subscribes do not multiply - see Observer.PartitionRecovery.cs.
-        await TryRecoverAllFailedPartitions();
-        await TransitionTo<CatchingUpInFlight>();
+        await RecoverAfterSubscribing(leavesQuarantine: true);
     }
 
     /// <inheritdoc/>
@@ -402,6 +454,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        SupersedeRecoveryAfterQuarantine();
         _subscription = ObserverSubscription.Unsubscribed;
         await PauseJobs();
         await TransitionTo<Disconnected>();
@@ -457,19 +510,13 @@ public partial class Observer(
         }
 
         await UnregisterReminderNamed(reminderName);
-        if (IsRetired || _removed || State.RunningState == ObserverRunningState.Quarantined)
-        {
-            return;
-        }
-
-        if (!_subscription.IsSubscribed)
+        if (CannotRecoverFromReminder())
         {
             return;
         }
 
         // Accept raw names registered by main as well as bounded episode-specific retry names.
-        foreach (var partition in Failures.Partitions.Where(partition => !partition.IsQuarantined &&
-            (PartitionReminderName(partition.Id) == reminderName || partition.Partition.ToString() == reminderName)))
+        foreach (var partition in Failures.Partitions.Where(partition => IsRetryReminderFor(partition, reminderName)))
         {
             await StartRecoverJobForFailedPartition(partition);
         }
@@ -490,6 +537,13 @@ public partial class Observer(
     {
         _subscription = subscription;
     }
+
+    /// <summary>
+    /// Gets whether a recovery owed after a quarantine ended has not yet settled, so the next clearance retries it.
+    /// This is internal and visible to the test suite only.
+    /// </summary>
+    /// <returns>True if the recovery is still owed, false if not.</returns>
+    internal bool OwesRecoveryAfterQuarantine() => _retryRecoveryAfterQuarantine;
 
     /// <summary>
     /// Records, in the observer's metrics, that the observer was quarantined.
@@ -553,29 +607,14 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override async Task OnBeforeEnteringState(IState<ObserverState> state)
     {
+        ResetRecoveryFlagsForEntering(state);
+        _isQuarantined = state is QuarantinedObserver;
         await _alertMutationLock.WaitAsync();
         try
         {
             if (state is BaseObserverState observerState)
             {
-                var wasQuarantined = State.RunningState == ObserverRunningState.Quarantined;
-                var isQuarantined = observerState.RunningState == ObserverRunningState.Quarantined;
-                if (isQuarantined && !wasQuarantined)
-                {
-                    _quarantineEpisodeId = Guid.NewGuid();
-                    ChangeAlertState();
-                }
-                else if (!isQuarantined && wasQuarantined)
-                {
-                    if (_quarantineEpisodeId is { } episode && !_alertEndings.ContainsKey(new(episode)))
-                    {
-                        RememberQuarantineEnding(Concepts.Alerts.AlertClearedReason.Cleared);
-                    }
-
-                    _quarantineEpisodeId = null;
-                    ChangeAlertState();
-                }
-
+                TrackQuarantineAlertFor(observerState);
                 State = State with { RunningState = observerState.RunningState };
             }
         }
@@ -586,13 +625,42 @@ public partial class Observer(
     }
 
     /// <inheritdoc/>
+    protected override async Task OnAfterEnteringState(IState<ObserverState> state)
+    {
+        if (SettlesOwedRecovery(state))
+        {
+            // Settled: the observer is driven forward again, or routing legitimately disconnected an empty
+            // explicitly-typed subscription. The initial Disconnected entry still owes its recovery.
+            _retryRecoveryAfterQuarantine = false;
+            _owedRecoveryAttempts = 0;
+            return;
+        }
+
+        if (state is Disconnected && _recoverSubscriptionAfterQuarantine)
+        {
+            _recoverSubscriptionAfterQuarantine = false;
+            if (_subscription.IsSubscribed)
+            {
+                await RecoverAfterQuarantine();
+            }
+        }
+    }
+
+    /// <inheritdoc/>
     protected override async Task WriteStateAsync()
     {
-        if (_stateWritingSuspended || !_observerExists) return;
+        if (CannotWriteState()) return;
         await _stateWriteLock.WaitAsync();
         try
         {
-            if (_removed || _stateWritingSuspended || !_observerExists) return;
+            if (_removed || CannotWriteState()) return;
+
+            // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
+            // so any write while quarantined persists the quarantine rather than a stale active snapshot.
+            if (IsQuarantined)
+            {
+                State = State with { RunningState = ObserverRunningState.Quarantined };
+            }
 
             // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
             // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
@@ -618,6 +686,19 @@ public partial class Observer(
         }
     }
 
+    static bool IsRetryReminderFor(FailedPartition partition, string reminderName) =>
+        !partition.IsQuarantined &&
+        (PartitionReminderName(partition.Id) == reminderName || partition.Partition.ToString() == reminderName);
+
+    static void ThrowIfPinsMultipleGenerations(IEnumerable<EventType> eventTypes)
+    {
+        var duplicate = eventTypes.GroupBy(_ => _.Id).FirstOrDefault(_ => _.Select(type => type.Generation).Distinct().Count() > 1);
+        if (duplicate is not null)
+        {
+            throw new ObserverPinsMultipleGenerationsOfEventType(duplicate.Key);
+        }
+    }
+
     static bool FiltersAreEqual(ObserverFilters? left, ObserverFilters? right)
     {
         if (left is null || right is null)
@@ -633,6 +714,77 @@ public partial class Observer(
                Equals(left.EventStreamType, right.EventStreamType);
     }
 
+    bool SettlesOwedRecovery(IState<ObserverState> state) =>
+        state is Observing or States.Replay || IsEmptySubscriptionDisconnect(state);
+
+    bool IsEmptySubscriptionDisconnect(IState<ObserverState> state) =>
+        state is Disconnected &&
+        !_recoverSubscriptionAfterQuarantine &&
+        _subscription.IsSubscribed &&
+        !_subscription.EventTypes.Any() &&
+        !State.SubscribesToAllEvents;
+
+    bool CannotWriteState() => _stateWritingSuspended || !_observerExists;
+
+    bool CannotRecoverFromReminder() => IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed;
+
+    void ResetRecoveryFlagsForEntering(IState<ObserverState> state)
+    {
+        // Any transition supersedes a recovery scheduled for when a requested leave enters Disconnected. Entering
+        // Disconnected is how that leave completes, so only that keeps it.
+        if (state is not Disconnected)
+        {
+            _recoverSubscriptionAfterQuarantine = false;
+        }
+
+        // A recovery owed after quarantine stays retryable until it settles. Entering a transient state does not
+        // settle it: the transition carrying it onward is dropped if persisting that entry fails. A new quarantine
+        // supersedes it, since clearing that one owes a recovery of its own.
+        if (state is QuarantinedObserver)
+        {
+            _retryRecoveryAfterQuarantine = false;
+            _owedRecoveryAttempts = 0;
+        }
+    }
+
+    void TrackQuarantineAlertFor(BaseObserverState observerState)
+    {
+        var wasQuarantined = State.RunningState == ObserverRunningState.Quarantined;
+        var isQuarantined = observerState.RunningState == ObserverRunningState.Quarantined;
+        if (isQuarantined && !wasQuarantined)
+        {
+            _quarantineEpisodeId = Guid.NewGuid();
+            ChangeAlertState();
+        }
+        else if (!isQuarantined && wasQuarantined)
+        {
+            if (_quarantineEpisodeId is { } episode && !_alertEndings.ContainsKey(new(episode)))
+            {
+                RememberQuarantineEnding(Concepts.Alerts.AlertClearedReason.Cleared);
+            }
+
+            _quarantineEpisodeId = null;
+            ChangeAlertState();
+        }
+    }
+
+    /// <summary>
+    /// Reloads stored progress without replacing this activation's identity or quarantine.
+    /// </summary>
+    /// <returns>True if storage no longer has a record for this observer, false if it does.</returns>
+    async Task<bool> ReloadObserverState()
+    {
+        await ReadStateAsync();
+        var storageWasReset = State.Identifier == ObserverId.Unspecified;
+        State = State with { Identifier = _observerId };
+        if (IsQuarantined)
+        {
+            State = State with { RunningState = ObserverRunningState.Quarantined };
+        }
+
+        return storageWasReset;
+    }
+
     async Task SubscribeToEventTypes<TObserverSubscriber>(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
@@ -642,14 +794,43 @@ public partial class Observer(
         ObserverFilters? filters,
         bool additive = false,
         bool recovering = false,
-        bool reactivateRetired = true)
+        bool reactivateRetired = true,
+        bool automatic = false,
+        EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility)
         where TObserverSubscriber : IObserverSubscriber
     {
+        eventTypes = eventTypes.ToArray();
+        if (generationDelivery == EventGenerationDelivery.Pinned)
+        {
+            ThrowIfPinsMultipleGenerations(eventTypes);
+
+            var eventTypesStorage = storage.GetEventStore(_observerKey.EventStore).EventTypes;
+            foreach (var eventType in eventTypes)
+            {
+                if (!await eventTypesStorage.HasFor(eventType.Id, eventType.Generation))
+                {
+                    throw new EventTypeGenerationNotRegisteredForObserver(eventType);
+                }
+            }
+        }
+
+        if (!automatic)
+        {
+            _recoverSubscriptionAfterQuarantine = false;
+        }
+
         // Automatic kernel subscription cannot revive a retired observer or a sealed activation.
         // Ordinary Subscribe keeps its explicit-registration semantics, including throwing when sealed.
-        if (additive && (_removed || IsRetired)) return;
+        if (IsAdditiveSubscriptionBlocked(additive)) return;
         ThrowIfSealed();
         if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
+
+        // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.
+        var leavesQuarantine = !automatic && !recovering;
+        if (leavesQuarantine)
+        {
+            SupersedeRecoveryAfterQuarantine();
+        }
 
         if (additive)
         {
@@ -664,16 +845,26 @@ public partial class Observer(
 
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
-            // Ordinary subscription re-reads storage, including after a shared test silo's database reset.
-            // Recovery must retain live progress rather than reload a stale persisted position.
+            // Ordinary subscription and automatic reconciliation re-read storage, including after a shared
+            // test silo's database reset, but must not let a stale snapshot overwrite an interleaved quarantine.
+            // Recovery retains live progress rather than reloading a stale persisted position.
             if (!recovering)
             {
-                await ReadStateAsync();
+                var wasQuarantined = IsQuarantined;
+                var storageWasReset = await ReloadObserverState();
+
                 await observerDefinition.ReadStateAsync();
                 await failures.ReadStateAsync();
+                if (storageWasReset && wasQuarantined && IsQuarantined)
+                {
+                    // The quarantine belonged to a wiped world. Discard it only after all state has been reloaded,
+                    // so routing cannot act on stale definitions or failures from that world.
+                    DiscardQuarantineFromWipedWorld();
+                    await TransitionTo<Routing>();
+                }
             }
 
-            if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
+            if (IsRetiredAndNotReactivating(reactivateRetired)) return;
             await BeginAlertLifecycle();
             if (recovering)
             {
@@ -682,12 +873,13 @@ public partial class Observer(
                 _subscriptionSetupFailed = true;
                 await TransitionTo<Disconnected>();
             }
-            else
+            else if (!automatic)
             {
                 await LeaveQuarantineForSubscription();
             }
 
-            await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters);
+            await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+            await RecoverAfterSubscribing(leavesQuarantine);
 
             // A persisted Active marker alone does not prove setup completed after an entry-write failure.
             _subscriptionSetupFailed = await GetCurrentState() is not (Observing or States.Replay);
@@ -699,13 +891,27 @@ public partial class Observer(
         }
     }
 
+    bool IsRetiredAndNotReactivating(bool reactivateRetired) => !reactivateRetired && State.AlertDisposition == AlertDisposition.Retired;
+
+    bool IsAdditiveSubscriptionBlocked(bool additive) => additive && (_removed || IsRetired);
+
+    void DiscardQuarantineFromWipedWorld()
+    {
+        _recoverSubscriptionAfterQuarantine = false;
+        _isPreparingCatchup = false;
+        NotePreparationEnded();
+        _catchupRecoveryAttempts = 0;
+        _subscription = ObserverSubscription.Unsubscribed;
+    }
+
     async Task SetUpSubscription<TObserverSubscriber>(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs,
         bool isReplayable,
-        ObserverFilters? filters)
+        ObserverFilters? filters,
+        EventGenerationDelivery generationDelivery)
         where TObserverSubscriber : IObserverSubscriber
     {
         var owner = GetOwner<TObserverSubscriber>();
@@ -717,47 +923,27 @@ public partial class Observer(
             Type = type,
             Owner = owner,
             EventTypes = eventTypes,
-            IsReplayable = isReplayable
+            IsReplayable = isReplayable,
+            GenerationDelivery = generationDelivery
         };
         await observerDefinition.WriteStateAsync();
 
-        if (subscriberArgs is ConnectedClient connectedClient)
-        {
-            var target = new ObserverSubscriberTarget(siloAddress, connectedClient);
-            if (CanFanOutInto<TObserverSubscriber>(eventTypes, filters))
-            {
-                // Another instance of the same client is already subscribed with an identical
-                // definition - add this instance as a fan-out target instead of replacing the
-                // subscription. The stable ordering keeps partition selection deterministic.
-                var targets = _subscription.Targets
-                    .Where(existing => existing.ConnectedClient!.ConnectionId != connectedClient.ConnectionId)
-                    .Append(target)
-                    .OrderBy(existing => existing.ConnectedClient!.ConnectionId.Value)
-                    .ToArray();
-                _subscription = _subscription with
-                {
-                    SiloAddress = targets[0].SiloAddress,
-                    Arguments = targets[0].ConnectedClient,
-                    Targets = targets
-                };
-            }
-            else
-            {
-                _subscription = new(
-                    _observerId,
-                    _observerKey,
-                    eventTypes,
-                    typeof(TObserverSubscriber),
-                    siloAddress,
-                    subscriberArgs,
-                    isReplayable,
-                    filters)
-                {
-                    Targets = [target]
-                };
-            }
-        }
-        else
+        ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+
+        State = State with { SubscribesToAllEvents = false };
+        await WriteStateAsync();
+    }
+
+    void ApplySubscription<TObserverSubscriber>(
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        object? subscriberArgs,
+        bool isReplayable,
+        ObserverFilters? filters,
+        EventGenerationDelivery generationDelivery)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        if (subscriberArgs is not ConnectedClient connectedClient)
         {
             _subscription = new(
                 _observerId,
@@ -767,33 +953,54 @@ public partial class Observer(
                 siloAddress,
                 subscriberArgs,
                 isReplayable,
-                filters);
-        }
-
-        State = State with { SubscribesToAllEvents = false };
-        await WriteStateAsync();
-
-        if (await TransitionToReplayIfNeeded())
-        {
+                filters)
+            {
+                GenerationDelivery = generationDelivery
+            };
             return;
         }
-        await ResumeJobs();
 
-        // Recovering failed partitions starts one job per partition through the jobs manager. An observer
-        // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
-        // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
-        // returned: the client timed out, retried, and the observer was recorded as never subscribed.
-        // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards, in
-        // bounded turns of its own that repeated subscribes do not multiply - see Observer.PartitionRecovery.cs.
-        await TryRecoverAllFailedPartitions();
-        await TransitionTo<CatchingUpInFlight>();
+        var target = new ObserverSubscriberTarget(siloAddress, connectedClient);
+        if (CanFanOutInto<TObserverSubscriber>(eventTypes, filters, generationDelivery))
+        {
+            // Another instance of the same client is already subscribed with an identical
+            // definition - add this instance as a fan-out target instead of replacing the
+            // subscription. The stable ordering keeps partition selection deterministic.
+            var targets = _subscription.Targets
+                .Where(existing => existing.ConnectedClient!.ConnectionId != connectedClient.ConnectionId)
+                .Append(target)
+                .OrderBy(existing => existing.ConnectedClient!.ConnectionId.Value)
+                .ToArray();
+            _subscription = _subscription with
+            {
+                SiloAddress = targets[0].SiloAddress,
+                Arguments = targets[0].ConnectedClient,
+                Targets = targets
+            };
+            return;
+        }
+
+        _subscription = new(
+            _observerId,
+            _observerKey,
+            eventTypes,
+            typeof(TObserverSubscriber),
+            siloAddress,
+            subscriberArgs,
+            isReplayable,
+            filters)
+        {
+            Targets = [target],
+            GenerationDelivery = generationDelivery
+        };
     }
 
-    bool CanFanOutInto<TObserverSubscriber>(IEnumerable<EventType> eventTypes, ObserverFilters? filters)
+    bool CanFanOutInto<TObserverSubscriber>(IEnumerable<EventType> eventTypes, ObserverFilters? filters, EventGenerationDelivery generationDelivery)
         where TObserverSubscriber : IObserverSubscriber =>
         _subscription.IsSubscribed &&
         _subscription.Targets.Count > 0 &&
         _subscription.SubscriberType == typeof(TObserverSubscriber) &&
+        _subscription.GenerationDelivery == generationDelivery &&
         _subscription.EventTypes.ToHashSet().SetEquals(eventTypes) &&
         FiltersAreEqual(_subscription.Filters, filters);
 
@@ -841,9 +1048,122 @@ public partial class Observer(
         static bool ShouldPauseJob(JobStatus status) => status is JobStatus.Running or JobStatus.PreparingJob or JobStatus.PreparingSteps or JobStatus.StartingSteps;
     }
 
-    async Task ResumeJobs()
+    async Task RecoverAfterSubscribing(bool leavesQuarantine)
     {
+        if (leavesQuarantine && IsQuarantined)
+        {
+            // The leave was only scheduled because quarantine entry is still stopping its retry work. The new
+            // subscription is in place, so recover once the leave has actually entered Disconnected.
+            _recoverSubscriptionAfterQuarantine = true;
+            _retryRecoveryAfterQuarantine = true;
+            return;
+        }
+
+        await RecoverSubscribedObserver();
+    }
+
+    Task RecoverAfterQuarantine()
+    {
+        // Recovery only schedules the transition out of Disconnected when called from its entry hook. That transition
+        // runs after Disconnected is persisted, and is dropped if the write fails, after this method has returned.
+        // Keep the recovery owed until a settled state is entered, so the operator's next clearance retries it.
+        _retryRecoveryAfterQuarantine = true;
+        return RecoverSubscribedObserver();
+    }
+
+    /// <summary>
+    /// Cancels any recovery owed after a quarantine ended, including one that is running right now.
+    /// </summary>
+    /// <remarks>
+    /// Unsubscribing, a subscription that may end quarantine, and wiping the world quarantine belonged to all replace
+    /// the subscription that recovery was for. A recovery entered from the <see cref="Disconnected"/> entry hook can
+    /// be running in an interleaved call while one of them happens, so moving the generation on is what stops it from
+    /// resuming jobs, retrying partitions or starting catch-up for a subscription that is no longer there.
+    /// </remarks>
+    void SupersedeRecoveryAfterQuarantine()
+    {
+        _recoverSubscriptionAfterQuarantine = false;
+        _retryRecoveryAfterQuarantine = false;
+        _owedRecoveryAttempts = 0;
+        _recoveryGeneration++;
+    }
+
+    /// <summary>
+    /// Retries a recovery owed after a quarantine ended that never reached a settled state.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    async Task RetryRecoveryAfterQuarantine()
+    {
+        switch (await GetCurrentState())
+        {
+            case Disconnected:
+                await RecoverAfterQuarantine();
+                break;
+
+            case Routing or CatchingUpInFlight:
+                // Stranded in a transient state whose onward transition was dropped. Disconnected owns recovery.
+                _recoverSubscriptionAfterQuarantine = true;
+                await TransitionTo<Disconnected>();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Gets whether a recovery has been overtaken since it started, so it must not act any further.
+    /// </summary>
+    /// <param name="recovery">The generation the recovery captured when it started.</param>
+    /// <returns>True if the recovery must stop, false if it may carry on.</returns>
+    bool IsRecoverySuperseded(int recovery) =>
+        IsQuarantined || !_subscription.IsSubscribed || recovery != _recoveryGeneration;
+
+    async Task RecoverSubscribedObserver()
+    {
+        // A newer recovery, an unsubscription or a new subscription supersedes this one. Every await below can let
+        // one of those run in between, so the recovery rechecks before each step and before its onward transition.
+        var recovery = ++_recoveryGeneration;
+        _recoveriesInProgress++;
+        try
+        {
+            if (await TransitionToReplayIfNeeded(recovery))
+            {
+                return;
+            }
+
+            await ResumeJobs(recovery);
+            if (IsRecoverySuperseded(recovery))
+            {
+                return;
+            }
+
+            // Recovering failed partitions starts one job per partition through the jobs manager. An observer
+            // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
+            // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
+            // returned: the client timed out, retried, and the observer was recorded as never subscribed.
+            // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards, in
+            // bounded turns of its own that repeated subscribes do not multiply - see Observer.PartitionRecovery.cs.
+            // Clearing quarantine on a subscribed observer owes the same recovery.
+            await TryRecoverAllFailedPartitions();
+            SeedSuspectedSkipOwnership();
+            await TransitionTo<CatchingUpInFlight>();
+        }
+        finally
+        {
+            _recoveriesInProgress--;
+        }
+    }
+
+    async Task ResumeJobs(int recovery)
+    {
+        if (IsRecoverySuperseded(recovery))
+        {
+            return;
+        }
+
         var unfilteredJobs = await _jobsManager.GetUnfinishedJobs();
+        if (IsRecoverySuperseded(recovery))
+        {
+            return;
+        }
 
         // Explicitly do not resume replay jobs.
         var resumeTasks = unfilteredJobs
@@ -851,7 +1171,9 @@ public partial class Observer(
                           observerJobRequest is not ReplayObserverRequest &&
                           ShouldResumeJob(job.Status) &&
                           observerJobRequest.ObserverKey == _subscription.ObserverKey)
-            .Select(job => _jobsManager.Resume(job.Id));
+            .Select(job => IsRecoverySuperseded(recovery)
+                ? Task.CompletedTask
+                : _jobsManager.Resume(job.Id));
         await Task.WhenAll(resumeTasks);
         return;
 

@@ -29,6 +29,8 @@ public static class EventTypeConverters
             Id = schema.Type.Id,
             Owner = schema.Owner,
             Source = schema.Source,
+            Visibility = schema.Visibility,
+            Origin = schema.Origin ?? string.Empty,
             Tombstone = schema.Type.Tombstone,
             Schemas = new Dictionary<uint, string>
             {
@@ -88,7 +90,9 @@ public static class EventTypeConverters
                schema.Tombstone),
             schema.Owner,
             schema.Source,
-            result);
+            result,
+            schema.Visibility,
+            schema.Origin ?? string.Empty);
     }
 
     /// <summary>
@@ -113,7 +117,9 @@ public static class EventTypeConverters
                schema.Tombstone),
             schema.Owner,
             schema.Source,
-            result);
+            result,
+            schema.Visibility,
+            schema.Origin ?? string.Empty);
     }
 
     /// <summary>

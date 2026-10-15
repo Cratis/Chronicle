@@ -1,0 +1,25 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
+
+/// <summary>
+/// A durable EffectReceiptEntry row.
+/// </summary>
+public class EffectReceiptEntry
+{
+    /// <summary>
+    /// Gets or sets Id.
+    /// </summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the indexed hash of the occurrence identity.
+    /// </summary>
+    public string OccurrenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets Data.
+    /// </summary>
+    public string Data { get; set; } = string.Empty;
+}

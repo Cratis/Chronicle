@@ -3,7 +3,7 @@
 The declarative API lets you define constraints in a dedicated class by implementing `IConstraint`. Chronicle discovers all `IConstraint` implementations automatically — no registration is needed.
 
 :::note[Client coverage]
-Kotlin and Java have a real `IConstraint`/`IConstraintBuilder` API, but it's narrower than C#'s: it has no `RemovedWith` (releasing a held value), no `WithName` (custom constraint names), no dynamic message callback, and its `on(...)` can only target a single event type per unique constraint — no chaining across multiple event types. Tabs on this page that need any of those are marked as gaps for Kotlin/Java rather than silently omitted. Elixir doesn't have a separate declarative-class style at all — see [Model-bound constraints](../model-bound/) for its event-type-attribute equivalent, which does support name-based grouping and releasing.
+Kotlin and Java have a real `IConstraint`/`IConstraintBuilder` API, but it's narrower than C#'s: it has no `RemovedWith` (releasing a held value), no `WithName` (custom constraint names), no dynamic message callback, and its `on(...)` can only target a single event type per unique constraint — no chaining across multiple event types. Tabs on this page that need any of those are marked as gaps for Kotlin/Java rather than silently omitted. Elixir declares a constraint as a standalone module with `use Chronicle.Events.Constraint`, and also as event-type-attribute macros — see [Model-bound constraints](../model-bound/) — both of which support name-based grouping and releasing.
 :::
 
 Use declarative constraints when you need:
@@ -18,6 +18,7 @@ Use declarative constraints when you need:
 |---|---|
 | [Unique property](unique) | Enforce that a property value is unique across one or more event types |
 | [Unique event type](unique-event-type) | Enforce that only one event of a specific type can be appended per event source |
+| [Closing stream](closing-stream) | Close a stream scope when an event of a specific type is appended |
 
 ## Defining a constraint
 

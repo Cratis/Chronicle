@@ -75,6 +75,10 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// </summary>
     public ChronicleRuntimeOptions Options { get; } = ChronicleRuntimeOptions.Parse();
 
+    /// <inheritdoc/>
+    public override bool UsesPerContextMongoDBHost =>
+        Options.Mode == ChronicleRuntimeMode.InProcess && Options.StorageProvider == ChronicleStorageProvider.MongoDB;
+
     /// <summary>
     /// Gets a unique database name for the in-process Orleans silo when running in out-of-process MongoDB mode.
     /// This isolates the in-process silo's grain state from the OOP container's MongoDB databases,

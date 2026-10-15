@@ -24,6 +24,10 @@ The read model type must already be registered by the client, either as a model-
 
 Each client names the operation in its own idiom, but the inputs are the same: the read model type and the read model key.
 
+## Read one stream instance
+
+A model declaring `[EventStream<TSource>(stream)]` must be read with `GetInstanceById<T>(EventSourceId, EventStreamId)`. It keeps the source ID as its model key and folds only that source's declared stream and requested ID. The declaration supplies the event source type as well; events written without that source type are not included. This implies passive and supplies no append guard. A key-only read refuses with `ReadModelRequiresStreamScope` rather than mixing streams. See [Read models scoped to one event stream](per-stream.mdx) for the monthly-limit example and query call.
+
 ## Missing instances
 
 If no instance exists for that key, clients return their normal "not found" shape: `null`, `nil`, or an empty result depending on the language. Treat that as "no state exists yet," not as a projection failure. For a materialized read model this covers both a key that was never created and one that has been removed — the observer is authoritative, so Chronicle does not fall back to a replay that would resurrect it.

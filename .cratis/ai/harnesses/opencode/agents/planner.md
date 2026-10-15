@@ -43,7 +43,7 @@ After selecting the profile and lane, read the applicable entries only:
 Run this once per request, before choosing an implementer; the master text is in `cratis-screenplay-modeling-lifecycle`.
 
 1. **Skill availability is separate from consent.** Check that the Screenplay method skills you need are installed. If they are missing, report which and stop for model work; never author Screenplay from memory and never install anything. Installed skills never opt a repository in.
-2. **Opted in?** Yes only when the model root (default `.cratis/screenplay/`) holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project explicitly set `mcpServers.screenplay.root` in `.cratis/ai.json`. An empty directory, install output, an installed skill, a `.play` file outside the root or an untracked or uncommitted draft is not opt-in; a behavior is a contract only when an accepted model under the root covers it. If your brief already states the decision, use it. Then the `.play` model is the source of truth and the plan starts from it.
+2. **Opted in?** Yes only when the model root (the folder holding the project's `.play` files) holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project explicitly set `mcpServers.screenplay.root` in `.cratis/ai.json`. An empty directory, install output, an installed skill, a `.play` file outside the root or an untracked or uncommitted draft is not opt-in; a behavior is a contract only when an accepted model under the root covers it. If your brief already states the decision, use it. Then the `.play` model is the source of truth and the plan starts from it.
 3. **Not opted in:** stay code-first. Only the entry-point agent or session proposes a model (never when your brief carries the decision), at most once per session, naming the feature it would start with, and never for trivial, bug-fix, infrastructure, client, framework or brownfield-maintenance work; if declined, do not ask again, and put the decision in the brief of every delegated agent. Unattended: record the recommendation in the final report. Framework, brownfield, infrastructure, client and adapter work stays code-first and is never forced into a model.
 4. **Code is the right level for** infrastructure, clients, Screenplay code attachments and handlers, adapters, and scope Stage cannot render yet (gap-fill, with the `.play` slice and specs as the contract). Never use code as a shortcut around the model, change the model to match existing code, edit Stage-managed output, leave a modeled rule living only in code, or weaken protection (authorization, `@pii`, rules) to make a model compile or render.
 5. **Proportional execution still applies.** A model-first request does not require a multi-agent hierarchy: a trivial change is one short plan for one implementer (or the parent).
@@ -52,7 +52,7 @@ Run this once per request, before choosing an implementer; the master text is in
 
 When the decision above says the repository is opted in and the scope is model-owned behavior or a model change (infrastructure, client, adapter and code-attachment/handler work is planned directly as code, keeping any model or spec contract it touches):
 
-- Plan from the `.play` slice and its specifications, not from C# conventions. Detect the slice by name under the model root (configured root, else `.cratis/screenplay/`); an empty root means the feature starts in discovery and slice design.
+- Plan from the `.play` slice and its specifications, not from C# conventions. Detect the slice by name under the model root (configured root, else the folder holding the project's `.play` files); an empty root means the feature starts in discovery and slice design.
 - Consumed events are orientation, not build order. The "State View waits for State Change" rule in the parallelisation rules below applies to hand-written C# only; it does not order model work.
 - Order: `screenplay-modeler` -> `screenplay-reviewer` (fresh context) -> user acceptance -> `screenplay-renderer`. Use `slice-implementer` for gap-fill only, after the renderer reports what Stage cannot render and the work is authorized.
 - The Backend/Specs/Build/Frontend template below is for code-first work and gap-fill; do not use it to bypass an accepted model.
@@ -83,7 +83,7 @@ For an explicitly requested large application scope, adapt this optional numbere
 1. Create `<AppSourceRoot>/<Module?>/<Feature>/<Slice>/<Slice>.cs` with all backend artifacts. Omit `<Module?>` when no natural domain grouping exists; never introduce a top-level `Features/` wrapper.
 
 ### Phase 2 — Specs  [delegate to: spec-writer]
-2. Write in-process scenario specs in `<AppSourceRoot>/<Module?>/<Feature>/<Slice>/when_<behavior>/` for every slice type.
+2. Write specs in `<AppSourceRoot>/<Module?>/<Feature>/<Slice>/when_<behavior>/` for every slice type: `Specification` plus a direct call by default for pure decisions; add in-process scenarios only where the pipeline, validation, constraints, projections or wiring contribute proof.
 
 ### Phase 3 — Build  [run: Debug, then Release]
 3. Run `dotnet build -c Debug` to validate spec code and generate TypeScript proxies.

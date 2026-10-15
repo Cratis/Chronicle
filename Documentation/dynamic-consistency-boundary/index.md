@@ -1,35 +1,61 @@
-# Dynamic Consistency Boundary
+---
+title: Dynamic Consistency Boundary
+description: What a Dynamic Consistency Boundary is, why it replaces fixed aggregate boundaries for many rules, and where to go to apply it in Chronicle.
+---
 
-A Dynamic Consistency Boundary (DCB) defines the minimal set of information that must be consistent to make a decision. The boundary is determined at runtime by the data a command actually uses, rather than by a fixed aggregate or transactional scope. This keeps decisions correct while allowing the rest of the system to remain eventually consistent and independently evolving.
+Use this page to understand the idea. To apply it, go to [Choosing how a rule holds](./choosing.mdx).
 
-## Core idea
+A Dynamic Consistency Boundary (DCB) is the smallest set of facts that must stay unchanged for one decision to be correct. You do not fix it in advance as an aggregate or a stream. The decision defines it when it runs: by the query it used to read its facts.
 
-- Consistency is scoped to the facts used to decide a change.
-- The boundary can cross multiple event streams and read models.
-- Events can still be appended independently once the decision is made.
+## How it works
 
-## How it works in practice
+1. Note the position of the last event you know about, then query the events that matter for the decision.
+2. Decide from what you read.
+3. Append the new events with a condition: fail if any event matching the same query exists after the position you noted.
+4. Let read models catch up asynchronously.
 
-1. Load the facts needed to decide.
-2. Derive a boundary that represents those facts.
-3. Enforce consistency for that boundary only.
-4. Append new events and let read models catch up.
+The position must be noted before you read. If you note it after, events that arrived in between are neither seen by the decision nor caught by the condition.
 
 ```mermaid
 flowchart TD
-    A[Command] --> B[Load decision facts]
-    B --> C[Derive consistency boundary]
-    C --> D[Validate and decide]
-    D --> E[Append events]
-    E --> F[Project read models]
+    A[Command] --> B[Note the position of the log]
+    B --> C[Query the facts the decision needs]
+    C --> D[Decide]
+    D --> E["Append with a condition: fail if a matching event appeared after the position"]
+    E -->|accepted| F[Read models catch up]
+    E -->|rejected| G[Read again and decide again]
 ```
 
 ## Why it matters
 
-A fixed aggregate boundary often forces unrelated data into a single consistency scope. DCB keeps correctness while avoiding unnecessary coupling. It improves throughput, reduces contention, and keeps models aligned with actual decision rules.
+A fixed boundary forces unrelated facts into one consistency scope. A stream or aggregate per entity cannot express a rule that spans two entities, such as a course with a capacity and a student with a course limit, without either merging them or accepting a race. A DCB lets one append be conditional on exactly the facts the decision used, so independent writes do not conflict and dependent writes do.
+
+The cost is that the decision carries its own query and position, and the store must evaluate the condition when it appends. A conflict is normal: the caller reads again and decides again.
+
+## DCB and Chronicle
+
+DCB as specified lets one event belong to several entities through tags, and lets a decision query by any combination of them. Chronicle supports DCB-style decision models and append conditions within its own model, where each event has exactly one event source and tags take no part in consistency. It is not a DCB event store. Where DCB tags one event with a student and a course, Chronicle writes two events, one per event source, in one atomic append. [Dynamic Consistency Boundary in Chronicle](./chronicle.md) says what maps and what does not, and [DCB examples in Chronicle](./dcb-examples.mdx) gives the Chronicle answer to each canonical DCB example.
+
+## When it fits and when it does not
+
+| It fits | It does not fit |
+|---|---|
+| A rule over a count, a stock or a status on one or a few keys | A value that must be unique across all keys. A [constraint](../constraints/index.md) is simpler and cheaper |
+| A rule that spans two entities | A rule that depends on data outside the event log |
+| Writers that rarely touch the same facts at the same time | A single key written by many writers all the time: conflicts will be constant |
+
+## Where to go next
+
+| You want to | Read |
+|---|---|
+| See how Chronicle maps these ideas | [Dynamic Consistency Boundary in Chronicle](./chronicle.md) |
+| See the canonical DCB examples as Chronicle code | [DCB examples in Chronicle](./dcb-examples.mdx) |
+| Declare event sources and streams as the boundary's dimensions | [Event sources and streams](../event-sources/index.mdx) and [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx) |
+| Pick the right mechanism for a rule | [Choosing how a rule holds](./choosing.mdx) |
+| See working examples | [Scenarios](./scenarios.mdx) |
+| Find a quick answer | [Questions and answers](./faq.md) |
 
 ## References
 
-- [https://dcb.events](https://dcb.events)
-- [https://www.eventsourcing.dev/best-practices/dynamic-consistency-boundaries](https://www.eventsourcing.dev/best-practices/dynamic-consistency-boundaries)
-
+- [dcb.events](https://dcb.events): the pattern and its specification.
+- [Killing the aggregate](https://sara.event-thinking.io/2023/04/kill-aggregate-chapter-1-I-am-here-to-kill-the-aggregate.html): the originating argument, with the course subscription example.
