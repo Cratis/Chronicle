@@ -91,10 +91,9 @@ public class ConnectedClients(
     }
 
     /// <inheritdoc/>
-    public async Task OnClientDisconnected(ConnectionId connectionId, string reason)
+    public Task OnClientDisconnected(ConnectionId connectionId, string reason)
     {
         logger.ClientDisconnected(connectionId, reason);
-        await OccurrenceRecovery.ExpireLeases(storage, connectionId.Value, DateTimeOffset.UtcNow);
 
         var client = _clients.Find(_ => _.ConnectionId == connectionId);
         if (client is not null)
@@ -103,6 +102,12 @@ public class ConnectedClients(
         }
 
         meter.ConnectedClients(_clients.Count);
+
+        // Expiry is best effort and must not hold up connection bookkeeping. Leases also expire
+        // by kernel time, so a failed scope only delays redelivery until its lease deadline.
+        var now = DateTimeOffset.UtcNow;
+        _ = Task.Run(() => OccurrenceRecovery.ExpireLeases(storage, connectionId.Value, now, logger));
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

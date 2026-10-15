@@ -37,6 +37,15 @@ public partial class OccurrencesStorage
     }
 
     /// <inheritdoc/>
+    public Task<bool> HasPendingForTrigger(TriggerId trigger)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult(_occurrences.Values.Any(occurrence => occurrence.Trigger == trigger && occurrence.State is OccurrenceState.Pending or OccurrenceState.Leased));
+        }
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<TriggerId>> GetPendingTriggers()
     {
         lock (_lock)

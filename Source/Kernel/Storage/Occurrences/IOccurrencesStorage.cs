@@ -92,6 +92,14 @@ public interface IOccurrencesStorage
     Task ExpireLeases(string worker, DateTimeOffset now) => throw new OccurrencesStorageNotSupported();
 
     /// <summary>
+    /// Tests for unfinished work without reading occurrence payloads or completed history.
+    /// </summary>
+    /// <param name="trigger">The trigger identity.</param>
+    /// <returns>Whether pending or leased work exists.</returns>
+    /// <exception cref="OccurrencesStorageNotSupported">The provider has not implemented queue discovery.</exception>
+    Task<bool> HasPendingForTrigger(TriggerId trigger) => throw new OccurrencesStorageNotSupported();
+
+    /// <summary>
     /// Discovers triggers with pending or leased work, independently of event-log data.
     /// </summary>
     /// <returns>The triggers to rehydrate.</returns>

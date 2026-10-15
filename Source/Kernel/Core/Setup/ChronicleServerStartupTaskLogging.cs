@@ -13,6 +13,9 @@ namespace Orleans.Hosting;
 /// </summary>
 internal static partial class ChronicleServerStartupTaskLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Failed rehydrating occurrences for {EventStore}/{Namespace}. Startup will continue; existing queue reminders can wake the work later")]
+    internal static partial void FailedRehydratingOccurrences(this ILogger<ChronicleServerStartupTask> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName? @namespace);
+
     [LoggerMessage(LogLevel.Warning, "Failed subscribing pattern capture for event store {EventStore} in namespace {Namespace}. Startup will continue; the event log will reconcile the subscription when active")]
     internal static partial void FailedSubscribingPatternCapture(this ILogger<ChronicleServerStartupTask> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 

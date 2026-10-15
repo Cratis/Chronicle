@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Occurrences;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Occurrences;
 
@@ -12,38 +13,78 @@ namespace Cratis.Chronicle.Occurrences;
 /// </summary>
 public static class OccurrenceRecovery
 {
+    static readonly TimeSpan _scopeTimeout = TimeSpan.FromSeconds(30);
+
     /// <summary>
-    /// Wakes every trigger with unfinished work in one scope.
+    /// Wakes triggers with unfinished work in one scope, with bounded fan-out and isolated failures.
     /// </summary>
     /// <param name="factory">The grain factory.</param>
     /// <param name="storage">The scoped occurrence store.</param>
     /// <param name="eventStore">The store.</param>
     /// <param name="namespace">The namespace or null for application scope.</param>
+    /// <param name="logger">The caller's logger.</param>
+    /// <param name="cancellationToken">Token bounding discovery and wake-up work.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task Rehydrate(IGrainFactory factory, IOccurrencesStorage storage, EventStoreName eventStore, string? @namespace)
+    public static async Task Rehydrate(IGrainFactory factory, IOccurrencesStorage storage, EventStoreName eventStore, string? @namespace, ILogger logger, CancellationToken cancellationToken = default)
     {
-        foreach (var trigger in await storage.GetPendingTriggers())
+        var triggers = await storage.GetPendingTriggers().WaitAsync(cancellationToken);
+        await Parallel.ForEachAsync(triggers, new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancellationToken }, async (trigger, token) =>
         {
-            await OccurrenceQueueKey.Resolve(factory, eventStore, @namespace, trigger.Value).Wake();
-        }
+            try
+            {
+                await OccurrenceQueueKey.Resolve(factory, eventStore, @namespace, trigger.Value).Wake().WaitAsync(token);
+            }
+            catch (Exception exception) when (!token.IsCancellationRequested)
+            {
+                logger.FailedWakingOccurrenceQueue(exception, eventStore, @namespace, trigger.Value);
+            }
+        });
     }
 
     /// <summary>
-    /// Expires one connection's leases in every namespace and application scope.
+    /// Expires one connection's leases in every scope without letting one failure stop the others.
     /// </summary>
     /// <param name="storage">The kernel storage.</param>
     /// <param name="worker">The disconnected connection identity.</param>
     /// <param name="now">The kernel instant.</param>
+    /// <param name="logger">The caller's logger.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task ExpireLeases(IStorage storage, string worker, DateTimeOffset now)
+    public static async Task ExpireLeases(IStorage storage, string worker, DateTimeOffset now, ILogger logger)
     {
-        foreach (var name in await storage.GetEventStores())
+        try
         {
-            var store = storage.GetEventStore(name);
-            await store.Occurrences.ExpireLeases(worker, now);
-            foreach (var state in await store.Namespaces.GetAll())
+            foreach (var name in await storage.GetEventStores().WaitAsync(_scopeTimeout))
             {
-                await store.GetNamespace(state.Name).Occurrences.ExpireLeases(worker, now);
+                try
+                {
+                    var store = storage.GetEventStore(name);
+                    await ExpireScope(() => store.Occurrences, name, null);
+                    foreach (var state in await store.Namespaces.GetAll().WaitAsync(_scopeTimeout))
+                    {
+                        await ExpireScope(() => store.GetNamespace(state.Name).Occurrences, name, state.Name.Value);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    logger.FailedDiscoveringOccurrenceScopes(exception, worker, name.Value);
+                }
+            }
+        }
+        catch (Exception exception)
+        {
+            // This runs outside the disconnect turn; no background failure may go unobserved.
+            logger.FailedDiscoveringOccurrenceScopes(exception, worker, null);
+        }
+
+        async Task ExpireScope(Func<IOccurrencesStorage> scope, EventStoreName eventStore, string? @namespace)
+        {
+            try
+            {
+                await scope().ExpireLeases(worker, now).WaitAsync(_scopeTimeout);
+            }
+            catch (Exception exception)
+            {
+                logger.FailedExpiringOccurrenceLeases(exception, worker, eventStore, @namespace);
             }
         }
     }

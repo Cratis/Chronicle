@@ -32,9 +32,13 @@ public partial class OccurrencesStorage
         Builders<BsonDocument>.Update.Set("expiry", now.UtcTicks));
 
     /// <inheritdoc/>
+    public Task<bool> HasPendingForTrigger(TriggerId trigger) => _occurrences.Find(
+        Builders<BsonDocument>.Filter.Eq("trigger", trigger.Value) & Builders<BsonDocument>.Filter.In("state", [(int)OccurrenceState.Pending, (int)OccurrenceState.Leased])).AnyAsync();
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<TriggerId>> GetPendingTriggers()
     {
-        var documents = await _occurrences.Find(Builders<BsonDocument>.Filter.In("state", [(int)OccurrenceState.Pending, (int)OccurrenceState.Leased])).Project(Builders<BsonDocument>.Projection.Include("trigger")).ToListAsync();
-        return documents.Select(document => new TriggerId(document["trigger"].AsString)).Distinct().ToArray();
+        using var cursor = await _occurrences.DistinctAsync<string>("trigger", Builders<BsonDocument>.Filter.In("state", [(int)OccurrenceState.Pending, (int)OccurrenceState.Leased]));
+        return (await cursor.ToListAsync()).Select(trigger => new TriggerId(trigger)).ToArray();
     }
 }

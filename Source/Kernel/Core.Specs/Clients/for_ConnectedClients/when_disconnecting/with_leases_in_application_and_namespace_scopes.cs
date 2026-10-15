@@ -18,6 +18,7 @@ public class with_leases_in_application_and_namespace_scopes : Specification
     readonly ConnectionId _connection = ConnectionId.New();
     readonly IOccurrencesStorage _application = Substitute.For<IOccurrencesStorage>();
     readonly IOccurrencesStorage _tenant = Substitute.For<IOccurrencesStorage>();
+    readonly TaskCompletionSource _expired = new(TaskCreationOptions.RunContinuationsAsynchronously);
     ConnectedClients _clients;
 
     void Establish()
@@ -31,10 +32,19 @@ public class with_leases_in_application_and_namespace_scopes : Specification
         store.Namespaces.GetAll().Returns(Task.FromResult<IEnumerable<NamespaceState>>([new(new("tenant"), DateTimeOffset.UnixEpoch)]));
         store.GetNamespace(new("tenant")).Returns(tenant);
         tenant.Occurrences.Returns(_tenant);
+        _tenant.ExpireLeases(Arg.Any<string>(), Arg.Any<DateTimeOffset>()).Returns(_ =>
+        {
+            _expired.SetResult();
+            return Task.CompletedTask;
+        });
         _clients = new(Substitute.For<ILogger<ConnectedClients>>(), Substitute.For<IMeter<ConnectedClients>>(), Options.Create(new ChronicleOptions()), storage);
     }
 
-    async Task Because() => await _clients.OnClientDisconnected(_connection, "closed");
+    async Task Because()
+    {
+        await _clients.OnClientDisconnected(_connection, "closed");
+        await _expired.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    }
     [Fact] async Task should_expire_application_leases() => await _application.Received(1).ExpireLeases(_connection.Value, Arg.Any<DateTimeOffset>());
     [Fact] async Task should_expire_namespace_leases_without_event_data() => await _tenant.Received(1).ExpireLeases(_connection.Value, Arg.Any<DateTimeOffset>());
 }

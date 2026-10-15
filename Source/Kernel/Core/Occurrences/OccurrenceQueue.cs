@@ -90,7 +90,7 @@ public class OccurrenceQueue(IStorage storage, IOptions<ChronicleOptions> option
     /// <inheritdoc/>
     public async Task Wake()
     {
-        var hasWork = (await _occurrences.GetForTrigger(_trigger)).Any(occurrence => occurrence.State is OccurrenceState.Pending or OccurrenceState.Leased);
+        var hasWork = await _occurrences.HasPendingForTrigger(_trigger);
         if (hasWork)
         {
             await EnsureWake();

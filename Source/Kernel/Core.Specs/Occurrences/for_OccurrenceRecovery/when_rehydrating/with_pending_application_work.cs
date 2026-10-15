@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Storage.Occurrences;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Occurrences.for_OccurrenceRecovery.when_rehydrating;
 
@@ -23,7 +24,7 @@ public class with_pending_application_work : Specification
         });
     }
 
-    async Task Because() => await OccurrenceRecovery.Rehydrate(_factory, _storage, new("store"), null);
+    async Task Because() => await OccurrenceRecovery.Rehydrate(_factory, _storage, new("store"), null, NullLogger.Instance);
     [Fact] async Task should_wake_the_durable_queue_without_event_log_data() => await _queue.Received(1).Wake();
     [Fact] void should_not_route_application_work_into_a_namespace() => JsonSerializer.Deserialize<OccurrenceQueueKey>(_key)!.Namespace.ShouldBeNull();
 }

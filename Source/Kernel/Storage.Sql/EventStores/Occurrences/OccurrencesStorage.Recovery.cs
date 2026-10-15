@@ -35,10 +35,23 @@ public partial class OccurrencesStorage<TContext>
     }
 
     /// <inheritdoc/>
+    public async Task<bool> HasPendingForTrigger(TriggerId trigger)
+    {
+        await using var scope = await open();
+        var hash = StorageIdentity.Hash(trigger.Value);
+        return await scope.DbContext.Set<OccurrenceEntry>().AnyAsync(row => row.Trigger == hash && (row.State == OccurrenceState.Pending || row.State == OccurrenceState.Leased));
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<TriggerId>> GetPendingTriggers()
     {
         await using var scope = await open();
-        var rows = await scope.DbContext.Set<OccurrenceEntry>().AsNoTracking().Where(row => row.State == OccurrenceState.Pending || row.State == OccurrenceState.Leased).ToListAsync();
-        return rows.Select(row => row.ToOccurrence().Trigger).Distinct().ToArray();
+
+        // Trigger is a hash on SQL; read one ingress value per unfinished trigger to recover
+        // its original identity, never materialize every pending occurrence and its payload.
+        var data = await scope.DbContext.Set<OccurrenceEntry>().AsNoTracking()
+            .Where(row => row.State == OccurrenceState.Pending || row.State == OccurrenceState.Leased)
+            .GroupBy(row => row.Trigger).Select(group => group.First().Data).ToListAsync();
+        return data.Select(value => JsonSerializer.Deserialize<Occurrence>(value)!.Trigger).ToArray();
     }
 }
