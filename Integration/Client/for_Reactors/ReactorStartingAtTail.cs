@@ -8,13 +8,16 @@ namespace Cratis.Chronicle.Integration.for_Reactors;
 
 [DependencyInjection.IgnoreConvention]
 [StartAtTail]
-public class ReactorStartingAtTail : IReactor
+public sealed class ReactorStartingAtTail : IReactor, IDisposable
 {
+    readonly SemaphoreSlim _handled = new(0);
+
     public int HandledEvents;
 
     public Task OnSomeEvent(SomeEvent evt, EventContext ctx)
     {
         Interlocked.Increment(ref HandledEvents);
+        _handled.Release();
         return Task.CompletedTask;
     }
 
@@ -24,7 +27,9 @@ public class ReactorStartingAtTail : IReactor
         using var cts = new CancellationTokenSource(timeout.Value);
         while (HandledEvents < count)
         {
-            await Task.Delay(50, cts.Token);
+            await _handled.WaitAsync(cts.Token);
         }
     }
+
+    public void Dispose() => _handled.Dispose();
 }
