@@ -56,7 +56,7 @@ The code is the [Unique username](./scenarios.mdx#unique-username) scenario. Nor
 
 **Chronicle.** Both events go on the sign-up's own event source, identified by a sign-up ID that the confirmation link carries. The token is compared with what the initiating event stored, so it needs no place in the boundary. A decision read of that one key checks the token, the expiry and whether it is already confirmed, and guards the confirmation against a concurrent one.
 
-<ChronicleClientTabs snippet="dynamic-consistency-boundary/dcb-examples/opt-in-token" variants="csharp" />
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/dcb-examples/opt-in-token" variants="csharp,elixir" />
 
 Three details matter:
 
@@ -72,7 +72,7 @@ Three details matter:
 
 **Chronicle.** This is a reduced variant of DCB's rule: the model keeps the current price and the one before it, and accepts the displayed price when it is the current one or the previous one within the grace period. DCB accepts any price within the grace window, even after several changes. Take one decision read per product in the cart, and append one event on the order's own event source with all the reads in `guardedBy`. The product keys are only read, never appended to. If any product's price changed after you read it, the append is rejected and the order is not written.
 
-<ChronicleClientTabs snippet="dynamic-consistency-boundary/dcb-examples/product-price" variants="csharp" />
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/dcb-examples/product-price" variants="csharp,elixir" />
 
 The set of reads is whatever the order contains, so it is dynamic in the same sense as DCB's. One event records the order. Nothing is written to the products. The cost is one fold per product in the cart, so very large carts are the case to measure first.
 
@@ -84,7 +84,7 @@ The set of reads is whatever the order contains, so it is dynamic in the same se
 
 **Chronicle.** Put `[Unique]` on the token property of the event. The client generates one token per order and sends the same token on every retry. The server generates a new event source ID for each attempt, so a retry is a different source with a token that is already claimed, and the kernel rejects it as a constraint violation. Treat the violation as "already placed".
 
-<ChronicleClientTabs snippet="dynamic-consistency-boundary/dcb-examples/idempotency" variants="csharp" />
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/dcb-examples/idempotency" variants="csharp,elixir" />
 
 By default a unique constraint lets one event source reclaim its own value, so do not reuse the event source ID across retries, or the second event would be accepted. If the order ID comes from the client, derive the event source ID from the token and declare a unique event type constraint, so a second `OrderPlaced` for the same source is rejected. This protects against an accidental resubmission. It does not protect against someone who deliberately sends a fresh token.
 

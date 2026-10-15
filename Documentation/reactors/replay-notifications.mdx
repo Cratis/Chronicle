@@ -4,11 +4,11 @@ A [replay](replay) re-delivers history to an observer, and some reactors and red
 
 Implement `ICanBeNotifiedWhenReplay` on the reactor or reducer class and Chronicle calls `BeginReplay()` when a replay of the observer begins and `EndReplay()` when it ends. The interface lives in the `Cratis.Chronicle.Observation` namespace.
 
-<ChronicleClientTabs snippet="reactors/replay-notifications/reactor" variants="csharp" />
+<ChronicleClientTabs snippet="reactors/replay-notifications/reactor" variants="csharp,elixir" />
 
 Reducers use the same interface:
 
-<ChronicleClientTabs snippet="reactors/replay-notifications/reducer" variants="csharp" />
+<ChronicleClientTabs snippet="reactors/replay-notifications/reducer" variants="csharp,elixir" />
 
 ## Notifications are separate from events
 
@@ -22,11 +22,11 @@ Chronicle creates the reactor or reducer for each notification, from a new depen
 
 Replaying one partition, for example with the [`observers replay-partition`](/cli/chronicle/observers/#replay-partition) command of the Cratis CLI, has its own interface, `ICanBeNotifiedWhenPartitionReplayed`. It receives the partition being replayed:
 
-<ChronicleClientTabs snippet="reactors/replay-notifications/partition" variants="csharp" />
+<ChronicleClientTabs snippet="reactors/replay-notifications/partition" variants="csharp,elixir" />
 
 The two interfaces are independent. Implement either or both, depending on which replays you need to know about.
 
 ## What is not notified
 
 - A reactor that has no class to implement the interface on: one defined fluently with the reactor builder, or registered at runtime with a handler delegate. Those are never notified.
-- Other clients. These interfaces are part of the .NET client.
+- Other clients. These interfaces are part of the .NET and Elixir clients.

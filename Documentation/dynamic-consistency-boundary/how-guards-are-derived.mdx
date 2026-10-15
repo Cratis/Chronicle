@@ -125,7 +125,7 @@ flowchart LR
 
 Under a read-protection frame, `GetAppendConditions()` returns one `AppendCondition` per guarded source after the commit. Use it in a test to assert that a rule is guarded by what you think. Each condition lists its `Origins`, such as `ProtectedRead` or `DeclaredRouting`, and the `Reads` behind it.
 
-<ChronicleClientTabs snippet="dynamic-consistency-boundary/how-guards-are-derived/see-the-guard" variants="csharp" />
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/how-guards-are-derived/see-the-guard" variants="csharp,elixir" />
 
 For a test that races two writers without a frame, see [Test the race](./scenarios.mdx#test-the-race).
 

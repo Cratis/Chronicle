@@ -1,5 +1,5 @@
 ---
-title: Decision-consistent reads (.NET)
+title: Decision-consistent reads
 description: Guard an event-log append against changes to an event-source-keyed projection read for a decision.
 ---
 
@@ -18,7 +18,7 @@ For a unique value or a create-once rule, a [constraint](../constraints/index.md
 
 A workshop has a fixed number of places. Read the workshop, check the rule, and append with the read as the guard.
 
-<ChronicleClientTabs snippet="read-models/decision-reads/first-read" variants="csharp" />
+<ChronicleClientTabs snippet="read-models/decision-reads/first-read" variants="csharp,elixir" />
 
 Three things make it work:
 
@@ -51,7 +51,7 @@ A decision read is Chronicle's form of a DCB decision model and append condition
 
 The Chronicle.AspNetCore middleware owns the request's unit and normally completes it after the response has been written, so a conflict is reported too late to change the response. To respond to the outcome, ask the middleware's owner to commit early with `HttpContext.Features.Get<IUnitOfWorkCompletionFeature>()` (in `Cratis.Chronicle.AspNetCore.Transactions`):
 
-<ChronicleClientTabs snippet="read-models/decision-reads/early-commit" variants="csharp" />
+<ChronicleClientTabs snippet="read-models/decision-reads/early-commit" variants="csharp,elixir" />
 
 The middleware will not commit the completed unit again.
 
