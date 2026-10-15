@@ -5,5 +5,9 @@ using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Kernel.Integration.EventSequences.for_EventSequence.given;
 
+/// <summary>
+/// Records a customer's name to exercise the first append observed by pattern capture.
+/// </summary>
+/// <param name="Name">The customer's recorded name.</param>
 [EventType]
 public record CustomerNamed(string Name);
