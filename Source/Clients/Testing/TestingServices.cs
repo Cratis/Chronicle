@@ -57,6 +57,7 @@ using KernelMaterializedReadModelStore = KernelCore::Cratis.Chronicle.ReadModels
 using KernelNamespacesService = KernelGrpc::Cratis.Chronicle.Services.Namespaces.Namespaces;
 using KernelObserverRemover = KernelCore::Cratis.Chronicle.Observation.ObserverRemover;
 using KernelObserversService = KernelGrpc::Cratis.Chronicle.Services.Observation.Observers;
+using KernelOccurrencesService = KernelGrpc::Cratis.Chronicle.Services.Occurrences.Occurrences;
 using KernelPatternMatcher = KernelCore::Cratis.Chronicle.Patterns.PatternMatcher;
 using KernelPatternsService = KernelGrpc::Cratis.Chronicle.Services.Patterns.Patterns;
 using KernelProjectionChangesetMediator = KernelCore::Cratis.Chronicle.Projections.ProjectionChangesetMediator;
@@ -99,6 +100,7 @@ internal sealed class TestingServices : IServices
     readonly Lazy<IWebhooks> _webhooks;
     readonly Lazy<IExternalServices> _externalServices;
     readonly Lazy<ICaptures> _captures;
+    readonly Lazy<Contracts.Occurrences.IOccurrences> _occurrences;
     readonly Lazy<IEventStoreSubscriptions> _eventStoreSubscriptions;
     readonly Lazy<IJobs> _jobs;
     readonly Lazy<IEventSeeding> _seeding;
@@ -210,6 +212,9 @@ internal sealed class TestingServices : IServices
                 storage,
                 jsonSerializerOptions,
                 NullLogger<KernelCapturesService>.Instance));
+
+        _occurrences = new(() =>
+            new KernelOccurrencesService(commandPipeline.Value, storage, NullLogger<KernelOccurrencesService>.Instance));
 
         _eventStoreSubscriptions = new(() =>
             new KernelSubscriptionsService(grainFactory, storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
@@ -340,6 +345,9 @@ internal sealed class TestingServices : IServices
 
     /// <inheritdoc/>
     public ICaptures Captures => _captures.Value;
+
+    /// <inheritdoc/>
+    public Contracts.Occurrences.IOccurrences Occurrences => _occurrences.Value;
 
     /// <inheritdoc/>
     public IEventStoreSubscriptions EventStoreSubscriptions => _eventStoreSubscriptions.Value;

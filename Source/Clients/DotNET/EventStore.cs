@@ -26,6 +26,7 @@ using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
@@ -211,6 +212,7 @@ public partial class EventStore : IEventStore
             GenerationDelivery = options.Value.EventGenerationDelivery
         };
         Reactors = reactors;
+        Occurrences = new Occurrences.Occurrences(this);
 
         var reducerObservers = new ReducerObservers();
 
@@ -353,6 +355,9 @@ public partial class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IReactors Reactors { get; }
+
+    /// <inheritdoc/>
+    public IOccurrences Occurrences { get; }
 
     /// <inheritdoc/>
     public IReducers Reducers { get; }

@@ -171,4 +171,10 @@ public interface IServices
     /// Gets the <see cref="IEventSources"/> service.
     /// </summary>
     IEventSources EventSources { get; }
+
+    /// <summary>
+    /// Gets the occurrence service when supported by this service container.
+    /// </summary>
+    /// <exception cref="NotSupportedException">This container predates occurrence support.</exception>
+    Occurrences.IOccurrences Occurrences => throw new NotSupportedException("Occurrences are not supported by this service container.");
 }

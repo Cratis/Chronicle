@@ -13,6 +13,7 @@ using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
@@ -80,6 +81,12 @@ public interface IEventStore
     /// Gets the <see cref="IReactors"/> for the event store.
     /// </summary>
     IReactors Reactors { get; }
+
+    /// <summary>
+    /// Gets occurrence effect receipts bound to this store and namespace.
+    /// </summary>
+    /// <exception cref="EffectReceiptsNotSupported">This implementation does not support occurrences.</exception>
+    IOccurrences Occurrences => throw new EffectReceiptsNotSupported();
 
     /// <summary>
     /// Gets the <see cref="IReducers"/> for the event store.

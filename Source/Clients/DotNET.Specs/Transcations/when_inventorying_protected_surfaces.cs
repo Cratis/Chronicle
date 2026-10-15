@@ -115,6 +115,7 @@ public class when_inventorying_protected_surfaces : Specification
             "IEventStore.get_EventLog`0/0",
             "IEventStore.get_Jobs`0/0",
             "IEventStore.get_Reactors`0/0",
+            "IEventStore.get_Occurrences`0/0",
             "IEventStore.get_Reducers`0/0",
             "IEventStore.get_Projections`0/0",
             "IEventStore.get_Webhooks`0/0",

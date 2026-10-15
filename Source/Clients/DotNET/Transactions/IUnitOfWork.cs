@@ -2,11 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Transactions;
@@ -35,6 +37,11 @@ public interface IUnitOfWork : IDisposable
     bool IsSuccess { get; }
 
     /// <summary>
+    /// Gets the winning receipt after a successful receipted commit.
+    /// </summary>
+    EffectReceiptResult? EffectReceipt => null;
+
+    /// <summary>
     /// Gets a value indicating whether a decision read has ever been successfully enrolled in this unit of work.
     /// </summary>
     /// <remarks>
@@ -47,6 +54,16 @@ public interface IUnitOfWork : IDisposable
     /// Gets whether this unit permanently uses enforced read protection and a strict lifecycle.
     /// </summary>
     bool IsEnforcingReadProtection => false;
+
+    /// <summary>
+    /// Enrolls one effect key in this unit's atomic commit. Re-enrolling the same key replaces its response until completion begins.
+    /// </summary>
+    /// <param name="key">The occurrence effect key.</param>
+    /// <param name="response">Optional plaintext JSON response without personal data.</param>
+    /// <exception cref="EffectReceiptsNotSupported">Atomic receipt support is absent or unknown.</exception>
+    /// <exception cref="EffectReceiptResponseTooLarge">The response exceeds 64 KiB of UTF-8 JSON.</exception>
+    /// <exception cref="UnitOfWorkEffectReceiptAlreadySet">Another key is already enrolled.</exception>
+    void UseEffectReceipt(EffectKey key, JsonNode? response = null) => throw new EffectReceiptsNotSupported();
 
     /// <summary>
     /// Begins invocation read protection before any event or read dependency is enrolled.
