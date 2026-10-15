@@ -240,6 +240,14 @@ internal static class Probe
                 var allState = await mongo.State().WaitAsync(cancellation);
                 run.PersistedObserverState = allState.Select(d => d.ToJson()).ToArray();
                 if (StateAtTail(allState, tail, "$system.patterns")) run.SystemDurableMs ??= run.Clock.Elapsed.TotalMilliseconds;
+                // Same explicit relaxation as the drain (PROBE_DRAIN_ALLOW_INFLIGHT=1): progress at tail with persisted
+                // in-flight partitions that never clear. Recorded as run.SystemDrainStatus COMPLETE_WITH_INFLIGHT.
+                else if (Environment.GetEnvironmentVariable("PROBE_DRAIN_ALLOW_INFLIGHT") == "1" &&
+                    StateAtTail(allState, tail, "$system.patterns", allowInFlight: true))
+                {
+                    run.SystemDurableMs ??= run.Clock.Elapsed.TotalMilliseconds;
+                    run.SystemDrainStatus = "COMPLETE_WITH_INFLIGHT";
+                }
                 if (!appendOnly)
                 {
                     var state = allState.Where(s => s["_id"].AsString == run.ProbeObserverId).ToArray();
