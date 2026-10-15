@@ -63,6 +63,7 @@ public partial class EventSequence
         }
         foreach (var name in _indexedDefinitions.Keys.Concat(_pendingConstraintIndexes.Keys).Except(definitions.Keys).ToArray())
         {
+            _constraintIndexPoisonTracker.ForgetSettledBefore(name, State.SequenceNumber);
             _indexedDefinitions.Remove(name);
             _pendingConstraintIndexes.Remove(name);
             _closingCoverageStarts.Remove(name);

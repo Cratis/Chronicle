@@ -26,6 +26,9 @@ public class when_classifying_failures : Specification
     [Fact] void should_not_retry_postgres_unique_violation() => _classifier.IsTransient(Postgres("23505")).ShouldBeFalse();
     [Fact] void should_retry_sql_server_timeout() => SqlStorageErrorClassifier.IsTransientSqlServerNumber(-2).ShouldBeTrue();
     [Fact] void should_retry_sql_server_deadlock() => SqlStorageErrorClassifier.IsTransientSqlServerNumber(1205).ShouldBeTrue();
+    [Fact] void should_retry_sql_server_unavailable_database() => SqlStorageErrorClassifier.IsTransientSqlServerNumber(40613).ShouldBeTrue();
+    [Fact] void should_retry_sql_server_throttling() => SqlStorageErrorClassifier.IsTransientSqlServerNumber(40501).ShouldBeTrue();
+    [Fact] void should_cover_every_reviewed_sql_server_outage_number() => new[] { 53, -1, 20, 64, 233, 10053, 10054, 10060, 4060, 40613, 40197, 49918, 49919, 49920, 40501, 10928, 10929 }.ShouldEachConformTo(SqlStorageErrorClassifier.IsTransientSqlServerNumber);
     [Fact] void should_not_retry_sql_server_unique_violation() => SqlStorageErrorClassifier.IsTransientSqlServerNumber(2627).ShouldBeFalse();
     [Fact] void should_not_retry_deterministic_errors() => _classifier.IsTransient(new FormatException()).ShouldBeFalse();
 

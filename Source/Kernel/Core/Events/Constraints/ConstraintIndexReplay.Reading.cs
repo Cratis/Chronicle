@@ -14,6 +14,7 @@ public partial class ConstraintIndexReplay
     async Task<(bool Finished, int Count)> ReadSegment(int limit, CancellationToken cancellationToken)
     {
         _position ??= _scopes.Min(scope => scope.From);
+        if (_position! >= endPoint) return (true, 0);
         var types = ReplayEventTypes();
         if (types.Length == 0) return (true, 0);
         if (_readIndividually) return await ReadIndividualEvents(types, limit, cancellationToken);
@@ -43,6 +44,7 @@ public partial class ConstraintIndexReplay
         {
             // A page fault has no event identity. Locate individual relevant slots on the next turn.
             _readIndividually = true;
+            _pageFaultPosition = _position;
             throw;
         }
     }

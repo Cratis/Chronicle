@@ -35,10 +35,10 @@ public partial class EventSequence
         using var hard = new CancellationTokenSource(duration, ConstraintIndexTimeProvider);
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(soft.Token, cancellationToken);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(hard.Token, cancellationToken);
-        await ContinueConstraintIndexRepair(timerTurn, end, budget.Token, deadline.Token);
+        await ContinueConstraintIndexRepair(timerTurn, end, budget.Token, deadline.Token, hard.Token);
     }
 
-    async Task ContinueConstraintIndexRepair(bool timerTurn, DateTimeOffset end, CancellationToken budget, CancellationToken deadline)
+    async Task ContinueConstraintIndexRepair(bool timerTurn, DateTimeOffset end, CancellationToken budget, CancellationToken deadline, CancellationToken snapshotLimit)
     {
         try
         {
@@ -94,7 +94,9 @@ public partial class EventSequence
             var remaining = end - ConstraintIndexTimeProvider.GetUtcNow();
             if (remaining <= TimeSpan.Zero) throw new TimeoutException("No repair budget remains for the state snapshot.");
             using var snapshot = new CancellationTokenSource(remaining < TimeSpan.FromMilliseconds(250) ? remaining : TimeSpan.FromMilliseconds(250), ConstraintIndexTimeProvider);
-            using var snapshotDeadline = CancellationTokenSource.CreateLinkedTokenSource(snapshot.Token, deadline);
+
+            // Timer disposal cancels the fold token, not the completed repair's snapshot.
+            using var snapshotDeadline = CancellationTokenSource.CreateLinkedTokenSource(snapshot.Token, snapshotLimit);
             await WriteStateAsync().WaitAsync(snapshotDeadline.Token);
         }
         catch (Exception error)
@@ -126,6 +128,7 @@ public partial class EventSequence
             if (_pendingConstraintIndexes.TryGetValue(name, out var from) && from < scope.From) continue;
             if (_replayEndPoint < State.SequenceNumber) _pendingConstraintIndexes[name] = _replayEndPoint;
             else _pendingConstraintIndexes.Remove(name);
+            _constraintIndexPoisonTracker.ForgetSettledBefore(name, _replayEndPoint);
         }
         if (_constraintIndexPosition < _replayEndPoint) _constraintIndexPosition = _replayEndPoint;
         _constraintIndexReplay = null;
@@ -163,7 +166,8 @@ public partial class EventSequence
             _replayEndPoint)
         {
             ConstraintIndexTimeProvider = ConstraintIndexTimeProvider,
-            StorageErrorClassifier = _storageErrorClassifier
+            StorageErrorClassifier = _storageErrorClassifier,
+            SettledPoison = _constraintIndexPoisonTracker.Settled
         };
     }
 }

@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 public partial class ConstraintIndexReplay
 {
     bool _readIndividually;
+    EventSequenceNumber? _pageFaultPosition;
 
     EventType[] ReplayEventTypes() => _scopes.SelectMany(scope => scope.Definition switch
     {
@@ -35,7 +36,14 @@ public partial class ConstraintIndexReplay
                 if (!await IncludeEvent(@event, cancellationToken)) return (false, count);
             }
             _position = position.Next();
+            _operationPosition = null;
             count++;
+            if (_pageFaultPosition is { } fault && _position > fault)
+            {
+                _readIndividually = false;
+                _pageFaultPosition = null;
+                return (false, count);
+            }
         }
         return (false, count);
     }

@@ -6,12 +6,14 @@ namespace Cratis.Chronicle.EventSequences;
 public partial class EventSequence
 {
     IGrainTimer? _constraintIndexRepairTimer;
+    bool _constraintIndexRepairTimerRunning;
 
     void UpdateConstraintIndexRepairTimer()
     {
         var hasGap = _indexedDefinitions.Count > 0 && _constraintIndexPosition < State.SequenceNumber;
         if (_pendingConstraintIndexes.Count == 0 && !hasGap)
         {
+            if (_constraintIndexRepairTimerRunning) return;
             _constraintIndexRepairTimer?.Dispose();
             _constraintIndexRepairTimer = null;
             return;
@@ -29,6 +31,7 @@ public partial class EventSequence
 
     async Task RepairConstraintIndexesOnTimer(CancellationToken cancellationToken)
     {
+        _constraintIndexRepairTimerRunning = true;
         try
         {
             PrepareConstraintIndexRepair();
@@ -37,6 +40,7 @@ public partial class EventSequence
         }
         finally
         {
+            _constraintIndexRepairTimerRunning = false;
             UpdateConstraintIndexRepairTimer();
         }
     }

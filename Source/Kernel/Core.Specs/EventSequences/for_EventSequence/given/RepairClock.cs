@@ -8,6 +8,8 @@ public class RepairClock : TimeProvider
     readonly List<ClockTimer> _timers = [];
     DateTimeOffset _now = DateTimeOffset.UnixEpoch;
 
+    public Action<TimeSpan>? TimerCreated { get; set; }
+
     public override DateTimeOffset GetUtcNow() => _now;
 
     public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
@@ -15,6 +17,7 @@ public class RepairClock : TimeProvider
         var timer = new ClockTimer(this, callback, state);
         _timers.Add(timer);
         timer.Change(dueTime, period);
+        TimerCreated?.Invoke(dueTime);
         return timer;
     }
 

@@ -42,6 +42,50 @@ public class when_observing_failures : Specification
         Observe(4).ShouldBeEmpty();
     }
 
+    [Fact]
+    void should_restart_the_count_for_a_different_provider_number()
+    {
+        Observe(4, error: new NumberedFailure(100));
+        Observe(1, error: new NumberedFailure(200)).ShouldBeEmpty();
+    }
+
+    [Fact]
+    void should_restart_the_count_for_a_different_provider_code()
+    {
+        Observe(4, error: new CodedFailure(100));
+        Observe(1, error: new CodedFailure(200)).ShouldBeEmpty();
+    }
+
+    [Fact]
+    void should_restart_the_count_for_a_different_sql_state()
+    {
+        Observe(4, error: new StatefulFailure("first"));
+        Observe(1, error: new StatefulFailure("second")).ShouldBeEmpty();
+    }
+
+    [Fact]
+    void should_restart_the_count_for_a_different_failure_message()
+    {
+        Observe(4, error: new FormatException("first"));
+        Observe(1, error: new FormatException("second")).ShouldBeEmpty();
+    }
+
+    [Fact]
+    void should_keep_poison_settlements_after_a_replay_attempt_is_discarded()
+    {
+        Observe(5);
+        _tracker.Observe(new Dictionary<ConstraintName, ConstraintIndexReplayFailure>(), true);
+        _tracker.Settled.ShouldContain(((ConstraintName)"unique", EventSequenceNumber.First));
+    }
+
+    [Fact]
+    void should_release_poison_settlements_only_after_the_constraint_advances()
+    {
+        Observe(5);
+        _tracker.ForgetSettledBefore("unique", 1);
+        _tracker.Settled.ShouldBeEmpty();
+    }
+
     IReadOnlyDictionary<ConstraintName, ConstraintIndexReplayFailure> Observe(int attempts, EventSequenceNumber? position = null, Exception? error = null, bool storageSucceeded = true, bool eventIdentified = true)
     {
         IReadOnlyDictionary<ConstraintName, ConstraintIndexReplayFailure> result = new Dictionary<ConstraintName, ConstraintIndexReplayFailure>();
@@ -50,5 +94,20 @@ public class when_observing_failures : Specification
             result = _tracker.Observe(new Dictionary<ConstraintName, ConstraintIndexReplayFailure> { ["unique"] = new(eventIdentified ? position ?? EventSequenceNumber.First : null, error ?? new FormatException()) }, storageSucceeded);
         }
         return result;
+    }
+
+    sealed class NumberedFailure(int number) : Exception("provider failure")
+    {
+        public int Number => number;
+    }
+
+    sealed class CodedFailure(int code) : Exception("provider failure")
+    {
+        public int Code => code;
+    }
+
+    sealed class StatefulFailure(string state) : Exception("provider failure")
+    {
+        public string SqlState => state;
     }
 }

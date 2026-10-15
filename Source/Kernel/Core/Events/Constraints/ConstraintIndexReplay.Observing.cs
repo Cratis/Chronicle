@@ -26,6 +26,14 @@ public partial class ConstraintIndexReplay
     internal IStorageErrorClassifier? StorageErrorClassifier { get; set; }
 
     /// <summary>
+    /// Seeds settlements retained by the activation when an earlier replay was discarded.
+    /// </summary>
+    internal IEnumerable<(ConstraintName Name, EventSequenceNumber Position)> SettledPoison
+    {
+        init => _poison.UnionWith(value);
+    }
+
+    /// <summary>
     /// Refolds without a poison event's partial staged effects, preserving preceding valid events.
     /// </summary>
     /// <param name="name">The failed constraint.</param>

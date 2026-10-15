@@ -26,6 +26,7 @@ using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Traces;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Orleans.TestKit;
@@ -66,6 +67,7 @@ public class an_event_sequence : Specification
     protected IConstraints _constraintsGrain;
     protected IJobsManager _jobsManager;
     protected List<IConstraintDefinition> _registeredConstraints;
+    protected ILogger<EventSequence> _eventSequenceLogger = NullLogger<EventSequence>.Instance;
 
     protected virtual EventSequenceId SequenceId => EventSequenceId.Log;
     protected virtual int StatePersistenceInterval => 1000;
@@ -209,7 +211,7 @@ public class an_event_sequence : Specification
                 CausationPropertyRetention = CausationPropertyRetention
             }
         }));
-        _silo.AddService(NullLogger<EventSequence>.Instance);
+        _silo.AddService(_eventSequenceLogger);
         _silo.AddService(NullLogger<ConstraintIndexReplay>.Instance);
         _silo.AddKeyedService<IMeter<EventSequence>>(WellKnown.MeterName, Substitute.For<IMeter<EventSequence>>());
         _silo.AddKeyedService<IActivitySource<EventSequence>>(WellKnown.MeterName, new ActivitySource<EventSequence>());

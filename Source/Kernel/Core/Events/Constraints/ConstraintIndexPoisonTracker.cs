@@ -13,7 +13,22 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="classifier">The active provider's transient error policy.</param>
 internal sealed class ConstraintIndexPoisonTracker(IStorageErrorClassifier classifier)
 {
+    static readonly string[] _errorCodeProperties = ["Code", "Number", "SqlState"];
     readonly Dictionary<ConstraintName, FailureRun> _runs = [];
+    readonly HashSet<(ConstraintName Name, EventSequenceNumber Position)> _settled = [];
+
+    /// <summary>
+    /// Gets settlements retained across replay replacement within this activation.
+    /// </summary>
+    internal IEnumerable<(ConstraintName Name, EventSequenceNumber Position)> Settled => _settled;
+
+    /// <summary>
+    /// Releases settlements only after their constraint has advanced past them.
+    /// </summary>
+    /// <param name="name">The repaired or removed constraint.</param>
+    /// <param name="endPoint">The exclusive confirmed end point.</param>
+    internal void ForgetSettledBefore(ConstraintName name, EventSequenceNumber endPoint) =>
+        _settled.RemoveWhere(item => item.Name == name && item.Position < endPoint);
 
     /// <summary>
     /// Observes one repair attempt's per-constraint failures.
@@ -33,14 +48,27 @@ internal sealed class ConstraintIndexPoisonTracker(IStorageErrorClassifier class
                 continue;
             }
             var type = failure.Error.GetType();
-            var count = _runs.TryGetValue(name, out var previous) && previous.Position == position && previous.ErrorType == type ? previous.Count + 1 : 1;
-            _runs[name] = new(position, type, count);
+            var identity = FailureIdentity(failure.Error);
+            var count = _runs.TryGetValue(name, out var previous) && previous.Position == position && previous.ErrorType == type && previous.Identity == identity ? previous.Count + 1 : 1;
+            _runs[name] = new(position, type, identity, count);
             if (count < 5) continue;
+            _settled.Add((name, position));
             poisoned.Add(name, failure);
             _runs.Remove(name);
         }
         return poisoned;
     }
 
-    sealed record FailureRun(EventSequenceNumber Position, Type ErrorType, int Count);
+    static string FailureIdentity(Exception error)
+    {
+        // Keep provider dependencies outside Core while preserving their public error identities.
+        var codes = _errorCodeProperties
+            .Select(name => (Name: name, Value: error.GetType().GetProperty(name)?.GetValue(error)))
+            .Where(code => code.Value is not null)
+            .Select(code => $"{code.Name}:{code.Value}")
+            .ToArray();
+        return codes.Length == 0 ? error.Message : string.Join('\0', codes);
+    }
+
+    sealed record FailureRun(EventSequenceNumber Position, Type ErrorType, string Identity, int Count);
 }
