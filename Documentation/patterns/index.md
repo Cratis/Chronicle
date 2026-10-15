@@ -128,8 +128,9 @@ What it fills in is the `Day` and the `TimeBucket`, derived from the moment with
 | Client | Ask about a moment | Bucket a moment |
 | --- | --- | --- |
 | [.NET](/chronicle/clients/dotnet/patterns/) | `Patterns.GetPatternsAt(scope, moment?)` | `moment.ToTimeBucket()` |
+| [Elixir](https://github.com/Cratis/Chronicle.Elixir/blob/main/Documentation/patterns.md) | `Chronicle.Patterns.get_patterns_at(scope, moment)` | `Chronicle.Patterns.time_bucket(moment)` |
 
-Other clients — TypeScript, Kotlin, Elixir, Python — expose the same capability in their own idiom; see the client's own page for the exact shape. The contract they share is the one above: scope required, moment optional and defaulting to now, day and time bucket derived by the engine's rule rather than the caller's.
+The Elixir moment argument is optional and defaults to now. Other clients — TypeScript, Kotlin, Python — expose the same capability in their own idiom; see the client's own page for the exact shape. The contract they share is the one above: scope required, moment optional and defaulting to now, day and time bucket derived by the engine's rule rather than the caller's.
 
 ## Seeing patterns in the Workbench
 
