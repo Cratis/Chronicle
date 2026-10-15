@@ -11,6 +11,18 @@ The default scope is built when you append: the client reads the tail then and u
 
 A concurrency scope is how Chronicle expresses the append condition of a [Dynamic Consistency Boundary](../dynamic-consistency-boundary/chronicle.md). To derive the scope from a declared event source and its streams instead of building it by hand, see [Concurrency per event source and stream](../event-sources/concurrency.mdx).
 
+## Choose between a scope and a decision read
+
+| You want to guard | Use | Why |
+|---|---|---|
+| A rule over state you read from a projection (a count, a stock, a status) | A [decision read](../read-models/decision-reads.mdx) | It captures the position before it folds, and builds the scope for you |
+| A change the user saw at a revision | An explicit scope built from that revision | The position is the revision the user saw, not what the server read |
+| Events you read yourself, not through a projection | An explicit scope, with the tail captured before you read | You own the capture-then-read order |
+| Every writer of a stream or source seeing every other | Dimensions declared on an [event source definition](../event-sources/concurrency.mdx) | The guard covers the whole range, whatever the event type |
+| A value that must be unique | A [constraint](../constraints/index.md) | The kernel checks it for every writer, with no read |
+
+What a guard covers, and how scopes and reads merge, is in [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx).
+
 ## Understanding ConcurrencyScope
 
 A `ConcurrencyScope` defines the boundaries and constraints for concurrent operations when appending events. It uses formalized, well-known event metadata tags that are indexed by Chronicle to scope concurrency control to specific aspects of your events, providing fine-grained control over when concurrency violations should be detected. These tags are separate from any user-controlled event tags you may add for categorization. See [Event Metadata Tags](../concepts/event-metadata-tags.md) for details.

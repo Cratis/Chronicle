@@ -8,5 +8,7 @@
   href: choosing.mdx
 - name: Scenarios
   href: scenarios.mdx
+- name: How guards are derived
+  href: how-guards-are-derived.mdx
 - name: Questions and answers
   href: faq.md
