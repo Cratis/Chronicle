@@ -37,6 +37,7 @@ public partial class UnitOfWork
         lock (_decisionLock)
         {
             ThrowIfStagingAfterCompletion();
+            eventSourceId = new(eventSourceId.Value);
             if (IsEnforcingReadProtection)
             {
                 var enforcedEvent = new EventForEventSourceId(eventSourceId, @event, causation)

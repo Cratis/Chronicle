@@ -110,7 +110,7 @@ public partial class UnitOfWork
     {
         ThrowIfReadEnrollmentAfterCompletion(read.ReadModelType.Name);
         if (!read.IsProtected) throw new UnprotectedDecisionRead();
-        var label = read.Scope.EventSourceId ?? EventSourceId.Unspecified;
+        var label = new EventSourceId(read.Scope.EventSourceId?.Value ?? EventSourceId.Unspecified.Value);
         var item = new ReadProtectionContribution(label, ReadProtectionContributionKind.ProtectedRead, read.Scope, new(read.EventStore, read.Namespace, read.EventSequenceId), $"{read.ReadModelType.Name} '{read.Key}'", ReadProtectionContributionIntent.ReadEnrolled);
         ReadProtectionMerge.ValidateTargetsAndLabels(new(eventStore.Name, eventStore.Namespace, EventSequenceId.Log), [item]);
         EnrolProtectedContribution(item);

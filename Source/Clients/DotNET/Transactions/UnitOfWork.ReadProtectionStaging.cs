@@ -39,7 +39,7 @@ public partial class UnitOfWork
         var pending = new List<ReadProtectionContribution>();
         foreach (var (label, scope) in scopes.Where(_ => _.Value != ConcurrencyScope.NotSet))
         {
-            if (scope.EventSourceId is not null && scope.EventSourceId != label) throw new ConcurrencyScopeEventSourceIdDoesNotMatchLabel(label, scope.EventSourceId);
+            if (scope.EventSourceId is not null && scope.EventSourceId.Value != label.Value) throw new ConcurrencyScopeEventSourceIdDoesNotMatchLabel(label, scope.EventSourceId);
             var kind = origin == ConcurrencyScopeOrigin.Aggregate ? ReadProtectionContributionKind.Aggregate : ReadProtectionContributionKind.Explicit;
             var intent = validateOnly && kind == ReadProtectionContributionKind.Explicit ? ReadProtectionContributionIntent.ValidateOnly : ReadProtectionContributionIntent.None;
             var contribution = new ReadProtectionContribution(label, kind, scope, new(eventStore.Name, eventStore.Namespace, sequence), $"{origin} scope for '{label}'", intent);

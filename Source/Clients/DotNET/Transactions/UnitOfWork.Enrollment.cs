@@ -39,7 +39,7 @@ public partial class UnitOfWork
 
     static bool RequiredScopesAreEqual(ConcurrencyScope first, ConcurrencyScope second) =>
         first.SequenceNumber == second.SequenceNumber &&
-        first.EventSourceId == second.EventSourceId &&
+        first.EventSourceId?.Value == second.EventSourceId?.Value &&
         Normalize(first.EventStreamType) == Normalize(second.EventStreamType) &&
         Normalize(first.EventStreamId) == Normalize(second.EventStreamId) &&
         Normalize(first.EventSourceType) == Normalize(second.EventSourceType) &&

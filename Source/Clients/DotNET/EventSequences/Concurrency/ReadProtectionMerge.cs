@@ -32,6 +32,7 @@ internal static class ReadProtectionMerge
         bool hasEvents = true)
     {
         ValidateTargetsAndLabels(target, contributions);
+        legacyScopes = legacyScopes.ToDictionary(_ => new EventSourceId(_.Key.Value), _ => _.Value);
         var scopes = new Dictionary<EventSourceId, ConcurrencyScope>();
         var conditions = new List<AppendCondition>();
         foreach (var label in contributions.Select(_ => _.Label).Union(legacyScopes.Keys))

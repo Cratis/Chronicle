@@ -35,7 +35,8 @@ public sealed class EventsWithConcurrencyScopes
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
     {
-        var materializedEvents = events.ToArray();
+        // Labels identify wire sources, not the CLR record types used by callers.
+        var materializedEvents = events.Select(_ => _ with { EventSourceId = new(_.EventSourceId.Value) }).ToArray();
         foreach (var @event in materializedEvents)
         {
             ThrowIfLabelIsNotSpecified(@event.EventSourceId);
@@ -45,12 +46,13 @@ public sealed class EventsWithConcurrencyScopes
         var eventTargets = materializedEvents.Select(_ => _.EventSourceId).ToHashSet();
 
         var materializedConcurrencyScopes = new Dictionary<EventSourceId, ConcurrencyScope>();
-        foreach (var (eventSourceId, concurrencyScope) in concurrencyScopes)
+        foreach (var (label, concurrencyScope) in concurrencyScopes)
         {
+            var eventSourceId = new EventSourceId(label.Value);
             ThrowIfLabelIsNotSpecified(eventSourceId);
 
             var materializedConcurrencyScope = Materialize(concurrencyScope);
-            if (materializedConcurrencyScope.EventSourceId is not null && materializedConcurrencyScope.EventSourceId != eventSourceId)
+            if (materializedConcurrencyScope.EventSourceId is not null && materializedConcurrencyScope.EventSourceId.Value != eventSourceId.Value)
             {
                 throw new ConcurrencyScopeEventSourceIdDoesNotMatchLabel(eventSourceId, materializedConcurrencyScope.EventSourceId);
             }
@@ -80,10 +82,11 @@ public sealed class EventsWithConcurrencyScopes
     /// </summary>
     public IReadOnlyDictionary<EventSourceId, ConcurrencyScope> ConcurrencyScopes { get; }
 
-    static ConcurrencyScope Materialize(ConcurrencyScope concurrencyScope) =>
-        concurrencyScope.EventTypes is null
-            ? concurrencyScope
-            : concurrencyScope with { EventTypes = concurrencyScope.EventTypes.ToArray() };
+    static ConcurrencyScope Materialize(ConcurrencyScope concurrencyScope) => concurrencyScope with
+    {
+        EventSourceId = concurrencyScope.EventSourceId is null ? null : new(concurrencyScope.EventSourceId.Value),
+        EventTypes = concurrencyScope.EventTypes?.ToArray()
+    };
 
     static void ThrowIfLabelIsNotSpecified(EventSourceId label)
     {

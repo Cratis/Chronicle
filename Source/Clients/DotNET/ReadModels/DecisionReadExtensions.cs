@@ -20,8 +20,8 @@ public static class DecisionReadExtensions
     /// <returns>The read models and keys whose decisions conflicted.</returns>
     public static IEnumerable<DecisionConflict> GetDecisionConflicts(this AppendManyResult result, IEnumerable<IDecisionRead> reads)
     {
-        var labels = result.ConcurrencyViolations.Select(_ => _.EventSourceId).ToHashSet();
-        return reads.Where(_ => labels.Contains(_.EventStreamType is not null || _.EventStreamId is not null ? _.Scope.EventSourceId! : (Events.EventSourceId)_.Key))
+        var labels = result.ConcurrencyViolations.Select(_ => _.EventSourceId.Value).ToHashSet(StringComparer.Ordinal);
+        return reads.Where(_ => labels.Contains(_.EventStreamType is not null || _.EventStreamId is not null ? _.Scope.EventSourceId!.Value : _.Key.Value))
             .Select(_ => new DecisionConflict(_.ReadModelType, _.Key)).Distinct().ToArray();
     }
 

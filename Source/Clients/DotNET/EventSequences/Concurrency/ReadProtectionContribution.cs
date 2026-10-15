@@ -21,7 +21,8 @@ internal sealed record ReadProtectionContribution
     /// <param name="intent">Explicit validation intent.</param>
     internal ReadProtectionContribution(EventSourceId label, ReadProtectionContributionKind kind, ConcurrencyScope scope, ReadProtectionTarget target, string description, ReadProtectionContributionIntent intent = ReadProtectionContributionIntent.None)
     {
-        Label = label;
+        // A derived source record and its base representation share one wire label.
+        Label = new(label.Value);
         Kind = kind;
         Scope = ReadProtectionPredicate.Normalize(scope);
         Target = target;

@@ -86,7 +86,7 @@ internal static class DefinitionConcurrencyScopeResolver
         scope != ConcurrencyScope.NotSet && scope != ConcurrencyScope.None && (scope.SequenceNumber.IsActualValue || scope.SequenceNumber.IsBeforeFirst);
 
     static bool SamePredicate(ConcurrencyScope left, ConcurrencyScope right) =>
-        left.EventSourceId == right.EventSourceId &&
+        left.EventSourceId?.Value == right.EventSourceId?.Value &&
         left.EventSourceType == right.EventSourceType &&
         left.EventStreamType == right.EventStreamType &&
         left.EventStreamId == right.EventStreamId &&

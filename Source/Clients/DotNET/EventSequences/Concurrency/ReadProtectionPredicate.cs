@@ -18,7 +18,7 @@ internal static class ReadProtectionPredicate
     /// <returns>The normalized immutable condition.</returns>
     internal static ConcurrencyScope Normalize(ConcurrencyScope scope) => scope with
     {
-        EventSourceId = scope.EventSourceId is null || string.IsNullOrEmpty(scope.EventSourceId.Value) || scope.EventSourceId.Value == "*" ? null : scope.EventSourceId,
+        EventSourceId = scope.EventSourceId is null || string.IsNullOrEmpty(scope.EventSourceId.Value) || scope.EventSourceId.Value == "*" ? null : new(scope.EventSourceId.Value),
         EventSourceType = scope.EventSourceType is null || string.IsNullOrEmpty(scope.EventSourceType.Value) || scope.EventSourceType == EventSourceType.Default || scope.EventSourceType == EventSourceType.Unspecified ? null : scope.EventSourceType,
         EventStreamType = scope.EventStreamType is null || string.IsNullOrEmpty(scope.EventStreamType.Value) || scope.EventStreamType.IsAll ? null : scope.EventStreamType,
         EventStreamId = scope.EventStreamId is null || string.IsNullOrEmpty(scope.EventStreamId.Value) || scope.EventStreamId.IsDefault ? null : scope.EventStreamId,
@@ -43,7 +43,7 @@ internal static class ReadProtectionPredicate
     /// <param name="inner">The required predicate.</param>
     /// <returns>Whether the outer predicate includes every inner match.</returns>
     internal static bool Covers(ConcurrencyScope outer, ConcurrencyScope inner) =>
-        (outer.EventSourceId is null || outer.EventSourceId == inner.EventSourceId) &&
+        (outer.EventSourceId is null || outer.EventSourceId.Value == inner.EventSourceId?.Value) &&
         (outer.EventSourceType is null || outer.EventSourceType == inner.EventSourceType) &&
         (outer.EventStreamType is null || outer.EventStreamType == inner.EventStreamType) &&
         (outer.EventStreamId is null || outer.EventStreamId == inner.EventStreamId) && CoversTypes(outer, inner);
@@ -66,7 +66,7 @@ internal static class ReadProtectionPredicate
     /// <param name="type">The staged event's registered type.</param>
     /// <returns>Whether the staged event overlaps the dependency.</returns>
     internal static bool Matches(ConcurrencyScope scope, EventForEventSourceId @event, EventType type) =>
-        (scope.EventSourceId is null || scope.EventSourceId == @event.EventSourceId) &&
+        (scope.EventSourceId is null || scope.EventSourceId.Value == @event.EventSourceId.Value) &&
         (scope.EventSourceType is null || scope.EventSourceType == @event.EventSourceType) &&
         (scope.EventStreamType is null || scope.EventStreamType == @event.EventStreamType) &&
         (scope.EventStreamId is null || scope.EventStreamId == @event.EventStreamId) &&
@@ -80,7 +80,7 @@ internal static class ReadProtectionPredicate
     /// <returns>The predicate union with only common equalities.</returns>
     internal static ConcurrencyScope Merge(ConcurrencyScope first, ConcurrencyScope second) => first with
     {
-        EventSourceId = first.EventSourceId == second.EventSourceId ? first.EventSourceId : null,
+        EventSourceId = first.EventSourceId?.Value == second.EventSourceId?.Value ? first.EventSourceId : null,
         EventSourceType = first.EventSourceType == second.EventSourceType ? first.EventSourceType : null,
         EventStreamType = first.EventStreamType == second.EventStreamType ? first.EventStreamType : null,
         EventStreamId = first.EventStreamId == second.EventStreamId ? first.EventStreamId : null,

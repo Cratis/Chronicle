@@ -29,12 +29,12 @@ internal static class ReadProtectionRouting
     {
         ReadProtectionMerge.ValidateTargetsAndLabels(commit.Target, commit.Contributions);
         var contributions = commit.Contributions.ToList();
-        var legacy = scopes.ToDictionary(_ => _.Key, _ => _.Value);
+        var legacy = scopes.ToDictionary(_ => new EventSourceId(_.Key.Value), _ => _.Value);
         var readLabels = contributions.Where(_ => _.Kind == ReadProtectionContributionKind.ProtectedRead).Select(_ => _.Label).ToHashSet();
-        var customLabel = entries.FirstOrDefault(_ => readLabels.Contains(_.Event.EventSourceId)).Event?.EventSourceId;
+        var customLabel = entries.FirstOrDefault(_ => readLabels.Contains(new(_.Event.EventSourceId.Value))).Event?.EventSourceId;
         if (customLabel is not null && strategy.GetType() != typeof(OptimisticConcurrencyStrategy)) throw new ReadProtectionRequiresTheDefaultConcurrencyStrategy(customLabel);
         var cache = new Dictionary<object, ConcurrencyScope>();
-        foreach (var group in entries.GroupBy(_ => _.Event.EventSourceId))
+        foreach (var group in entries.GroupBy(_ => new EventSourceId(_.Event.EventSourceId.Value)))
         {
             if (!readLabels.Contains(group.Key))
             {

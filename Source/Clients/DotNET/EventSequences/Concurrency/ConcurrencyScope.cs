@@ -70,10 +70,10 @@ public record ConcurrencyScope(
     /// <inheritdoc/>
     public virtual bool Equals(ConcurrencyScope? other) =>
         other is not null && EqualityContract == other.EqualityContract &&
-        SequenceNumber == other.SequenceNumber && EventSourceId == other.EventSourceId &&
+        SequenceNumber == other.SequenceNumber && EventSourceId?.Value == other.EventSourceId?.Value &&
         EventStreamType == other.EventStreamType && EventStreamId == other.EventStreamId &&
         EventSourceType == other.EventSourceType && EqualityComparer<IEnumerable<EventType>?>.Default.Equals(EventTypes, other.EventTypes);
 
     /// <inheritdoc/>
-    public override int GetHashCode() => HashCode.Combine(EqualityContract, SequenceNumber, EventSourceId, EventStreamType, EventStreamId, EventSourceType, EventTypes);
+    public override int GetHashCode() => HashCode.Combine(EqualityContract, SequenceNumber, EventSourceId?.Value, EventStreamType, EventStreamId, EventSourceType, EventTypes);
 }

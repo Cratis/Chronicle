@@ -55,7 +55,7 @@ public class ConflictingEnrollmentScope(EventSourceId eventSourceId, Concurrency
         (string Name, bool Differs)[] dimensions =
         [
             ("sequence number", effective.SequenceNumber != required.SequenceNumber),
-            ("event source id", effective.EventSourceId != required.EventSourceId),
+            ("event source id", effective.EventSourceId?.Value != required.EventSourceId?.Value),
             ("event source type", Normalize(effective.EventSourceType) != Normalize(required.EventSourceType)),
             ("event stream type", Normalize(effective.EventStreamType) != Normalize(required.EventStreamType)),
             ("event stream id", Normalize(effective.EventStreamId) != Normalize(required.EventStreamId)),

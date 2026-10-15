@@ -63,7 +63,7 @@ internal static class DecisionReadScopes
         foreach (var read in reads)
         {
             Validate(read, store, @namespace, EventSequenceId.Log);
-            var label = read.Scope.EventSourceId!;
+            var label = new EventSourceId(read.Scope.EventSourceId!.Value);
             scopes[label] = scopes.TryGetValue(label, out var existing) ? Merge(existing, read.Scope) : read.Scope;
         }
         return scopes;

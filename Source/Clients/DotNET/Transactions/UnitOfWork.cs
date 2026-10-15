@@ -162,7 +162,7 @@ public partial class UnitOfWork(
                 return;
             }
             var suppliedScopes = concurrencyScopes.Select(pair => new KeyValuePair<EventSourceId, ConcurrencyScope>(
-                pair.Key, MaterializeConcurrencyScope(pair.Value))).ToArray();
+                new(pair.Key.Value), MaterializeConcurrencyScope(pair.Value))).ToArray();
             var batch = new EventsWithConcurrencyScopes(events, suppliedScopes.Select(pair =>
                 _requiredEnrollmentScopes.TryGetValue(pair.Key, out var required)
                     ? new KeyValuePair<EventSourceId, ConcurrencyScope>(pair.Key, MergeRequiredScope(eventSequenceId, pair.Key, pair.Value, required))
@@ -225,7 +225,7 @@ public partial class UnitOfWork(
             DecisionReadScopes.Validate(read, eventStore.Name, eventStore.Namespace, EventSequenceId.Log);
             ValidateLegacyEventSequenceIdsForOrderedBatch(EventSequenceId.Log);
             EnsureEventSequenceCanBeUsed(EventSequenceId.Log);
-            var label = read.Scope.EventSourceId!;
+            var label = new EventSourceId(read.Scope.EventSourceId!.Value);
             if (_decisionScopes.TryGetValue(label, out var existing))
             {
                 _decisionScopes[label] = DecisionReadScopes.Merge(existing, read.Scope);
@@ -356,7 +356,7 @@ public partial class UnitOfWork(
     static bool ConcurrencyScopesAreSemanticallyEqual(ConcurrencyScope first, ConcurrencyScope second)
     {
         if (first.SequenceNumber != second.SequenceNumber ||
-            first.EventSourceId != second.EventSourceId ||
+            first.EventSourceId?.Value != second.EventSourceId?.Value ||
             first.EventStreamType != second.EventStreamType ||
             first.EventStreamId != second.EventStreamId ||
             first.EventSourceType != second.EventSourceType)
@@ -369,14 +369,15 @@ public partial class UnitOfWork(
         return firstEventTypes.SetEquals(secondEventTypes);
     }
 
-    static ConcurrencyScope MaterializeConcurrencyScope(ConcurrencyScope concurrencyScope) =>
-        concurrencyScope.EventTypes is null
-            ? concurrencyScope
-            : concurrencyScope with { EventTypes = concurrencyScope.EventTypes.ToArray() };
+    static ConcurrencyScope MaterializeConcurrencyScope(ConcurrencyScope concurrencyScope) => concurrencyScope with
+    {
+        EventSourceId = concurrencyScope.EventSourceId is null ? null : new(concurrencyScope.EventSourceId.Value),
+        EventTypes = concurrencyScope.EventTypes?.ToArray()
+    };
 
     static Dictionary<EventSourceId, ConcurrencyScope> MaterializeConcurrencyScopes(
         IReadOnlyDictionary<EventSourceId, ConcurrencyScope> concurrencyScopes) =>
-        concurrencyScopes.ToDictionary(_ => _.Key, _ => MaterializeConcurrencyScope(_.Value));
+        concurrencyScopes.ToDictionary(_ => new EventSourceId(_.Key.Value), _ => MaterializeConcurrencyScope(_.Value));
 
     static void ThrowIfLabelIsNotSpecified(EventSourceId label)
     {
@@ -603,7 +604,7 @@ public partial class UnitOfWork(
     {
         foreach (var (scopeLabel, concurrencyScope) in concurrencyScopes)
         {
-            if (concurrencyScope.EventSourceId is not null && concurrencyScope.EventSourceId != scopeLabel)
+            if (concurrencyScope.EventSourceId is not null && concurrencyScope.EventSourceId.Value != scopeLabel.Value)
             {
                 throw new ConcurrencyScopeEventSourceIdDoesNotMatchLabel(scopeLabel, concurrencyScope.EventSourceId);
             }
@@ -617,7 +618,7 @@ public partial class UnitOfWork(
         Dictionary<EventSourceId, ConcurrencyScope> enrolledConcurrencyScopes,
         IReadOnlyDictionary<EventSourceId, ConcurrencyScope>? requiredScopes = null)
     {
-        if (concurrencyScope.EventSourceId is not null && concurrencyScope.EventSourceId != scopeLabel)
+        if (concurrencyScope.EventSourceId is not null && concurrencyScope.EventSourceId.Value != scopeLabel.Value)
         {
             throw new ConcurrencyScopeEventSourceIdDoesNotMatchLabel(scopeLabel, concurrencyScope.EventSourceId);
         }
