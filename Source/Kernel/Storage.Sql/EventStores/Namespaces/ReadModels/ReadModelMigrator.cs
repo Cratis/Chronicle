@@ -157,12 +157,12 @@ public class ReadModelMigrator(
 
             if (context.Database.IsNpgsql())
             {
-                command.CommandText = $"SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{tableName}'";
+                command.CommandText = $"SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = '{tableName}'";
                 nameOrdinal = 0;
             }
             else if (context.Database.IsSqlServer())
             {
-                command.CommandText = $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{tableName}'";
+                command.CommandText = $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = '{tableName}'";
                 nameOrdinal = 0;
             }
             else
