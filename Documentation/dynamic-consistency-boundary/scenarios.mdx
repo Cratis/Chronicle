@@ -66,7 +66,7 @@ An account may withdraw at most 5000 a month. The rule concerns one account's `T
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/monthly-limit" variants="csharp" />
 
 ```text
-guard BankAccount-7: types=[MoneyWithdrawn], streamType=Transactions, streamId=2026-10, after <tail at read>
+guard BankAccount-7: types=[MoneyWithdrawn], sourceType=BankAccount, streamType=Transactions, streamId=2026-10, after <tail at read>
 ```
 
 What makes this work:
@@ -79,7 +79,7 @@ Why not read the whole account? It works, but the guard then covers every month,
 
 Two cautions:
 
-- **Two stream-scoped reads on one account widen to the whole account.** If a command reads `2026-10` and `2026-11`, the merged guard drops both stream dimensions. See [How guards are derived](./how-guards-are-derived.mdx#several-reads-on-one-source).
+- **Two stream-scoped reads on one account widen to the whole account.** If a command reads `2026-10` and `2026-11`, the merged guard covers every month of the account. Outside a read-protection frame both stream values are dropped, under a frame only the stream ID. See [How guards are derived](./how-guards-are-derived.mdx#several-reads-on-one-source).
 - **A stream-scoped read needs a specific stream type and a kernel that acknowledges stream scope.** See [Scoped to one event stream](../read-models/decision-reads.mdx#scoped-to-one-event-stream).
 
 The same code in an event source definition with declared dimensions is in [Event source scenarios](../event-sources/scenarios.mdx#a-monthly-limit-on-one-stream).
@@ -146,7 +146,7 @@ A customer's onboarding has steps, and a finished onboarding accepts nothing mor
 guard Customer-12: any type, streamType=Onboarding, after <tail at append>
 ```
 
-- **The guard is coarse on purpose.** It has no event types, so any step appended to this customer's onboarding after another writer read the tail conflicts. That is how an aggregate behaves, and it is right when the steps are one story. When only some events matter to a rule, use a decision read instead.
+- **The guard is coarse on purpose.** It has no event types, so any event in this customer's `Onboarding` stream counts. The tail is read when the append is made, not when the user last looked. Two writers that append at the same moment conflict. A step that another writer appended earlier, and that your writer never read, does not. If a decision depends on what the writer saw, use a decision read. The first append into a new stream is not checked unless you turn on `CheckFirstAppendIntoAScope`, see [Concurrency](../events/concurrency.mdx#the-first-append-into-a-scope-is-not-checked-by-default).
 - **A closing event ends the process.** `OnboardingCompleted` carries `[ClosesStream]`. The kernel writes it and closes the stream in one step, so a late or repeated step is refused with a `StreamClosed` constraint violation. See [Closing events](../closing-streams/closing-events.mdx).
 - **Different customers do not conflict.** The source ID is part of the guard.
 

@@ -46,15 +46,31 @@ Reads of the same source merge into one guard. The merged guard can only get wid
 
 | What the reads share | The merged guard |
 |---|---|
-| Same source, same stream | The union of the event types, from the earliest position |
-| Same source, different stream types or stream IDs | The union of the event types. Both stream dimensions are dropped, so every stream of the source counts |
+| Same source, same stream and source type | The union of the event types, from the earliest position |
+| Same source, different stream type or stream ID | The union of the event types. Which stream values survive depends on where you commit, see below |
 | Same source, different source types | The source type is dropped. Every source type counts |
 | Different sources | One guard per source, validated together with the append |
 
+The earliest position wins. An absent model, read before any matching event existed, counts as the earliest of all.
+
+Where the reads are merged decides what happens to the stream values.
+
+| Where | Stream type and stream ID | Event types |
+|---|---|---|
+| `AppendMany(guardedBy: reads)`, or a unit of work without a [read-protection frame](../read-models/read-protection.mdx) | Kept only when both are equal. If either differs, both are dropped | The union |
+| A unit of work under a read-protection frame | Each value is kept only when the reads agree on it. A different stream ID drops only the stream ID. A different stream type drops only the stream type | The union. If any read has no event types, any type counts |
+
 ```text
 // Two reads on BankAccount-7: Transactions/2026-10 and Transactions/2026-11
+
+// outside a frame
 guard BankAccount-7: types=[MoneyWithdrawn], any stream, after <earlier tail>
+
+// under a frame
+guard BankAccount-7: types=[MoneyWithdrawn], streamType=Transactions, any stream ID, after <earlier tail>
 ```
+
+In both cases a withdrawal in any month conflicts.
 
 The widening produces extra conflicts. It cannot hide one. If a rule needs two streams, read the whole source once instead, so the guard says what it covers.
 
@@ -66,8 +82,10 @@ Chronicle does not guess whether your own scope is enough. It checks.
 |---|---|
 | A decision read and an explicit scope on one source, outside a read-protection frame | The append is refused with `DecisionReadConflictsWithConcurrencyScope`. Remove the scope or the read |
 | A decision read and an explicit scope on one source, under a [read-protection frame](../read-models/read-protection.mdx) | The explicit scope is used if it covers everything the read watches and its position is not later than the read's. Otherwise `ExplicitScopeDoesNotCoverReads` |
-| Two different explicit scopes on one source | `ConflictingExplicitScopes` with a read, `ConflictingContributionsOnLabel` without one |
+| Two explicit scopes on one source that differ in meaning, under a frame | `ConflictingExplicitScopes` when a decision read is on the source. Without a read, `ConflictingContributionsOnLabel`, which also covers an explicit scope next to an aggregate-style scope |
 | A decision read and an aggregate-style contributed read on one source | `ReadAndAggregateOnSameSource` |
+
+Two scopes mean the same when they have the same position and the same expectation, and each covers the other. Scopes that mean the same are merged into one.
 
 A scope covers a read when its source, source type, stream type and stream ID are each unset or equal, its event types are empty or a superset, and its position is the same or earlier.
 

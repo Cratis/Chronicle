@@ -115,7 +115,7 @@ They are two layers. Read protection is the Chronicle API: the frame, the allowa
 
 ## Why did my guard cover more than I read?
 
-Guards only widen when they merge. Two reads of one source in different streams drop both stream dimensions. A [declared dimension set](../event-sources/concurrency.mdx) on a definition, committed under read protection, adds its dimensions and makes the guard match any event type in that range. The result can cause extra conflicts but never misses one. See [How guards are derived](./how-guards-are-derived.mdx).
+Guards only widen when they merge. Two reads of one source in different streams keep only the stream values they share: outside a read-protection frame both stream values are dropped when either differs, under a frame each value is kept only if the reads agree on it. A [declared dimension set](../event-sources/concurrency.mdx) on a definition, committed under a read-protection frame, adds its dimensions where they equal the read's and makes the guard match any event type. The result can cause extra conflicts but never misses one. See [How guards are derived](./how-guards-are-derived.mdx).
 
 ## How do I see what an append is guarded by?
 
@@ -123,7 +123,7 @@ Under a read-protection frame, call `IUnitOfWork.GetAppendConditions()` after th
 
 ## Can I read two streams of one source in the same decision?
 
-Yes, but the merged guard then covers every stream of that source. If the rule truly spans two streams, read the whole source once so the guard says what it covers. If it does not, split the rule into two decisions. See [Several reads on one source](./how-guards-are-derived.mdx#several-reads-on-one-source).
+Yes, but the merged guard then covers every stream ID of that source, and outside a read-protection frame every stream type as well. If the rule truly spans two streams, read the whole source once so the guard says what it covers. If it does not, split the rule into two decisions. See [Several reads on one source](./how-guards-are-derived.mdx#several-reads-on-one-source).
 
 ## Where do I go if I use Arc commands?
 

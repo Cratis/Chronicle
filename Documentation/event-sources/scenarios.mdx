@@ -83,7 +83,7 @@ A money transfer is a process with several steps. Each transfer is one event sou
 <ChronicleClientTabs snippet="event-sources/scenarios/process" variants="csharp" />
 
 - The reactor uses `[FromEventSource<TransferEventSource>("Process")]`. It receives the steps of transfer processes and nothing else.
-- Every append declares the event source id only. The scope narrows to the one transfer, so transfers do not conflict with each other, and two writers advancing the same transfer do.
+- Every append declares the event source id only. The scope narrows to the one transfer, so transfers do not conflict with each other, and two writers advancing the same transfer at the same moment do.
 - `TransferCompleted` carries `[ClosesStream]`. Appended to the `Process` stream, it closes that transfer's process stream. A step appended afterwards is refused with `StreamClosed`, so a late or duplicated message cannot reopen a finished transfer.
 
 A reactor reacts after the event is written. It is not a guard, and it can be given an event again after a recovery. Make each step safe to repeat, and see [once only](../reactors/once-only.mdx) for what that attribute does and does not promise.
