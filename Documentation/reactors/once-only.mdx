@@ -16,7 +16,8 @@ observer, or that a redaction or revision triggers for you. That is the whole of
 
 Renaming a reactor or moving its namespace changes its default id. The new observer catches up from
 the beginning as **ordinary observation**, so `OnceOnly` handlers run and side effects repeat. Preserve
-the existing id explicitly before refactoring; see [Reactor identity and renaming](identity.mdx).
+the existing id explicitly before refactoring; see [Reactor identity and renaming](identity.mdx). To keep a
+new reactor from acting on history at all, mark it with [StartAtTail](start-at-tail).
 
 It is not an exactly-once delivery guarantee. In particular, **recovering a failed partition re-delivers the
 event as an ordinary observation, so a `OnceOnly` handler runs again** — which is the point of a retry: the
