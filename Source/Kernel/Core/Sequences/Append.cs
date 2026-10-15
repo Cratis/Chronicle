@@ -119,7 +119,6 @@ public record Append(
     {
         var route = AppendRoute.Resolve(EventSourceType?.Value, EventStreamType?.Value, EventStreamId?.Value);
 
-        // Defer payload parsing until the grain has looked up the receipt.
         var events = new[] { Content }.Select(content => new EventSequences.EventToAppend(
             route.SourceType,
             EventSourceId,
@@ -133,7 +132,7 @@ public record Append(
         {
             NamedTags = namedTags,
             EventSource = string.IsNullOrEmpty(EventSource) ? null : new EventSourceName(EventSource)
-        });
+        }).ToArray();
         var scopes = new Concepts.EventSequences.Concurrency.ConcurrencyScopes(new Dictionary<EventSourceId, Concepts.EventSequences.Concurrency.ConcurrencyScope>
         {
             [EventSourceId] = ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None

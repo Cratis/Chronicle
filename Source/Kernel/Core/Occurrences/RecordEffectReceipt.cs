@@ -13,6 +13,10 @@ namespace Cratis.Chronicle.Occurrences;
 /// <summary>
 /// Records an effect that appends no events and has no protected decision scopes.
 /// </summary>
+/// <remarks>
+/// Always calls the Log grain. An AlreadyRecorded hit returns the namespace-scoped receipt but does
+/// not reconcile another event sequence's grain state; append retries reconcile their own sequence.
+/// </remarks>
 /// <param name="EventStore">The target event store.</param>
 /// <param name="Namespace">The target namespace.</param>
 /// <param name="EffectReceipt">The occurrence effect and optional response.</param>

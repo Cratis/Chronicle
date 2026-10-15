@@ -7,20 +7,12 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_with_
 
 public class and_the_commit_acknowledgment_is_lost : given.an_event_sequence_with_effect_receipts
 {
-    AppendManyResult _first;
-
     void Establish() => _commitThenFail = true;
 
-    async Task Because()
-    {
-        _first = await AppendEffect();
-        _receipt = _receipt with { Epoch = 2, Response = "{\"answer\":100}" };
-        _constraintValidation.ClearReceivedCalls();
-        _result = await AppendEffect([AnEvent with { EventType = new("different-event", EventTypeGeneration.First), EventSourceId = "different-source" }]);
-    }
+    async Task Because() => _result = await AppendEffect();
 
-    [Fact] void should_report_the_lost_acknowledgment_as_a_failure() => _first.IsSuccess.ShouldBeFalse();
-    [Fact] void should_settle_the_retry_from_the_receipt() => _result.EffectAlreadyRecorded.ShouldBeTrue();
+    [Fact] void should_settle_the_unknown_outcome_from_the_receipt() => _result.EffectAlreadyRecorded.ShouldBeTrue();
+    [Fact] void should_not_report_an_opaque_storage_error() => _result.Errors.ShouldBeEmpty();
     [Fact] void should_return_the_committed_response() => _result.EffectReceipt!.Response.ShouldEqual("{\"answer\":42}");
     [Fact] void should_keep_exactly_one_set_of_events() => _durableStorage.Events.Count.ShouldEqual(1);
     [Fact] void should_advance_the_next_slot_from_the_receipt() => _stateStorage.State.SequenceNumber.Value.ShouldEqual(1UL);

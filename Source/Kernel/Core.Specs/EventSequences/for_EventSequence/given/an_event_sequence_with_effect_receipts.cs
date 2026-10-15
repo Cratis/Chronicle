@@ -19,6 +19,7 @@ public class an_event_sequence_with_effect_receipts : an_event_sequence
     protected Storage.InMemory.EventSequences.EventSequenceStorage _durableStorage;
     protected IEffectReceiptStorage _receiptStorage;
     protected bool _commitThenFail;
+    protected bool _failWithoutCommit;
     protected EffectReceiptWriteResult? _collision;
     protected AppendManyResult _result;
 
@@ -44,6 +45,7 @@ public class an_event_sequence_with_effect_receipts : an_event_sequence
         _receiptStorage.AppendManyWithEffectReceipt(Arg.Any<IEnumerable<EventToAppendToStorage>>(), Arg.Any<StoredEffectReceipt>())
             .Returns(async call =>
             {
+                if (_failWithoutCommit) throw new SimulatedStateWriteError();
                 if (_collision is { } collision) return collision;
                 var result = await _durableStorage.AppendManyWithEffectReceipt(call.Arg<IEnumerable<EventToAppendToStorage>>(), call.Arg<StoredEffectReceipt>());
                 if (_commitThenFail)

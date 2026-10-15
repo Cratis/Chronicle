@@ -44,7 +44,7 @@ public partial class EventSequence
         }
 
         var receipt = new StoredEffectReceipt(id, new(new(effectReceipt.OccurrenceId), effectReceipt.Epoch), outcome, null, null, null, reasons, effectReceipt.Response, DateTimeOffset.UtcNow);
-        var result = await EffectReceiptStorage.AppendManyWithEffectReceipt([], receipt);
+        var result = await WriteEffectReceiptForSettlement([], receipt);
         if (result == EffectReceiptWriteResult.Written) return new(EffectReceiptStatus.Recorded, EffectReceiptConverters.ToDetails(receipt));
         existing = await EffectReceiptStorage.GetEffectReceipt(id);
         if (existing is not null) return new(EffectReceiptStatus.AlreadyRecorded, EffectReceiptConverters.ToDetails(existing));
@@ -111,7 +111,7 @@ public partial class EventSequence
     {
         while (true)
         {
-            var result = await EffectReceiptStorage.AppendManyWithEffectReceipt(events, PrepareEffectReceipt(effectReceipt, events));
+            var result = await WriteEffectReceiptForSettlement(events, PrepareEffectReceipt(effectReceipt, events));
             if (result == EffectReceiptWriteResult.Written) break;
             var settled = await FindEffectReceipt(effectReceipt, correlationId);
             if (settled is not null) return settled;
@@ -132,6 +132,21 @@ public partial class EventSequence
         }
 
         return Result<IEnumerable<AppendedEvent>, AppendManyResult>.Success(appendedEvents);
+    }
+
+    async Task<EffectReceiptWriteResult> WriteEffectReceiptForSettlement(IEnumerable<EventToAppendToStorage> events, StoredEffectReceipt receipt)
+    {
+        try
+        {
+            return await EffectReceiptStorage.AppendManyWithEffectReceipt(events, receipt);
+        }
+        catch (Exception exception)
+        {
+            // A storage exception cannot establish whether the commit happened. Both callers settle by
+            // receipt lookup, reconciling the durable winner or reporting EffectReceiptUnsettled on a miss.
+            logger.ErrorAppendingMany(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, exception);
+            return EffectReceiptWriteResult.TransactionConflicted;
+        }
     }
 
     StoredEffectReceipt PrepareEffectReceipt(EffectReceipt effectReceipt, List<EventToAppendToStorage> events) => new(
