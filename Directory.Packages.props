@@ -21,14 +21,14 @@
     <PackageVersion Include="Cratis.Fundamentals" Version="7.24.0" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.24.0" />
     <!-- Keep the Arc runtime packages aligned; Chronicle.Testing declares Arc dependencies for its embedded kernel. -->
-    <PackageVersion Include="Cratis.Arc" Version="22.86.0" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="22.86.0" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.86.0" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.86.0" />
+    <PackageVersion Include="Cratis.Arc" Version="22.103.0" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="22.103.0" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.103.0" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.103.0" />
     <!-- Build-time tool only, kept at 22.23.0: the 22.30.0 generator aborts on Core with "Microsoft.Extensions.Options has already been loaded into this MetadataLoadContext". -->
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.86.0" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.86.0" />
-    <PackageVersion Include="Cratis.Arc.Testing" Version="22.86.0" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.103.0" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.103.0" />
+    <PackageVersion Include="Cratis.Arc.Testing" Version="22.103.0" />
     <PackageVersion Include="Cratis.Screenplay" Version="4.149.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
