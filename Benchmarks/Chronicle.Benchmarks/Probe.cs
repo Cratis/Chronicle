@@ -51,7 +51,7 @@ internal static class Probe
         catch (OperationCanceledException)
         {
             run.Status = run.RegisteredMs.HasValue ? "DID_NOT_FINISH" : "INVALID";
-            run.Reason = !run.RegisteredMs.HasValue ? $"setup-deadline: {run.Phase}" :
+            run.Reason += !run.RegisteredMs.HasValue ? $"setup-deadline: {run.Phase}" :
                 $"Measurement deadline {run.MeasurementDeadlineSeconds}s reached (total internal budget {run.DeadlineSeconds}s, finalization reserve {run.FinalizationReserveSeconds}s); acknowledged membership only.";
         }
         catch (Exception error)
@@ -64,7 +64,7 @@ internal static class Probe
         {
             if (worker is not null && !worker.IsCompleted)
             {
-                try { await worker.WaitAsync(TimeSpan.FromSeconds(5)); }
+                try { await worker.WaitAsync(TimeSpan.FromSeconds(30)); }
                 catch (Exception error) { run.Reason += $"\nWorker finalization: {error.Message}"; }
                 if (!worker.IsCompleted) { run.Status = "INVALID"; run.Reason += "\nWorker did not stop before snapshot."; }
             }
@@ -231,73 +231,92 @@ internal static class Probe
         if (run.Expected != n) throw new InvalidOperationException($"Expected {n} unique acknowledged append results, got {run.Expected}.");
         var tail = run.Appended.Keys.Max(p => p.SequenceNumber);
         if (appendOnly) run.EffectMs = run.AppendMs;
-        while (true)
+        try
         {
-            cancellation.ThrowIfCancellationRequested();
-            run.Snapshot();
-            var allState = await mongo.State().WaitAsync(cancellation);
-            run.PersistedObserverState = allState.Select(d => d.ToJson()).ToArray();
-            if (StateAtTail(allState, tail, "$system.patterns")) run.SystemDurableMs ??= run.Clock.Elapsed.TotalMilliseconds;
-            if (!appendOnly)
+            while (true)
             {
-                var state = allState.Where(s => s["_id"].AsString == run.ProbeObserverId).ToArray();
-                var jobs = (await mongo.Jobs().WaitAsync(cancellation))
-                    .Where(j => j.GetValue("details", "").ToString() == run.ProbeObserverId).ToArray();
-                run.PersistedJobs = jobs.Select(d => d.ToJson()).ToArray();
-                // Retained jobs must name this sole observer and the catch-up job type, not merely have a success code.
-                var jobIdentityVerified = jobs.All(j => j.Contains("status") &&
-                    j.ToJson().Contains("CatchUpObserver", StringComparison.Ordinal) &&
-                    j.ToJson().Contains(projection ? typeof(BenchmarkProjection).FullName! : "probe-4748", StringComparison.Ordinal));
-                if (catchup && !jobIdentityVerified) throw new InvalidOperationException("Cannot verify retained catch-up job identity/schema for the sole probe observer.");
-                var finishedJobs = false;
-                if (catchup && StateAtTail(state, tail, run.ProbeObserverId) && jobs.Length == 0 && !run.JobMs.HasValue)
+                cancellation.ThrowIfCancellationRequested();
+                run.Snapshot();
+                var allState = await mongo.State().WaitAsync(cancellation);
+                run.PersistedObserverState = allState.Select(d => d.ToJson()).ToArray();
+                if (StateAtTail(allState, tail, "$system.patterns")) run.SystemDurableMs ??= run.Clock.Elapsed.TotalMilliseconds;
+                if (!appendOnly)
                 {
-                    var completed = await mongo.CompletedCatchupJobs(run.ProbeObserverId, tail).WaitAsync(cancellation);
-                    run.CompletedJobEvidence = completed.Select(d => d.ToJson()).ToArray();
-                    run.JobWriteSamples = mongo.JobWriteSamples;
-                    if (completed.Length != 1) throw new InvalidOperationException("Tail reached but full handled-all/tail job evidence plus deletion is not proven for exactly one job.");
-                    finishedJobs = true;
+                    var state = allState.Where(s => s["_id"].AsString == run.ProbeObserverId).ToArray();
+                    var jobs = (await mongo.Jobs().WaitAsync(cancellation))
+                        .Where(j => j.GetValue("details", "").ToString() == run.ProbeObserverId).ToArray();
+                    run.PersistedJobs = jobs.Select(d => d.ToJson()).ToArray();
+                    // Retained jobs must name this sole observer and the catch-up job type, not merely have a success code.
+                    var jobIdentityVerified = jobs.All(j => j.Contains("status") &&
+                        j.ToJson().Contains("CatchUpObserver", StringComparison.Ordinal) &&
+                        j.ToJson().Contains(projection ? typeof(BenchmarkProjection).FullName! : "probe-4748", StringComparison.Ordinal));
+                    if (catchup && !jobIdentityVerified) throw new InvalidOperationException("Cannot verify retained catch-up job identity/schema for the sole probe observer.");
+                    var finishedJobs = false;
+                    if (catchup && StateAtTail(state, tail, run.ProbeObserverId) && jobs.Length == 0 && !run.JobMs.HasValue)
+                    {
+                        var completed = await mongo.CompletedCatchupJobs(run.ProbeObserverId, tail).WaitAsync(cancellation);
+                        run.CompletedJobEvidence = completed.Select(d => d.ToJson()).ToArray();
+                        run.JobWriteSamples = mongo.JobWriteSamples;
+                        if (completed.Length != 1) throw new InvalidOperationException("Tail reached but full handled-all/tail job evidence plus deletion is not proven for exactly one job.");
+                        finishedJobs = true;
+                    }
+                    var terminal = catchup ? jobs.FirstOrDefault(j => j.GetValue("status", 0).ToInt32() >= 6) : null;
+                    if (terminal is not null)
+                    {
+                        // A non-successful terminal job never becomes healthy; capture evidence while the client is still connected.
+                        run.JobTerminalMs = run.Clock.Elapsed.TotalMilliseconds;
+                        run.JobTerminalStatus = terminal["status"].ToInt32();
+                        run.JobTerminalObservedUtc = DateTimeOffset.UtcNow;
+                        await Task.Delay(5000, cancellation);
+                        await CaptureConnectedFailure(mongo, run, cancellation);
+                        run.Status = "JOB_FAILED";
+                        run.Reason = $"Catch-up job reached non-successful terminal status {run.JobTerminalStatus}; evidence captured with the client connected.";
+                        return;
+                    }
+                    if (run.JobMs.HasValue && jobs.Length == 0) finishedJobs = true;
+                    if (catchup && finishedJobs) run.JobMs ??= run.Clock.Elapsed.TotalMilliseconds;
+                    if (StateAtTail(state, tail, run.ProbeObserverId) && (!catchup || finishedJobs)) run.DurableMs ??= run.Clock.Elapsed.TotalMilliseconds;
+                    if (projection)
+                    {
+                        var rows = await mongo.ProjectionRows().WaitAsync(cancellation);
+                        run.ProjectionDocuments = new(mongo.ProjectionEvidence);
+                        run.ProjectionRows = rows.Length;
+                        run.ProjectionValuesMatch = ProjectionMatches(rows, run);
+                        if (run.ProjectionValuesMatch.Value) run.EffectMs ??= run.Clock.Elapsed.TotalMilliseconds;
+                    }
                 }
-                var terminal = catchup ? jobs.FirstOrDefault(j => j.GetValue("status", 0).ToInt32() >= 6) : null;
-                if (terminal is not null)
+                if ((appendOnly || (run.DurableMs.HasValue && (!projection || run.EffectMs.HasValue))) && run.SystemDurableMs.HasValue)
                 {
-                    // A non-successful terminal job never becomes healthy; capture evidence while the client is still connected.
-                    run.JobTerminalMs = run.Clock.Elapsed.TotalMilliseconds;
-                    run.JobTerminalStatus = terminal["status"].ToInt32();
-                    run.JobTerminalObservedUtc = DateTimeOffset.UtcNow;
-                    await Task.Delay(5000, cancellation);
-                    run.Snapshot();
-                    run.ConnectedObserverState = (await mongo.State().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
-                    run.PersistedJobs = (await mongo.Jobs().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
-                    var steps = await mongo.JobSteps().WaitAsync(cancellation);
-                    run.JobStepCount = steps.Length;
-                    run.UnsuccessfulJobSteps = steps.Where(d => d.GetValue("status", 0).ToInt32() != 3).Select(d => d.ToJson()).ToArray();
-                    run.FailedJobSteps = (await mongo.FailedJobSteps().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
-                    run.FailedPartitions = (await mongo.FailedPartitions().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
-                    run.Status = "JOB_FAILED";
-                    run.Reason = $"Catch-up job reached non-successful terminal status {run.JobTerminalStatus}; evidence captured with the client connected.";
+                    await Task.Delay(2000, cancellation);
+                    run.Status = "COMPLETE";
                     return;
                 }
-                if (run.JobMs.HasValue && jobs.Length == 0) finishedJobs = true;
-                if (catchup && finishedJobs) run.JobMs ??= run.Clock.Elapsed.TotalMilliseconds;
-                if (StateAtTail(state, tail, run.ProbeObserverId) && (!catchup || finishedJobs)) run.DurableMs ??= run.Clock.Elapsed.TotalMilliseconds;
-                if (projection)
-                {
-                    var rows = await mongo.ProjectionRows().WaitAsync(cancellation);
-                    run.ProjectionDocuments = new(mongo.ProjectionEvidence);
-                    run.ProjectionRows = rows.Length;
-                    run.ProjectionValuesMatch = ProjectionMatches(rows, run);
-                    if (run.ProjectionValuesMatch.Value) run.EffectMs ??= run.Clock.Elapsed.TotalMilliseconds;
-                }
+                await Task.Delay(100, cancellation);
             }
-            if ((appendOnly || (run.DurableMs.HasValue && (!projection || run.EffectMs.HasValue))) && run.SystemDurableMs.HasValue)
-            {
-                await Task.Delay(2000, cancellation);
-                run.Status = "COMPLETE";
-                return;
-            }
-            await Task.Delay(100, cancellation);
         }
+        finally
+        {
+            if (catchup && !run.DurableMs.HasValue && run.ConnectedObserverState.Length == 0)
+            {
+                // Measure owns the connected client: snapshot before its using declaration disposes it,
+                // even when the measurement token expired with a job still Running (status below 6).
+                using var captureDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                try { await CaptureConnectedFailure(mongo, run, captureDeadline.Token); }
+                catch (Exception error) { run.Reason += $"Connected failure capture incomplete: {error.Message}\n"; }
+            }
+        }
+    }
+
+    static async Task CaptureConnectedFailure(ProbeMongo mongo, ProbeRun run, CancellationToken cancellation)
+    {
+        run.Snapshot();
+        run.ConnectedObserverState = (await mongo.State().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
+        run.PersistedJobs = (await mongo.Jobs().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
+        var steps = await mongo.JobSteps().WaitAsync(cancellation);
+        run.JobStepCount = steps.Length;
+        run.UnsuccessfulJobSteps = steps.Where(d => d.GetValue("status", 0).ToInt32() != 3).Select(d => d.ToJson()).ToArray();
+        run.FailedJobSteps = (await mongo.FailedJobSteps().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
+        run.FailedPartitions = (await mongo.FailedPartitions().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
     }
 
     static async Task Append(IEventLog log, ProbeRun run, int n, int keyCount, int concurrency, bool batch, CancellationToken cancellation)
