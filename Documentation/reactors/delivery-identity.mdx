@@ -106,6 +106,6 @@ If the integration you are calling is already idempotent, you do not need any of
 idempotency key and stop there.
 
 :::note[Client coverage]
-`ReactorDelivery` is a .NET client feature. Elixir and TypeScript reactors have no equivalent parameter yet; make
+`ReactorDelivery` is a .NET client feature. Elixir carries the same identity as `delivery_id` on the event context, built from the same parts. TypeScript reactors have no equivalent parameter yet; make
 those integrations self-idempotent instead.
 :::
