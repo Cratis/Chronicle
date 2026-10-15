@@ -20,7 +20,10 @@ internal static class DecisionReadEventConverters
     internal static EventAndContext ForDecisionRead(this Contracts.Sequences.AppendedEventResponse input, IEventStore store, EventType declared, Type model, JsonSerializerOptions options)
     {
         var context = input.Context.ToClient(store.Name, store.Namespace);
-        if (input.Revisions.Any(revision => revision.Generation != declared.Generation.Value))
+
+        // Storage that revises in place keeps no revision list, only the marker of the revised generation.
+        if ((input.RevisedGeneration is { } revised && revised != declared.Generation.Value) ||
+            input.Revisions.Any(revision => revision.Generation != declared.Generation.Value))
         {
             throw new DecisionReadRefused(DecisionReadRefusalReason.ReducerGeneration, model);
         }

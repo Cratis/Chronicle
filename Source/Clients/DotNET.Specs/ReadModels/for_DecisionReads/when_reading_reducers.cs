@@ -153,6 +153,26 @@ public class when_reading_reducers : given.a_decision_reader
     }
 
     [Fact]
+    public async Task should_refuse_a_revision_marker_without_revision_history()
+    {
+        // Storage that revises in place (SQL) sends only the revised generation, with no revision list.
+        _events[0] = Event(1, 999, 2);
+        _events[0].GenerationalContent = new Dictionary<int, string> { [1] = "{\"amount\":3}", [2] = "{\"amount\":999}" };
+        _events[0].RevisedGeneration = 2;
+        var error = await Record.ExceptionAsync(() => _reader.GetDetached<Counter>("source"));
+        ((DecisionReadRefused)error).Reason.ShouldEqual(DecisionReadRefusalReason.ReducerGeneration);
+    }
+
+    [Fact]
+    public async Task should_use_in_place_revised_content_of_the_declared_generation()
+    {
+        _events[0] = Event(1, 999, 2);
+        _events[0].GenerationalContent = new Dictionary<int, string> { [1] = "{\"amount\":3}" };
+        _events[0].RevisedGeneration = 1;
+        (await _reader.GetDetached<Counter>("source")).Instance!.Value.ShouldEqual(2);
+    }
+
+    [Fact]
     public async Task should_refuse_registry_fallback_to_a_different_generation()
     {
         _types.GetClrTypeFor((EventTypeId)"added", (EventTypeGeneration)1).Returns(typeof(AddedV2));

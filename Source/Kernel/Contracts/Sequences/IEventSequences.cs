@@ -1344,6 +1344,12 @@ public class AppendedEventResponse
     /// </summary>
     [ProtoMember(6)]
     public IEnumerable<global::System.Collections.Generic.KeyValuePair<int, string>> GenerationalContent { get; set; } = new List<global::System.Collections.Generic.KeyValuePair<int, string>>();
+
+    /// <summary>
+    /// Gets or sets the RevisedGeneration.
+    /// </summary>
+    [ProtoMember(7)]
+    public global::System.UInt32? RevisedGeneration { get; set; }
 }
 
 /// <summary>
