@@ -150,7 +150,6 @@ public partial class EventSequence
 
     ConstraintIndexReplay CreateConstraintIndexReplay()
     {
-        PrepareConstraintIndexRepair();
         _replayScopes = _pendingConstraintIndexes.Where(pair => _indexedDefinitions.ContainsKey(pair.Key)).Select(pair => new ConstraintIndexReplayScope(_indexedDefinitions[pair.Key], pair.Value)).ToArray();
         _replayAbandonedIndexes.Clear();
         _replaySettledErrors = 0;

@@ -64,10 +64,38 @@ public class when_observing_failures : Specification
     }
 
     [Fact]
-    void should_restart_the_count_for_a_different_failure_message()
+    void should_settle_the_same_failure_despite_changing_messages()
     {
-        Observe(4, error: new FormatException("first"));
-        Observe(1, error: new FormatException("second")).ShouldBeEmpty();
+        Observe(4, error: new FormatException("request 1"));
+        Observe(1, error: new FormatException("request 2")).Keys.ShouldContain((ConstraintName)"unique");
+    }
+
+    [Fact]
+    void should_restart_the_count_for_a_different_hresult()
+    {
+        Observe(4, error: new ResultFailure(100));
+        Observe(1, error: new ResultFailure(200)).ShouldBeEmpty();
+    }
+
+    [Fact]
+    void should_restart_the_count_for_a_provider_code_beneath_a_wrapper()
+    {
+        Observe(4, error: new InvalidOperationException("wrapper", new NumberedFailure(100)));
+        Observe(1, error: new InvalidOperationException("wrapper", new NumberedFailure(200))).ShouldBeEmpty();
+    }
+
+    [Fact]
+    void should_find_provider_codes_in_later_aggregate_branches()
+    {
+        Observe(4, error: new AggregateException(new FormatException(), new InvalidOperationException("wrapper", new CodedFailure(100))));
+        Observe(1, error: new AggregateException(new FormatException(), new InvalidOperationException("wrapper", new CodedFailure(200)))).ShouldBeEmpty();
+    }
+
+    [Fact]
+    void should_find_provider_codes_inside_an_aggregate_beneath_a_wrapper()
+    {
+        Observe(4, error: new InvalidOperationException("wrapper", new AggregateException(new StatefulFailure("first"))));
+        Observe(1, error: new InvalidOperationException("wrapper", new AggregateException(new StatefulFailure("second")))).ShouldBeEmpty();
     }
 
     [Fact]
@@ -94,6 +122,11 @@ public class when_observing_failures : Specification
             result = _tracker.Observe(new Dictionary<ConstraintName, ConstraintIndexReplayFailure> { ["unique"] = new(eventIdentified ? position ?? EventSequenceNumber.First : null, error ?? new FormatException()) }, storageSucceeded);
         }
         return result;
+    }
+
+    sealed class ResultFailure : Exception
+    {
+        public ResultFailure(int result) : base("provider failure") => HResult = result;
     }
 
     sealed class NumberedFailure(int number) : Exception("provider failure")

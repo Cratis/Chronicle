@@ -8,8 +8,14 @@ namespace Cratis.Chronicle.Events.Constraints;
 
 public partial class ConstraintIndexReplay
 {
+    /// <summary>
+    /// Bounds point-read fallback when a page fault has not yet been attributed to a slot.
+    /// </summary>
+    internal const int IndividualReadWindowSize = 1000;
     bool _readIndividually;
-    EventSequenceNumber? _pageFaultPosition;
+    int _individualReadsRemaining;
+    EventSequenceNumber? _individualReadFailureEnd;
+    EventSequenceNumber? _knownBadReadEnd;
 
     EventType[] ReplayEventTypes() => _scopes.SelectMany(scope => scope.Definition switch
     {
@@ -32,19 +38,35 @@ public partial class ConstraintIndexReplay
             _operationPosition = position;
             if (_scopes.Any(scope => position >= scope.From && !IsPoison(scope.Definition.Name, position)))
             {
-                var @event = await events.GetEventAt(position).WaitAsync(cancellationToken);
+                var @event = await ReadIndividualEvent(position, cancellationToken);
                 if (!await IncludeEvent(@event, cancellationToken)) return (false, count);
             }
             _position = position.Next();
             _operationPosition = null;
             count++;
-            if (_pageFaultPosition is { } fault && _position > fault)
+            var through = _readIndividually ? _individualReadFailureEnd : _knownBadReadEnd;
+            if ((through is { } end && _position! >= end) || (_readIndividually && --_individualReadsRemaining <= 0))
             {
                 _readIndividually = false;
-                _pageFaultPosition = null;
+                _individualReadFailureEnd = null;
                 return (false, count);
             }
         }
         return (false, count);
+    }
+
+    async Task<AppendedEvent> ReadIndividualEvent(EventSequenceNumber position, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await events.GetEventAt(position).WaitAsync(cancellationToken);
+        }
+        catch (Exception error) when (!cancellationToken.IsCancellationRequested && StorageErrorClassifier?.IsTransient(error) is false)
+        {
+            var end = position.Next();
+            _individualReadFailureEnd = end;
+            if (_knownBadReadEnd is not { } known || end > known) _knownBadReadEnd = end;
+            throw;
+        }
     }
 }

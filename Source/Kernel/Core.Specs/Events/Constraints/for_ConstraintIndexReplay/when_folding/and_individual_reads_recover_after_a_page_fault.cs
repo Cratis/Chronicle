@@ -14,9 +14,7 @@ public class and_individual_reads_recover_after_a_page_fault : given.a_replay
 
     void Establish()
     {
-        Event(0, "first", "Claimed", "first");
-        Event(1, "second", "Claimed", "second");
-        Event(2, "third", "Claimed", "third");
+        for (ulong number = 0; number < ConstraintIndexReplay.IndividualReadWindowSize + 2; number++) Event(number, $"source-{number}", "Claimed", $"value-{number}");
         var broken = Substitute.For<IEventCursor>();
         broken.MoveNext().Returns(Task.FromException<bool>(new FormatException("bad page")));
         _sequence.GetFromSequenceNumber(Arg.Any<EventSequenceNumber>(), Arg.Any<EventSourceId?>(), Arg.Any<EventSourceType?>(), Arg.Any<EventStreamType?>(), Arg.Any<EventStreamId?>(), Arg.Any<IEnumerable<EventType>?>(), Arg.Any<IEnumerable<Tag>?>(), Arg.Any<CancellationToken>())
@@ -35,11 +33,11 @@ public class and_individual_reads_recover_after_a_page_fault : given.a_replay
     async Task Because()
     {
         await _replay.Continue();
-        _result = await _replay.Continue();
+        _result = await _replay.Continue(int.MaxValue);
     }
 
     [Fact] void should_return_to_batched_reads() => _pages.ShouldEqual(2);
-    [Fact] void should_only_point_read_the_faulted_slot() => _pointReads.ShouldEqual(1);
+    [Fact] void should_point_read_only_one_bounded_window() => _pointReads.ShouldEqual(ConstraintIndexReplay.IndividualReadWindowSize);
     [Fact] void should_complete_the_recovered_fold() => _result.IsCompleted.ShouldBeTrue();
-    [Fact] async Task should_preserve_the_remaining_events() => (await Values("third")).ShouldContain(Hash("third").Value);
+    [Fact] async Task should_preserve_the_remaining_events() => (await Values("source-1001")).ShouldContain(Hash("value-1001").Value);
 }

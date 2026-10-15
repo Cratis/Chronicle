@@ -61,13 +61,26 @@ internal sealed class ConstraintIndexPoisonTracker(IStorageErrorClassifier class
 
     static string FailureIdentity(Exception error)
     {
-        // Keep provider dependencies outside Core while preserving their public error identities.
-        var codes = _errorCodeProperties
-            .Select(name => (Name: name, Value: error.GetType().GetProperty(name)?.GetValue(error)))
-            .Where(code => code.Value is not null)
-            .Select(code => $"{code.Name}:{code.Value}")
-            .ToArray();
-        return codes.Length == 0 ? error.Message : string.Join('\0', codes);
+        // Messages can contain changing request ids; they are not a stable failure identity.
+        return ProviderFailureIdentity(error) ?? $"{error.GetType().FullName}:{error.HResult}";
+    }
+
+    static string? ProviderFailureIdentity(Exception error)
+    {
+        // Keep provider dependencies outside Core while recognizing codes beneath storage wrappers.
+        foreach (var name in _errorCodeProperties)
+        {
+            if (error.GetType().GetProperty(name)?.GetValue(error) is { } code) return $"{error.GetType().FullName}:{name}:{code}";
+        }
+        if (error is AggregateException aggregate)
+        {
+            foreach (var inner in aggregate.InnerExceptions)
+            {
+                if (ProviderFailureIdentity(inner) is { } identity) return identity;
+            }
+            return null;
+        }
+        return error.InnerException is { } cause ? ProviderFailureIdentity(cause) : null;
     }
 
     sealed record FailureRun(EventSequenceNumber Position, Type ErrorType, string Identity, int Count);

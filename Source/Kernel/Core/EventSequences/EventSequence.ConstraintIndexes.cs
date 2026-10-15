@@ -59,6 +59,10 @@ public partial class EventSequence
         var definitions = _constraints!.IndexedDefinitions.ToDictionary(definition => definition.Name);
         if (_indexedDefinitions.Count != definitions.Count || definitions.Any(pair => !_indexedDefinitions.TryGetValue(pair.Key, out var previous) || !pair.Value.Equals(previous)))
         {
+            foreach (var name in definitions.Where(pair => _indexedDefinitions.TryGetValue(pair.Key, out var previous) && !pair.Value.Equals(previous)).Select(pair => pair.Key))
+            {
+                _constraintIndexPoisonTracker.ForgetSettledBefore(name, State.SequenceNumber);
+            }
             _constraintIndexReplay = null;
         }
         foreach (var name in _indexedDefinitions.Keys.Concat(_pendingConstraintIndexes.Keys).Except(definitions.Keys).ToArray())

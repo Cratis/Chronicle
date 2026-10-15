@@ -17,7 +17,10 @@ public partial class ConstraintIndexReplay
         if (_position! >= endPoint) return (true, 0);
         var types = ReplayEventTypes();
         if (types.Length == 0) return (true, 0);
-        if (_readIndividually) return await ReadIndividualEvents(types, limit, cancellationToken);
+
+        // A cursor has no upper bound and may decode an entire page before yielding a slot.
+        // On later passes, point-read the prefix through known corrupt slots before opening it.
+        if (_readIndividually || (_knownBadReadEnd is { } badEnd && _position! < badEnd)) return await ReadIndividualEvents(types, limit, cancellationToken);
         _operationConstraint = null;
         _operationPosition = null;
         using var cursor = await events.GetFromSequenceNumber(_position!, eventTypes: types, cancellationToken: cancellationToken);
@@ -44,7 +47,8 @@ public partial class ConstraintIndexReplay
         {
             // A page fault has no event identity. Locate individual relevant slots on the next turn.
             _readIndividually = true;
-            _pageFaultPosition = _position;
+            _individualReadsRemaining = IndividualReadWindowSize;
+            _individualReadFailureEnd = null;
             throw;
         }
     }

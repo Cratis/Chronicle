@@ -27,6 +27,9 @@ public class when_classifying_failures : Specification
     [Fact] void should_retry_driver_execution_timeouts() => _classifier.IsTransient(new MongoExecutionTimeoutException(_connection, "timeout")).ShouldBeTrue();
     [Fact] void should_retry_write_concern_errors() => _classifier.IsTransient(new MongoWriteConcernException(_connection, "write concern", new WriteConcernResult(new BsonDocument("ok", 1)))).ShouldBeTrue();
     [Fact] void should_retry_client_bulk_write_concern_errors() => _classifier.IsTransient(new ClientBulkWriteException(_connection, "bulk write concern", new Dictionary<int, WriteError>(), null, [new MongoWriteConcernException(_connection, "write concern", new WriteConcernResult(new BsonDocument("ok", 1)))], null)).ShouldBeTrue();
+    [Fact] void should_retry_bulk_write_concern_without_write_errors() => _classifier.IsTransient(BulkWriteFailure(false)).ShouldBeTrue();
+    [Fact] void should_not_hide_bulk_write_errors_behind_write_concern() => _classifier.IsTransient(BulkWriteFailure(true)).ShouldBeFalse();
+    [Fact] void should_not_hide_client_bulk_write_errors_behind_write_concern() => _classifier.IsTransient(new ClientBulkWriteException(_connection, "mixed failure", new Dictionary<int, WriteError> { [0] = WriteFailure(true).WriteError }, null, [new MongoWriteConcernException(_connection, "concern", new WriteConcernResult(new BsonDocument("ok", 1)))], null)).ShouldBeFalse();
     [Fact] void should_retry_transient_transaction_errors() => _classifier.IsTransient(Labelled("TransientTransactionError")).ShouldBeTrue();
     [Fact] void should_retry_unknown_commit_results() => _classifier.IsTransient(Labelled("UnknownTransactionCommitResult")).ShouldBeTrue();
     [Fact] void should_retry_primary_failover() => _classifier.IsTransient(new MongoNotPrimaryException(_connection, new BsonDocument(), new BsonDocument())).ShouldBeTrue();
@@ -46,6 +49,13 @@ public class when_classifying_failures : Specification
         var concern = (WriteConcernError)Activator.CreateInstance(typeof(WriteConcernError), flags, null, [64, "WriteConcernFailed", "concern", new BsonDocument(), Array.Empty<string>()], null)!;
         var write = deterministic ? (WriteError)Activator.CreateInstance(typeof(WriteError), flags, null, [ServerErrorCategory.DuplicateKey, 11000, "duplicate", new BsonDocument()], null)! : null;
         return new(_connection, write, concern, null);
+    }
+
+    MongoBulkWriteException<BsonDocument> BulkWriteFailure(bool deterministic)
+    {
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var error = (BulkWriteError)Activator.CreateInstance(typeof(BulkWriteError), flags, null, [0, ServerErrorCategory.DuplicateKey, 11000, "duplicate", new BsonDocument()], null)!;
+        return new(_connection, new BulkWriteResult<BsonDocument>.Unacknowledged(0, []), deterministic ? [error] : [], WriteFailure(false).WriteConcernError, []);
     }
 
     static MongoException Labelled(string label)
