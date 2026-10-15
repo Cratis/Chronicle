@@ -22,21 +22,17 @@ public partial class EventSequenceStorage : IEffectReceiptStorage
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EffectReceipt>> GetEffectReceipts(OccurrenceId occurrenceId)
+    public Task<IEnumerable<EffectReceipt>> GetEffectReceipts(OccurrenceId occurrenceId) => GetEffectReceiptsForOccurrences([occurrenceId]);
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EffectReceipt>> GetEffectReceiptsForOccurrences(IEnumerable<OccurrenceId> occurrenceIds)
     {
+        var ids = occurrenceIds.Select(id => StorageIdentity.Hash(id.Value)).Distinct().ToArray();
         await using var namespaceScope = await database.Namespace(eventStore, @namespace);
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
-        var receipts = new List<EffectReceipt>();
-        await foreach (var entry in scope.DbContext.Set<EffectReceiptEntry>().AsNoTracking().AsAsyncEnumerable())
-        {
-            var receipt = JsonSerializer.Deserialize<EffectReceipt>(entry.Data)!;
-            if (receipt.Lease.OccurrenceId == occurrenceId)
-            {
-                receipts.Add(receipt);
-            }
-        }
+        var entries = await scope.DbContext.Set<EffectReceiptEntry>().AsNoTracking().Where(row => ids.Contains(row.OccurrenceId)).ToArrayAsync();
 
-        return receipts;
+        return entries.Select(entry => JsonSerializer.Deserialize<EffectReceipt>(entry.Data)!).ToArray();
     }
 
     /// <inheritdoc/>
@@ -61,7 +57,7 @@ public partial class EventSequenceStorage : IEffectReceiptStorage
                 scope.DbContext.NamedTags.AddRange(item.NamedTags.Select((tag, position) => NamedTagEntry.From(eventSequenceId.Value, item.SequenceNumber.Value, position, tag)));
             }
 
-            scope.DbContext.Set<EffectReceiptEntry>().Add(new EffectReceiptEntry { Id = StorageIdentity.Hash(receipt.Id), Data = JsonSerializer.Serialize(receipt) });
+            scope.DbContext.Set<EffectReceiptEntry>().Add(new EffectReceiptEntry { Id = StorageIdentity.Hash(receipt.Id), OccurrenceId = StorageIdentity.Hash(receipt.Lease.OccurrenceId.Value), Data = JsonSerializer.Serialize(receipt) });
 
             // Includes the receipt even for a zero-event validate-only batch.
             await scope.DbContext.SaveChangesAsync();

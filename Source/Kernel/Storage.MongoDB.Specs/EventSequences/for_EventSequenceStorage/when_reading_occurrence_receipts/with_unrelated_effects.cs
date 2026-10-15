@@ -12,10 +12,14 @@ public class with_unrelated_effects(ReplicaSetMongoDBFixture fixture) : given.a_
     async Task Establish()
     {
         await Recreate().AppendManyWithEffectReceipt([], Receipt(null));
-        await Recreate().AppendManyWithEffectReceipt([], Receipt(null) with { Id = "other-effect", Lease = new("other-occurrence", 1) });
+        await Recreate().AppendManyWithEffectReceipt([], Receipt(null) with { Id = "second-effect" });
+        foreach (var index in Enumerable.Range(0, 100))
+        {
+            await Recreate().AppendManyWithEffectReceipt([], Receipt(null) with { Id = $"other-effect-{index}", Lease = new($"other-occurrence-{index}", 1) });
+        }
     }
 
     async Task Because() => _receipts = await Recreate().GetEffectReceipts(new("occurrence"));
-    [Fact] void should_include_only_the_requested_occurrences_effects() => _receipts.Select(receipt => receipt.Id).ShouldContainOnly(_receiptId);
-    [Fact] void should_preserve_the_winning_response() => _receipts.Single().Response.ShouldEqual("{\"winner\":1}");
+    [Fact] void should_include_only_the_requested_occurrences_effects() => _receipts.Select(receipt => receipt.Id).ShouldContainOnly(_receiptId, "second-effect");
+    [Fact] void should_preserve_the_winning_response() => _receipts.Select(receipt => receipt.Response).Distinct().ShouldContainOnly("{\"winner\":1}");
 }
