@@ -29,5 +29,5 @@ public class and_the_enclosing_budget_expires : given.a_constraint_validation_co
         _deadline.Dispose();
     }
 
-    [Fact] void should_report_the_interrupted_attempt_as_failed() => _results.Single(result => result.Updater == _firstValidatorIndexUpdater).Outcome.ShouldEqual(ConstraintIndexUpdateOutcome.Failed);
+    [Fact] void should_report_the_still_running_attempt_as_abandoned() => _results.Single(result => result.Updater == _firstValidatorIndexUpdater).Outcome.ShouldEqual(ConstraintIndexUpdateOutcome.Abandoned);
 }

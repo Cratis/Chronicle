@@ -9,7 +9,6 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_after
 public class and_the_budget_expires_during_the_writes : given.an_event_sequence_with_repairable_indexes
 {
     readonly given.RepairClock _clock = new();
-    readonly TaskCompletionSource _write = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly EventSourceId _second = "second";
     AppendResult _unfinished;
     bool _firstWritten;
@@ -28,8 +27,8 @@ public class and_the_budget_expires_during_the_writes : given.an_event_sequence_
             {
                 if (call.ArgAt<EventSourceId>(0) == _second && ++_secondWrites == 1)
                 {
-                    _clock.Advance(TimeSpan.FromSeconds(5));
-                    return _write.Task;
+                    _clock.Advance(TimeSpan.FromMilliseconds(4750));
+                    return Task.FromCanceled(call.ArgAt<CancellationToken>(5));
                 }
                 if (call.ArgAt<EventSourceId>(0) != _second) _firstWrites++;
                 return _claims.Save(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<EventSequenceNumber>(2), call.ArgAt<UniqueConstraintValue>(3), call.ArgAt<string>(4), call.ArgAt<CancellationToken>(5));
@@ -44,7 +43,6 @@ public class and_the_budget_expires_during_the_writes : given.an_event_sequence_
         _clock.Advance(TimeSpan.FromSeconds(5));
         _eventSourceId = EventSourceId.New();
         _result = await AppendAnEvent();
-        _write.TrySetResult();
     }
 
     [Fact] void should_keep_the_successfully_written_key() => _firstWritten.ShouldBeTrue();

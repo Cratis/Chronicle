@@ -192,6 +192,7 @@ public class an_event_sequence : Specification
     protected void ConfigureSilo()
     {
         _silo.AddService(_storage);
+        _silo.AddService<IStorageErrorClassifier>(new Storage.InMemory.InMemoryStorageErrorClassifier());
         _silo.AddService(_constraintValidationFactory);
         _silo.AddService(_eventTypeMigrations);
         _silo.AddService(_patternCapture);

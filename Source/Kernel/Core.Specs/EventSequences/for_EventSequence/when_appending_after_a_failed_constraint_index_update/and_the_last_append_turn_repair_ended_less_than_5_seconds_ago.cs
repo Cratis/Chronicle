@@ -13,7 +13,7 @@ public class and_the_last_append_turn_repair_ended_less_than_5_seconds_ago : giv
         _result = await AppendAnEvent();
     }
 
-    [Fact] void should_refuse_without_a_second_repair_even_after_a_one_second_backoff() => _result.Errors.ShouldContain(AppendError.ConstraintIndexUnavailable);
+    [Fact] void should_refuse_without_a_second_repair_inside_the_five_second_cadence() => _result.Errors.ShouldContain(AppendError.ConstraintIndexUnavailable);
     [Fact] void should_not_read_history_again() => _rangeReads.ShouldEqual(1);
     [Fact] void should_not_create_compliance_keys() => _complianceManager.ReceivedCalls().ShouldBeEmpty();
 }

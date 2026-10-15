@@ -22,19 +22,17 @@ internal static class ConstraintIndexUpdateAttempt
         if (cancellationToken.IsCancellationRequested) return (ConstraintIndexUpdateOutcome.NotAttempted, null);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(1), timeProvider ?? TimeProvider.System);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+        Task? write = null;
         try
         {
             deadline.Token.ThrowIfCancellationRequested();
-            await update(deadline.Token).WaitAsync(deadline.Token);
+            write = update(deadline.Token);
+            await write.WaitAsync(deadline.Token);
             return (ConstraintIndexUpdateOutcome.Applied, null);
-        }
-        catch (Exception error) when (cancellationToken.IsCancellationRequested)
-        {
-            return (ConstraintIndexUpdateOutcome.Failed, error);
         }
         catch (Exception error) when (deadline.IsCancellationRequested)
         {
-            return (ConstraintIndexUpdateOutcome.Abandoned, error);
+            return (write is { IsCompleted: false } ? ConstraintIndexUpdateOutcome.Abandoned : ConstraintIndexUpdateOutcome.Failed, error);
         }
         catch (DuplicateUniqueConstraintValue error)
         {

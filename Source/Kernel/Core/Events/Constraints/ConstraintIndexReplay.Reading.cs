@@ -14,58 +14,72 @@ public partial class ConstraintIndexReplay
     async Task<(bool Finished, int Count)> ReadSegment(int limit, CancellationToken cancellationToken)
     {
         _position ??= _scopes.Min(scope => scope.From);
-        var types = _scopes.SelectMany(scope => scope.Definition switch
-        {
-            UniqueConstraintDefinition unique => unique.EventDefinitions.Select(item => item.EventTypeId).Concat(unique.RemovedWith),
-            ClosesStreamConstraintDefinition closing => closing.EventTypeIds.Concat(closing.ReopenedBy).Append(GlobalEventTypes.Redaction),
-            _ => []
-        }).Distinct().Select(id => new EventType(id, EventTypeGeneration.First)).ToArray();
+        var types = ReplayEventTypes();
         if (types.Length == 0) return (true, 0);
+        if (_readIndividually) return await ReadIndividualEvents(types, limit, cancellationToken);
         _operationConstraint = null;
         _operationPosition = null;
         using var cursor = await events.GetFromSequenceNumber(_position!, eventTypes: types, cancellationToken: cancellationToken);
-        var count = 0;
-        while (await MoveNext(cursor, cancellationToken))
+        StorageCallSucceeded = true;
+        try
         {
-            foreach (var @event in cursor.Current)
+            var count = 0;
+            while (await MoveNext(cursor, cancellationToken))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (@event.Context.SequenceNumber >= endPoint) return (true, count);
-                if (count >= limit) return (false, count);
-                _operationConstraint = null;
-                _operationPosition = @event.Context.SequenceNumber;
-                var plaintext = await content.Release(@event, cancellationToken);
-                foreach (var scope in _scopes.Where(scope => @event.Context.SequenceNumber >= scope.From))
+                foreach (var @event in cursor.Current)
                 {
-                    try
-                    {
-                        await Include(scope.Definition, @event, plaintext, cancellationToken);
-                    }
-                    catch (Exception error) when (error is InvalidClosingStreamScope or RedactedClosingEventTypeUnavailable)
-                    {
-                        SettleError(scope.Definition, @event, error);
-                    }
-                    catch (Exception) when (cancellationToken.IsCancellationRequested)
-                    {
-                        throw;
-                    }
-                    catch (Exception error)
-                    {
-                        Fail(scope.Definition.Name, @event.Context.SequenceNumber, error);
-                        return (false, count);
-                    }
-                    if (!Fits())
-                    {
-                        Split();
-                        return (false, count);
-                    }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (@event.Context.SequenceNumber >= endPoint) return (true, count);
+                    if (count >= limit) return (false, count);
+                    if (!await IncludeEvent(@event, cancellationToken)) return (false, count);
+                    _position = @event.Context.SequenceNumber.Next();
+                    _operationPosition = null;
+                    count++;
                 }
-                _position = @event.Context.SequenceNumber.Next();
-                count++;
+            }
+            return (true, count);
+        }
+        catch (Exception error) when (!cancellationToken.IsCancellationRequested && _operationPosition is null && StorageErrorClassifier?.IsTransient(error) is false)
+        {
+            // A page fault has no event identity. Locate individual relevant slots on the next turn.
+            _readIndividually = true;
+            throw;
+        }
+    }
+
+    async Task<bool> IncludeEvent(AppendedEvent @event, CancellationToken cancellationToken)
+    {
+        _operationConstraint = null;
+        _operationPosition = @event.Context.SequenceNumber;
+        var applicableScopes = _scopes.Where(scope => @event.Context.SequenceNumber >= scope.From && !IsPoison(scope.Definition.Name, @event.Context.SequenceNumber)).ToArray();
+        if (applicableScopes.Length == 0) return true;
+        var plaintext = await content.Release(@event, cancellationToken);
+        foreach (var scope in applicableScopes)
+        {
+            try
+            {
+                await Include(scope.Definition, @event, plaintext, cancellationToken);
+            }
+            catch (Exception error) when (error is InvalidClosingStreamScope or RedactedClosingEventTypeUnavailable)
+            {
+                SettleError(scope.Definition, @event, error);
+            }
+            catch (Exception) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception error)
+            {
+                Fail(scope.Definition.Name, @event.Context.SequenceNumber, error);
+                return false;
+            }
+            if (!Fits())
+            {
+                Split();
+                return false;
             }
         }
-
-        return (true, count);
+        return true;
     }
 
     async Task Include(IConstraintDefinition definition, AppendedEvent @event, ExpandoObject plaintext, CancellationToken cancellationToken)

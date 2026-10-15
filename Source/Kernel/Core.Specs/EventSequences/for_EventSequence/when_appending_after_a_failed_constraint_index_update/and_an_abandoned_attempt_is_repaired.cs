@@ -8,21 +8,36 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_after
 
 public class and_an_abandoned_attempt_is_repaired : given.an_event_sequence_with_repairable_indexes
 {
+    readonly given.RepairClock _clock = new();
     readonly TaskCompletionSource _write = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    AppendResult _beforeConfirmation;
     bool _hang = true;
 
     async Task Establish()
     {
+        _eventSequence.ConstraintIndexTimeProvider = _clock;
         _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(call => _hang ? _write.Task : _claims.Save(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<EventSequenceNumber>(2), call.ArgAt<UniqueConstraintValue>(3), call.ArgAt<string>(4), call.ArgAt<CancellationToken>(5)));
+            .Returns(call =>
+            {
+                if (!_hang) return _claims.Save(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<EventSequenceNumber>(2), call.ArgAt<UniqueConstraintValue>(3), call.ArgAt<string>(4), call.ArgAt<CancellationToken>(5));
+                _clock.Advance(TimeSpan.FromSeconds(2));
+                return _write.Task;
+            });
         await AppendAnEvent();
         _hang = false;
-        _write.TrySetResult();
+        await given.ConstraintRepairTimer.Tick(_silo);
         _eventSourceId = EventSourceId.New();
+        _beforeConfirmation = await AppendAnEvent();
+        _write.TrySetResult();
     }
 
-    async Task Because() => _result = await AppendAnEvent();
+    async Task Because()
+    {
+        await given.ConstraintRepairTimer.Tick(_silo);
+        _result = await AppendAnEvent();
+    }
 
-    [Fact] void should_clear_the_abandoned_constraint_after_a_full_later_fold() => _result.Errors.ShouldBeEmpty();
+    [Fact] void should_refuse_until_a_confirming_timer_fold() => _beforeConfirmation.Errors.ShouldContain(AppendError.ConstraintIndexUnavailable);
+    [Fact] void should_clear_the_abandoned_constraint_after_confirmation() => _result.Errors.ShouldBeEmpty();
     [Fact] void should_validate_against_the_repaired_claim() => _result.ConstraintViolations.ShouldNotBeEmpty();
 }

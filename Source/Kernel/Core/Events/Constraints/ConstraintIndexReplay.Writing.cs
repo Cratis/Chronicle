@@ -32,7 +32,9 @@ public partial class ConstraintIndexReplay
                 difference.Claimed = await Write(difference, difference.Claim, cancellationToken);
                 continue;
             }
+            WritingConstraint = difference.Name;
             var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(difference.Claim, cancellationToken, ConstraintIndexTimeProvider);
+            WritingConstraint = null;
             if (MustRetry(difference, outcome))
             {
                 if (_segment < _segments)
@@ -57,7 +59,7 @@ public partial class ConstraintIndexReplay
         }
     }
 
-    bool CanWrite(ConstraintIndexReplayDifference difference) => !_failed.ContainsKey(difference.Name) && !_abandoned.Contains(difference.Name);
+    bool CanWrite(ConstraintIndexReplayDifference difference) => !IsPoison(difference.Name, difference.Position) && !_failed.ContainsKey(difference.Name) && !_abandoned.Contains(difference.Name);
 
     bool MustRetry(ConstraintIndexReplayDifference difference, ConstraintIndexUpdateOutcome outcome) =>
         outcome == ConstraintIndexUpdateOutcome.Settled && !_retryPass && (_segment < _segments || _differences.Exists(holder => ChangesHolder(holder, difference)));
@@ -68,7 +70,9 @@ public partial class ConstraintIndexReplay
 
     async Task<bool> Write(ConstraintIndexReplayDifference difference, Func<CancellationToken, Task> write, CancellationToken cancellationToken)
     {
+        WritingConstraint = difference.Name;
         var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(write, cancellationToken, ConstraintIndexTimeProvider);
+        WritingConstraint = null;
         return Record(difference, outcome, error, cancellationToken);
     }
 

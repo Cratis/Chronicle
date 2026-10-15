@@ -24,7 +24,7 @@ public class an_unfinished_constraint_repair : an_event_sequence_with_repairable
                 if (stop)
                 {
                     stop = false;
-                    _clock.Advance(TimeSpan.FromSeconds(5));
+                    _clock.Advance(TimeSpan.FromMilliseconds(4750));
                 }
                 return new EventCursor(_log.Events.Where(e => e.Context.SequenceNumber >= call.ArgAt<EventSequenceNumber>(0) && call.ArgAt<IEnumerable<EventType>>(5).Any(t => t.Id == e.Context.EventType.Id)).ToList());
             });

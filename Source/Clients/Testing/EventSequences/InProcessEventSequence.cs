@@ -129,6 +129,7 @@ internal static class InProcessEventSequence
                 expandoObjectConverter,
                 eventSerializer,
                 new KernelEventSequences::EventHashCalculator(),
+                new global::Cratis.Chronicle.Storage.InMemory.InMemoryStorageErrorClassifier(),
                 Options.Create(new KernelConfiguration::ChronicleOptions()),
                 NullLogger<KernelEventSequences::EventSequence>.Instance,
                 NullLogger<KernelEventSequences::Concurrency.ConcurrencyValidator>.Instance);

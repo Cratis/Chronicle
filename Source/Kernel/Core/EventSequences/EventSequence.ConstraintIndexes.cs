@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -14,6 +15,9 @@ public partial class EventSequence
     readonly Dictionary<ConstraintName, EventSequenceNumber> _closingCoverageStarts = [];
     readonly HashSet<ConstraintName> _abandonedConstraintIndexes = [];
     readonly HashSet<ConstraintName> _replayAbandonedIndexes = [];
+    readonly HashSet<ConstraintName> _constraintIndexesAwaitingConfirmation = [];
+    readonly IStorageErrorClassifier _storageErrorClassifier = storageErrorClassifier;
+    readonly ConstraintIndexPoisonTracker _constraintIndexPoisonTracker = new(storageErrorClassifier);
     int _replaySettledErrors;
     EventSequenceNumber _constraintIndexPosition = EventSequenceNumber.First;
     ConstraintIndexReplay? _constraintIndexReplay;
@@ -34,6 +38,7 @@ public partial class EventSequence
         _pendingConstraintIndexes.Clear();
         _closingCoverageStarts.Clear();
         _abandonedConstraintIndexes.Clear();
+        _constraintIndexesAwaitingConfirmation.Clear();
         _constraintIndexReplay = null;
         _lastAppendRepairEnded = null;
         _nextConstraintRepairAttempt = default;
@@ -62,6 +67,7 @@ public partial class EventSequence
             _pendingConstraintIndexes.Remove(name);
             _closingCoverageStarts.Remove(name);
             _abandonedConstraintIndexes.Remove(name);
+            _constraintIndexesAwaitingConfirmation.Remove(name);
         }
         foreach (var (name, definition) in definitions)
         {
@@ -71,6 +77,7 @@ public partial class EventSequence
                 _closingCoverageStarts.TryAdd(name, coverageStart ?? State.SequenceNumber);
             }
         }
+        UpdateConstraintIndexRepairTimer();
     }
 
     void MarkConstraintIndexPending(ConstraintName name, EventSequenceNumber from)
@@ -80,6 +87,7 @@ public partial class EventSequence
         {
             _pendingConstraintIndexes[name] = from;
         }
+        UpdateConstraintIndexRepairTimer();
     }
 
     void MarkConstraintIndexGap(EventSequenceNumber from)
@@ -97,9 +105,12 @@ public partial class EventSequence
             _constraintIndexPosition < State.SequenceNumber ? _constraintIndexPosition : State.SequenceNumber,
             (position, pending) => pending < position ? pending : position);
         _metrics?.ConstraintIndexLag(State.SequenceNumber.Value - State.ConstraintIndexWatermark.Value);
+        UpdateConstraintIndexRepairTimer();
     }
 
-    bool IsGovernedByPendingIndex(EventTypeId type) => _pendingConstraintIndexes.Keys.Any(name =>
+    bool IsGovernedByPendingIndex(EventTypeId type) => _pendingConstraintIndexes.Keys
+        .Concat(_constraintIndexPosition < State.SequenceNumber ? _indexedDefinitions.Keys : [])
+        .Any(name =>
         _indexedDefinitions.TryGetValue(name, out var definition) && definition switch
         {
             UniqueConstraintDefinition unique => unique.SupportsEventType(type),
@@ -110,7 +121,6 @@ public partial class EventSequence
     async Task PrepareConstraintIndexes(IEnumerable<EventTypeId> types)
     {
         SynchronizeIndexedDefinitions();
-        if (_constraintIndexPosition < State.SequenceNumber) MarkConstraintIndexGap(_constraintIndexPosition);
         if (types.Any(IsGovernedByPendingIndex)) await RepairConstraintIndexesBeforeAppend();
     }
 }

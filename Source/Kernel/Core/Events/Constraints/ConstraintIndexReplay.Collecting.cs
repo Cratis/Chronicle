@@ -21,6 +21,12 @@ public partial class ConstraintIndexReplay
             cancellationToken.ThrowIfCancellationRequested();
             var key = _uniqueCollectKeys[_uniqueCollectIndex]!;
             var state = _unique[key];
+            if (IsPoison(key.Name, state.Position))
+            {
+                _unique.Remove(key);
+                _uniqueCollectKeys[_uniqueCollectIndex++] = null;
+                continue;
+            }
             _operationConstraint = key.Name;
             _operationPosition = state.Position;
             var current = await CurrentValues(key, state, cancellationToken);
@@ -53,6 +59,12 @@ public partial class ConstraintIndexReplay
             cancellationToken.ThrowIfCancellationRequested();
             var key = _closingCollectKeys[_closingCollectIndex]!;
             var state = _closed[key];
+            if (IsPoison(key.Name, state.Position))
+            {
+                _closed.Remove(key);
+                _closingCollectKeys[_closingCollectIndex++] = null;
+                continue;
+            }
             _operationConstraint = key.Name;
             _operationPosition = state.Position;
             var current = await closed.GetFor(key.Name.Value, key.Scope, cancellationToken).WaitAsync(cancellationToken);

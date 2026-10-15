@@ -3,12 +3,49 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
 public partial class ConstraintIndexReplay
 {
+    /// <summary>
+    /// Gets whether another storage call succeeded during this attempt.
+    /// </summary>
+    internal bool StorageCallSucceeded { get; private set; }
+
+    /// <summary>
+    /// Gets the constraint whose storage write has not returned yet.
+    /// </summary>
+    internal ConstraintName? WritingConstraint { get; private set; }
+
+    /// <summary>
+    /// Gets or sets the provider policy used to distinguish corrupt cursor input from transient failures.
+    /// </summary>
+    internal IStorageErrorClassifier? StorageErrorClassifier { get; set; }
+
+    /// <summary>
+    /// Refolds without a poison event's partial staged effects, preserving preceding valid events.
+    /// </summary>
+    /// <param name="name">The failed constraint.</param>
+    /// <param name="position">The failed event.</param>
+    internal void SettlePoison(ConstraintName name, EventSequenceNumber position)
+    {
+        if (!_poison.Add((name, position))) return;
+        _settledWithError++;
+        _unique.Clear();
+        _closed.Clear();
+        _differences.Clear();
+        _segment = 0;
+        _needsRetryPass = false;
+        _retryPass = false;
+        _overflow = false;
+        BeginSegment();
+    }
+
+    bool IsPoison(ConstraintName name, EventSequenceNumber position) => _poison.Contains((name, position));
+
     async Task<bool> MoveNext(IEventCursor cursor, CancellationToken cancellationToken)
     {
         _operationConstraint = null;

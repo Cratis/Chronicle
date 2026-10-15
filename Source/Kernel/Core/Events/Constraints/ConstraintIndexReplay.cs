@@ -38,6 +38,7 @@ public partial class ConstraintIndexReplay(
     readonly List<ConstraintIndexReplayDifference> _differences = [];
     readonly Dictionary<ConstraintName, ConstraintIndexReplayFailure> _failed = [];
     readonly HashSet<ConstraintName> _abandoned = [];
+    readonly HashSet<(ConstraintName Name, EventSequenceNumber Position)> _poison = [];
     readonly Dictionary<ConstraintName, EventSequenceNumber> _lastSettledError = [];
     ConstraintName? _operationConstraint;
     EventSequenceNumber? _operationPosition;
@@ -82,6 +83,7 @@ public partial class ConstraintIndexReplay(
     public async Task<ConstraintIndexReplayResult> Continue(int eventLimit = 1000, CancellationToken cancellationToken = default)
     {
         RangeReadFailed = false;
+        StorageCallSucceeded = false;
         _failed.Clear();
         _abandoned.Clear();
         _operationConstraint = null;
@@ -90,6 +92,13 @@ public partial class ConstraintIndexReplay(
         var processed = 0;
         try
         {
+            if (_phase is Phase.Collecting or Phase.Releasing or Phase.Claiming)
+            {
+                // Continuation turns also need successful range I/O before an event-local failure
+                // can count toward poison settlement. Do not infer health from an earlier turn.
+                await events.GetNextSequenceNumberGreaterOrEqualThan(_scopes.Min(scope => scope.From)!, ReplayEventTypes()).WaitAsync(cancellationToken);
+                StorageCallSucceeded = true;
+            }
             while (_phase != Phase.Complete && !cancellationToken.IsCancellationRequested)
             {
                 if (_phase == Phase.Reading)
@@ -148,8 +157,12 @@ public partial class ConstraintIndexReplay(
         }
         catch (Exception error)
         {
-            RangeReadFailed = _operationConstraint is null;
-            foreach (var constraint in _operationConstraint is { } name ? [name] : _scopes.Select(scope => scope.Definition.Name).Distinct()) Fail(constraint, _operationPosition, error);
+            RangeReadFailed = _operationConstraint is null && _operationPosition is null;
+            foreach (var constraint in _operationConstraint is { } name ? [name] : _scopes.Select(scope => scope.Definition.Name).Distinct())
+            {
+                if (_operationPosition is { } position && IsPoison(constraint, position)) continue;
+                Fail(constraint, _operationPosition, error);
+            }
         }
 
         return new(_phase == Phase.Complete, _applied, _settled, _settledWithError, new Dictionary<ConstraintName, ConstraintIndexReplayFailure>(_failed), _abandoned.ToArray());

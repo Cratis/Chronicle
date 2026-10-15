@@ -17,13 +17,13 @@ public class and_the_repair_snapshot_times_out : given.an_event_sequence_with_re
         _eventSequence.ConstraintIndexTimeProvider = _clock;
         _snapshots.BeforeWrite = () =>
         {
-            _clock.Advance(TimeSpan.FromMilliseconds(5250));
+            _clock.Advance(TimeSpan.FromMilliseconds(250));
             return _write.Task;
         };
         _eventSourceId = EventSourceId.New();
     }
 
-    async Task Because() => _result = await AppendAnEvent();
+    async Task Because() => _result = await AppendAnEvent().WaitAsync(TimeSpan.FromSeconds(2), TimeProvider.System);
     void Destroy() => _write.TrySetCanceled();
 
     [Fact] void should_not_mark_the_repaired_index_pending_again() => _result.Errors.ShouldBeEmpty();

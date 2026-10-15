@@ -12,6 +12,7 @@ public class and_the_store_hangs_for_a_batch_of_1000_events : given.an_event_seq
     readonly given.RepairClock _clock = new();
     readonly TaskCompletionSource _write = new(TaskCreationOptions.RunContinuationsAsynchronously);
     AppendManyResult _batch;
+    AppendResult _beforeConfirmation;
     int _attempts;
     bool _hang = true;
 
@@ -40,13 +41,17 @@ public class and_the_store_hangs_for_a_batch_of_1000_events : given.an_event_seq
         _batch = await append.WaitAsync(TimeSpan.FromSeconds(2), TimeProvider.System);
         _hang = false;
         _write.TrySetResult();
+        await given.ConstraintRepairTimer.Tick(_silo);
         _eventSourceId = EventSourceId.New();
+        _beforeConfirmation = await AppendAnEvent();
+        await given.ConstraintRepairTimer.Tick(_silo);
         _result = await AppendAnEvent();
     }
 
     [Fact] void should_succeed_for_all_durable_events_within_the_turn_budget() => _batch.IsSuccess.ShouldBeTrue();
-    [Fact] void should_defer_the_remaining_999_updates_to_one_fold() => _attempts.ShouldEqual(2);
-    [Fact] void should_not_leave_a_budget_cut_constraint_abandoned() => _result.Errors.ShouldBeEmpty();
+    [Fact] void should_write_only_the_final_claim_during_repair() => _attempts.ShouldEqual(2);
+    [Fact] void should_refuse_until_the_timer_confirms_the_abandoned_write() => _beforeConfirmation.Errors.ShouldContain(AppendError.ConstraintIndexUnavailable);
+    [Fact] void should_release_the_constraint_after_confirmation() => _result.Errors.ShouldBeEmpty();
     [Fact] void should_validate_against_the_repaired_claim() => _result.ConstraintViolations.ShouldNotBeEmpty();
     [Fact] async Task should_persist_the_repaired_batch_watermark() => (await _log.GetState()).ConstraintIndexWatermark.ShouldEqual((EventSequenceNumber)1000);
 }

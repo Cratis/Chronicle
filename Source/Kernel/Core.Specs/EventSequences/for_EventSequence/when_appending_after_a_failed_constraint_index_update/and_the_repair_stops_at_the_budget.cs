@@ -45,7 +45,7 @@ public class and_the_repair_stops_at_the_budget : given.an_event_sequence_with_r
         _eventSourceId = EventSourceId.New();
         var append = AppendAnEvent();
         await _reading.Task.WaitAsync(TimeSpan.FromSeconds(2), TimeProvider.System);
-        _clock.Advance(TimeSpan.FromSeconds(5));
+        _clock.Advance(TimeSpan.FromMilliseconds(4750));
         _page.TrySetCanceled();
         _stopped = await append.WaitAsync(TimeSpan.FromSeconds(2), TimeProvider.System);
         _clock.Advance(TimeSpan.FromSeconds(5));
