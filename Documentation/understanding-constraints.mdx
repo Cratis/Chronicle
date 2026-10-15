@@ -78,11 +78,13 @@ This means the kernel can still enforce uniqueness — two identical values prod
 
 Constraints are one half of data integrity; the other half is **concurrency**. They guard against different things:
 
-- A **constraint** protects a *value* across every event source in an event sequence — no two users in the event log may ever hold the same email, no matter who appends or when. The check is scoped to one namespace and one event sequence: two tenants in different namespaces can hold the same value, and so can two different event sequences.
-- A **concurrency scope** protects a *moment* — when two requests race to append to the same event source, the one that acted on stale state is rejected instead of silently interleaving.
-- A **decision read** protects a *rule over state*: "at most three loans per member" or "no more than the seats available". It folds the state, notes the log position before it does, and rejects the append if a relevant event arrived since. A constraint cannot count, so this is the tool for those rules.
+| Mechanism | Protects | Example |
+|---|---|---|
+| **Constraint** | A *value* across every event source in an event sequence. The check is scoped to one namespace and one event sequence, so two tenants in different namespaces can hold the same value | No two users hold the same email, no matter who appends or when |
+| **Concurrency scope** | A *moment*: when two requests race to append to the same event source, the one that acted on stale state is rejected | Two people save the same record |
+| **Decision read** | A *rule over state*. It folds the state, notes the log position before it does, and rejects the append if a relevant event arrived since | At most three loans per member, or no more than the seats available |
 
-All three checks run in the kernel at append time, and all surface as a failed append you can handle. When you find yourself worried about "two requests at once" rather than "the same value twice," reach for [concurrency scopes](/chronicle/events/concurrency/) or [decision reads](/chronicle/read-models/decision-reads/). [Choosing how a rule holds](/chronicle/dynamic-consistency-boundary/choosing/) compares them.
+A constraint cannot count, so a decision read is the tool for those rules, and a decision read guards one key's history, so a constraint is the tool for a value across keys. All three checks run in the kernel at append time, and all surface as a failed append you can handle. When you find yourself worried about "two requests at once" rather than "the same value twice," reach for [concurrency scopes](/chronicle/events/concurrency/) or [decision reads](/chronicle/read-models/decision-reads/). [Choosing how a rule holds](/chronicle/dynamic-consistency-boundary/choosing/) compares them.
 
 ## The pattern to take with you
 

@@ -7,17 +7,17 @@ Use this page to decide which appends should conflict. The general model of conc
 
 ## What an append is guarded by
 
-When you append without passing a `ConcurrencyScope`, the client reads the tail of the event sequence and sends it as the position you expect. The kernel rejects the append if an event that matches the scope was appended after that position. What "matches" means is the part a definition changes:
+When you append without passing a `ConcurrencyScope`, the client reads the tail of the event sequence and sends it as the position you expect. The kernel rejects the append if an event that matches the scope was appended after that position. A definition decides what "matches" means.
 
-| The append goes through | The scope narrows to the append's |
+| The append goes through | The scope narrows to |
 |---|---|
-| No definition | event source id, event source type, event stream type and event stream id |
-| A definition whose dimensions are `None` | the same four values, as without a definition |
-| A definition with dimensions | only the dimensions it declares |
+| No definition | The append's event source ID, event source type, event stream type and event stream ID |
+| A definition whose dimensions are `None` | The same four values, as without a definition |
+| A definition with dimensions | Only the dimensions it declares |
 
-The client reads the tail with exactly the narrowing it sends, so the position and the check ask the same question. A dimension that is not declared is left out, not set to a default.
+The four values are the routing values of an event. What each one means is in [Event source](../concepts/event-source.md), and how they build a scope is in [Concurrency](../events/concurrency.mdx#formalized-metadata-tags-for-concurrency). The client reads the tail with exactly the narrowing it sends, so the position and the check ask the same question. A dimension that is not declared is left out, not set to a default.
 
-A nonempty `Concurrency` declaration without `EventSourceId` applies across event sources. [CHR0062](../code-analysis/CHR0062.mdx) reports this at Info severity and offers a code fix to include `EventSourceId`. Keep a cross-source declaration only when that is intentional: it is an independent condition, not protection for the state you read. Reserve declared concurrency for stream-wide rules such as ledgers, numbering and approvals; use decision reads for state dependencies.
+A nonempty `Concurrency` declaration without `EventSourceId` applies across event sources. [CHR0062](../code-analysis/CHR0062.mdx) reports this at Info severity and offers a code fix to include `EventSourceId`. Keep a cross-source declaration only when that is intentional: it is an independent condition, not protection for the state you read. Reserve declared concurrency for stream-wide rules such as ledgers, numbering and approvals; use [decision reads](../read-models/decision-reads.mdx) for state dependencies. How declared dimensions mix with a decision read is in [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx#declared-routing-on-a-definition).
 
 ## Which dimensions apply
 
