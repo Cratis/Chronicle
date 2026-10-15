@@ -193,10 +193,12 @@ internal sealed class ProbeMongo(IContainer container, string store, long profil
             var removal = writes.SingleOrDefault(r => r["op"] == "remove" && r["command"]["q"]["_id"].Equals(job["_id"]) &&
                 r.GetValue("ndeleted", 0).ToInt32() == 1 && r["ts"].AsBsonDateTime.MillisecondsSinceEpoch >= write["ts"].AsBsonDateTime.MillisecondsSinceEpoch);
             if (job["type"] != "CatchUpObserver" || key["observerId"] != observerId || key["eventStore"] != store || key["namespace"] != "Default" || key["eventSequenceId"] != "event-log") continue;
-            var last = job["lastHandledEventSequenceNumber"].ToDecimal();
+            // The job persists its state before recording the final step's result and is then deleted without another
+            // write (Cratis.Orleans Job.Steps.cs / Job.cs), so handledAllEvents/lastHandled on the last persisted copy are
+            // not proof of anything; observer state at tail (checked by the caller) is the tail proof.
             if (progress["totalSteps"].ToInt32() <= 0 || progress["successfulSteps"] != progress["totalSteps"] ||
                 progress["failedSteps"].ToInt32() != 0 || progress["stoppedSteps"].ToInt32() != 0 || progress["unreachableSteps"].ToInt32() != 0 ||
-                !job["handledAllEvents"].AsBoolean || last < tail || last >= (decimal)(ulong.MaxValue - 2) || removal is null) continue;
+                removal is null) continue;
             completed.Add(new BsonDocument { { "job", job }, { "writeTimestamp", write["ts"] }, { "removalTimestamp", removal["ts"] } });
         }
         if ((await Jobs()).Any(j => j.GetValue("details", "") == observerId)) throw new InvalidOperationException("A second non-deleted probe job remains at tail.");

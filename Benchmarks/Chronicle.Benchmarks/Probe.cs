@@ -259,6 +259,15 @@ internal static class Probe
                         j.ToJson().Contains("CatchUpObserver", StringComparison.Ordinal) &&
                         j.ToJson().Contains(projection ? typeof(BenchmarkProjection).FullName! : "probe-4748", StringComparison.Ordinal));
                     if (catchup && !jobIdentityVerified) throw new InvalidOperationException("Cannot verify retained catch-up job identity/schema for the sole probe observer.");
+                    // Read the sink in the same iteration as the observer state so the effect clock is not one loop late.
+                    if (projection)
+                    {
+                        var rows = await mongo.ProjectionRows().WaitAsync(cancellation);
+                        run.ProjectionDocuments = new(mongo.ProjectionEvidence);
+                        run.ProjectionRows = rows.Length;
+                        run.ProjectionValuesMatch = ProjectionMatches(rows, run);
+                        if (run.ProjectionValuesMatch.Value) run.EffectMs ??= run.Clock.Elapsed.TotalMilliseconds;
+                    }
                     var finishedJobs = false;
                     if (catchup && StateAtTail(state, tail, run.ProbeObserverId) && jobs.Length == 0 && !run.JobMs.HasValue)
                     {
@@ -284,14 +293,6 @@ internal static class Probe
                     if (run.JobMs.HasValue && jobs.Length == 0) finishedJobs = true;
                     if (catchup && finishedJobs) run.JobMs ??= run.Clock.Elapsed.TotalMilliseconds;
                     if (StateAtTail(state, tail, run.ProbeObserverId) && (!catchup || finishedJobs)) run.DurableMs ??= run.Clock.Elapsed.TotalMilliseconds;
-                    if (projection)
-                    {
-                        var rows = await mongo.ProjectionRows().WaitAsync(cancellation);
-                        run.ProjectionDocuments = new(mongo.ProjectionEvidence);
-                        run.ProjectionRows = rows.Length;
-                        run.ProjectionValuesMatch = ProjectionMatches(rows, run);
-                        if (run.ProjectionValuesMatch.Value) run.EffectMs ??= run.Clock.Elapsed.TotalMilliseconds;
-                    }
                 }
                 if ((appendOnly || (run.DurableMs.HasValue && (!projection || run.EffectMs.HasValue))) && run.SystemDurableMs.HasValue)
                 {
