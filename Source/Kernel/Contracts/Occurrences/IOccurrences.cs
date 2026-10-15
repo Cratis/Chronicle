@@ -28,6 +28,14 @@ public interface IOccurrences
     [Operation]
     Task<CommandResult<RecordEffectReceiptResponse>> RecordEffectReceipt(RecordEffectReceiptRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the RegisterTriggers command.
+    /// </summary>
+    /// <param name = "request">The RegisterTriggers request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<RegisterTriggersResponse>> RegisterTriggers(RegisterTriggersRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the GetEffectReceipt query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -91,6 +99,44 @@ public class RecordEffectReceiptResponse
     /// </summary>
     [ProtoMember(2)]
     public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails Receipt { get; set; } = new();
+}
+
+/// <summary>
+/// Represents the RegisterTriggersRequest message.
+/// </summary>
+[ProtoContract]
+public class RegisterTriggersRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Triggers.
+    /// </summary>
+    [ProtoMember(2)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Occurrences.TriggerRegistration> Triggers { get; set; } = new List<global::Cratis.Chronicle.Contracts.Occurrences.TriggerRegistration>();
+}
+
+/// <summary>
+/// Represents the RegisterTriggersResponse message.
+/// </summary>
+[ProtoContract]
+public class RegisterTriggersResponse
+{
+    /// <summary>
+    /// Gets or sets the Registered.
+    /// </summary>
+    [ProtoMember(1)]
+    public bool Registered { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Errors.
+    /// </summary>
+    [ProtoMember(2)]
+    public IEnumerable<string> Errors { get; set; } = new List<string>();
 }
 
 /// <summary>

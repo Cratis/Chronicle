@@ -25,6 +25,13 @@ internal sealed class Occurrences(
             response => ToRecordEffectReceiptResponse(response));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersResponse>> RegisterTriggers(global::Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.Occurrences.TriggerRegistrationResult, global::Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Occurrences.RegisterTriggers((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Triggers.Select(x => x.ToApi())),
+            response => ToRegisterTriggersResponse(response));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse?>> GetEffectReceipt(global::Cratis.Chronicle.Contracts.Occurrences.GetEffectReceiptRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse?>(
             async () =>
@@ -39,6 +46,13 @@ internal sealed class Occurrences(
         {
             Status = (global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptStatus)source.Status,
             Receipt = source.Receipt.ToContract()
+        };
+
+    static global::Cratis.Chronicle.Contracts.Occurrences.RegisterTriggersResponse ToRegisterTriggersResponse(global::Cratis.Chronicle.Occurrences.TriggerRegistrationResult source) =>
+        new()
+        {
+            Registered = source.Registered,
+            Errors = source.Errors
         };
 
     static global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse ToEffectReceiptRecordResponse(global::Cratis.Chronicle.Occurrences.EffectReceiptRecord source) =>

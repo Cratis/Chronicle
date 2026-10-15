@@ -11,6 +11,15 @@ message CommandResult_RecordEffectReceiptResponse {
    string AuthorizationFailureReason = 6;
    RecordEffectReceiptResponse Response = 7;
 }
+message CommandResult_RegisterTriggersResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   RegisterTriggersResponse Response = 7;
+}
 enum EffectOutcome {
    Appended = 0;
    NoEvents = 1;
@@ -75,9 +84,22 @@ message RecordEffectReceiptResponse {
    EffectReceiptStatus Status = 1;
    EffectReceiptDetails Receipt = 2;
 }
+message RegisterTriggersRequest {
+   string EventStore = 1;
+   repeated TriggerRegistration Triggers = 2;
+}
+message RegisterTriggersResponse {
+   bool Registered = 1;
+   repeated string Errors = 2;
+}
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
    string Value = 1;
+}
+message TriggerRegistration {
+   string Id = 1;
+   string Name = 2;
+   string Schema = 3;
 }
 message ValidationResult {
    ValidationResultSeverity Severity = 1; // default value could not be applied: Error
@@ -93,4 +115,5 @@ enum ValidationResultSeverity {
 service Occurrences {
    rpc GetEffectReceipt (GetEffectReceiptRequest) returns (QueryResult_EffectReceiptRecordResponse);
    rpc RecordEffectReceipt (RecordEffectReceiptRequest) returns (CommandResult_RecordEffectReceiptResponse);
+   rpc RegisterTriggers (RegisterTriggersRequest) returns (CommandResult_RegisterTriggersResponse);
 }

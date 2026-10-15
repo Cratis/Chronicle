@@ -7,6 +7,12 @@ A worker can commit events and disappear before acknowledging its work. Running 
 
 Use receipts for retryable work identified by an occurrence and a nonempty effect name. They live in infrastructure storage, not in the event log: projections and reactors never observe a receipt.
 
+## Trigger payload contracts
+
+A trigger names a kind of retryable work. Register its stable identity, display name and JSON payload schema through the kernel's `RegisterTriggers` command. Definitions belong to the event store, rather than to an individual namespace. Repeating the same registration preserves its revision; changing the contract creates a new revision, so an occurrence can retain the revision it was validated against.
+
+Trigger payloads are plaintext infrastructure data, not events. A schema carrying compliance metadata at any nesting depth is refused with `TriggerSchemaCarriesCompliance`. The kernel validates the whole registration request before saving definitions, so this refusal does not leave the request's other definitions partially registered. Registration and delivery are separate from effect receipts; a receipt alone does not record or deliver an occurrence.
+
 ## One key, one winning outcome
 
 A receipt belongs to an event store and namespace. Its identity combines the occurrence id and effect key; it does not include the retry's payload or lease epoch. The first writer wins, even if another attempt proposes different events or a different response.
@@ -34,6 +40,8 @@ This lookup-before-validation guarantee belongs to the **grain**. HTTP and gRPC 
 ## An effect without events
 
 `RecordEffectReceipt` accepts `NoEvents` or `Refused` without concurrency scopes. It returns `Recorded` for a new receipt or `AlreadyRecorded` with the first writer's receipt. Record an explicit terminal business refusal here; do not turn a transient storage failure or concurrency conflict into a terminal receipt.
+
+This command always uses the Log grain. If it finds a receipt for an effect written to another sequence, it returns that receipt without reconciling the other sequence's grain state. Retry the original append on its destination sequence when that reconciliation is needed.
 
 A no-event decision with protected reads must instead use `AppendManyWithEffectReceipt` with **zero events and its concurrency scopes**. The grain validates those scopes before committing a `NoEvents` receipt in the batch transaction. A violated scope writes no receipt. Receipt-only writes cannot bypass protected reads.
 
