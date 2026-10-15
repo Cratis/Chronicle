@@ -82,6 +82,8 @@ Allowances are not inherited by a reducer that Chronicle runs for a decision rea
 
 `IDecisionReads.Describe<T>()` reports without I/O whether a model can be read, which event types it guards, and whether it uses Pinned generation delivery. See [Decision reads](decision-reads.mdx#admitted-projections).
 
+For a model declaring `[EventStream<TSource>(stream)]`, these same enrollment rules apply, but a key-only read is undefined even outside read protection. `DecisionReadRefused.Reason` is `ReadModelRequiresStreamScope` (24) for a key-only decision read or plain read. A decision read with another stream type or event source type, including an omitted source type, refuses with `StreamScopeDoesNotMatchReadModel` (25). Pass the declared route to `Get` or `GetFor`; use the stream-aware plain read only for advisory queries. See [Read models scoped to one event stream](per-stream.mdx).
+
 ## Contributed reads
 
 Use a contributed read when a decision depends on events you read yourself, for example an aggregate rehydrated from one event source. Capture the boundary first, read, then enroll a `ContributedRead` before the value is used:

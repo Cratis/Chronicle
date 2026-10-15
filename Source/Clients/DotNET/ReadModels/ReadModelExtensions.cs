@@ -13,5 +13,6 @@ public static class ReadModelExtensions
     /// </summary>
     /// <param name="readModelType">The read model type to check.</param>
     /// <returns>True if the read model is passive, false otherwise.</returns>
-    public static bool IsPassive(this Type readModelType) => Attribute.IsDefined(readModelType, typeof(PassiveAttribute));
+    public static bool IsPassive(this Type readModelType) =>
+        Attribute.IsDefined(readModelType, typeof(PassiveAttribute)) || EventStreamReadModel.DeclarationFor(readModelType) is not null;
 }

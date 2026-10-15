@@ -4,6 +4,8 @@ Mark a projection as passive (not actively observing) using `[Passive]`:
 
 <ChronicleClientTabs snippet="projections/model-bound/passive/basic" />
 
+A read model declaring `[EventStream<TSource>(stream)]` from `Cratis.Chronicle.ReadModels` is implicitly passive, so `[Passive]` is unnecessary. It keeps its event source ID as the key but requires a stream-scoped read. See [Read models scoped to one event stream](../../read-models/per-stream.mdx).
+
 ## When to use
 
 - On-demand projections that are only rebuilt when explicitly requested

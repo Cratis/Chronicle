@@ -50,10 +50,16 @@ public sealed class DecisionReads : IDecisionReads
 
     /// <inheritdoc/>
     public DecisionReadAdmission Admit<T>()
-        where T : class =>
-        IsReducer(typeof(T))
+        where T : class
+    {
+        if (EventStreamReadModel.DeclarationFor(typeof(T)) is not null)
+        {
+            return new(false, DecisionReadRefusalReason.ReadModelRequiresStreamScope);
+        }
+        return IsReducer(typeof(T))
             ? Reducers.ReducerDecisionReadAdmission.Assess(_eventStore, typeof(T)).Admission
             : _admissions.GetOrAdd(typeof(T), static (type, self) => self.Assess(type), this).Admission;
+    }
 
     /// <inheritdoc/>
     public DecisionReadAdmission AdmitForStream<T>()
@@ -161,6 +167,7 @@ public sealed class DecisionReads : IDecisionReads
     {
         var type = typeof(T);
         var streamScoped = streamScope is not null;
+        if (!streamScoped) EventStreamReadModel.RequireStreamScope(type);
         if (_eventStore.Reducers.HasFor(type))
         {
             var reducer = Reducers.ReducerDecisionReadAdmission.Assess(_eventStore, type, streamScoped);
@@ -313,6 +320,7 @@ public sealed class DecisionReads : IDecisionReads
         {
             throw new DecisionReadRefused(DecisionReadRefusalReason.AllStreamsNotSupported, typeof(T));
         }
+        EventStreamReadModel.ValidateMatch(typeof(T), _eventStore.EventSources, scope);
         var streamKeyed = UsesStreamKey(definition!);
         if (streamKeyed && scope.EventStreamId.IsDefault)
         {
@@ -359,6 +367,7 @@ public sealed class DecisionReads : IDecisionReads
     {
         static (DecisionReadAdmission, ProjectionDefinition?, EventType[], bool) Refuse(DecisionReadRefusalReason reason) =>
             (new(false, reason), null, [], false);
+        if (!streamScoped && EventStreamReadModel.DeclarationFor(type) is not null) return Refuse(DecisionReadRefusalReason.ReadModelRequiresStreamScope);
         if (_eventStore.Reducers.HasFor(type))
         {
             var reducer = Reducers.ReducerDecisionReadAdmission.Assess(_eventStore, type, streamScoped);

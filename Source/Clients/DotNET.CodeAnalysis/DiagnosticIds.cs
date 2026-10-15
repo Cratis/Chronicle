@@ -19,6 +19,11 @@ public static class DiagnosticIds
     public const string RouteScopeStreamMismatch = "CHR0063";
 
     /// <summary>
+    /// A read model's event stream declaration is invalid.
+    /// </summary>
+    public const string InvalidEventStreamReadModel = "CHR0064";
+
+    /// <summary>
     /// Event type must have EventType attribute when appended to event sequence.
     /// </summary>
     public const string EventTypeMustHaveAttributeWhenAppended = "CHR0001";

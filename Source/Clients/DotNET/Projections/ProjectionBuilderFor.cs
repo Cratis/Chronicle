@@ -29,7 +29,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     EventSequenceId _eventSequenceId = EventSequenceId.Log;
     bool _eventSequenceExplicitlySet;
     bool _isRewindable = true;
-    bool _isActive = true;
+    bool _isActive = EventStreamReadModel.DeclarationFor(typeof(TReadModel)) is null;
     string? _containerName;
     Type? _variantIdentity;
     PropertyPath _variantKey = PropertyPath.NotSet;
@@ -202,6 +202,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             Nested = _nestedDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value)
         };
         ProjectionGenerationDeliveryValidation.Apply(definition, effectiveDelivery);
+        EventStreamReadModel.ValidateProjection(typeof(TReadModel), definition);
 
         return definition;
     }

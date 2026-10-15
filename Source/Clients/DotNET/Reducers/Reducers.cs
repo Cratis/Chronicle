@@ -376,6 +376,8 @@ public partial class Reducers : IReducers
 
     ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)
     {
+        EventStreamReadModel.RefuseReducer(readModelType);
+        EventStreamReadModel.RefuseReducer(reducerType);
         var descriptor = new ReducerDescriptor(reducerType, readModelType, ReducerCatalog.IsSelfReducer(reducerType));
         ReadModelBuilderOwnership.Validate(_eventStore, _clientArtifacts, Catalog, readModelType, reducerType, descriptor.IsSelfReducing);
 

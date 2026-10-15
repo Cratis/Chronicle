@@ -1,0 +1,34 @@
+---
+title: "CHR0064: Invalid read model event stream"
+description: "CHR0064 rejects invalid per-stream read model declarations and confusion between the generic and non-generic EventStream attributes."
+---
+
+## Rule description
+
+A per-stream read model must name one stream declared by an `IEventSource` definition and keep the event source ID as its model key. It is implicitly passive and cannot be reducer-backed.
+
+| Declaration | Diagnostic |
+|---|---|
+| `[EventStream<TSource>(stream)]` names an undeclared stream, an empty stream or `All` | Error |
+| Non-generic `[EventStream(stream)]` on a type that is not an `IEventSource` | Error; the attribute would not scope a read model |
+| Generic `[EventStream<TSource>(stream)]` on an `IEventSource` | Error; use the non-generic declaration there |
+| Generic attribute on a self-reducing model, a classic reducer, or a model with a visible `IReducerFor<T>` | Error; reducers cannot fold one stream |
+| Fluent `UsingKeyFromContext(context => context.EventStreamId)` on the declared model | Error; a month alone collides across owners |
+
+The analyzer reports statically visible declarations and stream-key mappings. Runtime registration validates the declaration and the projection's root key as well.
+
+## Severity
+
+Error
+
+## How to fix
+
+Put the non-generic attribute from `Cratis.Chronicle.EventSources` on the event source definition. Put the generic attribute from `Cratis.Chronicle.ReadModels` on a source-keyed projection model and name a stream the definition declares. Remove stream-key redirection and reducer handlers from that model. Keep a separate whole-source reducer if you need one.
+
+The [monthly-limit example](../read-models/per-stream.mdx#declare-the-model-and-guard-the-decision) shows both attributes together and the stream-aware reads. There is no automatic code fix: choosing which history defines a rule is a correctness decision.
+
+## Related topics
+
+- [Read models scoped to one event stream](../read-models/per-stream.mdx)
+- [Decision-consistent reads](../read-models/decision-reads.mdx)
+- [Defining event sources](../event-sources/defining.mdx)
