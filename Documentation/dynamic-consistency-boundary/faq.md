@@ -87,7 +87,7 @@ Decision reads need kernel 19.0.0 or later. A stream-scoped read needs a kernel 
 
 ## Do decision reads work from every client?
 
-Decision reads are part of the .NET client. Constraints are enforced by the kernel, so they apply to appends from every client. Your SDK's own pages list what it offers.
+Decision reads are part of the .NET and Elixir clients. Constraints are enforced by the kernel, so they apply to appends from every client. Your SDK's own pages list what it offers.
 
 ## Why is protection opt-in?
 

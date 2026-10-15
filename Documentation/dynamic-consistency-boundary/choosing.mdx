@@ -3,7 +3,7 @@ title: Choosing how a rule holds
 description: Pick the mechanism that makes a write-side rule hold when you use the Chronicle client directly, and learn what costs and limits come with each.
 ---
 
-Use this page when you append events with the Chronicle client yourself (a minimal API, a controller, a worker, a console app) and a rule must stay true while other writers append at the same time. The code on these pages uses the .NET client. If you use Cratis Arc commands, start with [Choosing how a command's rule holds](/arc/backend/csharp/chronicle/consistency/) instead. It builds on this page.
+Use this page when you append events with the Chronicle client yourself (a minimal API, a controller, a worker, a console app) and a rule must stay true while other writers append at the same time. The code on these pages uses the .NET and Elixir clients. If you use Cratis Arc commands, start with [Choosing how a command's rule holds](/arc/backend/csharp/chronicle/consistency/) instead. It builds on this page.
 
 ## The short answer
 
@@ -79,7 +79,7 @@ Capturing the tail yourself before a plain read does not fix this. A materialize
 
 This is the shape that looks safe and is not:
 
-<ChronicleClientTabs snippet="dynamic-consistency-boundary/choosing/plain-read-race" variants="csharp" />
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/choosing/plain-read-race" variants="csharp,elixir" />
 
 Two requests can both read `Claims` as `0` and both append. A constraint, or a decision read on the seat, closes that race.
 
