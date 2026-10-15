@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -36,14 +37,23 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
     /// <param name="mongoDBOptions"><see cref="Configuration.Storage"/> configuration.</param>
     /// <param name="storageOptions">Chronicle-specific database naming options.</param>
+    /// <param name="connections">Optional <see cref="IMongoDBStorageConnections"/> that resolves where each database is.</param>
     public EventStoreNamespaceDatabase(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         IMongoDBClientManager clientManager,
         IOptions<MongoDBOptions> mongoDBOptions,
-        IOptions<MongoDBStorageOptions>? storageOptions = null)
+        IOptions<MongoDBStorageOptions>? storageOptions = null,
+        IMongoDBStorageConnections? connections = null)
     {
         var databaseName = DatabaseNames.ForEventStoreNamespace(eventStore, @namespace, storageOptions?.Value.DatabaseNamePrefix ?? string.Empty);
+        if (connections is not null)
+        {
+            _database = connections.GetDatabase(StorageConnectionKind.Namespace, databaseName, eventStore.Value, @namespace.Value);
+            Client = _database.Client;
+            return;
+        }
+
         var settings = MongoClientSettings.FromUrl(new MongoUrl(mongoDBOptions.Value.Server));
         if (mongoDBOptions.Value.DirectConnection == true)
         {
