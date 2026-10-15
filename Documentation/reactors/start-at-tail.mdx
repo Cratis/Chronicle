@@ -1,0 +1,37 @@
+---
+title: StartAtTail
+description: Keep a new side-effecting reactor from acting on events that predate its first registration.
+---
+
+A new reactor starts from the first event in the event sequence and catches up on everything that is already there. That is what you want for a reactor that builds something from history. It is not what you want for one that sends an email, calls an external system or starts a job, because it will do that once for every event in history the moment it is deployed.
+
+Mark such a reactor with `StartAtTail`. The first time Chronicle sees it, the reactor begins at the tail of the event sequence and observes only what is appended from then on.
+
+<ChronicleClientTabs snippet="reactors/start-at-tail/basic" />
+
+## What it does
+
+`StartAtTail` decides where a reactor **starts**, once. It does not filter events and it does not change what the reactor does afterwards.
+
+- **First registration only.** A reactor that Chronicle already holds a position for keeps that position. The marker is safe to leave in place; it never skips events after a restart or a redeploy.
+- **Per namespace.** Each namespace has its own observer, so a reactor that appears in a new namespace starts at the tail of that namespace.
+- **Replay is unaffected.** An explicit replay still replays from the beginning. See [Replay](replay) and [OnceOnly](once-only) for keeping side effects out of a replay.
+
+## Compared with OnceOnly
+
+`OnceOnly` and `StartAtTail` cover different moments, and a reactor with side effects often needs both:
+
+| | Moment it acts on | What it does |
+| --- | --- | --- |
+| `OnceOnly` | A replay of an observer that already exists | Skips the handler for replayed events |
+| `StartAtTail` | The first registration of a new observer | Starts at the tail, so history is never delivered |
+
+Neither is an exactly-once guarantee. Recovering a failed partition re-delivers an event as ordinary observation. See [Delivery identity](delivery-identity).
+
+## Renaming a reactor
+
+A reactor's default id is its full type name, so renaming it or moving its namespace makes it a **new** reactor, and a reactor marked `StartAtTail` starts at the tail again. That is usually the safe outcome. It also means events appended between the old reactor's last position and the rename are not seen by the new one. If the new reactor must continue from where the old one stopped, give it its old id explicitly. See [Reactor identity and renaming](identity).
+
+## Server and client versions
+
+Both the Chronicle server and the client must support `StartAtTail`. A server that predates it ignores the request and the reactor catches up from the beginning, as before. Upgrade the server first, then the clients.

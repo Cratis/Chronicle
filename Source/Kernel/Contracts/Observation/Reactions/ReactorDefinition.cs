@@ -56,4 +56,15 @@ public class ReactorDefinition
     /// </summary>
     [ProtoMember(8)]
     public EventGenerationDelivery GenerationDelivery { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the reactor should begin at the tail of the event sequence when it is registered for the first time.
+    /// </summary>
+    /// <remarks>
+    /// Only the very first registration is affected. A reactor that already has a position keeps it, so
+    /// the flag is safe to leave set. Optional on the wire - clients that do not know it omit it, which means
+    /// the reactor starts from the beginning as before.
+    /// </remarks>
+    [ProtoMember(9)]
+    public bool StartAtTail { get; set; }
 }
