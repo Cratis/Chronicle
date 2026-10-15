@@ -14,25 +14,29 @@ namespace Cratis.Chronicle.Benchmarks;
 public class ChronicleBenchmarkFixture : IAsyncDisposable
 {
     const string CertificatePassword = "TestPassword123";
-    const int MongoDBPort = 27018;
-    const int ChroniclePort = 35001;
-    static readonly string _certificatePath;
-    static readonly string _backupsPath;
+    static readonly int MongoDBPort = int.Parse(Environment.GetEnvironmentVariable("BENCH_MONGO_PORT") ?? "27018");
+    static readonly int ChroniclePort = int.Parse(Environment.GetEnvironmentVariable("BENCH_CHRONICLE_PORT") ?? "35001");
+    readonly string _certificatePath;
+    readonly string _backupsPath;
 
     INetwork? _network;
     IContainer? _container;
     bool _started;
 
-    static ChronicleBenchmarkFixture()
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChronicleBenchmarkFixture"/> class with private temporary paths.
+    /// </summary>
+    public ChronicleBenchmarkFixture()
     {
-        var certificateDirectory = Path.Join(Path.GetTempPath(), "chronicle-benchmark-certs");
+        var instance = Guid.NewGuid().ToString("N");
+        var certificateDirectory = Path.Join(Path.GetTempPath(), $"chronicle-benchmark-4748-certs-{instance}");
         _certificatePath = Path.Combine(certificateDirectory, "chronicle-benchmark.pfx");
         BenchmarkCertificateGenerator.GenerateAndSaveCertificate(_certificatePath, CertificatePassword);
 
         // The bind mount source has to be a directory the container runtime can already see. A directory created
         // moments earlier below the benchmark host's working directory is not, because BenchmarkDotNet regenerates
         // that directory tree for every run, so the mount is anchored in a stable location instead.
-        _backupsPath = Path.Join(Path.GetTempPath(), "chronicle-benchmark-backups");
+        _backupsPath = Path.Join(Path.GetTempPath(), $"chronicle-benchmark-4748-backups-{instance}");
         Directory.CreateDirectory(_backupsPath);
     }
 
@@ -66,6 +70,13 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
         .WithTlsValidationSkipped()
         .Build();
 
+    /// <summary>
+    /// Starts the owned fixture within the caller's deadline.
+    /// </summary>
+    /// <param name="cancellationToken">The scenario deadline.</param>
+    /// <returns>The startup task.</returns>
+    public Task Prepare(CancellationToken cancellationToken) => InitializeAsync(cancellationToken);
+
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
@@ -77,10 +88,14 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
         {
             await _network.DisposeAsync();
         }
+        // Only the exact task-created certificate and empty private directories are removed; never recurse over backups.
+        File.Delete(_certificatePath);
+        Directory.Delete(Path.GetDirectoryName(_certificatePath)!, false);
+        Directory.Delete(_backupsPath, false);
         GC.SuppressFinalize(this);
     }
 
-    async Task InitializeAsync()
+    async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         if (_started) return;
 
@@ -96,7 +111,7 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
             .AddCustomWaitStrategy(new HttpsHealthWait(35000));
 
         _container = new ContainerBuilder(imageName)
-            .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}/?maxPoolSize=500")
+            .WithEnvironment("Storage__ConnectionDetails", "mongodb://localhost:27017/?maxPoolSize=500")
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(ChroniclePort, 35000)
             .WithHostname("chronicle")
@@ -115,10 +130,10 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
             })
             .Build();
 
-        await StartContainerAsync();
+        await StartContainerAsync(cancellationToken);
     }
 
-    async Task StartContainerAsync()
+    async Task StartContainerAsync(CancellationToken cancellationToken)
     {
         var container = _container;
         if (_started || container is null) return;
@@ -132,13 +147,12 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
                 var imageFullName = container.Image?.FullName ?? "[unknown]";
                 Console.WriteLine($"Starting Chronicle container with image '{imageFullName}'...");
                 failure = null;
-                await container.StartAsync();
+                await container.StartAsync(cancellationToken);
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Failed to start the container: {e.Message} - retrying...");
+                Console.WriteLine($"Failed to start the container (single startup attempt): {e.Message}");
                 failure = e;
-                await Task.Delay(2000);
             }
 
             // Logs are only available once the container resource exists, so a container that never got created
@@ -154,7 +168,7 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
                 Console.WriteLine($"Unable to read the container logs: {e.Message}");
             }
         }
-        while (failure is not null && ++retryCount < 10);
+        while (failure is not null && ++retryCount < 1);
 
         if (failure is not null)
         {
