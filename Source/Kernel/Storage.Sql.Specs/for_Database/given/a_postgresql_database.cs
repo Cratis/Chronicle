@@ -34,12 +34,14 @@ public class a_postgresql_database(PostgreSqlFixture fixture) : Specification
         Database = CreateDatabase();
     }
 
-    internal Database CreateDatabase() => new(
-        Services,
-        Options.Create(new ChronicleOptions { Storage = new() { Type = StorageType.PostgreSql, ConnectionDetails = ConnectionString } }),
+    internal Database CreateDatabase() => CreateDatabase(new() { Type = StorageType.PostgreSql, ConnectionDetails = ConnectionString }, Services);
+
+    internal Database CreateDatabase(Configuration.Storage storage, IServiceProvider services) => new(
+        services,
+        Options.Create(new ChronicleOptions { Storage = storage }),
         new EventSequenceMigrator(new TableMigrator<EventSequenceDbContext>(NullLogger<TableMigrator<EventSequenceDbContext>>.Instance), NullLogger<EventSequenceMigrator>.Instance),
         new UniqueConstraintMigrator(new TableMigrator<UniqueConstraintDbContext>(NullLogger<TableMigrator<UniqueConstraintDbContext>>.Instance), new TableMigrator<UniqueConstraintValuesDbContext>(NullLogger<TableMigrator<UniqueConstraintValuesDbContext>>.Instance), NullLogger<UniqueConstraintMigrator>.Instance),
-        Services.GetRequiredService<IReadModelMigrator>());
+        services.GetRequiredService<IReadModelMigrator>());
 
     internal string LogicalStoreName => new NpgsqlConnectionStringBuilder(ConnectionString).Database + "+es+" + Store;
 

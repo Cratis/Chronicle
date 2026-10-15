@@ -13,7 +13,8 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// Reads database and schema metadata without provisioning or migrating candidates.
 /// </summary>
 /// <param name="connectionString">The configured cluster connection.</param>
-internal sealed class SqlDatabaseCatalog(string connectionString)
+/// <param name="prepareConnection">Optional callback preparing every connection before it opens, for instance with a resolved identity.</param>
+internal sealed class SqlDatabaseCatalog(string connectionString, Func<DbConnection, Task>? prepareConnection = null)
 {
     /// <summary>
     /// Gets the SQL provider.
@@ -43,8 +44,7 @@ internal sealed class SqlDatabaseCatalog(string connectionString)
     /// <returns>Whether it exists.</returns>
     internal async Task<bool> Exists(string name)
     {
-        await using var connection = CreateConnection(Provider == DatabaseType.PostgreSql ? "postgres" : "master");
-        await connection.OpenAsync();
+        await using var connection = await Open(Provider == DatabaseType.PostgreSql ? "postgres" : "master");
         var sql = Provider == DatabaseType.PostgreSql
             ? "SELECT COUNT(*) FROM pg_database WHERE datname::text COLLATE \"C\" = @name"
             : "SELECT COUNT(*) FROM sys.databases WHERE name = @name";
@@ -65,8 +65,7 @@ internal sealed class SqlDatabaseCatalog(string connectionString)
             return string.Equals(left, right, StringComparison.Ordinal);
         }
 
-        await using var connection = CreateConnection("master");
-        await connection.OpenAsync();
+        await using var connection = await Open("master");
 
         // master uses the server's collation, including on servers with case-sensitive names.
         await using var command = Command(connection, "SELECT CASE WHEN @left COLLATE DATABASE_DEFAULT = @right COLLATE DATABASE_DEFAULT THEN 1 ELSE 0 END", ("left", left), ("right", right));
@@ -80,11 +79,10 @@ internal sealed class SqlDatabaseCatalog(string connectionString)
     /// <returns>Tables with their columns.</returns>
     internal async Task<IReadOnlyDictionary<string, string[]>> Tables(string name)
     {
-        await using var connection = CreateConnection(name);
-        await connection.OpenAsync();
+        await using var connection = await Open(name);
         var sql = Provider == DatabaseType.PostgreSql
-            ? "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public'"
-            : "SELECT TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo'";
+            ? "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = current_schema()"
+            : "SELECT TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME()";
         await using var command = Command(connection, sql);
         await using var reader = await command.ExecuteReaderAsync();
         var columns = new List<(string Table, string Column)>();
@@ -103,8 +101,7 @@ internal sealed class SqlDatabaseCatalog(string connectionString)
     /// <returns>The applied migrations.</returns>
     internal async Task<string[]> MigrationHistory(string name)
     {
-        await using var connection = CreateConnection(name);
-        await connection.OpenAsync();
+        await using var connection = await Open(name);
         var sql = Provider == DatabaseType.PostgreSql
             ? "SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\""
             : "SELECT [MigrationId] FROM [__EFMigrationsHistory]";
@@ -132,6 +129,26 @@ internal sealed class SqlDatabaseCatalog(string connectionString)
         }
 
         return command;
+    }
+
+    async Task<DbConnection> Open(string name)
+    {
+        var connection = CreateConnection(name);
+        try
+        {
+            if (prepareConnection is not null)
+            {
+                await prepareConnection(connection);
+            }
+
+            await connection.OpenAsync();
+            return connection;
+        }
+        catch
+        {
+            await connection.DisposeAsync();
+            throw;
+        }
     }
 
     DbConnection CreateConnection(string name) => Provider == DatabaseType.PostgreSql ? new NpgsqlConnection(ConnectionString(name)) : new SqlConnection(ConnectionString(name));
