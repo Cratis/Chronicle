@@ -123,7 +123,7 @@ Under a read-protection frame, call `IUnitOfWork.GetAppendConditions()` after th
 
 ## Can I read two streams of one source in the same decision?
 
-Yes, but the merged guard then covers every stream ID of that source, and outside a read-protection frame every stream type as well. If the rule truly spans two streams, read the whole source once so the guard says what it covers. If it does not, split the rule into two decisions. See [Several reads on one source](./how-guards-are-derived.mdx#several-reads-on-one-source).
+Yes, but the merged guard widens to what the reads have in common. Outside a read-protection frame, the guard covers every stream of that source when either the stream type or the stream ID differs. Under a frame, only the dimension that differs is dropped: two months of `Transactions` give a guard over every `Transactions` stream ID, and two stream types with the same stream ID keep that ID. If the rule truly spans two streams, read the whole source once so the guard says what it covers. If it does not, split the rule into two decisions. See [Several reads on one source](./how-guards-are-derived.mdx#several-reads-on-one-source).
 
 ## Where do I go if I use Arc commands?
 

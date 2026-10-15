@@ -79,7 +79,7 @@ Why not read the whole account? It works, but the guard then covers every month,
 
 Two cautions:
 
-- **Two stream-scoped reads on one account widen to the whole account.** If a command reads `2026-10` and `2026-11`, the merged guard covers every month of the account. Outside a read-protection frame both stream values are dropped, under a frame only the stream ID. See [How guards are derived](./how-guards-are-derived.mdx#several-reads-on-one-source).
+- **Two stream-scoped reads on one account widen the guard.** If a command reads `2026-10` and `2026-11`, the merged guard covers every month of the account. Under a read-protection frame it still covers only `Transactions`; outside a frame it covers every stream of the account. See [How guards are derived](./how-guards-are-derived.mdx#several-reads-on-one-source).
 - **A stream-scoped read needs a specific stream type and a kernel that acknowledges stream scope.** See [Scoped to one event stream](../read-models/decision-reads.mdx#scoped-to-one-event-stream).
 
 The same code in an event source definition with declared dimensions is in [Event source scenarios](../event-sources/scenarios.mdx#a-monthly-limit-on-one-stream).
