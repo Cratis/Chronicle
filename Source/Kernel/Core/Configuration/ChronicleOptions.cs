@@ -111,6 +111,11 @@ public class ChronicleOptions : IValidatableObject
     public Observers Observers { get; init; } = new Observers();
 
     /// <summary>
+    /// Gets the durable occurrence delivery configuration.
+    /// </summary>
+    public Occurrences Occurrences { get; init; } = new();
+
+    /// <summary>
     /// Gets the alerts configuration.
     /// </summary>
     public Alerts Alerts { get; init; } = new Alerts();
