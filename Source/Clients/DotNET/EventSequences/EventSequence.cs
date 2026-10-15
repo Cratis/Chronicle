@@ -1086,7 +1086,7 @@ public class EventSequence(
         IEnumerable<NamedTag> namedTags,
         ReadProtectionCommit? readProtectionCommit = null)
     {
-        concurrencyScopes = concurrencyScopes?.ToDictionary(_ => new EventSourceId(_.Key.Value), _ => NormalizeConcurrencyScope(_.Value));
+        concurrencyScopes = concurrencyScopes?.ToDictionary(_ => _.Key, _ => NormalizeConcurrencyScope(_.Value));
         if (readProtectionCommit is not null)
         {
             readProtectionCommit = readProtectionCommit with
@@ -1246,7 +1246,7 @@ public class EventSequence(
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes,
         ReadProtectionCommit? readProtectionCommit = null)
     {
-        var resolvedConcurrencyScopes = concurrencyScopes?.ToDictionary(kvp => new EventSourceId(kvp.Key.Value), kvp => kvp.Value) ?? [];
+        var resolvedConcurrencyScopes = concurrencyScopes?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value) ?? [];
         var strategy = concurrencyScopeStrategies.GetFor(this);
         var routingByEvent = events.Select((@event, index) => (Event: @event, Routing: routings[index])).ToList();
         if (readProtectionCommit is not null)
@@ -1256,7 +1256,7 @@ public class EventSequence(
             return plan.Scopes.ToDictionary(_ => _.Key, _ => _.Value);
         }
 
-        foreach (var eventsForEventSource in routingByEvent.GroupBy(_ => new EventSourceId(_.Event.EventSourceId.Value)))
+        foreach (var eventsForEventSource in routingByEvent.GroupBy(_ => _.Event.EventSourceId))
         {
             if (resolvedConcurrencyScopes.TryGetValue(eventsForEventSource.Key, out var concurrencyScope) &&
                 concurrencyScope != ConcurrencyScope.NotSet)

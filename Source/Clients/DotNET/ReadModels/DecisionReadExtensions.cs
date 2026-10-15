@@ -58,6 +58,7 @@ public static class DecisionReadExtensions
             throw new DecisionReadTargetMismatch();
         }
         var batch = events.ToArray();
+        scopes = DecisionReadScopes.ForEvents(scopes, batch);
         try
         {
             return await sequence.AppendMany(batch, concurrencyScopes: scopes);

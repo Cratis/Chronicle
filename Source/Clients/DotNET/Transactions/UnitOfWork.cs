@@ -162,7 +162,7 @@ public partial class UnitOfWork(
                 return;
             }
             var suppliedScopes = concurrencyScopes.Select(pair => new KeyValuePair<EventSourceId, ConcurrencyScope>(
-                new(pair.Key.Value), MaterializeConcurrencyScope(pair.Value))).ToArray();
+                pair.Key, MaterializeConcurrencyScope(pair.Value))).ToArray();
             var batch = new EventsWithConcurrencyScopes(events, suppliedScopes.Select(pair =>
                 _requiredEnrollmentScopes.TryGetValue(pair.Key, out var required)
                     ? new KeyValuePair<EventSourceId, ConcurrencyScope>(pair.Key, MergeRequiredScope(eventSequenceId, pair.Key, pair.Value, required))
@@ -176,7 +176,7 @@ public partial class UnitOfWork(
             var resolution = ResolveEnrollmentScopes(eventSequenceId, enrollments);
             foreach (var (label, scope) in resolution.Scopes)
             {
-                if (scope != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(label))
+                if (scope != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(new(label.Value)))
                 {
                     throw new DecisionReadConflictsWithConcurrencyScope(label);
                 }
@@ -232,7 +232,7 @@ public partial class UnitOfWork(
             }
             else
             {
-                if (_concurrencyScopes.ContainsKey(label))
+                if (_concurrencyScopes.Keys.Any(_ => _.Value == label.Value))
                 {
                     throw new DecisionReadConflictsWithConcurrencyScope(label);
                 }
@@ -369,15 +369,14 @@ public partial class UnitOfWork(
         return firstEventTypes.SetEquals(secondEventTypes);
     }
 
-    static ConcurrencyScope MaterializeConcurrencyScope(ConcurrencyScope concurrencyScope) => concurrencyScope with
-    {
-        EventSourceId = concurrencyScope.EventSourceId is null ? null : new(concurrencyScope.EventSourceId.Value),
-        EventTypes = concurrencyScope.EventTypes?.ToArray()
-    };
+    static ConcurrencyScope MaterializeConcurrencyScope(ConcurrencyScope concurrencyScope) =>
+        concurrencyScope.EventTypes is null
+            ? concurrencyScope
+            : concurrencyScope with { EventTypes = concurrencyScope.EventTypes.ToArray() };
 
     static Dictionary<EventSourceId, ConcurrencyScope> MaterializeConcurrencyScopes(
         IReadOnlyDictionary<EventSourceId, ConcurrencyScope> concurrencyScopes) =>
-        concurrencyScopes.ToDictionary(_ => new EventSourceId(_.Key.Value), _ => MaterializeConcurrencyScope(_.Value));
+        concurrencyScopes.ToDictionary(_ => _.Key, _ => MaterializeConcurrencyScope(_.Value));
 
     static void ThrowIfLabelIsNotSpecified(EventSourceId label)
     {
@@ -435,7 +434,7 @@ public partial class UnitOfWork(
             eventSequence = _eventSequence;
             events = eventSequence is null ? [] : GetEventsToCommit();
             scopes = !protectedCommit ? _concurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value) :
-                _concurrencyScopes.Concat(_decisionScopes).ToDictionary(_ => _.Key, _ => _.Value);
+                _concurrencyScopes.Concat(DecisionReadScopes.ForEvents(_decisionScopes, events)).ToDictionary(_ => _.Key, _ => _.Value);
             readProtectionCommit = IsEnforcingReadProtection
                 ? new(GetReadProtectionTarget(), Array.AsReadOnly(_readProtectionContributions.ToArray()), CaptureAppendConditions)
                 : null;

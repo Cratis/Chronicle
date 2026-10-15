@@ -37,7 +37,6 @@ public partial class UnitOfWork
         lock (_decisionLock)
         {
             ThrowIfStagingAfterCompletion();
-            eventSourceId = new(eventSourceId.Value);
             if (IsEnforcingReadProtection)
             {
                 var enforcedEvent = new EventForEventSourceId(eventSourceId, @event, causation)
@@ -73,7 +72,7 @@ public partial class UnitOfWork
                 ValidateLegacyEventSequenceIdsForOrderedBatch(eventSequenceId);
                 EnsureEventSequenceCanBeUsed(eventSequenceId);
             }
-            if (scope != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(eventSourceId))
+            if (scope != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(new(eventSourceId.Value)))
             {
                 throw new DecisionReadConflictsWithConcurrencyScope(eventSourceId);
             }

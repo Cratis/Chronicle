@@ -52,6 +52,16 @@ internal static class DecisionReadScopes
         };
     }
 
+    /// <summary>Matches read guards to caller IDs by wire identity without changing event payloads or legacy grouping.</summary>
+    /// <param name="scopes">The read guards.</param>
+    /// <param name="events">The events being guarded.</param>
+    /// <returns>The guards keyed by the original event IDs, retaining independent read labels.</returns>
+    internal static Dictionary<EventSourceId, ConcurrencyScope> ForEvents(IReadOnlyDictionary<EventSourceId, ConcurrencyScope> scopes, IReadOnlyList<EventForEventSourceId> events) =>
+        scopes.SelectMany(pair => events.Select(_ => _.EventSourceId)
+                .Where(label => label.Value == pair.Key.Value).Distinct().DefaultIfEmpty(pair.Key)
+                .Select(label => new KeyValuePair<EventSourceId, ConcurrencyScope>(label, pair.Value)))
+            .ToDictionary(_ => _.Key, _ => _.Value);
+
     /// <summary>Collects and validates detached reads for one target.</summary>
     /// <param name="reads">The reads.</param>
     /// <param name="store">The expected store.</param>
