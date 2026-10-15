@@ -32,6 +32,8 @@ internal static class Probe
         Directory.CreateDirectory(output);
         var fixture = new ChronicleBenchmarkFixture();
         ProbeMongo? mongo = null;
+        if (run.FinalizationReserveSeconds <= 0 || run.MeasurementDeadlineSeconds <= 0 || run.DrainBudgetSeconds <= 0)
+            throw new ArgumentException("Deadline, finalization reserve and drain budget must be positive, with reserve below deadline.");
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(run.MeasurementDeadlineSeconds));
         using var process = Process.GetCurrentProcess();
         Task? worker = null;
@@ -48,12 +50,15 @@ internal static class Probe
         }
         catch (OperationCanceledException)
         {
-            run.Reason = $"Measurement deadline {run.MeasurementDeadlineSeconds}s reached (total internal budget {run.DeadlineSeconds}s, finalization reserve {run.FinalizationReserveSeconds}s); acknowledged membership only.";
+            run.Status = run.RegisteredMs.HasValue ? "DID_NOT_FINISH" : "INVALID";
+            run.Reason = !run.RegisteredMs.HasValue ? $"setup-deadline: {run.Phase}" :
+                $"Measurement deadline {run.MeasurementDeadlineSeconds}s reached (total internal budget {run.DeadlineSeconds}s, finalization reserve {run.FinalizationReserveSeconds}s); acknowledged membership only.";
         }
         catch (Exception error)
         {
             run.Status = "INVALID";
-            run.Reason = error.ToString();
+            run.Reason = error is TimeoutException && !run.RegisteredMs.HasValue
+                ? $"setup-deadline: {run.Phase}\n{error}" : error.ToString();
         }
         finally
         {
@@ -114,7 +119,7 @@ internal static class Probe
             }
             // Final snapshot is after quiescence, client shutdown and cleanup; late deliveries cannot silently pass.
             run.Snapshot();
-            if (run.Accounting is { } accounting && run.Expected > 0 &&
+            if (run.RegisteredMs.HasValue && run.Accounting is { } accounting && run.Expected > 0 &&
                 (accounting.Duplicates != 0 || accounting.FirstDeliveryOrderViolations != 0 ||
                  accounting.Unexpected.Length != 0 || accounting.Missing.Length != 0))
             {
@@ -145,18 +150,20 @@ internal static class Probe
         var batch = parts.Contains("batch");
         run.Requested = n;
         var observer = projection ? typeof(BenchmarkProjection) : typeof(ProbeReactor);
+        run.Phase = "seeder-connection";
         using var seeder = new ChronicleClientHelper(fixture, run.EventStore, new ObserverScopedClientArtifactsProvider());
         await seeder.WaitForConnection().WaitAsync(cancellation);
         CheckObservers(await mongo.Observers().WaitAsync(cancellation), 0, projection);
         if (catchup)
         {
+            run.Phase = "seeding";
             var timer = Stopwatch.StartNew();
             await Append(seeder.EventLog, run, n, keys, concurrency, batch, cancellation);
             run.AppendMs = timer.Elapsed.TotalMilliseconds;
-            timer.Restart();
-            await DrainSystemObservers(mongo, run.Appended.Keys.Max(p => p.SequenceNumber), cancellation);
-            run.SystemDrainMs = timer.Elapsed.TotalMilliseconds;
+            run.Phase = "system-drain";
+            await ProbeSystemDrain.Run(mongo, run, cancellation);
         }
+        run.Phase = "live-warmup";
         using var live = !catchup && !appendOnly
             ? new ChronicleClientHelper(fixture, run.EventStore, new ObserverScopedClientArtifactsProvider(observer)) : null;
         if (!catchup)
@@ -164,6 +171,7 @@ internal static class Probe
             await (live ?? seeder).WaitForConnection().WaitAsync(cancellation);
             await Warm(live ?? seeder, mongo, !appendOnly ? run.ProbeObserverId : null, cancellation);
         }
+        run.Phase = "profile-setup";
         var before = await mongo.Observers().WaitAsync(cancellation);
         run.BeforeObservers = before.Select(d => d.ToJson()).ToArray();
         run.InitialObserverState = (await mongo.State().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
@@ -173,6 +181,7 @@ internal static class Probe
         run.Started = Stopwatch.GetTimestamp();
         run.CpuStart = Process.GetCurrentProcess().TotalProcessorTime;
         run.Clock.Start(); // Catch-up clocks deliberately exclude seeding and container startup.
+        run.Phase = "probe-registration";
         using var catchingUp = catchup
             ? new ChronicleClientHelper(fixture, run.EventStore, new ObserverScopedClientArtifactsProvider(observer)) : null;
         if (catchingUp is not null)
@@ -201,6 +210,7 @@ internal static class Probe
             run.RegisteredMs = run.Clock.Elapsed.TotalMilliseconds;
             await mongo.MarkRegistered().WaitAsync(cancellation);
         }
+        run.Phase = "measurement";
         if (!catchup)
         {
             await Append((live ?? seeder).EventLog, run, n, keys, concurrency, batch, cancellation);
@@ -315,7 +325,7 @@ internal static class Probe
             throw new InvalidOperationException($"Observer-list check expected {string.Join(',', expected)}: {string.Join(';', observers.Select(d => d.ToJson()))}");
     }
 
-    static bool StateAtTail(BsonDocument[] states, ulong tail, string observerId, bool allowScanned = false)
+    internal static bool StateAtTail(BsonDocument[] states, ulong tail, string observerId, bool allowScanned = false)
     {
         var state = states.SingleOrDefault(s => s["_id"].AsString == observerId);
         var progress = state?.GetValue("lastHandledEventSequenceNumber", -1).ToDecimal() ?? -1;
@@ -328,24 +338,6 @@ internal static class Probe
             state.GetValue("failedPartitionCount", 0).ToInt32() == 0 &&
             state.GetValue("catchingUpPartitions", new BsonArray()).AsBsonArray.Count == 0 &&
             state.GetValue("inFlightPartitions", new BsonArray()).AsBsonArray.Count == 0;
-    }
-
-    static async Task DrainSystemObservers(ProbeMongo mongo, ulong eventLogTail, CancellationToken cancellation)
-    {
-        var definitions = await mongo.Observers().WaitAsync(cancellation);
-        var tails = new Dictionary<string, ulong?> { ["event-log"] = eventLogTail };
-        foreach (var sequence in definitions.Where(d => SystemObserverIds.Contains(d["_id"].AsString)).Select(d => d["eventSequenceId"].AsString).Distinct())
-            if (!tails.ContainsKey(sequence)) tails[sequence] = await mongo.SequenceTail(sequence).WaitAsync(cancellation);
-        while (true)
-        {
-            var states = await mongo.State().WaitAsync(cancellation);
-            var ready = definitions.Where(d => SystemObserverIds.Contains(d["_id"].AsString))
-                .Where(d => states.Any(s => s["_id"] == d["_id"]))
-                .All(d => !tails[d["eventSequenceId"].AsString].HasValue ||
-                    StateAtTail(states, tails[d["eventSequenceId"].AsString]!.Value, d["_id"].AsString, allowScanned: true));
-            if (ready) return;
-            await Task.Delay(100, cancellation);
-        }
     }
 
     static bool ProjectionMatches(BsonDocument[] rows, ProbeRun run)

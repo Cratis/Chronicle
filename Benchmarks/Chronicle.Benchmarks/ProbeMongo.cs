@@ -81,7 +81,7 @@ internal sealed class ProbeMongo(IContainer container, string store, long profil
         const serverCommittedDelta=serverEnd.totalCommitted-serverStart.totalCommitted, serverAbortedDelta=serverEnd.totalAborted-serverStart.totalAborted;
         const knownIds={{{{{JsonSerializer.Serialize(Probe.SystemObserverIds.Prepend(_probeId).ToArray())}}}}};
         const probeId={{{{{JsonSerializer.Serialize(_probeId)}}}}};
-        const rows=[],boundary=[],samples=[],observed=new Set(),owners=new Map();
+        const rows=[],boundary=[],samples=[],systemOwnerSamples=[],observed=new Set(),owners=new Map();
         let profileEntries=0,transactionIdentityMissing=0;
         function ownerOf(r,ids,probe) {
           function find(v) {
@@ -112,7 +112,7 @@ internal sealed class ProbeMongo(IContainer container, string store, long profil
           // All per-operation work and grouping occur on Mongo; mongosh receives only compact groups and bounded samples.
           const grouped=p.aggregate([
             {$match:filter},
-            {$set:{meta:{$function:{body:ownerOf,args:['$$ROOT',knownIds,probeId],lang:'js'}},session:{$ifNull:['$command.lsid.id','$lsid.id']},number:{$ifNull:['$command.txnNumber','$txnNumber']}}},
+            {$set:{meta:{$function:{body:ownerOf,args:['$$ROOT',{$literal:knownIds},{$literal:probeId}],lang:'js'}},session:{$ifNull:['$command.lsid.id','$lsid.id']},number:{$ifNull:['$command.txnNumber','$txnNumber']}}},
             {$group:{_id:{ns:'$ns',op:'$op',command:'$meta.command',owner:'$meta.owner',observerId:'$meta.observerId',
               phase:{$cond:[{$lt:['$ts',registered.ts]},'registration','delivery']},
               transaction:{$cond:['$meta.isTx',{session:'$session',number:'$number'},null]},
@@ -130,6 +130,8 @@ internal sealed class ProbeMongo(IContainer container, string store, long profil
             for(const field of Object.keys(fields)) { row[field]=Number(g[field]); if(!Number.isFinite(row[field]) || row[field]<0) throw new Error('Invalid metric '+field); }
             rows.push(row);
           }
+          systemOwnerSamples.push(...p.find({...filter,'command.q._id':'$system.patterns',op:'update'},
+            {ns:1,op:1,ts:1,'command.q':1}).limit(2).toArray());
           if(samples.length<20) samples.push(...p.find(filter,{ns:1,op:1,ts:1,'command.q':1,'command.filter':1,'command.u.details':1,'command.u.request.observerKey':1,'command.lsid':1,'command.txnNumber':1,'command.autocommit':1}).limit(Math.min(8,20-samples.length)).toArray());
         }
         const admin=db.getSiblingDB('admin'), transactions=[];
@@ -139,7 +141,7 @@ internal sealed class ProbeMongo(IContainer container, string store, long profil
           const [owner,observerId]=!set?['uncorrelated','']:set.size===1?JSON.parse([...set][0]):['shared',''];
           transactions.push({op:r.op,ns:r.ns,command:Object.keys(c)[0],owner,observerId,sessionTransaction:key,responseBytes:Number(r.responseLength||0),documentsExamined:Number(r.docsExamined||0)});
         }
-        print(JSON.stringify({databases:names,boundary,rows,samples,transactions,profileEntries,unparsed:0,
+        print(JSON.stringify({databases:names,boundary,rows,samples,systemOwnerSamples,transactions,profileEntries,unparsed:0,
           transactionSet:[...observed],transactionsObserved:observed.size,terminalCommandsProfiled:transactions.length,terminalCostProfiled:false,
           transactionIdentityMissing,serverStart,serverEnd,serverCommittedDelta,serverAbortedDelta,
           transactionCounterMethod:'explicit run-bounded serverStatus().transactions delta; task-owned single-tenant Mongo; terminal cost NOT PROFILED',

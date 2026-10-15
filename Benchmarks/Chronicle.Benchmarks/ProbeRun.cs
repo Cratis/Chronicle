@@ -25,12 +25,22 @@ internal sealed class ProbeRun(string scenario, string store)
     public string Status { get; set; } = "DID_NOT_FINISH";
     public string? Reason { get; set; }
     public int DeadlineSeconds { get; set; } = int.Parse(Environment.GetEnvironmentVariable("PROBE_DEADLINE_SECONDS") ?? "200");
-    public int FinalizationReserveSeconds => 100;
+    public int FinalizationReserveSeconds { get; } = int.Parse(Environment.GetEnvironmentVariable("PROBE_FINALIZE_SECONDS") ?? "100");
     public int MeasurementDeadlineSeconds => DeadlineSeconds - FinalizationReserveSeconds;
+    public int DrainBudgetSeconds { get; } = int.Parse(Environment.GetEnvironmentVariable("PROBE_DRAIN_SECONDS") ??
+        (int.Parse(Environment.GetEnvironmentVariable("PROBE_DEADLINE_SECONDS") ?? "200") -
+         int.Parse(Environment.GetEnvironmentVariable("PROBE_FINALIZE_SECONDS") ?? "100")).ToString());
+    public string Phase { get; set; } = "fixture-startup";
     public long ProfilerCapacityBytes => int.Parse(scenario.Split(':')[2]) >= 10000 ? 1073741824L
         : int.Parse(scenario.Split(':')[2]) >= 2000 ? 268435456L : 67108864L;
     public int QuiescenceMilliseconds => 2000;
     public double SystemDrainMs { get; set; }
+    public string SystemDrainStatus { get; set; } = "NOT_RUN";
+    public DateTimeOffset? SystemDrainStartedUtc { get; set; }
+    public ProbeSystemDrainObserver[] SystemDrainObservers { get; set; } = [];
+    public double? SystemDrainSeededEventsPerSecond => SystemDrainStatus == "COMPLETE" && SystemDrainMs > 0 ? Expected * 1000.0 / SystemDrainMs : null;
+    public double? SystemSeedToTailMs => SystemDrainStatus == "COMPLETE" ? AppendMs + SystemDrainMs : null;
+    public double? SystemSeedToTailEventsPerSecond => SystemSeedToTailMs > 0 ? Expected * 1000.0 / SystemSeedToTailMs : null;
     public double? RegisteredMs { get; set; }
     public double? EffectFromRegisteredMs => EffectMs - RegisteredMs;
     public double? EventsPerSecondFromRegistered => EffectFromRegisteredMs > 0 ? Expected * 1000.0 / EffectFromRegisteredMs : null;
