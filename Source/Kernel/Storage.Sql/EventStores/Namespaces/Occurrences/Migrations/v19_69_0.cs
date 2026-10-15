@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Occurrences.Migrat
 /// and no receipt writer existed before occurrence delivery. No backfill is required.
 /// </summary>
 [DbContext(typeof(NamespaceDbContext))]
-[Migration("NS-Occurrences-v19_68_0")]
-public class v19_68_0 : Migration
+[Migration("NS-Occurrences-v19_69_0")]
+public class v19_69_0 : Migration
 {
     /// <inheritdoc/>
     protected override void Up(MigrationBuilder migrationBuilder)

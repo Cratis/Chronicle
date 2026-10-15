@@ -18,13 +18,13 @@ public class when_indexing_receipt_occurrences : Specification
 
     void Because()
     {
-        _id = typeof(v19_68_0).GetCustomAttribute<MigrationAttribute>()!.Id;
+        _id = typeof(v19_69_0).GetCustomAttribute<MigrationAttribute>()!.Id;
         _previous = typeof(v19_67_0).GetCustomAttribute<MigrationAttribute>()!.Id;
-        _context = typeof(v19_68_0).GetCustomAttribute<DbContextAttribute>()!.ContextType;
-        _operations = new v19_68_0 { ActiveProvider = "Microsoft.EntityFrameworkCore.Sqlite" }.UpOperations;
+        _context = typeof(v19_69_0).GetCustomAttribute<DbContextAttribute>()!.ContextType;
+        _operations = new v19_69_0 { ActiveProvider = "Microsoft.EntityFrameworkCore.Sqlite" }.UpOperations;
     }
 
-    [Fact] void should_use_the_namespace_prefix() => _id.ShouldEqual("NS-Occurrences-v19_68_0");
+    [Fact] void should_use_the_namespace_prefix() => _id.ShouldEqual("NS-Occurrences-v19_69_0");
     [Fact] void should_bind_the_namespace_context() => _context.ShouldEqual(typeof(NamespaceDbContext));
     [Fact] void should_sort_after_receipt_infrastructure() => string.CompareOrdinal(_id, _previous).ShouldBeGreaterThan(0);
     [Fact] void should_add_the_occurrence_column() => _operations.OfType<AddColumnOperation>().Single().Name.ShouldEqual("OccurrenceId");
