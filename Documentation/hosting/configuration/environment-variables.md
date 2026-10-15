@@ -38,6 +38,8 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Features__OAuthAuthority | Enable internal OAuth authority |
 | Cratis__Chronicle__Storage__Type | Storage provider type |
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
+| Cratis__Chronicle__Storage__Schema | SQL schema for Chronicle's tables |
+| Cratis__Chronicle__Storage__CreateIfMissing | Whether Chronicle creates missing databases and schemas |
 | Cratis__Chronicle__Observers__SubscriberTimeout | Seconds an observer waits for its subscriber to answer (0 = indefinitely) |
 | Cratis__Chronicle__Observers__MaxConcurrentPartitions | Upper bound on parallel job steps, applied together with `Jobs__MaxParallelSteps` (does not limit live event delivery) |
 | Cratis__Chronicle__Observers__MaxRetryAttempts | Maximum retry attempts for observers |
@@ -114,7 +116,19 @@ Cratis__Chronicle__Storage__Type=MongoDB
 
 # MongoDB connection string
 Cratis__Chronicle__Storage__ConnectionDetails=mongodb://localhost:27017
+
+# SQL schema for Chronicle's tables (default: the database user's default schema)
+Cratis__Chronicle__Storage__Schema=chronicle
+
+# Create missing databases and schemas (default: true)
+Cratis__Chronicle__Storage__CreateIfMissing=false
+
+# Resolve connections per event store, namespace and purpose
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Resolver=Http
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Endpoint=https://platform-mgmt.example/internal/connections
 ```
+
+See [storage connection resolution](storage-connection-resolution.md) for every resolver setting.
 
 ## Observers
 
