@@ -21,7 +21,7 @@ internal static class OccurrenceSnapshotConverters
     /// <param name="occurrence">The occurrence.</param>
     /// <param name="receipts">The receipts.</param>
     /// <returns>The read surface.</returns>
-    internal static OccurrenceSnapshot ToSnapshot(Occurrence occurrence, IEnumerable<EffectReceiptDetails> receipts) => new(
+    internal static OccurrenceSnapshot ToSnapshot(Occurrence occurrence, IEnumerable<OccurrenceEffectReceipt> receipts) => new(
         occurrence.Id.Value, occurrence.Trigger.Value, occurrence.Kind, occurrence.Payload, occurrence.SchemaRevision, occurrence.RecordedAt, occurrence.Due, occurrence.State, occurrence.Attempts, occurrence.Epoch, occurrence.Owner, occurrence.LeaseExpiry, occurrence.LastError, occurrence.NextAttempt, occurrence.RetriedBy, occurrence.RetriedAt, receipts);
 
     /// <summary>
@@ -32,18 +32,37 @@ internal static class OccurrenceSnapshotConverters
     /// <param name="namespace">The optional namespace.</param>
     /// <returns>The status snapshot.</returns>
     /// <exception cref="OccurrencesStorageNotSupported">The provider has no receipt storage.</exception>
-    internal static async Task<OccurrenceSnapshot> WithReceipts(Occurrence occurrence, IEventStoreStorage store, string? @namespace)
+    internal static async Task<OccurrenceSnapshot> WithReceipts(Occurrence occurrence, IEventStoreStorage store, string? @namespace) =>
+        (await WithReceipts([occurrence], store, @namespace)).Single();
+
+    /// <summary>
+    /// Reads all effects in view with one indexed receipt query per namespace.
+    /// </summary>
+    /// <param name="occurrences">The occurrences in view.</param>
+    /// <param name="store">The store.</param>
+    /// <param name="namespace">The optional namespace.</param>
+    /// <returns>The namespace-qualified status snapshots.</returns>
+    /// <exception cref="OccurrencesStorageNotSupported">The provider has no receipt storage.</exception>
+    internal static async Task<IEnumerable<OccurrenceSnapshot>> WithReceipts(IEnumerable<Occurrence> occurrences, IEventStoreStorage store, string? @namespace)
     {
+        var inView = occurrences.ToArray();
+        if (inView.Length == 0)
+        {
+            return [];
+        }
+
+        var ids = inView.Select(occurrence => occurrence.Id).Distinct().ToArray();
         var namespaces = @namespace is null ? (await store.Namespaces.GetAll()).Select(state => state.Name) : [new Concepts.EventStoreNamespaceName(@namespace)];
-        var receipts = new List<EffectReceiptDetails>();
+        var receipts = new List<(OccurrenceId Occurrence, OccurrenceEffectReceipt Effect)>();
         foreach (var name in namespaces)
         {
             var sequence = store.GetNamespace(name).GetEventSequence(EventSequenceId.Log);
             var receiptStorage = sequence as IEffectReceiptStorage ?? throw new OccurrencesStorageNotSupported();
-            receipts.AddRange((await receiptStorage.GetEffectReceipts(occurrence.Id)).Select(EffectReceiptConverters.ToDetails));
+            receipts.AddRange((await receiptStorage.GetEffectReceiptsForOccurrences(ids)).Select(receipt => (receipt.Lease.OccurrenceId, new OccurrenceEffectReceipt(name.Value, EffectReceiptConverters.ToDetails(receipt)))));
         }
 
-        return ToSnapshot(occurrence, receipts);
+        var byOccurrence = receipts.ToLookup(entry => entry.Occurrence, entry => entry.Effect);
+        return inView.Select(occurrence => ToSnapshot(occurrence, byOccurrence[occurrence.Id])).ToArray();
     }
 
     /// <summary>
@@ -59,11 +78,8 @@ internal static class OccurrenceSnapshotConverters
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var snapshots = new List<OccurrenceSnapshot>();
-                foreach (var occurrence in await key.Storage(storage).GetForTrigger(new(key.Trigger)).WaitAsync(cancellationToken))
-                {
-                    snapshots.Add(await WithReceipts(occurrence, storage.GetEventStore(new(key.EventStore)), key.Namespace).WaitAsync(cancellationToken));
-                }
+                var occurrences = await key.Storage(storage).GetForTrigger(new(key.Trigger)).WaitAsync(cancellationToken);
+                var snapshots = await WithReceipts(occurrences, storage.GetEventStore(new(key.EventStore)), key.Namespace).WaitAsync(cancellationToken);
 
                 observer.OnNext(snapshots);
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);

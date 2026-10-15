@@ -728,7 +728,7 @@ public class OccurrenceSnapshotResponse
     /// Gets or sets the Receipts.
     /// </summary>
     [ProtoMember(17)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails> Receipts { get; set; } = new List<global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails>();
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceEffectReceipt> Receipts { get; set; } = new List<global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceEffectReceipt>();
 }
 
 /// <summary>

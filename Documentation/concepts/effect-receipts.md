@@ -33,9 +33,9 @@ Quarantine parks only the affected occurrence. After correcting the cause, an op
 
 ## Inspect and recover delivery
 
-`GetOccurrence` returns delivery state, attempts, epoch, owner, expiry, last error, next attempt and effect receipts. Application-scoped lookup gathers receipts from the store's namespaces. These reads are status snapshots: occurrence state and receipts do not share a transaction.
+`GetOccurrence` returns delivery state, attempts, epoch, owner, expiry, last error, next attempt and effect receipts. Each item in `Receipts` carries its `Namespace` and the recorded `Receipt`. Application-scoped lookup gathers receipts from the store's namespaces, keeping equal effect identities in different namespaces distinct. These reads are status snapshots: occurrence state and receipts do not share a transaction.
 
-`ObserveOccurrences` supplies an initial snapshot and periodic durable snapshots, including when time alone makes a retry claimable. Workers can use it as a wake signal, then claim through the queue; a notification never grants ownership. Dispose the subscription when stopping a worker.
+`ObserveOccurrences` supplies an initial snapshot and periodic durable snapshots, including when time alone makes a retry claimable. Each cycle retrieves receipts for all occurrences in view in one indexed lookup per namespace, rather than scanning receipt history for each occurrence. Workers can use it as a wake signal, then claim through the queue; a notification never grants ownership. Dispose the subscription when stopping a worker.
 
 An active queue uses a grain timer and a persistent reminder with a one-minute period. Startup also rehydrates unfinished queues, including application scope and namespaces with no event-log data. Storage decides claimability after every wake-up. InMemory loses its queues with the process, just as it loses events and receipts.
 

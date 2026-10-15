@@ -157,6 +157,10 @@ message OccurrenceClaimDetails {
    int64 Epoch = 9;
    SerializableDateTimeOffset LeaseExpiry = 10;
 }
+message OccurrenceEffectReceipt {
+   string Namespace = 1;
+   EffectReceiptDetails Receipt = 2;
+}
 enum OccurrenceIngressStatus {
    OCCURRENCE_INGRESS_STATUS_Recorded = 0;
    OCCURRENCE_INGRESS_STATUS_AlreadyRecorded = 1;
@@ -191,7 +195,7 @@ message OccurrenceSnapshotResponse {
    SerializableDateTimeOffset NextAttempt = 14;
    string RetriedBy = 15;
    SerializableDateTimeOffset RetriedAt = 16;
-   repeated EffectReceiptDetails Receipts = 17;
+   repeated OccurrenceEffectReceipt Receipts = 17;
 }
 enum OccurrenceState {
    Pending = 0;

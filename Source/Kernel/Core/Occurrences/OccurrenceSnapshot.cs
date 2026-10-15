@@ -49,7 +49,7 @@ public record OccurrenceSnapshot(
     DateTimeOffset? NextAttempt,
     string? RetriedBy,
     DateTimeOffset? RetriedAt,
-    IEnumerable<EffectReceiptDetails> Receipts)
+    IEnumerable<OccurrenceEffectReceipt> Receipts)
 {
     /// <summary>
     /// Reads one occurrence and its receipts. Null namespace selects application scope.

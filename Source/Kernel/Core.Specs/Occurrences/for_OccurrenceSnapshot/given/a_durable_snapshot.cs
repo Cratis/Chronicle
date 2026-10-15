@@ -30,7 +30,7 @@ public class a_durable_snapshot : Specification
         _occurrence = new(new("occurrence"), new("trigger"), OccurrenceKind.Application, "fingerprint", "{}", 3, DateTimeOffset.UnixEpoch, null, null, OccurrenceState.Leased, 2, 7, "worker", DateTimeOffset.UnixEpoch.AddMinutes(1), "previous failure", null);
         _occurrences.Get(_occurrence.Id).Returns(_occurrence);
         _occurrences.GetForTrigger(_occurrence.Trigger).Returns(Task.FromResult<IEnumerable<Occurrence>>([_occurrence]));
-        ((IEffectReceiptStorage)_sequence).GetEffectReceipts(_occurrence.Id).Returns(Task.FromResult<IEnumerable<Storage.Occurrences.EffectReceipt>>([
+        ((IEffectReceiptStorage)_sequence).GetEffectReceiptsForOccurrences(Arg.Any<IEnumerable<OccurrenceId>>()).Returns(Task.FromResult<IEnumerable<Storage.Occurrences.EffectReceipt>>([
             new("receipt", new(_occurrence.Id, 6), EffectOutcome.NoEvents, null, null, null, [], "{\"answer\":42}", DateTimeOffset.UnixEpoch)]));
     }
 }

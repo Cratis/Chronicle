@@ -10,6 +10,7 @@ public class with_a_winning_effect_receipt : given.a_durable_snapshot
     [Fact] void should_expose_the_current_epoch() => _snapshot.Epoch.ShouldEqual(7);
     [Fact] void should_expose_the_current_owner() => _snapshot.Owner.ShouldEqual("worker");
     [Fact] void should_expose_the_attempt_count() => _snapshot.Attempts.ShouldEqual(2);
-    [Fact] void should_expose_the_recorded_effect_response() => _snapshot.Receipts.Single().Response.ShouldEqual("{\"answer\":42}");
-    [Fact] void should_preserve_the_receipts_original_epoch() => _snapshot.Receipts.Single().Epoch.ShouldEqual(6);
+    [Fact] void should_expose_the_recorded_effect_response() => _snapshot.Receipts.Single().Receipt.Response.ShouldEqual("{\"answer\":42}");
+    [Fact] void should_identify_the_effect_namespace() => _snapshot.Receipts.Single().Namespace.ShouldEqual(_namespace.Value);
+    [Fact] void should_preserve_the_receipts_original_epoch() => _snapshot.Receipts.Single().Receipt.Epoch.ShouldEqual(6);
 }
