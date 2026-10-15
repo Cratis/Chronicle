@@ -52,6 +52,7 @@ public static class SqlChronicleBuilderExtensions
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();
         builder.Services.AddSingleton<ISystemStorage, SqlStorage>();
         builder.Services.AddSingleton<IStorage, Storage.Storage>();
+        builder.Services.AddSingleton<IStorageErrorClassifier, SqlStorageErrorClassifier>();
 
         // The Cratis.Orleans job system storage: jobs DbContext options resolved per event store and
         // namespace onto the same database the namespace's own DbContext uses.

@@ -115,6 +115,7 @@ public static class MongoDBChronicleBuilderExtensions
 
             services.AddSingleton<JobStateSerializer>();
             services.AddSingleton<IStorage, Storage.Storage>();
+            services.AddSingleton<IStorageErrorClassifier, MongoDBStorageErrorClassifier>();
 
             services.AddHealthChecks().AddMongoDb(
                 _ => new MongoClient(settings),
