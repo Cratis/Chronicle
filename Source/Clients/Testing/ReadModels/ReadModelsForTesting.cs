@@ -112,13 +112,14 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
         if (_store is null) return await inner.GetInstanceById<TReadModel>(eventSourceId, eventStreamId);
         var scope = EventStreamReadModel.ScopeFor(typeof(TReadModel), _store.EventSources, eventSourceId, eventStreamId);
         var events = await (_eventLog ?? _store.EventLog).GetFromSequenceNumber(EventSequenceNumber.First);
+        var source = new EventSourceId(scope.EventSourceId.Value);
         var selected = events.Where(@event =>
-            @event.Context.EventSourceId == scope.EventSourceId &&
+            @event.Context.EventSourceId.Value == source.Value &&
             @event.Context.EventSourceType == scope.EventSourceType &&
             @event.Context.EventStreamType == scope.EventStreamType &&
             (scope.EventStreamId.IsDefault || @event.Context.EventStreamId == scope.EventStreamId));
         var instances = await ReadModelFolder.Fold(_store, typeof(TReadModel), selected);
-        return instances.TryGetValue(eventSourceId, out var instance) ? (TReadModel)instance : default!;
+        return instances.TryGetValue(source, out var instance) ? (TReadModel)instance : default!;
     }
 
     /// <inheritdoc/>
