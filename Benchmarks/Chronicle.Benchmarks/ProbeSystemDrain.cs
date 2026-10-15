@@ -23,6 +23,8 @@ internal sealed record ProbeSystemDrainObserver(
 
 internal static class ProbeSystemDrain
 {
+    static bool AllowInFlight => Environment.GetEnvironmentVariable("PROBE_DRAIN_ALLOW_INFLIGHT") == "1";
+
     internal static async Task Run(ProbeMongo mongo, ProbeRun run, CancellationToken cancellation)
     {
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
@@ -55,6 +57,10 @@ internal static class ProbeSystemDrain
                     var last = Number(state, "lastHandledEventSequenceNumber");
                     var reached = state is not null && (!prior.Tail.HasValue ||
                         Probe.StateAtTail(states, prior.Tail.Value, prior.Id, allowScanned: true));
+                    // Explicit, recorded relaxation (PROBE_DRAIN_ALLOW_INFLIGHT=1): progress at tail but persisted in-flight
+                    // partitions never clear. Ongoing system work is then attributed to the system owner, not hidden.
+                    var reachedInFlight = !reached && AllowInFlight && state is not null && prior.Tail.HasValue &&
+                        Probe.StateAtTail(states, prior.Tail.Value, prior.Id, allowScanned: true, allowInFlight: true);
                     return prior with
                     {
                         InitialNextSequenceNumber = prior.Status == "NOT_OBSERVED" ? next : prior.InitialNextSequenceNumber,
@@ -62,17 +68,17 @@ internal static class ProbeSystemDrain
                         NextSequenceNumber = next,
                         LastHandledSequenceNumber = last,
                         RunningState = state?.GetValue("runningState", BsonNull.Value) is { IsBsonNull: false } running ? running.ToInt32() : null,
-                        Status = state is null ? "NO_STATE" : reached ? "AT_TAIL" : "DRAINING",
-                        ReachedTailMs = prior.ReachedTailMs ?? (reached ? timer.Elapsed.TotalMilliseconds : null),
-                        ReachedTailUtc = prior.ReachedTailUtc ?? (reached ? observed : null),
+                        Status = state is null ? "NO_STATE" : reached ? "AT_TAIL" : reachedInFlight ? "AT_TAIL_INFLIGHT" : "DRAINING",
+                        ReachedTailMs = prior.ReachedTailMs ?? (reached || reachedInFlight ? timer.Elapsed.TotalMilliseconds : null),
+                        ReachedTailUtc = prior.ReachedTailUtc ?? (reached || reachedInFlight ? observed : null),
                         ObservedUtc = observed,
                         State = state?.ToJson()
                     };
                 }).ToArray();
                 // Preserve the existing drain gate: every system observer with state must reach its own sequence tail.
-                if (run.SystemDrainObservers.All(d => d.Status is "AT_TAIL" or "NO_STATE"))
+                if (run.SystemDrainObservers.All(d => d.Status is "AT_TAIL" or "NO_STATE" or "AT_TAIL_INFLIGHT"))
                 {
-                    run.SystemDrainStatus = "COMPLETE";
+                    run.SystemDrainStatus = run.SystemDrainObservers.Any(d => d.Status == "AT_TAIL_INFLIGHT") ? "COMPLETE_WITH_INFLIGHT" : "COMPLETE";
                     return;
                 }
                 await Task.Delay(100, token);

@@ -376,7 +376,7 @@ internal static class Probe
             throw new InvalidOperationException($"Observer-list check expected {string.Join(',', expected)}: {string.Join(';', observers.Select(d => d.ToJson()))}");
     }
 
-    internal static bool StateAtTail(BsonDocument[] states, ulong tail, string observerId, bool allowScanned = false)
+    internal static bool StateAtTail(BsonDocument[] states, ulong tail, string observerId, bool allowScanned = false, bool allowInFlight = false)
     {
         var state = states.SingleOrDefault(s => s["_id"].AsString == observerId);
         var progress = state?.GetValue("lastHandledEventSequenceNumber", -1).ToDecimal() ?? -1;
@@ -388,7 +388,7 @@ internal static class Probe
             state.GetValue("runningState", 0).ToInt32() == 1 &&
             state.GetValue("failedPartitionCount", 0).ToInt32() == 0 &&
             state.GetValue("catchingUpPartitions", new BsonArray()).AsBsonArray.Count == 0 &&
-            state.GetValue("inFlightPartitions", new BsonArray()).AsBsonArray.Count == 0;
+            (allowInFlight || state.GetValue("inFlightPartitions", new BsonArray()).AsBsonArray.Count == 0);
     }
 
     static bool ProjectionMatches(BsonDocument[] rows, ProbeRun run)
