@@ -44,11 +44,11 @@ public class RouteScopeStreamMismatchAnalyzer : DiagnosticAnalyzer
         var definition = Definition(append);
         var stream = Argument(append, "eventStream")?.ConstantValue;
         var scopeArgument = append.Arguments.FirstOrDefault(_ => _.Parameter?.Name == "concurrencyScope");
-        if (definition is null || stream?.Value is not string appendStream || scopeArgument is null) return;
+        if (definition is null || stream is not { HasValue: true, Value: string appendStream } || scopeArgument is null) return;
         var scope = FindDefinitionScope(scopeArgument.Value, append.SemanticModel!, new HashSet<ISymbol>(SymbolEqualityComparer.Default));
         if (scope is null || !SymbolEqualityComparer.Default.Equals(definition, Definition(scope))) return;
         var scopeStream = Argument(scope, "stream")?.ConstantValue;
-        if (scopeStream?.Value is not string guardedStream || guardedStream == appendStream) return;
+        if (scopeStream is not { HasValue: true, Value: string guardedStream } || guardedStream == appendStream) return;
         context.ReportDiagnostic(Diagnostic.Create(Rule, scopeArgument.Value.Syntax.GetLocation(), definition.Name, guardedStream, appendStream));
     }
 
