@@ -42,6 +42,7 @@ internal sealed class ProbePullCoordinator : IAsyncDisposable
     readonly CancellationTokenSource _stop;
     readonly Task[] _tasks;
     long _gapHolds;
+    long _gapRetries;
     double _maxGapMs;
     long _reads;
     PullCursor? _cursor;
@@ -62,6 +63,7 @@ internal sealed class ProbePullCoordinator : IAsyncDisposable
 
     internal long Reads => Interlocked.Read(ref _reads);
     internal long GapHolds => Interlocked.Read(ref _gapHolds);
+    internal long GapRetries => Interlocked.Read(ref _gapRetries);
     internal double MaxGapHoldMs => _maxGapMs;
     internal void Wake()
     {
@@ -82,6 +84,8 @@ internal sealed class ProbePullCoordinator : IAsyncDisposable
         long? gapStarted = null;
         while (!_stop.IsCancellationRequested)
         {
+            // This query covers hints already pending before it starts. Only later hints must wake the next query.
+            _wake.Wait(0);
             Interlocked.Increment(ref _reads);
             var page = await _source.Read(_cursor, _options.Page, _stop.Token);
             var entries = new List<ProbePullLedger.Entry>();
@@ -100,22 +104,26 @@ internal sealed class ProbePullCoordinator : IAsyncDisposable
                     Volatile.Write(ref entry.Done, 1);
                 else await _lanes[Lane(entry.Event.Key, _lanes.Length)].Writer.WriteAsync(entry, _stop.Token);
             }
-            if (gap)
+            // Progress closes the previous missing position, even if this page exposes a new gap.
+            if (entries.Count > 0) gapStarted = null;
+            if (gap && !gapStarted.HasValue)
             {
                 Interlocked.Increment(ref _gapHolds);
-                gapStarted ??= Stopwatch.GetTimestamp();
+                gapStarted = Stopwatch.GetTimestamp();
+            }
+            if (gapStarted.HasValue)
+            {
                 _maxGapMs = Math.Max(_maxGapMs, Stopwatch.GetElapsedTime(gapStarted.Value).TotalMilliseconds);
-                if (_maxGapMs > 2000) throw new InvalidOperationException("Pull visibility gap held for over 2 seconds; no gap crossed.");
+                if (Stopwatch.GetElapsedTime(gapStarted.Value).TotalMilliseconds > 2000)
+                    throw new ProbePullCorrectnessFailure("Pull visibility gap held for over 2 seconds; no gap crossed.");
+                Interlocked.Increment(ref _gapRetries);
                 await Task.Delay(5, _stop.Token);
             }
-            else if (page.Length == 0)
+            else if (page.Length < _options.Page)
             {
-                // A known gap remains known even if a later reread is empty.
-                if (gapStarted.HasValue && Stopwatch.GetElapsedTime(gapStarted.Value).TotalMilliseconds > 2000)
-                    throw new InvalidOperationException("Pull visibility gap did not close within 2 seconds.");
+                // No immediate empty find after a short page. Hints released during the read remain coalesced.
                 await _wake.WaitAsync(TimeSpan.FromMilliseconds(100), _stop.Token);
             }
-            else gapStarted = null;
         }
     }
 

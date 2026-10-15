@@ -29,7 +29,7 @@ internal sealed class ProbePullLedger(int capacity)
         lock (_gate)
         {
             var next = _r.HasValue ? checked(_r.Value + 1) : 0;
-            if (evt.Sequence != next) throw new InvalidOperationException($"Ledger gap: expected {next}, got {evt.Sequence}.");
+            if (evt.Sequence != next) throw new ProbePullCorrectnessFailure($"Ledger gap: expected {next}, got {evt.Sequence}.");
             var entry = new Entry(evt);
             _entries.Enqueue(entry);
             _r = evt.Sequence;

@@ -57,6 +57,7 @@ internal static partial class Probe
             }, cancellation);
         }
         JsonElement? cpuBefore = null;
+        long readsAtStart = 0;
         try
         {
             if (!catchup)
@@ -82,6 +83,7 @@ internal static partial class Probe
             run.Phase = "profile-setup";
             if (run.ProfileEnabled) run.ProfileStart = await mongo.StartProfile(run.ProbeObserverId).WaitAsync(cancellation);
             cpuBefore = await mongo.CpuSnapshot().WaitAsync(cancellation);
+            readsAtStart = coordinator?.Reads ?? 0; // Exclude live warmup; catch-up starts the reader inside this window.
             run.Started = Stopwatch.GetTimestamp();
             run.CpuStart = Process.GetCurrentProcess().TotalProcessorTime;
             run.Clock.Start();
@@ -115,7 +117,11 @@ internal static partial class Probe
                     run.SystemDurableMs ??= run.Clock.Elapsed.TotalMilliseconds;
                     run.SystemDrainStatus = "COMPLETE_WITH_INFLIGHT";
                 }
-                if (await progress.AtTail(tail, cancellation)) run.DurableMs ??= run.Clock.Elapsed.TotalMilliseconds;
+                if (await progress.AtTail(tail, cancellation) && !run.DurableMs.HasValue)
+                {
+                    run.DurableMs = run.Clock.Elapsed.TotalMilliseconds;
+                    run.PullReadsAtDurable = coordinator.Reads - readsAtStart;
+                }
                 // The planted loss must finish at the saved tail instead of waiting for a missing effect forever.
                 if (run.DurableMs.HasValue && run.SystemDurableMs.HasValue)
                 {
@@ -124,7 +130,7 @@ internal static partial class Probe
                     await progress.AtTail(tail, cancellation);
                     var final = BsonDocument.Parse(progress.FinalDocument!);
                     run.PullTailExact = final["w"].ToDecimal() == tail && final["r"].ToDecimal() == tail;
-                    if (run.PullTailExact != true) throw new InvalidOperationException("Final pull w/r does not equal event-log tail.");
+                    if (run.PullTailExact != true) throw new ProbePullCorrectnessFailure("Final pull w/r does not equal event-log tail.");
                     await progress.CaptureCounts(cancellation);
                     var expectedCounts = run.Appended.GroupBy(p => p.Key.Key).ToDictionary(g => g.Key, g => (long)g.Count());
                     if (options.Stats == "equivalent")
@@ -132,14 +138,19 @@ internal static partial class Probe
                         var counts = progress.FinalCounts.Select(BsonDocument.Parse).ToDictionary(d => d["_id"]["partition"].AsString,
                             d => d["counts"][ProbePullMongoSource.EventType].ToInt64());
                         if (expectedCounts.Any(p => counts.GetValueOrDefault(p.Key) != p.Value) || counts.Values.Sum() != run.Expected + (catchup ? 0 : 1))
-                            throw new InvalidOperationException("Pull per-key statistics do not match acknowledged membership plus warmup.");
+                            throw new ProbePullCorrectnessFailure("Pull per-key statistics do not match acknowledged membership plus warmup.");
                     }
-                    if (final["handled"].ToInt64() != run.Expected + (catchup ? 0 : 1)) throw new InvalidOperationException("Pull checkpoint handled count mismatch.");
+                    if (final["handled"].ToInt64() != run.Expected + (catchup ? 0 : 1)) throw new ProbePullCorrectnessFailure("Pull checkpoint handled count mismatch.");
                     run.Status = run.ProfileEnabled ? "COMPLETE" : "COMPLETE_TIMING_ONLY";
                     return;
                 }
                 await Task.Delay(100, cancellation);
             }
+        }
+        catch (ProbePullCorrectnessFailure error)
+        {
+            run.PullCorrectnessFailure = error.ToString();
+            throw;
         }
         finally
         {
@@ -149,15 +160,16 @@ internal static partial class Probe
             try { if (coordinator is not null) await coordinator.DisposeAsync(); }
             finally
             {
-                run.PullReads = coordinator?.Reads ?? 0;
+                run.PullReads = coordinator is null ? 0 : coordinator.Reads - readsAtStart;
                 run.PullGapHolds = coordinator?.GapHolds ?? 0;
+                run.PullGapRetries = coordinator?.GapRetries ?? 0;
                 run.PullMaxGapHoldMs = coordinator?.MaxGapHoldMs ?? 0;
                 run.PullEventSample = source?.Sample;
                 run.PullProgressDocument = progress?.FinalDocument;
                 run.PullCounts = progress?.FinalCounts ?? [];
                 run.PullFlushes = progress?.Flushes ?? 0;
                 run.PullCountDocuments = progress?.CountDocuments ?? 0;
-                if (cpuBefore.HasValue) run.ContainerCpu = JsonSerializer.SerializeToElement(new { start = cpuBefore.Value, end = await mongo.CpuSnapshot().WaitAsync(TimeSpan.FromSeconds(5)) });
+                if (cpuBefore.HasValue) await CaptureContainerCpu(mongo, run, cpuBefore.Value);
             }
         }
     }

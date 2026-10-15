@@ -39,6 +39,54 @@ internal static class ProbePullSelfTest
         coordinator.CheckHealth();
     }
 
+    static void CheckDispositions()
+    {
+        var position = new ProbePosition("drop", 3);
+        var clean = new ProbeAccounting(1, 1, 0, 0, [], [], 1, 0);
+        ProbeRun Row(bool planted = false)
+        {
+            var run = new ProbeRun($"live:pull:1:1:1{(planted ? ":drop" : "")}", "self-test")
+            {
+                RegisteredMs = 0, Status = "COMPLETE", AppendFinished = true, PullTailExact = true,
+                PullOptions = Options(planted ? 3UL : null), Accounting = clean
+            };
+            run.Appended[position] = new(3, DateTimeOffset.UnixEpoch);
+            return run;
+        }
+        var defects = new[]
+        {
+            clean with { Missing = [position], DistinctDelivered = 0 }, clean with { Duplicates = 1 },
+            clean with { FirstDeliveryOrderViolations = 1 }, clean with { PayloadMismatches = 1 },
+            clean with { Unexpected = [new("other", 4)] }
+        };
+        foreach (var accounting in defects)
+        {
+            var run = Row();
+            run.Accounting = accounting;
+            Probe.ApplyCorrectness(run);
+            Assert(run.Status == "DEFECT" && Probe.ExitCode(run.Status) == 1, "Real pull correctness failure did not stop the driver.");
+        }
+        foreach (var message in new[] { "tail mismatch", "per-key mismatch", "handled mismatch", "gap" })
+        {
+            var run = Row();
+            run.PullCorrectnessFailure = new ProbePullCorrectnessFailure(message).ToString();
+            run.Status = "INVALID"; // A later attribution/cleanup failure may not hide a correctness failure.
+            Probe.ApplyCorrectness(run);
+            Assert(run.Status == "DEFECT" && Probe.ExitCode(run.Status) == 1, "Progress failure was masked by finalization.");
+        }
+        var drop = Row(true);
+        drop.Accounting = defects[0];
+        Probe.ApplyCorrectness(drop);
+        Assert(drop.Status == "EXPECTED_DROP" && Probe.ExitCode(drop.Status) == 0, "Exact planted drop stopped driver or became a valid timing row.");
+        foreach (var accounting in defects.Skip(1).Append(clean with { Missing = [new("drop", 4)] }))
+        {
+            drop = Row(true);
+            drop.Accounting = accounting;
+            Probe.ApplyCorrectness(drop);
+            Assert(drop.Status == "DEFECT", "Drop flag hid an unrelated correctness failure.");
+        }
+    }
+
     internal static async Task<int> Run()
     {
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -100,11 +148,11 @@ internal static class ProbePullSelfTest
             await using (var coordinator = new ProbePullCoordinator(new Source(events, s => s != 1 || Volatile.Read(ref reveal)), progress, Options(), e =>
             { completed[e.Sequence] = 1; return Task.CompletedTask; }, token))
             {
-                await Until(() => coordinator.GapHolds > 2, coordinator, token);
+                await Until(() => coordinator.GapRetries > 2, coordinator, token);
                 Assert(completed.Keys.All(s => s == 0) && progress.Saved.All(w => w == 0), "Reader crossed a visibility gap.");
                 Volatile.Write(ref reveal, true);
                 await Until(() => progress.Saved.Contains(9UL), coordinator, token);
-                Assert(coordinator.GapHolds > 0, "Gap script was vacuous.");
+                Assert(coordinator.GapHolds == 1, "A single gap was counted once per retry instead of once per missing position.");
             }
             passed.Add("delayed visibility gap held, reread, never crossed");
 
@@ -148,6 +196,40 @@ internal static class ProbePullSelfTest
                 await Until(() => progress.Saved.Contains(19UL), coordinator, token);
             Assert(selected.SequenceEqual([9UL, 19UL]), "Selective subscription dispatched an unrelated event or skipped a selected one.");
             passed.Add("sparse pages register every position and dispatch selected types only");
+
+            completed = new();
+            progress = new(completed);
+            await using (var coordinator = new ProbePullCoordinator(new Source([Event(0, "short")]), progress, Options(), e =>
+            { completed[e.Sequence] = 1; return Task.CompletedTask; }, token))
+            {
+                await Until(() => progress.Saved.Contains(0UL), coordinator, token);
+                await Task.Delay(20, token);
+                Assert(coordinator.Reads == 1, "Short page caused an immediate redundant find.");
+                coordinator.Wake();
+                await Until(() => coordinator.Reads == 2, coordinator, token);
+            }
+            passed.Add("short page waits; coalesced wake resumes reading");
+
+            completed = new();
+            progress = new(completed);
+            var visibleThrough = 0;
+            events = Enumerable.Range(0, 5).Select(i => Event((ulong)i, "gaps")).ToArray();
+            await using (var coordinator = new ProbePullCoordinator(new Source(events, s => s % 2 == 0 || s <= (ulong)Volatile.Read(ref visibleThrough)), progress, Options(), e =>
+            { completed[e.Sequence] = 1; return Task.CompletedTask; }, token))
+            {
+                await Until(() => coordinator.GapRetries > 2, coordinator, token);
+                Assert(coordinator.GapHolds == 1, "Retries counted as distinct gaps.");
+                Volatile.Write(ref visibleThrough, 1);
+                await Until(() => completed.ContainsKey(2) && coordinator.GapHolds == 2, coordinator, token);
+                Assert(!completed.ContainsKey(4), "Reader crossed the second visibility gap.");
+                Volatile.Write(ref visibleThrough, 3);
+                await Until(() => progress.Saved.Contains(4UL), coordinator, token);
+                Assert(coordinator.GapHolds == 2, "Progress followed by a new gap was not counted separately.");
+            }
+            passed.Add("progress resets gap age; distinct gaps separate from retries");
+
+            CheckDispositions();
+            passed.Add("unplanted loss/dup/order/payload/unexpected and progress failures DEFECT/1; exact planted drop EXPECTED_DROP/0 only");
             Console.WriteLine(JsonSerializer.Serialize(new { pullSelfTest = "PASS", cases = passed.Count, passed }));
             return 0;
         }

@@ -55,11 +55,17 @@ internal static partial class Probe
             run.Reason += !run.RegisteredMs.HasValue ? $"setup-deadline: {run.Phase}" :
                 $"Measurement deadline {run.MeasurementDeadlineSeconds}s reached (total internal budget {run.DeadlineSeconds}s, finalization reserve {run.FinalizationReserveSeconds}s); acknowledged membership only.";
         }
+        catch (ProbePullCorrectnessFailure error)
+        {
+            run.PullCorrectnessFailure = error.ToString();
+            run.Status = "DEFECT";
+            run.Reason += $"\n{error}";
+        }
         catch (Exception error)
         {
             run.Status = "INVALID";
-            run.Reason = error is TimeoutException && !run.RegisteredMs.HasValue
-                ? $"setup-deadline: {run.Phase}\n{error}" : error.ToString();
+            run.Reason += error is TimeoutException && !run.RegisteredMs.HasValue
+                ? $"\nsetup-deadline: {run.Phase}\n{error}" : $"\n{error}";
         }
         finally
         {
@@ -154,16 +160,10 @@ internal static partial class Probe
             }
             // Final snapshot is after quiescence, client shutdown and cleanup; late deliveries cannot silently pass.
             run.Snapshot();
-            if (run.RegisteredMs.HasValue && run.Accounting is { } accounting && run.Expected > 0 &&
-                (accounting.Duplicates != 0 || accounting.FirstDeliveryOrderViolations != 0 ||
-                 accounting.Unexpected.Length != 0 || accounting.Missing.Length != 0 || accounting.PayloadMismatches != 0))
-            {
-                run.Status = run.IsPull ? "INVALID" : "DEFECT";
-                run.Reason += $"\nDelivery defect (planted={run.DeliberateDrop}): missing={accounting.Missing.Length}, duplicates={accounting.Duplicates}, order={accounting.FirstDeliveryOrderViolations}, unexpected={accounting.Unexpected.Length}, payload={accounting.PayloadMismatches}.";
-            }
+            ApplyCorrectness(run);
             Save(output, run);
         }
-        return run.Status switch { "COMPLETE" or "COMPLETE_TIMING_ONLY" => 0, "DEFECT" => 1, _ => 2 };
+        return ExitCode(run.Status);
     }
 
     static void Save(string output, ProbeRun result)
@@ -331,7 +331,7 @@ internal static partial class Probe
         }
         finally
         {
-            run.ContainerCpu = JsonSerializer.SerializeToElement(new { start = cpuBefore, end = await mongo.CpuSnapshot().WaitAsync(TimeSpan.FromSeconds(5)) });
+            await CaptureContainerCpu(mongo, run, cpuBefore);
             if (catchup && !run.DurableMs.HasValue && run.ConnectedObserverState.Length == 0)
             {
                 // Measure owns the connected client: snapshot before its using declaration disposes it,

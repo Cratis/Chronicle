@@ -60,9 +60,13 @@ internal sealed class ProbeRun(string scenario, string store)
     public JsonElement? PullWireCommands { get; set; }
     public string? TodayHandledCountSample { get; set; }
     public long PullReads { get; set; }
+    public long? PullReadsAtDurable { get; set; }
+    public double? PullReadsPerEventAtDurable => Expected > 0 ? PullReadsAtDurable / (double)Expected : null;
+    public string? PullCorrectnessFailure { get; set; }
     public long PullFlushes { get; set; }
     public long PullCountDocuments { get; set; }
     public long PullGapHolds { get; set; }
+    public long PullGapRetries { get; set; }
     public double PullMaxGapHoldMs { get; set; }
     public bool? PullTailExact { get; set; }
     public JsonElement? ContainerCpu { get; set; }
