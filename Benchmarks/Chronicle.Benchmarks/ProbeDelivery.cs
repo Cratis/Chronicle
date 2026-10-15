@@ -12,21 +12,19 @@ internal sealed class ProbeDelivery
     readonly object _gate = new();
     readonly Dictionary<ProbePosition, (long First, int Count)> _delivered = [];
     long _busyTicks;
-    int _counter;
 
     internal static ProbeDelivery Current { get; set; } = new();
 
-    internal bool Noop { get; init; }
+    internal bool Drop { get; init; }
 
-    internal int DropIndex { get; init; } = -1;
+    internal int DropIndex { get; init; } = 1;
 
     internal double BusyMs => Interlocked.Read(ref _busyTicks) * 1000.0 / Stopwatch.Frequency;
 
     internal void Record(ProbePosition position, int payloadIndex)
     {
         var start = Stopwatch.GetTimestamp();
-        if (!Noop) Interlocked.Increment(ref _counter);
-        if (payloadIndex != DropIndex)
+        if (!Drop || payloadIndex != DropIndex)
         {
             lock (_gate)
             {
@@ -57,7 +55,7 @@ internal sealed class ProbeDelivery
                 foreach (var item in group.OrderBy(p => p.Value.First))
                 {
                     if (previous.HasValue && item.Key.SequenceNumber < previous.Value) count++;
-                    previous = item.Key.SequenceNumber;
+                    previous = previous.HasValue ? Math.Max(previous.Value, item.Key.SequenceNumber) : item.Key.SequenceNumber;
                 }
                 return count;
             });

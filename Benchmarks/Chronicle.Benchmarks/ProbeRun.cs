@@ -12,7 +12,7 @@ internal sealed record ProbePayload(int Value, DateTimeOffset Timestamp);
 internal sealed class ProbeRun(string scenario, string store)
 {
     internal readonly ConcurrentDictionary<ProbePosition, ProbePayload> Appended = new();
-    internal readonly ProbeDelivery Delivery = new() { Noop = scenario.Split(':').Contains("noop") };
+    internal readonly ProbeDelivery Delivery = new() { Drop = scenario.Split(':').Contains("drop") };
     internal readonly Stopwatch Clock = new();
     internal long Started;
     internal int SubmittedCount;
@@ -25,7 +25,17 @@ internal sealed class ProbeRun(string scenario, string store)
     public string Status { get; set; } = "DID_NOT_FINISH";
     public string? Reason { get; set; }
     public int DeadlineSeconds { get; set; } = int.Parse(Environment.GetEnvironmentVariable("PROBE_DEADLINE_SECONDS") ?? "200");
+    public int FinalizationReserveSeconds => 100;
+    public int MeasurementDeadlineSeconds => DeadlineSeconds - FinalizationReserveSeconds;
+    public long ProfilerCapacityBytes => int.Parse(scenario.Split(':')[2]) >= 10000 ? 1073741824L
+        : int.Parse(scenario.Split(':')[2]) >= 2000 ? 268435456L : 67108864L;
     public int QuiescenceMilliseconds => 2000;
+    public double SystemDrainMs { get; set; }
+    public double? RegisteredMs { get; set; }
+    public double? EffectFromRegisteredMs => EffectMs - RegisteredMs;
+    public double? EventsPerSecondFromRegistered => EffectFromRegisteredMs > 0 ? Expected * 1000.0 / EffectFromRegisteredMs : null;
+    public double? HandlerBusyFraction => WallMs > 0 ? HandlerBusyMs / WallMs : null;
+    public bool DeliberateDrop => scenario.Split(':').Contains("drop");
     public int Requested { get; set; }
     public int Submitted { get => Volatile.Read(ref SubmittedCount); set => SubmittedCount = value; }
     public int Expected => Appended.Count;
@@ -61,7 +71,7 @@ internal sealed class ProbeRun(string scenario, string store)
     public JsonElement? Mongo { get; set; }
     public string AccountingMethod => Scenario.StartsWith("appendonly") ? "no probe observer: successful append results only; kernel observers remain"
         : Scenario.Contains("projection") ? "sink final payload per key at highest acknowledged sequence, not per-event effects"
-        : "exact acknowledged append-result membership; mandatory lock/timestamp instrumentation even in noop";
+        : "exact acknowledged append-result membership; mandatory lock/timestamp instrumentation; no noop comparison";
 
     internal void Snapshot()
     {

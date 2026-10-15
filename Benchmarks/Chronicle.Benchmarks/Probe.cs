@@ -26,12 +26,13 @@ internal static class Probe
     {
         if (args.Length == 1 && args[0] == "self-test") return SelfTest();
         if (args.Length != 1) throw new ArgumentException("Supply exactly one scenario per phase.");
+        if (args[0].Split(':').Contains("noop")) throw new ArgumentException("Noop rows were removed; use measured handler busy time and CPU headroom.");
         var output = Environment.GetEnvironmentVariable("PROBE_OUT") ?? throw new InvalidOperationException("PROBE_OUT is required.");
         var run = new ProbeRun(args[0], $"measure4748-{Guid.NewGuid():N}");
         Directory.CreateDirectory(output);
         var fixture = new ChronicleBenchmarkFixture();
         ProbeMongo? mongo = null;
-        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(run.DeadlineSeconds));
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(run.MeasurementDeadlineSeconds));
         using var process = Process.GetCurrentProcess();
         Task? worker = null;
         try
@@ -40,14 +41,14 @@ internal static class Probe
             worker = Task.Run(async () =>
             {
                 await fixture.Prepare(deadline.Token);
-                mongo = new ProbeMongo(fixture.Container, run.EventStore);
+                mongo = new ProbeMongo(fixture.Container, run.EventStore, run.ProfilerCapacityBytes);
                 await Measure(fixture, mongo, run, deadline.Token);
             });
             await worker.WaitAsync(deadline.Token);
         }
         catch (OperationCanceledException)
         {
-            run.Reason = $"Scenario deadline {run.DeadlineSeconds}s reached; counts cover acknowledged appends only.";
+            run.Reason = $"Measurement deadline {run.MeasurementDeadlineSeconds}s reached (total internal budget {run.DeadlineSeconds}s, finalization reserve {run.FinalizationReserveSeconds}s); acknowledged membership only.";
         }
         catch (Exception error)
         {
@@ -62,6 +63,7 @@ internal static class Probe
                 catch (Exception error) { run.Reason += $"\nWorker finalization: {error.Message}"; }
                 if (!worker.IsCompleted) { run.Status = "INVALID"; run.Reason += "\nWorker did not stop before snapshot."; }
             }
+            run.Clock.Stop();
             run.Snapshot();
             run.ClientCpuMs = run.Started == 0 ? 0 : (process.TotalProcessorTime - run.CpuStart).TotalMilliseconds;
             // Reserve time before the phase timeout for profiling, partial output and owned-resource disposal.
@@ -71,11 +73,12 @@ internal static class Probe
                 {
                     run.PersistedObserverState = (await mongo.State().WaitAsync(TimeSpan.FromSeconds(5))).Select(d => d.ToJson()).ToArray();
                     run.PersistedJobs = (await mongo.Jobs().WaitAsync(TimeSpan.FromSeconds(5))).Select(d => d.ToJson()).ToArray();
-                    var jobWrites = await mongo.JobWrites().WaitAsync(TimeSpan.FromSeconds(5));
-                    run.JobWriteSamples = jobWrites.Take(2).Concat(jobWrites.TakeLast(5)).Select(d => d.ToJson()).ToArray();
+                    if (run.Scenario.StartsWith("catchup") && run.DurableMs.HasValue &&
+                        run.PersistedJobs.Select(BsonDocument.Parse).Any(j => j.GetValue("details", "") == run.ProbeObserverId))
+                        throw new InvalidOperationException("Non-deleted probe job remains after claimed catch-up completion.");
                     run.EndObservers = (await mongo.Observers().WaitAsync(TimeSpan.FromSeconds(5))).Select(d => d.ToJson()).ToArray();
                     CheckObservers(run.EndObservers.Select(BsonDocument.Parse).ToArray(), run.Scenario.StartsWith("appendonly") ? 0 : 1, run.Scenario.Contains("projection"));
-                    run.Mongo = await mongo.EndProfile().WaitAsync(TimeSpan.FromSeconds(10));
+                    run.Mongo = await mongo.EndProfile().WaitAsync(TimeSpan.FromSeconds(60));
                     ValidateProfile(run.Mongo.Value);
                 }
                 catch (Exception error)
@@ -109,9 +112,18 @@ internal static class Probe
                 run.Status = "INVALID";
                 run.Reason += $"\nOwned fixture cleanup incomplete: {error.Message}";
             }
+            // Final snapshot is after quiescence, client shutdown and cleanup; late deliveries cannot silently pass.
+            run.Snapshot();
+            if (run.Accounting is { } accounting && run.Expected > 0 &&
+                (accounting.Duplicates != 0 || accounting.FirstDeliveryOrderViolations != 0 ||
+                 accounting.Unexpected.Length != 0 || accounting.Missing.Length != 0))
+            {
+                run.Status = "DEFECT";
+                run.Reason += $"\nDelivery defect: missing={accounting.Missing.Length}, duplicates={accounting.Duplicates}, order={accounting.FirstDeliveryOrderViolations}, unexpected={accounting.Unexpected.Length}.";
+            }
             Save(output, run);
         }
-        return run.Status == "INVALID" ? 2 : 0;
+        return run.Status switch { "COMPLETE" => 0, "DEFECT" => 1, _ => 2 };
     }
 
     static void Save(string output, ProbeRun result)
@@ -141,6 +153,9 @@ internal static class Probe
             var timer = Stopwatch.StartNew();
             await Append(seeder.EventLog, run, n, keys, concurrency, batch, cancellation);
             run.AppendMs = timer.Elapsed.TotalMilliseconds;
+            timer.Restart();
+            await DrainSystemObservers(mongo, run.Appended.Keys.Max(p => p.SequenceNumber), cancellation);
+            run.SystemDrainMs = timer.Elapsed.TotalMilliseconds;
         }
         using var live = !catchup && !appendOnly
             ? new ChronicleClientHelper(fixture, run.EventStore, new ObserverScopedClientArtifactsProvider(observer)) : null;
@@ -165,8 +180,14 @@ internal static class Probe
             await catchingUp.WaitForConnection().WaitAsync(cancellation);
             // An append-ready connection does not imply the asynchronous reactor subscription is persisted.
             var registration = Stopwatch.StartNew();
-            while (!(await mongo.Observers().WaitAsync(cancellation)).Any(o => o["_id"].AsString == run.ProbeObserverId))
+            while (true)
             {
+                if ((await mongo.Observers().WaitAsync(cancellation)).Any(o => o["_id"].AsString == run.ProbeObserverId))
+                {
+                    run.RegisteredMs = run.Clock.Elapsed.TotalMilliseconds;
+                    await mongo.MarkRegistered().WaitAsync(cancellation);
+                    break;
+                }
                 if (registration.Elapsed > TimeSpan.FromSeconds(30)) throw new TimeoutException("Probe observer definition was not persisted within 30 seconds.");
                 await Task.Delay(100, cancellation);
             }
@@ -175,6 +196,11 @@ internal static class Probe
         run.Observers = registered.Select(d => d.ToJson()).ToArray();
         CheckObservers(registered, appendOnly ? 0 : 1, projection);
         run.ObserverListPassed = true;
+        if (!run.RegisteredMs.HasValue)
+        {
+            run.RegisteredMs = run.Clock.Elapsed.TotalMilliseconds;
+            await mongo.MarkRegistered().WaitAsync(cancellation);
+        }
         if (!catchup)
         {
             await Append((live ?? seeder).EventLog, run, n, keys, concurrency, batch, cancellation);
@@ -201,13 +227,16 @@ internal static class Probe
                     j.ToJson().Contains("CatchUpObserver", StringComparison.Ordinal) &&
                     j.ToJson().Contains(projection ? typeof(BenchmarkProjection).FullName! : "probe-4748", StringComparison.Ordinal));
                 if (catchup && !jobIdentityVerified) throw new InvalidOperationException("Cannot verify retained catch-up job identity/schema for the sole probe observer.");
-                var finishedJobs = jobs.Length > 0 && jobIdentityVerified && jobs.All(j => j["status"].ToInt32() == 5);
-                if (catchup && StateAtTail(state, tail, run.ProbeObserverId))
+                var finishedJobs = false;
+                if (catchup && StateAtTail(state, tail, run.ProbeObserverId) && jobs.Length == 0 && !run.JobMs.HasValue)
                 {
                     var completed = await mongo.CompletedCatchupJobs(run.ProbeObserverId, tail).WaitAsync(cancellation);
                     run.CompletedJobEvidence = completed.Select(d => d.ToJson()).ToArray();
-                    finishedJobs = completed.Length == 1;
+                    run.JobWriteSamples = mongo.JobWriteSamples;
+                    if (completed.Length != 1) throw new InvalidOperationException("Tail reached but full handled-all/tail job evidence plus deletion is not proven for exactly one job.");
+                    finishedJobs = true;
                 }
+                if (run.JobMs.HasValue && jobs.Length == 0) finishedJobs = true;
                 if (catchup && finishedJobs) run.JobMs ??= run.Clock.Elapsed.TotalMilliseconds;
                 if (StateAtTail(state, tail, run.ProbeObserverId) && (!catchup || finishedJobs)) run.DurableMs ??= run.Clock.Elapsed.TotalMilliseconds;
                 if (projection)
@@ -219,7 +248,7 @@ internal static class Probe
                     if (run.ProjectionValuesMatch.Value) run.EffectMs ??= run.Clock.Elapsed.TotalMilliseconds;
                 }
             }
-            if ((appendOnly || (run.EffectMs.HasValue && run.DurableMs.HasValue)) && run.SystemDurableMs.HasValue)
+            if ((appendOnly || (run.DurableMs.HasValue && (!projection || run.EffectMs.HasValue))) && run.SystemDurableMs.HasValue)
             {
                 await Task.Delay(2000, cancellation);
                 run.Status = "COMPLETE";
@@ -286,15 +315,37 @@ internal static class Probe
             throw new InvalidOperationException($"Observer-list check expected {string.Join(',', expected)}: {string.Join(';', observers.Select(d => d.ToJson()))}");
     }
 
-    static bool StateAtTail(BsonDocument[] states, ulong tail, string observerId)
+    static bool StateAtTail(BsonDocument[] states, ulong tail, string observerId, bool allowScanned = false)
     {
         var state = states.SingleOrDefault(s => s["_id"].AsString == observerId);
         var progress = state?.GetValue("lastHandledEventSequenceNumber", -1).ToDecimal() ?? -1;
-        return state is not null && progress >= tail && progress < (decimal)(ulong.MaxValue - 2) &&
+        var next = state?.GetValue("nextEventSequenceNumber", -1).ToDecimal() ?? -1;
+        var reached = progress >= tail && progress < (decimal)(ulong.MaxValue - 2);
+        // System observers on the system sequence can exclude every event: actual scanned-next is then the progress proof.
+        reached |= allowScanned && next > tail && next < (decimal)(ulong.MaxValue - 2);
+        return state is not null && reached &&
             state.GetValue("runningState", 0).ToInt32() == 1 &&
             state.GetValue("failedPartitionCount", 0).ToInt32() == 0 &&
             state.GetValue("catchingUpPartitions", new BsonArray()).AsBsonArray.Count == 0 &&
             state.GetValue("inFlightPartitions", new BsonArray()).AsBsonArray.Count == 0;
+    }
+
+    static async Task DrainSystemObservers(ProbeMongo mongo, ulong eventLogTail, CancellationToken cancellation)
+    {
+        var definitions = await mongo.Observers().WaitAsync(cancellation);
+        var tails = new Dictionary<string, ulong?> { ["event-log"] = eventLogTail };
+        foreach (var sequence in definitions.Where(d => SystemObserverIds.Contains(d["_id"].AsString)).Select(d => d["eventSequenceId"].AsString).Distinct())
+            if (!tails.ContainsKey(sequence)) tails[sequence] = await mongo.SequenceTail(sequence).WaitAsync(cancellation);
+        while (true)
+        {
+            var states = await mongo.State().WaitAsync(cancellation);
+            var ready = definitions.Where(d => SystemObserverIds.Contains(d["_id"].AsString))
+                .Where(d => states.Any(s => s["_id"] == d["_id"]))
+                .All(d => !tails[d["eventSequenceId"].AsString].HasValue ||
+                    StateAtTail(states, tails[d["eventSequenceId"].AsString]!.Value, d["_id"].AsString, allowScanned: true));
+            if (ready) return;
+            await Task.Delay(100, cancellation);
+        }
     }
 
     static bool ProjectionMatches(BsonDocument[] rows, ProbeRun run)
@@ -310,14 +361,15 @@ internal static class Probe
 
     static void ValidateProfile(JsonElement profile)
     {
-        if (!profile.GetProperty("boundary").EnumerateArray().All(b => b.GetProperty("retained").GetBoolean()) || profile.GetProperty("commands").GetInt64() == 0)
+        if (!profile.GetProperty("boundary").EnumerateArray().All(b => b.GetProperty("retained").GetBoolean() && b.GetProperty("registeredRetained").GetBoolean()) || profile.GetProperty("commands").GetInt64() == 0)
             throw new InvalidOperationException("Profiler boundary lost or no scoped Mongo operations recorded.");
         if (profile.GetProperty("unparsed").GetInt64() != 0)
             throw new InvalidOperationException("Profiler rows could not be parsed; INVALID, not silently omitted.");
         var committed = profile.GetProperty("serverCommittedDelta").GetInt64();
         var aborted = profile.GetProperty("serverAbortedDelta").GetInt64();
         if (profile.GetProperty("transactionIdentityMissing").GetInt64() != 0 || committed < 0 || aborted != 0 ||
-            profile.GetProperty("transactionsObserved").GetInt64() > committed)
+            profile.GetProperty("transactionsObserved").GetInt64() > committed ||
+            profile.GetProperty("terminalCommandsProfiled").GetInt64() > committed + aborted)
             throw new InvalidOperationException("Run-bounded transaction cross-check failed: missing identity, abort, counter regression, or observed transactions exceed commits.");
         if (profile.GetProperty("transactions").EnumerateArray().Any(t => t.GetProperty("owner").GetString() == "uncorrelated"))
             throw new InvalidOperationException("Admin transaction commands could not be correlated by session/txnNumber to run databases; INVALID, not silently attributed.");
@@ -326,7 +378,7 @@ internal static class Probe
     static int SelfTest()
     {
         var positions = new[] { new ProbePosition("key", 10), new ProbePosition("key", 20), new ProbePosition("key", 30) };
-        var delivery = new ProbeDelivery { DropIndex = 1 };
+        var delivery = new ProbeDelivery { Drop = true, DropIndex = 1 };
         var start = Stopwatch.GetTimestamp();
         delivery.Record(positions[2], 2);
         delivery.Record(positions[1], 1);
@@ -335,10 +387,15 @@ internal static class Probe
         delivery.Record(new("wrong-key", 20), 4);
         delivery.Record(new("key", 99), 5);
         var result = delivery.Snapshot(positions, start);
-        var passed = result.Expected == 3 && result.DistinctDelivered == 2 && result.Duplicates == 1 &&
+        var runningMax = new ProbeDelivery();
+        runningMax.Record(positions[2], -1); // Warm-like negative values are not dropped without explicit Drop.
+        runningMax.Record(positions[0], 0);
+        runningMax.Record(positions[1], 1);
+        var orderCheck = runningMax.Snapshot(positions, start);
+        var passed = orderCheck.DistinctDelivered == 3 && orderCheck.FirstDeliveryOrderViolations == 2 && result.Expected == 3 && result.DistinctDelivered == 2 && result.Duplicates == 1 &&
             result.FirstDeliveryOrderViolations == 1 && result.Missing.SequenceEqual([positions[1]]) && result.EffectMs is null &&
             result.Unexpected.ToHashSet().SetEquals([new("wrong-key", 20), new("key", 99)]);
-        Console.WriteLine(JsonSerializer.Serialize(new { selfTest = "known drop, duplicate, inversion, unexpected sequence, wrong key at expected sequence", passed, result }, JsonOptions));
+        Console.WriteLine(JsonSerializer.Serialize(new { selfTest = "explicit drop, duplicate, running-max order, unexpected sequence, wrong key, negative warm payload", passed, result, orderCheck }, JsonOptions));
         return passed ? 0 : 1;
     }
 }
