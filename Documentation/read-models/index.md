@@ -40,6 +40,7 @@ one decision path with scenarios, the same view four ways, and the cost of switc
 | [Decision-consistent reads](./decision-reads) | Guard a .NET command against a projection changing after it was read. |
 | [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) | Which mechanism makes a write-side rule hold, and why a plain read of a read model does not. |
 | [Empty child collections](./empty-child-collections) | Why a child collection with no children is absent rather than `[]`, and how to say what that means. |
+| [Read models scoped to one event stream](./per-stream.mdx) | Fold one account's month without mixing other months; guard a decision or make a plain query. |
 | [Getting a single instance](./getting-single-instance) | Retrieve one read model instance by its key. |
 | [Getting a collection](./getting-collection-instances) | Retrieve all instances of a read model. |
 | [Getting snapshots](./getting-snapshots) | Retrieve historical snapshots of a read model's state. |

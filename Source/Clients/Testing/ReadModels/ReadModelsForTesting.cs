@@ -94,6 +94,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     public async Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
         ReadProtectionGuard.Read(nameof(GetInstanceById));
+        EventStreamReadModel.RequireStreamScope(readModelType);
         var identifier = readModelType.GetReadModelIdentifier();
         if (_instances.TryGetValue((identifier, key.Value), out var instance)) return instance;
         if (!_foldReads) return null!;
@@ -105,9 +106,26 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     }
 
     /// <inheritdoc/>
+    public async Task<TReadModel> GetInstanceById<TReadModel>(EventSourceId eventSourceId, EventStreamId eventStreamId)
+    {
+        ReadProtectionGuard.Read(nameof(GetInstanceById));
+        if (_store is null) return await inner.GetInstanceById<TReadModel>(eventSourceId, eventStreamId);
+        var scope = EventStreamReadModel.ScopeFor(typeof(TReadModel), _store.EventSources, eventSourceId, eventStreamId);
+        var events = await (_eventLog ?? _store.EventLog).GetFromSequenceNumber(EventSequenceNumber.First);
+        var selected = events.Where(@event =>
+            @event.Context.EventSourceId == scope.EventSourceId &&
+            @event.Context.EventSourceType == scope.EventSourceType &&
+            @event.Context.EventStreamType == scope.EventStreamType &&
+            (scope.EventStreamId.IsDefault || @event.Context.EventStreamId == scope.EventStreamId));
+        var instances = await ReadModelFolder.Fold(_store, typeof(TReadModel), selected);
+        return instances.TryGetValue(eventSourceId, out var instance) ? (TReadModel)instance : default!;
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null)
     {
         ReadProtectionGuard.Read(nameof(GetInstances));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         if (!_foldReads) return await inner.GetInstances<TReadModel>(eventCount);
 
         var instances = await Rebuild(typeof(TReadModel), _eventLog!, _store!, eventCount);
@@ -118,6 +136,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     public ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
     {
         ReadProtectionGuard.Read(nameof(Observe));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         var log = _eventLog ?? throw new ReadModelCannotBeObserved(typeof(TReadModel), "An event log is not available in this test scenario");
         var metadata = StoreForObservation(typeof(TReadModel));
         var predicate = filter?.Compile();
@@ -141,6 +160,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     public Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
     {
         ReadProtectionGuard.Read(nameof(GetSnapshotsById));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         return inner.GetSnapshotsById<TReadModel>(readModelKey);
     }
 
@@ -148,6 +168,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
     {
         ReadProtectionGuard.Read(nameof(Watch));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         return inner.Watch<TReadModel>();
     }
 
@@ -155,6 +176,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     public IReadModelWatcher<TReadModel> GetWatcherFor<TReadModel>()
     {
         ReadProtectionGuard.Read(nameof(GetWatcherFor));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         return inner.GetWatcherFor<TReadModel>();
     }
 

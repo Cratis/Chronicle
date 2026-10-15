@@ -6,6 +6,8 @@
   href: decision-reads.mdx
 - name: Read Protection
   href: read-protection.mdx
+- name: Read Models Scoped to One Event Stream
+  href: per-stream.mdx
 - name: Empty Child Collections
   href: empty-child-collections.mdx
 - name: Getting a Single Instance

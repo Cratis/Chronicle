@@ -112,3 +112,5 @@
   href: CHR0062.mdx
 - name: CHR0063 - Scope stream does not match append
   href: CHR0063.mdx
+- name: CHR0064 - Invalid read model event stream
+  href: CHR0064.mdx

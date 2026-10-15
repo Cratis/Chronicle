@@ -185,6 +185,7 @@ public partial class ReadModels(
     public async Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
         ReadProtectionGuard.Read(nameof(GetInstanceById));
+        EventStreamReadModel.RequireStreamScope(readModelType);
 
         // Validate that the read model is known by either projections or reducers
         if (!projections.HasFor(readModelType) && !reducers.HasFor(readModelType))
@@ -216,35 +217,14 @@ public partial class ReadModels(
         };
 
         var response = await _chronicleServicesAccessor.Services.ReadModels.GetInstanceByKey(request);
-        var readModelJson = response.ReadModel;
-
-        // A "null" JSON value means the model was not found in the sink (e.g. removed or never created).
-        if (readModelJson == "null")
-        {
-            return default!;
-        }
-
-        // Mirror the __lastHandledEventSequenceNumber that the sink writes so that
-        // GetInstanceById results are consistent with sink-stored read models.
-        if (response.LastHandledEventSequenceNumber != EventSequenceNumber.Unavailable)
-        {
-            var jsonNode = JsonNode.Parse(readModelJson);
-            if (jsonNode is JsonObject jsonObj)
-            {
-                jsonObj["__lastHandledEventSequenceNumber"] =
-                    JsonValue.Create(response.LastHandledEventSequenceNumber);
-                readModelJson = jsonObj.ToJsonString(jsonSerializerOptions);
-            }
-        }
-
-        var instance = JsonSerializer.Deserialize(readModelJson, readModelType, jsonSerializerOptions);
-        return instance ?? throw new InvalidOperationException($"Read model returned null for type '{readModelType.Name}' with key '{key.Value}'");
+        return DeserializeInstance(readModelType, key, response);
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null)
     {
         ReadProtectionGuard.Read(nameof(GetInstances));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         var readModelType = typeof(TReadModel);
 
         // Validate that the read model is known by projections or reducers
@@ -283,6 +263,7 @@ public partial class ReadModels(
     public async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
     {
         ReadProtectionGuard.Read(nameof(GetSnapshotsById));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
 
         // Check for projection first
         if (projections.HasFor<TReadModel>())
@@ -318,6 +299,7 @@ public partial class ReadModels(
     public ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
     {
         ReadProtectionGuard.Read(nameof(Observe));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         var readModelType = typeof(TReadModel);
         if (!projections.HasFor(readModelType) && !reducers.HasFor(readModelType))
         {
@@ -344,6 +326,7 @@ public partial class ReadModels(
     public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
     {
         ReadProtectionGuard.Read(nameof(Watch));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         if (reducers.HasFor<TReadModel>())
         {
             return reducerObservers.GetWatcher<TReadModel>().Observable
@@ -368,6 +351,7 @@ public partial class ReadModels(
     public IReadModelWatcher<TReadModel> GetWatcherFor<TReadModel>()
     {
         ReadProtectionGuard.Read(nameof(GetWatcherFor));
+        EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         if (!projections.HasFor<TReadModel>())
         {
             throw new UnknownReadModel(typeof(TReadModel));
@@ -399,6 +383,33 @@ public partial class ReadModels(
 
     /// <inheritdoc/>
     public Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances) => _releaser.Release(instances);
+
+    object DeserializeInstance(Type readModelType, ReadModelKey key, GetInstanceByKeyResponse response)
+    {
+        var readModelJson = response.ReadModel;
+
+        // A "null" JSON value means the model was not found in the sink (e.g. removed or never created).
+        if (readModelJson == "null")
+        {
+            return default!;
+        }
+
+        // Mirror the __lastHandledEventSequenceNumber that the sink writes so that
+        // GetInstanceById results are consistent with sink-stored read models.
+        if (response.LastHandledEventSequenceNumber != EventSequenceNumber.Unavailable)
+        {
+            var jsonNode = JsonNode.Parse(readModelJson);
+            if (jsonNode is JsonObject jsonObj)
+            {
+                jsonObj["__lastHandledEventSequenceNumber"] =
+                    JsonValue.Create(response.LastHandledEventSequenceNumber);
+                readModelJson = jsonObj.ToJsonString(jsonSerializerOptions);
+            }
+        }
+
+        var instance = JsonSerializer.Deserialize(readModelJson, readModelType, jsonSerializerOptions);
+        return instance ?? throw new InvalidOperationException($"Read model returned null for type '{readModelType.Name}' with key '{key.Value}'");
+    }
 
     /// <summary>
     /// Reads the snapshots one read model instance passed through.
