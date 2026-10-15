@@ -10,6 +10,7 @@ Each scenario names one recommended way and the reason, then the alternatives. D
 | Scenario | Shows |
 |---|---|
 | [A bank account with monthly streams](#a-bank-account-with-monthly-streams) | Stream dimensions narrow the guard, source dimensions widen it |
+| [A monthly limit on one stream](#a-monthly-limit-on-one-stream) | A decision read inside a definition's stream |
 | [A stream per owner](#a-stream-per-owner) | Writers on different streams of one event source do not conflict |
 | [A process stream](#a-process-stream) | A reactor that follows one stream, and a stream that ends |
 | [A transfer between two accounts](#a-transfer-between-two-accounts) | One atomic append across two event sources |
@@ -38,6 +39,25 @@ What conflicts, when both writers read before either appends:
 
 The first deposit of each new month is not checked by default. Two writers that open `2026-06` at the same time both succeed. To check it, turn on `CheckFirstAppendIntoAScope`, as described in [Concurrency](./concurrency.mdx#the-first-append-into-a-scope).
 
+## A monthly limit on one stream
+
+The bank account allows at most 5000 withdrawn a month. A declared dimension guards the whole month, whatever the event type, so it would reject a deposit that races a withdrawal. The rule only cares about withdrawals, so read them with a decision read scoped to the month's stream, and append through the same definition. This scenario uses the definition and events from the first scenario.
+
+**Recommended:** a stream-scoped decision read whose stream type and event source type come from the definition. The guard is as narrow as the rule. **Alternatives:** rely on the declared dimensions alone, which guard the month but do not capture what you read, or read the whole account, which makes every month conflict with every other.
+
+<ChronicleClientTabs snippet="event-sources/scenarios/monthly-limit" variants="csharp" />
+
+```text
+guard Account-a1: types=[MoneyWithdrawn], sourceType=Account, streamType=Transactions, streamId=2026-04, after <tail at read>
+```
+
+- Two withdrawals in `2026-04` on `a1` conflict. The second is rejected, and its caller reads again.
+- A deposit in `2026-04` does not conflict, because the read model counts only `MoneyWithdrawn`.
+- A withdrawal in `2026-05`, or on another account, does not conflict.
+- The guard replaces the definition's default scope for this append. Declared dimensions widen a guard only when you commit under [read protection](../read-models/read-protection.mdx). See [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx#declared-routing-on-a-definition).
+
+A count version of this rule is explained step by step in [Event sources and the Dynamic Consistency Boundary](./dcb.mdx#a-guarded-decision-on-one-stream). The same rule on a `BankAccount` source is in [A limit inside one stream](../dynamic-consistency-boundary/scenarios.mdx#a-limit-inside-one-stream).
+
 ## A stream per owner
 
 A project collects notes from several authors. Authors write at the same time and should not wait for each other. The notes of one author are ordered and must not interleave with themselves.
@@ -63,7 +83,7 @@ A money transfer is a process with several steps. Each transfer is one event sou
 <ChronicleClientTabs snippet="event-sources/scenarios/process" variants="csharp" />
 
 - The reactor uses `[FromEventSource<TransferEventSource>("Process")]`. It receives the steps of transfer processes and nothing else.
-- Every append declares the event source id only. The scope narrows to the one transfer, so transfers do not conflict with each other, and two writers advancing the same transfer do.
+- Every append declares the event source id only. The scope narrows to the one transfer, so transfers do not conflict with each other, and two writers advancing the same transfer at the same moment do.
 - `TransferCompleted` carries `[ClosesStream]`. Appended to the `Process` stream, it closes that transfer's process stream. A step appended afterwards is refused with `StreamClosed`, so a late or duplicated message cannot reopen a finished transfer.
 
 A reactor reacts after the event is written. It is not a guard, and it can be given an event again after a recovery. Make each step safe to repeat, and see [once only](../reactors/once-only.mdx) for what that attribute does and does not promise.

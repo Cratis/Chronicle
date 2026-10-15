@@ -3,7 +3,7 @@ title: Choosing how a rule holds
 description: Pick the mechanism that makes a write-side rule hold when you use the Chronicle client directly, and learn what costs and limits come with each.
 ---
 
-Use this page when you append events with the Chronicle client yourself (a minimal API, a controller, a worker, a console app) and a rule must stay true while other writers append at the same time. The code on these pages uses the .NET client. If you use Cratis Arc commands, start with [Choosing how a command's rule holds](/arc/backend/csharp/chronicle/consistency/) instead. It builds on this page.
+Use this page when you append events with the Chronicle client yourself (a minimal API, a controller, a worker, a console app) and a rule must stay true while other writers append at the same time. The code on these pages uses the .NET and Elixir clients. If you use Cratis Arc commands, start with [Choosing how a command's rule holds](/arc/backend/csharp/chronicle/consistency/) instead. It builds on this page.
 
 ## The short answer
 
@@ -79,11 +79,11 @@ Capturing the tail yourself before a plain read does not fix this. A materialize
 
 This is the shape that looks safe and is not:
 
-<ChronicleClientTabs snippet="dynamic-consistency-boundary/choosing/plain-read-race" variants="csharp" />
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/choosing/plain-read-race" variants="csharp,elixir" />
 
 Two requests can both read `Claims` as `0` and both append. A constraint, or a decision read on the seat, closes that race.
 
-In Arc, a `CommandValidator<T>` that reads a read model is also a plain read. See [Validators and protected decisions](/arc/backend/csharp/chronicle/consistency/validators/).
+A read model injected into an Arc command or validator is also a plain read unless Arc is set to guard it. See [Validators and protected decisions](/arc/backend/csharp/chronicle/consistency/validators/).
 
 ## What a decision read costs
 
@@ -134,14 +134,14 @@ One run, on a loaded machine, so read the ratios and not the milliseconds.
 
 ### Why protection is opt-in
 
-Chronicle does not guard a decision unless you ask. An `Append` with no scope gets only the default optimistic check, which covers the moment between reading the tail and writing. A decision read protects only the append you pass it to. In Arc, a command opts in with `[ProtectedDecision]`.
+Chronicle does not guard a decision unless you ask. An `Append` with no scope gets only the default optimistic check, which covers the moment between reading the tail and writing. A decision read protects only the append you pass it to. A host opts in for a whole invocation with [read protection](../read-models/read-protection.mdx). Arc's own switch is described on [its consistency page](/arc/backend/csharp/chronicle/consistency/).
 
-- **Existing code keeps its behavior.** The Arc change that introduced protected decisions states that unmarked commands keep their current behavior. Turning protection on everywhere would change what many existing commands do.
-- **Protection fails closed.** A protected path refuses what it cannot guard exactly: reducers with filters or dependencies, joins, validators with dependencies, and commits of the unit of work by anyone but its owner, such as an aggregate's own `Commit()`. Code that works today and guards nothing would start to fail.
+- **Existing code keeps its behavior.** Turning protection on everywhere would change what many existing commands do.
+- **Protection fails closed.** A protected path refuses what it cannot guard exactly: reducers with filters or dependencies, joins, immediate appends, and commits of the unit of work by anyone but its owner, such as an aggregate's own `Commit()`. Code that works today and guards nothing would start to fail.
 - **It has a price.** The cost above is acceptable per rule. It is not free for every read.
 - **Other systems choose differently.** The [DCB specification](https://dcb.events/specification/) makes the append condition optional per append. [Axon Framework 5](https://docs.axoniq.io/axon-framework-reference/5.3/events/event-store-internals/) attaches the consistency marker automatically for a sourced entity. [KurrentDB](https://docs.kurrent.io/clients/node/v1.3/appending-events) defaults to no check.
 
-There is no application-wide switch in Arc or Chronicle that makes protection the default.
+Chronicle has no application-wide switch that makes protection the default. You opt in per unit of work with `EnforceReadProtection()`.
 
 ## Where guarantees do not hold
 
@@ -175,14 +175,17 @@ For the retry inside the kernel after a duplicate sequence number: the kernel re
 
 | Arc feature | What it gives you | Where to read |
 |---|---|---|
-| `[ProtectedDecision]` with `DecisionRead<T>` | A command that takes decision reads as parameters and commits them as the owner | [Choosing how a command's rule holds](/arc/backend/csharp/chronicle/consistency/) |
+| Guarded read-model parameters on a command | The command's read models become decision reads, committed by the command's owner | [Choosing how a command's rule holds](/arc/backend/csharp/chronicle/consistency/) |
 | Stream decisions (`IStreamReads`) | A guard on every event in one stream | [Stream decisions](/arc/backend/csharp/chronicle/commands/stream-decisions/) |
 | Aggregate roots | A guard on the event types the aggregate handles, taken before the events are applied | [Aggregate roots](/arc/backend/csharp/chronicle/aggregates/) |
-| `CommandValidator<T>` | Shape rules. A validator that reads state is a plain read | [Validators and protected decisions](/arc/backend/csharp/chronicle/consistency/validators/) |
+| `CommandValidator<T>` | Shape rules, and early feedback on state | [Validators and protected decisions](/arc/backend/csharp/chronicle/consistency/validators/) |
+
+[Read protection](../read-models/read-protection.mdx#how-arc-uses-this-api) maps Arc's modes to the Chronicle API they drive.
 
 ## Next steps
 
 - [Scenarios](./scenarios.mdx): each rule shape as working code.
+- [How guards are derived](./how-guards-are-derived.mdx): what an append conflicts with, and how guards merge.
 - [Decision reads](../read-models/decision-reads.mdx): the API, admission rules and limits.
 - [Read protection](../read-models/read-protection.mdx): make a host refuse unguarded reads and immediate appends.
 - [DCB examples in Chronicle](./dcb-examples.mdx): the canonical DCB examples, the Chronicle way.

@@ -87,7 +87,7 @@ Decision reads need kernel 19.0.0 or later. A stream-scoped read needs a kernel 
 
 ## Do decision reads work from every client?
 
-Decision reads are part of the .NET client. Constraints are enforced by the kernel, so they apply to appends from every client. Your SDK's own pages list what it offers.
+Decision reads are part of the .NET and Elixir clients. Constraints are enforced by the kernel, so they apply to appends from every client. Your SDK's own pages list what it offers.
 
 ## Why is protection opt-in?
 
@@ -96,6 +96,34 @@ Making it the default would change what existing code does, and a protected path
 ## How do I test a rule?
 
 Append a competing event between the read and the guarded append, and assert the conflict. A test without that interleaving cannot show the guard works. See [Test the race](./scenarios.mdx#test-the-race).
+
+## What is read protection?
+
+An option for code that owns a unit of work. Inside one protected invocation, `IDecisionReads.Get` and `GetFor` enroll each read as a guard for the commit, and a plain read, a detached read or an immediate append is refused. It makes the mistake of deciding on an unguarded read an error instead of a silent race. See [Read protection](../read-models/read-protection.mdx).
+
+## What is the difference between an advisory and a contributed read allowance?
+
+Both open a region where a raw read is allowed. An `Advisory` read guards nothing: use it for a screen, a hint or a log, where a stale value is fine. A `Contributed` read influences the decision, so you enroll it yourself with `EnrolContributedRead` before you use the value, and it becomes part of the guard. Both need a reason. See [Read allowances](../read-models/read-protection.mdx#read-allowances).
+
+## When should I enforce read protection?
+
+When you own the code that begins and completes the unit of work, such as a command pipeline or a request host, and the rules there depend on state. Skip it for a single guarded append, where passing the decision read to `AppendMany(guardedBy:)` is enough, and for uniqueness, where a constraint is simpler. Protection refuses what it cannot guard exactly and costs a fold per read, so enable it where the rules need it.
+
+## Is read protection the same as Arc's read-protection setting?
+
+They are two layers. Read protection is the Chronicle API: the frame, the allowances and the refusals. Arc's setting is how an Arc project drives that API for its commands. [How Arc uses this API](../read-models/read-protection.mdx#how-arc-uses-this-api) maps one to the other.
+
+## Why did my guard cover more than I read?
+
+Guards only widen when they merge. Two reads of one source in different streams keep only the stream values they share: outside a read-protection frame both stream values are dropped when either differs, under a frame each value is kept only if the reads agree on it. A [declared dimension set](../event-sources/concurrency.mdx) on a definition, committed under a read-protection frame, adds its dimensions where they equal the read's and makes the guard match any event type. The result can cause extra conflicts but never misses one. See [How guards are derived](./how-guards-are-derived.mdx).
+
+## How do I see what an append is guarded by?
+
+Under a read-protection frame, call `IUnitOfWork.GetAppendConditions()` after the commit. It lists one condition per guarded source, with its event types, stream values, position and origins. See [See what a commit guarded](./how-guards-are-derived.mdx#see-what-a-commit-guarded).
+
+## Can I read two streams of one source in the same decision?
+
+Yes, but the merged guard widens to what the reads have in common. Outside a read-protection frame, the guard covers every stream of that source when either the stream type or the stream ID differs. Under a frame, only the dimension that differs is dropped: two months of `Transactions` give a guard over every `Transactions` stream ID, and two stream types with the same stream ID keep that ID. If the rule truly spans two streams, read the whole source once so the guard says what it covers. If it does not, split the rule into two decisions. See [Several reads on one source](./how-guards-are-derived.mdx#several-reads-on-one-source).
 
 ## Where do I go if I use Arc commands?
 

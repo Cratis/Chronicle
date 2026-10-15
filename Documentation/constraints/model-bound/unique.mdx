@@ -50,7 +50,7 @@ Changing the sequences takes effect when the client next registers its constrain
 
 ## Violation message
 
-The `message` parameter is optional. Chronicle produces a default violation message when one is not supplied. C# supports a custom violation message, and so do Kotlin and Java from `io.cratis:chronicle` 6.5.0: the client that registered the constraint puts its message on the violations its appends return, with `{detailKey}` placeholders filled in from the violation details. Elixir and TypeScript use Chronicle's default message:
+The `message` parameter is optional. Chronicle produces a default violation message when one is not supplied. C# supports a custom violation message, and so do Kotlin and Java from `io.cratis:chronicle` 6.5.0: the client that registered the constraint puts its message on the violations its appends return, with `{detailKey}` placeholders filled in from the violation details. TypeScript uses Chronicle's default message. Elixir accepts `:message` as a string or a `{Module, :function}` callback:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/violation-message" />
 
