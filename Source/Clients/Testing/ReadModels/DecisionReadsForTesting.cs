@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Testing.Events;
+using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
 
@@ -18,15 +19,15 @@ internal sealed class DecisionReadsForTesting(EventStoreForTesting eventStore, D
         where T : class => admission.Admit<T>();
 
     /// <inheritdoc/>
-    public async Task<DecisionRead<T>> Get<T>(ReadModelKey key, CancellationToken cancellationToken = default)
+    public Task<DecisionRead<T>> Get<T>(ReadModelKey key, CancellationToken cancellationToken = default)
+        where T : class => GetFor<T>(ReadProtectionGuard.AmbientUnit(eventStore.UnitOfWorkManager, typeof(T).Name), key, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<DecisionRead<T>> GetFor<T>(IUnitOfWork unitOfWork, ReadModelKey key, CancellationToken cancellationToken = default)
         where T : class
     {
-        if (!eventStore.UnitOfWorkManager.HasCurrent)
-        {
-            throw new DecisionReadRequiresUnitOfWork();
-        }
-        var unitOfWork = eventStore.UnitOfWorkManager.Current;
-        var read = await GetDetached<T>(key, cancellationToken);
+        ReadProtectionGuard.ProtectedRead(unitOfWork, typeof(T).Name);
+        var read = await ReadDetached<T>(key, null, cancellationToken, unitOfWork.IsEnforcingReadProtection);
         unitOfWork.AddDecisionRead(read);
         return read;
     }
@@ -36,12 +37,16 @@ internal sealed class DecisionReadsForTesting(EventStoreForTesting eventStore, D
         where T : class => admission.AdmitForStream<T>();
 
     /// <inheritdoc/>
-    public async Task<DecisionRead<T>> Get<T>(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventSourceType? eventSourceType = default, CancellationToken cancellationToken = default)
+    public Task<DecisionRead<T>> Get<T>(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventSourceType? eventSourceType = default, CancellationToken cancellationToken = default)
+        where T : class => GetFor<T>(ReadProtectionGuard.AmbientUnit(eventStore.UnitOfWorkManager, typeof(T).Name), eventSourceId, eventStreamType, eventStreamId, eventSourceType, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<DecisionRead<T>> GetFor<T>(IUnitOfWork unitOfWork, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventSourceType? eventSourceType = default, CancellationToken cancellationToken = default)
         where T : class
     {
-        if (!eventStore.UnitOfWorkManager.HasCurrent) throw new DecisionReadRequiresUnitOfWork();
-        var unitOfWork = eventStore.UnitOfWorkManager.Current;
-        var read = await GetDetached<T>(eventSourceId, eventStreamType, eventStreamId, eventSourceType, cancellationToken);
+        ReadProtectionGuard.ProtectedRead(unitOfWork, typeof(T).Name);
+        var scope = new DecisionReadStreamScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
+        var read = await ReadDetached<T>(admission.GetStreamKey<T>(scope), scope, cancellationToken, unitOfWork.IsEnforcingReadProtection);
         unitOfWork.AddDecisionRead(read);
         return read;
     }
@@ -50,24 +55,42 @@ internal sealed class DecisionReadsForTesting(EventStoreForTesting eventStore, D
     public Task<DecisionRead<T>> GetDetached<T>(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventSourceType? eventSourceType = default, CancellationToken cancellationToken = default)
         where T : class
     {
+        ReadProtectionGuard.Detached(nameof(GetDetached));
         var scope = new DecisionReadStreamScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
         return ReadDetached<T>(admission.GetStreamKey<T>(scope), scope, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Task<DecisionRead<T>> GetDetached<T>(ReadModelKey key, CancellationToken cancellationToken = default)
-        where T : class => ReadDetached<T>(key, null, cancellationToken);
-
-    async Task<DecisionRead<T>> ReadDetached<T>(ReadModelKey key, DecisionReadStreamScope? streamScope, CancellationToken cancellationToken)
         where T : class
     {
-        var (definition, types) = admission.GetAdmittedShape<T>(key, streamScope is not null);
+        ReadProtectionGuard.Detached(nameof(GetDetached));
+        return ReadDetached<T>(key, null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public DecisionReadDescription Describe<T>()
+        where T : class => admission.Describe<T>();
+
+    async Task<DecisionRead<T>> ReadDetached<T>(ReadModelKey key, DecisionReadStreamScope? streamScope, CancellationToken cancellationToken, bool enforcing = false)
+        where T : class
+    {
+        if (eventStore.Reducers.HasFor<T>())
+        {
+            return await admission.ReadDetached<T>(key, streamScope, cancellationToken, enforcing);
+        }
+        var (definition, types) = admission.GetAdmittedShape<T>(key, streamScope is not null, enforcing);
         cancellationToken.ThrowIfCancellationRequested();
         var log = eventStore.EventLog;
-        var boundary = await log.GetTailSequenceNumber();
-        var events = streamScope is null
-            ? await log.GetFromSequenceNumber(EventSequenceNumber.First, (EventSourceId)key, types)
-            : await log.GetForEventSourceIdAndEventTypes(streamScope.EventSourceId, types, streamScope.EventStreamType, streamScope.EventStreamId, streamScope.EventSourceType);
+        EventSequenceNumber boundary;
+        IReadOnlyList<AppendedEvent> events;
+        using (new ReadProtectionReadRegion(ReadAllowance.Contributed, "Decision fold transport"))
+        {
+            boundary = await log.GetTailSequenceNumber();
+            events = streamScope is null
+                ? await log.GetFromSequenceNumber(EventSequenceNumber.First, (EventSourceId)key, types)
+                : await log.GetForEventSourceIdAndEventTypes(streamScope.EventSourceId, types, streamScope.EventStreamType, streamScope.EventStreamId, streamScope.EventSourceType);
+        }
         cancellationToken.ThrowIfCancellationRequested();
         T? instance;
         if (events.Count == 0)

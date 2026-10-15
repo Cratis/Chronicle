@@ -70,6 +70,7 @@ public class ReducerInvoker : IReducerInvoker
         await using var activatedReducer = activatedReducerResult.AsT0;
         EventAndContext? lastSuccessfulObservedEventAndContext = default;
         var currentModelState = initialReadModelContent;
+        var dispatched = 0;
 
         foreach (var eventAndContext in eventsAndContexts)
         {
@@ -117,6 +118,7 @@ public class ReducerInvoker : IReducerInvoker
                     }
 
                     lastSuccessfulObservedEventAndContext = eventAndContext;
+                    ++dispatched;
                 }
             }
             catch (Exception ex)
@@ -133,7 +135,7 @@ public class ReducerInvoker : IReducerInvoker
                 currentModelState,
                 lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 [],
-                string.Empty);
+                string.Empty) { DispatchedEvents = dispatched };
     }
 
     /// <summary>

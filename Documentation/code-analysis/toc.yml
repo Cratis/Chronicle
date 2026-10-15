@@ -108,3 +108,7 @@
   href: CHR0056.mdx
 - name: CHR0057 - An artifact must target one read model
   href: CHR0057.mdx
+- name: CHR0062 - Concurrency applies across event sources
+  href: CHR0062.mdx
+- name: CHR0063 - Scope stream does not match append
+  href: CHR0063.mdx

@@ -134,6 +134,7 @@ message AppendedEventResponse {
    string OriginalContent = 4;
    repeated EventRevision Revisions = 5;
    repeated KeyValuePair_Int32_String GenerationalContent = 6;
+   uint32 RevisedGeneration = 7;
 }
 message AppendedEventsRequest {
    string EventStore = 2;

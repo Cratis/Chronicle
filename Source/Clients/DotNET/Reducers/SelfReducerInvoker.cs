@@ -50,6 +50,7 @@ internal sealed class SelfReducerInvoker : IReducerInvoker
     {
         var current = initialReadModelContent;
         var last = EventSequenceNumber.Unavailable;
+        var dispatched = 0;
         foreach (var input in eventsAndContexts)
         {
             if (!_methods.TryGetValue(input.Event.GetType(), out var method))
@@ -66,6 +67,7 @@ internal sealed class SelfReducerInvoker : IReducerInvoker
                 }
                 current = result;
                 last = input.Context.SequenceNumber;
+                ++dispatched;
             }
             catch (Exception error)
             {
@@ -74,6 +76,6 @@ internal sealed class SelfReducerInvoker : IReducerInvoker
             }
         }
 
-        return new(current, last, [], string.Empty);
+        return new(current, last, [], string.Empty) { DispatchedEvents = dispatched };
     }
 }
