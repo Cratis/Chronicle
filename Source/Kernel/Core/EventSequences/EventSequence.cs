@@ -614,14 +614,6 @@ public partial class EventSequence(
         if (appendResult.TryGetError(out var retryFailure)) return retryFailure;
         var recordedReceipt = effectReceipt is null ? null : await EffectReceiptStorage.GetEffectReceipt(ReceiptId(effectReceipt));
 
-        // Commit the advanced sequence number only after the batch has been durably appended, so a thrown
-        // storage error (handled by the caller's catch) cannot leave State.SequenceNumber advanced past
-        // events that were never persisted.
-        if (eventsToAppend.Count > 0)
-        {
-            State.SequenceNumber = eventsToAppend[^1].SequenceNumber.Next();
-        }
-
         List<AppendedEvent> appendedEventsList = new();
         await appendResult.Match(
             success =>
@@ -638,6 +630,13 @@ public partial class EventSequence(
         if (appendedEventsList.Count != eventsToAppend.Count)
         {
             throw new InvalidAppendAcknowledgment(eventsToAppend.Count, appendedEventsList.Count);
+        }
+
+        // Commit the next slot only once the durable acknowledgment is complete. Receipt retries
+        // use this position to distinguish a commit-before-ack from a range already accounted for.
+        if (eventsToAppend.Count > 0)
+        {
+            State.SequenceNumber = eventsToAppend[^1].SequenceNumber.Next();
         }
 
         foreach (var appendedEvent in appendedEventsList)

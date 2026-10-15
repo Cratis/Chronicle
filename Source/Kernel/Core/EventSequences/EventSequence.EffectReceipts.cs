@@ -59,20 +59,21 @@ public partial class EventSequence
         if (receipt is null) return null;
         await ReconcileEffectReceipt(receipt);
 
-        return new AppendManyResult
-        {
-            CorrelationId = correlationId,
-            EffectAlreadyRecorded = true,
-            EffectReceipt = EffectReceiptConverters.ToDetails(receipt)
-        };
+        return AlreadyRecorded(receipt, correlationId);
     }
+
+    AppendManyResult AlreadyRecorded(StoredEffectReceipt receipt, CorrelationId correlationId) => new()
+    {
+        CorrelationId = correlationId,
+        EffectAlreadyRecorded = true,
+        EffectReceipt = EffectReceiptConverters.ToDetails(receipt)
+    };
 
     async Task ReconcileEffectReceipt(StoredEffectReceipt receipt)
     {
-        if (receipt.Outcome != EffectOutcome.Appended || receipt.EventSequenceId != _eventSequenceId) return;
+        if (receipt.Outcome != EffectOutcome.Appended || receipt.EventSequenceId != _eventSequenceId || HasAccountedForEffectReceipt(receipt)) return;
         var first = receipt.FirstSequenceNumber!;
         var last = receipt.LastSequenceNumber!;
-        if (State.SequenceNumber <= last) State.SequenceNumber = last.Next();
         await RefreshConstraintsIfChanged();
         var appendedEvents = new List<AppendedEvent>();
         var updates = new List<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)>();
@@ -101,7 +102,15 @@ public partial class EventSequence
             updates.Add((_constraints!.Establish(context.EventSourceId, context.EventType.Id, content, context.EventSourceType, context.EventStreamType, context.EventStreamId), number));
         }
 
+        State.SequenceNumber = last.Next();
         await CompleteDurableAppend(appendedEvents, updates);
+    }
+
+    bool HasAccountedForEffectReceipt(StoredEffectReceipt receipt)
+    {
+        // Only the commit-before-ack window needs repair. Replaying an accounted-for range
+        // would apply historical constraint claims over newer releases and dispatch events twice.
+        return receipt.Outcome == EffectOutcome.Appended && State.SequenceNumber > receipt.LastSequenceNumber!;
     }
 
     async Task<Result<IEnumerable<AppendedEvent>, AppendManyResult>> AppendEffectToStorage(
@@ -112,7 +121,19 @@ public partial class EventSequence
         while (true)
         {
             var result = await WriteEffectReceiptForSettlement(events, PrepareEffectReceipt(effectReceipt, events));
-            if (result == EffectReceiptWriteResult.Written) break;
+            if (result == EffectReceiptWriteResult.Written)
+            {
+                var receipt = await EffectReceiptStorage.GetEffectReceipt(ReceiptId(effectReceipt));
+                if (receipt is null)
+                {
+                    return new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.EffectReceiptUnsettled] };
+                }
+
+                // Apply the same range guard after Written as after an ambiguous commit: an
+                // acknowledged historical winner must not roll the grain or constraint index back.
+                if (HasAccountedForEffectReceipt(receipt)) return AlreadyRecorded(receipt, correlationId);
+                break;
+            }
             var settled = await FindEffectReceipt(effectReceipt, correlationId);
             if (settled is not null) return settled;
             if (result != EffectReceiptWriteResult.DuplicateEventSequenceNumber)
