@@ -25,6 +25,7 @@ internal static class ReactorDefinitionConverters
             reactorDefinition.Tags,
             reactorDefinition.Filters.ToChronicle())
         {
-            GenerationDelivery = (Concepts.Observation.EventGenerationDelivery)reactorDefinition.GenerationDelivery
+            GenerationDelivery = (Concepts.Observation.EventGenerationDelivery)reactorDefinition.GenerationDelivery,
+            StartAtTail = reactorDefinition.StartAtTail
         };
 }
