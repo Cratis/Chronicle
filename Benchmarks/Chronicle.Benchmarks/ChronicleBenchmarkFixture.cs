@@ -133,6 +133,12 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
                 .WithEnvironment("Logging__LogLevel__Cratis.Orleans.Jobs", "Debug");
         }
 
+        // Opt-in diagnosis only: a shorter Orleans response timeout forces bookkeeping-queue timeouts deterministically.
+        if (Environment.GetEnvironmentVariable("PROBE_KERNEL_RESPONSE_TIMEOUT") is { Length: > 0 } responseTimeout)
+        {
+            builder = builder.WithEnvironment("Cratis__Chronicle__Clustering__ResponseTimeout", responseTimeout);
+        }
+
         _container = builder
             .WithEnvironment("Storage__ConnectionDetails", "mongodb://localhost:27017/?maxPoolSize=500")
             .WithPortBinding(MongoDBPort, 27017)

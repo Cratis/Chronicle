@@ -30,6 +30,9 @@ internal sealed class ProbeRun(string scenario, string store)
     public int DrainBudgetSeconds { get; } = int.Parse(Environment.GetEnvironmentVariable("PROBE_DRAIN_SECONDS") ??
         (int.Parse(Environment.GetEnvironmentVariable("PROBE_DEADLINE_SECONDS") ?? "200") -
          int.Parse(Environment.GetEnvironmentVariable("PROBE_FINALIZE_SECONDS") ?? "100")).ToString());
+    public string KernelResponseTimeout { get; } = Environment.GetEnvironmentVariable("PROBE_KERNEL_RESPONSE_TIMEOUT") is { Length: > 0 } timeout
+        ? timeout : "default (Clustering.ResponseTimeout 00:00:30)";
+    public bool KernelDebugLogging { get; } = Environment.GetEnvironmentVariable("PROBE_KERNEL_DEBUG") == "1";
     public string Phase { get; set; } = "fixture-startup";
     public long ProfilerCapacityBytes => int.Parse(scenario.Split(':')[2]) >= 10000 ? 1073741824L
         : int.Parse(scenario.Split(':')[2]) >= 2000 ? 268435456L : 67108864L;
