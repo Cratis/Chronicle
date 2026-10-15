@@ -22,4 +22,9 @@ public static class KernelCapabilities
     /// The kernel atomically records occurrence effects and their opaque responses with event batches.
     /// </summary>
     public const string EffectReceipts = "effect-receipts";
+
+    /// <summary>
+    /// The kernel records and delivers application occurrences under durable fenced leases.
+    /// </summary>
+    public const string Occurrences = "occurrences";
 }

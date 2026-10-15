@@ -2,6 +2,45 @@ syntax = "proto3";
 package Cratis.Chronicle.Contracts.Occurrences;
 import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
 
+message ClaimOccurrencesRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string Trigger = 3;
+   string WorkerId = 4;
+   int32 LeaseSeconds = 5;
+   int32 Max = 6;
+   bool ApplicationScope = 7;
+}
+message ClaimOccurrencesResponse {
+   repeated OccurrenceClaimDetails Claims = 1;
+}
+message CommandResult_Boolean {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   bool Response = 7;
+}
+message CommandResult_ClaimOccurrencesResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   ClaimOccurrencesResponse Response = 7;
+}
+message CommandResult_CompleteOccurrenceResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   CompleteOccurrenceResponse Response = 7;
+}
 message CommandResult_RecordEffectReceiptResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -11,6 +50,15 @@ message CommandResult_RecordEffectReceiptResponse {
    string AuthorizationFailureReason = 6;
    RecordEffectReceiptResponse Response = 7;
 }
+message CommandResult_RecordOccurrenceResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   RecordOccurrenceResponse Response = 7;
+}
 message CommandResult_RegisterTriggersResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -19,6 +67,17 @@ message CommandResult_RegisterTriggersResponse {
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
    RegisterTriggersResponse Response = 7;
+}
+message CompleteOccurrenceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string Trigger = 3;
+   string OccurrenceId = 4;
+   int64 Epoch = 5;
+   bool ApplicationScope = 6;
+}
+message CompleteOccurrenceResponse {
+   OccurrenceLeaseResult Status = 1;
 }
 enum EffectOutcome {
    Appended = 0;
@@ -56,14 +115,90 @@ message EffectReceiptRecordResponse {
    SerializableDateTimeOffset RecordedAt = 10;
 }
 enum EffectReceiptStatus {
-   Recorded = 0;
-   AlreadyRecorded = 1;
+   EFFECT_RECEIPT_STATUS_Recorded = 0;
+   EFFECT_RECEIPT_STATUS_AlreadyRecorded = 1;
+}
+message FailOccurrenceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string Trigger = 3;
+   string OccurrenceId = 4;
+   int64 Epoch = 5;
+   string Error = 6;
+   bool ApplicationScope = 7;
 }
 message GetEffectReceiptRequest {
    string EventStore = 1;
    string Namespace = 2;
    string OccurrenceId = 3;
    string EffectKey = 4;
+}
+message GetOccurrenceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string OccurrenceId = 3;
+   bool ApplicationScope = 4;
+}
+message ObserveOccurrencesRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string Trigger = 3;
+   bool ApplicationScope = 4;
+}
+message OccurrenceClaimDetails {
+   string Id = 1;
+   string Trigger = 2;
+   OccurrenceKind Kind = 3;
+   string Payload = 4;
+   int64 SchemaRevision = 5;
+   SerializableDateTimeOffset RecordedAt = 6;
+   SerializableDateTimeOffset Due = 7;
+   int32 Attempts = 8;
+   int64 Epoch = 9;
+   SerializableDateTimeOffset LeaseExpiry = 10;
+}
+enum OccurrenceIngressStatus {
+   OCCURRENCE_INGRESS_STATUS_Recorded = 0;
+   OCCURRENCE_INGRESS_STATUS_AlreadyRecorded = 1;
+   OccurrenceIdConflict = 2;
+   OccurrencePayloadInvalid = 3;
+}
+enum OccurrenceKind {
+   Application = 0;
+   Schedule = 1;
+   Startup = 2;
+   Shutdown = 3;
+}
+enum OccurrenceLeaseResult {
+   Updated = 0;
+   AlreadyCompleted = 1;
+   OccurrenceLeaseLost = 2;
+}
+message OccurrenceSnapshotResponse {
+   string Id = 1;
+   string Trigger = 2;
+   OccurrenceKind Kind = 3;
+   string Payload = 4;
+   int64 SchemaRevision = 5;
+   SerializableDateTimeOffset RecordedAt = 6;
+   SerializableDateTimeOffset Due = 7;
+   OccurrenceState State = 8;
+   int32 Attempts = 9;
+   int64 Epoch = 10;
+   string Owner = 11;
+   SerializableDateTimeOffset LeaseExpiry = 12;
+   string LastError = 13;
+   SerializableDateTimeOffset NextAttempt = 14;
+   string RetriedBy = 15;
+   SerializableDateTimeOffset RetriedAt = 16;
+   repeated EffectReceiptDetails Receipts = 17;
+}
+enum OccurrenceState {
+   Pending = 0;
+   Leased = 1;
+   Completed = 2;
+   Quarantined = 3;
+   Skipped = 4;
 }
 message QueryResult_EffectReceiptRecordResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -72,6 +207,22 @@ message QueryResult_EffectReceiptRecordResponse {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    EffectReceiptRecordResponse Data = 6;
+}
+message QueryResult_IEnumerable_OccurrenceSnapshotResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated OccurrenceSnapshotResponse Data = 6;
+}
+message QueryResult_OccurrenceSnapshotResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   OccurrenceSnapshotResponse Data = 6;
 }
 message RecordEffectReceiptRequest {
    string EventStore = 1;
@@ -84,6 +235,19 @@ message RecordEffectReceiptResponse {
    EffectReceiptStatus Status = 1;
    EffectReceiptDetails Receipt = 2;
 }
+message RecordOccurrenceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string Trigger = 3;
+   string IdempotencyId = 4;
+   string Payload = 5;
+   OccurrenceKind Kind = 6;
+   bool ApplicationScope = 7;
+}
+message RecordOccurrenceResponse {
+   string Id = 1;
+   OccurrenceIngressStatus Status = 2;
+}
 message RegisterTriggersRequest {
    string EventStore = 1;
    repeated TriggerRegistration Triggers = 2;
@@ -91,6 +255,22 @@ message RegisterTriggersRequest {
 message RegisterTriggersResponse {
    bool Registered = 1;
    repeated string Errors = 2;
+}
+message RenewOccurrenceLeaseRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string Trigger = 3;
+   string OccurrenceId = 4;
+   int64 Epoch = 5;
+   int32 LeaseSeconds = 6;
+   bool ApplicationScope = 7;
+}
+message RetryQuarantinedOccurrenceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string Trigger = 3;
+   string OccurrenceId = 4;
+   bool ApplicationScope = 5;
 }
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
@@ -113,7 +293,15 @@ enum ValidationResultSeverity {
    Error = 3;
 }
 service Occurrences {
+   rpc ClaimOccurrences (ClaimOccurrencesRequest) returns (CommandResult_ClaimOccurrencesResponse);
+   rpc CompleteOccurrence (CompleteOccurrenceRequest) returns (CommandResult_CompleteOccurrenceResponse);
+   rpc FailOccurrence (FailOccurrenceRequest) returns (CommandResult_CompleteOccurrenceResponse);
    rpc GetEffectReceipt (GetEffectReceiptRequest) returns (QueryResult_EffectReceiptRecordResponse);
+   rpc GetOccurrence (GetOccurrenceRequest) returns (QueryResult_OccurrenceSnapshotResponse);
+   rpc ObserveOccurrences (ObserveOccurrencesRequest) returns (stream QueryResult_IEnumerable_OccurrenceSnapshotResponse);
    rpc RecordEffectReceipt (RecordEffectReceiptRequest) returns (CommandResult_RecordEffectReceiptResponse);
+   rpc RecordOccurrence (RecordOccurrenceRequest) returns (CommandResult_RecordOccurrenceResponse);
    rpc RegisterTriggers (RegisterTriggersRequest) returns (CommandResult_RegisterTriggersResponse);
+   rpc RenewOccurrenceLease (RenewOccurrenceLeaseRequest) returns (CommandResult_CompleteOccurrenceResponse);
+   rpc RetryQuarantinedOccurrence (RetryQuarantinedOccurrenceRequest) returns (CommandResult_Boolean);
 }

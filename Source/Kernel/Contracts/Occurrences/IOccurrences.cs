@@ -20,6 +20,30 @@ namespace Cratis.Chronicle.Contracts.Occurrences;
 public interface IOccurrences
 {
     /// <summary>
+    /// Executes the ClaimOccurrences command.
+    /// </summary>
+    /// <param name = "request">The ClaimOccurrences request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<ClaimOccurrencesResponse>> ClaimOccurrences(ClaimOccurrencesRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the CompleteOccurrence command.
+    /// </summary>
+    /// <param name = "request">The CompleteOccurrence request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<CompleteOccurrenceResponse>> CompleteOccurrence(CompleteOccurrenceRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the FailOccurrence command.
+    /// </summary>
+    /// <param name = "request">The FailOccurrence request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<CompleteOccurrenceResponse>> FailOccurrence(FailOccurrenceRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the RecordEffectReceipt command.
     /// </summary>
     /// <param name = "request">The RecordEffectReceipt request.</param>
@@ -27,6 +51,14 @@ public interface IOccurrences
     /// <returns>The command result.</returns>
     [Operation]
     Task<CommandResult<RecordEffectReceiptResponse>> RecordEffectReceipt(RecordEffectReceiptRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the RecordOccurrence command.
+    /// </summary>
+    /// <param name = "request">The RecordOccurrence request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<RecordOccurrenceResponse>> RecordOccurrence(RecordOccurrenceRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the RegisterTriggers command.
     /// </summary>
@@ -36,6 +68,22 @@ public interface IOccurrences
     [Operation]
     Task<CommandResult<RegisterTriggersResponse>> RegisterTriggers(RegisterTriggersRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the RenewOccurrenceLease command.
+    /// </summary>
+    /// <param name = "request">The RenewOccurrenceLease request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<CompleteOccurrenceResponse>> RenewOccurrenceLease(RenewOccurrenceLeaseRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the RetryQuarantinedOccurrence command.
+    /// </summary>
+    /// <param name = "request">The RetryQuarantinedOccurrence request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<bool>> RetryQuarantinedOccurrence(RetryQuarantinedOccurrenceRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the GetEffectReceipt query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -43,6 +91,189 @@ public interface IOccurrences
     /// <returns>The query result.</returns>
     [Operation]
     Task<QueryResult<EffectReceiptRecordResponse?>> GetEffectReceipt(GetEffectReceiptRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the GetOccurrence query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<OccurrenceSnapshotResponse?>> GetOccurrence(GetOccurrenceRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the ObserveOccurrences query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    IObservable<QueryResult<IEnumerable<OccurrenceSnapshotResponse>>> ObserveOccurrences(ObserveOccurrencesRequest request, CallContext callContext = default);
+}
+
+/// <summary>
+/// Represents the ClaimOccurrencesRequest message.
+/// </summary>
+[ProtoContract]
+public class ClaimOccurrencesRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Trigger.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Trigger { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the WorkerId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string WorkerId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the LeaseSeconds.
+    /// </summary>
+    [ProtoMember(5)]
+    public int LeaseSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Max.
+    /// </summary>
+    [ProtoMember(6)]
+    public int Max { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ApplicationScope.
+    /// </summary>
+    [ProtoMember(7)]
+    public bool ApplicationScope { get; set; }
+}
+
+/// <summary>
+/// Represents the ClaimOccurrencesResponse message.
+/// </summary>
+[ProtoContract]
+public class ClaimOccurrencesResponse
+{
+    /// <summary>
+    /// Gets or sets the Claims.
+    /// </summary>
+    [ProtoMember(1)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails> Claims { get; set; } = new List<global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceClaimDetails>();
+}
+
+/// <summary>
+/// Represents the CompleteOccurrenceRequest message.
+/// </summary>
+[ProtoContract]
+public class CompleteOccurrenceRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Trigger.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Trigger { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the OccurrenceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string OccurrenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Epoch.
+    /// </summary>
+    [ProtoMember(5)]
+    public long Epoch { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ApplicationScope.
+    /// </summary>
+    [ProtoMember(6)]
+    public bool ApplicationScope { get; set; }
+}
+
+/// <summary>
+/// Represents the CompleteOccurrenceResponse message.
+/// </summary>
+[ProtoContract]
+public class CompleteOccurrenceResponse
+{
+    /// <summary>
+    /// Gets or sets the Status.
+    /// </summary>
+    [ProtoMember(1)]
+    public global::Cratis.Chronicle.Contracts.Storage.Occurrences.OccurrenceLeaseResult Status { get; set; }
+}
+
+/// <summary>
+/// Represents the FailOccurrenceRequest message.
+/// </summary>
+[ProtoContract]
+public class FailOccurrenceRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Trigger.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Trigger { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the OccurrenceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string OccurrenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Epoch.
+    /// </summary>
+    [ProtoMember(5)]
+    public long Epoch { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Error.
+    /// </summary>
+    [ProtoMember(6)]
+    public string Error { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the ApplicationScope.
+    /// </summary>
+    [ProtoMember(7)]
+    public bool ApplicationScope { get; set; }
 }
 
 /// <summary>
@@ -102,6 +333,74 @@ public class RecordEffectReceiptResponse
 }
 
 /// <summary>
+/// Represents the RecordOccurrenceRequest message.
+/// </summary>
+[ProtoContract]
+public class RecordOccurrenceRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Trigger.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Trigger { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the IdempotencyId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string IdempotencyId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Payload.
+    /// </summary>
+    [ProtoMember(5)]
+    public string Payload { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Kind.
+    /// </summary>
+    [ProtoMember(6)]
+    public global::Cratis.Chronicle.Contracts.Storage.Occurrences.OccurrenceKind Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ApplicationScope.
+    /// </summary>
+    [ProtoMember(7)]
+    public bool ApplicationScope { get; set; }
+}
+
+/// <summary>
+/// Represents the RecordOccurrenceResponse message.
+/// </summary>
+[ProtoContract]
+public class RecordOccurrenceResponse
+{
+    /// <summary>
+    /// Gets or sets the Id.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Status.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceIngressStatus Status { get; set; }
+}
+
+/// <summary>
 /// Represents the RegisterTriggersRequest message.
 /// </summary>
 [ProtoContract]
@@ -137,6 +436,92 @@ public class RegisterTriggersResponse
     /// </summary>
     [ProtoMember(2)]
     public IEnumerable<string> Errors { get; set; } = new List<string>();
+}
+
+/// <summary>
+/// Represents the RenewOccurrenceLeaseRequest message.
+/// </summary>
+[ProtoContract]
+public class RenewOccurrenceLeaseRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Trigger.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Trigger { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the OccurrenceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string OccurrenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Epoch.
+    /// </summary>
+    [ProtoMember(5)]
+    public long Epoch { get; set; }
+
+    /// <summary>
+    /// Gets or sets the LeaseSeconds.
+    /// </summary>
+    [ProtoMember(6)]
+    public int LeaseSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ApplicationScope.
+    /// </summary>
+    [ProtoMember(7)]
+    public bool ApplicationScope { get; set; }
+}
+
+/// <summary>
+/// Represents the RetryQuarantinedOccurrenceRequest message.
+/// </summary>
+[ProtoContract]
+public class RetryQuarantinedOccurrenceRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Trigger.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Trigger { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the OccurrenceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string OccurrenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the ApplicationScope.
+    /// </summary>
+    [ProtoMember(5)]
+    public bool ApplicationScope { get; set; }
 }
 
 /// <summary>
@@ -235,4 +620,175 @@ public class GetEffectReceiptRequest
     /// </summary>
     [ProtoMember(4)]
     public string EffectKey { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the OccurrenceSnapshotResponse message.
+/// </summary>
+[ProtoContract]
+public class OccurrenceSnapshotResponse
+{
+    /// <summary>
+    /// Gets or sets the Id.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Trigger.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Trigger { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Kind.
+    /// </summary>
+    [ProtoMember(3)]
+    public global::Cratis.Chronicle.Contracts.Storage.Occurrences.OccurrenceKind Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Payload.
+    /// </summary>
+    [ProtoMember(4)]
+    public string Payload { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the SchemaRevision.
+    /// </summary>
+    [ProtoMember(5)]
+    public long SchemaRevision { get; set; }
+
+    /// <summary>
+    /// Gets or sets the RecordedAt.
+    /// </summary>
+    [ProtoMember(6)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset RecordedAt { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Due.
+    /// </summary>
+    [ProtoMember(7)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Due { get; set; }
+
+    /// <summary>
+    /// Gets or sets the State.
+    /// </summary>
+    [ProtoMember(8)]
+    public global::Cratis.Chronicle.Contracts.Storage.Occurrences.OccurrenceState State { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Attempts.
+    /// </summary>
+    [ProtoMember(9)]
+    public int Attempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Epoch.
+    /// </summary>
+    [ProtoMember(10)]
+    public long Epoch { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Owner.
+    /// </summary>
+    [ProtoMember(11)]
+    public string? Owner { get; set; }
+
+    /// <summary>
+    /// Gets or sets the LeaseExpiry.
+    /// </summary>
+    [ProtoMember(12)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset LeaseExpiry { get; set; }
+
+    /// <summary>
+    /// Gets or sets the LastError.
+    /// </summary>
+    [ProtoMember(13)]
+    public string? LastError { get; set; }
+
+    /// <summary>
+    /// Gets or sets the NextAttempt.
+    /// </summary>
+    [ProtoMember(14)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset NextAttempt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the RetriedBy.
+    /// </summary>
+    [ProtoMember(15)]
+    public string? RetriedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the RetriedAt.
+    /// </summary>
+    [ProtoMember(16)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset RetriedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Receipts.
+    /// </summary>
+    [ProtoMember(17)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails> Receipts { get; set; } = new List<global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails>();
+}
+
+/// <summary>
+/// Represents the GetOccurrenceRequest message.
+/// </summary>
+[ProtoContract]
+public class GetOccurrenceRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the occurrenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string OccurrenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the applicationScope.
+    /// </summary>
+    [ProtoMember(4)]
+    public bool ApplicationScope { get; set; }
+}
+
+/// <summary>
+/// Represents the ObserveOccurrencesRequest message.
+/// </summary>
+[ProtoContract]
+public class ObserveOccurrencesRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the trigger.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Trigger { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the applicationScope.
+    /// </summary>
+    [ProtoMember(4)]
+    public bool ApplicationScope { get; set; }
 }
