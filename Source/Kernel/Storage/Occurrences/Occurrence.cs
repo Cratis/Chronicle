@@ -38,4 +38,15 @@ public record Occurrence(
     string? Owner,
     DateTimeOffset? LeaseExpiry,
     string? LastError,
-    DateTimeOffset? NextAttempt);
+    DateTimeOffset? NextAttempt)
+{
+    /// <summary>
+    /// Gets the authenticated operator who most recently re-armed this occurrence.
+    /// </summary>
+    public string? RetriedBy { get; init; }
+
+    /// <summary>
+    /// Gets the kernel instant of the most recent operator re-arm.
+    /// </summary>
+    public DateTimeOffset? RetriedAt { get; init; }
+}

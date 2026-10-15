@@ -19,4 +19,9 @@ public class EffectReceiptState
     /// Gets the first-writer-wins receipt identities in this process scope.
     /// </summary>
     internal Dictionary<string, EffectReceipt> Receipts { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets the secondary index of receipt identities by occurrence.
+    /// </summary>
+    internal Dictionary<OccurrenceId, HashSet<string>> ReceiptsByOccurrence { get; } = [];
 }

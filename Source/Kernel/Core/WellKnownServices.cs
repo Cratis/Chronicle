@@ -9,6 +9,11 @@ namespace Cratis.Chronicle;
 public static class WellKnownServices
 {
     /// <summary>
+    /// Durable application occurrences and effect receipts.
+    /// </summary>
+    public const string Occurrences = "Occurrences";
+
+    /// <summary>
     /// The name of the scoped alert incident query service.
     /// </summary>
     public const string Alerts = "Alerts";

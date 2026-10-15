@@ -12,6 +12,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
@@ -112,6 +113,7 @@ internal sealed class ChronicleServerStartupTask(
         foreach (var eventStore in allEventStores)
         {
             await Step("DiscoverAndRegisterEventTypes", () => eventTypes.DiscoverAndRegister(eventStore));
+            await RehydrateOccurrences(eventStore, null, cancellationToken);
             var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
             await Step("EnsureDefaultNamespace", namespaces.EnsureDefault);
 
@@ -155,6 +157,8 @@ internal sealed class ChronicleServerStartupTask(
                     // subscription on its timer, including namespaces whose first append happens after startup.
                     logger.FailedSubscribingPatternCapture(exception, eventStore, namespaceName);
                 }
+
+                await RehydrateOccurrences(eventStore, namespaceName, token);
 
                 if (!hasData)
                 {
@@ -241,6 +245,25 @@ internal sealed class ChronicleServerStartupTask(
             {
                 logger.FailedRegisteringPersistedProjectionDefinition(failure, identifier);
             }
+        }
+    }
+
+    async Task RehydrateOccurrences(EventStoreName eventStore, EventStoreNamespaceName? namespaceName, CancellationToken cancellationToken)
+    {
+        // Occurrences are independent of event-log data. Discover only unfinished triggers, cap
+        // wake-up fan-out, and bound each scope so a slow store cannot prevent the host starting.
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(30));
+        try
+        {
+            var store = storage.GetEventStore(eventStore);
+            var occurrences = namespaceName is null ? store.Occurrences : store.GetNamespace(namespaceName).Occurrences;
+            await OccurrenceRecovery.Rehydrate(grainFactory, occurrences, eventStore, namespaceName?.Value, logger, deadline.Token);
+        }
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Previously recorded work has reminders; a failing namespace must not block others.
+            logger.FailedRehydratingOccurrences(exception, eventStore, namespaceName);
         }
     }
 

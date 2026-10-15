@@ -250,6 +250,20 @@ TLS certificate settings for the gRPC connection. TLS is active when both `Certi
 | `CertificatePath` | `string?` | Path to a PFX certificate file |
 | `CertificatePassword` | `string?` | Password for the certificate file |
 
+### Occurrences
+
+Kernel delivery settings under `Cratis:Chronicle:Occurrences`. These settings do not change observer retry policy.
+
+| Property | Type | Default | Behavior |
+|---|---|---|---|
+| `MaxInFlight` | `int` | `1` | Maximum live leases per trigger and scope; values below one use one |
+| `MaxAttempts` | `int` | `10` | Quarantines exhausted work; zero permits unlimited attempts |
+| `BackoffDelay` | `int` | `1` | Initial failure retry delay in seconds; negative values use zero |
+| `ExponentialBackoffDelayFactor` | `float` | `2` | Multiplier per failed attempt; values below one use one |
+| `MaximumBackoffDelay` | `int` | `600` | Failure retry delay cap in seconds; negative values use zero |
+
+Lease duration is selected by the claim or renew request, not this section: zero or a negative value uses 60 seconds, and the maximum is 600 seconds. Claims return at most 1,000 occurrences and remain subject to `MaxInFlight`. Kernel time controls expiry and backoff. See [occurrence delivery and receipts](../concepts/effect-receipts.md#record-and-deliver-an-occurrence) for ordering, quarantine and recovery.
+
 ### Authentication
 
 OAuth/OIDC authority configuration. When `Authority` is not set, the Chronicle internal OAuth authority is used.
