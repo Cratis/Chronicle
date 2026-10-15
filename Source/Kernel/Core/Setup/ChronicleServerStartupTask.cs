@@ -12,6 +12,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
@@ -112,6 +113,7 @@ internal sealed class ChronicleServerStartupTask(
         foreach (var eventStore in allEventStores)
         {
             await Step("DiscoverAndRegisterEventTypes", () => eventTypes.DiscoverAndRegister(eventStore));
+            await Step("RehydrateApplicationOccurrences", () => OccurrenceRecovery.Rehydrate(grainFactory, storage.GetEventStore(eventStore).Occurrences, eventStore, null));
             var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
             await Step("EnsureDefaultNamespace", namespaces.EnsureDefault);
 
@@ -155,6 +157,8 @@ internal sealed class ChronicleServerStartupTask(
                     // subscription on its timer, including namespaces whose first append happens after startup.
                     logger.FailedSubscribingPatternCapture(exception, eventStore, namespaceName);
                 }
+
+                await Step("RehydrateOccurrences", () => OccurrenceRecovery.Rehydrate(grainFactory, namespaceStorage.Occurrences, eventStore, namespaceName.Value));
 
                 if (!hasData)
                 {
