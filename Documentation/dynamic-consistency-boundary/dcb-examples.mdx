@@ -9,7 +9,7 @@ Use this page when you know a canonical example from [dcb.events](https://dcb.ev
 |---|---|
 | [Course subscription](#course-subscription) | Two decision reads, two events, one `AppendMany` |
 | [Unique username](#unique-username) | A `[Unique]` constraint |
-| [Invoice number](#invoice-number) | A numbering event source with one decision read |
+| [Invoice number](#invoice-number) | A numbering event source with one decision read, see [Gapless invoice numbers](./scenarios.mdx#gapless-invoice-numbers) |
 | [Opt-in token](#opt-in-token) | Both events on the sign-up's event source |
 | [Dynamic product price](#dynamic-product-price) | One decision read per product, one event on the order |
 | [Idempotency](#idempotency) | A `[Unique]` constraint on the token |
@@ -36,9 +36,7 @@ The code is the [A rule across two keys](./scenarios.mdx#a-rule-across-two-keys)
 
 **Chronicle.** Declare a [constraint](../constraints/index.md). The kernel checks it inside the append, for every writer, without a read. There is nothing to guard and nothing to retry.
 
-<ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/unique-username" variants="csharp" />
-
-Normalize the value before it reaches the event, as DCB does: `jamesbond` and `JamesBond` are two values to a constraint. To release a name when a user is removed or renamed, use [model-bound constraints](../constraints/model-bound/index.md) or [declarative constraints](../constraints/declarative/index.mdx). A decision read cannot do this job: it guards one key's history, not a value across keys.
+The code is the [Unique username](./scenarios.mdx#unique-username) scenario. Normalize the value before it reaches the event, as DCB does: `jamesbond` and `JamesBond` are two values to a constraint. To release a name when a user is removed or renamed, use [model-bound constraints](../constraints/model-bound/index.md) or [declarative constraints](../constraints/declarative/index.mdx). A decision read cannot do this job: it guards one key's history, not a value across keys.
 
 ## Invoice number
 
@@ -46,13 +44,9 @@ Normalize the value before it reaches the event, as DCB does: `jamesbond` and `J
 
 **DCB.** Query every `InvoiceCreated` event, take the last number plus one, and append with a condition on the same query.
 
-**Chronicle.** Make the sequence one event source. Every `InvoiceCreated` event is appended to a numbering event source with a fixed id. A decision read of the last number on that source guards the append. One event is written, on one source, and nothing is recorded twice.
+**Chronicle.** Make the sequence one event source. Every `InvoiceCreated` event is appended to a numbering event source with a fixed id, and a decision read of the last number on that source guards the append. One event is written, on one source, and nothing is recorded twice. Two requests that read the same last number both try to append, and the second is rejected and reads again.
 
-<ChronicleClientTabs snippet="dynamic-consistency-boundary/dcb-examples/invoice-number" variants="csharp" />
-
-Two requests that read the same last number both try to append. The second is rejected, and it reads again and gets the next number.
-
-**What this costs.** The numbering source is a hot key. Every decision read folds its whole history, and every writer conflicts with every other, so two invoices cannot be created at the same moment. Both are inherent to an unbroken sequence. If the numbering restarts each year, use one numbering source per year to keep the history short. The invoice read model is keyed by the invoice number carried in the event, not by the numbering source, so later invoice events can live on the invoice's own event source.
+**What this costs.** The numbering source is a hot key: every writer conflicts with every other, and every read folds the source's whole history. Both are inherent to an unbroken sequence. The code and the cost are in [Gapless invoice numbers](./scenarios.mdx#gapless-invoice-numbers).
 
 ## Opt-in token
 
