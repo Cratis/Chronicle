@@ -61,6 +61,16 @@ internal sealed class ProbeRun(string scenario, string store)
     public string[] PersistedJobs { get; set; } = [];
     public string[] JobWriteSamples { get; set; } = [];
     public string[] CompletedJobEvidence { get; set; } = [];
+    public double? JobTerminalMs { get; set; }
+    public int? JobTerminalStatus { get; set; }
+    public DateTimeOffset? JobTerminalObservedUtc { get; set; }
+    public string[] ConnectedObserverState { get; set; } = [];
+    public int? JobStepCount { get; set; }
+    public string[] UnsuccessfulJobSteps { get; set; } = [];
+    public string[] FailedJobSteps { get; set; } = [];
+    public string[] FailedPartitions { get; set; } = [];
+    public string? KernelLogFile { get; set; }
+    public string? DeliveriesFile { get; set; }
     public Dictionary<string, string[]>? ProjectionDocuments { get; set; }
     public int? ProjectionRows { get; set; }
     public bool? ProjectionValuesMatch { get; set; }

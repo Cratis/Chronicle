@@ -102,6 +102,18 @@ internal static class Probe
                 run.Status = "INVALID";
                 run.Reason = $"{run.Reason}\nAppend phase incomplete: outstanding RPC outcomes may be unknown; partial acknowledged membership only.";
             }
+            try
+            {
+                run.KernelLogFile = $"{run.EventStore}-kernel.log";
+                File.WriteAllText(Path.Combine(output, run.KernelLogFile), await fixture.KernelLogs().WaitAsync(TimeSpan.FromSeconds(20)));
+            }
+            catch (Exception error)
+            {
+                run.KernelLogFile = null;
+                run.Reason += $"\nKernel log capture failed: {error.Message}";
+            }
+            run.DeliveriesFile = $"{run.EventStore}-deliveries.json";
+            File.WriteAllText(Path.Combine(output, run.DeliveriesFile), JsonSerializer.Serialize(run.Delivery.FirstDeliveries(run.Started), JsonOptions));
             File.WriteAllText(Path.Combine(output, $"{run.EventStore}-expected.json"), JsonSerializer.Serialize(
                 run.Appended.OrderBy(p => p.Key.SequenceNumber).Select(p => new { position = p.Key, payload = p.Value }), JsonOptions));
             // A per-store partial is available before disposal; the authoritative JSONL row follows cleanup.
@@ -245,6 +257,26 @@ internal static class Probe
                     run.JobWriteSamples = mongo.JobWriteSamples;
                     if (completed.Length != 1) throw new InvalidOperationException("Tail reached but full handled-all/tail job evidence plus deletion is not proven for exactly one job.");
                     finishedJobs = true;
+                }
+                var terminal = catchup ? jobs.FirstOrDefault(j => j.GetValue("status", 0).ToInt32() >= 6) : null;
+                if (terminal is not null)
+                {
+                    // A non-successful terminal job never becomes healthy; capture evidence while the client is still connected.
+                    run.JobTerminalMs = run.Clock.Elapsed.TotalMilliseconds;
+                    run.JobTerminalStatus = terminal["status"].ToInt32();
+                    run.JobTerminalObservedUtc = DateTimeOffset.UtcNow;
+                    await Task.Delay(5000, cancellation);
+                    run.Snapshot();
+                    run.ConnectedObserverState = (await mongo.State().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
+                    run.PersistedJobs = (await mongo.Jobs().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
+                    var steps = await mongo.JobSteps().WaitAsync(cancellation);
+                    run.JobStepCount = steps.Length;
+                    run.UnsuccessfulJobSteps = steps.Where(d => d.GetValue("status", 0).ToInt32() != 3).Select(d => d.ToJson()).ToArray();
+                    run.FailedJobSteps = (await mongo.FailedJobSteps().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
+                    run.FailedPartitions = (await mongo.FailedPartitions().WaitAsync(cancellation)).Select(d => d.ToJson()).ToArray();
+                    run.Status = "JOB_FAILED";
+                    run.Reason = $"Catch-up job reached non-successful terminal status {run.JobTerminalStatus}; evidence captured with the client connected.";
+                    return;
                 }
                 if (run.JobMs.HasValue && jobs.Length == 0) finishedJobs = true;
                 if (catchup && finishedJobs) run.JobMs ??= run.Clock.Elapsed.TotalMilliseconds;

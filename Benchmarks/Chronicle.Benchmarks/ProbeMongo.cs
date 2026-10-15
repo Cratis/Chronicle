@@ -151,6 +151,9 @@ internal sealed class ProbeMongo(IContainer container, string store, long profil
     internal Task<BsonDocument[]> Observers() => Read($"{store}+es", "observers");
     internal Task<BsonDocument[]> State() => Read($"{store}+es+Default", "observers");
     internal Task<BsonDocument[]> Jobs() => Read($"{store}+es+Default", "jobs");
+    internal Task<BsonDocument[]> JobSteps() => Read($"{store}+es+Default", "job-steps");
+    internal Task<BsonDocument[]> FailedJobSteps() => Read($"{store}+es+Default", "failed-job-steps");
+    internal Task<BsonDocument[]> FailedPartitions() => Read($"{store}+es+Default", "failed-partitions");
 
     internal async Task<ulong?> SequenceTail(string sequence)
     {

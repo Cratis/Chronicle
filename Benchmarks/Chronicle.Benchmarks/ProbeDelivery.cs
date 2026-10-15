@@ -41,6 +41,23 @@ internal sealed class ProbeDelivery
         Interlocked.Add(ref _busyTicks, Stopwatch.GetTimestamp() - start);
     }
 
+    internal object[] FirstDeliveries(long started)
+    {
+        lock (_gate)
+        {
+            var now = Stopwatch.GetTimestamp();
+            var utcNow = DateTimeOffset.UtcNow;
+            return _delivered.OrderBy(p => p.Value.First).Select(p => (object)new
+            {
+                key = p.Key.Key,
+                sequenceNumber = p.Key.SequenceNumber,
+                count = p.Value.Count,
+                msFromStart = (p.Value.First - started) * 1000.0 / Stopwatch.Frequency,
+                utc = utcNow.AddTicks(-(long)((now - p.Value.First) * (double)TimeSpan.TicksPerSecond / Stopwatch.Frequency))
+            }).ToArray();
+        }
+    }
+
     internal ProbeAccounting Snapshot(IReadOnlyCollection<ProbePosition> expected, long started)
     {
         lock (_gate)

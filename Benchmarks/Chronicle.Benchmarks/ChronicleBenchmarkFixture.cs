@@ -77,6 +77,17 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
     /// <returns>The startup task.</returns>
     public Task Prepare(CancellationToken cancellationToken) => InitializeAsync(cancellationToken);
 
+    /// <summary>
+    /// Reads the kernel container's complete stdout and stderr, for diagnosis before the container is disposed.
+    /// </summary>
+    /// <returns>The combined container log.</returns>
+    public async Task<string> KernelLogs()
+    {
+        if (_container is null) return string.Empty;
+        var logs = await _container.GetLogsAsync(timestampsEnabled: true);
+        return $"{logs.Stdout}\n--- stderr ---\n{logs.Stderr}";
+    }
+
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
@@ -110,7 +121,19 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
             .UntilInternalTcpPortIsAvailable(35000)
             .AddCustomWaitStrategy(new HttpsHealthWait(35000));
 
-        _container = new ContainerBuilder(imageName)
+        var builder = new ContainerBuilder(imageName);
+
+        // Opt-in diagnosis only: Debug logging of catch-up steps, reactor delivery and jobs changes timing.
+        if (Environment.GetEnvironmentVariable("PROBE_KERNEL_DEBUG") == "1")
+        {
+            builder = builder
+                .WithEnvironment("Logging__LogLevel__Cratis.Chronicle.Observation.Jobs", "Debug")
+                .WithEnvironment("Logging__LogLevel__Cratis.Chronicle.Observation.Reactors", "Debug")
+                .WithEnvironment("Logging__LogLevel__Cratis.Chronicle.Services.Observation.Reactors", "Debug")
+                .WithEnvironment("Logging__LogLevel__Cratis.Orleans.Jobs", "Debug");
+        }
+
+        _container = builder
             .WithEnvironment("Storage__ConnectionDetails", "mongodb://localhost:27017/?maxPoolSize=500")
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(ChroniclePort, 35000)
