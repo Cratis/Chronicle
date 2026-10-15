@@ -1,0 +1,157 @@
+---
+title: Read protection (.NET)
+description: Make the Chronicle .NET client refuse unguarded reads and immediate appends inside one invocation, so every decision read is enrolled in the unit of work that commits.
+---
+
+Use read protection when you own the code that begins and completes a [unit of work](../events/transactions.mdx), such as a command pipeline or a request host, and you want Chronicle to refuse a decision that is not guarded. Inside a protected invocation, a read either becomes a guard for the commit or is refused. If you only need to guard one append, a [decision read](decision-reads.mdx) passed to the append is enough. If the rule is uniqueness, use a [constraint](../constraints/index.md).
+
+Cratis Arc builds on this API: its read-protection switch starts the frame for each command and resolves read-model parameters through `IDecisionReads.GetFor`. See [Choosing how a command's rule holds](/arc/backend/csharp/chronicle/consistency/) in the Arc documentation. Read this page when you use Chronicle directly or write a host like Arc's.
+
+## What it does
+
+| Inside a protected invocation | Result |
+|---|---|
+| `IDecisionReads.Get<T>` and `GetFor<T>` | Fold the model, enroll the read in the unit of work, then return the value |
+| `IDecisionReads.GetDetached<T>` | Refused with `DetachedReadWhileReadsAreProtected` |
+| Raw reads (`IReadModels`, `IReducers`, event sequence reads) | Refused with `ReadRefusedWhileReadsAreProtected` unless a read allowance is open |
+| Immediate appends (`Append`, `AppendMany`, prepared and through-event-source variants) | Refused with `ImmediateAppendWhileReadsAreProtected`. Stage events in the unit of work instead |
+| `Commit`, `Rollback` and `Dispose` of the unit | Refused unless the owner calls them |
+| Events and reads after the unit completed | Refused |
+
+Nothing changes outside a protected invocation, and nothing changes for code that never calls `EnforceReadProtection()`.
+
+<ChronicleClientTabs snippet="read-models/read-protection/owner-commit" variants="csharp" />
+
+## The frame and its lifetime
+
+`IUnitOfWork.EnforceReadProtection()` returns a `ReadProtectionFrame`. The frame is flow-local: it follows the asynchronous flow that created it and nothing else.
+
+- **Owner and lease.** The first call for a unit returns the owning frame. Later calls on the same unit return a lease. Disposing a lease does nothing. Only the owner ends enforcement, so dispose it in a `finally` block on success, failure and cancellation.
+- **Begin first.** Call it before any event or read is enrolled. Otherwise it throws `ReadProtectionMustBeginBeforeEnrollment`.
+- **One unit.** While a frame is active, enrollment, staging and completion must use the frame's unit. Any other unit, including one set with `UnitOfWorkManager.SetCurrent`, is refused with `ReadProtectionUnitMismatch`.
+- **After completion.** `ReadProtectionFrame.UnitCompleted` reports whether the unit was committed or rolled back. The frame stays active until the owner disposes it. Protected reads and staging after completion are refused with `ReadAfterProtectedCommit` and `UnitOfWorkIsCompleted`.
+
+A unit implementation that does not support this throws `UnitOfWorkReadProtectionNotSupported`.
+
+### Owner-only completion
+
+A unit that enforces read protection is completed only by its owner. Claim ownership with `ClaimDecisionReadCommitOwnership()`, then use `CommitAsOwner(owner)` or `RollbackAsOwner(owner)`. Calling `Commit()`, `Rollback()` or `Dispose()` on the unit throws `ProtectedUnitOfWorkRequiresOwner`, so an aggregate-style `Commit()` in application code cannot complete the unit half-guarded. A commit that is already running throws `UnitOfWorkIsCompleting` for a rollback.
+
+A successful commit validates every guard atomically with the append. A changed read is a conflict, not an exception: nothing is appended, and `GetDecisionConflicts()` names the model type and key. Check `GetConcurrencyViolations()` and `GetConstraintViolations()` for the other outcomes.
+
+With no staged events, the commit still validates a guard that was supplied for validation only. A guard that exists only because a read was enrolled sends nothing, because no write means nothing to protect.
+
+### After the commit
+
+Chronicle refuses `CompleteStream` inside a protected invocation, even after the commit. To close a stream once the commit succeeded, run it through the owner's frame:
+
+<ChronicleClientTabs snippet="read-models/read-protection/after-commit" variants="csharp" />
+
+`RunAfterCommit` throws `ImmediateAppendWhileReadsAreProtected` if the unit did not commit successfully, or if the frame is no longer active. It permits stream completion on the unit's own event sequence and nothing else: no read and no append.
+
+## Read allowances
+
+`IUnitOfWork.AllowReads(allowance, reason)` opens a flow-local region for raw reads and returns an `IDisposable`. The reason must be a non-empty explanation; otherwise it throws `ReadProtectionAllowanceNotValid`. An allowance never permits an immediate append.
+
+| `ReadAllowance` | Use it for | What you must do |
+|---|---|---|
+| `Advisory` | A read that feeds a screen, a hint or a log, where a stale value is acceptable | Nothing. The read guards nothing. `GetDetached` is also permitted and returns an advisory read |
+| `Contributed` | A read that influences the decision and that you enroll yourself | Enroll it with `EnrolContributedRead` before you use the value |
+
+Allowances are not inherited by a reducer that Chronicle runs for a decision read. Code inside the reducer that reads Chronicle meets the guards.
+
+## Acquiring a decision read
+
+| Call | Under a frame |
+|---|---|
+| `IDecisionReads.Get<T>(key)` | Allowed. Enrolls the read in the ambient unit before it returns |
+| `IDecisionReads.GetFor<T>(unit, key)` | Allowed. Enrolls the read in the given unit, which must be the frame's unit, before it returns. Hosts such as Arc use this |
+| `IDecisionReads.GetDetached<T>(key)` | Refused with `DetachedReadWhileReadsAreProtected`, unless an `Advisory` allowance is open |
+
+`GetDetached` exists to hand a read to a chosen append with `guardedBy:`. Enrolling it silently in the ambient unit would change which commit it guards, so a protected invocation refuses it. Stream-scoped overloads of `Get`, `GetFor` and `GetDetached` follow the same rules.
+
+`GetFor` and `Get` also check, before the value is exposed, that no event staged in this unit would have changed the read. If one would, they throw `ReadOfSourceWithStagedEvents`: the read cannot see events that are staged but not committed. Decide once, then pass the value down.
+
+`IDecisionReads.Describe<T>()` reports without I/O whether a model can be read, which event types it guards, and whether it uses Pinned generation delivery. See [Decision reads](decision-reads.mdx#admitted-projections).
+
+## Contributed reads
+
+Use a contributed read when a decision depends on events you read yourself, for example an aggregate rehydrated from one event source. Capture the boundary first, read, then enroll a `ContributedRead` before the value is used:
+
+<ChronicleClientTabs snippet="read-models/read-protection/contributed-read" variants="csharp" />
+
+The `ConcurrencyScopeOrigin` of the contribution is `Explicit` or `Aggregate`. Any other origin throws `ContributedReadOriginNotValid`. Enrollment is atomic and runs before the call returns:
+
+1. The target (event store, namespace and sequence) must match the unit, or it throws `ReadDependencyTargetMismatch`.
+2. No staged event may match the read's source, types and dimensions, or it throws `ReadOfSourceWithStagedEvents`.
+3. Two different explicit or aggregate scopes on one label throw `ConflictingContributionsOnLabel`, or `ConflictingExplicitScopes` when a decision read is on that label too.
+4. An aggregate contribution and a decision read on the same event source throw `ReadAndAggregateOnSameSource`.
+5. A contribution without an event source throws `SourceLessReadNotSupported`.
+
+`IUnitOfWork.AddEventWithOptions(...)` stages an event with `EventEnrollmentOptions`, including the `Origin` of its scope. The origin of an event may not be `DecisionRead`; that value is reserved for reads and throws `ConcurrencyScopeOriginNotValidForEvents`. `EventEnrollmentOptions.DeclaredConcurrency` and `EventForEventSourceId.DeclaredConcurrency` ask Chronicle to resolve the concurrency dimensions at commit instead of using a scope you computed.
+
+## Append conditions
+
+At commit, Chronicle merges every enrolled read, explicit scope and routing rule into the conditions the kernel checks with the append. `IUnitOfWork.GetAppendConditions()` returns the conditions of the last commit as `AppendCondition` values. Use it in tests and diagnostics to see exactly what a commit guarded.
+
+| `AppendCondition` member | Meaning |
+|---|---|
+| `Label` | The event source the condition belongs to |
+| `EventTypes`, `EventSourceType`, `EventStreamType`, `EventStreamId` | The narrowing. Empty types or a missing dimension means any |
+| `After` | The retained boundary. An event matching the condition after it is a conflict |
+| `ExpectsNoMatchingEvent` | No matching event may exist at all. This is how an absent model is guarded |
+| `Origins` | Which dependencies supplied the condition (`AppendConditionOrigin`) |
+| `Reads` | Descriptions of the protected reads behind it |
+
+`AppendConditionOrigin` is `ProtectedRead`, `Explicit`, `Aggregate`, `DeclaredRouting` or `DefaultRouting`.
+
+If the commit also carries an explicit scope, it must cover every read on that label and capture its boundary no later than the read did. Otherwise the commit is refused with `ExplicitScopeDoesNotCoverReads`. A declared-routing condition that the explicit scope does not cover throws `DeclaredRoutingNotCoveredByExplicitScope`. Scope labels starting with `$read-protection/` are reserved (`ReservedConcurrencyScopeLabel`). Custom concurrency strategies are not supported with read protection (`ReadProtectionRequiresTheDefaultConcurrencyStrategy`).
+
+## Guarded entry points
+
+Inside a frame, these raw reads need a read allowance:
+
+- `IReadModels`: `GetInstanceById`, `GetInstances`, `GetSnapshotsById`, `Observe`, `Watch`, `GetWatcherFor`
+- `IReducers`: `GetInstanceById`, `GetInstances`
+- Materialized read models: `GetInstances`, `ObserveInstances`
+- Event sequences: `HasEventsFor`, `GetMetadataAt`, `GetFromSequenceNumber`, `GetForEventSourceIdAndEventTypes`, `GetNextSequenceNumber`, `GetTailSequenceNumber`, `GetTailSequenceNumberForObserver`, `IsStreamCompleted`, `GetClosedStreams`, `VerifyContent`
+- `IProjections.Query` (an ad-hoc projection over the event log)
+- `IEventStore.GetNamespaces`
+
+Every public immediate append on an event sequence is refused regardless of allowances, and so are `Revise`, both `Redact` overloads and `CompleteStream` outside `RunAfterCommit`. Treat a Chronicle read that is not in this list as unguarded.
+
+## Refusals at a glance
+
+| Exception | When |
+|---|---|
+| `DetachedReadWhileReadsAreProtected` | `GetDetached` under a frame without an `Advisory` allowance |
+| `ReadRefusedWhileReadsAreProtected` | A guarded raw read without an allowance |
+| `ImmediateAppendWhileReadsAreProtected` | An immediate append, `Revise` or `Redact`, or `CompleteStream` outside `RunAfterCommit` |
+| `ReadAfterProtectedCommit` | A protected read after the unit completed |
+| `ReadOfSourceWithStagedEvents` | A read of a source after events that match it were staged |
+| `ReadProtectionUnitMismatch` | Enrollment, staging or completion on a unit other than the frame's |
+| `ReadProtectionMustBeginBeforeEnrollment` | `EnforceReadProtection()` after anything was enrolled |
+| `ProtectedUnitOfWorkRequiresOwner` | `Commit`, `Rollback` or `Dispose` by a caller that is not the owner |
+| `UnitOfWorkIsCompleted` | Staging after the commit began or after rollback |
+| `DecisionReadRefused` | The model cannot be guarded exactly. See [Decision reads](decision-reads.mdx) |
+| `ReadAndAggregateOnSameSource`, `ConflictingContributionsOnLabel`, `ConflictingExplicitScopes`, `SourceLessReadNotSupported` | The enrolled dependencies cannot be merged into one exact guard |
+| `ExplicitScopeDoesNotCoverReads`, `DeclaredRoutingNotCoveredByExplicitScope` | An explicit scope is narrower than what was read or declared |
+
+Each message names the fix. Chronicle refuses rather than guard something it cannot compute exactly.
+
+## Limits
+
+- **History mutation.** Revising or redacting an event does not advance the tail, so a read that was folded before the change is not invalidated. Inside a frame, `Revise` and `Redact` are refused; run them as separate administrative operations. Chronicle issue [#4900](https://github.com/Cratis/Chronicle/issues/4900) tracks a kernel check.
+- **Reducers.** A reducer is admitted only if it has no filters and no constructor dependencies other than `ILogger<T>`. See [Decision reads](decision-reads.mdx#reducers).
+- **Pinned delivery.** A projection with Pinned generation delivery is refused with `GenerationDeliveryNotSupported`.
+- **Source-less reads.** A contributed read must name an event source. Reads over many sources are refused.
+- **One event log.** Guards apply to one event sequence, the event log, and one unit of work cannot span sequences.
+- **Writers without a guard.** A writer that decides without a guard can still break the rule. The rule holds only when every writer that decides on it is protected, or when it is a constraint.
+
+## Related topics
+
+- [Decision reads](decision-reads.mdx)
+- [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx)
+- [Concurrency scopes](../events/concurrency.mdx)
+- [Transactions](../events/transactions.mdx)
+- [CHR0062: Concurrency applies across event sources](../code-analysis/CHR0062.mdx)

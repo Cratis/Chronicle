@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.EventSequences.Concurrency;
 
@@ -10,8 +12,31 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 /// </summary>
 /// <param name="options">The <see cref="ConcurrencyOptions"/> containing the concurrency configuration.</param>
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/> to resolve the concurrency strategy.</param>
-public class ConcurrencyScopeStrategies(ConcurrencyOptions options, IServiceProvider serviceProvider) : IConcurrencyScopeStrategies
+/// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> for explicit append scope diagnostics.</param>
+public class ConcurrencyScopeStrategies(ConcurrencyOptions options, IServiceProvider serviceProvider, ILoggerFactory? loggerFactory) : IConcurrencyScopeStrategies
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConcurrencyScopeStrategies"/> class without append diagnostics.
+    /// </summary>
+    /// <param name="options">The concurrency configuration.</param>
+    /// <param name="serviceProvider">The provider used to resolve strategies.</param>
+    public ConcurrencyScopeStrategies(ConcurrencyOptions options, IServiceProvider serviceProvider)
+        : this(options, serviceProvider, null)
+    {
+    }
+
+    /// <inheritdoc/>
+    public ConcurrencyOptions Options => options;
+
+    /// <summary>
+    /// Gets the logger for explicit append scope diagnostics.
+    /// </summary>
+    /// <remarks>
+    /// The logger comes from the client's <see cref="ILoggerFactory"/>, never from the service provider: the client's
+    /// default service provider activates unregistered types and cannot create an interface such as <see cref="ILogger{T}"/>.
+    /// </remarks>
+    internal ILogger<EventSequence> Logger { get; } = loggerFactory?.CreateLogger<EventSequence>() ?? NullLogger<EventSequence>.Instance;
+
     /// <inheritdoc/>
     public IConcurrencyScopeStrategy GetFor(IEventSequence eventSequence) =>
         (CreateStrategy(eventSequence) as IConcurrencyScopeStrategy)!;

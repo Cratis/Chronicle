@@ -14,6 +14,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Sinks;
 using Cratis.Chronicle.Testing.Events;
+using Cratis.Chronicle.Transactions;
 using Cratis.Json;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
@@ -81,6 +82,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     /// </remarks>
     public async Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
+        ReadProtectionGuard.Read(nameof(GetInstanceById));
         var instance = await GetInstanceById(typeof(TReadModel), key, sessionId);
         return instance is null ? default! : (TReadModel)instance;
     }
@@ -91,6 +93,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     /// </remarks>
     public async Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
+        ReadProtectionGuard.Read(nameof(GetInstanceById));
         var identifier = readModelType.GetReadModelIdentifier();
         if (_instances.TryGetValue((identifier, key.Value), out var instance)) return instance;
         if (!_foldReads) return null!;
@@ -104,6 +107,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     /// <inheritdoc/>
     public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null)
     {
+        ReadProtectionGuard.Read(nameof(GetInstances));
         if (!_foldReads) return await inner.GetInstances<TReadModel>(eventCount);
 
         var instances = await Rebuild(typeof(TReadModel), _eventLog!, _store!, eventCount);
@@ -113,6 +117,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     /// <inheritdoc/>
     public ISubject<IEnumerable<TReadModel>> Observe<TReadModel>(Expression<Func<TReadModel, bool>>? filter = null)
     {
+        ReadProtectionGuard.Read(nameof(Observe));
         var log = _eventLog ?? throw new ReadModelCannotBeObserved(typeof(TReadModel), "An event log is not available in this test scenario");
         var metadata = StoreForObservation(typeof(TReadModel));
         var predicate = filter?.Compile();
@@ -133,16 +138,25 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey) =>
-        inner.GetSnapshotsById<TReadModel>(readModelKey);
+    public Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
+    {
+        ReadProtectionGuard.Read(nameof(GetSnapshotsById));
+        return inner.GetSnapshotsById<TReadModel>(readModelKey);
+    }
 
     /// <inheritdoc/>
-    public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>() =>
-        inner.Watch<TReadModel>();
+    public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
+    {
+        ReadProtectionGuard.Read(nameof(Watch));
+        return inner.Watch<TReadModel>();
+    }
 
     /// <inheritdoc/>
-    public IReadModelWatcher<TReadModel> GetWatcherFor<TReadModel>() =>
-        inner.GetWatcherFor<TReadModel>();
+    public IReadModelWatcher<TReadModel> GetWatcherFor<TReadModel>()
+    {
+        ReadProtectionGuard.Read(nameof(GetWatcherFor));
+        return inner.GetWatcherFor<TReadModel>();
+    }
 
     /// <inheritdoc/>
     public Task DehydrateSession(ReadModelSessionId sessionId, Type readModelType, ReadModelKey readModelKey) =>

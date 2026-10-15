@@ -328,7 +328,8 @@ internal sealed class EventSequences(
             Content = source.Content,
             OriginalContent = source.OriginalContent,
             Revisions = source.Revisions.Select(element0 => element0.ToContract()).ToList(),
-            GenerationalContent = source.GenerationalContent
+            GenerationalContent = source.GenerationalContent,
+            RevisedGeneration = source.RevisedGeneration
         };
 
     static global::Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse ToClosedStreamResponse(global::Cratis.Chronicle.Sequences.ClosedStream source) =>

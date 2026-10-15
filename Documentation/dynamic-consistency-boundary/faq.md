@@ -55,7 +55,7 @@ About four calls per attempt, a fold of the key's whole history of the model's e
 
 ## Why was my decision read refused?
 
-The model has a shape Chronicle cannot guard exactly: a reducer or self-reducing model, a join, children, a key that is not the event source ID, or no `Id` property. It throws `DecisionReadRefused` with a typed reason. Use a flat projection keyed by event source, with an `Id` property that is a string or a GUID. See [admitted projections](../read-models/decision-reads.mdx#admitted-projections).
+The model has a shape Chronicle cannot guard exactly: a reducer with filters or constructor dependencies, a join, children, a key that is not the event source ID, or no `Id` property. It throws `DecisionReadRefused` with a typed reason. Use a flat projection keyed by event source, with an `Id` property that is a string or a GUID, or a reducer without filters or dependencies. See [admitted projections](../read-models/decision-reads.mdx#admitted-projections) and [reducers](../read-models/decision-reads.mdx#reducers).
 
 ## Why did my conflict not reach the HTTP response?
 

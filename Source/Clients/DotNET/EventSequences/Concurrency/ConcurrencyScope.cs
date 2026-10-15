@@ -56,4 +56,24 @@ public record ConcurrencyScope(
     /// on - with it on, an empty narrowing gives <see cref="ExpectsNoMatchingEvent"/>, which the kernel checks.
     /// </remarks>
     public bool IsIncomplete => this != NotSet && this != None && !SequenceNumber.IsActualValue && !SequenceNumber.IsBeforeFirst;
+
+    /// <summary>
+    /// Gets a value indicating whether a strategy supplied this scope, preserving its first-append policy.
+    /// </summary>
+    internal bool IssuedByStrategy { get; init; }
+
+    /// <summary>
+    /// Gets the definition linked by the builder, outside value equality.
+    /// </summary>
+    internal Type? DefinitionType { get; init; }
+
+    /// <inheritdoc/>
+    public virtual bool Equals(ConcurrencyScope? other) =>
+        other is not null && EqualityContract == other.EqualityContract &&
+        SequenceNumber == other.SequenceNumber && EventSourceId?.Value == other.EventSourceId?.Value &&
+        EventStreamType == other.EventStreamType && EventStreamId == other.EventStreamId &&
+        EventSourceType == other.EventSourceType && EqualityComparer<IEnumerable<EventType>?>.Default.Equals(EventTypes, other.EventTypes);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => HashCode.Combine(EqualityContract, SequenceNumber, EventSourceId?.Value, EventStreamType, EventStreamId, EventSourceType, EventTypes);
 }

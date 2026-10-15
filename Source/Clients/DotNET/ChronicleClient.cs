@@ -334,7 +334,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             new InstancesOf<ICanProvideSecurityMetadataForType>(types, _serviceProvider),
             new InstancesOf<ICanProvideSecurityMetadataForProperty>(types, _serviceProvider));
         var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, securityMetadataResolver, _namingPolicy);
-        var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, _serviceProvider);
+        var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, _serviceProvider, _loggerFactory);
         var artifactActivator = new ClientArtifactsActivator(_serviceProvider, _loggerFactory);
 
         InitializeJsonSerializationOptions();

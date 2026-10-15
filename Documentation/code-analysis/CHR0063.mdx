@@ -1,0 +1,25 @@
+---
+title: "CHR0063: Scope stream does not match append"
+description: "CHR0063 reports a definition-linked scope guarding a different stream than a single-route append."
+---
+
+## Rule description
+
+A scope built with `ConcurrencyScopeBuilder.ForEventSource<T>("Onboarding")` is passed to a single-route append through the same definition to another stream, such as `T.Transactions`.
+
+The rule checks the routed single, batch and prepared append APIs, including typed extensions. It recognizes inline builder chains and unmodified local scopes with constant stream names. Unknown streams and mutable builder variables are left to runtime validation. Labelled batches and ordinary prepared appends without a definition route are independent and are not reported.
+
+## Severity
+
+Warning
+
+## How to fix
+
+Align the scope with the history the decision depends on. If intentionally guarding another stream while writing this one, use a labelled independent condition on `AppendMany`.
+
+There is no automatic code fix: changing which history is guarded is a decision about correctness. The runtime throws `ConcurrencyScopeStreamDoesNotMatchAppend` for a linked mismatch before an append RPC. `ConcurrencyOptions.AllowRouteScopeStreamMismatch` restores legacy acceptance; it does not suppress this diagnostic or make the decision safe.
+
+## Related topics
+
+- [Concurrency per event source and stream](../event-sources/concurrency.mdx)
+- [Concurrency scopes](../events/concurrency.mdx)
