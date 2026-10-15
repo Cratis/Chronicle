@@ -47,6 +47,7 @@ public partial class ConstraintIndexReplay
     {
         if (!_poison.Add((name, position))) return;
         _settledWithError++;
+        if (CatchUp is { Refusing: true } barrier) barrier.UnderRefusal = true;
         _unique.Clear();
         _closed.Clear();
         _differences.Clear();

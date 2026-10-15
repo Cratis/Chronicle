@@ -52,6 +52,11 @@ public partial class EventSequence
         {
             State.ConstraintIndexCatchUpBelow ??= State.SequenceNumber;
         }
+
+        // Registration during this catch-up retains ordinary coverage from registration; it
+        // must not acquire a new historical scope when a refresh replaces the replay.
+        _catchUpDefinitionNames.Clear();
+        _catchUpDefinitionNames.UnionWith(_indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Select(definition => definition.Name));
         var staleMarker = State.ConstraintIndexCatchUpBelow is null && State.ConstraintIndexCatchUpRefusing is not null;
         if (staleMarker) State.ConstraintIndexCatchUpRefusing = null;
         _catchUpExcludedThrough = State.ConstraintIndexCatchUpBelow;

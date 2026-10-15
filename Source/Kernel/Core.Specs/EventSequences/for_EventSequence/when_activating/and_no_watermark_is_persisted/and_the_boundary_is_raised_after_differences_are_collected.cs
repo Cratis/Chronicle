@@ -11,6 +11,7 @@ public class and_the_boundary_is_raised_after_differences_are_collected : given.
     bool _expire = true;
     EventSequenceNumber? _raisedBoundary;
     int _initialWrites;
+    bool _persistedBeforeLiveRemoval;
 
     async Task Establish()
     {
@@ -28,6 +29,11 @@ public class and_the_boundary_is_raised_after_differences_are_collected : given.
         await Tick();
         _initialWrites = _claimWrites;
         _eventSequence.ConstraintIndexCatchUpKeyLimit = 1;
+        _snapshots.BeforeWrite = () =>
+        {
+            _persistedBeforeLiveRemoval |= !_unique.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Remove" && call.GetArguments()[0] is EventSourceId source && source.Value == "third");
+            return Task.CompletedTask;
+        };
     }
 
     async Task Because()
@@ -35,12 +41,13 @@ public class and_the_boundary_is_raised_after_differences_are_collected : given.
         _eventSourceId = "third";
         _eventType = new("Removed", EventTypeGeneration.First);
         await AppendAnEvent();
-        _raisedBoundary = _snapshots.Written!.ConstraintIndexCatchUpBelow;
         await Tick();
+        _raisedBoundary = _snapshots.Snapshots.Last(snapshot => snapshot.ConstraintIndexCatchUpBelow is not null).ConstraintIndexCatchUpBelow;
     }
 
     [Fact] void should_have_yielded_with_unwritten_collected_differences() => _initialWrites.ShouldEqual(1);
-    [Fact] void should_persist_the_new_boundary() => _raisedBoundary.ShouldEqual((EventSequenceNumber)4);
+    [Fact] void should_not_delay_live_updates_for_the_boundary_snapshot() => _persistedBeforeLiveRemoval.ShouldBeFalse();
+    [Fact] void should_persist_the_new_boundary_before_resuming_catch_up() => _raisedBoundary.ShouldEqual((EventSequenceNumber)4);
     [Fact] async Task should_not_write_the_old_collected_claim() => (await Values("third")).ShouldBeEmpty();
     [Fact] async Task should_still_repair_other_unwritten_keys() => (await Values("second")).ShouldContainOnly(Hash("b"));
     [Fact] void should_not_rewrite_already_correct_keys() => _claimWrites.ShouldEqual(2);

@@ -20,6 +20,7 @@ public partial class ConstraintIndexReplay
     {
         if (boundary <= _endPoint) return;
         _endPoint = boundary;
+        if (CatchUp is { Refusing: true } barrier) barrier.UnderRefusal = true;
         _differences.Clear();
         _catchUpGroups = null;
         _catchUpGroupIndex = 0;
@@ -38,6 +39,7 @@ public partial class ConstraintIndexReplay
         if (_remainingCatchUpSegments is { } remaining)
         {
             _segment = remaining.TryDequeue(out var next) ? next : _segments;
+            if (_segment == _segments) _remainingCatchUpSegments = null;
         }
         else
         {
@@ -63,6 +65,11 @@ public partial class ConstraintIndexReplay
             await ClaimDifferences(budget);
             if (Interrupted() || budget.IsCancellationRequested) return false;
             if (_differences.Exists(difference => CanWrite(difference) && (!difference.Released || !difference.Claimed))) return false;
+            if (_segment >= _segments && (!_needsRetryPass || _retryPass))
+            {
+                await barrier.Allow(CancellationToken.None);
+                barrier.UnderRefusal = false;
+            }
         }
         else if (!await WriteCatchUpGroups(budget))
         {
@@ -87,15 +94,24 @@ public partial class ConstraintIndexReplay
             if (group.Release is { } release && !release.Released && CanWrite(release))
             {
                 release.Released = await Write(release, release.Release!, CancellationToken.None);
-                if (!release.Released) return false;
+                if (!release.Released)
+                {
+                    barrier.UnderRefusal = true;
+                    return false;
+                }
             }
             if (group.Claim is { } claim && !claim.Claimed && CanWrite(claim))
             {
                 claim.Claimed = await Write(claim, claim.Claim!, CancellationToken.None);
-                if (!claim.Claimed) return false;
+                if (!claim.Claimed)
+                {
+                    barrier.UnderRefusal = true;
+                    return false;
+                }
             }
             _catchUpGroupIndex++;
         }
+        if (_catchUpGroups.Exists(group => group.Release?.Released == true && group.Claim is { Claimed: false })) return false;
         await barrier.Allow(CancellationToken.None);
         return _catchUpGroupIndex == _catchUpGroups.Count;
     }

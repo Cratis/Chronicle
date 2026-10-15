@@ -24,6 +24,11 @@ internal sealed class ConstraintIndexCatchUpWriting(
     internal bool UnderRefusal { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a durable refusal has not yet been cleared.
+    /// </summary>
+    internal bool Refusing { get; set; }
+
+    /// <summary>
     /// Tests whether a difference has been superseded live.
     /// </summary>
     /// <param name="difference">The staged key.</param>
@@ -43,12 +48,20 @@ internal sealed class ConstraintIndexCatchUpWriting(
     /// <param name="names">The constraints to refuse.</param>
     /// <param name="token">The deadline.</param>
     /// <returns>The persistence task.</returns>
-    internal Task Refuse(IEnumerable<ConstraintName> names, CancellationToken token) => refuse(names, token);
+    internal async Task Refuse(IEnumerable<ConstraintName> names, CancellationToken token)
+    {
+        Refusing = true;
+        await refuse(names, token);
+    }
 
     /// <summary>
     /// Clears the marker after every group started by the turn is complete.
     /// </summary>
     /// <param name="token">The deadline.</param>
     /// <returns>The persistence task.</returns>
-    internal Task Allow(CancellationToken token) => allow(token);
+    internal async Task Allow(CancellationToken token)
+    {
+        await allow(token);
+        Refusing = false;
+    }
 }

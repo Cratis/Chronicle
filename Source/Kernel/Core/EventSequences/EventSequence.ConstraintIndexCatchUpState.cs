@@ -10,6 +10,31 @@ public partial class EventSequence
 {
     Task? _catchUpSnapshotWrite;
 
+    /// <inheritdoc/>
+    protected override Task WriteStateAsync()
+    {
+        var previous = _catchUpSnapshotWrite;
+        return _catchUpSnapshotWrite = WriteSnapshotAfter(previous);
+    }
+
+    async Task WriteSnapshotAfter(Task? previous)
+    {
+        if (previous is not null)
+        {
+            try
+            {
+                await previous;
+            }
+            catch (Exception error)
+            {
+                // The original caller observes its failure too. A newer snapshot may supersede it,
+                // but must never overtake an abandoned write that could still land afterwards.
+                logger.ConstraintIndexRepairSnapshotNotPersisted(_eventSequenceKey, State.ConstraintIndexWatermark!, error);
+            }
+        }
+        await base.WriteStateAsync();
+    }
+
     async Task PersistCatchUpState(CancellationToken token)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(250), ConstraintIndexTimeProvider);

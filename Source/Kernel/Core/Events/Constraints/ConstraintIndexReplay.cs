@@ -153,6 +153,7 @@ public partial class ConstraintIndexReplay(
                         // Re-read instead of retaining an unbounded list of refused claims from flushed segments.
                         // All releases have now completed; already-written final keys produce no difference.
                         _retryPass = true;
+                        _remainingCatchUpSegments = null;
                         _segment = 0;
                         BeginSegment();
                     }

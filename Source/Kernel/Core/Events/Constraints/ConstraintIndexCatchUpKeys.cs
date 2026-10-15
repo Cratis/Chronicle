@@ -68,6 +68,18 @@ internal sealed class ConstraintIndexCatchUpKeys
         }
     }
 
+    /// <summary>
+    /// Conservatively excludes every value of a live source whose content cannot be released.
+    /// </summary>
+    /// <param name="definition">The unique declaration.</param>
+    /// <param name="context">The still-readable stored dimensions.</param>
+    internal void IncludeSource(UniqueConstraintDefinition definition, EventContext context)
+    {
+        if (!definition.SupportsEventType(context.EventType.Id) && !definition.RemovedWith.Contains(context.EventType.Id)) return;
+        var scope = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
+        Add(definition, scope, context.EventSourceId, null);
+    }
+
     static Fingerprint Hash(ConstraintName name, string scope, EventSourceId source, UniqueConstraintValue? value)
     {
         // Length-prefix each component: domain strings may themselves contain separators.

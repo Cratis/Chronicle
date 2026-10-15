@@ -31,6 +31,7 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
     protected virtual EventSequenceNumber? Watermark => EventSequenceNumber.First;
     protected virtual EventSequenceNumber InitialNext => EventSequenceNumber.First;
     protected virtual bool Closing => false;
+    protected virtual bool IncludeUniqueWithClosing => false;
     protected virtual UniqueConstraintMode UniqueMode => UniqueConstraintMode.PerEventSource;
 
     protected override async Task<EventSequence> CreateEventSequence()
@@ -81,6 +82,11 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
             : new ConstraintValidation([new UniqueConstraintValidator(_uniqueDefinition, unique), new UniqueConstraintValidator(otherDefinition, unique)]);
         _registeredConstraints.Add(Closing ? _closingDefinition : _uniqueDefinition);
         if (!Closing) _registeredConstraints.Add(otherDefinition);
+        if (IncludeUniqueWithClosing)
+        {
+            _registeredConstraints.Add(_uniqueDefinition);
+            _currentValidation = new ConstraintValidation([new UniqueConstraintValidator(_uniqueDefinition, unique), new ClosesStreamConstraintValidator(_closingDefinition, closed), new ClosedStreamConstraintValidator(closed, [_closingDefinition.Dimensions], [_closingDefinition])]);
+        }
         _eventSequenceStorage.GetFromSequenceNumber(Arg.Any<EventSequenceNumber>(), Arg.Any<EventSourceId?>(), Arg.Any<EventSourceType?>(), Arg.Any<EventStreamType?>(), Arg.Any<EventStreamId?>(), Arg.Any<IEnumerable<EventType>?>(), Arg.Any<IEnumerable<Tag>?>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {

@@ -25,7 +25,6 @@ public class SnapshottingSequenceStorage(Func<EventSequenceState, Task> save) : 
 
     public async Task WriteStateAsync()
     {
-        await BeforeWrite();
         var snapshot = new EventSequenceState
         {
             SequenceNumber = State.SequenceNumber,
@@ -34,6 +33,7 @@ public class SnapshottingSequenceStorage(Func<EventSequenceState, Task> save) : 
             ConstraintIndexCatchUpRefusing = State.ConstraintIndexCatchUpRefusing?.ToArray(),
             TailSequenceNumberPerEventType = new Dictionary<Concepts.Events.EventTypeId, Concepts.Events.EventSequenceNumber>(State.TailSequenceNumberPerEventType)
         };
+        await BeforeWrite();
         await save(snapshot);
         Written = snapshot;
         Snapshots.Add(snapshot);

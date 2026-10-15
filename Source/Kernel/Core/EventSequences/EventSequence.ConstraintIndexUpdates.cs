@@ -13,7 +13,7 @@ public partial class EventSequence
         using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(2), ConstraintIndexTimeProvider);
         foreach (var (context, number) in contexts)
         {
-            await ExcludeLiveConstraintKeys(context, number);
+            ExcludeLiveConstraintKeys(context, number);
             var updates = context.IndexUpdates.ToArray();
             if (number > _constraintIndexPosition) MarkConstraintIndexGap(_constraintIndexPosition);
             foreach (var (validator, updater) in updates.Where(update => !_pendingConstraintIndexes.ContainsKey(update.Validator.Definition.Name)))

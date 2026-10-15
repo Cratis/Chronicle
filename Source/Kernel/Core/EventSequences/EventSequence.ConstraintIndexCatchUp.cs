@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.EventSequences;
 public partial class EventSequence
 {
     readonly ConstraintIndexCatchUpKeys _catchUpExcluded = new();
+    readonly HashSet<ConstraintName> _catchUpDefinitionNames = [];
     EventSequenceNumber? _catchUpExcludedThrough;
     ConstraintIndexReplay? _catchUpReplay;
     bool _catchUpBoundaryDirty;
@@ -26,30 +27,28 @@ public partial class EventSequence
     /// </summary>
     internal int ConstraintIndexCatchUpExcludedKeyCount => _catchUpExcluded.Count;
 
-    async Task ExcludeLiveConstraintKeys(ConstraintValidationContext context, EventSequenceNumber number)
+    void ExcludeLiveConstraintKeys(ConstraintValidationContext context, EventSequenceNumber number)
     {
         if (!_catchUpTracking || State.ConstraintIndexCatchUpBelow is not { } boundary || number < boundary) return;
-        foreach (var definition in _indexedDefinitions.Values.OfType<UniqueConstraintDefinition>())
+        foreach (var definition in CatchUpDefinitions())
         {
             _catchUpExcluded.Include(definition, context);
             if (_catchUpExcluded.Count < ConstraintIndexCatchUpKeyLimit) continue;
-            await RaiseConstraintCatchUpBoundary();
+            RaiseConstraintCatchUpBoundary();
             return;
         }
     }
 
-    async Task RaiseConstraintCatchUpBoundary()
+    void RaiseConstraintCatchUpBoundary()
     {
         State.ConstraintIndexCatchUpBelow = State.SequenceNumber;
         _catchUpBoundaryDirty = true;
 
-        // No await separates invalidation from the new in-memory boundary: a failed snapshot
-        // cannot leave differences computed at the old boundary eligible for writing.
+        // Invalidate synchronously on the live path. The next timer turn persists this boundary
+        // before any catch-up write; a restart at the old persisted boundary rebuilds exclusions.
         _catchUpReplay?.RaiseCatchUpBoundary(State.SequenceNumber);
         _catchUpExcluded.Clear();
         _catchUpExcludedThrough = State.SequenceNumber;
-        await PersistCatchUpState(CancellationToken.None);
-        _catchUpBoundaryDirty = false;
     }
 
     async Task RunConstraintIndexCatchUpTurn(CancellationToken cancellationToken)
@@ -67,7 +66,7 @@ public partial class EventSequence
                 _catchUpBoundaryDirty = false;
             }
             var count = await RebuildCatchUpExclusions(budget.Token);
-            if (_catchUpExcludedThrough! < State.SequenceNumber || count >= 1000) return;
+            if (_catchUpBoundaryDirty || _catchUpExcludedThrough! < State.SequenceNumber || count >= 1000) return;
             _catchUpReplay ??= CreateCatchUpReplay();
             var result = await _catchUpReplay.Continue(1000 - count, budget.Token);
             if (CatchUpTurnFailed(result)) return;
@@ -94,7 +93,7 @@ public partial class EventSequence
     {
         _catchUpExcludedThrough ??= State.ConstraintIndexCatchUpBelow;
         if (_catchUpExcludedThrough! >= State.SequenceNumber) return 0;
-        var definitions = _indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().ToArray();
+        var definitions = CatchUpDefinitions().ToArray();
         var types = definitions.SelectMany(definition => definition.EventDefinitions.Select(item => item.EventTypeId).Concat(definition.RemovedWith)).Distinct().Select(id => new EventType(id, EventTypeGeneration.First)).ToArray();
         if (types.Length == 0)
         {
@@ -111,15 +110,26 @@ public partial class EventSequence
                 cancellationToken.ThrowIfCancellationRequested();
                 if (@event.Context.SequenceNumber >= State.SequenceNumber) break;
                 if (count >= 1000) return count;
-                var plaintext = await content.Release(@event, cancellationToken);
-                var context = new ConstraintValidationContext([], @event.Context.EventSourceId, @event.Context.EventType.Id, plaintext, @event.Context.EventSourceType, @event.Context.EventStreamType, @event.Context.EventStreamId);
+                ConstraintValidationContext? context = null;
+                try
+                {
+                    var plaintext = await content.Release(@event, cancellationToken);
+                    context = new([], @event.Context.EventSourceId, @event.Context.EventType.Id, plaintext, @event.Context.EventSourceType, @event.Context.EventStreamType, @event.Context.EventStreamId);
+                }
+                catch (Exception error) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // The source and stream dimensions remain readable even when its values do not.
+                    // Excluding the whole source is conservative and lets unrelated history catch up.
+                    logger.ConstraintIndexRepairFailed(_eventSequenceKey, State.ConstraintIndexWatermark!, State.SequenceNumber, error);
+                }
                 _catchUpExcludedThrough = @event.Context.SequenceNumber.Next();
                 count++;
                 foreach (var definition in definitions)
                 {
-                    _catchUpExcluded.Include(definition, context);
+                    if (context is null) _catchUpExcluded.IncludeSource(definition, @event.Context);
+                    else _catchUpExcluded.Include(definition, context);
                     if (_catchUpExcluded.Count < ConstraintIndexCatchUpKeyLimit) continue;
-                    await RaiseConstraintCatchUpBoundary();
+                    RaiseConstraintCatchUpBoundary();
                     return count;
                 }
             }
@@ -138,7 +148,7 @@ public partial class EventSequence
             ClosedStreamsStorage,
             CatchUpContent(),
             constraintIndexReplayLogger ?? NullLogger<ConstraintIndexReplay>.Instance,
-            _indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Select(definition => new ConstraintIndexReplayScope(definition, EventSequenceNumber.First)),
+            CatchUpDefinitions().Select(definition => new ConstraintIndexReplayScope(definition, EventSequenceNumber.First)),
             State.ConstraintIndexCatchUpBelow!)
         {
             ConstraintIndexTimeProvider = ConstraintIndexTimeProvider,
@@ -150,10 +160,13 @@ public partial class EventSequence
                 PersistCatchUpRefusal,
                 ClearCatchUpRefusal)
             {
-                UnderRefusal = State.ConstraintIndexCatchUpRefusing?.Any() == true
+                UnderRefusal = State.ConstraintIndexCatchUpRefusing?.Any() == true,
+                Refusing = State.ConstraintIndexCatchUpRefusing?.Any() == true
             }
         };
     }
+
+    IEnumerable<UniqueConstraintDefinition> CatchUpDefinitions() => _indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Where(definition => _catchUpDefinitionNames.Contains(definition.Name));
 
     StoredConstraintEventContent CatchUpContent() => new(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventTypesStorage, jsonComplianceManagerProvider, expandoObjectConverter);
 }
