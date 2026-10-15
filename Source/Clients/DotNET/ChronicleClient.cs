@@ -239,6 +239,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         foreach (var eventStore in CreatedEventStores())
         {
             eventStore.ReadModelReactors.Dispose();
+            if (eventStore.Occurrences is IDisposable occurrences) occurrences.Dispose();
         }
 
         try

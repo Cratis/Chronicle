@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Commands;
@@ -13,8 +14,37 @@ namespace Cratis.Chronicle.Occurrences;
 /// Provides durable receipts in the event store's namespace.
 /// </summary>
 /// <param name="eventStore">The namespace-bound event store.</param>
-public class Occurrences(IEventStore eventStore) : IOccurrences, IOccurrencesForUnitOfWork
+public partial class Occurrences(IEventStore eventStore) : IOccurrences, IOccurrencesForUnitOfWork
 {
+    TriggerRegistry? _triggers;
+    JsonSerializerOptions _jsonOptions = JsonSerializerOptions.Default;
+
+    /// <inheritdoc/>
+    public async Task<OccurrenceRecordResult> Record(object trigger, string idempotencyId)
+    {
+        OccurrenceSupport.Require(eventStore.Connection);
+        if (string.IsNullOrWhiteSpace(idempotencyId)) throw new TriggerNotValid("An occurrence idempotency identity must not be empty.");
+        var registration = _triggers?.Get(trigger.GetType()) ?? throw new TriggerNotValid("Trigger discovery has not been configured for this occurrence service.");
+        var result = await ((IChronicleServicesAccessor)eventStore.Connection).Services.Occurrences.RecordOccurrence(new()
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            Trigger = registration.Id,
+            IdempotencyId = idempotencyId,
+            Payload = JsonSerializer.Serialize(trigger, trigger.GetType(), _jsonOptions),
+            Kind = Contracts.Storage.Occurrences.OccurrenceKind.Application
+        }).EnsureSuccess();
+        var status = result.Status switch
+        {
+            Contracts.Occurrences.OccurrenceIngressStatus.Recorded => OccurrenceRecordStatus.Recorded,
+            Contracts.Occurrences.OccurrenceIngressStatus.AlreadyRecorded => OccurrenceRecordStatus.AlreadyRecorded,
+            Contracts.Occurrences.OccurrenceIngressStatus.OccurrenceIdConflict => OccurrenceRecordStatus.OccurrenceIdConflict,
+            Contracts.Occurrences.OccurrenceIngressStatus.OccurrencePayloadInvalid => OccurrenceRecordStatus.OccurrencePayloadInvalid,
+            _ => throw new TriggerNotValid("The kernel returned an unknown occurrence ingress status.")
+        };
+        return new(result.Id, status);
+    }
+
     /// <inheritdoc/>
     public async Task<EffectReceipt?> GetEffectReceipt(EffectKey key)
     {

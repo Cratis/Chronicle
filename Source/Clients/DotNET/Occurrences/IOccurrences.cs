@@ -11,6 +11,16 @@ namespace Cratis.Chronicle.Occurrences;
 public interface IOccurrences
 {
     /// <summary>
+    /// Records an application trigger in this namespace. This is an in-process API, not a public trigger endpoint.
+    /// </summary>
+    /// <param name="trigger">The discovered typed plaintext payload, without personal data.</param>
+    /// <param name="idempotencyId">A stable identity for this ingress, reused on retries.</param>
+    /// <returns>The durable ingress outcome, including identity conflicts and invalid payloads.</returns>
+    /// <exception cref="OccurrencesNotSupported">Occurrence support is absent or unknown.</exception>
+    /// <exception cref="TriggerNotValid">The trigger has not been discovered.</exception>
+    Task<OccurrenceRecordResult> Record(object trigger, string idempotencyId);
+
+    /// <summary>
     /// Looks up the first durable outcome without executing the effect again.
     /// </summary>
     /// <param name="key">The effect key.</param>

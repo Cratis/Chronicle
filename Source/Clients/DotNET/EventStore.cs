@@ -212,7 +212,9 @@ public partial class EventStore : IEventStore
             GenerationDelivery = options.Value.EventGenerationDelivery
         };
         Reactors = reactors;
-        Occurrences = new Occurrences.Occurrences(this);
+        var occurrences = new Occurrences.Occurrences(this);
+        occurrences.Configure(clientArtifactsProvider, schemaGenerator, jsonSerializerOptions, serviceProvider, artifactActivator, causationManager, identityProvider, loggerFactory.CreateLogger<Occurrences.Occurrences>());
+        Occurrences = occurrences;
 
         var reducerObservers = new ReducerObservers();
 
@@ -736,7 +738,8 @@ public partial class EventStore : IEventStore
             Constraints.Register(),
             Reactors.Register(),
             Reducers.Register(),
-            Projections.Register());
+            Projections.Register(),
+            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Register() : Task.CompletedTask);
 
         // Auto-subscribe to any external event stores referenced by observers
         await RegisterExternalEventStoreSubscriptionsAsync();

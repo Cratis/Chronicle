@@ -36,6 +36,7 @@ public partial class EventStore
     {
         Connection.Lifecycle.OnConnected -= RegisterAll;
         Connection.Lifecycle.OnDisconnected -= MarkRegistrationAfterDisconnect;
+        if (Occurrences is IDisposable disposable) disposable.Dispose();
     }
 
     void PublishLocalPreparationFailure(Exception failure)
@@ -66,7 +67,8 @@ public partial class EventStore
             Reactors.Discover(),
             Reducers.Discover(),
             Projections.Discover(),
-            Seeding.Discover());
+            Seeding.Discover(),
+            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Discover() : Task.CompletedTask);
         var report = BuildDiscoveryReport();
         if (report is not null)
         {

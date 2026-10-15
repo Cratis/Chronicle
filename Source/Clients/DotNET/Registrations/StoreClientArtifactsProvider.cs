@@ -72,6 +72,12 @@ internal sealed class StoreClientArtifactsProvider(IClientArtifactsProvider nati
     /// <inheritdoc/>
     public IEnumerable<Type> EventSources => Current.EventSources;
 
+    /// <inheritdoc/>
+    public IEnumerable<Type> Triggers => Current.Triggers;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> OccurrenceHandlers => Current.OccurrenceHandlers;
+
     /// <summary>
     /// Gets the currently captured immutable catalog, or the untouched native manual provider.
     /// </summary>
