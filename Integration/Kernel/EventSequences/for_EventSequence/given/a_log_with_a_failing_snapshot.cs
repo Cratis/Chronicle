@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Setup;
 using Orleans.Storage;
@@ -16,6 +17,7 @@ public class a_log_with_a_failing_snapshot(PatternCaptureFixture fixture) : Spec
 {
     protected IEventStore _store;
     protected FailingEventSequenceStateStorage _snapshotStorage;
+    protected PatternCaptureFixture.SignalingObserverStorage _observerStorage;
     protected KernelEventSequenceKey _key;
 
     public override bool AutoDiscoverArtifacts => false;
@@ -32,6 +34,8 @@ public class a_log_with_a_failing_snapshot(PatternCaptureFixture fixture) : Spec
             services.PostConfigure<Configuration.ChronicleOptions>(options => configuration.Bind(options));
             services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.EventSequences, (provider, _) =>
                 new FailingEventSequenceStateStorage(ActivatorUtilities.CreateInstance<EventSequencesStorageProvider>(provider)));
+            services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.ObserverState, (provider, _) =>
+                ActivatorUtilities.CreateInstance<PatternCaptureFixture.SignalingObserverStorage>(provider));
         });
     };
 
@@ -42,7 +46,12 @@ public class a_log_with_a_failing_snapshot(PatternCaptureFixture fixture) : Spec
         await _store.RegisterAll();
         (await _store.WaitForRegistration(TimeSpan.FromSeconds(30))).IsSuccess.ShouldBeTrue();
         _key = new(KernelEventSequenceId.Log, _store.Name.Value, _store.Namespace.Value);
+
+        // This fixture disables kernel startup. Identity-drift reads can implicitly provision the store before
+        // EnsureEventStore, which only registers kernel projections for a new store. Bootstrap them explicitly.
+        await Services.GetRequiredService<IKernelProjections>().DiscoverAndRegister(_key.EventStore);
         _snapshotStorage = (FailingEventSequenceStateStorage)Services.GetRequiredKeyedService<IGrainStorage>(WellKnownGrainStorageProviders.EventSequences);
         _snapshotStorage.Target = _key;
+        _observerStorage = (PatternCaptureFixture.SignalingObserverStorage)Services.GetRequiredKeyedService<IGrainStorage>(WellKnownGrainStorageProviders.ObserverState);
     }
 }

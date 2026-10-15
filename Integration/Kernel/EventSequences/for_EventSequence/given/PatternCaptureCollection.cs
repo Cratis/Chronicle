@@ -3,7 +3,10 @@
 
 namespace Cratis.Chronicle.Kernel.Integration.EventSequences.for_EventSequence.given;
 
-[CollectionDefinition(Name)]
+/// <summary>
+/// Serializes the dedicated host with other collections that share the process-wide client artifacts provider.
+/// </summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
 public class PatternCaptureCollection : ICollectionFixture<PatternCaptureFixture>
 {
     public const string Name = "Pattern capture append subscription";
