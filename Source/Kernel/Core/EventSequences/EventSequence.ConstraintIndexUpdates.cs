@@ -10,7 +10,7 @@ public partial class EventSequence
 {
     async Task UpdateConstraintIndexes(IEnumerable<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)> contexts)
     {
-        using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(2), ConstraintIndexTimeProvider);
         foreach (var (context, number) in contexts)
         {
             var updates = context.IndexUpdates.ToArray();
@@ -49,13 +49,14 @@ public partial class EventSequence
                     return ConstraintIndexUpdateOutcome.NotAttempted;
                 }
             }
-            (outcome, var error) = await ConstraintIndexUpdateAttempt.Run(token => updater.Update(number, token), cancellationToken);
+            (outcome, var error) = await ConstraintIndexUpdateAttempt.Run(token => updater.Update(number, token), cancellationToken, ConstraintIndexTimeProvider);
             if (error is not null)
             {
                 logger.ConstraintIndexUpdateOutcome(_eventSequenceKey, name, number, State.ConstraintIndexWatermark!, State.SequenceNumber, outcome, error);
                 if (outcome is ConstraintIndexUpdateOutcome.Failed or ConstraintIndexUpdateOutcome.Abandoned or ConstraintIndexUpdateOutcome.NotAttempted) _metrics?.ConstraintIndexUpdateFailed();
             }
-            if (outcome == ConstraintIndexUpdateOutcome.Abandoned || (outcome == ConstraintIndexUpdateOutcome.NotAttempted && error is not null)) _abandonedConstraintIndexes.Add(name);
+            if (outcome == ConstraintIndexUpdateOutcome.SettledWithError) _metrics?.ConstraintIndexSettledWithError();
+            if (outcome == ConstraintIndexUpdateOutcome.Abandoned) _abandonedConstraintIndexes.Add(name);
             if (outcome is not (ConstraintIndexUpdateOutcome.Failed or ConstraintIndexUpdateOutcome.Abandoned)) break;
         }
 

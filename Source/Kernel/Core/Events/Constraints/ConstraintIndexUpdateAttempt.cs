@@ -15,11 +15,13 @@ internal static class ConstraintIndexUpdateAttempt
     /// </summary>
     /// <param name="update">The storage write.</param>
     /// <param name="cancellationToken">The enclosing deadline.</param>
+    /// <param name="timeProvider">The clock for the individual attempt.</param>
     /// <returns>The outcome and its optional error.</returns>
-    internal static async Task<(ConstraintIndexUpdateOutcome Outcome, Exception? Error)> Run(Func<CancellationToken, Task> update, CancellationToken cancellationToken)
+    internal static async Task<(ConstraintIndexUpdateOutcome Outcome, Exception? Error)> Run(Func<CancellationToken, Task> update, CancellationToken cancellationToken, TimeProvider? timeProvider = null)
     {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(TimeSpan.FromSeconds(1));
+        if (cancellationToken.IsCancellationRequested) return (ConstraintIndexUpdateOutcome.NotAttempted, null);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(1), timeProvider ?? TimeProvider.System);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
         try
         {
             deadline.Token.ThrowIfCancellationRequested();
@@ -28,7 +30,7 @@ internal static class ConstraintIndexUpdateAttempt
         }
         catch (Exception error) when (cancellationToken.IsCancellationRequested)
         {
-            return (ConstraintIndexUpdateOutcome.NotAttempted, error);
+            return (ConstraintIndexUpdateOutcome.Failed, error);
         }
         catch (Exception error) when (deadline.IsCancellationRequested)
         {

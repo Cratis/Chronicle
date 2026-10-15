@@ -209,6 +209,7 @@ public class an_event_sequence : Specification
             }
         }));
         _silo.AddService(NullLogger<EventSequence>.Instance);
+        _silo.AddService(NullLogger<ConstraintIndexReplay>.Instance);
         _silo.AddKeyedService<IMeter<EventSequence>>(WellKnown.MeterName, Substitute.For<IMeter<EventSequence>>());
         _silo.AddKeyedService<IActivitySource<EventSequence>>(WellKnown.MeterName, new ActivitySource<EventSequence>());
         _silo.AddProbe(_ => _namespaces);

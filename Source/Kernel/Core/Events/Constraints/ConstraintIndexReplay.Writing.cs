@@ -32,7 +32,7 @@ public partial class ConstraintIndexReplay
                 difference.Claimed = await Write(difference, difference.Claim, cancellationToken);
                 continue;
             }
-            var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(difference.Claim, cancellationToken);
+            var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(difference.Claim, cancellationToken, ConstraintIndexTimeProvider);
             if (MustRetry(difference, outcome))
             {
                 if (_segment < _segments)
@@ -68,12 +68,13 @@ public partial class ConstraintIndexReplay
 
     async Task<bool> Write(ConstraintIndexReplayDifference difference, Func<CancellationToken, Task> write, CancellationToken cancellationToken)
     {
-        var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(write, cancellationToken);
+        var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(write, cancellationToken, ConstraintIndexTimeProvider);
         return Record(difference, outcome, error, cancellationToken);
     }
 
     bool Record(ConstraintIndexReplayDifference difference, ConstraintIndexUpdateOutcome outcome, Exception? error, CancellationToken cancellationToken)
     {
+        if (outcome is ConstraintIndexUpdateOutcome.Failed or ConstraintIndexUpdateOutcome.NotAttempted) cancellationToken.ThrowIfCancellationRequested();
         switch (outcome)
         {
             case ConstraintIndexUpdateOutcome.Applied:

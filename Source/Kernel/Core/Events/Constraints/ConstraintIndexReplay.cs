@@ -59,6 +59,11 @@ public partial class ConstraintIndexReplay(
     internal int SegmentCount => _segments;
 
     /// <summary>
+    /// Gets or sets the clock used for bounded storage attempts.
+    /// </summary>
+    internal TimeProvider ConstraintIndexTimeProvider { get; set; } = TimeProvider.System;
+
+    /// <summary>
     /// Gets the highest combined count of staged keys and collected differences.
     /// </summary>
     internal int MaxKeysHeld => _maxKeysHeld;

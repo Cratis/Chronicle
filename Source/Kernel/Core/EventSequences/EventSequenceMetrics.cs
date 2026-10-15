@@ -28,6 +28,9 @@ internal static partial class EventSequenceMetrics
     [Counter<int>("chronicle-event-sequences-constraint-index-update-failures", "Number of failed constraint index attempts")]
     internal static partial void ConstraintIndexUpdateFailed(this IMeterScope<EventSequence> scope);
 
+    [Counter<int>("chronicle-event-sequences-constraint-index-settled-errors", "Number of constraint index events settled with a deterministic error")]
+    internal static partial void ConstraintIndexSettledWithError(this IMeterScope<EventSequence> scope);
+
     [Counter<int>("chronicle-event-sequences-constraint-index-repairs", "Number of completed constraint index repairs")]
     internal static partial void ConstraintIndexRepaired(this IMeterScope<EventSequence> scope);
 

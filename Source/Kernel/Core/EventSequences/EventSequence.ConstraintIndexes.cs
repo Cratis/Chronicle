@@ -13,6 +13,8 @@ public partial class EventSequence
     readonly Dictionary<ConstraintName, EventSequenceNumber> _pendingConstraintIndexes = [];
     readonly Dictionary<ConstraintName, EventSequenceNumber> _closingCoverageStarts = [];
     readonly HashSet<ConstraintName> _abandonedConstraintIndexes = [];
+    readonly HashSet<ConstraintName> _replayAbandonedIndexes = [];
+    int _replaySettledErrors;
     EventSequenceNumber _constraintIndexPosition = EventSequenceNumber.First;
     ConstraintIndexReplay? _constraintIndexReplay;
     ConstraintIndexReplayScope[] _replayScopes = [];
@@ -38,7 +40,7 @@ public partial class EventSequence
         _constraintRepairFailures = 0;
 
         // Legacy initialization is isolated here; historical catch-up can attach at this boundary.
-        State.ConstraintIndexWatermark ??= State.SequenceNumber;
+        State.ConstraintIndexWatermark = State.ConstraintIndexWatermark is { } watermark && watermark < State.SequenceNumber ? watermark : State.SequenceNumber;
         _constraintIndexPosition = State.SequenceNumber;
         SynchronizeIndexedDefinitions(State.ConstraintIndexWatermark);
         if (State.ConstraintIndexWatermark < State.SequenceNumber)
@@ -54,11 +56,12 @@ public partial class EventSequence
         {
             _constraintIndexReplay = null;
         }
-        foreach (var name in _indexedDefinitions.Keys.Except(definitions.Keys).ToArray())
+        foreach (var name in _indexedDefinitions.Keys.Concat(_pendingConstraintIndexes.Keys).Except(definitions.Keys).ToArray())
         {
             _indexedDefinitions.Remove(name);
             _pendingConstraintIndexes.Remove(name);
             _closingCoverageStarts.Remove(name);
+            _abandonedConstraintIndexes.Remove(name);
         }
         foreach (var (name, definition) in definitions)
         {
@@ -90,10 +93,10 @@ public partial class EventSequence
 
     void UpdateConstraintIndexWatermark()
     {
-        State.ConstraintIndexWatermark = _pendingConstraintIndexes.Count == 0
-            ? State.SequenceNumber
-            : _pendingConstraintIndexes.Values.Min();
-        _metrics?.ConstraintIndexLag(State.SequenceNumber.Value - State.ConstraintIndexWatermark!.Value);
+        State.ConstraintIndexWatermark = _pendingConstraintIndexes.Values.Aggregate(
+            _constraintIndexPosition < State.SequenceNumber ? _constraintIndexPosition : State.SequenceNumber,
+            (position, pending) => pending < position ? pending : position);
+        _metrics?.ConstraintIndexLag(State.SequenceNumber.Value - State.ConstraintIndexWatermark.Value);
     }
 
     bool IsGovernedByPendingIndex(EventTypeId type) => _pendingConstraintIndexes.Keys.Any(name =>
@@ -107,6 +110,7 @@ public partial class EventSequence
     async Task PrepareConstraintIndexes(IEnumerable<EventTypeId> types)
     {
         SynchronizeIndexedDefinitions();
+        if (_constraintIndexPosition < State.SequenceNumber) MarkConstraintIndexGap(_constraintIndexPosition);
         if (types.Any(IsGovernedByPendingIndex)) await RepairConstraintIndexesBeforeAppend();
     }
 }

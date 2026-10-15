@@ -57,6 +57,11 @@ public partial class EventSequence
 
             await RefreshConstraintsIfChanged();
             await PrepareConstraintIndexes([eventType.Id]);
+            if (IsGovernedByPendingIndex(eventType.Id))
+            {
+                _metrics?.ConstraintIndexRefused();
+                return AppendResult.Failed(correlationId, [AppendError.ConstraintIndexUnavailable]);
+            }
             var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventSource, eventSourceType, eventStreamType, correlationId);
             if (resolvedEventSourceType.TryGetError(out var eventSourceError))
             {

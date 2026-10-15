@@ -11,6 +11,7 @@ public class and_the_range_read_ignores_cancellation : given.an_event_sequence_w
     readonly TaskCompletionSource<IEventCursor> _read = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly given.TriggeredRepairDeadline _deadline = new();
     Exception? _error;
+    AppendResult _otherResult;
 
     async Task Establish()
     {
@@ -24,9 +25,15 @@ public class and_the_range_read_ignores_cancellation : given.an_event_sequence_w
                 return _read.Task;
             });
     }
-    async Task Because() => _error = await Catch.Exception(async () => _result = await AppendAnEvent().WaitAsync(TimeSpan.FromSeconds(1), TimeProvider.System));
+    async Task Because()
+    {
+        _error = await Catch.Exception(async () => _result = await AppendAnEvent().WaitAsync(TimeSpan.FromSeconds(1), TimeProvider.System));
+        _eventType = new("OtherEvent", EventTypeGeneration.First);
+        _otherResult = await AppendAnEvent();
+    }
     void Destroy() => _read.TrySetCanceled();
 
     [Fact] void should_stop_waiting_at_the_repair_deadline() => _error.ShouldBeNull();
     [Fact] void should_refuse_instead_of_writing_on_unknown_state() => _result.Errors.ShouldContain(AppendError.ConstraintIndexUnavailable);
+    [Fact] void should_not_mark_the_healthy_constraint_pending_after_a_hard_timeout() => _otherResult.IsSuccess.ShouldBeTrue();
 }

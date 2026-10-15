@@ -23,5 +23,5 @@ public class and_a_cancelled_write_throws_a_provider_error : given.a_constraint_
 
     void Destroy() => _budget.Dispose();
 
-    [Fact] void should_classify_the_budget_expiry_as_not_attempted() => _results.Single(result => result.Updater == _firstValidatorIndexUpdater).Outcome.ShouldEqual(ConstraintIndexUpdateOutcome.NotAttempted);
+    [Fact] void should_classify_the_interrupted_attempt_as_failed() => _results.Single(result => result.Updater == _firstValidatorIndexUpdater).Outcome.ShouldEqual(ConstraintIndexUpdateOutcome.Failed);
 }

@@ -19,5 +19,5 @@ public class and_the_repair_succeeds : given.an_event_sequence_with_repairable_i
     [Fact] void should_refuse_the_duplicate_after_restoring_the_claim() => _result.ConstraintViolations.ShouldNotBeEmpty();
     [Fact] void should_store_only_the_original_event() => _log.Events.Count.ShouldEqual(1);
     [Fact] void should_read_the_pending_range_once() => _rangeReads.ShouldEqual(1);
-    [Fact] void should_advance_the_watermark_after_repair() => _stateStorage.State.ConstraintIndexWatermark.ShouldEqual((EventSequenceNumber)1);
+    [Fact] async Task should_advance_the_watermark_after_repair() => (await _log.GetState()).ConstraintIndexWatermark.ShouldEqual((EventSequenceNumber)1);
 }

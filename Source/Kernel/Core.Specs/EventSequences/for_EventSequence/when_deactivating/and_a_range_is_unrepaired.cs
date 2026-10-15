@@ -15,6 +15,6 @@ public class and_a_range_is_unrepaired : given.an_event_sequence_with_repairable
     }
     Task Because() => _eventSequence.OnDeactivateAsync(new DeactivationReason(DeactivationReasonCode.None, string.Empty), CancellationToken.None);
 
-    [Fact] void should_leave_the_watermark_before_the_failed_event() => _stateStorage.State.ConstraintIndexWatermark.ShouldEqual((EventSequenceNumber)1);
-    [Fact] void should_keep_the_durable_tail() => _stateStorage.State.SequenceNumber.ShouldEqual((EventSequenceNumber)2);
+    [Fact] async Task should_leave_the_watermark_before_the_failed_event() => (await _log.GetState()).ConstraintIndexWatermark.ShouldEqual((EventSequenceNumber)1);
+    [Fact] void should_keep_the_durable_tail() => _snapshots.Written!.SequenceNumber.ShouldEqual((EventSequenceNumber)2);
 }

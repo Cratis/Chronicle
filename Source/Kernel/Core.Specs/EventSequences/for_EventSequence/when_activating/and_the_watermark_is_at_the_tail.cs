@@ -13,5 +13,5 @@ public class and_the_watermark_is_at_the_tail : given.an_event_sequence_with_rep
 
     [Fact] void should_append_without_replay() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_not_read_history() => _rangeReads.ShouldEqual(0);
-    [Fact] void should_advance_the_watermark() => _stateStorage.State.ConstraintIndexWatermark.ShouldEqual((EventSequenceNumber)3);
+    [Fact] async Task should_advance_the_watermark() => (await _log.GetState()).ConstraintIndexWatermark.ShouldEqual((EventSequenceNumber)3);
 }

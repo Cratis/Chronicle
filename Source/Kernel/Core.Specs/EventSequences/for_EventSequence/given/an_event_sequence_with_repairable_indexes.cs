@@ -19,6 +19,10 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
     protected Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage _closures;
     protected UniqueConstraintDefinition _uniqueDefinition;
     protected ClosesStreamConstraintDefinition _closingDefinition;
+    protected SnapshottingSequenceStorage _snapshots;
+    protected IUniqueConstraintsStorage _unique;
+    protected IClosedStreamsConstraintStorage _closed;
+    protected UniqueConstraintDefinition _otherDefinition;
     protected bool _failWrites;
     protected bool _failReads;
     protected int _rangeReads;
@@ -30,6 +34,11 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
 
     protected override async Task<EventSequence> CreateEventSequence()
     {
+        _silo = new();
+        ConfigureSilo();
+        _snapshots = new(state => _log.SaveState(state));
+        _silo.Options.StorageFactory = _ => _snapshots;
+        _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequence).FullName!);
         _stateStorage.State.ConstraintIndexWatermark = Watermark;
         _stateStorage.State.SequenceNumber = InitialNext;
         _claims = new();
@@ -37,7 +46,7 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
         _log = new(EventStore, EventStoreNamespace, SequenceId, _identityStorage);
         _uniqueDefinition = new("unique", [new(_eventType.Id, ["email"])], ["Removed"]);
         _closingDefinition = new("closing", [_eventType.Id], ClosedStreamDimensions.EventSourceId, ["Reopened"]);
-        var unique = Substitute.For<IUniqueConstraintsStorage>();
+        var unique = _unique = Substitute.For<IUniqueConstraintsStorage>();
         unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
@@ -50,7 +59,9 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
             .Returns(call => _claims.IsAllowed(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<UniqueConstraintValue>(2), call.ArgAt<string>(3), call.ArgAt<CancellationToken>(4)));
         unique.Remove(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(call => _claims.Remove(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<string>(2), call.ArgAt<CancellationToken>(3)));
-        var closed = Substitute.For<IClosedStreamsConstraintStorage>();
+        var closed = _closed = Substitute.For<IClosedStreamsConstraintStorage>();
+        closed.Reopen(Arg.Any<ClosedStreamOwner>(), Arg.Any<ClosedStreamScope>(), Arg.Any<CancellationToken>())
+            .Returns(call => _failWrites ? Task.FromException(new SimulatedStateWriteError()) : _closures.Reopen(call.ArgAt<ClosedStreamOwner>(0), call.ArgAt<ClosedStreamScope>(1), call.ArgAt<CancellationToken>(2)));
         closed.Close(Arg.Any<ClosedStream>(), Arg.Any<CancellationToken>())
             .Returns(call => _failWrites ? Task.FromException(new SimulatedStateWriteError()) : _closures.Close(call.ArgAt<ClosedStream>(0), call.ArgAt<CancellationToken>(1)));
         closed.GetFor(Arg.Any<ClosedStreamOwner>(), Arg.Any<ClosedStreamScope>(), Arg.Any<CancellationToken>())
@@ -59,7 +70,7 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
             .Returns(call => _closures.GetCovering(call.ArgAt<ClosedStreamScope>(0), call.ArgAt<IEnumerable<ClosedStreamDimensions>>(1)));
         _namespaceStorage.GetUniqueConstraintsStorage(SequenceId).Returns(unique);
         _namespaceStorage.GetClosedStreamsConstraints(SequenceId).Returns(closed);
-        var otherDefinition = new UniqueConstraintDefinition("other", [new("OtherEvent", ["email"])]);
+        var otherDefinition = _otherDefinition = new UniqueConstraintDefinition("other", [new("OtherEvent", ["email"])]);
         _currentValidation = Closing
             ? new ConstraintValidation([new ClosesStreamConstraintValidator(_closingDefinition, closed), new ClosedStreamConstraintValidator(closed, [_closingDefinition.Dimensions], [_closingDefinition])])
             : new ConstraintValidation([new UniqueConstraintValidator(_uniqueDefinition, unique), new UniqueConstraintValidator(otherDefinition, unique)]);
@@ -79,23 +90,24 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
         return await base.CreateEventSequence();
     }
 
-    protected static ExpandoObject Content()
+    protected static ExpandoObject Content(string email = "claimed@example.com")
     {
         dynamic content = new ExpandoObject();
-        content.email = "claimed@example.com";
+        content.email = email;
         return content;
     }
 
     protected async Task Reactivate()
     {
         await _eventSequence.OnDeactivateAsync(new DeactivationReason(DeactivationReasonCode.None, string.Empty), CancellationToken.None);
-        await _log.SaveState(_stateStorage.State);
         _silo = new();
         ConfigureSilo();
+        _snapshots = new(_log.SaveState);
+        _silo.Options.StorageFactory = _ => _snapshots;
         _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequence).FullName!);
         _stateStorage.State = await _log.GetState();
         _eventSequence = await _silo.CreateGrainAsync<EventSequence>(_eventSequenceKey.ToString());
     }
 
-    protected async Task Seed(EventSequenceNumber number) => await _log.Append(number, EventSourceType.Default, _eventSourceId, EventStreamType.All, EventStreamId.Default, _eventType, CorrelationId.NotSet, [], [], [], DateTimeOffset.UtcNow, new Dictionary<EventTypeGeneration, ExpandoObject> { [EventTypeGeneration.First] = Content() }, new Dictionary<EventTypeGeneration, EventHash>());
+    protected async Task Seed(EventSequenceNumber number, EventSourceId? source = null, EventType? type = null, string email = "claimed@example.com") => await _log.Append(number, EventSourceType.Default, source ?? _eventSourceId, EventStreamType.All, EventStreamId.Default, type ?? _eventType, CorrelationId.NotSet, [], [], [], DateTimeOffset.UtcNow, new Dictionary<EventTypeGeneration, ExpandoObject> { [EventTypeGeneration.First] = Content(email) }, new Dictionary<EventTypeGeneration, EventHash>());
 }

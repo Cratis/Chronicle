@@ -60,6 +60,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the <see cref="ConcurrencyValidator"/> created per append.</param>
+/// <param name="constraintIndexReplayLogger">The constraint replay logger.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 [EventSequencePlacement]
 public partial class EventSequence(
@@ -75,7 +76,8 @@ public partial class EventSequence(
     IEventHashCalculator eventHashCalculator,
     IOptions<ChronicleOptions> options,
     ILogger<EventSequence> logger,
-    ILogger<ConcurrencyValidator> concurrencyValidatorLogger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
+    ILogger<ConcurrencyValidator> concurrencyValidatorLogger,
+    ILogger<ConstraintIndexReplay>? constraintIndexReplayLogger = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
     readonly HashSet<EventTypeId> _unspecifiedVisibilityWarned = [];
     IEventSequenceStorage? _eventSequenceStorage;
@@ -354,6 +356,11 @@ public partial class EventSequence(
             await RefreshConstraintsIfChanged();
             events = events as IList<EventToAppend> ?? events.ToList();
             await PrepareConstraintIndexes(events.Select(@event => @event.EventType.Id));
+            if (events.Any(@event => IsGovernedByPendingIndex(@event.EventType.Id)))
+            {
+                _metrics?.ConstraintIndexRefused();
+                return new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.ConstraintIndexUnavailable] };
+            }
 
             // Validate sequentially with a shared set of batch claims so that two events in the same batch
             // cannot both claim the same unique constraint value — the persisted index is only updated after
@@ -702,6 +709,7 @@ public partial class EventSequence(
         appendedEventsList ??= [];
         if (appendedEventsList.Count != eventsToAppend.Count)
         {
+            MarkConstraintIndexGap(_constraintIndexPosition);
             throw new InvalidAppendAcknowledgment(eventsToAppend.Count, appendedEventsList.Count);
         }
 
@@ -1036,6 +1044,7 @@ public partial class EventSequence(
         EventStreamId eventStreamId,
         CorrelationId correlationId)
     {
+        if (_constraintIndexPosition < State.SequenceNumber) MarkConstraintIndexGap(_constraintIndexPosition);
         _metrics?.FailedAppending(eventSourceId, eventType.Id);
         logger.ErrorAppending(
             _eventSequenceKey.EventStore,
