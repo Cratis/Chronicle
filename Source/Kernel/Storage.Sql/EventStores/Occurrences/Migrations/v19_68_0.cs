@@ -11,8 +11,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Occurrences.Migrations;
 /// Adds event-store trigger payload contracts after occurrence infrastructure.
 /// </summary>
 [DbContext(typeof(EventStoreDbContext))]
-[Migration("ES-Occurrences-v19_67_1")]
-public class v19_67_1 : Migration
+[Migration("ES-Occurrences-v19_68_0")]
+public class v19_68_0 : Migration
 {
     /// <inheritdoc/>
     protected override void Up(MigrationBuilder migrationBuilder) => migrationBuilder.CreateTable(
