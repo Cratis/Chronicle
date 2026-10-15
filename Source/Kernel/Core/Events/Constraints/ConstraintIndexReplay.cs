@@ -40,6 +40,8 @@ public partial class ConstraintIndexReplay(
     readonly HashSet<ConstraintName> _abandoned = [];
     readonly HashSet<(ConstraintName Name, EventSequenceNumber Position)> _poison = [];
     readonly Dictionary<ConstraintName, EventSequenceNumber> _lastSettledError = [];
+    EventSequenceNumber _endPoint = endPoint;
+    Queue<int>? _remainingCatchUpSegments;
     ConstraintName? _operationConstraint;
     EventSequenceNumber? _operationPosition;
     EventSequenceNumber? _position;
@@ -53,6 +55,11 @@ public partial class ConstraintIndexReplay(
     bool _needsRetryPass;
     bool _retryPass;
     bool _overflow;
+
+    /// <summary>
+    /// Gets or sets the optional historical catch-up write barrier.
+    /// </summary>
+    internal ConstraintIndexCatchUpWriting? CatchUp { get; init; }
 
     /// <summary>
     /// Gets the number of key-hash segments used by this fold.
@@ -113,13 +120,18 @@ public partial class ConstraintIndexReplay(
                 if (_phase == Phase.Collecting)
                 {
                     await CollectDifferences(cancellationToken);
-                    _segment++;
+                    AdvanceSegment();
                     if (_segment < _segments && _differences.Count < Math.Max(1, keyLimit / 2))
                     {
                         BeginSegment();
                         continue;
                     }
                     _phase = Phase.Releasing;
+                }
+                if (_phase == Phase.Releasing && CatchUp is not null)
+                {
+                    if (!await WriteCatchUp(cancellationToken)) break;
+                    _phase = Phase.Claiming;
                 }
                 if (_phase == Phase.Releasing)
                 {
@@ -129,7 +141,7 @@ public partial class ConstraintIndexReplay(
                 }
                 if (_phase == Phase.Claiming)
                 {
-                    await ClaimDifferences(cancellationToken);
+                    if (CatchUp is null) await ClaimDifferences(cancellationToken);
                     if (Interrupted()) break;
                     _differences.Clear();
                     if (_segment < _segments)
@@ -190,6 +202,7 @@ public partial class ConstraintIndexReplay(
     void Split()
     {
         _segments = checked(_segments * 2);
+        _remainingCatchUpSegments = null;
         _overflow = false;
         _segment = 0;
         _unique.Clear();

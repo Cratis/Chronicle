@@ -48,7 +48,7 @@ public partial class ConstraintIndexReplay
                 Func<CancellationToken, Task>? claim = state.Value is { } value
                     ? token => unique.Save(key.Source, state.Definition, state.Position, value, key.Scope, token)
                     : null;
-                _differences.Add(new(key.Name, state.Position, release, claim, key.Scope, state.Value, current));
+                _differences.Add(new(key.Name, state.Position, release, claim, key.Scope, state.Value, current, key.Source, key.Retained));
             }
             _uniqueCollectKeys[_uniqueCollectIndex++] = null;
             TrackKeys();

@@ -183,7 +183,7 @@ public class an_event_sequence : Specification
 
         ConfigureSilo();
         _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequence).FullName!);
-        _stateStorage.State = new EventSequenceState();
+        _stateStorage.State = new EventSequenceState { ConstraintIndexWatermark = EventSequenceNumber.First };
 
         _eventSequence = await CreateEventSequence();
     }

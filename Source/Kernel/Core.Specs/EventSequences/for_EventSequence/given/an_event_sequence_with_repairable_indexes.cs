@@ -31,6 +31,7 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
     protected virtual EventSequenceNumber? Watermark => EventSequenceNumber.First;
     protected virtual EventSequenceNumber InitialNext => EventSequenceNumber.First;
     protected virtual bool Closing => false;
+    protected virtual UniqueConstraintMode UniqueMode => UniqueConstraintMode.PerEventSource;
 
     protected override async Task<EventSequence> CreateEventSequence()
     {
@@ -44,7 +45,7 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
         _claims = new();
         _closures = new();
         _log = new(EventStore, EventStoreNamespace, SequenceId, _identityStorage);
-        _uniqueDefinition = new("unique", [new(_eventType.Id, ["email"])], ["Removed"]);
+        _uniqueDefinition = new("unique", [new(_eventType.Id, ["email"])], ["Removed"]) { Mode = UniqueMode };
         _closingDefinition = new("closing", [_eventType.Id], ClosedStreamDimensions.EventSourceId, ["Reopened"]);
         var unique = _unique = Substitute.For<IUniqueConstraintsStorage>();
         unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -55,6 +56,10 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
             });
         unique.GetFor(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(call => _claims.GetFor(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<string>(2), call.ArgAt<CancellationToken>(3)));
+        unique.GetForStream(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(call => _claims.GetForStream(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<string>(2), call.ArgAt<CancellationToken>(3)));
+        unique.RemoveValue(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(call => _claims.RemoveValue(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<UniqueConstraintValue>(2), call.ArgAt<string>(3), call.ArgAt<CancellationToken>(4)));
         unique.IsAllowed(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(call => _claims.IsAllowed(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<UniqueConstraintValue>(2), call.ArgAt<string>(3), call.ArgAt<CancellationToken>(4)));
         unique.Remove(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -109,5 +114,5 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
         _eventSequence = await _silo.CreateGrainAsync<EventSequence>(_eventSequenceKey.ToString());
     }
 
-    protected async Task Seed(EventSequenceNumber number, EventSourceId? source = null, EventType? type = null, string email = "claimed@example.com") => await _log.Append(number, EventSourceType.Default, source ?? _eventSourceId, EventStreamType.All, EventStreamId.Default, type ?? _eventType, CorrelationId.NotSet, [], [], [], DateTimeOffset.UtcNow, new Dictionary<EventTypeGeneration, ExpandoObject> { [EventTypeGeneration.First] = Content(email) }, new Dictionary<EventTypeGeneration, EventHash>());
+    protected async Task Seed(EventSequenceNumber number, EventSourceId? source = null, EventType? type = null, string email = "claimed@example.com") => await _log.Append(number, EventSourceType.Default, source ?? _eventSourceId, EventStreamType.All, EventStreamId.Default, type ?? _eventType, CorrelationId.NotSet, [], [], [], DateTimeOffset.UtcNow, new Dictionary<EventTypeGeneration, ExpandoObject> { [(type ?? _eventType).Generation] = Content(email) }, new Dictionary<EventTypeGeneration, EventHash>());
 }

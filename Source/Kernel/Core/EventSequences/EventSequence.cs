@@ -145,7 +145,7 @@ public partial class EventSequence(
 
         await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
-        InitializeConstraintIndexes();
+        await InitializeConstraintIndexes();
 
         if (_eventSequenceId == EventSequenceId.Log)
         {
@@ -171,6 +171,10 @@ public partial class EventSequence(
     {
         _constraintIndexRepairTimer?.Dispose();
         _constraintIndexRepairTimer = null;
+        ConstraintIndexCatchUpSlots.For(storage).Complete(this);
+        _catchUpTracking = false;
+        _catchUpReplay = null;
+        _catchUpExcluded.Clear();
         if (_appendsSinceStateWrite > 0)
         {
             await WriteStateAsync();

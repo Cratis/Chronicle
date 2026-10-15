@@ -7,8 +7,17 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_after
 
 public class and_another_constraint_governs_the_append : given.an_event_sequence_with_repairable_indexes
 {
+    readonly given.RepairClock _clock = new();
+
     async Task Establish()
     {
+        _eventSequence.ConstraintIndexTimeProvider = _clock;
+
+        // Advance retry backoffs only; host scheduling must not manufacture a pending no-op updater.
+        _clock.TimerCreated = due =>
+        {
+            if (due.TotalMilliseconds is 100 or 400) _clock.Advance(due);
+        };
         _failWrites = true;
         await AppendAnEvent();
         _eventType = new("OtherEvent", EventTypeGeneration.First);

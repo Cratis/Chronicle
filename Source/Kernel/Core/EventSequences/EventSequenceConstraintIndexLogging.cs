@@ -14,6 +14,9 @@ internal static partial class EventSequenceConstraintIndexLogging
     [LoggerMessage(Level = LogLevel.Error, Message = "Constraint {Constraint} on {Sequence} had index outcome {Outcome} at {Position}, watermark {Watermark}, exclusive tail {Tail}")]
     internal static partial void ConstraintIndexUpdateOutcome(this ILogger<EventSequence> logger, EventSequenceKey sequence, ConstraintName constraint, EventSequenceNumber position, EventSequenceNumber watermark, EventSequenceNumber tail, ConstraintIndexUpdateOutcome outcome, Exception exception);
 
+    [LoggerMessage(Level = LogLevel.Error, Message = "Constraint {Constraint} on {Sequence} has an unconfirmed catch-up write below {Boundary}, watermark {Watermark}, exclusive tail {Tail}")]
+    internal static partial void ConstraintIndexCatchUpAbandoned(this ILogger<EventSequence> logger, EventSequenceKey sequence, ConstraintName constraint, EventSequenceNumber boundary, EventSequenceNumber watermark, EventSequenceNumber tail);
+
     [LoggerMessage(Level = LogLevel.Error, Message = "Constraint {Constraint} on {Sequence} settled poison event {Position} after five identical non-transient failures; reindex after fixing the cause")]
     internal static partial void ConstraintIndexPoisonEvent(this ILogger<EventSequence> logger, EventSequenceKey sequence, ConstraintName constraint, EventSequenceNumber position, Exception exception);
 

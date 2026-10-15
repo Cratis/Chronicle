@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Storage.EventSequences;
+
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 
 /// <summary>
@@ -11,6 +14,10 @@ public class an_event_sequence_that_cannot_persist_state : appending_many_events
 {
     protected override int StatePersistenceInterval => 1;
 
-    protected override async Task<EventSequence> CreateEventSequence() =>
-        await _silo.CreateGrainAsync<EventSequenceThatCannotPersistState>(_eventSequenceKey.ToString());
+    protected override async Task<EventSequence> CreateEventSequence()
+    {
+        _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequenceThatCannotPersistState).FullName!);
+        _stateStorage.State.ConstraintIndexWatermark = EventSequenceNumber.First;
+        return await _silo.CreateGrainAsync<EventSequenceThatCannotPersistState>(_eventSequenceKey.ToString());
+    }
 }

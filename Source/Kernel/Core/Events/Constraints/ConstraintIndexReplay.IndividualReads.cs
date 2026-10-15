@@ -34,7 +34,7 @@ public partial class ConstraintIndexReplay
             _operationPosition = null;
             var position = await events.GetNextSequenceNumberGreaterOrEqualThan(_position!, types).WaitAsync(cancellationToken);
             StorageCallSucceeded = true;
-            if (position == EventSequenceNumber.Unavailable || position >= endPoint) return (true, count);
+            if (position == EventSequenceNumber.Unavailable || position >= _endPoint) return (true, count);
             _operationPosition = position;
             if (_scopes.Any(scope => position >= scope.From && !IsPoison(scope.Definition.Name, position)))
             {

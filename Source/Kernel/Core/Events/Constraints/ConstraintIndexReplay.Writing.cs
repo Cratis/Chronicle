@@ -59,7 +59,8 @@ public partial class ConstraintIndexReplay
         }
     }
 
-    bool CanWrite(ConstraintIndexReplayDifference difference) => !IsPoison(difference.Name, difference.Position) && !_failed.ContainsKey(difference.Name) && !_abandoned.Contains(difference.Name);
+    bool CanWrite(ConstraintIndexReplayDifference difference) => !IsPoison(difference.Name, difference.Position) && !_failed.ContainsKey(difference.Name) && !_abandoned.Contains(difference.Name) &&
+        (CatchUp is null || (!CatchUp.IsExcluded(difference) && !CatchUp.IsPending(difference.Name)));
 
     bool MustRetry(ConstraintIndexReplayDifference difference, ConstraintIndexUpdateOutcome outcome) =>
         outcome == ConstraintIndexUpdateOutcome.Settled && !_retryPass && (_segment < _segments || _differences.Exists(holder => ChangesHolder(holder, difference)));

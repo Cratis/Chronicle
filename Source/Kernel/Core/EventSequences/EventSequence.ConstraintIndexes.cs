@@ -32,7 +32,7 @@ public partial class EventSequence
     /// </summary>
     internal TimeProvider ConstraintIndexTimeProvider { get; set; } = TimeProvider.System;
 
-    void InitializeConstraintIndexes()
+    async Task InitializeConstraintIndexes()
     {
         _indexedDefinitions.Clear();
         _pendingConstraintIndexes.Clear();
@@ -44,10 +44,19 @@ public partial class EventSequence
         _nextConstraintRepairAttempt = default;
         _constraintRepairFailures = 0;
 
-        // Legacy initialization is isolated here; historical catch-up can attach at this boundary.
+        var upgrading = State.ConstraintIndexWatermark is null;
         State.ConstraintIndexWatermark = State.ConstraintIndexWatermark is { } watermark && watermark < State.SequenceNumber ? watermark : State.SequenceNumber;
         _constraintIndexPosition = State.SequenceNumber;
         SynchronizeIndexedDefinitions(State.ConstraintIndexWatermark);
+        if (upgrading && State.SequenceNumber > EventSequenceNumber.First && _indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Any())
+        {
+            State.ConstraintIndexCatchUpBelow ??= State.SequenceNumber;
+        }
+        var staleMarker = State.ConstraintIndexCatchUpBelow is null && State.ConstraintIndexCatchUpRefusing is not null;
+        if (staleMarker) State.ConstraintIndexCatchUpRefusing = null;
+        _catchUpExcludedThrough = State.ConstraintIndexCatchUpBelow;
+        if (upgrading || staleMarker) await WriteStateAsync();
+        UpdateConstraintIndexRepairTimer();
         if (State.ConstraintIndexWatermark < State.SequenceNumber)
         {
             MarkConstraintIndexGap(State.ConstraintIndexWatermark);
@@ -62,12 +71,17 @@ public partial class EventSequence
             foreach (var name in definitions.Where(pair => _indexedDefinitions.TryGetValue(pair.Key, out var previous) && !pair.Value.Equals(previous)).Select(pair => pair.Key))
             {
                 _constraintIndexPoisonTracker.ForgetSettledBefore(name, State.SequenceNumber);
+                _catchUpPoisonTracker.ForgetSettledBefore(name, State.SequenceNumber);
             }
             _constraintIndexReplay = null;
+            _catchUpReplay = null;
+            _catchUpExcluded.Clear();
+            _catchUpExcludedThrough = State.ConstraintIndexCatchUpBelow;
         }
         foreach (var name in _indexedDefinitions.Keys.Concat(_pendingConstraintIndexes.Keys).Except(definitions.Keys).ToArray())
         {
             _constraintIndexPoisonTracker.ForgetSettledBefore(name, State.SequenceNumber);
+            _catchUpPoisonTracker.ForgetSettledBefore(name, State.SequenceNumber);
             _indexedDefinitions.Remove(name);
             _pendingConstraintIndexes.Remove(name);
             _closingCoverageStarts.Remove(name);
@@ -114,6 +128,7 @@ public partial class EventSequence
     }
 
     bool IsGovernedByPendingIndex(EventTypeId type) => _pendingConstraintIndexes.Keys
+        .Concat(State.ConstraintIndexCatchUpRefusing ?? [])
         .Concat(_constraintIndexPosition < State.SequenceNumber ? _indexedDefinitions.Keys : [])
         .Any(name =>
         _indexedDefinitions.TryGetValue(name, out var definition) && definition switch
@@ -126,6 +141,6 @@ public partial class EventSequence
     async Task PrepareConstraintIndexes(IEnumerable<EventTypeId> types)
     {
         SynchronizeIndexedDefinitions();
-        if (types.Any(IsGovernedByPendingIndex)) await RepairConstraintIndexesBeforeAppend();
+        if ((_pendingConstraintIndexes.Count > 0 || _constraintIndexPosition < State.SequenceNumber) && types.Any(IsGovernedByPendingIndex)) await RepairConstraintIndexesBeforeAppend();
     }
 }

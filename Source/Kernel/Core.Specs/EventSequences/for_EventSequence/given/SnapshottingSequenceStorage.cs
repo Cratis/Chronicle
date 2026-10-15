@@ -11,6 +11,7 @@ public class SnapshottingSequenceStorage(Func<EventSequenceState, Task> save) : 
     public bool RecordExists { get; private set; }
     public EventSequenceState State { get; set; } = new();
     public EventSequenceState? Written { get; private set; }
+    public List<EventSequenceState> Snapshots { get; } = [];
     public Func<Task> BeforeWrite { get; set; } = () => Task.CompletedTask;
 
     public Task ReadStateAsync() => Task.CompletedTask;
@@ -35,6 +36,7 @@ public class SnapshottingSequenceStorage(Func<EventSequenceState, Task> save) : 
         };
         await save(snapshot);
         Written = snapshot;
+        Snapshots.Add(snapshot);
         RecordExists = true;
     }
 }

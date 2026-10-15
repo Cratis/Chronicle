@@ -16,6 +16,11 @@ public partial class ConstraintIndexReplay
     internal bool StorageCallSucceeded { get; private set; }
 
     /// <summary>
+    /// Gets whether a failure occurred while reading or collecting, before writing this segment.
+    /// </summary>
+    internal bool IsFolding => _phase is ConstraintIndexReplayPhase.Reading or ConstraintIndexReplayPhase.Collecting;
+
+    /// <summary>
     /// Gets the constraint whose storage write has not returned yet.
     /// </summary>
     internal ConstraintName? WritingConstraint { get; private set; }
@@ -46,6 +51,9 @@ public partial class ConstraintIndexReplay
         _closed.Clear();
         _differences.Clear();
         _segment = 0;
+        _remainingCatchUpSegments = null;
+        _catchUpGroups = null;
+        _catchUpGroupIndex = 0;
         _needsRetryPass = false;
         _retryPass = false;
         _overflow = false;

@@ -16,12 +16,24 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="scopeKey">The unique scope.</param>
 /// <param name="value">The final claimed value.</param>
 /// <param name="previousValues">The old values this key releases.</param>
-internal sealed class ConstraintIndexReplayDifference(ConstraintName name, EventSequenceNumber position, Func<CancellationToken, Task>? release, Func<CancellationToken, Task>? claim, string scopeKey, UniqueConstraintValue? value, IReadOnlyList<UniqueConstraintValue> previousValues)
+/// <param name="source">The unique key's event source, absent for closures.</param>
+/// <param name="retained">The per-value key, absent for per-source keys.</param>
+internal sealed class ConstraintIndexReplayDifference(ConstraintName name, EventSequenceNumber position, Func<CancellationToken, Task>? release, Func<CancellationToken, Task>? claim, string scopeKey, UniqueConstraintValue? value, IReadOnlyList<UniqueConstraintValue> previousValues, EventSourceId? source = null, UniqueConstraintValue? retained = null)
 {
     /// <summary>
     /// Gets the constraint.
     /// </summary>
     internal ConstraintName Name { get; } = name;
+
+    /// <summary>
+    /// Gets the event source identifying a unique key.
+    /// </summary>
+    internal EventSourceId? Source { get; } = source;
+
+    /// <summary>
+    /// Gets the value identifying a per-value key.
+    /// </summary>
+    internal UniqueConstraintValue? Retained { get; } = retained;
 
     /// <summary>
     /// Gets the deciding event.

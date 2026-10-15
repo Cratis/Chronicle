@@ -14,7 +14,7 @@ public partial class ConstraintIndexReplay
     async Task<(bool Finished, int Count)> ReadSegment(int limit, CancellationToken cancellationToken)
     {
         _position ??= _scopes.Min(scope => scope.From);
-        if (_position! >= endPoint) return (true, 0);
+        if (_position! >= _endPoint) return (true, 0);
         var types = ReplayEventTypes();
         if (types.Length == 0) return (true, 0);
 
@@ -23,7 +23,7 @@ public partial class ConstraintIndexReplay
         if (_readIndividually || (_knownBadReadEnd is { } badEnd && _position! < badEnd)) return await ReadIndividualEvents(types, limit, cancellationToken);
         _operationConstraint = null;
         _operationPosition = null;
-        using var cursor = await events.GetFromSequenceNumber(_position!, eventTypes: types, cancellationToken: cancellationToken);
+        using var cursor = await events.GetFromSequenceNumber(_position!, eventTypes: types, cancellationToken: cancellationToken).WaitAsync(cancellationToken);
         StorageCallSucceeded = true;
         try
         {
@@ -33,7 +33,7 @@ public partial class ConstraintIndexReplay
                 foreach (var @event in cursor.Current)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (@event.Context.SequenceNumber >= endPoint) return (true, count);
+                    if (@event.Context.SequenceNumber >= _endPoint) return (true, count);
                     if (count >= limit) return (false, count);
                     if (!await IncludeEvent(@event, cancellationToken)) return (false, count);
                     _position = @event.Context.SequenceNumber.Next();
@@ -133,11 +133,19 @@ public partial class ConstraintIndexReplay
             }
             else if (definition.Mode == UniqueConstraintMode.PerValue)
             {
-                await foreach (var value in unique.GetForStream(context.EventSourceId, definition, scope, cancellationToken))
+                var retainedValues = unique.GetForStream(context.EventSourceId, definition, scope, cancellationToken).GetAsyncEnumerator(cancellationToken);
+                try
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    SetUnique(definition, context.EventSourceId, scope, value, null, position);
-                    if (!Fits()) return;
+                    while (await retainedValues.MoveNextAsync().AsTask().WaitAsync(cancellationToken))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        SetUnique(definition, context.EventSourceId, scope, retainedValues.Current, null, position);
+                        if (!Fits()) return;
+                    }
+                }
+                finally
+                {
+                    await retainedValues.DisposeAsync().AsTask().WaitAsync(cancellationToken);
                 }
                 foreach (var key in _unique.Keys.Where(key => key.Name == definition.Name && key.Source == context.EventSourceId && key.Scope == scope).ToArray())
                 {
