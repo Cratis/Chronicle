@@ -20,6 +20,7 @@ using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.SequenceQueries;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -98,6 +99,21 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
 
     /// <inheritdoc/>
     public IEventSeedingStorage EventSeeding { get; } = new Seeding.EventSeedingStorage(eventStore, database, jsonSerializerOptions);
+
+    /// <inheritdoc/>
+    public async Task<bool> IsInitialized()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        return await scope.DbContext.EventStoreInitialization.AnyAsync(row => row.Id == 1);
+    }
+
+    /// <inheritdoc/>
+    public async Task MarkInitialized()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        await scope.DbContext.EventStoreInitialization.Upsert(new EventStoreInitialization { Id = 1 });
+        await scope.DbContext.SaveChangesAsync();
+    }
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)

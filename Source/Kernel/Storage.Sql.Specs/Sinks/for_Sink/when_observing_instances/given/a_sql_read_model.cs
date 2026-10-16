@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using System.Dynamic;
+using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
@@ -65,7 +66,7 @@ public abstract class a_sql_read_model : Specification
 
         _database = Substitute.For<IDatabase>();
         _database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
-        _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
+        _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns(_ => Task.FromResult(new DbContextScope<ReadModelDbContext>(CreateContext(), () => { })));
         _sink = new SqlSink(
             "test-event-store",

@@ -144,11 +144,11 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
 
             if (context.Database.IsSqlServer())
             {
-                command.CommandText = $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}'";
+                command.CommandText = $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}'";
             }
             else if (context.Database.IsNpgsql())
             {
-                command.CommandText = $"SELECT COUNT(*) FROM information_schema.columns WHERE table_name = '{tableName}' AND column_name = '{columnName}'";
+                command.CommandText = $"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = '{tableName}' AND column_name = '{columnName}'";
             }
             else
             {
@@ -175,11 +175,11 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
 
             if (context.Database.IsSqlServer())
             {
-                command.CommandText = $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{tableName}'";
+                command.CommandText = $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = '{tableName}'";
             }
             else if (context.Database.IsNpgsql())
             {
-                command.CommandText = $"SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '{tableName}'";
+                command.CommandText = $"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = '{tableName}'";
             }
             else
             {

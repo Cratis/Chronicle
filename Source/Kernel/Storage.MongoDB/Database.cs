@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Configuration;
 using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -21,6 +22,7 @@ public class Database : IDatabase
     readonly IMongoDBClientManager _clientManager;
     readonly IOptions<MongoDBOptions> _mongoDBOptions;
     readonly IOptions<MongoDBStorageOptions> _storageOptions;
+    readonly IMongoDBStorageConnections? _connections;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
@@ -29,13 +31,27 @@ public class Database : IDatabase
     /// <param name="mongoDBOptions"><see cref="Storage"/> configuration.</param>
     /// <param name="customSerializers"><see cref="ICustomSerializers"/> for registering custom serializers.</param>
     /// <param name="storageOptions">Chronicle-specific database naming options.</param>
+    /// <param name="connections">Optional <see cref="IMongoDBStorageConnections"/> that resolves where each database is.</param>
     public Database(
         IMongoDBClientManager clientManager,
         IOptions<MongoDBOptions> mongoDBOptions,
         ICustomSerializers customSerializers,
-        IOptions<MongoDBStorageOptions>? storageOptions = null)
+        IOptions<MongoDBStorageOptions>? storageOptions = null,
+        IMongoDBStorageConnections? connections = null)
     {
         customSerializers.Register();
+
+        _storageOptions = storageOptions ?? Options.Create(new MongoDBStorageOptions());
+        _clientManager = clientManager;
+        _mongoDBOptions = mongoDBOptions;
+        _connections = connections;
+
+        var databaseName = DatabaseNames.WithPrefix(WellKnownDatabaseNames.Chronicle, _storageOptions.Value.DatabaseNamePrefix);
+        if (connections is not null)
+        {
+            _database = connections.GetDatabase(StorageConnectionKind.Cluster, databaseName);
+            return;
+        }
 
         var url = new MongoUrl(mongoDBOptions.Value.Server);
         var settings = MongoClientSettings.FromUrl(url);
@@ -44,10 +60,7 @@ public class Database : IDatabase
             settings.DirectConnection = true;
         }
         var client = clientManager.GetClientFor(settings);
-        _storageOptions = storageOptions ?? Options.Create(new MongoDBStorageOptions());
-        _database = client.GetDatabase(DatabaseNames.WithPrefix(WellKnownDatabaseNames.Chronicle, _storageOptions.Value.DatabaseNamePrefix));
-        _clientManager = clientManager;
-        _mongoDBOptions = mongoDBOptions;
+        _database = client.GetDatabase(databaseName);
     }
 
     /// <inheritdoc/>
@@ -69,7 +82,7 @@ public class Database : IDatabase
             return database;
         }
 
-        return _eventStoreDatabases[eventStore] = new EventStoreDatabase(eventStore, _clientManager, _mongoDBOptions, _storageOptions);
+        return _eventStoreDatabases[eventStore] = new EventStoreDatabase(eventStore, _clientManager, _mongoDBOptions, _storageOptions, _connections);
     }
 
     /// <inheritdoc/>
@@ -81,8 +94,14 @@ public class Database : IDatabase
             return database;
         }
 
-        // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
         var databaseName = DatabaseNames.ForReadModels(eventStore, @namespace, _storageOptions.Value.DatabaseNamePrefix);
+        if (_connections is not null)
+        {
+            database = _connections.GetDatabase(StorageConnectionKind.ReadModels, databaseName, eventStore.Value, @namespace.Value);
+            _readModelDatabases[key] = database;
+            return database;
+        }
+
         var settings = MongoClientSettings.FromUrl(new MongoUrl(_mongoDBOptions.Value.Server));
         if (_mongoDBOptions.Value.DirectConnection == true)
         {

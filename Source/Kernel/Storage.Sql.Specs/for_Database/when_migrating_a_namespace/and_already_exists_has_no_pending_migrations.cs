@@ -4,6 +4,7 @@
 using System.Reflection;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
+using Cratis.Chronicle.Storage.Sql.Connections;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.EntityFrameworkCore;
@@ -41,9 +42,9 @@ public class and_already_exists_has_no_pending_migrations(PostgreSqlFixture fixt
         var migrate = typeof(Database).GetMethod("EnsureMigratedOnce", BindingFlags.Instance | BindingFlags.NonPublic)!;
         _error = await Catch.Exception(async () =>
         {
-            await (Task)migrate.Invoke(Database, ["complete-history-probe", _connection, context])!;
+            await (Task)migrate.Invoke(Database, ["complete-history-probe", new SqlTarget(_connection, string.Empty, null), context])!;
             var reads = _failure.HistoryReads;
-            await (Task)migrate.Invoke(Database, ["complete-history-probe", _connection, context])!;
+            await (Task)migrate.Invoke(Database, ["complete-history-probe", new SqlTarget(_connection, string.Empty, null), context])!;
             _secondMigrationReads = _failure.HistoryReads - reads;
         });
         _pending = (await context.Database.GetPendingMigrationsAsync()).ToArray();

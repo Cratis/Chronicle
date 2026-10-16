@@ -18,7 +18,7 @@ using ProjectionDefinition = Cratis.Chronicle.Contracts.Projections.ProjectionDe
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>Client-side implementation of decision-consistent reads.</summary>
-public sealed class DecisionReads : IDecisionReads
+public sealed partial class DecisionReads : IDecisionReads
 {
     static readonly ConditionalWeakTable<IEventStore, IDecisionReads> _instances = new();
     readonly IEventStore _eventStore;
@@ -27,7 +27,6 @@ public sealed class DecisionReads : IDecisionReads
     readonly JsonSerializerOptions _jsonOptions;
     readonly ConcurrentDictionary<Type, (DecisionReadAdmission Admission, ProjectionDefinition? Definition, EventType[] Types, bool GuidKey)> _admissions = new();
     readonly ConcurrentDictionary<Type, (DecisionReadAdmission Admission, ProjectionDefinition? Definition, EventType[] Types, bool GuidKey)> _streamAdmissions = new();
-    readonly ConcurrentDictionary<(Type Type, bool StreamScoped), Task> _agreements = new();
 
     /// <summary>Creates a decision reader for a concrete event store.</summary>
     /// <param name="eventStore">The target event store.</param>
@@ -40,6 +39,8 @@ public sealed class DecisionReads : IDecisionReads
         _projections = projections;
         _schemas = schemas;
         _jsonOptions = jsonOptions;
+        eventStore.Connection.Lifecycle.OnConnected += ClearAgreements;
+        eventStore.Connection.Lifecycle.OnDisconnected += ClearAgreements;
         projections.Registered += () =>
         {
             _agreements.Clear();
@@ -179,21 +180,9 @@ public sealed class DecisionReads : IDecisionReads
         cancellationToken.ThrowIfCancellationRequested();
         var agreement = _agreements.GetOrAdd(
             (type, streamScoped),
-            static (model, state) => state.Self.CheckAgreement(model.Type, state.Definition, state.Types),
+            static (model, state) => state.Self.CreateAgreement(model, state.Definition, state.Types),
             (Self: this, Definition: definition, Types: types));
-        try
-        {
-            await agreement.WaitAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception) when (exception is not DecisionReadRefused)
-        {
-            ((ICollection<KeyValuePair<(Type, bool), Task>>)_agreements).Remove(new((type, streamScoped), agreement));
-            throw;
-        }
+        await agreement.Value.WaitAsync(cancellationToken);
         var services = ((IChronicleServicesAccessor)_eventStore.Connection).Services;
         var callContext = new CallContext(new CallOptions(cancellationToken: cancellationToken));
         var source = streamScope?.EventSourceId ?? (EventSourceId)key;
@@ -413,35 +402,5 @@ public sealed class DecisionReads : IDecisionReads
         if (target == typeof(Guid) && format != "guid" && format != "uuid") return Refuse(DecisionReadRefusalReason.KeyConversion);
         return (new(true, null), definition,
             types.Select(_ => new EventType(_.Id, _.Generation, _.Tombstone)).ToArray(), target == typeof(Guid));
-    }
-
-    async Task CheckAgreement(Type type, ProjectionDefinition client, EventType[] types)
-    {
-        static string NormalizeKey(string? key) => string.IsNullOrEmpty(key) ? "$eventSourceId" : key;
-        var services = ((IChronicleServicesAccessor)_eventStore.Connection).Services;
-        var context = CallContext.Default;
-        var readModels = await services.ReadModels.GetDefinitions(new() { EventStore = _eventStore.Name }, context);
-        var matches = readModels.ReadModels.Where(_ => _.Type.Identifier == type.GetReadModelIdentifier()).ToArray();
-        var definitions = await services.Projections.GetAllDefinitions(new() { EventStore = _eventStore.Name }, context);
-        var projections = definitions.Where(_ => _.Identifier == client.Identifier).ToArray();
-        if (matches.Length != 1 || matches[0].ObserverIdentifier != client.Identifier ||
-            matches[0].ObserverType != ReadModelObserverType.Projection || projections.Length != 1 ||
-            projections[0].ReadModel != client.ReadModel ||
-            projections[0].EventSequenceId != client.EventSequenceId ||
-            projections[0].GenerationDelivery != client.GenerationDelivery ||
-            projections[0].SubscribesToAllEvents != client.SubscribesToAllEvents ||
-            projections[0].Join.Count != client.Join.Count || projections[0].RemovedWithJoin.Count != client.RemovedWithJoin.Count ||
-            projections[0].Children.Count != client.Children.Count || projections[0].Nested.Count != client.Nested.Count ||
-            projections[0].FromEvery.Count != client.FromEvery.Count ||
-            projections[0].FromEventProperty is not null ||
-            !projections[0].From.Keys.Concat(projections[0].RemovedWith.Keys).Select(_ => _.Id).ToHashSet()
-                .SetEquals(types.Select(_ => _.Id.Value)) ||
-            NormalizeKey(projections[0].All.Key) != NormalizeKey(client.All.Key) ||
-            projections[0].From.Count != client.From.Count || projections[0].RemovedWith.Count != client.RemovedWith.Count ||
-            projections[0].From.Any(_ => client.From.FirstOrDefault(pair => pair.Key.Id == _.Key.Id).Value is not { } from || NormalizeKey(_.Value.Key) != NormalizeKey(from.Key) || NormalizeKey(_.Value.ParentKey) != NormalizeKey(from.ParentKey)) ||
-            projections[0].RemovedWith.Any(_ => client.RemovedWith.FirstOrDefault(pair => pair.Key.Id == _.Key.Id).Value is not { } removed || NormalizeKey(_.Value.Key) != NormalizeKey(removed.Key) || NormalizeKey(_.Value.ParentKey) != NormalizeKey(removed.ParentKey)))
-        {
-            throw new DecisionReadRefused(DecisionReadRefusalReason.DefinitionMismatch, type);
-        }
     }
 }

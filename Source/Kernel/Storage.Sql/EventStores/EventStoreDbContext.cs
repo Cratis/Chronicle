@@ -27,6 +27,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) : BaseDbContext(options)
 {
     /// <summary>
+    /// Gets or sets the first-time initialization marker.
+    /// </summary>
+    public DbSet<EventStoreInitialization> EventStoreInitialization { get; set; }
+
+    /// <summary>
     /// Gets or sets the event types DbSet.
     /// </summary>
     public DbSet<EventType> EventTypes { get; set; }

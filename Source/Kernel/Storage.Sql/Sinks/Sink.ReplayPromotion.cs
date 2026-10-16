@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
@@ -23,8 +24,9 @@ public partial class Sink
         var replayName = ReplayTableNameFor(_tableName);
 
         // Open the scope on the replay table so the DbContext we use for DDL is bound to
-        // the rebuilt table. Other scopes may still be reading the primary table.
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, replayName, _columns);
+        // the rebuilt table. Other scopes may still be reading the primary table. The swap renames
+        // tables, so it connects as the schema identity when connection resolution distinguishes one.
+        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, replayName, _columns, ConnectionPurpose.Schema);
 
         await scope.DbContext.EnsureReplayPromotions();
         var replayHasRows = await scope.DbContext.Entries.AsNoTracking().AnyAsync();
