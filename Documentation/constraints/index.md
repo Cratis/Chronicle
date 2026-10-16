@@ -41,9 +41,13 @@ Chronicle provides two ways to define constraints:
 | [Model-bound](model-bound/index.md) | Declaring constraints directly on event types using attributes — no separate class needed. **Preferred for most scenarios.** |
 | [Declarative](declarative/) | Complex rules spanning multiple event types with different property names, or when you need a callback for constraint violation messages. |
 
-## When a constraint is not enough
+## Constraint or decision read
 
-A constraint checks a fixed rule about values and event types. It cannot count, sum or compare, so it cannot express "at most five courses per student" or "no more than the stock on hand". For a rule that depends on state, use a [decision read](../read-models/decision-reads.mdx) and a guarded append. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) compares the options, and [Scenarios](../dynamic-consistency-boundary/scenarios.mdx) shows each as code.
+A constraint checks a fixed rule about values and event types. It cannot count, sum or compare, so it cannot express "at most five courses per student" or "no more than the stock on hand". For a rule that depends on state, use a [decision read](../read-models/decision-reads.mdx) and a guarded append.
+
+A constraint is checked inside the append for every writer, with no read first. A decision read folds one key's history and guards only the appends that carry it. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) compares them side by side.
+
+A decision read cannot make a value unique across keys, and a constraint cannot count. [Scenarios](../dynamic-consistency-boundary/scenarios.mdx) shows each as code.
 
 Know the limits of what a constraint covers:
 

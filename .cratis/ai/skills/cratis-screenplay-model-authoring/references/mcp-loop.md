@@ -20,11 +20,8 @@
 The working loop for the session that owns the model connection: connect, orient,
 choose an edit route, propose, review, run specifications, apply, verify. Tool-by-tool arguments and
 refusals are in the [MCP tool guide](mcp-tools.md); verdict names (V1 to V5) are
-defined by `cratis-screenplay-modeling-lifecycle`. Facts here were read at
-Screenplay v4.66.0 (`Source/DotNET/Screenplay.Mcp/`, `Documentation/screenplay/mcp/`)
-and probed against the standalone 4.66.0 tool and, for the connection behavior,
-4.63.1. Cratis CLI 3.28.2 bundles Screenplay 4.66.0 (probed: 29 tools and the same views);
-Cratis CLI before 3.28.2 bundled 4.60.1, whose tool set and views differ: read `tools/list`.
+defined by `cratis-screenplay-modeling-lifecycle`. Discover the installed tool set and views with
+`tools/list`: the CLI-bundled server can differ from the standalone one.
 
 ## Connect
 
@@ -40,7 +37,7 @@ Cratis CLI before 3.28.2 bundled 4.60.1, whose tool set and views differ: read `
    `.screenplay` metadata.
 4. Read `tools/list` schemas once per connection; never hard-code counts or
    argument lists. MCP-Apps hosts also expose `visualize-model`.
-5. At 4.125.0 a startup root may switch to the same relative model folder in a
+5. (Requires Screenplay 4.81.0 or later.) A startup root may switch to the same relative model folder in a
    registered Git worktree of its repository. `open-workspace.path` accepts the
    checkout or exact model folder. Shared Git directory and registration
    back-pointer must agree physically; unrelated/malformed/unregistered roots,
@@ -50,19 +47,20 @@ Cratis CLI before 3.28.2 bundled 4.60.1, whose tool set and views differ: read `
    worktree is removed, explicitly return to the startup root; if the startup
    root is removed, start a new connection. No simultaneous named workspaces.
 
-### Roots bug and the workaround
+### Dynamic roots and the workaround
 
-Screenplay up to 4.63.1 (fixed in 4.63.2; the 4.66.0 tool is fixed) read the
-client's roots reply from the wrong member. A server started **without** a root,
-facing a client that advertises roots, answered with an error with `id: null`
-immediately after `notifications/initialized`, before any tool call. Real hosts
-treat that as fatal and drop the connection. Passing `open-workspace.path` does
-**not** avoid it, because the error is sent before `open-workspace` runs.
+A server started **without** a root binds one on first use: `open-workspace.path`, then the
+client's `roots/list` root, then a working-directory or fallback model folder. Avoid depending on
+that by fixing the root at launch (the forms in step 1). The `cratis/screenplay` profile
+registration fixes it in an installed project, and the CLI locates the model itself, so no model
+directory has to exist.
 
-Avoid it by fixing the root at launch (the forms in step 1). The `cratis/screenplay`
-profile registration is not affected in an installed project, and the CLI now locates the model itself, so no model directory has to exist. Cratis CLI before 3.28.2 bundled 4.60.1: for a
-dynamic root there, fix the root. Cratis CLI 3.28.2 bundles 4.66.0, which is fixed (probed:
-the server sends `roots/list` and serves `tools/list` after the reply).
+Requires Screenplay 4.63.2 or later (standalone, or a Cratis CLI 3.28.2 or later that bundles it)
+for a server without a root facing a client that advertises roots. Before it, the server read the
+roots reply from the wrong member and answered with an error with `id: null` immediately after
+`notifications/initialized`, before any tool call; real hosts treat that as fatal and drop the
+connection. Passing `open-workspace.path` does **not** avoid it, because the error is sent before
+`open-workspace` runs. On such a tool, fix the root at launch.
 
 ## Who owns the connection
 
@@ -109,15 +107,15 @@ the server sends `roots/list` and serves `tools/list` after the reply).
    `find-modeling-smells` as questions needing a domain consequence, and compare
    generated/curated exported snapshots with `semantic-diff`.
    Before a property change, use `find-references`/`dependencies`
-   `kind: "Property"` (4.138.0+) and `Owner.member` or historical event
+   `kind: "Property"` and `Owner.member` or historical event
    `Owner.generationN.member`. Follow direct mapping counterparts one query at a
    time; inspect incomplete/ambiguous evidence and `reasons`. `complete: false`
    is not an empty successful result. Shapes/roles: [property links](property-links.md).
-   On Screenplay 4.149.0, inspect concept `generate` with `declaration-details`
+   Inspect concept `generate` with `declaration-details`
    `kind: "Concept"`, `view: "summary"`: `generation.executable.status` distinguishes
    `admitted`, `refused`, `notAssessed`; empty local error codes do not prove binding.
-   The CLI 3.57.0 / MCP 4.147.1 bundle lacks this summary and entropy repairs.
-   Fields and tagged evidence: [concept generation](mcp-tools.md#concept-generation-41490).
+   A bundle that predates this summary also lacks the entropy repairs.
+   Fields and tagged evidence: [concept generation](mcp-tools.md#concept-generation).
 3. `open-workspace` and keep `revision` and `catalogRevision`. Opening writes
    nothing. With `identityPersistence: "root-local-on-apply"` the identities file
    is written only by `apply`.
@@ -131,21 +129,29 @@ the server sends `roots/list` and serves `tools/list` after the reply).
    Otherwise propose one coherent change (a slice works best): `propose-source` for whole
    `.play` text, `propose-ast` for focused typed edits, with
    `validation: "Authoring"`, `referencePolicy: "Safe"` (`Draft` only for
-   deliberate, reported gaps), `formatting: "PreserveTrivia"` for value and mapping
-   patches, otherwise `CanonicalizeTouchedDocuments` (reprints the touched files).
-6. Review: `read-proposal` (`view` changes, then before/after per document, then
-   `dropped-comments`), `introducedExecutableErrors`, `droppedCommentCount`. On
+   deliberate, reported gaps). For hand-written source use `propose-source` with
+   `formatting: "PreserveExactSource"` to keep supplied text, even structural edits.
+   For typed AST value/mapping patches use `PreserveTrivia`; structural AST edits
+   need `CanonicalizeTouchedDocuments` (reprints the touched files).
+6. Report the proposal from its one-paragraph `summary` (also the second text
+   block after JSON), rather than inventing a summary from counts. Review
+   `authoringDiagnosticSeverities.errors` and `codes`: nonzero
+   `authoringDiagnosticCount` counts proposal checks, including PLAY0288 canonical
+   printing even with no dropped comments; `after.readiness` counts resulting-source
+   diagnostics only. Page `read-proposal view=diagnostics`, then changes,
+   before/after per document and `dropped-comments`; keep checking
+   `introducedExecutableErrors` and `droppedCommentCount`. On
    MCP-Apps hosts `visualize-model` with the `proposalId` shows Current and
    Proposed, and its `sketch` argument previews a what-if of whole documents
    without writing. An
    unintended executable regression is discarded (`discard-proposal`) and
    re-proposed. Intent the user has accepted that does not run yet (operations,
-   the `numbers exact` source mode or refusal/redelivery; PLAY0268 by design)
+   the `numbers exact` source mode; PLAY0268 by design)
    may be applied from a reviewed `Authoring` proposal: disclose the new
    diagnostics, report V3 as not binding-ready, and never drop or stub the
    construct. The server's own guidance is to apply such a proposal only when
    the user accepts a model that does not run yet.
-7. On **Screenplay 4.145.0 and later**, run `run-specifications` with the
+7. Run `run-specifications` with the
    retained `proposalId` before `apply`. This read-only V4 route runs the candidate,
    including retained identities and planned renames, without applying, refreshing
    from disk or discarding it. `read-proposal view: "semantic-diff"` is static
@@ -189,9 +195,12 @@ the server sends `roots/list` and serves `tools/list` after the reply).
    A text edit is **never** a way around a refusal: if a typed operation refused,
    change the request or ask, do not retype the file.
 4. **`id` pins alone are not enough when `.screenplay/identities.json` exists.**
-   A text rename plus an `id "<old name>"` pin protects the stored event type
-   name but leaves the identity catalog pointing at the old declaration; the next
+   A text rename plus an `id "<old name>"` pin preserves authored stored-name intent
+   but leaves the identity catalog pointing at the old declaration; the next
    `apply` can mint new identities silently. Use the identity-preserving operation.
+   Differing event pins carry `storedName` in ESM v16;
+   that does not repair a stale catalog or admit the model to a renderer that stops before
+   v16. Evidence and target limits: `mcp-tools.md`.
 5. **A session without MCP** (a subagent, or a harness with no server) carries out a
    requested rename by text with `id "<Old>"` pins and an identity note when no
    `.screenplay/identities.json` exists. When it exists, it does not edit
@@ -202,12 +211,12 @@ the server sends `roots/list` and serves `tools/list` after the reply).
 | --- | --- | --- |
 | Address-preserving | descriptions; bodies of rules and expressions; mappings between members that already exist; any edit that adds, removes or renames no addressed element. Also every edit in a model with no `.screenplay/identities.json` except persisted names | bounded text edit of the `.play` file, then compile the folder; or `propose-ast` |
 | Catalog-changing (identity file present) | add, remove or rename a declaration (slice, command, event, read model, projection, ...), a property of a command, event, read model, composite type or trigger, a query, a query argument or a specification; create, delete, rename or move a mapped `.play` document (McpState refuses reopening with `IdentityMappingConflict`; use document operations in `propose-ast`); rename, remove or move an event, command, read model, constraint, module, feature or slice; move declarations between files (slices and features across logical parents: `propose-move`); contract evolution of a persisted event (new generation, property added, removed or retyped) | `propose-rename` or a reviewed `propose-ast`; never a blind text rename. Renaming a constraint resets its uniqueness index: ask first unless the request names it, then report the reset. A persisted event rename needs `id "OldName"` (added by default) |
-| Concept `generate` | set/change/remove strategy and modifiers | `propose-ast` replaces `ConceptSyntax.generation` (`GenerationSyntax`; omit/null to remove), or reviewed `propose-source`; never hand-edit `generate` text. Preserve other concept members and inspect executable diagnostics: sequence PLAY0682, preview strategies/generated-concept rules PLAY0268. |
+| Concept `generate` | set/change/remove strategy and modifiers | `propose-ast` replaces `ConceptSyntax.generation` (`GenerationSyntax`; omit/null to remove), or reviewed `propose-source`; never hand-edit `generate` text. Preserve other concept members and inspect executable diagnostics: sequence PLAY0682, preview strategies PLAY0268, generated-rule proofs PLAY0688/0689. |
 | Repair | `PLAY0166`, `0478`, `0469`, `0471`, `0479`, `0516`, `0563`, `0564`, `0565`, `0614`, `0653`, `0683`, `0684` (and recipe-only `0397`) | `propose-repair` with `formatting`; PLAY0166/0478 may pin attachment evidence (`pinRepairEvidence` and `expectedRepairEvidenceRevision`), never fix-all PLAY0478 |
 | Inline event extraction | `produces event ...` to a declared event | `propose-extract-inline-event` |
 | Parser-invalid document | no editable handles | `propose-source` `replace-document` with corrected source, or typed `propose-ast` document replacement |
-| Unadmitted constructs | systems/operations, the `numbers exact` source mode, refusal/redelivery | reviewed Authoring `propose-source` (whole documents) or `propose-ast` (typed edits); preserve intent and report PLAY0268 |
-| Admitted source/stream routing | ESM v8 at 4.125.0 | typed `propose-ast`; `propose-rename` repairs proven route references; target admission separate |
+| Unadmitted constructs | systems/operations, the `numbers exact` source mode | reviewed Authoring `propose-source` (whole documents) or `propose-ast` (typed edits); preserve intent and report PLAY0268 |
+| Admitted source/stream routing | ESM v8 | typed `propose-ast`; `propose-rename` repairs proven route references; target admission separate |
 
 PLAY0683/PLAY0684 repairs raise NanoID size or bytes count to at least 64 random
 bits using the concept subject (possibly across documents). PLAY0683 can instead
@@ -218,11 +227,11 @@ and `read-workspace view: "repairs"`, then `propose-repair` with both revisions 
 Neither action supports fix-all or pinned evidence. A concept change affects all
 uses; uniqueness changes append-time behavior. Derived regex, matches/checksum
 repairs and rule-proof status await phase 2b-2; details and source citations are in
-[concept generation](mcp-tools.md#concept-generation-41490).
+[concept generation](mcp-tools.md#concept-generation).
 
 ## Self-describing identity migration refusals
 
-At Screenplay 4.127.0, read `identityMigrationIssues` on rejected proposals
+Read `identityMigrationIssues` on rejected proposals
 (conflict `InvalidIdentityMigration`). Each entry names typed `address.kind` and
 `address.parts`, and the input `arguments` it belongs in: `semanticRenames`,
 `eventRenames`, `retiredSemanticAddresses`, `retiredEventAddresses`. Stale renames
@@ -231,7 +240,9 @@ not an instruction to retire. Include both event-contract and semantic assignmen
 and all assigned descendants. Rename/apply messages name the same offending addresses.
 Supply exactly the entries required for the intended change instead of retrying
 by trial and error. Re-read actual revisions when stale; never clear the catalog.
-Authority: v4.127.0 `mcp/reference.md`, `mcp/authoring-tools.md`.
+Authority: `mcp/reference.md`, `mcp/authoring-tools.md`.
+
+Requires Screenplay 4.89.0 or later (`screenplay --version`) for `identityMigrationIssues`.
 
 ## Identity state (`.screenplay/identities.json`)
 
@@ -251,7 +262,7 @@ Authority: v4.127.0 `mcp/reference.md`, `mcp/authoring-tools.md`.
 
 ### Root discovery conflicts
 
-At Screenplay 4.125.0 default discovery preserves `.screenplay/identities.json`
+Default discovery preserves `.screenplay/identities.json`
 or `pending.json` on the ancestor-or-self path from the offered project to the
 discovered model. Empty metadata folders/backups do not count. With several
 state roots, the nearest the offered project wins. `rootBindingConflict` in
@@ -306,11 +317,19 @@ per page. Excluded directories: `.git`, `.ai-work`, `.screenplay`, `bin`, `obj`,
 
 ## Formatting and limits
 
-Formatting is explicit. Prefer `PreserveTrivia` for identifier, literal-value and
-whole-mapping edits; it rewrites only the changed span. Structural edits (add,
-remove, move) need `CanonicalizeTouchedDocuments`, which keeps attached comments
-and the authored member order within a document but normalizes whitespace and
-blank lines. Before applying, check the proposal's `droppedCommentCount`; when it
+Formatting is explicit. Default hand-written `propose-source` edits to
+`PreserveExactSource`: supplied comments, alignment, blank lines and line endings
+(including CRLF) survive structural edits; replacements retain the original BOM
+policy. The same parsing, identity, reference and compilation checks run, without
+PLAY0288. Choose `CanonicalizeTouchedDocuments` only when canonical output is
+wanted. `propose-ast` exact mode is unchanged: `PreserveTrivia` rewrites supported
+value/mapping spans and refuses structural changes; structural AST edits need
+canonical printing. Its refusal points source authors to `PreserveExactSource`.
+
+Requires Screenplay 4.158.0 or later (`screenplay --version`) for exact structural source proposals; older servers refuse that mode.
+Requires Screenplay 4.156.0 or later (`screenplay --version`) for proposal `summary` and `authoringDiagnosticSeverities`; older servers lack these review fields.
+
+ Before applying, check the proposal's `droppedCommentCount`; when it
 is not zero, read `read-proposal` with `view: "dropped-comments"` and disclose
 each lost comment (`PLAY0288` also reports their count and lines). Untouched
 documents retain exact bytes. A printer that loses requested structural fields
@@ -318,10 +337,5 @@ rejects the plan.
 
 ## Provenance
 
-Proposal execution: Screenplay v4.145.0
-`Source/DotNET/Screenplay.Mcp/McpWorkspaces.Specifications.cs:12-79` and
-`Source/DotNET/Tool/ModelTest.cs:14-108`; `Documentation/screenplay/mcp/authoring-tools.md:500-535`.
-
 The structure of this loop (ownership, edit-request shape, failure handling) is
-adapted from the project's earlier event-modeling toolkit draft and re-verified
-against the Screenplay sources named above. See [provenance](provenance.md).
+adapted from the project's earlier event-modeling toolkit draft.

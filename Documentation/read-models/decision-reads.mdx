@@ -1,19 +1,64 @@
 ---
-title: Decision-consistent reads (.NET)
+title: Decision-consistent reads
 description: Guard an event-log append against changes to an event-source-keyed projection read for a decision.
 ---
 
-A decision read folds a projection from the event log in a fresh session and supplies an opaque guard for an append. If an event that could affect the read model is appended for the same source after the read boundary, the guarded append reports a concurrency violation and appends nothing. An absent model is guarded too: a concurrent creation conflicts. An unrelated event type or a change for another source does not invalidate the read. This is optimistic concurrency, **not** a retry of the command or a global lock.
+Use a decision read when a rule depends on state you read first: a count, a stock, a status, a limit. A decision read folds a projection from the event log in a fresh session and gives you a guard for the append that follows. If an event that could change the read model arrives for the same source after the read, the guarded append reports a concurrency violation and writes nothing.
 
-Use a decision read when a rule depends on state you read first. For a unique value or a create-once rule, a [constraint](../constraints/index.md) is simpler and cheaper. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) compares the options, [Scenarios](../dynamic-consistency-boundary/scenarios.mdx) shows each as code, and the measured cost is in [What a decision read costs](../dynamic-consistency-boundary/choosing.mdx#what-a-decision-read-costs). A plain read through `IReadModels` or an injected read model guards nothing, even when it is passive. A decision read is Chronicle's form of a DCB decision model and append condition, within its one-event-source-per-event model: [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) says what maps and what does not, and [DCB examples in Chronicle](../dynamic-consistency-boundary/dcb-examples.mdx) shows the canonical examples. To scope a read to one stream and append through an event source definition, see [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx).
+| The guard | What it does |
+|---|---|
+| Notes the log position before it folds | Events appended while you decide are caught |
+| Watches the key and the model's event types | An unrelated event type, or a change for another source, does not conflict |
+| Guards an absent model too | A concurrent creation conflicts |
+| Is optimistic concurrency | Nothing is retried for you and nothing is locked |
+
+For a unique value or a create-once rule, a [constraint](../constraints/index.md) is simpler and cheaper. A plain read through `IReadModels` or an injected read model guards nothing, even when it is passive. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) compares the options, [Scenarios](../dynamic-consistency-boundary/scenarios.mdx) shows each as code, and the measured cost is in [What a decision read costs](../dynamic-consistency-boundary/limits.mdx#what-a-decision-read-costs). To see exactly what a guard covers, read [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx).
+
+## Your first decision read
+
+A workshop has a fixed number of places. Read the workshop, check the rule, and append with the read as the guard.
+
+<ChronicleClientTabs snippet="read-models/decision-reads/first-read" variants="csharp,elixir" />
+
+Three things make it work:
+
+- **The model has an `Id` and is keyed by the event source.** A decision read refuses a model it cannot guard exactly. See [Admitted projections](#admitted-projections).
+- **`GetDetached` returns the state and the guard.** You pass the guard to the append with `guardedBy`. `Instance` is `null` when no event created the model yet.
+- **A rejected append is a result, not an exception.** Read again and decide again.
+
+To tell a conflict from another failure, ask the result. A conflict names the model and key; `IsSuccess` also covers constraint violations.
 
 <ChronicleClientTabs snippet="read-models/decision-reads/detached-read" variants="csharp" />
 
-For a unit of work, `Get<T>(key)` enrolls into the ambient unit; `GetDetached<T>(key)` does not. `GetFor<T>(unit, key)` enrolls into the unit you pass, before it returns the value. Under [read protection](read-protection.mdx), `GetDetached` is refused with `DetachedReadWhileReadsAreProtected` unless an advisory read allowance is open, because a detached read is meant for a chosen append and enrolling it silently would change which commit it guards. Alternatively, enroll a detached read using `IUnitOfWork.AddDecisionRead`. A protected unit must be completed with its owner's capability (`UnitOfWork.ClaimDecisionReadCommitOwnership` and `CommitAsOwner` or `RollbackAsOwner`); calling `Commit()` from application code after enrollment is rejected. Once a claimed unit has enrolled a decision read, public `Rollback()` and `Dispose()` on an open unit are also refused: only the owner can roll it back. During a pending commit, public and owner rollback instead throw `UnitOfWorkIsCompleting` in both Compatibility and Strict modes, retaining staged events; disposal remains a no-op. A claim alone does not change public rollback or disposal of a unit without enrolled decision reads, but owner rollback during a pending commit is also refused. A protected commit with **no events** still validates the guard. A kernel too old to allow validate-only returns `DecisionReadValidateOnlyNotSupported`, never success. Units without decision reads keep their previous staging behavior by default: late `AddEvent` and `AddEvents` calls still stage events that cannot be appended, but each attempt logs an error with the correlation id and no event content. Opt in to `ChronicleOptions.UnitOfWorkLifecyclePolicy = UnitOfWorkLifecyclePolicy.Strict` (also available through client and ASP.NET Core options) to reject staging as soon as commit begins, after commit failure, rollback or disposal. Strict rejection throws `UnitOfWorkIsCompleted` before enumerating input or changing staged events; it will become the default in the next major release. Protected units still refuse late events in compatibility mode. The Chronicle.AspNetCore middleware owns the request unit and normally completes it after the response has been written; a conflict is therefore reported too late to change that response. To respond to a protected decision's outcome, an action can ask the middleware's owner to commit early via `HttpContext.Features.Get<IUnitOfWorkCompletionFeature>()` (in `Cratis.Chronicle.AspNetCore.Transactions`):
+`Get<T>(key)` enrolls the read in the unit of work instead of returning a detached guard. The next section covers that.
 
-<ChronicleClientTabs snippet="read-models/decision-reads/early-commit" variants="csharp" />
+A decision read is Chronicle's form of a DCB decision model and append condition, within its one-event-source-per-event model. [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) says what maps and what does not, and [DCB examples in Chronicle](../dynamic-consistency-boundary/dcb-examples.mdx) shows the canonical examples. To scope a read to one stream and append through an event source definition, see [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx).
 
-The middleware will not commit the completed unit again. `IUnitOfWork.GetDecisionConflicts()` maps violated labels to the read model type and key without exposing boundaries. `IUnitOfWork.HasEnrolledDecisionReads` is a read-only indication that at least one decision read was successfully enrolled, including through a direct `AddDecisionRead` call. On Chronicle's unit of work it remains true after commit, rollback or disposal. Custom implementations default to false for compatibility; a false value on one of those implementations is not proof that it cannot enroll protected reads. This property does not grant permission to commit a protected unit without its owner capability.
+## Unit-of-work lifecycle
+
+`Get<T>(key)` enrolls into the ambient unit of work. `GetDetached<T>(key)` does not. `GetFor<T>(unit, key)` enrolls into the unit you pass, before it returns the value. You can also enroll a detached read with `IUnitOfWork.AddDecisionRead`.
+
+| Topic | Behavior |
+|---|---|
+| Detached reads under [read protection](read-protection.mdx) | `GetDetached` is refused with `DetachedReadWhileReadsAreProtected` unless an advisory read allowance is open. A detached read is meant for a chosen append, and enrolling it silently would change which commit it guards |
+| Who completes a protected unit | Its owner: `UnitOfWork.ClaimDecisionReadCommitOwnership`, then `CommitAsOwner` or `RollbackAsOwner`. Calling `Commit()` from application code after enrollment is rejected |
+| Rollback and dispose | Once a claimed unit has enrolled a decision read, public `Rollback()` and `Dispose()` on an open unit are refused: only the owner can roll it back. During a pending commit, public and owner rollback throw `UnitOfWorkIsCompleting` in both Compatibility and Strict modes and keep the staged events. Disposal stays a no-op. A claim alone does not change rollback or disposal of a unit without enrolled reads, but owner rollback during a pending commit is still refused |
+| Commit with no events | A protected commit with no events still validates the guard. A kernel too old to allow validate-only returns `DecisionReadValidateOnlyNotSupported`, never success |
+| Staging after commit began | Units without decision reads keep their previous behavior by default: a late `AddEvent` or `AddEvents` stages events that cannot be appended, and each attempt logs an error with the correlation id and no event content. Protected units refuse late events in every mode |
+| Strict policy | Set `ChronicleOptions.UnitOfWorkLifecyclePolicy = UnitOfWorkLifecyclePolicy.Strict` (also available through client and ASP.NET Core options) to reject staging as soon as commit begins, after commit failure, rollback or disposal. Strict rejection throws `UnitOfWorkIsCompleted` before it enumerates input or changes staged events. It will become the default in the next major release |
+
+### In an ASP.NET Core request
+
+The Chronicle.AspNetCore middleware owns the request's unit and normally completes it after the response has been written, so a conflict is reported too late to change the response. To respond to the outcome, ask the middleware's owner to commit early with `HttpContext.Features.Get<IUnitOfWorkCompletionFeature>()` (in `Cratis.Chronicle.AspNetCore.Transactions`):
+
+<ChronicleClientTabs snippet="read-models/decision-reads/early-commit" variants="csharp,elixir" />
+
+The middleware will not commit the completed unit again.
+
+### Inspecting the outcome
+
+- `IUnitOfWork.GetDecisionConflicts()` maps violated labels to the read model type and key without exposing boundaries.
+- `IUnitOfWork.HasEnrolledDecisionReads` says that at least one decision read was enrolled, including through a direct `AddDecisionRead` call. On Chronicle's unit of work it stays true after commit, rollback or disposal. Custom implementations default to `false` for compatibility, so a `false` from one of those is not proof that it cannot enroll protected reads. The property does not grant permission to commit a protected unit without its owner capability.
 
 ## Admitted projections
 
@@ -61,9 +106,17 @@ The stream type and stream id are strings here. With an [event source definition
 
 The stream-scoped overload requires a specific stream type: `EventStreamType.All` refuses with `AllStreamsNotSupported`. `EventStreamId.Default` is allowed for event-source-keyed projections with a specific stream type, including stream types that use only the default ID. As in other Chronicle event filters, this default does not narrow by stream ID: the fold and guard cover every ID within that source and stream type. Stream-keyed projections require an explicit stream ID; the default refuses with `StreamKeyRequiresExplicitStreamId` because it could fold several instance keys together.
 
-Multiple reads for the same source still merge at their earliest boundary and union their event types. If their stream type or stream ID differs, the merged guard drops **both stream dimensions**, checking all streams of that source. Different source type filters likewise widen to all source types. This can produce extra conflicts, but cannot miss a change affecting either read.
+Reads of the same source merge into one guard, and reads of different streams widen it. [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx#several-reads-on-one-source) has the merge rules.
 
 A materialized projection keyed only by stream ID can collide when two event sources use the same stream ID. Prefer a passive projection (`[Passive]`) for these decision folds, or use a composite key for materialization. Composite-key projections are not admitted for protected decision reads. Command-property binding belongs to Arc; Chronicle supplies the explicit read API.
+
+## Declaring a per-stream read model
+
+Use `[EventStream<TSource>(stream)]` from `Cratis.Chronicle.ReadModels` when a model always represents one stream declared by an `IEventSource`. The model stays keyed by event source ID, but its fold is scoped to the stream. The attribute implies passive for model-bound and fluent projections, so no stored instance mixes months.
+
+Key-only `Get`, `GetFor` and `GetDetached` refuse with `ReadModelRequiresStreamScope`. Use the stream overload and pass the declaration's event source type as well as its stream type; an omitted or different source type, or a different stream type, refuses with `StreamScopeDoesNotMatchReadModel`. `AdmitForStream<T>()` assesses the stream shape; key-only `Admit<T>()` reports the required scope. Reducers, stream-keyed models, undeclared streams and `All` are invalid declarations.
+
+The plain instance read, the route every writer must use and a worked monthly limit are on [Read models scoped to one event stream](per-stream.mdx). Existing models without this attribute retain their current key-only and stream-scoped behavior.
 
 ## Limits and assumptions
 

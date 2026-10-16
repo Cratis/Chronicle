@@ -3,6 +3,7 @@
 
 ## Contents
 
+- One feature, one story
 - 1. Sequence
 - 2. Record after / caused by / only if
 - 3. Ask what can happen instead
@@ -12,12 +13,29 @@
 - Storyline: one view walked through its states
 - 5. Plot checks
 - Handoff packet to `cratis-screenplay-slice-design`
+- Board order
 
 Plotting arranges the discovered events as a narrative: what happens first, what depends on
 what, what can happen instead, where it ends. In Screenplay the plot is written into the
 model (fenced `documentation` on slices and features) and into STATE.md. Board order is the
 authored declaration and import order; it is presentation, not causation, so write causes and
 dependencies down.
+
+## One feature, one story
+A `feature` tells a story: a journey someone lives through from start to outcome
+(`SeasonalBerths`, `HullInspections`), never one action or one screen (`RequestBerth`,
+`FindRequest`, `ViewRequest` as features). Requesting a berth, looking the request up and
+correcting it belong to one story. Read the feature names aloud in order. A feature is too fine
+when:
+
+- its name is one verb and one noun, or names one form or page;
+- it holds one or two slices;
+- the next feature starts with the view or the identity this one just produced.
+
+Merge those. When in doubt, merge: a feature with a dozen slices that reads as one journey is
+right, and five features of two slices each is not. The opposite case stays as it is: a choice made
+before the process starts, after which everything differs, is its own feature (a separate story,
+section 3). Nest a sub-feature for a long story rather than splitting it into sibling features.
 
 ## 1. Sequence
 
@@ -81,8 +99,8 @@ recording. For project decisions, cite `refs: [{ "id": "D123" }]`; resolve with
 Turn the answer into a specification, a description or a project-owned decision
 record. A resolution alone implements nothing; carry behavioral answers to slice
 design/scenario coverage. Reopen if the decision stops answering the question.
-Evidence: Screenplay `v4.144.0:Documentation/screenplay/model-notes.md:12-77`,
-`decisions/0045-model-notes-sidecar.md:40-79`; tool-source lines in the linked guide.
+Evidence: Screenplay `Documentation/screenplay/model-notes.md`,
+`decisions/0045-model-notes-sidecar.md`; tool-source lines in the linked guide.
 
 ## 4. Plot output format
 
@@ -183,3 +201,11 @@ Seeds for later skills:
 | Competition candidate | a competing-claim spec; consistency design |
 | Duplicate candidate | a duplicate or retry spec |
 | Ending | removal from affected views |
+
+## Board order
+
+- Boards keep authored declaration and import order: imports expand depth-first, glob
+  matches alphabetically. Unimported folder files remain visible after ranked siblings.
+  MCP `expand-layout` preserves this order with import barrels; an import-less
+  `PlayFileWriter.Expand` layout falls back to path order. Order is presentation, not
+  execution or identity. Keep causes and branches in the feature `documentation` and STATE.md.

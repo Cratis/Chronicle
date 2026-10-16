@@ -16,8 +16,6 @@ validation, constraints or projections matter; a pure decision (`Handle()`,
 call. A library or framework repository reaches for a scenario only to test the
 very engine it provides.
 
-Arc scenarios verified at **v22.75.0** (Chronicle dependency 19.39.1).
-Separate Chronicle-only scenario claims retain their version-qualified sources.
 Read [query and decision scenarios](../../cratis-application-slice-specifications/references/query-and-decision-scenarios.md)
 when using `QueryScenario<T>`, buffered emissions or `UseDecisionReads()`.
 Guarded decisions need actual seeded events, not pinned models; their given
@@ -91,7 +89,7 @@ from `Cratis.Arc.Chronicle.Testing`.
   pass against a read-model shape the projection never produces.
 - **Validator and `Provide()` dependencies** are registered in
   `_scenario.Services`; the concrete validator is discovered automatically.
-- **Caller setup (Arc 22.75.1+, re-verified at 22.76.0):** register a substituted
+- **Caller setup (Requires Arc 22.75.1):** register a substituted
   `ICurrentPrincipalAccessor`, `ICurrentPrincipalOverride` or
   `IAuthorizationPolicyRuntime` in `Services` before first execution. The scenario
   preserves these registrations instead of replacing them with Arc defaults,
@@ -101,7 +99,7 @@ from `Cratis.Arc.Chronicle.Testing`.
 
 ### Pin generated values
 
-Verified at **Arc v22.75.0**, available in `Cratis.Arc.Testing` **22.67.0+**.
+Requires `Cratis.Arc.Testing` 22.67.0 or later.
 For the `AllocateCartId` command from `cratis-arc-command`, whose
 `Handle([GeneratedValue("cart")] CartId cartId)` returns that id, specify the
 pipeline with a known concept pin. Import `Cratis.Arc.Commands` and
@@ -165,8 +163,8 @@ public class and_value_is_pinned : Specification
 - Do not log or trace captures. Do not replace/seed the production generator.
   A direct-call decision spec supplies the known argument to `Handle()` itself.
 
-Guide: [Pin generated values in command specs](/arc/backend/csharp/testing/generated-values/).
-Source: **Arc v22.75.0**, `Source/DotNET/Testing/Commands/CommandScenarioGeneratedValueExtensions.cs`,
+Guide: [Pin generated values in command specs](https://www.cratis.io/arc/backend/csharp/testing/generated-values/).
+Source: `Source/DotNET/Testing/Commands/CommandScenarioGeneratedValueExtensions.cs`,
 `ScenarioGeneratedValueFixture.cs`, `ScenarioGeneratedValues.cs` and
 `GeneratedValuesCommandScenarioExtender.cs`;
 `Source/DotNET/Testing.Specs/Commands/for_CommandScenario/generated_values/when_pinning_a_value.cs`.
@@ -275,7 +273,9 @@ async Task Because() =>
 Construct with an `IServiceProvider` of substituted collaborators and assert on
 those substitutes after `Given` fires the events.
 
-### Read-model parameters — Chronicle 19.46.0+
+### Read-model parameters
+
+Requires Chronicle 19.46.0 or later.
 
 `Given` events invoke the reactor; they **do not build read models**, including
 passive ones. In the present-state specification, seed a pre-built instance:
@@ -301,7 +301,7 @@ for that type when any exist. Fix the fixture/key rather than hiding missing
 setup with `NoReadModel<T>()`. This guard applies to `EventStoreForTesting`, not
 production resolution or an explicitly supplied store of another type.
 
-Also in **Chronicle 19.46.0+**, a synchronous handler throw surfaces its own
+A synchronous handler throw surfaces its own
 exception, not reflection's `TargetInvocationException`, preserving the handler
 stack. Capture with `await Catch.Exception(() => _scenario.Given.ForEventSource(_id).Events(...))`
 and assert the handler's exception type.
@@ -311,7 +311,7 @@ previously local `Now`. Scenario contexts, `EventContext.Empty` and
 `EmptyWithEventSourceId(...)` use this helper; explicit times retain their offset,
 and the positional constructor has no such default.
 
-Sources at **Chronicle tag `v19.46.0`**:
+Sources:
 `Source/Clients/Testing/Reactors/{ReactorScenario,ReactorSourceGivenBuilder,ScenarioReactorMethodArgumentsResolver,ReadModelNotSeededForReactorScenario}.cs`
 and `Source/Clients/DotNET/Events/EventContext.cs`. For exact signatures and
 source-backed examples, read `cratis-chronicle-reactor/references/specifications.md`.

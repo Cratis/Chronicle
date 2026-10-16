@@ -44,7 +44,7 @@ module Collections
   command, here `SendInvoice`, not in the `Automation` slice that reacts: a command
   from another slice is `PLAY0273` "command is unresolved in its slice" at binding.
 - A reaction invocation without a declared actor has no caller and a gated
-  command denies. At 4.125.0 reaction `runs as system role "<Role>"` supplies the
+  command denies. Reaction `runs as system role "<Role>"` supplies the
   authenticated system actor (ESM v10); `given caller` does not. Each command is
   atomic, not the cascade. Checked actor scenario and CLI/Stage limitations:
   captures-and-reactions `references/invocation-identity.md`.
@@ -54,21 +54,20 @@ module Collections
 - A reached reaction with a code body (`file` or inline) returns unsupported, as
   does a reaction that never settles. The reference stops at 1,000 new facts per
   scenario and 10,000 due occurrences per clock advance.
-- A model that uses these forms selects ESM v6 (`schemaVersion: 6`). Stage 4.89.1
-  admits ESM v1-v15 and renders supported event-triggered Automation, but not Translate,
+- A model that uses these forms selects ESM v6 (`schemaVersion: 6`). Stage
+  renders supported event-triggered Automation, but not Translate,
   captures, non-event triggers or opaque bodies (`-024`), claim-reading/opaque `runs as` gates (`-034`), legacy filters (`-035`)
   or mixed effects (`-037`). Single-hop reaction append specs render; deeper appends and
   command specs cascading into reactions remain `-011`. Keep refused scope as gap-fill against this contract: `cratis-screenplay-render-and-gap-fill`.
 
-### Version skew: cascades and the false `PLAY0285` (cratis before 3.28.2)
+### Version skew: cascades and the false `PLAY0285`
 
 `PLAY0285` (a specification's expected event contradicts every producer of its
-`when` command) runs in the syntax pass, with no binding. Reachability through
-reactions and `invokes` was added after Screenplay 4.60.1. So the example above
-passes `screenplay` 4.68.0 (and is executable-ready over its MCP server) and also passes
-`cratis screenplay validate` 3.28.2 (probed); it failed `cratis screenplay validate` 3.27.1 with
+`when` command) runs in the syntax pass, with no binding. An older compiler does not trace
+reachability through reactions and `invokes`, so the example above passes `screenplay` (and is
+executable-ready over its MCP server) but fails an older `cratis screenplay validate` with
 `PLAY0285` "Specification outcome 'ReminderScheduled' cannot be produced by 'SendInvoice'",
-exit 5 (Cratis/cli#242). If an older bundle still reports it, it is a tool skew, not a
+exit 5. If an older bundle still reports it, it is a tool skew, not a
 modeling error: do not delete the `then` line or move the event to make `cratis`
 green. Validate with the standalone tool or a current `cratis`, record which tool gave which
 verdict, and see `cratis-screenplay-toolchain`.

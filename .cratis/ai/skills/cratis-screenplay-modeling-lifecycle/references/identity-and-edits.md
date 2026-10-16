@@ -23,7 +23,7 @@ changes. The Screenplay Reviewer and Renderer never edit `.play`; they always re
 
 ## Classify by catalog address
 Classify an edit by whether it changes the **catalog addresses**, not by artifact category.
-At Screenplay v4.66.0 `SemanticAddress` assigns identities to modules, features, slices,
+`SemanticAddress` assigns identities to modules, features, slices,
 concepts, composite types, properties, commands, event contracts, read models, projections,
 queries, query arguments, specifications, triggers, reactions and captures;
 `ScreenplayWorkspace` materializes new assignments when it is created from source; and
@@ -78,3 +78,12 @@ existing approval (a request that named the change is that approval), then appli
 How the first `.screenplay/identities.json` is created for a model that was only ever text-edited
 is not documented beyond "after the first apply". Ask before relying on a first apply to
 initialise identities, use `id` pins for persisted events, and record it in STATE.md when it applies.
+
+## Document mappings
+
+**Document mappings count too.** With `identities.json` present, creating, deleting, renaming or
+moving a mapped `.play` file changes no catalog address but still breaks reopening:
+`McpState.Open` throws `IdentityMappingConflict` ("mapped .play files are missing,
+renamed, or accompanied by unmapped files ... use an MCP proposal to move/add/delete documents
+explicitly"). Do these through MCP document operations (the `screenplay` server's `propose-ast` tool), never a file move or rename
+in the shell or editor.

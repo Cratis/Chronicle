@@ -15,7 +15,7 @@ A vertical slice owns a single behavior: the command or query, the events it pro
 
 This file is the reference for *what* goes in each part of a slice. Layout, slice types, workflow, and quality gates are in [general.md](./general.md).
 
-**Model-first check.** Before changing a slice, look for it in the accepted `.play` model (in the committed tree: `git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured; its HEAD version remains the contract until working-tree edits are committed) under the model root (the folder holding the project's `.play` files, or the root set by `mcpServers.screenplay.root` in `.cratis/ai.json`). A `.play` file outside the root or an untracked or uncommitted draft is not a contract. If an accepted model covers it, change the model and render or gap-fill from it; never edit Stage-managed files. See Phase 0 in [application-profile.md](./application-profile.md).
+**Model-first check.** Before changing a slice, look for it in the accepted `.play` model under the model root (opted in per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs` for the decision, root and drafts). If an accepted model covers it, change the model and render or gap-fill from it; never edit Stage-managed files. See Phase 0 in [application-profile.md](./application-profile.md).
 
 ## Technical stack
 
@@ -249,7 +249,7 @@ public record AuthorRegistered(AuthorName Name);
 
 ## Read Models and Queries
 
-**[contract]** `[ReadModel]` records expose queries as `public static` methods; dependencies are plain method parameters (no `[FromServices]`). Default to model-bound projection shape; drop to fluent only when needed. For step-by-step creation, invoke the **cratis-chronicle-read-model** skill.
+**[contract]** `[ReadModel]` records expose queries as `public static` methods; dependencies are plain method parameters (no `[FromServices]`). For application code, start with model-bound mappings, use fluent when the definition needs structure, and choose reducer code when transitions read better as code. For step-by-step creation, invoke the **cratis-chronicle-read-model** skill.
 
 Use `[ReadModel(RequireQueryAttribute = true)]` with `[Query]` on intended
 endpoints when public folds/helpers exist (ARC0026/ARCCHR0019). `[Query]` alone
@@ -263,7 +263,8 @@ observations emit `default` on absence/deletion/filter exit: guard `hasData` and
 
 Stay within analyzer-supported shapes: the read model, `T?`, a collection/array/`IQueryable<T>` of it, `Task<...>` of those, `IAsyncEnumerable<T>`, or `ISubject<...>` of read model/collection.
 
-- **`IQueryable<TReadModel>`** → automatic server-side paging/sorting (frontend `useWithPaging` — see the **cratis-arc-query-paging** skill). Use it whenever a list can grow.
+- **`IQueryable<TReadModel>`** → Arc pages and sorts it through LINQ. Right for a LINQ-native provider such as Entity Framework Core.
+- **`ISubject<IEnumerable<TReadModel>>` from `collection.Observe(...)`** → the MongoDB way to a paged, sorted list, built on a native `Find` with no LINQ (frontend `useWithPaging` — see the **cratis-arc-query-paging** skill). **[contract]** A query never writes `Skip`/`Take`/`OrderBy` for the client's paging or sorting; Arc applies them. Use one of these two shapes whenever a list can grow.
 - **`ISubject<...>`** → live/observable queries. Return it directly — **never** `Task<ISubject<...>>`.
 - **[contract] Custom paths use `[Path("...")]`** (`PathAttribute`), not ASP.NET `[Route]`. Reserve `[Route]` for controller endpoints (which this convention avoids).
 
@@ -272,7 +273,7 @@ Stay within analyzer-supported shapes: the read model, `T?`, a collection/array/
 [FromEvent<AuthorRegistered>]
 public record Author(AuthorId Id, AuthorName Name)
 {
-    public static IQueryable<Author> AllAuthors(IMongoCollection<Author> collection) => collection.AsQueryable();
+    public static ISubject<IEnumerable<Author>> AllAuthors(IMongoCollection<Author> collection) => collection.Observe();
     public static Task<Author?> AuthorById(IReadModels readModels, AuthorId id) =>
         readModels.GetInstanceById<Author>((EventSourceId)id);
 }
@@ -320,18 +321,34 @@ evaluate reconstruction frequency, history length, consistency, and security.
 
 **Injected-parameter nullability is the required/optional switch:** a nullable `TReadModel?` parameter (on a validator, `Provide()`, or `Handle()`) gets `null` injected for a never-created/removed instance — check `is null`. A **non-nullable** `TReadModel` whose instance does not exist is **rejected, not crashed**: Arc raises `ReadModelDoesNotExistForCommand`, which surfaces as a validation failure (HTTP 400) with reason `DependencyUnavailable` (non-nullable = "required, must exist"). The server-fault path (`CannotResolveCommandDependency` / `CannotResolveValidatorDependency`, HTTP 500) is reached only when the dependency is *not* a registered read model or no usable key was resolved — the exact contract is in the **cratis-arc-command** skill's `read-model-injection` reference. ⚠️ Both switches ride on the same resolution, so on a **`[Passive]` projection** neither fires for a never-created instance: the nullable parameter receives a default-valued object and the `is null` guard never runs, and the non-nullable one resolves happily. Check the existence flag there, not nullability. Type by-id accessors you write yourself as `Task<T?>` so callers get the compiler signal Chronicle's own signature withholds.
 
+### Observation commands append only changes **[convention]**
+
+A command fed by a webhook, poll, sweep, retry or classifier is an *observation*, and looking is not a fact.
+
+- Compare with current state and append **nothing** when nothing changed; `Handle()` takes the thing it would change and compares each fact on its own.
+- Compare against something that cannot lag: a `[Passive]` read model read by key, or the stream's own events, never a materialized read model (it trails the log and is bypassed exactly while rebuilding).
+- Never append a tick, a heartbeat, a trigger event for a reactor, a "last looked" timestamp, telemetry or a non-answer ("pending", "could not decide"); use a job, state machine, command operation or `ICommandPipeline`.
+- An event named `…Changed` records a real change; split a broad `…DetailsChanged` into per-fact events.
+- Specify two behaviors per observation command: the same observation twice appends nothing, and a changed observation appends exactly the change.
+
+See the **cratis-chronicle-event-modeling** skill (`references/event-log-hygiene.md`).
+
 ## Projections **[contract]**
 
 Projections build read models from **events** (never from other read models). Use the ladder — for adding one to an existing model, invoke the **cratis-chronicle-projection** skill:
 
 1. **Model-bound attributes** on the `[ReadModel]`: `[FromEvent<T>]`, `[SetFrom<T>]`, `[SetFromContext<T>]`, `[ChildrenFrom<T>]`, `[RemovedWith<T>]`, `[Nested]`, `[ClearWith<T>]`, counters, `[FromAll]`.
-2. **Fluent `IProjectionFor<T>`** for joins, composite/constant keys, parent-key extraction, context mapping, `.NotRewindable()`, or supported conditional setters. Declarative metadata only — no DI side effects, no imperative `Define()` body, builder lambdas are member access only.
-3. **Reducer `IReducerFor<T>`** when the model is "current state + event → next state" — branching on prior state, loops, calculations. A valid style, **not** a failure mode; carry an inline justification comment naming the limitation that ruled out a projection.
+2. **Fluent `IProjectionFor<T>`** when mappings need structure or the contract should stay attribute-free: joins, composite/constant keys, parent-key extraction, context mapping, `.NotRewindable()`, or supported conditional setters. Declarative metadata only — no DI side effects, no imperative `Define()` body, builder lambdas are member access only.
+3. **Reducer code** for clearer "current state + event → next state" logic — prior-state branches, calculations and guards. A normal choice, not a last resort. Default new .NET reducers to **self-reducing models** with public static `Reduce(event, model? current[, EventContext])`, returning model or `Task<model>` (including nullable results), without a marker. Use separate `IReducerFor<T>` for fold-time DI, replay instance behavior or separation.
+4. **Nominated plain instance class** only when its assembly cannot reference Chronicle; nominate through `ChronicleOptions.ExplicitArtifacts` before creating stores. Use **PDL** for definitions authored outside application code, not as the code-first default.
+
+For self models, keep `[ReadModel]`, static `Reduce` methods and queries on one record. Before Arc 22.90.0, use `[ReadModel(RequireQueryAttribute = true)]` and `[Query]`; from Arc 22.90.0, Arc excludes methods taking the model itself from query discovery and Arc.Chronicle claims self models for command injection. Complete marker-free shapes become reducers on upgrade; a competing builder fails with `AmbiguousReadModelBuilder`. Preserve admission/ordering guards when converting and remove the previous builder. See **cratis-chronicle-reducer** for exact signatures, hooks and limits. `[Passive]` belongs on the model; it gives fresh reads, not a concurrency guard — decision reads refuse reducers. Self reduction is .NET-only (Cratis/Chronicle#4851); this does not claim Stage renders it.
 
 - **[contract] AutoMap is on by default — never call `.AutoMap()`.** Match property names so AutoMap wires them; diverge with `[SetFrom<T>]` / `.Set().To()` only for genuine name differences. Re-enable `.AutoMap()` only inside a scope disabled with `.NoAutoMap()`.
   - ⚠️ **AutoMap runs per *event* across every event the projection references — it does not defer to your explicit setters.** A property sourced with `[SetFrom<A>]` can still be silently overwritten when some *other* referenced event `B` happens to carry an identically named property (AutoMap wires `B`'s value on top). Fence the property with property-level **`[NoAutoMap]`** (which pairs with the `[SetFrom]`, not replaces it) so only your explicit setter writes it. `[SetFrom]` does **not** imply this — leaving AutoMap on is what allows the common create-then-rename pattern (a later event updating a property by name-match). No colliding event property name means no `[NoAutoMap]` needed. (An event subscribed only via an aggregate like `[Count]` doesn't auto-map its other properties, so it can't collide.) The analyzer **`CHR0025`** surfaces this collision as an *informational* heads-up (not a warning, because either resolution — add `[NoAutoMap]`, or accept the update — can be correct).
 - **[contract] `[Nested]`** projects a single nullable child object; place `[FromEvent<T>]` on the nested type (or property-level `[SetFrom<T>]` when the parent shares the event — declaring class-level `[FromEvent<T>]` on both parent and nested type for the same event is a duplicate-registration startup crash).
 - **[contract] Event-sequence source attributes:** class-level `[EventSequence("name")]`, `[EventLog]`, or `[EventStore("name")]` select where the projection reads from (a named sequence, the explicit default log, or another Chronicle event store / inbox). ⚠️ `[FromEventSequence]` is **removed** — use `[EventSequence("name")]`.
+- **[convention] Counters and aggregates (`[Increment]`, `[Decrement]`, `[Count]`) need clean lifecycle transitions.** They see the event, not the item's previous state, so a close for an already closed item drifts the counter permanently and replay reproduces it. The command that appends the lifecycle event refuses a non-transition and appends nothing; fold the log per event source with the proposed mapping and compare it with the state it summarizes before shipping.
 
 ## Constraints **[contract]**
 
@@ -391,7 +408,7 @@ Redaction is a system-event request that removes payload availability from the e
 
 ## Cross-slice patterns **[convention]**
 
-Cross-slice access is **read-only and goes through Chronicle** — inject another slice's read model (validator/`Provide()`/`Handle()`), read by explicit key with `IReadModels.GetInstanceById`, mark a `[Passive]` projection for command-side decisions, or react to its events. **Never** instantiate or DI another slice's command/handler/service.
+Cross-slice access is **read-only and goes through Chronicle** — inject another slice's read model (validator/`Provide()`/`Handle()`), read by explicit key with `IReadModels.GetInstanceById`, mark a `[Passive]` projection for a current read (a rule that must hold under concurrency needs a decision read or constraint, see the `cratis-chronicle-decision-reads` skill's `references/choosing-how-a-rule-holds.md`), or react to its events. **Never** instantiate or DI another slice's command/handler/service.
 
 **DCB (Dynamic Consistency Boundary):** the boundary is the event state explicitly
 enrolled in guarded decisions, not every model a command reads. Use stream

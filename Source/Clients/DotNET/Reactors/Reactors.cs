@@ -426,7 +426,8 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             [.. reactorType.GetFilterTags()],
             eventSourceFilter.EventSourceType,
             eventSourceFilter.EventStreamType,
-            null);
+            null,
+            reactorType.IsDefined(typeof(StartAtTailAttribute), inherit: false));
     }
 
     ReactorRegistration CreateRegistrationFor(IReactorDefinition definition)
@@ -566,6 +567,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
                 IsReplayable = registration.IsReplayable,
                 IsNotReplayable = !registration.IsReplayable,
+                StartAtTail = registration.StartAtTail,
                 Tags = registration.Tags,
                 Filters = new()
                 {
@@ -637,6 +639,16 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                         _logger.ReactorStreamLostConnection(handler.Id, ex);
                         messages.Dispose();
                         ScheduleReconnect();
+                        return;
+                    }
+
+                    // The kernel lost this client's registration. Retrying the same stream with the same connection id
+                    // can never work, so reconnect the whole client, which re-registers every reactor.
+                    if (errorKind == KernelConnectionErrorKind.SessionLost)
+                    {
+                        _logger.ReactorStreamLostConnection(handler.Id, ex);
+                        messages.Dispose();
+                        _eventStore.Connection.RequestReconnect();
                         return;
                     }
 
@@ -894,7 +906,8 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         string[] FilterTags,
         EventSourceType EventSourceType,
         EventStreamType EventStreamType,
-        Func<ReactorEvent, CancellationToken, Task>? Handle)
+        Func<ReactorEvent, CancellationToken, Task>? Handle,
+        bool StartAtTail = false)
     {
         /// <summary>
         /// Gets or sets whether the subscription has been sent on the current connection.

@@ -81,7 +81,7 @@ module Berths
   specification can state the exact rejection. No `BerthReassigned` event was added to carry it.
 - The `Cannot` line in the persona resolves to the `HarbourOffice` policy and a `then denied`
   specification whose caller fixture carries a non-matching role.
-- On Screenplay 4.144.0, record Q1 as a `question` note on `Berths.Allocation`:
+- Record Q1 as a `question` note on `Berths.Allocation`:
   "Is allocation always manual? Assuming manual allocation; an automatic route
   would need an automation." The documentation carries the working assumption;
   STATE.md carries the returned note ID. Read `stop-or-assume.md` "Durable

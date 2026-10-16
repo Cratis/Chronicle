@@ -500,7 +500,9 @@
         "cratis-chronicle-reactor",
         "cratis-chronicle-read-model",
         "cratis-chronicle-reducer",
-        "cratis-event-model-diagram"
+        "cratis-event-model-diagram",
+        "cratis-multi-service-architecture",
+        "cratis-multi-service-local-orchestration"
       ],
       "languages": [
         "csharp",

@@ -26,23 +26,12 @@ hand-copy Screenplay source between repositories. Keep Markdown that explains,
 questions or navigates the model in the repository's documentation; the `.play`
 source is the single flow model.
 
-## Verified product sources
+## Product sources
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Screenplay` | `4.31.0` | Original parser, validator and binder evidence |
-| `Cratis.Screenplay` | main `fd18129` | Canonical optionality; changed examples compiled |
-| `Cratis.Screenplay` | `4.66.0` (`c89198b`) | Which query shapes bind and render (`Semantics/`, `Documentation/screenplay/queries.md`) |
-
-The update follows `types.md`, `queries.md` and `vscode.md` at that main commit
-(after v4.52.0). Compilation does not establish query execution. Current equality-filter evidence:
-Screenplay v4.145.0 (admitted in 4.143.0, decision 0069); read
-[the verified sources and compiled example](references/equality-filters.md).
-
-Checked against the Screenplay repository at tag `v4.31.0` (commit `355dffb`):
-`Documentation/screenplay/{queries,readmodels,screens,policies,specifications,interactions}.md`
-and decision 0010 established the original baseline. Changed examples use the
-newer main commit above; do not attribute their verification to the old tag.
+Screenplay `Documentation/screenplay/{queries,readmodels,screens,policies,specifications,interactions,types,vscode}.md`
+describe the parser, validator and binder behavior, including which query shapes bind and render
+(`Semantics/`). Compilation does not establish query execution. Equality-filter evidence: read
+[the sources and compiled example](references/equality-filters.md).
 
 ## `readmodel` — shape only
 
@@ -67,8 +56,8 @@ and an admitted list query does the binder infer an unambiguous `*Id`; queryless
 read models need an explicit `key`. See named keys below for collection-key exclusions.
 One explicit key binds byte-identically to equivalent inference. Several marks
 form a composite key, supplied by name in query/read
-`by` blocks. At Screenplay 4.135.0 composite keys and block queries remain
-**authoring-only** (PLAY0268, #599); the scalar optional snapshot shape binds.
+`by` blocks. Composite keys and block queries remain
+**authoring-only** (PLAY0268); the scalar optional snapshot shape binds.
 Read [named keys](references/named-keys.md) for complete examples, trigger/command
 reads, all-parts fixtures, PLAY0660–0662 and command-read-only PLAY0661 repair.
 A `=>` target resolving to an event is an event-target builder, not a read model;
@@ -88,11 +77,15 @@ query ListInvoices => InvoiceListReadModel[]
 ```
 
 **Name the compiler and renderer.** Optional keyed queries and collection queries
-bind, including `observable`. Since Screenplay 4.143.0, caller-supplied equality
+bind, including `observable`. Caller-supplied equality
 filters on collections bind as ESM v14; `from`, single-result filters, `scoped to`,
 `performer` and composite `by` remain PLAY0268, each with its reason. Read
 [equality filters](references/equality-filters.md) for the admitted shape, a complete
 compiled specification model and the Stage/CLI ceilings. Keep a list the domain needs.
+
+Concept keys/supplied filters validate after authorization: invalid means Validation,
+not absence; omitted optional filters are unchecked. Read [query rejections](../cratis-screenplay-specifications/references/query-rejections.md) when specifying this.
+Requires Screenplay 4.161.0 (`screenplay --version`); older runners may answer absence.
 
 Return-type forms after `=>`: `ReadModel`, `ReadModel optional`, `ReadModel[]`,
 each optionally prefixed `observable`. `ReadModel[] optional` permits an absent
@@ -139,7 +132,7 @@ down, rather than the one you get by forgetting."*
 language documents, but the grammar accepts any name — what scopes exist follows
 the identity model of whatever runs the document. A query declares at most one.
 
-At Screenplay 4.127.0, `scoped to` remains an opaque name, **not** a reference
+`scoped to` remains an opaque name, **not** a reference
 to a declared identity detail. An `identity` query source must be keyed and return
 one result (possibly optional), with a type compatible with the detail; its key
 uses only caller built-ins/claims/literals and its effective gate cannot depend
@@ -158,8 +151,7 @@ to a live query exactly as it binds to a one-shot one. The delivery itself is th
 target runtime's: the executable model binds `observable` queries (delivery `live`) that
 have no opaque scope/performer and, when filtered, only admitted caller-supplied equality filters (ESM v14).
 
-Paging, sorting and change-set delivery for queries are accepted as Screenplay
-decision 0010 but **not in the language yet**. Do not invent syntax for them.
+Paging, sorting and change-set delivery for queries are are planned but **not in the language yet**. Do not invent syntax for them.
 
 ### `performer`
 
@@ -172,21 +164,21 @@ Screenplay never runs it.
 
 A read model a performer composes needs no projection, and no event builds it.
 Specify it from state with `given readmodel`, then `when query <Query>` with the
-arguments and `then result` (v4.48.0) - see `cratis-screenplay-specifications`.
+arguments and `then result` - see `cratis-screenplay-specifications`.
 
 A query's key goes on its own `by` line in the body. `query X => RM optional by id Type`
 on the header line is a declaration error, not a shorthand.
 
 ### What runs
 
-These bind on standalone 4.149.0: keyed `=> RM optional`, unfiltered collections,
+These bind: keyed `=> RM optional`, unfiltered collections,
 collections narrowed by caller-supplied `by`, and their `observable` forms.
-Caller-supplied equality filters on collections select ESM v14: same-named scalar
+Caller-supplied equality filters on collections select ESM v14 (Requires Screenplay 4.143.0 or later): same-named scalar
 primitive/concept/enum properties, same nominal type ignoring optionality, no
 `from`, distinct names not repeating `by`. `by` and supplied filters AND together;
 optional filters may be omitted, but supplied null is refused. PLAY0268 still
 rejects context sources, single-result filters, opaque scope/performer and
-composite `by` (#599); a single non-optional result remains unadmitted too.
+composite `by`; a single non-optional result remains unadmitted too.
 Authorization runs before lookup, ANDed with module/feature gates; policies see
 only `by`, never filters. Pin denial with `given caller` and `then denied`.
 Specs pass `by` and filters by name (PLAY0468 for unknown, repeated or missing
@@ -301,10 +293,9 @@ binding failures are errors.
 
 ## Verify
 
-- [ ] Standalone `screenplay <model> --warnaserror` (4.68.0) reports zero errors and zero
+- [ ] Standalone `screenplay <model> --warnaserror` reports zero errors and zero
       warnings; or `cratis screenplay validate --warnings-as-errors` on the model folder
-      (3.28.2 bundles the same Screenplay 4.66.0; before 3.28.2 bundled 4.60.1, ESM v5
-      or lower). Name which tool produced the result.
+      (an older bundled compiler can stop at a lower ESM version). Name which tool produced the result.
 - [ ] Every value the caller must not choose is a `from` parameter, not a `filter`.
 - [ ] Every `scoped to global` is deliberate and defensible.
 - [ ] `observable` is present exactly where the caller should see changes without
@@ -317,7 +308,7 @@ binding failures are errors.
       parameter, dialog input, outlet route) has a source in the screen contract
       or an explicitly provided template/form context.
 
-Read `references/versions.md` in `cratis-screenplay-toolchain` when choosing a tool, checking versions, or assessing executable and renderable subsets. Where a construct sits in the
+Read `SKILL.md` in `cratis-screenplay-toolchain` when choosing a tool, reading installed versions, or assessing executable and renderable subsets. Where a construct sits in the
 method: `cratis-screenplay-modeling-lifecycle` and `cratis-screenplay-slice-design`.
 
 Read [screen patterns](references/screen-patterns.md) when deciding whether a screen is an input, status or error-state screen and which `data` and `action` lines it needs.
@@ -327,6 +318,6 @@ Read [screen patterns](references/screen-patterns.md) when deciding whether a sc
 Attribution and licences: `references/provenance.md`.
 
 - How events fill the read model: `cratis-screenplay-projections`.
-- Layouts, templates, forms, component bindings, toolbars, outlets, contributions, packages and themes: `cratis-screenplay-ui-composition`.
+- Layouts, templates, forms, component bindings, toolbars and slice buttons, outlets, contributions, navigation regions, sample data, packages and themes: `cratis-screenplay-ui-composition`.
 - Asserting query results: `cratis-screenplay-specifications`.
 - Deciding which read models exist: `cratis-screenplay-event-modeling`.

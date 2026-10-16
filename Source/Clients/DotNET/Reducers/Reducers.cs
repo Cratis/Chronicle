@@ -376,6 +376,8 @@ public partial class Reducers : IReducers
 
     ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)
     {
+        EventStreamReadModel.RefuseReducer(readModelType);
+        EventStreamReadModel.RefuseReducer(reducerType);
         var descriptor = new ReducerDescriptor(reducerType, readModelType, ReducerCatalog.IsSelfReducer(reducerType));
         ReadModelBuilderOwnership.Validate(_eventStore, _clientArtifacts, Catalog, readModelType, reducerType, descriptor.IsSelfReducing);
 
@@ -528,6 +530,12 @@ public partial class Reducers : IReducers
                         case KernelConnectionErrorKind.ConnectionLost:
                             _logger.ReducerStreamLostConnection(handler.Id, ex);
                             break;
+                        case KernelConnectionErrorKind.SessionLost:
+                            // The kernel lost this client's registration: reconnect the whole client, which
+                            // re-registers every reducer with a fresh connection id.
+                            _logger.ReducerStreamLostConnection(handler.Id, ex);
+                            _eventStore.Connection.RequestReconnect();
+                            return;
                         default:
                             _logger.ReducerStreamFailed(handler.Id, ex);
                             break;

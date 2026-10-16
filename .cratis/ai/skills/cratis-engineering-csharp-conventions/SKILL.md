@@ -14,9 +14,9 @@ do not claim the framework requires them.
 
 ## Verified product sources
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Fundamentals` | `7.23.0` | DI lifetime attributes and `IInstancesOf<T>` instance resolution |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Fundamentals` | DI lifetime attributes and `IInstancesOf<T>` instance resolution |
 
 ## Route near misses
 

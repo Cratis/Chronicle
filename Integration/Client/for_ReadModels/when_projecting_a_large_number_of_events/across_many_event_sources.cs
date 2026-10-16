@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Events;
 using context = Cratis.Chronicle.Integration.for_ReadModels.when_projecting_a_large_number_of_events.across_many_event_sources.context;
 
@@ -14,6 +12,7 @@ public class across_many_event_sources(context context) : Given<context>(context
     public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
     {
         public const int NumberOfEventSources = 500;
+        const int EventsPerEventSource = 2;
 
         public IReadOnlyList<EventSourceId> EventSourceIds { get; private set; }
         public IEnumerable<SomeReadModel> Instances { get; private set; }
@@ -29,45 +28,35 @@ public class across_many_event_sources(context context) : Given<context>(context
             var projection = EventStore.Projections.GetHandlerFor<SomeProjection>();
             await projection.WaitTillActive();
 
+            var tail = EventSequenceNumber.Unavailable;
             for (var index = 0; index < NumberOfEventSources; index++)
             {
-                await EventStore.EventLog.AppendMany(
+                var result = await EventStore.EventLog.AppendMany(
                     EventSourceIds[index],
                     [new SomeEvent(index), new AnotherEvent($"value-{index}")]);
+                tail = result.TailSequenceNumber;
             }
 
-            await WaitTillAllInstancesAreMaterialized();
+            await projection.WaitTillReachesEventSequenceNumber(tail, TimeoutForMaterialization());
             Instances = await EventStore.ReadModels.GetInstances<SomeReadModel>();
         }
 
         /// <summary>
-        /// Polls the sink-backed endpoint until every instance has landed. The projection observer
-        /// materializes asynchronously, so without this the assertions would run against a partially
-        /// caught-up read side.
+        /// The projection handles every appended event before the sink is read, so the wait is sized for the
+        /// number of events rather than for a single one. A slow machine only makes the projection take longer;
+        /// it fails here only when the projection never reaches the last appended event.
         /// </summary>
-        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        async Task WaitTillAllInstancesAreMaterialized()
+        /// <returns>The time allowed for the projection to reach the last appended event.</returns>
+        static TimeSpan TimeoutForMaterialization()
         {
-            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-            var readModels = Services.GetRequiredService<IServices>().ReadModels;
-            while (true)
+            var defaultTimeout = TimeSpanFactory.DefaultTimeout();
+            if (defaultTimeout == Timeout.InfiniteTimeSpan)
             {
-                var response = await readModels.GetInstances(new GetInstancesRequest
-                {
-                    EventStore = Constants.EventStore,
-                    Namespace = "Default",
-                    ReadModel = typeof(SomeReadModel).FullName,
-                    Page = 0,
-                    PageSize = 1
-                });
-
-                if (response.TotalCount >= NumberOfEventSources)
-                {
-                    break;
-                }
-
-                await Task.Delay(100, cts.Token);
+                return defaultTimeout;
             }
+
+            var forEveryEvent = TimeSpan.FromMilliseconds(NumberOfEventSources * EventsPerEventSource * 100);
+            return forEveryEvent > defaultTimeout ? forEveryEvent : defaultTimeout;
         }
     }
 

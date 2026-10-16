@@ -14,8 +14,6 @@
 - What makes a type a model-bound projection
 - AutoMap
 
-Verified against `Cratis.Chronicle` `18.3.0`.
-
 Unless noted, every attribute below lives in
 `Cratis.Chronicle.Projections.ModelBound`. Generic arity is stated exactly:
 `<T>` means one generic parameter naming the event type; "non-generic" means the
@@ -55,7 +53,7 @@ attribute takes no generic parameter at all.
 Note that `[FromAll]` and `[FromEvery]` take their two optional arguments in
 **opposite order**. Always pass them by name.
 
-At **Cratis/Chronicle v19.50.0**, `[FromEvery]` includes child-only and nested-child
+`[FromEvery]` includes child-only and nested-child
 contributing events in the owning parent's mappings (no attribute opt-out).
 `[FromAll]` subscribes to every sequence event type except join-only types;
 pair it with `[NotRewindable]`. `[NotProjected]` excludes a query-assembled member
@@ -72,6 +70,12 @@ from AutoMap and CHR0024. Sources: `Projections/ModelBound/NotProjectedAttribute
 | `[AddFrom<T>]` | `<T>` | `(string? eventPropertyName = default)` | property, parameter; repeatable |
 | `[SubtractFrom<T>]` | `<T>` | `(string? eventPropertyName = default)` | property, parameter; repeatable |
 | `[ClearWith<T>]` | `<T>` | **none** | class, property, parameter; repeatable |
+
+Requires Chronicle 19.51.1 for dotted CLR member paths in model-bound attributes
+and naming-policy conversion of every nested path segment. Check the client/kernel
+versions; earlier nested mappings can remain empty. A corrected definition follows
+`observers.definitionEvolution`: Automatic rebuilds it, while PartialOnly/Manual
+can recommend replay. Do not assume upgrading repaired stored state.
 
 ## Counters
 
@@ -100,7 +104,7 @@ that key. That is a different mechanism from the fluent builder's
 | `[EntersOn<T>]` | `<T>` | `(string? key = default)` | class, struct; repeatable |
 | `[GlobalFor<TIdentity>]` | `<TIdentity>` | none | class, struct; single |
 
-Requires `Cratis.Chronicle` `19.1.0` or later. See
+Requires `Cratis.Chronicle` 19.1.0 or later for variants. See
 [variants.md](variants.md) for the full mechanics, the update-only
 reclassification of non-entering events, and the `VariantMustDeclareEntersOnEvent`
 startup trap.

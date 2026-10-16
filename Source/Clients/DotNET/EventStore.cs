@@ -485,6 +485,10 @@ public partial class EventStore : IEventStore
         return namespaces.Select(_ => (EventStoreNamespaceName)_.Name).ToArray();
     }
 
+    /// <inheritdoc/>
+    public async Task RemoveNamespace(EventStoreNamespaceName @namespace, CancellationToken cancellationToken = default) =>
+        await _servicesAccessor.Services.Namespaces.RemoveNamespace(new RemoveNamespaceRequest { EventStore = _eventStoreName, Namespace = @namespace.Value }).EnsureSuccess();
+
     async Task RegisterAllCore()
     {
         _logger.RegisterAllArtifacts();

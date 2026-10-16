@@ -15,7 +15,7 @@
 A top-level `system` names an external business system. A slice-owned `operation`
 declares exactly one `uses <System>`, typed inputs, optional description and
 execute/compensate phases. Operations and their specification steps are
-**authoring-only** at Screenplay 4.125.0: compile acceptance is not execution;
+**authoring-only**: compile acceptance is not execution;
 binding refuses the whole model with PLAY0268. Source: released `operations.md`.
 
 `produces operation <Name>` declares an inline slice-owned operation with typed
@@ -44,7 +44,7 @@ must preserve its production sequence, mappings, comments and attachment paths.
 
 ## Specification intent
 
-This complete authoring-only model compiles with `--warnaserror` at 4.125.0.
+This complete authoring-only model compiles with `--warnaserror`.
 `screenplay test` intentionally returns exit 3/unbound with PLAY0268; it proves
 no failure/compensation behavior today:
 

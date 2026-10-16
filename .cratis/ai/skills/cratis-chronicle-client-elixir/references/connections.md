@@ -4,17 +4,17 @@
 
 # Connections, trust and resilience
 
-Verified at `Cratis/Chronicle.Elixir v3.10.2`: `Source/chronicle/lib/chronicle/connections/{connection_string,connection,keep_alive,client_certificate,transport}.ex`, `registration/coordinator.ex`, and `Documentation/connections/{connection-strings,resilience,crash-reports}.md`.
+Source: `Cratis/Chronicle.Elixir`: `Source/chronicle/lib/chronicle/connections/{connection_string,connection,keep_alive,client_certificate,transport}.ex`, `registration/coordinator.ex`, and `Documentation/connections/{connection-strings,resilience,crash-reports}.md`.
 
 ## Connection strings and authentication
 
-`Chronicle.Connections.ConnectionString` accepts `chronicle://` and `chronicle+srv://`; the default port is `35000`. Multiple comma-separated hosts are resolved again on reconnect; SRV accepts only one host (`connection_string.ex:198-199`).
+`Chronicle.Connections.ConnectionString` accepts `chronicle://` and `chronicle+srv://`; the default port is `35000`. Multiple comma-separated hosts are resolved again on reconnect; SRV accepts only one host (`connection_string.ex`).
 
 | Function | Line in `connection_string.ex` |
 | --- | --- |
-| `default/0` — localhost, **no credentials** | `:145` |
-| `development/0` — well-known local development credentials | `:155` |
-| `parse/1` | `:187` |
+| `default/0` — localhost, **no credentials** | |
+| `development/0` — well-known local development credentials | |
+| `parse/1` | |
 
 Use `development/0` only for a local kernel configured to accept the well-known credentials, never for a shared or production kernel. A bare default connection does not substitute credentials; an authentication-required development kernel drops its session (`:stream_ended`) and it never registers.
 
@@ -24,9 +24,11 @@ Query parameters: `apiKey`, `disableTls`, `skipTlsValidation`, `certificatePath`
 
 ## Server trust and client certificates
 
-`skip_tls_validation` defaults to **true** in both the struct and parser (`connection_string.ex:113,215`). TLS encrypts traffic but does not authenticate the server with that default. Set `skipTlsValidation=false` outside local development. `disableTls` is only for a TLS-terminating proxy; the kernel itself serves TLS.
+`skip_tls_validation` defaults to **true** in both the struct and parser (`connection_string.ex`). TLS encrypts traffic but does not authenticate the server with that default. Set `skipTlsValidation=false` outside local development. `disableTls` is only for a TLS-terminating proxy; the kernel itself serves TLS.
 
-Since 3.7.0, `certificatePath` accepts PKCS#12 (`.p12`/`.pfx`) or PEM containing a certificate and matching private key. `certificatePassword` unlocks protected files. The identity is presented to both gRPC and the OAuth token endpoint; invalid files, wrong passwords or mismatched keys fail startup. PKCS#12 loading needs `openssl`. Client certificates cannot be combined with `disableTls=true`.
+Requires `cratis_chronicle` 3.7.0 for client certificates.
+
+`certificatePath` accepts PKCS#12 (`.p12`/`.pfx`) or PEM containing a certificate and matching private key. `certificatePassword` unlocks protected files. The identity is presented to both gRPC and the OAuth token endpoint; invalid files, wrong passwords or mismatched keys fail startup. PKCS#12 loading needs `openssl`. Client certificates cannot be combined with `disableTls=true`.
 
 **A client certificate does not trust the server.** With a client certificate, put custom server-verification options on `GRPC.Credential` passed as `:cred` through `:grpc_options`, not in adapter-level `:transport_opts`. For example, this option excerpt assumes `trusted_der` is an approved DER-encoded CA certificate:
 
@@ -38,20 +40,22 @@ grpc_options: [
 
 This credential configures the **gRPC channel only**; OAuth server verification still follows `skipTlsValidation` and the system trust store. Install the CA in that trust store when client credentials need it. Conflicting identity or adapter-level verification overrides are rejected at startup.
 
-Since 3.8.0 the client uses grpc 1.x and Mint 1.11+, owns its transport, and needs no `GRPC.Client.Supervisor`. If the application calls `GRPC.Stub.connect/2` independently, specify `adapter: GRPC.Client.Adapters.Mint` there too (or explicitly depend on Gun). Application-level Mint `client_settings` must retain `enable_push: false`; grpc replaces rather than merges those settings and the client rejects unsafe overrides.
+Requires `cratis_chronicle` 3.8.0 for the client-owned transport.
+
+The client uses grpc 1.x and Mint 1.11+, owns its transport, and needs no `GRPC.Client.Supervisor`. If the application calls `GRPC.Stub.connect/2` independently, specify `adapter: GRPC.Client.Adapters.Mint` there too (or explicitly depend on Gun). Application-level Mint `client_settings` must retain `enable_push: false`; grpc replaces rather than merges those settings and the client rejects unsafe overrides.
 
 ## Credential-safe logging is still necessary
 
-Chronicle's own process status redacts credentials, but dependency crash reports can expose gRPC headers, bearer tokens, API keys and Mint HPACK tables. Before starting the client, install the primary Logger filter from the versioned [client crash-report guide](https://github.com/Cratis/Chronicle.Elixir/blob/v3.10.2/Documentation/connections/crash-reports.md). It matches `Elixir.GRPC.Client`, `Elixir.GRPC.Channel`, and `Elixir.Mint.` report content and replaces reports with a notice.
+Chronicle's own process status redacts credentials, but dependency crash reports can expose gRPC headers, bearer tokens, API keys and Mint HPACK tables. The client itself installs a primary Logger filter (`Chronicle.Connections.ResponseCrashRedaction`) when a connection starts, replacing the Mint response-process termination report, the one shape it can intercept generically, with a one-line notice (requires `cratis_chronicle` 3.13.0). The `ConnectionProcess` and `GRPC.Client.Connection` state can still print credentials, so before starting the client, install the primary Logger filter from the [client crash-report guide](https://github.com/Cratis/Chronicle.Elixir/blob/main/Documentation/connections/crash-reports.md). It matches `Elixir.GRPC.Client`, `Elixir.GRPC.Channel`, and `Elixir.Mint.` report content and replaces reports with a notice.
 
 Keep `handle_sasl_reports: false`. This is a safety net, not a guarantee: plain warning strings carrying exit reasons are not covered, and filters do not survive a Logger restart. Restrict production log access and rotate any credential already exposed. Never log connection strings.
 
 ## Keepalive and readiness
 
-The kernel sends keepalive once a second; the client answers via a separate unary RPC (`keep_alive.ex:7-17,56`). Merely consuming the stream is insufficient. Kernel eviction after five seconds without an answer can silence reactors/reducers while appends continue working. Diagnose the connection when observers go quiet rather than assuming there are no events.
+The kernel sends keepalive once a second; the client answers via a separate unary RPC (`keep_alive.ex`). Merely consuming the stream is insufficient. Kernel eviction after five seconds without an answer can silence reactors/reducers while appends continue working. Diagnose the connection when observers go quiet rather than assuming there are no events.
 
 `:connected` means the first keepalive acknowledged the connection id, not that artifacts registered. Failed registration logs `Chronicle registration failed`, stays `:connected`, and retries every five seconds. Wait for `:registered` before claiming readiness.
 
 Reconnect uses exponential backoff (1000 ms base, 10000 ms cap); `:retry_attempts` is accepted but ignored. Appends do not wait or queue during an outage: before a channel exists they return `{:error, :not_connected}`. Read model queries wait up to 30 seconds for registration. Transport failures return `{:error, %GRPC.RPCError{}}`; a timeout does not prove a write was not stored.
 
-Seeders run after `:registered`, again on reconnect, and skip an event source with existing events (`seeding/runner.ex`, `seeding.ex`). Since 3.5.1 this avoids startup duplicates; it does not remove duplicates already stored by 3.5.0.
+Seeders run after `:registered`, again on reconnect, and skip an event source with existing events (`seeding/runner.ex`, `seeding.ex`). This avoids startup duplicates; it does not remove duplicates already stored.

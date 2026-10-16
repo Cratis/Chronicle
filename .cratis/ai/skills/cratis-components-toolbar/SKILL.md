@@ -15,11 +15,11 @@ over a list, use `DataPage.MenuItems` instead (see the
 
 ## Verified product sources
 
-| Package | Version | Verified from |
-| --- | --- | --- |
-| `@cratis/components` | `4.26.4` | its package manifest, `Source/Toolbar/*` (exports and props), `Documentation/Toolbar/*`, `Documentation/Common/icon.md` |
-| `react-icons` | `5.7.0` | dependency of `@cratis/components@4.26.4` — the icon source the examples use |
-| `react` | `^19.0.0` | peer of `@cratis/components@4.26.4` |
+| Package | Verified from |
+| --- | --- |
+| `@cratis/components` | its package manifest, `Source/Toolbar/*` (exports and props), `Documentation/Toolbar/*`, `Documentation/Common/icon.md` |
+| `react-icons` | dependency of `@cratis/components` — the icon source the examples use |
+| `react` | peer of `@cratis/components` |
 
 ## Import from the subpath
 

@@ -32,6 +32,10 @@ message QueryResult_IEnumerable_NamespaceNamesResponse {
    string ExceptionStackTrace = 5;
    repeated NamespaceNamesResponse Data = 6;
 }
+message RemoveNamespaceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+}
 message ValidationResult {
    ValidationResultSeverity Severity = 1; // default value could not be applied: Error
    string Message = 2;
@@ -47,4 +51,5 @@ service Namespaces {
    rpc AllNamespaces (AllNamespacesRequest) returns (QueryResult_IEnumerable_NamespaceNamesResponse);
    rpc EnsureNamespace (EnsureNamespaceRequest) returns (CommandResult);
    rpc ObserveNamespaces (ObserveNamespacesRequest) returns (stream QueryResult_IEnumerable_NamespaceNamesResponse);
+   rpc RemoveNamespace (RemoveNamespaceRequest) returns (CommandResult);
 }

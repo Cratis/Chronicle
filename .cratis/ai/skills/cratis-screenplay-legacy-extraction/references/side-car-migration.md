@@ -79,6 +79,8 @@ Rules for any option:
   events as if they were observed facts without recording their provenance.
 - Map every in-scope legacy table to extractable events or to an explicit "not extracted"
   row with a reason. An unmapped table is an unknown.
+- Use the field chains of the as-is slice map (`evidence-table-template.md` section 11) as the
+  column-to-property map: each event property has a chain to a column, or a question.
 
 ## Routing user traffic (Y-valve)
 
@@ -91,7 +93,7 @@ Move users gradually, never all at once:
 
 A routing rule decides per request: a new feature goes to the side-car; a user who opted in
 goes to the side-car; everything else goes to legacy. Users should always know which system
-they are in.
+they are in. Route per slice: the as-is slice map names the legacy entry point each slice replaces.
 
 ## Integration patterns
 

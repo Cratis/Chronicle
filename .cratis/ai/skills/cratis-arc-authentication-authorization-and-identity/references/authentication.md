@@ -10,8 +10,9 @@
 - Forwarded headers, ingress requirements and protected introspection
 - What is not here
 - The security boundary, stated plainly
+- AuthenticationResult
 
-Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.75.0`. Types are in
+Source: `Cratis.Arc.Core` and `Cratis.Arc`. Types are in
 `Cratis.Arc.Authentication` and `Cratis.Arc.Identity`.
 
 ## The contract
@@ -137,13 +138,13 @@ whose `SchemeName` is `"MicrosoftIdentityPlatform"`. `builder.AddCratis()` (the
 `Cratis` package) calls this for you and makes it the **default** authentication
 scheme; `AddCratisArc()` from `Cratis.Arc` does not register it.
 
-At **v22.75.0**, `AddCratis()` registers the scheme but forwarded headers do not
+`AddCratis()` registers the scheme but forwarded headers do not
 authenticate anybody until `Cratis:Arc:TrustForwardedIdentityHeaders=true`.
 `AddMicrosoftIdentityPlatformIdentityAuthentication()` warns at startup without
 that opt-in; built-in handlers warn on the first header-bearing request.
 The three-argument `MicrosoftIDentityPlatformAuthHandler` constructor is obsolete;
 use the constructor receiving `IOptions<ArcOptions>`.
-Source: [secure defaults](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/upgrading/secure-defaults.mdx).
+Source: [secure defaults](https://github.com/Cratis/Arc/blob/main/Documentation/upgrading/secure-defaults.mdx).
 
 ## Forwarded headers, ingress requirements and protected introspection
 
@@ -153,7 +154,7 @@ prevents direct access to the backend**. The same applies to any custom header
 such as `X-User-ID`. Adding a bearer validator does not make a separately accepted
 forwarded-header mechanism safe.
 
-Configure discovery through `Cratis:Arc:Introspection` at **v22.75.0**:
+Configure discovery through `Cratis:Arc:Introspection`:
 
 | Option | Default | Effect |
 | --- | --- | --- |
@@ -180,9 +181,9 @@ On ASP.NET Core, a scheme's challenge may redirect instead of returning 401.
 
 `[ExcludeFromDiscovery]` suppresses catalogs/OpenAPI, not endpoint invocation;
 it is not authorization. These .NET options do not establish a JVM equivalent.
-Sources: [IntrospectionOptions.cs](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Arc.Core/Introspection/IntrospectionOptions.cs),
-[DiscoveryExposure.cs](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Arc.Core/Introspection/DiscoveryExposure.cs),
-[secure defaults](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/upgrading/secure-defaults.mdx).
+Sources: [IntrospectionOptions.cs](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Arc.Core/Introspection/IntrospectionOptions.cs),
+[DiscoveryExposure.cs](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Arc.Core/Introspection/DiscoveryExposure.cs),
+[secure defaults](https://github.com/Cratis/Arc/blob/main/Documentation/upgrading/secure-defaults.mdx).
 
 ## What is not here
 
@@ -199,3 +200,10 @@ sent it. Any caller that can reach the application can author the entire
 serialized principal, including the fields Arc reads. Trust it exactly as far as
 you trust that your ingress is the only thing that can set it — which means the
 application must not be reachable any other way.
+
+## AuthenticationResult
+
+`AuthenticationResult` is
+`record (ClaimsPrincipal? Principal = default, AuthenticationFailure? Failure = default)`
+with `Anonymous`, `Succeeded(principal)` and `Failed(reason)`, and
+`IsAuthenticated => Principal is not null`.

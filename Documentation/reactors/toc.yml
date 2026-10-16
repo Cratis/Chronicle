@@ -18,6 +18,8 @@
   href: identity.mdx
 - name: OnceOnly
   href: once-only.mdx
+- name: StartAtTail
+  href: start-at-tail.mdx
 - name: Replay
   href: replay.mdx
 - name: Replay notifications

@@ -86,5 +86,11 @@ public enum DecisionReadRefusalReason
     ReducerGeneration = 22,
 
     /// <summary>Not every fetched handled-type event was dispatched successfully.</summary>
-    ReducerDispatchIncomplete = 23
+    ReducerDispatchIncomplete = 23,
+
+    /// <summary>The read model declares an event stream and cannot be read by key alone.</summary>
+    ReadModelRequiresStreamScope = 24,
+
+    /// <summary>The supplied stream type or event source type differs from the read model's declaration.</summary>
+    StreamScopeDoesNotMatchReadModel = 25
 }

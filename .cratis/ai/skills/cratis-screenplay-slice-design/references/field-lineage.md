@@ -3,15 +3,24 @@
 
 ## Contents
 
+- Where information starts
 - Where values come from, per element
+- Check as you edit
 - The matrix
 - The reason line per contributing event
 - Gap handling
 - Adding or renaming a field along a chain (manual checklist)
+- Tracing caller details
 
 Every value in the model has a place it comes from and a place it goes. If you cannot say
 where a field comes from, the model is missing an input, an event field or a decision. If an
 event field goes nowhere, ask why it is recorded (audit and history are valid answers; say so).
+
+## Where information starts
+
+Every value starts at one specific place and is carried by name from there: the person's
+input on a screen, the runtime's context (caller, time, tenant), an identifier the runtime
+allocates, or a view's own calculation. A value with no such start is a gap, not a default.
 
 ## Where values come from, per element
 
@@ -22,8 +31,9 @@ event field goes nowhere, ask why it is recorded (audit and history are valid an
 | the user types or picks it | screen `action`, form or dialog input | default for business decisions |
 | shown before the user acts | form `populate via query` from a read model | the read model must exist and be traced |
 | the instance being acted on | the `identifier` property, carried from the screen row or route | |
-| allocated by the runtime | `Type generated` on a required scalar generatable Uuid/String concept (implicit UUID is v7; explicit serialized strategy selects v15, Screenplay 4.147.0+ with strict fixtures and whole-source freshness). CLI 3.57.0 / Stage 4.89.1 render supported strategies; types/combinations retain -028/-038; no concept rules. See command-surface `references/generated-values-and-responses.md` | never a request input or form field; no policy, rule or requirement may read it (`PLAY0273`); return it with `returns`; where a tool cannot bind it, executable scope needs explicit allocation |
+| allocated by the runtime | `Type generated` on a required scalar generatable Uuid/String concept (implicit UUID is v7; explicit serialized strategy selects v15, Screenplay 4.147.0+ with strict fixtures and whole-source freshness). The CLI/Stage render supported strategies within their bundled ESM ceiling; types/combinations retain -028/-038. Generated-concept rules select v20 (Requires Screenplay 4.164.0, `screenplay --version`); older compilers refuse them, and targets need explicit v20 admission. See command-surface `references/generated-values-and-responses.md` | never a request input or form field; no policy, rule or requirement may read it (`PLAY0273`); return it with `returns`; where a tool cannot bind it, executable scope needs explicit allocation |
 | an outside party | capture field `$.x` or a reaction trigger value | `cratis-screenplay-automations-and-translations` |
+| time of the decision | not an input: `$context.occurred` in `produces`; a rule reads it as `context.Occurred` in a named rule (`command-inventory.md` *Values a rule reads*) | a date the person chooses is an input; "now" is context |
 | the caller | not an input: `$context.identity.*` in `produces`; who may act in `authorize`; "acting on own X" is a claim policy matched to the identifier or a command property | never trust a caller-supplied "who am I" |
 
 **Event property** - set only in `produces` mappings, from:
@@ -44,6 +54,21 @@ duration, a sum of rows) is recorded as `derived: <expression>` with its origin 
 **Conditional inputs.** If one input matters only for some values of another, record the
 condition in the matrix, then decide: two commands (two decisions) or one command with an
 implication rule. Never leave it implicit.
+
+## Check as you edit
+
+After every edit that adds, renames or removes a field, run the opt-in structural checks on
+the model root rather than waiting for the audit: `field-origins` (a read-model field with no
+origin), `input-surfaces` (a command nothing issues), `data-bindings`, `query-keys` and
+`event-consumers`. Use `--check` on the standalone tool or the MCP `diagnostics` `checks`;
+flags and versions are in `cratis-screenplay-toolchain`. They run only when the whole model
+has no source errors, so fix those first and never read a skipped check as clean.
+
+- A finding is a prompt to look, not proof of a gap, and a clean result covers structure only.
+  It does not replace the matrix for command inputs, screen fields, reducers or performer views.
+- An origin must be known, not just labeled. Calling an unknown value "allocated", "derived"
+  or "from context" to close a row is the same failure as leaving it blank: mark it `gap`
+  and ask.
 
 ## The matrix
 
@@ -119,8 +144,16 @@ hop before editing:
    An explicit mapping to a renamed-away target fails binding (V3, PLAY0273); a property AutoMap
    used to fill and no longer matches is **not reported** - the field silently stays empty.
 
+Before an add, check the element one hop further upstream than the stated source. If it already
+carries the value, the requested chain stops too early: extend it to where the value really
+starts (an input, a context value, a generated identifier, a view calculation).
+
 Skip a hop and log why when the field already exists there (add) or is not found on that
-element (rename); never skip silently. Report the walk hop by hop: element, field, `updated`
+element (rename); never skip silently. Skipping a hop is also safe when the value already
+arrives there under its old name and an explicit mapping bridges it (hop 3 below). When a hop
+that must carry the value cannot be applied (a persisted event, an accepted slice), do not apply
+the rest as if it had been: stop and route the whole chain to the identity owner. The chain is
+one logical edit. Report the walk hop by hop: element, field, `updated`
 or `skipped` with the reason (already present; not on this element); name the chain from
 the consuming element back to the source. Run V1 after the chain edit; if a hop cannot be applied, stop
 and report that hop. Rename only through the identity-aware path when any hop is persisted
@@ -139,3 +172,11 @@ go to the identity owner):
 | 4 | command InstallLocker | `volume` | skipped: not part of this change |
 | 5 | concept Litres | none | skipped: unchanged |
 | 6 | specifications | read-model and query expectations only; LockerInstalled event expectations stay `volume` | updated |
+
+## Tracing caller details
+
+   Trace caller details to claims or a keyed single-result identity-source query
+   (built-in/claim/literal key, detail-independent effective gate, compatible result).
+   The `identity` block is authoring metadata; executable `$identity.<detail>` reads
+   remain PLAY0268. `scoped to` is opaque, not a detail reference; see command-surface
+   `references/context.md`.

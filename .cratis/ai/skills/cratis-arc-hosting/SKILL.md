@@ -16,14 +16,14 @@ Nothing in `AddCratis()` runs the Chronicle engine in your application.
 
 ## Verified product sources
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis`, `Cratis.Arc`, `Cratis.Arc.Core` | `22.75.0` | Composition, ASP.NET hosting and standalone host |
-| `Cratis.Arc.Chronicle`, `Cratis.Arc.MongoDB`, `Cratis.Arc.EntityFrameworkCore` | `22.75.0` | Optional client/storage integrations |
-| `Cratis.Arc.Screenplay.Embedded` | `22.75.0` | Optional embedded event-model explorer |
+| Package | Purpose |
+| --- | --- |
+| `Cratis`, `Cratis.Arc`, `Cratis.Arc.Core` | Composition, ASP.NET hosting and standalone host |
+| `Cratis.Arc.Chronicle`, `Cratis.Arc.MongoDB`, `Cratis.Arc.EntityFrameworkCore` | Optional client/storage integrations |
+| `Cratis.Arc.Screenplay.Embedded` | Optional embedded event-model explorer |
 
-Source verification at [Arc v22.75.0](https://github.com/Cratis/Arc/tree/v22.75.0/Source/DotNET).
-Reverify signatures at the consumer's tag before claiming another version.
+Source: [Arc](https://github.com/Cratis/Arc/tree/main/Source/DotNET).
+Check signatures against the consumer's installed version.
 
 ## Choose one bootstrap
 
@@ -75,7 +75,7 @@ configuring the explorer.
   as usable. See `cratis-arc-authentication-authorization-and-identity` for the
   full ingress, identity and authorization contract.
 
-Source: [secure defaults at v22.75.0](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/upgrading/secure-defaults.mdx).
+Source: [secure defaults](https://github.com/Cratis/Arc/blob/main/Documentation/upgrading/secure-defaults.mdx).
 
 ## Verify the host, not just the compilation
 
@@ -95,3 +95,4 @@ Source: [secure defaults at v22.75.0](https://github.com/Cratis/Arc/blob/v22.75.
 - EF schema/migrations: `cratis-arc-ef-core-migration`.
 - Authentication and identity: `cratis-arc-authentication-authorization-and-identity`.
 - A standalone Chronicle client or running store: the Chronicle client/CLI skills.
+- Several Arc services with their own event stores: `cratis-multi-service-architecture`; running them together locally: `cratis-multi-service-local-orchestration`.

@@ -22,10 +22,14 @@ owning session records both. Parallel overwrites of one STATE.md are never allow
 2. **Connect once.** Discover the model root, tool versions and MCP capabilities on the first
    turn. Rediscover only when the model root, tool, version or configuration changes, or a call fails
    (including a credentials refusal; `cratis-screenplay-model-authoring` `references/mcp-loop.md`).
-   Sub-skills do not rediscover what the session already knows.
+   Sub-skills do not rediscover what the session already knows. A delegated agent inherits none
+   of this session's state, so its brief carries the discovered model root, mode, source
+   identity, tool versions, MCP capabilities and the addresses it must read, and says it need not
+   rediscover them. It rediscovers only on the triggers above.
 3. **Resolve the scope.** An address named in the brief (declaration address, feature, slice)
    wins over a name inferred from prose. Read STATE.md and recompute the source identity before
-   trusting recorded verdicts.
+   trusting recorded verdicts. A slice under delivery is read-only unless the brief names it
+   (`phases.md` "Slices under delivery").
 4. **Mark it started** (owning session): set `Active: <scope> by <agent> since <time>` in
    STATE.md before the work. A stale value on resume means an interrupted run.
 5. **Run the matched phase skill; never substitute raw tool calls for it.** MCP operations and
@@ -49,3 +53,8 @@ owning session records both. Parallel overwrites of one STATE.md are never allow
    goes in the packet's "Learning candidates" (`handoff-template.md`; "none" is valid) with its
    evidence; the main session decides what is kept. Story-specific details, judgment heuristics
    built from one case and text copied from evidence never become standing guidance.
+
+## End of a turn
+
+4. **End** with one closed outcome, never "neither progressed nor closed". The packet's first
+   line is `Outcome: done | partial (...) | blocked (Qn) | out-of-scope (why)`.

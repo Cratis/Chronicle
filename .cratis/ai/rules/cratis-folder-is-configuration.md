@@ -1,5 +1,7 @@
 ---
-applyTo: "**/*"
+applyTo: "**/.cratis/**"
+paths:
+  - "**/.cratis/**"
 ---
 <!-- cratis-ai-managed: rules/cratis-folder-is-configuration.md -->
 

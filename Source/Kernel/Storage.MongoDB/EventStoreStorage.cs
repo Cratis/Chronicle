@@ -151,4 +151,11 @@ public class EventStoreStorage(
 
         return _namespaces.GetOrAdd(@namespace, created);
     }
+
+    /// <inheritdoc/>
+    public async Task DropNamespace(EventStoreNamespaceName @namespace)
+    {
+        await eventStoreDatabase.GetNamespaceDatabase(@namespace).Drop();
+        _namespaces.TryRemove(@namespace, out _);
+    }
 }

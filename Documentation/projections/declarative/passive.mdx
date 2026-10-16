@@ -14,6 +14,8 @@ This projection:
 - Can be read on demand through `ReadModels.GetInstanceById`
 - Reconstructs the read model from events when requested
 
+A read model declaring `[EventStream<TSource>(stream)]` is also passive, even without `.Passive()`. It stays keyed by event source ID but requires a stream-aware instance read; a key-only read is refused rather than mixing stream IDs. See [Read models scoped to one event stream](../../read-models/per-stream.mdx).
+
 ## Using passive projections
 
 Passive projections are accessed through the event store's `ReadModels` using the `GetInstanceById` method:

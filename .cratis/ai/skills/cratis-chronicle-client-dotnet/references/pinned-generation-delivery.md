@@ -11,7 +11,7 @@ opt consumers in.
 
 ## Standalone client
 
-This configuration excerpt uses `Cratis.Chronicle` **19.48.0** and a running
+This configuration excerpt uses `Cratis.Chronicle` and a running
 local development kernel. Keep the client alive for observation; supply logging
 and a service provider when the application's observers need them (see the main
 skill's standalone checklist).
@@ -33,7 +33,7 @@ var eventStore = await client.GetEventStore("People");
 
 `AddCratisChronicle` extends `IHostApplicationBuilder` (an `IHostBuilder`
 overload also exists), **not** `IServiceCollection`. Its `ChronicleClientOptions` inherits the delivery option.
-This worker-host configuration excerpt uses `Cratis.Chronicle` **19.48.0** and
+This worker-host configuration excerpt uses `Cratis.Chronicle` and
 `Microsoft.Extensions.Hosting`; add the application's hosted worker and start
 the host as usual.
 
@@ -82,12 +82,14 @@ For delivery-time migration, persisted PDL pins, and testing limits, read
 
 ## Product sources
 
-Verified at `Cratis/Chronicle` **v19.48.0**:
+Source: `Cratis/Chronicle`:
 `Source/Clients/DotNET/ChronicleOptions.cs`,
 `Observation/EventGenerationDelivery.cs`,
 `ChronicleHostApplicationBuilderExtensions.cs`,
 `Projections/ProjectionGenerationDeliveryValidation.cs`, and
 `Source/Kernel/Core/Projections/Engine/ProjectionFactory.cs`.
-The option and reactor/reducer validation also exist at **v19.41.0**.
+The option and reactor/reducer validation are also in the client.
 
-See [Chronicle's pinned observer delivery documentation](https://github.com/Cratis/Chronicle/blob/v19.48.0/Documentation/concepts/event-type-migrations.mdx#opt-in-to-pinned-observer-delivery).
+See [Chronicle's pinned observer delivery documentation](https://github.com/Cratis/Chronicle/blob/main/Documentation/concepts/event-type-migrations.mdx#opt-in-to-pinned-observer-delivery).
+
+| Copying a version out of the repository | It is a placeholder; take it from nuget.org |

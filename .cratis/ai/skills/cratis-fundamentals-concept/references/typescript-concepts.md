@@ -11,12 +11,12 @@
 - Serialization boundaries
 - Other typed values
 
-Verified against `@cratis/fundamentals` 7.23.0: `ConceptAs.ts`,
+Source: `@cratis/fundamentals`: `ConceptAs.ts`,
 `JsonSerializer.ts`, and `Documentation/typescript/concept_as.md` in Fundamentals.
 
 ## Declare a concept
 
-The convenient union pattern (7.13.0+) accepts either a concept instance or its
+The convenient union pattern accepts either a concept instance or its
 underlying primitive. Supply the runtime class, not the union type, to `@field`:
 
 ```typescript
@@ -48,7 +48,7 @@ for a string-backed concept; it does not require a different naming pattern.
 
 ## Convert non-primitive values
 
-From 7.19.5, `valueType` tells deserialization to convert the inner payload before
+`valueType` tells deserialization to convert the inner payload before
 constructing the concept. Without it, a Guid wire value remains a string:
 
 ```typescript
@@ -73,10 +73,10 @@ class User {
 Use `JsonSerializer.serialize(instance)` and
 `JsonSerializer.deserialize(Type, json)` for typed conversion. Concepts serialize
 to their inner value and deserialize to instances when their runtime class is
-supplied as metadata. Collections and maps unwrap concepts too (7.17.0+).
+supplied as metadata. Collections and maps unwrap concepts too.
 
 Keep one resolved copy of `@cratis/fundamentals`: duplicate copies trigger a
-warning and can cause identity/`instanceof` problems. The 7.23.0 serializer uses
+warning and can cause identity/`instanceof` problems. The serializer uses
 stable type keys for concepts and converters, but that does not make all
 cross-copy identity checks safe.
 
@@ -84,15 +84,15 @@ cross-copy identity checks safe.
 
 The root exports `Guid`, `DateOnly`, `TimeOnly`, `TimeSpan`, `ValueMap`, `field`,
 and `JsonSerializer`. Subpaths `/json`, `/geospatial`, and `/reflection` are
-exported too. The package declarations support NodeNext resolution (7.19.6+).
+exported too. The package declarations support NodeNext resolution.
 Use `JsonSerializer.registerConverter(converter)` for a custom `JsonConverter`
 instance, rather than replacing the serializer.
 
-`@field` supports legacy and standard decorators (7.18.0+); standard fields need
+`@field` supports legacy and standard decorators; standard fields need
 decorator metadata support. Load `@cratis/fundamentals/reflection` before defining
 metadata-dependent types. For arrays, declare the element constructor with
 `@field(Array, { genericArguments: [Item] })`, where `Item` is the model's runtime
-class, not a type alias (7.19.5+).
+class, not a type alias.
 
 Dependent Arc/Chronicle peer ranges are not feature guarantees: check the actual
 resolved Fundamentals version before relying on these version-qualified APIs.

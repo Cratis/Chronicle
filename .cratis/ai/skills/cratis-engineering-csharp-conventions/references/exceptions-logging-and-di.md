@@ -282,7 +282,7 @@ Rules:
   rely on the `IFoo → Foo` convention for a transient, and delete the
   registration line.
 - `IInstancesOf<T>` fixes its type set at construction and resolves instances on
-  each enumeration through the consumer's provider (Fundamentals 7.23.0). Late
+  each enumeration through the consumer's provider. Late
   assemblies do not update that set. A singleton captures the root provider;
   never use it to enumerate scoped implementations. Resolve a scoped or
   transient consumer inside a scope instead; follow `csharp.md`'s lifetime rule.

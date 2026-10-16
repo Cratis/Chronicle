@@ -133,4 +133,4 @@ Use [ReadModelScenario](../testing/read-models/scenario) for transitions and met
 
 ## Diagnostics
 
-`CHR0058` warns about near-miss signatures, `CHR0059` errors on malformed hooks, and `CHR0060` errors on definite declaration ties. `CHR0061` errors on definite ownership conflicts within one type and warns on possible peer ownership. Registry/plugin/separate-client membership remains runtime authority rather than a compilation error. Model state is not classic mutable reducer-service state.
+`CHR0058` warns about near-miss signatures. [CHR0065](../code-analysis/CHR0065.mdx) warns about event folds on read models that have the wrong name or are not static and therefore will not be discovered. `CHR0059` errors on malformed hooks, and `CHR0060` errors on definite declaration ties. `CHR0061` errors on definite ownership conflicts within one type and warns on possible peer ownership. Registry/plugin/separate-client membership remains runtime authority rather than a compilation error. Model state is not classic mutable reducer-service state.

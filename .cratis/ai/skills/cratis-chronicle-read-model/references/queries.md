@@ -12,7 +12,7 @@
 - Custom routes
 - Reading without a query surface
 
-Verified against `Cratis.Arc.Core` and `Cratis.Arc.MongoDB` **v22.75.0**.
+Sources: `Cratis.Arc.Core` and `Cratis.Arc.MongoDB`.
 Chronicle projection behavior is owned by the Chronicle guidance.
 
 ## Where the pieces live
@@ -38,11 +38,14 @@ are never queries. Use `[ReadModel(RequireQueryAttribute = true)]` and `[Query]`
 on intended endpoints when the type also has folds (`Create`/`Reduce`) or public
 helpers. `[Query]` alone does not hide siblings. ARC0026 checks invalid/ambiguous
 query declarations; ARCCHR0019 warns about fold-like statics exposed by convention.
+Requires Arc 22.90.0 for automatic exclusion of methods taking the model itself,
+including `Reduce(event, current)`; `[Query]` cannot force such a method into an
+endpoint. On older Arc keep the explicit `[Query]` policy above; check the package version.
 A `CancellationToken` parameter is supplied by Arc, not a query argument/proxy
 input. Concept parameters are always caller-supplied, never DI. Invalid bool,
 overflow, concept or collection-element GET/QUERY arguments return HTTP 400.
-Minimal-API concepts serialize as primitives since 22.26.0.
-Sources at Arc v22.75.0: `Arc.Core/Queries/ModelBound/ReadModelAttribute.cs`,
+Minimal-API concepts serialize as primitives.
+Sources: `Arc.Core/Queries/ModelBound/ReadModelAttribute.cs`,
 `QueryAttribute.cs`, and `Documentation/backend/csharp/chronicle/code-analysis/ARCCHR0019.md`.
 
 The declared return type is validated after unwrapping at most one `Task<>`:
@@ -74,8 +77,19 @@ public static async Task<IEnumerable<<ReadModelName>>> All<PluralName>(
 public static async Task<<ReadModelName>?> <SingularName>ById(
     <IdType> id,
     IMongoCollection<<ReadModelName>> collection) =>
-    await collection.Find(model => model.Id == id).FirstOrDefaultAsync();
+    await collection.Find(Builders<<ReadModelName>>.Filter.Eq(model => model.Id, id)).FirstOrDefaultAsync();
 ```
+
+Query MongoDB with the native driver API (`Find`, `Builders<T>` filter, sort and
+projection definitions, `Aggregate` pipelines), not `collection.AsQueryable()`.
+LINQ is translated at execution time and an expression the driver cannot
+translate fails the request with `Expression not supported`; the native API has
+no such step. See the MongoDB rule.
+
+A `Find(...).ToListAsync()` result is **not** paged. Use it for a bounded set. A
+list that can grow is returned with `collection.Observe(<FilterDefinition>)`,
+which Arc pages and sorts for the client without the query writing `Skip`,
+`Take` or `OrderBy`; see the **cratis-arc-query-paging** skill.
 
 Name the method for what it returns — the name is the query's identity on the
 generated client surface.
@@ -96,6 +110,13 @@ public static ISubject<<ReadModelName>> Observe<SingularName>ById(
 ```
 
 Return `ISubject<...>` directly. Do **not** return `Task<ISubject<...>>`.
+
+For Chronicle-maintained models, prefer `IReadModels.Observe<T>()` over direct
+sink access so registered collection names, keys and protected-value release are
+preserved.
+Requires Chronicle 19.54.0; read
+[collection observation](collection-observation.md) when exposing such a list.
+The MongoDB extension examples here remain for provider-owned collections.
 
 ## The `Observe` family — exact signatures
 
@@ -150,9 +171,9 @@ Guard React `result.hasData` and `result.isReady` before dereferencing data.
 
 ## Cost and composition
 
-The behavior below was checked against **Arc v22.75.0**
-([collection observation](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/mongodb/observing-collections.md),
-[implementation](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/MongoDB/MongoCollectionExtensions.cs)).
+The behavior below is described in
+([collection observation](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/mongodb/observing-collections.md),
+[implementation](https://github.com/Cratis/Arc/blob/main/Source/DotNET/MongoDB/MongoCollectionExtensions.cs)).
 Do not generalize it to every provider or custom observable.
 
 - Per-collection `Observe` reads an initial filtered set, retains it in memory,
@@ -178,9 +199,9 @@ Do not generalize it to every provider or custom observable.
 - Prefer a purpose-built projected summary for frequently recomputed joins.
   Query-time composition is supported, not forbidden. Bound each input and define
   count, paging, missing-related-data, and subscription-disposal behavior.
-  At v22.75.0 MongoDB and EF auxiliary observations can use `ignoreQueryContext: true` so client
+  MongoDB and EF auxiliary observations can use `ignoreQueryContext: true` so client
   paging/counts belong to the primary source. That option reads **all matching
-  auxiliary rows**; it is not a performance limit. Confirm version support before
+  auxiliary rows**; it is not a performance limit. Confirm the installed Arc supports it before
   using it, and keep an explicit narrow filter.
 
 Use the **cratis-arc-query-paging** skill for source-side paging. Paging an
@@ -206,5 +227,6 @@ public record <ReadModelName>(...)
 When only backend code reads the model, skip `[ReadModel]` entirely and use
 `IEventStore.ReadModels.GetInstanceById<T>(key)`. Its declared return type is
 non-nullable even though no instance may exist, so test the result. There is no
-predicate or `IQueryable` surface on `IReadModels` — filtered reads belong on the
-sink, which is what the query methods above use.
+general predicate or `IQueryable` snapshot surface on `IReadModels`.
+`Observe<T>(filter)` is a collection-observation API, not a server-side filtered
+snapshot query; see [collection observation](collection-observation.md).

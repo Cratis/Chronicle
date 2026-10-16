@@ -1,5 +1,7 @@
 ---
-applyTo: "**/*"
+applyTo: "**/.cratis/**"
+paths:
+  - "**/.cratis/**"
 ---
 <!-- cratis-ai-managed: harnesses/copilot/instructions/cratis-folder-is-configuration.instructions.md -->
 <!-- cratis-ai: generated Copilot instructions. Do not edit; rules/ is the source. -->

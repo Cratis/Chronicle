@@ -4,7 +4,7 @@
 One complete model for `cratis-screenplay-slice-design`. It is in **design mode**: V1 clean
 (compiles with warnings as errors); V3 is blocked on purpose by the `ListLockers` list query
 (`PLAY0268` at binding); `given clock` also failed binding on a cratis before 3.28.2 bundle (3.28.2 binds it)
-(`cratis-screenplay-toolchain` `references/versions.md`). Personas and screens are informational.
+(`cratis-screenplay-toolchain` `SKILL.md`). Personas and screens are informational.
 The stored-state rules in `AssignLocker` (`reads` + `require`) are intent, not enforced today,
 and they also fail binding on their own: `PLAY0271` on each `reads`, and `PLAY0268` because the
 `require` operands (`locker.assigned`, `request.state`) must be command properties. So this
@@ -15,14 +15,17 @@ Lineage matrix: `field-lineage.md`. State-transition table and rule coverage: `s
 Per-command refusal inventory: `command-inventory.md`.
 
 This historical compiled example keeps per-event reasoning in StateView
-`description` strings. For authoring checked at 4.127.0, keep descriptions as summaries
+`description` strings. For authoring checked, keep descriptions as summaries
 and record lineage reasoning in fenced Markdown `documentation` (`field-lineage.md`).
 The historical source below stays unchanged; it is not the current placement recipe.
 
 The excerpt's Stage availability note is historical (Stage 4.24.x, Arc 22.25.0).
 Stage 4.73.1's scaffold pins an Arc/Chronicle set (see the Stage skill's `references/rendered-application.md`), so protected-read APIs are available
 to gap-fill (the compiled description below saying they are "not available in Stage-rendered apps" is superseded); this neither admits these `.play` rules nor proves target protection.
-The original compiled excerpt is retained unchanged.
+The original compiled excerpt is retained unchanged. Its `expect PLAY0516` is the story-order
+information (`slicing.md` "Declare in story order"): the `LockerBoard` view consumes
+`LockerAssigned` from the feature declared after it. A new model declares the producing feature
+first and carries no such information.
 
 ```screenplay expect PLAY0516 test=unbound
 domain Parcelpoint.Lockers

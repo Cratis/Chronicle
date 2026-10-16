@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-ui-composition
-description: Compose the user interface of a Cratis Screenplay `.play` model — `layout` and responsive `arrangement`, screen/dialog templates, component data-context bindings, exposed template configuration, command forms and columns, navigation contributions, hierarchical outlets/routes, toolbar dialogs, package/icon selection, interaction `behavior`/`on`/`uses` wiring, `ui profile`, `theme`, localized `$strings`, and `file` references. Use when declaring the application shell, reusable screen shapes, component/package configuration, command forms, navigation/toolbars, click or submit behavior, or theming. Do not use for a screen's own data and actions.
+description: Compose the user interface of a Cratis Screenplay `.play` model — `layout` and responsive `arrangement`, screen/dialog templates, component data-context bindings, exposed template configuration, command forms and columns, navigation contributions, application navigation regions (topbar/sidebar, module inherit/extend/override), toolbar slice buttons, blueprint template references, sample data packs, hierarchical outlets/routes, toolbar dialogs, package/icon selection, interaction `behavior`/`on`/`uses` wiring, `ui profile`, `theme`, localized `$strings`, and `file` references. Use when declaring the application shell, reusable screen shapes, component/package configuration, command forms, navigation/toolbars, click or submit behavior, or theming. Do not use for a screen's own data and actions.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-ui-composition/SKILL.md -->
@@ -26,23 +26,14 @@ root. Never put a model under `.cratis/` or hand-copy it between repositories.
 `cratis ai install` manages `.cratis/ai/`, never model files. Keep explanatory
 Markdown in project documentation; `.play` is the single flow model.
 
-## Verified product sources
+## Product sources
 
-Current pins: toolchain `references/versions.md`; UI statements were re-read at Screenplay v4.139.0
-(`screens.md`, `contributions.md`, `forms.md`, `templates.md`, `ui-profile.md`, `fixtures/screen-release-ui.play`). Older provenance:
-`4.31.0` (original parser evidence), main `fd18129` (cancellation routing, `optional`), `4.66.0` (`c89198b`: `PLAY0269`).
-
-Scene runtime sources: scaffold Scene tag, `Source/JavaScript/**`.
-
-The update follows `commands.md`, `events.md`, `queries.md` and decision 0023
-at that main commit (after v4.52.0). It does not verify UI rendering.
-
-Checked against the Screenplay repository at tag `v4.31.0` (commit `355dffb`):
-`Documentation/screenplay/{templates,layout-arrangement,forms,contributions,interactions,ui-profile,theme,internationalization,file-references}.md`.
-Those checks established the original baseline. The changed cancellation
-example uses the newer main commit above, not the old tag.
-
-Read `references/versions.md` in `cratis-screenplay-toolchain` when choosing or checking tool versions for these examples.
+Tool versions: toolchain `SKILL.md`. UI statements come from Screenplay
+`screens.md`, `contributions.md`, `navigation.md`, `sample-data.md`, `forms.md`, `templates.md`, `ui-profile.md`,
+`fixtures/screen-release-ui.play`, `layout-arrangement.md`, `interactions.md`, `theme.md`,
+`internationalization.md` and `file-references.md` under `Documentation/screenplay/`. Scene
+runtime sources: scaffold Scene tag, `Source/JavaScript/**`. This guidance does not verify
+UI rendering.
 
 Every construct on this page is deferred from the executable model with
 information `PLAY0269`: it never blocks binding, and it is not evidence that a
@@ -55,11 +46,8 @@ routes, toolbars and dialog destinations, each with a separate support level
 installed shape through MCP `syntax-schema`; details:
 `references/screen-composition-contract.md`.
 
-These constructs went unhighlighted and uncompleted by the Monaco and VS Code
-language service until `Cratis/Screenplay#199` gave every construct the parser
-dispatches on a keyword entry. On an older language-service version they still
-look unrecognized — **check `screenplay`, not the editor**, because absent
-highlighting was never evidence that a construct is wrong.
+Absent editor highlighting is never evidence that a construct is wrong: check `screenplay`, not the editor (see [references/screen-composition-contract.md](references/screen-composition-contract.md)).
+
 
 ## Compose in this order
 
@@ -74,6 +62,8 @@ work on a screen whose purpose is unsettled is rework.
    a board; that is optional, and the text review is enough. Do not
    use the Stage sandbox as the review: it renders only part of a screen, and
    nothing here establishes that Stage renders an authored screen faithfully.
+   A behavior walk of what commands change is a separate, optional check owned by
+   `cratis-stage-rendering-and-sandbox`.
 3. **Add structure only to screens whose Level 1 is agreed**: template, sections,
    forms, `on`/`uses`. Use Level 3 inline code last, only where Level 2 cannot
    say it.
@@ -97,6 +87,7 @@ A complete example:
 
 ```screenplay
 layout AppShell
+  category application
   topbar
   navigation contributes Navigation
   content
@@ -116,31 +107,7 @@ A slot is declared once by name, optionally marked
 
 ## `arrangement` — responsive `flow` or pixel-precise `freeform`
 
-The size-class matrix is **2×2**: width `compact` or `regular`, height `compact`
-or `regular` — phone landscape, phone portrait, desktop short, desktop tall.
-
-**`arrangement flow`** nests slots under `row`, `column` or `grid` containers.
-
-- A container may declare `gap <n>`.
-- A slot leaf takes `width <n>`, `height <n>`, `grow`, and `span <n>` for grid tracks.
-- `when width <class>[, height <class>]` or `when height <class>` **replaces the
-  entire tree** for that condition — it is not a partial override.
-
-**`arrangement freeform`** declares one variant per matrix point. Excerpt, inside
-the `layout` above in place of its `arrangement flow`:
-
-```screenplay excerpt
-arrangement freeform
-  variant width regular, height regular
-    place navigation at 0,0 size 240,fill
-    place content    at 240,0 size fill,fill
-  variant width compact, height regular
-    place navigation hidden
-    place content    at 0,0 size fill,fill
-```
-
-`place <Slot> at <x>,<y> size <w>,<h>` where either dimension may be `fill`, or
-`place <Slot> hidden` to drop the slot from that variant entirely.
+A `when width/height <class>` variant replaces the entire tree for that condition, never a partial override. Read [references/layout-arrangement.md](references/layout-arrangement.md) when writing `flow` containers, `freeform` variants or `place` lines.
 
 ## `screen template` and `dialog template`
 
@@ -219,14 +186,48 @@ module-level.
 `navigate to <Screen> by <param>` is **not** string interpolation; it reuses the
 same typed navigate binding a screen action uses.
 
-⚠️ At v4.139.0 a navigation contribution also carries `id`, `icon`, `presentation`, `group` and
+⚠️ A navigation contribution also carries `id`, `icon`, `presentation`, `group` and
 `destination outlet <name> | dialog <DialogTemplate> | external "<route>"`; its `navigate to` takes
 `route`, `outlet` and `parameter` lines, and an undeclared outlet or dialog target is `PLAY0654`
-(`contributions.md`). An explicit override for when nearest-enclosing is not the point you mean is
+(`contributions.md`).
+
+Requires Screenplay 4.133.0 or later (`screenplay --version`) for `PLAY0654` on an undeclared outlet or dialog target.
+
+An explicit override for when nearest-enclosing is not the point you mean is
 not in the language. The screens-release vector
-(canonical `ScreenComposition` corpus v1) adds typed screen composition; public
-CLI 3.53.1 renders it and passes the browser run. Report a refused form as a
+(canonical `ScreenComposition` corpus v1) adds typed screen composition; a
+renderer that admits it renders it and passes the browser run. Report a refused form as a
 capability gap, never a flat-list fallback; Studio production proof is separate.
+
+## The application shell: regions, slice buttons, blueprint references, sample data
+
+The shell's navigation is declared in the `layout` (`navigation topbar` / `navigation sidebar`, with `logo` and nested
+`item` lines) and each `module` states how it relates to a region: **inherit** (the default), **extend** (the
+application's items plus its own) or **override** (its own only). Toolbars gain `button <id> title "<text>" slice
+<Module>.<Feature>.<Slice>`, which opens a **State Change** slice as a dialog (a State View or Automation slice is
+`PLAY0762`). A screen takes a template from a blueprint with `template blueprint <Blueprint> <Name> version "<range>"`,
+and the `ui profile` selects the one active sample data pack (design and preview only, never in production).
+
+```screenplay
+layout AppShell
+  category application
+  content
+
+  navigation sidebar
+    item sales title "Sales" target Sales
+      item orders title "Orders" target Sales.Orders
+
+module Sales
+  navigation sidebar extends
+    item customers title "Customers" target Sales.Customers
+
+  feature Orders
+  feature Customers
+```
+
+Read [references/application-shell.md](references/application-shell.md) before writing any of it: the inherit/extend/override
+choice, item target and slot, the module-only target rule (`PLAY0750`), buttons, blueprint ranges, sample data, MCP editing
+and the review checklist. `contribute to Navigation` stays the flat contribution; a new application uses regions.
 
 ## Interactions — what a click does
 
@@ -283,9 +284,9 @@ module Invoicing
 ```
 
 The inline event targets `invoiceId`; the projection gets it from event context.
-Scalar/named `returns` bind and reference-execute since Screenplay 4.68.0 (ESM v7).
+Scalar/named `returns` bind and reference-execute (ESM v7).
 Renderer generation/response limits: command-surface `references/generated-values-and-responses.md`.
-Screenplay 4.148.0 resolves response names in form submit and execute success;
+Screenplay resolves response names in form submit and execute success (Requires Screenplay 4.148.0 or later);
 own failure use is PLAY0685. No ESM change; Scene runtime binding remains downstream.
 An existing success continuation does not imply a response contract.
 Read [response continuations](references/response-continuations.md) for precedence,
@@ -312,88 +313,22 @@ nested/failure scopes, PLAY0485, examples and tagged evidence.
 
 ## `ui profile` and `theme`
 
-Excerpt: `AppShell` is the layout above.
-
-```screenplay excerpt
-ui profile Desktop
-  target platform web
-  target size regular
-  layout AppShell
-  theme Nordic
-  packages
-    Cratis.Components
-
-theme Nordic
-  compatible with Cratis.Components
-```
-
-- `target platform` takes a comma-separated list. `web`, `ios` and `android` are
-  the documented examples; ⚠️ **the parser accepts any identifier** — there is no
-  enforced list, so a typo is silent.
-- `target size` is documented as `compact`, `regular` or `expanded`; ⚠️ again any
-  identifier parses.
-- `packages` are listed **in override-priority order** — a later package's `Button`
-  shadows an earlier one's — and `core`, the built-in vocabulary, is always the
-  final fallback.
-- Component package metadata is owned by the package/runtime catalog; the model
-  selects packages and icons, never copying metadata into `.play`.
-- `compatible with` lists the packages a theme actually supports, each at most
-  once. A profile selecting a theme not declared compatible with one of its own
-  packages gets a compile-time **warning**.
+A `ui profile` selects the layout, theme and `packages`, listed in override-priority order (a later package shadows an earlier one); `target platform` and `target size` accept any identifier, so a typo is silent. Read [references/ui-profile-and-theme.md](references/ui-profile-and-theme.md) when writing a profile or theme.
 
 ## Localized strings
 
-Localized text lives in companion `.strings` files — `MySystem.play` pairs with
-`MySystem.<locale>.strings`, line-based, dotted keys, `=` assignment, `//`
-comments. `{placeholder}` tokens are kept verbatim for runtime substitution.
-
-Reference them with `$strings.<dotted.key>`, unquoted, anywhere a literal is
-accepted in: a validation rule's `message`; a screen action, table column or
-summary field `label`; a screen or section `title`; a contribution `label`; and a
-form field `label`. The value is stored as the literal text `$strings.<key>`, and
-the printer emits it unquoted so a round trip preserves it.
+Localized text lives in companion `.strings` files and is referenced unquoted as `$strings.<dotted.key>`. Read [references/localized-strings.md](references/localized-strings.md) when localizing messages, labels or titles.
 
 ## `file` — implementation or provenance, never a substitute
 
-Three meanings, one word:
-
-- **Backend implementation attachment.** On a command `handler` (which never
-  binds, `PLAY0268`), a validation
-  rule predicate, a query `performer`, a reducer rule, a reaction trigger, a
-  `constraint` and a `policy`, `file` stands in for the inline body: the
-  implementation lives there. These are the files a host inventories.
-- **UI realization file.** On a `screen`, `file` names the file that realizes
-  the screen. It sits on the **screen itself**, not on a directive inside it:
-  `File` is a member of `ScreenSyntax`, and the directive types have no such
-  member. Screens are deferred from the executable model (`PLAY0269`), and the
-  attachment loader does not collect screen files: they are never loaded, hashed
-  or checked, so a missing screen file gets no `PLAY0430`–`PLAY0434` warning.
-- **Provenance.** On a **pure declaration** — `concept`, `type`, `event`,
-  `readmodel`, `projection`, `slice`, `specification`, top-level `trigger` — it
-  only records which file realizes it.
-
-The rules:
-
-- **Repository relative, never absolute** (an absolute path is warning `PLAY0264`).
-- **Syntax compilation never resolves it.** The `screenplay` tool and
-  `PlayFileCompiler` do not read files, so a stale path does not invalidate the
-  document. A host that loads attachments (the MCP server, `AttachmentFiles.Load`)
-  reads **backend implementation** files only, resolved from the model root
-  rather than the `.play` file's directory, to hash their content; a refused or
-  missing file stays unresolved with a `PLAY0430`–`PLAY0434` warning. Screen
-  files and declaration-only `file` references are never read; check a screen
-  file's path yourself.
-- **It never replaces the declaration** — a `projection` still declares its
-  blocks, an `event` still declares its properties.
-- **Loaded is not run.** Screenplay hashes attached code and can map an inline
-  body back to its source for an editor, but never compiles or executes it.
+`file` is a backend attachment, a screen realization file or declaration provenance; use repository-relative paths (`PLAY0264`) and never let it replace the declaration. **Loaded is not run.** Read [references/file-references.md](references/file-references.md) when attaching or checking a `file`, or diagnosing `PLAY0430`–`PLAY0434`.
 
 ## Verify
 
 - [ ] `screenplay <model> --warnaserror` (standalone) reports zero errors and zero
-      warnings; `cratis screenplay validate --warnings-as-errors` says the same on
-      cratis 3.28.2 or later, which bundles the same compiler (versions: `cratis-screenplay-toolchain`
-      `references/versions.md`).
+      warnings; `cratis screenplay validate --warnings-as-errors` says the same when its bundled
+      compiler matches (versions: `cratis-screenplay-toolchain`
+      `SKILL.md`).
 - [ ] Every screen in the flow has Level 1 reviewed before any layout, and every
       form field and screen field traces to a command or read-model property.
 - [ ] Every slot a `contribute` targets is declared `contributes <Point>` somewhere
@@ -407,6 +342,7 @@ The rules:
 - [ ] No `file` reference is doing work the declaration should be doing.
 - [ ] Every click, submit and screen entry that does something has an `on` or
       `uses`; continuations sit only on actions that can fail.
+- [ ] Navigation regions, slice buttons, blueprint references and sample data follow `references/application-shell.md`: each module's mode is deliberate, no module item targets another module, every button names a State Change slice, every template has a `category`, and the active sample data pack is chosen once in the `ui profile`.
 - [ ] Component bindings, exposed template values, manual form columns, toolbar items, outlets and routes all trace to typed data; no runtime fallback counts as delivery. Report authoring acceptance, executable admission and runtime
       implementation separately.
 

@@ -16,7 +16,8 @@ observer, or that a redaction or revision triggers for you. That is the whole of
 
 Renaming a reactor or moving its namespace changes its default id. The new observer catches up from
 the beginning as **ordinary observation**, so `OnceOnly` handlers run and side effects repeat. Preserve
-the existing id explicitly before refactoring; see [Reactor identity and renaming](identity.mdx).
+the existing id explicitly before refactoring; see [Reactor identity and renaming](identity.mdx). To keep a
+new reactor from acting on history at all, mark it with [StartAtTail](start-at-tail).
 
 It is not an exactly-once delivery guarantee. In particular, **recovering a failed partition re-delivers the
 event as an ordinary observation, so a `OnceOnly` handler runs again** — which is the point of a retry: the
@@ -41,5 +42,5 @@ covers what is left.
 Reach for the method placement unless the entire reactor exists to do something that must not happen twice.
 
 :::note[Client coverage]
-TypeScript supports `@onceOnly()` on a handler method or on the reactor class from `@cratis/chronicle` 6.9.0, with the same meaning as `OnceOnly`. Elixir has no equivalent marker, so a replay always re-runs the full handler there. Design side effects to be idempotent instead (see [Getting started with reactors](getting-started)).
+TypeScript supports `@onceOnly()` on a handler method or on the reactor class from `@cratis/chronicle` 6.9.0, with the same meaning as `OnceOnly`. Elixir sets `once_only: true` on `use Chronicle.Reactors.Reactor` to register the reactor as not replayable, or `once_only: [EventModule]` to skip the listed events' handlers while replaying. As in every client, this is not exactly-once delivery: design side effects to be idempotent (see [Getting started with reactors](getting-started)).
 :::

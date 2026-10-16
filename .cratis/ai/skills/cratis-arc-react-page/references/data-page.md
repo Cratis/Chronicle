@@ -11,6 +11,7 @@
 - `Column`
 - Type name caution
 - Layout
+- Step 7 — Row selection and a details pane
 
 `DataPage` is the standard list page: an action menubar, a data table, and an
 optional details pane in one component. Import from
@@ -149,3 +150,30 @@ DataPage subpath: it is the props type of the `DataPage.Columns` wrapper.
 The details pane renders in a resizable split. Give the page a bounded height —
 the stories wrap `DataPage` in a container with an explicit height — or the
 split has nothing to size against.
+
+## Step 7 — Row selection and a details pane
+
+`selection` and `onSelectionChange` are controlled. The change event carries
+`value`, which is `null` when the selection is cleared.
+
+```tsx
+import type { DataTableSelectionChangeEvent } from '@cratis/components/DataTables';
+
+const [selected, setSelected] = useState<AccountSummary | null>(null);
+
+<DataPage
+    title='Accounts'
+    query={AllAccounts}
+    emptyMessage='No accounts yet.'
+    dataKey='id'
+    selection={selected}
+    onSelectionChange={(event: DataTableSelectionChangeEvent<AccountSummary>) => setSelected(event.value)}
+    detailsComponent={AccountDetails}>
+    <DataPage.Columns>
+        <Column field='name' header='Name' />
+    </DataPage.Columns>
+</DataPage>
+```
+
+`detailsComponent` receives `IDetailsComponentProps<T>` — `{ item, onRefresh? }`
+— and renders beside the table for the selected row.

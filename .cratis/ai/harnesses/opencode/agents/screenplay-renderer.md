@@ -38,7 +38,7 @@ Load all three before rendering, triage or gap classification: the lifecycle ski
 - On re-delivery, diff the specifications against what is generated or written; each missing specification becomes the work list, and a scope is done only when every contracted field and specification maps to a realization and every specification has a passing test.
 - Never change a test derived from a specification to make it pass.
 - Explicit realization requirements in a slice description (for example an idempotency key) bind adapters and fallback, cannot contradict executable parts and are never supplemented with inferred rules; descriptive prose that is not an explicit requirement is a hint. List which requirements you applied.
-- Your run covers the whole application. The one-ledger-scope-per-run limit applies to each `slice-implementer` fallback brief you issue, not to your own runs.
+- Your run covers the whole application. The one-scope-per-run limit applies to each `slice-implementer` fallback brief you issue, not to your own runs.
 - Follow the repository's actual conventions for hand-written parts and report any drift from template guidance as a learning candidate (at most three, each with evidence); never edit skills yourself.
 
 ## Independence
@@ -47,7 +47,7 @@ You author nothing in the model. When your verdicts feed a review, record the mo
 
 ## Finish
 
-First line: `Outcome: done | partial (...) | blocked (Qn) | out-of-scope (why)`. Then the report: admission, publication, build and test results mapped to specifications, source identity (commit plus the digest from the source-identity helper, `cratis-screenplay-modeling-lifecycle` `references/verdicts-and-modes.md` "Source identity", kept apart from the MCP `modelRevision`), drift, the gap-fill ledger, UI omissions, and the handoff packet from the lifecycle skill with all five verdict lines.
+First line: `Outcome: done | partial (...) | blocked (Qn) | out-of-scope (why)`. Then the report: admission, publication, build and test results mapped to specifications, source identity (commit plus the digest from the source-identity helper, `cratis-screenplay-modeling-lifecycle` `references/verdicts-and-modes.md` "Source identity", kept apart from the MCP `modelRevision`), drift, the fallback record, UI omissions, and the handoff packet from the lifecycle skill with all five verdict lines.
 
 ## Lineage
 

@@ -27,12 +27,19 @@
     <ProjectReference Include="../../Source/Kernel/Server/Server.csproj" Condition="'$(ArtifactsPath)' == ''" />
   </ItemGroup>
 
+  <!-- The image runs Linux, so on macOS the kernel is published for the Linux runtime identifier of the
+       container. A plain build would copy a macOS apphost into the image, and the container would fail to start
+       with "Exec format error". On Linux the default runtime identifier already matches the container. -->
+  <PropertyGroup Condition="'$(DisableDockerBuild)' != 'true'">
+    <_IsOSX>$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))</_IsOSX>
+    <_DockerPublishRid Condition="'$(_IsOSX)' == 'True' And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'Arm64'">linux-arm64</_DockerPublishRid>
+    <_DockerPublishRid Condition="'$(_IsOSX)' == 'True' And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'X64'">linux-x64</_DockerPublishRid>
+  </PropertyGroup>
+
   <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true' and '$(ArtifactsPath)' == ''">
-    <!-- Build the server in Debug so the DEVELOPMENT symbol is defined and dev credentials are seeded -->
-    <Exec Command="dotnet build -c Debug $(MSBuildThisFileDirectory)../../Source/Kernel/Server/Server.csproj" />
-    <Exec Command="rm -rf $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-    <Exec Command="mkdir $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-    <Exec Command="cp -R -f $(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/Debug/net10.0/. $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out/ 2&gt;/dev/null" />
+    <!-- Publishes the kernel in Debug with the DEVELOPMENT symbol, so dev credentials are seeded, through the
+         same shared target the integration projects use, which wipes Source/Kernel/Server/out before publishing. -->
+    <MSBuild Projects="$(MSBuildThisFileDirectory)../../Integration/LocalKernelPublish.proj" Targets="PublishKernel" Properties="KernelPublishRid=$(_DockerPublishRid)" />
     <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../" />
   </Target>
 

@@ -6,14 +6,9 @@
 
 ## Variants — mutually exclusive read models for one entity's lifecycle
 
-> Requires `cratis_chronicle` `3.4.0` or later. Verified at
-> `Cratis/Chronicle.Elixir v3.10.2` (`Source/chronicle/lib/chronicle/read_models/read_model.ex:280-300`,
-> `projections/global_handler.ex`, `projections/variant_reclassifier.ex`).
->
-> The 3.4.0 release reported a kernel `$eventSourceId` property-mapping limitation
-> (Cratis/Chronicle#3924). This client-source verification does not establish
-> whether kernel 19.x fixed it; verify the full variant transition against your
-> kernel before claiming end-to-end support.
+Requires `cratis_chronicle` 3.4.0 or later.
+
+The client source does not establish whether the kernel maps `$eventSourceId` properties for variants; verify the full variant transition against your kernel before claiming end-to-end support.
 
 Some entities do not have one shape for their whole lifetime — a work item is a
 backlog entry until a pull request exists for it, then it is a pull request

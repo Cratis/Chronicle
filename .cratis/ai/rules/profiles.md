@@ -151,6 +151,21 @@ Node.js server and a C# or React-frontend project has no use for them. Select
 Standalone Chronicle client usage (no Arc) in TypeScript is
 `cratis-chronicle-client-typescript`.
 
+### Several services with their own event stores
+
+`cratis/chronicle/core` carries both multi-service skills, so every profile that
+includes it loads them: `cratis/application`, `cratis/application/arc-chronicle`,
+`cratis/application/chronicle-dotnet`, and `cratis/application/csharp` and
+`cratis/chronicle` through `cratis/chronicle/compliance`.
+
+| Skill | Covers |
+| --- | --- |
+| `cratis-multi-service-architecture` | Store per service on one kernel, namespace alignment, public contract events and the outbox, consumer routes, delivery semantics, PII across stores, contract versioning, Arc between services |
+| `cratis-multi-service-local-orchestration` | Repository layout with contracts projects, .NET Aspire AppHost, Docker Compose with a MongoDB replica set, per-service settings, CLI contexts per store, frontends per service |
+
+Modeling such a system in Screenplay (one model folder per service) is
+`cratis-screenplay-streams-and-consistency`'s multi-service reference.
+
 ### Experimental Go modules
 
 Select `cratis/language/go` for a Go repository without importing any HTTP or
@@ -212,11 +227,7 @@ The MCP catalog has no install-hints field and does not install the executable.
 
 ### Event modeling with Screenplay
 
-**Model first.** A repository is opted in only when its model root (where the project's
-`.play` files live: normally under `Source/` or `src/`, else `Screenplay/`) holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured) or the project explicitly set
-`mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install output, an
-installed profile or skill, a `.play` file outside the root or an untracked or uncommitted draft is not
-opt-in. An accepted model under the root covering the scope is the contract and the source
+**Model first.** Decide opt-in per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs` for the decision, model root and drafts. An accepted model under the root covering the scope is the contract and the source
 of truth for behavior. Change the model, verify and independently review it, then render
 or gap-fill from its contract; never edit Stage-managed output or weaken protection.
 Otherwise stay code-first; only the entry-point session may propose a model, at most once
@@ -280,7 +291,7 @@ the first `apply` write creates it. `cratis ai install` also creates no model
 folder unless the project configured a root. Older CLIs create the resolved model root at
 server startup (`Screenplay/` when no `.play` files, `Source/` or `src/` exist); upgrade before using the automatically selected MCP server in a
 repository without a model. In Pi, when every selected path to Screenplay goes through an application profile and no root is configured, a missing, older or unavailable CLI leaves its MCP tools inactive with one informational UI notice (none in headless mode); an independent non-application path to Screenplay or a configured root still surfaces startup errors. See the toolchain skill's
-[version reference](../skills/cratis-screenplay-toolchain/references/versions.md).
+[tool versions](../skills/cratis-screenplay-toolchain/SKILL.md).
 
 ## How to Use Profiles
 
@@ -387,6 +398,10 @@ profile: application
 - **`profile: application`** - Rules for building applications on Cratis
 - **`profile: framework`** - Rules for contributing to Cratis framework repos
 - **No profile tag** - Universal rules that apply to both profiles
+
+[authoring-skills.md](./authoring-skills.md) is universal but path-scoped to corpus
+skills, rules, agents and prompts. Harnesses without path-rule loading discover it
+through `general.md`'s Where to Look table; its body is needed only for authoring work.
 
 ## Finding Profile Information
 

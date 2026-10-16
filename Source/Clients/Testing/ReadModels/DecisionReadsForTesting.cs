@@ -97,7 +97,7 @@ internal sealed class DecisionReadsForTesting(EventStoreForTesting eventStore, D
         {
             // A seeded model has no corresponding stored event, but still guards against anything
             // appended after the current in-memory log boundary.
-            instance = seeded.GetSeededInstance<T>(key);
+            instance = EventStreamReadModel.DeclarationFor(typeof(T)) is null ? seeded.GetSeededInstance<T>(key) : null;
         }
         else
         {

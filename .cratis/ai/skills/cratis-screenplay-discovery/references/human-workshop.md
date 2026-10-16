@@ -6,6 +6,7 @@
 - The agent's part
 - Before the workshop
 - Run sheet: discovery
+- Run sheet: design session
 - Techniques
 - Remote adaptations
 - After the workshop
@@ -156,6 +157,30 @@ open question blocks the next step?"
 Later sessions (commands, views, screens, scenarios) use `cratis-screenplay-slice-design`
 and `cratis-screenplay-scenario-coverage`.
 
+## Run sheet: design session
+The second session turns the plotted story into slices. Adapted from the storyboarding, inputs,
+outputs and boundaries steps of TrogonStack's workshop guide (`provenance.md`).
+
+1. **Screens** (5 to 7 minutes each). "What is the first screen the person sees?" Sketch roughly.
+   Label every field as *entered* (it becomes a command input) or *shown* (it names the view that
+   carries it). "Which screen shows the result?" A missing value is a gap in a view field or an
+   event field. The agent writes a Level-1 `screen` (`data ... via query ...`, `action ...`). A
+   shown field never comes from the submitted command (slice-design `references/field-lineage.md`).
+2. **Inputs.** "Looking at the screens, what are people doing?" Each is an `action <Command>`.
+   "What does the system do automatically?" Mark reaction candidates for
+   `cratis-screenplay-automations-and-translations`. "For each command, what data does it need?"
+   Who is acting comes from context, never from a form field. "What must be true for it to pass?"
+   goes to the rules register; for each rule ask what the person sees when refused.
+3. **Outputs.** "For each command, which event happens and which details does it carry?" Ask
+   whether a figure is decided (a fact) or recalculated (a view). "Which views do people need?"
+   (status, list, detail). For each view note one reason line per contributing event in the
+   StateView `documentation`.
+4. **Boundaries**, only when ownership matters. "Is this something we do, or an outside system?"
+   "Which system owns each event?" "Who builds what?" Use the ownership interview in
+   `cratis-screenplay-streams-and-consistency` `references/boundaries.md`. Never create a module per
+   team just to draw it.
+5. Close with scenarios: `cratis-screenplay-scenario-coverage` `references/scenario-workshop.md`.
+
 ## Techniques
 
 ### Personalities
@@ -205,7 +230,7 @@ questions; ask for corrections; schedule the next session and name who owns what
 |---|---|---|
 | Day 1, morning | goals, brainstorm, filtering, roles, plot | this skill |
 | Day 1, afternoon | sweep, remaining workflows, closing | this skill |
-| Day 2, morning | commands, inputs, views, screens | `cratis-screenplay-slice-design` |
+| Day 2, morning | commands, inputs, views, screens | `cratis-screenplay-slice-design` (run sheet: design session) |
 | Day 2, afternoon | streams, consistency, outside parties, clocks | `cratis-screenplay-streams-and-consistency`, `cratis-screenplay-automations-and-translations` |
 | Day 3 | scenarios and review | `cratis-screenplay-scenario-coverage`, `cratis-screenplay-model-review` |
 

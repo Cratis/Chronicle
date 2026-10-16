@@ -3,9 +3,9 @@
 
 A complete model: a webhook record from an outside proctoring service is captured, kept as an
 external fact in the provider's vocabulary, then translated by reactions into our facts. It
-binds on Screenplay 4.66.0 (`executableReady: true`), standalone and through `cratis screenplay mcp`
-3.28.2; the cratis 3.27.1 bundle (Screenplay 4.60.1) compiled it (V1) but rejected the Translate
-slice at binding (PLAY0268). `cratis render` refuses it (3.28.2: whole, `STAGE-ESM-016`; Stage 4.73.1: `STAGE-ESM-024`).
+binds as ESM v6 (`executableReady: true`), standalone and through `cratis screenplay mcp`; a
+compiler that stops before v6 compiles it (V1) but rejects the Translate slice at binding
+(PLAY0268). `cratis render` refuses it (`STAGE-ESM-016` or `STAGE-ESM-024`, by renderer).
 
 Read the slice `description`: it is the per-field disposition (map, translate, ignore) and it
 states what this example does not do. Examples never show the whole integration contract; use
@@ -58,7 +58,7 @@ module Exams
         then denied
 
     slice Translate ImportProctorResults
-      description "Per external field: reference -> correlation key (our attempt id, echoed); outcome -> translated to our enum; score -> kept; examinerNote -> ignored (free text, may hold personal data, no consumer). Repeated delivery: this example compares outcome only. An unchanged outcome appends nothing, even if the score changed, so it does not implement score corrections. OneResultPerAttempt refuses a second local result. Changed outcomes and score-only corrections need an explicit correction policy (open decision, recorded in STATE.md, not an overwrite) before this is a complete integration."
+      description "Per external field: reference -> correlation key (our attempt id, echoed); outcome -> translated to our enum; score -> kept; examinerNote -> ignored (free text, may hold personal data, no consumer). Repeated delivery: the first record of a key appends once (`when added`, Chronicle's first-observation rule); a later delivery of the same key appends nothing, even if the outcome or score changed, so it does not implement corrections. OneResultPerAttempt refuses a second local result. Changed outcomes and score-only corrections need an explicit correction policy (open decision, recorded in STATE.md, not an overwrite) before this is a complete integration."
       capture ProctorResults
         source webhook
           path /webhooks/proctoring/results
@@ -68,21 +68,9 @@ module Exams
             "P" => passed
             "F" => failed
         append ProctorResultReceived
-          when outcome
+          when added
             outcome = $.outcome
             score   = $.score
-      reaction PassTranslator
-        when ProctorResultReceived
-          outcome
-          score
-          produces ExamPassed
-            score = score
-        where outcome == "passed"
-      reaction FailTranslator
-        when ProctorResultReceived
-          outcome
-          produces ExamFailed
-        where outcome == "failed"
       event ProctorResultReceived
         outcome ProctorOutcome
         score   Int
@@ -113,12 +101,26 @@ module Exams
           outcome = "failed"
           score   = 40
         then error "Constraint 'OneResultPerAttempt' is violated: the event source already has the constrained event."
+
+    slice Automation TranslateProctorResults
+      description "Our facts from the provider's: the translators react to the external fact the Translate slice records"
+      reaction PassTranslator
+        when ProctorResultReceived
+          outcome
+          score
+          produces ExamPassed
+            score = score
+        where outcome == "passed"
+      reaction FailTranslator
+        when ProctorResultReceived
+          outcome
+          produces ExamFailed
+        where outcome == "failed"
 ```
 
 Notes for the reader:
 
-- A capture, the translator reactions and the events they append stay in one `Translate`
-  slice. `then` lists every new fact, so `TranslatingAPass` names both the external fact and ours.
+- A capture and the external fact it appends stay in the `Translate` slice; the translator reactions that answer that fact sit in an `Automation` slice beside it (a reaction in the capture's own directionless `Translate` slice is `PLAY0694`). `then` lists every new fact, so `TranslatingAPass` names both the external fact and ours.
 - The unauthenticated-booking spec needs an explicit `given caller` (empty means no caller);
   an authorized command exercised without one is PLAY0389 at binding.
 - Authenticity of the webhook, tenant ownership and a score-correction policy are not in the

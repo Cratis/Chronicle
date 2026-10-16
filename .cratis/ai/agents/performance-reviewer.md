@@ -43,7 +43,7 @@ Your responsibility is to identify performance problems in changed code before t
 ### MongoDB / Read Models
 
 - [ ] Queries filter on indexed fields — no full-collection scans
-- [ ] Paged queries use `.Skip()` + `.Take()` (or `useWithPaging()`) — never load all rows
+- [ ] Paged queries return a shape Arc pages (`IQueryable<T>`, or MongoDB `Observe`) and use `useWithPaging()` — no hand-written `.Skip()`/`.Take()`/`OrderBy` for the client's page or sort, never load all rows
 - [ ] Read-model `record` types do not embed large nested collections that are never fully iterated
 - [ ] No N+1 pattern: single query returns all needed data rather than one query per row
 

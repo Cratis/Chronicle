@@ -12,13 +12,13 @@ concepts and Chronicle stream identities separate.
 
 ## Verified product sources
 
-This skill is verified against these exact public releases:
+Sources:
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Fundamentals` | `7.23.0` | `Cratis.Concepts.ConceptAs<T>`, `IGeneratable<TSelf>` and `GenerateValue` |
-| `Cratis.Chronicle` | `18.3.0` | `Cratis.Chronicle.Events.EventSourceId` and `EventSourceId<T>` |
-| `@cratis/fundamentals` | `7.23.0` | TypeScript `ConceptAs<T>`, `field`, `Guid`, and JSON conversion |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Fundamentals` | `ConceptAs<T>`, `IGeneratable<TSelf>`, `IGeneratableInContext<TSelf>`, `GenerationContext` and `GenerateValue` |
+| `Cratis.Chronicle` | `Cratis.Chronicle.Events.EventSourceId` and `EventSourceId<T>` |
+| `@cratis/fundamentals` | TypeScript `ConceptAs<T>`, `field`, `Guid`, and JSON conversion |
 
 Reverify product sources before claiming support for another version.
 
@@ -80,18 +80,13 @@ Do not assume `string.Empty`, `0`, or `Guid.Empty` is universally invalid.
 
 ## Let a concept generate its own value
 
-Check the Cratis.Fundamentals version the project resolves first. Arc first
-pinned **7.23.0 in v22.66.0** (also verified at v22.68.0); the older-version
-caveat is not a reason to add a direct reference for Arc 22.66.0+ when it already
-resolves 7.23.0 or later. Chronicle **v19.50.0** still pins **7.22.0** in
-`Directory.Packages.props`. For older Arc or Chronicle-only applications, when
-the resolved version is below 7.23.0, add a direct `Cratis.Fundamentals` 7.23.0
-or later package reference, or keep the existing `static New()` (without the
+Check the Cratis.Fundamentals version the project resolves first.
+
+Requires Cratis.Fundamentals 7.23.0 for `IGeneratable<TSelf>`. Arc 22.66.0 or later already resolves it, so do not add a direct reference there. For an older Arc or a Chronicle-only application whose resolved version is lower, add a direct `Cratis.Fundamentals` package reference at 7.23.0 or later, or keep the existing `static New()` (without the
 interface) until you can.
 
 When the system, not the caller, creates a value, the concept declares how by
-implementing `IGeneratable<TSelf>` (`Cratis.Concepts`, Cratis.Fundamentals
-7.23.0 or later). The interface requires `static abstract TSelf New()`, so
+implementing `IGeneratable<TSelf>` (`Cratis.Concepts`). The interface requires `static abstract TSelf New()`, so
 generic code constrained on `where T : IGeneratable<T>` calls `T.New()` without
 reflection. Generate a UUID with `GenerateValue`, never with `Guid.NewGuid()` in
 scattered call sites and never with `System.Random`:
@@ -115,24 +110,33 @@ bits from `RandomNumberGenerator`:
   millisecond, and clock adjustments can reorder values.
 
 Neither helper guarantees uniqueness; a collision is extremely unlikely, not
-impossible. `IGeneratable<TSelf>` is not limited to Guid-backed concepts, but
-`GenerateValue` only produces UUIDs.
+impossible. Fundamentals also supplies ULID, TypeID, NanoID and encoded
+bytes. `IGeneratableInContext<TSelf>` declares static `New(GenerationContext)`
+for a captured time and portable tenant. Built-ins consume time, not tenant;
+context is not tenant isolation. Default time is rejected, not replaced with now.
+Sources and the complete shop example: [shop generation](references/shop-generation.md).
 
-Do not generate when:
+## Choosing a strategy
 
-- The client supplies the identifier. It is an input; keep it.
-- The value must be secret or authenticate someone. A UUID is an identifier,
-  not a token; use a dedicated secure-token API.
-- The same input must yield the same value. Random generation is not
-  idempotency; derive the value deterministically, or persist and reuse the
-  first one.
+The shared shop uses CustomerId (`cus_` + ULID), context-aware OrderId (TypeID),
+InviteCode (NanoID), and secret ApiKey (`Bytes(32)`, `[NotAudited]` in its host).
+Read [choices, time/tenant context and protection](references/shop-generation.md).
+Requires Fundamentals 7.24.0 for these newer helpers; the earlier
+UUID examples remain supported.
+
+## When not to generate
+
+Client-supplied identities stay inputs; random generation is not idempotency or
+gapless numbering. UUIDs are not credentials. Byte generation can create a secret
+in Fundamentals, but audit suppression, authorized delivery and hash storage are separate
+host responsibilities; never treat randomness as protection.
 
 In specifications, construct the concept from a known value
 (`new <ConceptName>(Guid.Parse("…"))`) and assert against it. Do not seed or
-replace the generator. In Arc **22.66.0+**, let a server-owned new identifier
-reach `Handle()` through `[GeneratedValue]` rather than calling `New()` inside
+replace the generator. Let a server-owned new identifier
+reach `Handle()` through `[GeneratedValue]` (Requires Arc 22.66.0) rather than calling `New()` inside
 it; see `cratis-arc-command` for declaration and migration, and
-`cratis-specifications-csharp` for named scenario pins (Arc **22.67.0+**).
+`cratis-specifications-csharp` for named scenario pins (Requires Arc 22.67.0).
 Guide: `/fundamentals/csharp/generating-values/`.
 
 ## Create a TypeScript value concept
@@ -213,9 +217,9 @@ untyped `EventSourceId`, and `EventSourceId<T>`. Those operators do not create
 your derived `<ConceptName>` from `T`, string, or untyped `EventSourceId`.
 Declare only the derived-type conversions your domain API needs.
 
-String and Guid remain the safest stream-id primitives. At **Chronicle v19.50.0**
-(`Source/Clients/DotNET/Events/EventSourceId.cs:148-174`), numeric/date/time ids
-and concepts wrapping them convert with invariant culture (since 19.37.3).
+String and Guid remain the safest stream-id primitives. In Chronicle
+(`Source/Clients/DotNET/Events/EventSourceId.cs`), numeric/date/time ids
+and concepts wrapping them convert with invariant culture (Requires Chronicle 19.37.3).
 `DateTime`, `DateTimeOffset`, `DateOnly`, `TimeOnly` use `"O"`; `TimeSpan` uses
 `"c"`. Decimal `123.45` stays `"123.45"` even under nb-NO.
 **Existing streams may have different legacy ids** if written under date/time or
@@ -259,7 +263,8 @@ repository structure.
 - Enums remain enums.
 - A concept that creates its own value implements `IGeneratable<TSelf>`; a
   Guid-backed one uses `GenerateValue`, not `Guid.NewGuid()` or `Random`.
-  Client-supplied, secret or idempotent values are not generated.
+  Client-supplied/idempotent values are not freshly generated; secrets use the
+  explicit entropy, audit and storage contract in [shop generation](references/shop-generation.md).
 - Null absence uses a nullable concept reference rather than a null wrapped
   value.
 - Primitive-to-derived conversions and sentinels exist only when justified by

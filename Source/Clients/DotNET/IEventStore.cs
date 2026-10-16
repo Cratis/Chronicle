@@ -216,4 +216,16 @@ public interface IEventStore
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns>An asynchronous enumerable for all namespace names.</returns>
     Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Remove a namespace from the event store, together with its observers, their reminders and the data Chronicle
+    /// stores for it. Clients connected to the namespace must stop using it first. Removing a namespace that does not
+    /// exist does nothing; the default namespace cannot be removed.
+    /// </summary>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to remove.</param>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="NotSupportedException">The event store does not support removing namespaces.</exception>
+    Task RemoveNamespace(EventStoreNamespaceName @namespace, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("Removing a namespace is not supported by this event store");
 }

@@ -12,8 +12,8 @@
 - One outcome per file
 
 Detail for the plain `Cratis.Specifications` surface: phases, substitution,
-assertions, and exception capture. Verified against `Cratis.Specifications.XUnit`
-`4.1.1` (base and assertions) and its `Cratis.Specifications` dependency (`Catch`).
+assertions, and exception capture. Sources: `Cratis.Specifications.XUnit`
+(base and assertions) and its `Cratis.Specifications` dependency (`Catch`).
 NSubstitute is a separate collaborator-substitution dependency.
 
 ## Phases
