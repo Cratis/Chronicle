@@ -265,6 +265,8 @@ message ConcurrencyViolation {
    string EventSourceId = 1;
    uint64 ExpectedSequenceNumber = 2;
    uint64 ActualSequenceNumber = 3;
+   string ConflictingEventTypeId = 4;
+   uint64 ConflictingSequenceNumber = 5;
 }
 enum ConstraintType {
    CONSTRAINT_TYPE_Unknown = 0;

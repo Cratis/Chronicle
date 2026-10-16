@@ -253,7 +253,7 @@ public partial class UnitOfWork(
     /// <inheritdoc/>
     public IEnumerable<DecisionConflict> GetDecisionConflicts() =>
         _appendManyResult.ConcurrencyViolations
-            .SelectMany(_ => _decisionConflicts.TryGetValue(_.EventSourceId, out var conflicts) ? conflicts : [])
+            .SelectMany(violation => _decisionConflicts.TryGetValue(violation.EventSourceId, out var conflicts) ? conflicts.Select(_ => _.CausedBy(violation)) : [])
             .Distinct().ToArray();
 
     /// <summary>Claims exclusive completion ownership for protected units of work.</summary>
