@@ -124,6 +124,20 @@ public interface IEventStoreStorage
     IEventSeedingStorage EventSeeding { get; }
 
     /// <summary>
+    /// Checks whether first-time kernel setup completed. Missing markers in older stores mean uninitialized.
+    /// </summary>
+    /// <returns>Whether initialization completed.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task<bool> IsInitialized() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
+    /// Durably records successful first-time kernel setup. Only the store's initializer grain writes this marker.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task MarkInitialized() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
     /// Get a specific <see cref="IEventStoreNamespaceStorage"/> for a <see cref="EventStoreNamespaceName"/>.
     /// </summary>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get for.</param>

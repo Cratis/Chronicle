@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Namespaces;
-using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation.Reactors.Kernel;
@@ -19,9 +18,8 @@ namespace Cratis.Chronicle.Observation.Reactors.Kernel;
 /// <param name="reactors">The <see cref="IReactors"/> to use for discovering and registering reactors.</param>
 /// <param name="eventTypes">The <see cref="IEventTypes"/> to use for discovering and registering event types.</param>
 /// <param name="storage">The <see cref="IStorage"/> to check whether a namespace already holds data.</param>
-/// <param name="kernelProjections">The <see cref="IKernelProjections"/> to register the kernel's own projections with.</param>
 [Reactor(eventSequence: WellKnownEventSequences.System, systemEventStoreOnly: true)]
-public class ReactorsReactor(IReactors reactors, IEventTypes eventTypes, IStorage storage, IKernelProjections kernelProjections) : Reactor
+public class ReactorsReactor(IReactors reactors, IEventTypes eventTypes, IStorage storage) : Reactor
 {
     /// <summary>
     /// Handles the addition of an event store.
@@ -34,9 +32,8 @@ public class ReactorsReactor(IReactors reactors, IEventTypes eventTypes, IStorag
         await eventTypes.DiscoverAndRegister(@event.EventStore);
         await reactors.DiscoverAndRegister(@event.EventStore, EventStoreNamespaceName.Default);
 
-        // Without this a store created while the server is running has none of the kernel's own projections -
-        // such as the event statistics - until the next restart, and every read of them fails.
-        await kernelProjections.DiscoverAndRegister(@event.EventStore);
+        // Kernel projections are initialized synchronously by EventStoreInitializer before this event is
+        // appended. Repeating registration here can re-subscribe them through stale multi-silo caches.
     }
 
     /// <summary>
