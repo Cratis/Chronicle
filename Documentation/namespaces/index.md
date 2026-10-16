@@ -21,11 +21,7 @@ If you use Cratis Arc with the Chronicle extension, tenancy is automatically con
 
 ## Removing a namespace
 
-Removing a tenant means removing its namespace. Stop every client that uses the namespace, then call `RemoveNamespace` on the event store:
-
-```csharp
-await eventStore.RemoveNamespace("acme");
-```
+Removing a tenant means removing its namespace. Stop every client that uses the namespace, then call `RemoveNamespace` with its name on the event store (`IEventStore.RemoveNamespace` in the .NET client).
 
 Chronicle then, in order:
 
