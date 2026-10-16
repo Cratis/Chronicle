@@ -17,6 +17,10 @@ The MongoDB instance-loss case kills the silo hosting the first client, then can
 
 Two `ActivationScope.PerProcess` hosts in the same test runner are one process and correctly share the SDK's static process identity. Proving two Startup occurrences for two processes requires a separate-process application host connected to a current kernel over gRPC. These specifications deliberately do not reset private static fields or invent two process identities. The two-process Startup scenario and SQL application OS-process kill therefore remain separate coverage gaps.
 
+## Released-kernel compatibility (opt-in)
+
+`Integration/Client/for_OldKernelOccurrences` checks that a current client fails closed against a released kernel without the occurrence and effect-receipt capabilities. It is **opt-in**: its facts are reported as skipped unless `CHRONICLE_OLD_KERNEL_SPECS=1` is set, and it needs a `-p:Version=19.74.0` build of the client and its project references (the ordinary CI artifact is not release-stamped). The command is in that directory's `README.md`. Two scenarios remain deferred and are tracked in Cratis/Chronicle#5001.
+
 ## Running
 
 Run the two namespaces separately with `.github/scripts/run-tests-with-retry.sh` and the bounded integration phase runner. Check one-minute load is below 60 before admitting either phase. Use `TEST_MAX_ATTEMPTS=1` for diagnosis; change code or gather new evidence before a retry. No sleep-based assertions or Ryuk-disabling environment overrides are needed.

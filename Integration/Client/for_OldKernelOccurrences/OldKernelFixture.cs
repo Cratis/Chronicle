@@ -13,8 +13,17 @@ namespace Cratis.Chronicle.Integration.for_OldKernelOccurrences;
 /// Runs a released kernel independently of the current-image integration fixtures.
 /// </summary>
 /// <remarks>
-/// Build the client and its project references with -p:Version=19.74.0, as the publish workflow does.
+/// <para>
+/// Opt-in: the specs in this namespace are skipped unless <see cref="EnableVariable"/> is set to 1, and the
+/// fixture then starts nothing. The ordinary CI integration artifact is not release-stamped, so its
+/// protocol version is not 19.x and the released-kernel comparison would not mean anything.
+/// </para>
+/// <para>
+/// To run: set CHRONICLE_OLD_KERNEL_SPECS=1 (optionally CHRONICLE_OLD_KERNEL_IMAGE to override the image)
+/// and build the client and its project references with -p:Version=19.74.0, as the publish workflow does.
 /// ProtocolVersion comes from the Contracts assembly, not from the test or application assembly.
+/// See README.md in this directory for the full command.
+/// </para>
 /// </remarks>
 public sealed class OldKernelFixture : IAsyncLifetime
 {
@@ -23,6 +32,17 @@ public sealed class OldKernelFixture : IAsyncLifetime
     /// v19.68.0 is the newest preceding release. Never build current source into this tag.
     /// </summary>
     public const string DefaultImage = "cratis/chronicle:19.68.0-development";
+
+    /// <summary>
+    /// The environment variable that opts in to running the released-kernel specs.
+    /// </summary>
+    public const string EnableVariable = "CHRONICLE_OLD_KERNEL_SPECS";
+
+    /// <summary>
+    /// Gets whether the released-kernel specs were explicitly requested.
+    /// </summary>
+    public static bool Enabled => Environment.GetEnvironmentVariable(EnableVariable) == "1";
+
     readonly IContainer _kernel = new ContainerBuilder(Environment.GetEnvironmentVariable("CHRONICLE_OLD_KERNEL_IMAGE") ?? DefaultImage)
         .WithLabel("cratis.task", "4911-p3c-old-kernel")
         .WithPortBinding(35000, assignRandomHostPort: true)
@@ -37,6 +57,7 @@ public sealed class OldKernelFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
+        if (!Enabled) return;
         Assert.True(Contracts.ProtocolVersion.Current.StartsWith("19.", StringComparison.Ordinal),
             "Build this integration project AND its references with -p:Version=19.74.0. An unversioned Contracts assembly speaks protocol 1, not 19; do not skip the compatibility check.");
         await _kernel.StartAsync();
@@ -62,7 +83,7 @@ public sealed class OldKernelFixture : IAsyncLifetime
     {
         _client?.Dispose();
         _requests?.Dispose();
-        await _kernel.DisposeAsync();
+        if (Enabled) await _kernel.DisposeAsync();
     }
 
     sealed class ClientAssemblyDiscovery : ICanProvideAssembliesForDiscovery

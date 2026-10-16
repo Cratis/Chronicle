@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Integration.for_OldKernelOccurrences;
 [Collection(OldKernelCollection.Name)]
 public class when_enrolling_a_receipted_unit_of_work(OldKernelFixture fixture)
 {
-    [Fact]
+    [OldKernelFact]
     public async Task should_fail_closed_before_sending_any_receipt()
     {
         var registration = await fixture.EventStore.WaitForRegistration().WaitAsync(TimeSpan.FromSeconds(30));

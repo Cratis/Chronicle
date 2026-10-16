@@ -1,9 +1,9 @@
 # Released-kernel occurrence compatibility
 
-Build and run this namespace with the release version stamp, including all project references:
+This namespace is **opt-in**. Without `CHRONICLE_OLD_KERNEL_SPECS=1` its facts are reported as skipped (not passed, not failed) and the fixture starts no container, because the ordinary CI integration artifact is not release-stamped. Build and run it with the variable and the release version stamp, including all project references:
 
 ```sh
-TEST_MAX_ATTEMPTS=1 .github/scripts/run-tests-with-retry.sh \
+CHRONICLE_OLD_KERNEL_SPECS=1 TEST_MAX_ATTEMPTS=1 .github/scripts/run-tests-with-retry.sh \
   Integration/Client/Client.csproj \
   FullyQualifiedName~Cratis.Chronicle.Integration.for_OldKernelOccurrences \
   -p:Version=19.74.0 -p:DisableDockerBuild=true -p:DisableProxyGenerator=true
