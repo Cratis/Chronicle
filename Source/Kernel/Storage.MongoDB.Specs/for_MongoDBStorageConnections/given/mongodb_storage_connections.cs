@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Connections;
 using Cratis.Arc.MongoDB;
+using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
@@ -10,7 +11,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.for_MongoDBStorageConnections.given;
 
 public class mongodb_storage_connections : Specification
 {
-    protected MongoDBStorageOptions _storageOptions;
+    protected ConnectionResolutionOptions _resolutionOptions;
     protected ICachingConnectionResolver _resolver;
     protected IConnectionResolverFactory _resolverFactory;
     protected IMongoDBClientManager _clientManager;
@@ -20,7 +21,7 @@ public class mongodb_storage_connections : Specification
 
     void Establish()
     {
-        _storageOptions = new();
+        _resolutionOptions = new();
         _resolver = Substitute.For<ICachingConnectionResolver>();
         _resolver.Resolve(Arg.Any<ConnectionRequest>(), Arg.Any<CancellationToken>()).Returns(ResolvedConnection.Unchanged);
         _resolverFactory = Substitute.For<IConnectionResolverFactory>();
@@ -36,8 +37,7 @@ public class mongodb_storage_connections : Specification
         _clientManager.GetClientFor(Arg.Do<MongoClientSettings>(_ => _settings = _)).Returns(_client);
         _connections = new(
             Options.Create(new MongoDBOptions { Server = "mongodb://configured:27017", Database = "chronicle" }),
-            Options.Create(_storageOptions),
-            _clientManager,
-            _resolverFactory);
+            new StorageConnectionResolution(WellKnownConnectionStorage.MongoDB, _resolutionOptions, _resolverFactory),
+            _clientManager);
     }
 }

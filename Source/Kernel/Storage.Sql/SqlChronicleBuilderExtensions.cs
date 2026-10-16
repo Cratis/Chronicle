@@ -34,8 +34,8 @@ public static class SqlChronicleBuilderExtensions
     {
         builder.SiloBuilder.AddStartupTask<ClusterDbContextMigrator>(ServiceLifecycleStage.First);
 
-        builder.Services.AddConnectionResolution();
-        builder.Services.AddSingleton(sp => new SqlConnectionResolution(options.Storage, sp));
+        builder.Services.AddStorageConnectionResolution(SqlConnectionResolution.StorageFor(options.Storage.ConnectionDetails), options.Storage.ConnectionResolution);
+        builder.Services.AddSingleton(sp => new SqlConnectionResolution(options.Storage, sp.GetRequiredService<IStorageConnectionResolution>()));
         builder.Services.AddSingleton<IDatabase, Database>();
         builder.Services.AddSingleton<ReplayingTables>();
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();

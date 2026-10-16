@@ -21,38 +21,29 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// one; only its identity is resolved.
 /// </remarks>
 /// <param name="mongoDBOptions">The <see cref="IOptions{TOptions}"/> for <see cref="MongoDBOptions"/>.</param>
-/// <param name="storageOptions">The <see cref="IOptions{TOptions}"/> for <see cref="MongoDBStorageOptions"/>.</param>
+/// <param name="resolution">The <see cref="IStorageConnectionResolution"/>.</param>
 /// <param name="clientManager">The <see cref="IMongoDBClientManager"/>.</param>
-/// <param name="resolverFactory">The <see cref="IConnectionResolverFactory"/>.</param>
 public class MongoDBStorageConnections(
     IOptions<MongoDBOptions> mongoDBOptions,
-    IOptions<MongoDBStorageOptions> storageOptions,
-    IMongoDBClientManager clientManager,
-    IConnectionResolverFactory resolverFactory) : IMongoDBStorageConnections
+    IStorageConnectionResolution resolution,
+    IMongoDBClientManager clientManager) : IMongoDBStorageConnections
 {
-    readonly Lazy<ICachingConnectionResolver> _resolver = new(() => resolverFactory.Create(storageOptions.Value.ConnectionResolution));
     readonly ConcurrentDictionary<string, MongoDBConnectionResolutionHooks> _hooks = new();
 
     /// <inheritdoc/>
     public IMongoDatabase GetDatabase(StorageConnectionKind kind, string derivedName, string eventStore = "", string @namespace = "")
     {
         var configured = new MongoUrl(mongoDBOptions.Value.Server);
-        if (!storageOptions.Value.ConnectionResolution.IsConfigured)
+        if (!resolution.IsConfigured)
         {
             return clientManager.GetClientFor(WithDirectConnection(MongoClientSettings.FromUrl(configured))).GetDatabase(derivedName);
         }
 
-        var resolver = _resolver.Value;
-        var request = StorageConnectionRequests.For(WellKnownConnectionStorage.MongoDB, ConnectionPurpose.Runtime, kind, eventStore, @namespace);
+        var resolver = resolution.Resolver;
+        var request = resolution.RequestFor(ConnectionPurpose.Runtime, kind, eventStore, @namespace);
 
         // Databases are opened from synchronous paths. The resolution is cached, so this only waits when it is not.
-        var resolved = resolver.Resolve(request).GetAwaiter().GetResult();
-
-        // The cluster database is always the configured one; only who connects to it is resolved.
-        if (kind == StorageConnectionKind.Cluster)
-        {
-            resolved = resolved with { ConnectionString = null, Database = null };
-        }
+        var resolved = resolution.Resolve(ConnectionPurpose.Runtime, kind, eventStore, @namespace).GetAwaiter().GetResult();
 
         var hooks = _hooks.GetOrAdd(request.ToKey(), static (_, state) => new(state.Resolver, state.Request, TimeProvider.System), (Resolver: resolver, Request: request));
         var settings = WithDirectConnection(resolved.ToMongoClientSettings(configured, hooks));

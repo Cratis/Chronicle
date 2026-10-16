@@ -14,7 +14,7 @@ public class with_a_resolved_database_and_identity : given.mongodb_storage_conne
 
     void Establish()
     {
-        _storageOptions.ConnectionResolution.Connection.UseHttp(new Uri("https://platform.example/connections"));
+        _resolutionOptions.Connection.UseHttp(new Uri("https://platform.example/connections"));
         _resolver.Resolve(Arg.Do<ConnectionRequest>(_ => _request = _), Arg.Any<CancellationToken>())
             .Returns(new ResolvedConnection("mongodb://tenant-server:27017", "tenant-acme", Identity: new("acme-user", "acme-password")));
     }

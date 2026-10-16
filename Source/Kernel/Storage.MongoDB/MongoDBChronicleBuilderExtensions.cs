@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.Connections;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
@@ -38,7 +39,7 @@ public static class MongoDBChronicleBuilderExtensions
     public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, ChronicleOptions options)
     {
         builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle, options.Clustering.Type == ClusteringType.MongoDB, options.Storage.DatabaseNamePrefix);
-        builder.ConfigureServices(services => services.Configure<MongoDBStorageOptions>(_ => _.ConnectionResolution = options.Storage.ConnectionResolution));
+        builder.ConfigureServices(services => services.AddStorageConnectionResolution(WellKnownConnectionStorage.MongoDB, options.Storage.ConnectionResolution));
         return builder;
     }
 
@@ -89,6 +90,10 @@ public static class MongoDBChronicleBuilderExtensions
         builder.ConfigureServices(services =>
         {
             services.AddConnectionResolution();
+            services.TryAddSingleton<IStorageConnectionResolution>(sp => new StorageConnectionResolution(
+                WellKnownConnectionStorage.MongoDB,
+                new(),
+                sp.GetRequiredService<IConnectionResolverFactory>()));
             services.AddSingleton<IMongoDBStorageConnections, MongoDBStorageConnections>();
             services.AddSingleton<IDatabase, Database>();
 
