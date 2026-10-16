@@ -128,7 +128,7 @@ public partial class EventSequence
         State.ConstraintIndexWatermark = _pendingConstraintIndexes.Values.Aggregate(
             _constraintIndexPosition < State.SequenceNumber ? _constraintIndexPosition : State.SequenceNumber,
             (position, pending) => pending < position ? pending : position);
-        _metrics?.ConstraintIndexLag(State.SequenceNumber.Value - State.ConstraintIndexWatermark.Value);
+        _metrics?.ConstraintIndexLag(long.CreateSaturating(State.SequenceNumber.Value - State.ConstraintIndexWatermark.Value));
         UpdateConstraintIndexRepairTimer();
     }
 
