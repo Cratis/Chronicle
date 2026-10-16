@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -26,7 +27,6 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     static readonly string[] _obsoleteEventIndexNames = ["eventSourceId", "eventTypeId", "eventStreamType", "contentHashes"];
 
     readonly IMongoDatabase _database;
-    readonly string _databaseName;
     readonly ConcurrentDictionary<EventSequenceId, bool> _indexedEventSequences = [];
 
     /// <summary>
@@ -37,14 +37,23 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
     /// <param name="mongoDBOptions"><see cref="Configuration.Storage"/> configuration.</param>
     /// <param name="storageOptions">Chronicle-specific database naming options.</param>
+    /// <param name="connections">Optional <see cref="IMongoDBStorageConnections"/> that resolves where each database is.</param>
     public EventStoreNamespaceDatabase(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         IMongoDBClientManager clientManager,
         IOptions<MongoDBOptions> mongoDBOptions,
-        IOptions<MongoDBStorageOptions>? storageOptions = null)
+        IOptions<MongoDBStorageOptions>? storageOptions = null,
+        IMongoDBStorageConnections? connections = null)
     {
         var databaseName = DatabaseNames.ForEventStoreNamespace(eventStore, @namespace, storageOptions?.Value.DatabaseNamePrefix ?? string.Empty);
+        if (connections is not null)
+        {
+            _database = connections.GetDatabase(StorageConnectionKind.Namespace, databaseName, eventStore.Value, @namespace.Value);
+            Client = _database.Client;
+            return;
+        }
+
         var settings = MongoClientSettings.FromUrl(new MongoUrl(mongoDBOptions.Value.Server));
         if (mongoDBOptions.Value.DirectConnection == true)
         {
@@ -54,7 +63,6 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         // TODO: Performance optimization - separate reads from writes in a clustered setup. Read from secondary.
         // settings.ReadPreference = ReadPreference.SecondaryPreferred;
         Client = clientManager.GetClientFor(settings);
-        _databaseName = databaseName;
         _database = Client.GetDatabase(databaseName);
     }
 
@@ -110,7 +118,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     public async Task Drop()
     {
         _indexedEventSequences.Clear();
-        await Client.DropDatabaseAsync(_databaseName).ConfigureAwait(false);
+        await Client.DropDatabaseAsync(_database.DatabaseNamespace.DatabaseName).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>

@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql;
 using Cratis.Chronicle.Storage.Sql.Cluster;
+using Cratis.Chronicle.Storage.Sql.Connections;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
@@ -34,17 +34,13 @@ public static class SqlChronicleBuilderExtensions
     {
         builder.SiloBuilder.AddStartupTask<ClusterDbContextMigrator>(ServiceLifecycleStage.First);
 
+        builder.Services.AddStorageConnectionResolution(SqlConnectionResolution.StorageFor(options.Storage.ConnectionDetails), options.Storage.ConnectionResolution);
+        builder.Services.AddSingleton(sp => new SqlConnectionResolution(options.Storage, sp.GetRequiredService<IStorageConnectionResolution>()));
         builder.Services.AddSingleton<IDatabase, Database>();
         builder.Services.AddSingleton<ReplayingTables>();
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
         builder.Services.AddSingleton<EncryptionKeyStorage>();
         builder.Services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
-        builder.Services.AddDbContextFactory<ClusterDbContext>((serviceProvider, optionsBuilder) =>
-        {
-            optionsBuilder
-                .UseDatabaseFromConnectionString(options.Storage.ConnectionDetails)
-                .UseApplicationServiceProvider(serviceProvider);
-        });
 
         builder.Services.AddSingleton(typeof(ITableMigrator<>), typeof(TableMigrator<>));
         builder.Services.AddSingleton<IEventSequenceMigrator, EventSequenceMigrator>();
