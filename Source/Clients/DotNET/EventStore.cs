@@ -213,7 +213,7 @@ public partial class EventStore : IEventStore
         };
         Reactors = reactors;
         var occurrences = new Occurrences.Occurrences(this);
-        occurrences.Configure(clientArtifactsProvider, schemaGenerator, jsonSerializerOptions, serviceProvider, artifactActivator, causationManager, identityProvider, loggerFactory.CreateLogger<Occurrences.Occurrences>());
+        occurrences.Configure(clientArtifactsProvider, schemaGenerator, jsonSerializerOptions, serviceProvider, artifactActivator, causationManager, identityProvider, loggerFactory.CreateLogger<Occurrences.Occurrences>(), options.Value);
         Occurrences = occurrences;
 
         var reducerObservers = new ReducerObservers();

@@ -75,6 +75,9 @@ public class EventStoreStorage(
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage(eventStoreDatabase.GetCollection<BsonDocument>("lifecycle-fan-out-intents").Database);
+
+    /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
 
     /// <inheritdoc/>

@@ -32,6 +32,7 @@ namespace Cratis.Chronicle.Occurrences;
 /// <param name="identity">The identity provider.</param>
 /// <param name="timeProvider">The renewal clock.</param>
 /// <param name="logger">The worker logger.</param>
+/// <param name="deliveryScope">Optional lifecycle delivery boundary.</param>
 internal sealed class OccurrenceAttempt(
     IEventStore eventStore,
     OccurrenceService service,
@@ -43,7 +44,8 @@ internal sealed class OccurrenceAttempt(
     ICausationManager causation,
     IIdentityProvider identity,
     TimeProvider timeProvider,
-    ILogger logger)
+    ILogger logger,
+    OccurrenceDeliveryScope? deliveryScope = null)
 {
     /// <summary>
     /// The requested lease duration, with renewal every twenty seconds.
@@ -67,7 +69,10 @@ internal sealed class OccurrenceAttempt(
             claim.RecordedAt,
             null,
             claim.Attempts,
-            new(claim.Id, claim.Epoch));
+            new(claim.Id, claim.Epoch))
+        {
+            Namespace = deliveryScope?.ApplicationScope == true ? null : new EventStoreNamespaceName(deliveryScope?.Namespace ?? eventStore.Namespace.Value)
+        };
         CorrelationIdAccessor.SetCurrent(CorrelationId.New());
         identity.SetCurrentIdentity(Identity.System);
         var renewal = Renew(claim, lifetime);
@@ -116,7 +121,8 @@ internal sealed class OccurrenceAttempt(
             var failure = new FailOccurrenceRequest
             {
                 EventStore = eventStore.Name,
-                Namespace = eventStore.Namespace,
+                Namespace = deliveryScope?.Namespace ?? eventStore.Namespace,
+                ApplicationScope = deliveryScope?.ApplicationScope ?? false,
                 Trigger = claim.Trigger,
                 OccurrenceId = claim.Id,
                 Epoch = claim.Epoch,
@@ -129,7 +135,8 @@ internal sealed class OccurrenceAttempt(
         var completion = new CompleteOccurrenceRequest
         {
             EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
+            Namespace = deliveryScope?.Namespace ?? eventStore.Namespace,
+            ApplicationScope = deliveryScope?.ApplicationScope ?? false,
             Trigger = claim.Trigger,
             OccurrenceId = claim.Id,
             Epoch = claim.Epoch
@@ -169,7 +176,8 @@ internal sealed class OccurrenceAttempt(
                 var renewal = new RenewOccurrenceLeaseRequest
                 {
                     EventStore = eventStore.Name,
-                    Namespace = eventStore.Namespace,
+                    Namespace = deliveryScope?.Namespace ?? eventStore.Namespace,
+                    ApplicationScope = deliveryScope?.ApplicationScope ?? false,
                     Trigger = claim.Trigger,
                     OccurrenceId = claim.Id,
                     Epoch = claim.Epoch,

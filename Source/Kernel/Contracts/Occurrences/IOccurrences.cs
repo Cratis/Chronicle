@@ -52,6 +52,14 @@ public interface IOccurrences
     [Operation]
     Task<CommandResult<RecordEffectReceiptResponse>> RecordEffectReceipt(RecordEffectReceiptRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the RecordLifecycleOccurrence command.
+    /// </summary>
+    /// <param name = "request">The RecordLifecycleOccurrence request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<RecordLifecycleOccurrenceResponse>> RecordLifecycleOccurrence(RecordLifecycleOccurrenceRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the RecordOccurrence command.
     /// </summary>
     /// <param name = "request">The RecordOccurrence request.</param>
@@ -330,6 +338,62 @@ public class RecordEffectReceiptResponse
     /// </summary>
     [ProtoMember(2)]
     public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails Receipt { get; set; } = new();
+}
+
+/// <summary>
+/// Represents the RecordLifecycleOccurrenceRequest message.
+/// </summary>
+[ProtoContract]
+public class RecordLifecycleOccurrenceRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the ActivationId.
+    /// </summary>
+    [ProtoMember(2)]
+    public string ActivationId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Kind.
+    /// </summary>
+    [ProtoMember(3)]
+    public global::Cratis.Chronicle.Contracts.Storage.Occurrences.OccurrenceKind Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AllNamespaces.
+    /// </summary>
+    [ProtoMember(4)]
+    public bool AllNamespaces { get; set; }
+}
+
+/// <summary>
+/// Represents the RecordLifecycleOccurrenceResponse message.
+/// </summary>
+[ProtoContract]
+public class RecordLifecycleOccurrenceResponse
+{
+    /// <summary>
+    /// Gets or sets the Id.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Status.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceIngressStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Namespaces.
+    /// </summary>
+    [ProtoMember(3)]
+    public IEnumerable<string> Namespaces { get; set; } = new List<string>();
 }
 
 /// <summary>

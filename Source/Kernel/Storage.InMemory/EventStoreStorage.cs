@@ -72,6 +72,9 @@ public sealed class EventStoreStorage(
     public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage();
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage();
+
+    /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
 
     /// <inheritdoc/>

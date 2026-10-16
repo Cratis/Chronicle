@@ -25,6 +25,12 @@ public record OccurrenceContext(
     LeaseToken Lease)
 {
     /// <summary>
+    /// Gets the delivery namespace, or null for application-scoped lifecycle work.
+    /// AllNamespaces handlers use this namespace when selecting the event store for their effects.
+    /// </summary>
+    public EventStoreNamespaceName? Namespace { get; init; }
+
+    /// <summary>
     /// Identifies an effect across redelivery. Pass its Value to external idempotent endpoints.
     /// </summary>
     /// <param name="name">The stable name of the effect within this occurrence.</param>

@@ -27,12 +27,25 @@ internal sealed class TriggerRegistry(IEventStore eventStore, IClientArtifactsPr
     internal IEnumerable<(Type Trigger, Type Handler)> Handlers => _handlers.Select(_ => (_.Key, _.Value));
 
     /// <summary>
+    /// Gets whether this store has any lifecycle handlers.
+    /// </summary>
+    internal bool HasLifecycleHandlers => _handlers.Keys.Any(IsLifecycle);
+
+    /// <summary>
+    /// Determines whether a payload is a built-in lifecycle trigger.
+    /// </summary>
+    /// <param name="type">The payload type.</param>
+    /// <returns>Whether this is Startup or Shutdown.</returns>
+    internal static bool IsLifecycle(Type type) => type == typeof(Startup) || type == typeof(Shutdown);
+
+    /// <summary>
     /// Builds an immutable catalog, rejecting duplicate or invalid declarations before publishing it.
     /// </summary>
     /// <exception cref="TriggerNotValid">A declaration is invalid, duplicated or missing its trigger.</exception>
     internal void Discover()
     {
-        var triggers = artifacts.Triggers.Distinct().ToArray();
+        var builtIns = artifacts.OccurrenceHandlers.SelectMany(_ => _.GetInterfaces()).Where(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IOccurrenceHandler<>)).Select(_ => _.GenericTypeArguments[0]).Where(IsLifecycle).ToArray();
+        var triggers = artifacts.Triggers.Concat(builtIns.Length > 0 ? [typeof(Startup), typeof(Shutdown)] : []).Distinct().ToArray();
         var registrations = triggers.ToDictionary(type => type, type =>
         {
             var marker = type.GetCustomAttribute<TriggerAttribute>();

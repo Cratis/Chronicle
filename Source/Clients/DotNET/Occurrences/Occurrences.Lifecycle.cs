@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using System.Threading.Channels;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Identities;
@@ -13,7 +14,10 @@ namespace Cratis.Chronicle.Occurrences;
 public partial class Occurrences : IDisposable, IAsyncDisposable
 {
     readonly object _workerSync = new();
-    Func<Type, Type, OccurrenceAttempt>? _attemptFactory;
+    readonly Channel<bool> _scopeChanges = Channel.CreateBounded<bool>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
+    readonly HashSet<string> _lifecycleNamespaces = new(StringComparer.Ordinal);
+    Func<Type, Type, OccurrenceDeliveryScope?, OccurrenceAttempt>? _attemptFactory;
+    ChronicleOptions _options = new();
     ILogger<Occurrences>? _logger;
     Action? _cancelWorkers;
     Task _workers = Task.CompletedTask;
@@ -65,6 +69,7 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
     /// <param name="causation">The causation context.</param>
     /// <param name="identity">The identity context.</param>
     /// <param name="logger">The worker logger.</param>
+    /// <param name="options">Optional lifecycle configuration.</param>
     internal void Configure(
         IClientArtifactsProvider artifacts,
         IJsonSchemaGenerator schemas,
@@ -73,12 +78,14 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
         IClientArtifactsActivator activator,
         ICausationManager causation,
         IIdentityProvider identity,
-        ILogger<Occurrences> logger)
+        ILogger<Occurrences> logger,
+        ChronicleOptions? options = null)
     {
+        _options = options ?? new();
         _triggers = new(eventStore, artifacts, schemas);
         _jsonOptions = jsonOptions;
         _logger = logger;
-        _attemptFactory = (trigger, handler) => new(
+        _attemptFactory = (trigger, handler, scope) => new(
             eventStore,
             ((IChronicleServicesAccessor)eventStore.Connection).Services.Occurrences,
             trigger,
@@ -89,7 +96,8 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
             causation,
             identity,
             TimeProvider,
-            logger);
+            logger,
+            scope);
         eventStore.Connection.Lifecycle.OnDisconnected += Disconnect;
     }
 
@@ -102,6 +110,7 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
         await Disconnect();
         await _workers;
         _triggers?.Discover();
+        if (_triggers?.HasLifecycleHandlers == true) LifecycleActivation.Resolve(_options);
     }
 
     /// <summary>
@@ -139,12 +148,7 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
         }
         try
         {
-            var workers = _triggers!.Handlers.Select(pair =>
-            {
-                var worker = new OccurrenceWorker(eventStore, _triggers.Get(pair.Trigger).Id, _attemptFactory!(pair.Trigger, pair.Handler), TimeProvider, _logger!);
-                return Task.Run(() => worker.Run(lifetime.Token));
-            }).ToArray();
-            await Task.WhenAll(workers);
+            await RunScopedWorkers(lifetime.Token);
         }
         finally
         {

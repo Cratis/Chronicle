@@ -21,7 +21,8 @@ namespace Cratis.Chronicle.Occurrences;
 /// <param name="attempt">The attempt runner.</param>
 /// <param name="timeProvider">The reconnection clock.</param>
 /// <param name="logger">The worker logger.</param>
-internal sealed class OccurrenceWorker(IEventStore eventStore, TriggerId trigger, OccurrenceAttempt attempt, TimeProvider timeProvider, ILogger logger)
+/// <param name="deliveryScope">Optional lifecycle delivery boundary.</param>
+internal sealed class OccurrenceWorker(IEventStore eventStore, TriggerId trigger, OccurrenceAttempt attempt, TimeProvider timeProvider, ILogger logger, OccurrenceDeliveryScope? deliveryScope = null)
 {
     /// <summary>
     /// Delivers until its owning connection session ends.
@@ -63,7 +64,8 @@ internal sealed class OccurrenceWorker(IEventStore eventStore, TriggerId trigger
         var observation = new ObserveOccurrencesRequest
         {
             EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
+            Namespace = deliveryScope?.Namespace ?? eventStore.Namespace,
+            ApplicationScope = deliveryScope?.ApplicationScope ?? false,
             Trigger = trigger
         };
         using var subscription = service.ObserveOccurrences(observation, new CallContext(new CallOptions(cancellationToken: cancellationToken))).Subscribe(
@@ -92,7 +94,8 @@ internal sealed class OccurrenceWorker(IEventStore eventStore, TriggerId trigger
                 var request = new ClaimOccurrencesRequest
                 {
                     EventStore = eventStore.Name,
-                    Namespace = eventStore.Namespace,
+                    Namespace = deliveryScope?.Namespace ?? eventStore.Namespace,
+                    ApplicationScope = deliveryScope?.ApplicationScope ?? false,
                     Trigger = trigger,
                     WorkerId = eventStore.Connection.Lifecycle.ConnectionId.ToString(),
                     LeaseSeconds = OccurrenceAttempt.LeaseSeconds,

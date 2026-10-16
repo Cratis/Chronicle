@@ -113,6 +113,7 @@ internal sealed class ChronicleServerStartupTask(
         foreach (var eventStore in allEventStores)
         {
             await Step("DiscoverAndRegisterEventTypes", () => eventTypes.DiscoverAndRegister(eventStore));
+            await Step("ReconcileLifecycleOccurrences", grainFactory.GetGrain<ILifecycleOccurrences>(eventStore.Value).Ensure);
             await RehydrateOccurrences(eventStore, null, cancellationToken);
             var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
             await Step("EnsureDefaultNamespace", namespaces.EnsureDefault);

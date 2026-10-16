@@ -21,6 +21,14 @@ public interface IOccurrences
     Task<OccurrenceRecordResult> Record(object trigger, string idempotencyId);
 
     /// <summary>
+    /// Explicitly ends a logical activation, recording Shutdown once. Stopping one instance never calls this implicitly.
+    /// </summary>
+    /// <param name="activationId">The activation to end, shared across all instances.</param>
+    /// <returns>The durable recording work.</returns>
+    /// <exception cref="OccurrencesNotSupported">Occurrence support is absent or unknown.</exception>
+    Task EndActivation(ActivationId activationId) => throw new OccurrencesNotSupported();
+
+    /// <summary>
     /// Looks up the first durable outcome without executing the effect again.
     /// </summary>
     /// <param name="key">The effect key.</param>
